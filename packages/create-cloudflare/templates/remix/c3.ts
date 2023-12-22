@@ -21,8 +21,10 @@ const config: FrameworkConfig = {
 	displayName: "Remix",
 	platform: "pages",
 	generate,
-	getPackageScripts: async () => ({
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
+		},
 	}),
 	devCommand: ["dev"],
 	testFlags: ["--typescript", "--no-install", "--no-git-init"],

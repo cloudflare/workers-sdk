@@ -27,7 +27,7 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	process.chdir(ctx.project.path);
 	writeFile("./.node-version", "17");
-	await updateNuxtConfig();
+	updateNuxtConfig();
 	await npmInstall();
 };
 
@@ -53,9 +53,11 @@ const config: FrameworkConfig = {
 	displayName: "Nuxt",
 	generate,
 	configure,
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+		},
 	}),
 };
 export default config;

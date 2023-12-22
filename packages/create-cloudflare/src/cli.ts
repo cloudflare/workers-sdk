@@ -27,7 +27,7 @@ import {
 	validateProjectDirectory,
 } from "./common";
 import { createProject, runPagesGenerator } from "./pages";
-import { selectTemplate } from "./templateMap";
+import { selectTemplate, updatePackageJson } from "./templateMap";
 import { createWranglerToml, runWorkersGenerator } from "./workers";
 import type { C3Args, C3Context } from "types";
 
@@ -108,8 +108,9 @@ const runTemplate = async (ctx: C3Context) => {
 		await runPagesGenerator(ctx);
 	}
 
-	await offerGit(ctx);
+	await updatePackageJson(ctx);
 	await createWranglerToml(ctx);
+	await offerGit(ctx);
 	// TODO: this needs to be moved to after bindings since that might
 	// change wrangler.toml
 	await gitCommit(ctx);

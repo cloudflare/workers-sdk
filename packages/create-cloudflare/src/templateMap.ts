@@ -5,10 +5,11 @@ import { join, resolve } from "path";
 import { crash } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import deepmerge from "deepmerge";
 import degit from "degit";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { readJSON, usesTypescript } from "helpers/files";
+import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context } from "types";
 
@@ -28,6 +29,10 @@ export type TemplateConfig = {
 
 	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
+
+	transformPackageJson?: (
+		pkgJson: Record<string, string | object>
+	) => Promise<Record<string, string | object>>;
 
 	path?: string;
 };
@@ -273,6 +278,29 @@ const downloadRemoteTemplate = async (src: string) => {
 	} catch (error) {
 		return crash(`Failed to clone remote template: ${src}`);
 	}
+};
+
+export const updatePackageJson = async (ctx: C3Context) => {
+	const s = spinner();
+	s.start("Updating `package.json`");
+
+	// Update package.json with project name
+	const placeholderNames = ["<TBD>", "TBD", ""];
+	const pkgJsonPath = resolve(ctx.project.path, "package.json");
+	let pkgJson = readJSON(pkgJsonPath);
+	if (placeholderNames.includes(pkgJson.name)) {
+		pkgJson.name = ctx.project.name;
+	}
+
+	// Run any transformers defined by the template
+	if (ctx.template.transformPackageJson) {
+		const transformed = await ctx.template.transformPackageJson(pkgJson);
+		pkgJson = deepmerge(pkgJson, transformed);
+	}
+
+	// Write the finalized package.json to disk
+	writeJSON(pkgJsonPath, pkgJson);
+	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
 };
 
 export const getTemplatePath = (ctx: C3Context) => {

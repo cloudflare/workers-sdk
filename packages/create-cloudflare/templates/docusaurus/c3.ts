@@ -15,9 +15,11 @@ const config: FrameworkConfig = {
 	platform: "pages",
 	displayName: "Docusaurus",
 	generate,
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run start`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./build`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run start`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./build`,
+		},
 	}),
 	testFlags: [`--package-manager`, npm],
 };

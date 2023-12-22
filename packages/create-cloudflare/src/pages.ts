@@ -1,16 +1,13 @@
-import { resolve } from "path";
 import { chdir } from "process";
 import { crash, endSection, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
 import {
 	installWrangler,
 	resetPackageManager,
 	retry,
 	runCommand,
 } from "helpers/command";
-import { readJSON, writeFile } from "helpers/files";
 import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
 import { getProductionBranch, quoteShellArgs } from "./common";
@@ -60,48 +57,6 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 
 	// Install wrangler so that the dev/deploy commands work
 	await installWrangler();
-	await updatePackageScripts(ctx);
-};
-
-// Add/Update commands in the `scripts` section of package.json
-const updatePackageScripts = async (ctx: C3Context) => {
-	const { getPackageScripts } = ctx.framework?.config ?? {};
-	const packageScripts = getPackageScripts ? await getPackageScripts() : {};
-	if (packageScripts) {
-		const s = spinner();
-
-		const updatingScripts =
-			Object.entries(packageScripts).filter(
-				([_, cmdOrUpdater]) => typeof cmdOrUpdater === "function"
-			).length > 0;
-
-		s.start(
-			`${updatingScripts ? "Updating" : "Adding"} command scripts`,
-			"for development and deployment"
-		);
-
-		const pkgJsonPath = resolve("package.json");
-		const pkgConfig = readJSON(pkgJsonPath);
-
-		Object.entries(packageScripts).forEach(([target, cmdOrUpdater]) => {
-			if (typeof cmdOrUpdater === "string") {
-				const command = cmdOrUpdater;
-				pkgConfig.scripts[target] = command;
-			} else {
-				const existingCommand = pkgConfig.scripts[target] as string | undefined;
-				if (!existingCommand) {
-					throw new Error(
-						`Could not find ${target} script to update during ${ctx.framework} setup`
-					);
-				}
-				const updater = cmdOrUpdater;
-				pkgConfig.scripts[target] = updater(existingCommand);
-			}
-		});
-
-		writeFile(pkgJsonPath, JSON.stringify(pkgConfig, null, 2));
-		s.stop(`${brandColor("added")} ${dim("commands to `package.json`")}`);
-	}
 };
 
 export const createProject = async (ctx: C3Context) => {

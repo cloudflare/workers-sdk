@@ -45,14 +45,9 @@ type DeploymentInfo = {
 	kvNamespaces: Record<string, string>;
 };
 
-type UpdaterPackageScript = (cmd: string) => string;
-
 export type FrameworkConfig = TemplateConfig & {
 	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
-	getPackageScripts: () => Promise<
-		Record<string, string | UpdaterPackageScript>
-	>;
 	deployCommand?: string[];
 	devCommand?: string[];
 	testFlags?: string[];

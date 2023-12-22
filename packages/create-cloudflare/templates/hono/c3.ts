@@ -20,7 +20,6 @@ const config: FrameworkConfig = {
 	// platform: 'workers',
 	platform: "pages",
 	generate,
-	getPackageScripts: async () => ({}),
 	devCommand: ["dev"],
 	deployCommand: ["deploy"],
 	type: "workers",

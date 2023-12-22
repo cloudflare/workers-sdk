@@ -14,14 +14,7 @@ import {
 	npmInstall,
 	runCommand,
 } from "helpers/command";
-import {
-	appendFile,
-	readFile,
-	readJSON,
-	usesTypescript,
-	writeFile,
-	writeJSON,
-} from "helpers/files";
+import { appendFile, readFile, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { chooseAccount } from "./common";
 import { copyTemplateFiles } from "./templateMap";
@@ -43,7 +36,6 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 		await installWorkersTypes(ctx);
 	}
 	await installWorkersTypes(ctx);
-	await updateFiles(ctx);
 };
 
 export async function createWranglerToml(ctx: C3Context) {
@@ -127,16 +119,6 @@ async function copyExistingWorkerFiles(ctx: C3Context) {
 		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 		join(ctx.project.path, "wrangler.toml")
 	);
-}
-
-async function updateFiles(ctx: C3Context) {
-	// Update package.json with project name
-	const pkgJsonPath = resolve(ctx.project.path, "package.json");
-	const pkgJson = readJSON(pkgJsonPath);
-	if (pkgJson.name === "<TBD>") {
-		pkgJson.name = ctx.project.name;
-	}
-	writeJSON(pkgJsonPath, pkgJson);
 }
 
 async function installWorkersTypes(ctx: C3Context) {

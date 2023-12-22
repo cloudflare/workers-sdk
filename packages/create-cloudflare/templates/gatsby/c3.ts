@@ -35,9 +35,11 @@ const config: FrameworkConfig = {
 	platform: "pages",
 	displayName: "Gatsby",
 	generate,
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
+		},
 	}),
 };
 export default config;

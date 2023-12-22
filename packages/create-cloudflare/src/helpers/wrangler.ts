@@ -40,6 +40,10 @@ export const wrangler = async (
 // This also has a bad experience if the user decides to deploy, since
 // bindings will get skipped and types will be empty
 export const generateTypes = async (ctx: C3Context) => {
+	if (ctx.template.platform !== "workers") {
+		return;
+	}
+
 	try {
 		// We need to use runCommand instead of `wrangler` here because
 		// this runs in unauthenticated contexts

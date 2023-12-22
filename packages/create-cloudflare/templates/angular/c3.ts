@@ -84,11 +84,14 @@ const config: FrameworkConfig = {
 	},
 	generate,
 	configure,
-	getPackageScripts: async () => ({
-		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
-		process: "node ./tools/copy-files.mjs && node ./tools/alter-polyfills.mjs",
-		"pages:build": `ng build && ${npm} run process`,
-		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
+	transformPackageJson: async () => ({
+		scripts: {
+			start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
+			process:
+				"node ./tools/copy-files.mjs && node ./tools/alter-polyfills.mjs",
+			"pages:build": `ng build && ${npm} run process`,
+			deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
+		},
 	}),
 	deployCommand: ["deploy"],
 	devCommand: ["start"],

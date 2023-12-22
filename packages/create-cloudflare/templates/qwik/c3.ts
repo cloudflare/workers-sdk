@@ -29,9 +29,11 @@ const config: FrameworkConfig = {
 	platform: "pages",
 	generate,
 	configure,
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- ${npm} run dev`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+		},
 	}),
 };
 export default config;

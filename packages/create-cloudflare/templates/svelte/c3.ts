@@ -72,9 +72,11 @@ const config: FrameworkConfig = {
 	platform: "pages",
 	generate,
 	configure,
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
+		},
 	}),
 };
 export default config;

@@ -15,9 +15,11 @@ const config: FrameworkConfig = {
 	displayName: "Vue",
 	platform: "pages",
 	generate,
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+	transformPackageJson: async () => ({
+		scripts: {
+			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+		},
 	}),
 	testFlags: ["--ts"],
 };

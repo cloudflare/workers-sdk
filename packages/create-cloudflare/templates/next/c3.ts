@@ -149,7 +149,7 @@ const config: FrameworkConfig = {
 	displayName: "Next",
 	generate,
 	configure,
-	getPackageScripts: async () => {
+	transformPackageJson: async () => {
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";
 		const isNpmOrBun = isNpm || isBun;
@@ -160,9 +160,11 @@ const config: FrameworkConfig = {
 			isNpm ? "npm run" : isBun ? "bun" : pmCommand
 		} pages:build`;
 		return {
-			"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-			"pages:preview": `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
-			"pages:deploy": `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+			scripts: {
+				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
+				"pages:preview": `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
+				"pages:deploy": `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+			},
 		};
 	},
 	testFlags: [
