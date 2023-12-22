@@ -19,13 +19,13 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/wrangler/">
-    <img src="https://img.shields.io/npm/v/wrangler.svg?logo=npm&logoColor=fff&label=NPM+package&color=limegreen" alt="Wrangler on npm" />
+    <img src="https://img.shields.io/npm/v/wrangler.svg?logo=npm&logoColor=fff&label=Wrangler&color=orange" alt="Wrangler on npm" />
   </a>&nbsp;
   <a href="https://discord.cloudflare.com/">
     <img src="https://img.shields.io/discord/595317990191398933.svg?logo=discord&logoColor=fff&label=Discord&color=7389d8" alt="Discord conversation" />
   </a>
   <a href="https://twitter.com/CloudflareDev">
-    <img src="https://img.shields.io/twitter/follow/cloudflaredev" alt="Discord conversation" />
+    <img src="https://img.shields.io/twitter/follow/cloudflaredev" alt="X conversation" />
   </a>
 </p>
 
