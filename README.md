@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/wrangler/">
-    <img src="https://img.shields.io/npm/v/wrangler.svg?logo=npm&logoColor=fff&label=NPM+package&color=limegreen" alt="Angular on npm" />
+    <img src="https://img.shields.io/npm/v/wrangler.svg?logo=npm&logoColor=fff&label=NPM+package&color=limegreen" alt="Wrangler on npm" />
   </a>&nbsp;
   <a href="https://discord.cloudflare.com/">
     <img src="https://img.shields.io/discord/595317990191398933.svg?logo=discord&logoColor=fff&label=Discord&color=7389d8" alt="Discord conversation" />
@@ -70,3 +70,8 @@ We welcome new contributors! Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) 
 ## Community
 
 Join us in the official [Cloudflare Discord](https://discord.cloudflare.com/) to meet other developers, ask questions, or learn more in general.
+
+## Links
+
+- [Project Board](https://github.com/orgs/cloudflare/projects/1)
+- [Discussions](https://github.com/cloudflare/workers-sdk/discussions)
