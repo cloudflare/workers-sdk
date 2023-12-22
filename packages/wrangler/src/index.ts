@@ -664,6 +664,10 @@ export function createCLIParser(argv: string[]) {
 					type: "string",
 					default: undefined,
 				})
+				.option("name", {
+					describe: "The name of your worker",
+					type: "string",
+				})
 				.epilogue(rollbackWarning),
 		async (rollbackYargs) => {
 			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
