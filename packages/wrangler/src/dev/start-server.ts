@@ -95,7 +95,7 @@ export async function startDevServer(
 				port: props.inspectorPort,
 			},
 			urlOverrides: {
-				secure: props.localProtocol === "https",
+				secure: props.upstreamProtocol === "https",
 				hostname: props.localUpstream,
 			},
 			liveReload: props.liveReload,
@@ -168,6 +168,7 @@ export async function startDevServer(
 			queueConsumers: props.queueConsumers,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
+			upstreamProtocol: props.upstreamProtocol,
 			inspect: true,
 			onReady: async (ip, port, proxyData) => {
 				// at this point (in the layers of onReady callbacks), we have devEnv in scope
@@ -412,7 +413,7 @@ export async function startLocalServer(
 					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
 				},
 				userWorkerInnerUrlOverrides: {
-					protocol: props.localProtocol,
+					protocol: props.upstreamProtocol,
 					hostname: props.localUpstream,
 					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 				},

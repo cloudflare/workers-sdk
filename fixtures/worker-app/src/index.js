@@ -22,12 +22,10 @@ export default {
 			return new Response(request.url);
 		}
 
-		console.log(
-			request.method,
-			request.url,
-			new Map([...request.headers]),
-			request.cf
-		);
+		console.log("METHOD =", request.method);
+		console.log("URL = ", request.url);
+		console.log("HEADERS =", new Map([...request.headers]));
+		console.log("CF =", request.cf);
 
 		logErrors();
 

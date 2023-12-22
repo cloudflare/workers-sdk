@@ -33,7 +33,7 @@ describe("normalizeAndValidateConfig()", () => {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
 				local_protocol: "http",
 				port: undefined, // the default of 8787 is set at runtime
-				upstream_protocol: "https",
+				upstream_protocol: "http",
 				host: undefined,
 			},
 			cloudchamber: {},

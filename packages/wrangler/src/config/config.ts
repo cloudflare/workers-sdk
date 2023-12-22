@@ -215,11 +215,10 @@ export interface DevConfig {
 	/**
 	 * Protocol that wrangler dev forwards requests on
 	 *
-	 * Setting this to `http` is not currently implemented.
+	 * Setting this to `http` is not currently implemented for remote mode.
 	 * See https://github.com/cloudflare/workers-sdk/issues/583
 	 *
-	 * @default `https`
-	 * @todo this needs to be implemented https://github.com/cloudflare/workers-sdk/issues/583
+	 * @default `https` in remote mode; same as local_protocol in local mode.
 	 */
 	upstream_protocol: "https" | "http";
 

@@ -52,7 +52,7 @@ const ENGLISH = new Intl.ListFormat("en");
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: unknown
+	args: object
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -196,7 +196,7 @@ export function normalizeAndValidateConfig(
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
-		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
+		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		migrations: normalizeAndValidateMigrations(
 			diagnostics,
 			rawConfig.migrations ?? [],
@@ -387,7 +387,8 @@ function normalizeAndValidateBaseDirField(
  */
 function normalizeAndValidateDev(
 	diagnostics: Diagnostics,
-	rawDev: RawDevConfig
+	rawDev: RawDevConfig,
+	args: unknown
 ): DevConfig {
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -400,8 +401,13 @@ function normalizeAndValidateDev(
 		ip = process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port,
 		inspector_port,
-		local_protocol = "http",
-		upstream_protocol = "https",
+		local_protocol = (args as { localProtocol: "http" | "https" })
+			.localProtocol ?? "http",
+		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
+		upstream_protocol = (args as { upstreamProtocol: boolean })
+			.upstreamProtocol ?? (args as { remote: boolean }).remote
+			? "https"
+			: local_protocol,
 		host,
 		...rest
 	} = rawDev;
