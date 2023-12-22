@@ -5,6 +5,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
+import { fetch } from "undici";
 import { quoteShellArgs } from "../common";
 import { detectPackageManager } from "./packages";
 import type { PagesGeneratorContext } from "types";
@@ -381,23 +382,36 @@ export const listAccounts = async () => {
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
 export async function getWorkerdCompatibilityDate() {
-	const { npm } = detectPackageManager();
-
-	return runCommand([npm, "info", "workerd", "dist-tags.latest"], {
-		silent: true,
-		captureOutput: true,
+	const { compatDate: workerdCompatibilityDate } = await printAsyncStatus<{
+		compatDate: string;
+		isFallback: boolean;
+	}>({
+		useSpinner: true,
 		startText: "Retrieving current workerd compatibility date",
-		transformOutput: (result) => {
-			// The format of the workerd version is `major.yyyymmdd.patch`.
-			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+		doneText: ({ compatDate, isFallback }) =>
+			`${brandColor("compatibility date")}${
+				isFallback ? dim(" Could not find workerd date, falling back to") : ""
+			} ${dim(compatDate)}`,
+		async promise() {
+			try {
+				const resp = await fetch("https://registry.npmjs.org/workerd");
+				const workerdNpmInfo = (await resp.json()) as {
+					"dist-tags": { latest: string };
+				};
+				const result = workerdNpmInfo["dist-tags"].latest;
 
-			if (!match) {
-				throw new Error("Could not find workerd date");
-			}
-			const [, year, month, date] = match;
-			return `${year}-${month}-${date}`;
+				// The format of the workerd version is `major.yyyymmdd.patch`.
+				const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+
+				if (match) {
+					const [, year, month, date] = match ?? [];
+					return { compatDate: `${year}-${month}-${date}`, isFallback: false };
+				}
+			} catch {}
+
+			return { compatDate: "2023-05-18", isFallback: true };
 		},
-		fallbackOutput: () => "2023-05-18",
-		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,
 	});
+
+	return workerdCompatibilityDate;
 }
