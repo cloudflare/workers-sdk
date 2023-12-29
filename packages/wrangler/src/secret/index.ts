@@ -444,9 +444,18 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 			throw e;
 		}
 	}
-	const inheritBindings = existingBindings.filter((binding) => {
-		return binding.type !== "secret_text" || !content[binding.name];
-	});
+	// any existing bindings can be "inherited" from the previous deploy via the PATCH settings api
+	// by just providing the "name" and "type" fields for the binding.
+	// so after fetching the bindings in the script settings, we can map over and just pick out those fields
+	const inheritBindings = existingBindings
+		.filter((binding) => {
+			// secrets that currently exist for the worker but are not provided for bulk update
+			// are inherited over with other binding types
+			return binding.type !== "secret_text" || !content[binding.name];
+		})
+		.map((binding) => ({ type: binding.type, name: binding.name }));
+	// secrets to upload are provided as bindings in their full form
+	// so when we PATCH, we patch in [...current bindings, ...updated / new secrets]
 	const upsertBindings: Array<SecretBindingUpload> = Object.entries(
 		content
 	).map(([key, value]) => {
