@@ -110,7 +110,7 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	];
 	if (options.inspectorAddress !== undefined) {
 		// Required to enable the V8 inspector
-		args.push(`--inspector-addr=${options.inspectorAddress}`);
+	  // args.push(`--inspector-addr=${options.inspectorAddress}`);
 	}
 	if (options.verbose) {
 		args.push("--verbose");
