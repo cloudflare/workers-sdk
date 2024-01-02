@@ -30,6 +30,10 @@ import { getWranglerTmpDir } from "../paths";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
+import {
+	getSourceMappedString,
+	maybeRetrieveFileSourceMap,
+} from "../sourcemap";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
@@ -44,6 +48,7 @@ import type { Entry } from "../deployment-bundle/entry";
 import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
+import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
 	config: Config;
@@ -593,10 +598,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const placement: CfPlacement | undefined =
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
+		const entryPointName = path.basename(resolvedEntryPointPath);
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main: {
-				name: path.basename(resolvedEntryPointPath),
+				name: entryPointName,
 				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
@@ -689,6 +695,34 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
+
+				// Apply source mapping to validation startup errors if possible
+				if (
+					err instanceof ParseError &&
+					"code" in err &&
+					err.code === 10021 /* validation error */ &&
+					err.notes.length > 0
+				) {
+					const maybeNameToFilePath = (moduleName: string) => {
+						// If this is a service worker, always return the entrypoint path.
+						// Service workers can't have additional JavaScript modules.
+						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						// Similarly, if the name matches the entrypoint, return its path
+						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						// Otherwise, return the file path of the matching module (if any)
+						for (const module of modules) {
+							if (moduleName === module.name) return module.filePath;
+						}
+					};
+					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
+						maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
+
+					err.notes[0].text = getSourceMappedString(
+						err.notes[0].text,
+						retrieveSourceMap
+					);
+				}
+
 				throw err;
 			}
 		}

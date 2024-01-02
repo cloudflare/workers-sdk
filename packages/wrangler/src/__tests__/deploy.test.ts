@@ -7,6 +7,7 @@ import * as TOML from "@iarna/toml";
 import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
+import dedent from "ts-dedent";
 import { FormData } from "undici";
 import {
 	printBundleSize,
@@ -1834,6 +1835,119 @@ addEventListener('fetch', event => {});`
 			",
 			}
 		`);
+		});
+
+		describe("should source map validation errors", () => {
+			function mockDeployWithValidationError(message: string) {
+				const handler = rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					async (req, res, ctx) => {
+						const body = createFetchResult(null, false, [
+							{ code: 10021, message },
+						]);
+						return res(ctx.json(body));
+					}
+				);
+				msw.use(handler);
+			}
+
+			it("with TypeScript source file", async () => {
+				writeWranglerToml();
+				fs.writeFileSync(
+					`index.ts`,
+					dedent`interface Env {
+						THING: string;
+					}
+					x;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+				});
+			});
+
+			it("with additional modules", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
+				});
+
+				fs.writeFileSync(
+					"dep.ts",
+					dedent`interface Env {
+					}
+					y;
+					export default "message";`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("dep.ts")],
+					outdir: process.cwd(),
+					sourcemap: true,
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					dedent`import dep from "./dep.js";
+					export default {
+						fetch() {
+							return new Response(dep);
+						}
+					}`
+				);
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: y is not defined\n  at dep.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("dep.ts:3:1") }, {}],
+				});
+			});
+
+			it("with inline source map", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+				});
+
+				fs.writeFileSync(
+					"index.ts",
+					dedent`interface Env {}
+					z;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("index.ts")],
+					outdir: process.cwd(),
+					sourcemap: "inline",
+				});
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: z is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:2:1") }, {}],
+				});
+			});
 		});
 	});
 

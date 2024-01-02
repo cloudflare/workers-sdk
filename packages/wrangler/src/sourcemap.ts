@@ -1,10 +1,69 @@
 import assert from "node:assert";
+import fs from "node:fs";
+import url from "node:url";
+import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
 
+function maybeGetFile(filePath: string | URL) {
+	try {
+		return fs.readFileSync(filePath, "utf8");
+	} catch (e: unknown) {
+		const notFound =
+			typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT";
+		if (!notFound) throw e;
+	}
+}
+
+export type RetrieveSourceMapFunction = NonNullable<
+	Options["retrieveSourceMap"]
+>;
+export function maybeRetrieveFileSourceMap(
+	filePath?: string
+): ReturnType<RetrieveSourceMapFunction> {
+	if (filePath === undefined) return null;
+	const contents = maybeGetFile(filePath);
+	if (contents === undefined) return null;
+
+	// Find the last source mapping URL if any
+	const mapRegexp = /# sourceMappingURL=(.+)/g;
+	const matches = [...contents.matchAll(mapRegexp)];
+	// If we couldn't find a source mapping URL, there's nothing we can do
+	if (matches.length === 0) return null;
+	const mapMatch = matches[matches.length - 1];
+
+	// Get the source map
+	const fileUrl = url.pathToFileURL(filePath);
+	const mapUrl = new URL(mapMatch[1], fileUrl);
+	if (
+		mapUrl.protocol === "data:" &&
+		mapUrl.pathname.startsWith("application/json;base64,")
+	) {
+		// sourceMappingURL=data:application/json;base64,ew...
+		const base64 = mapUrl.href.substring(mapUrl.href.indexOf(",") + 1);
+		const map = Buffer.from(base64, "base64").toString();
+		return { map, url: fileUrl.href };
+	} else {
+		const map = maybeGetFile(mapUrl);
+		if (map === undefined) return null;
+		return { map, url: mapUrl.href };
+	}
+}
+
+// `sourceMappingPrepareStackTrace` is initialised on the first call to
+// `getSourceMappingPrepareStackTrace()`. Subsequent calls to
+// `getSourceMappingPrepareStackTrace()` will not update it. We'd like to be
+// able to customise source map retrieval on each call though. Therefore, we
+// make `retrieveSourceMapOverride` a module level variable, so
+// `sourceMappingPrepareStackTrace` always has access to the latest override.
 let sourceMappingPrepareStackTrace: typeof Error.prepareStackTrace;
-function getSourceMappingPrepareStackTrace(): NonNullable<
-	typeof Error.prepareStackTrace
-> {
+let retrieveSourceMapOverride: RetrieveSourceMapFunction | undefined;
+
+function getSourceMappingPrepareStackTrace(
+	retrieveSourceMap?: RetrieveSourceMapFunction
+): NonNullable<typeof Error.prepareStackTrace> {
+	// Source mapping is synchronous, so setting a module level variable is fine
+	retrieveSourceMapOverride = retrieveSourceMap;
+	// If we already have a source mapper, return it
 	if (sourceMappingPrepareStackTrace !== undefined) {
 		return sourceMappingPrepareStackTrace;
 	}
@@ -31,6 +90,10 @@ function getSourceMappingPrepareStackTrace(): NonNullable<
 		redirectConflictingLibrary: false,
 		// Make sure we're using fresh copies of files each time we source map
 		emptyCacheBetweenOperations: true,
+		// Allow retriever to be overridden at prepare stack trace time
+		retrieveSourceMap(path) {
+			return retrieveSourceMapOverride?.(path) ?? null;
+		},
 	});
 	sourceMappingPrepareStackTrace = Error.prepareStackTrace;
 	assert(sourceMappingPrepareStackTrace !== undefined);
@@ -69,7 +132,10 @@ function callFrameToCallSite(frame: Protocol.Runtime.CallFrame): CallSite {
 }
 
 const placeholderError = new Error();
-export function getSourceMappedString(value: string): string {
+export function getSourceMappedString(
+	value: string,
+	retrieveSourceMap?: RetrieveSourceMapFunction
+): string {
 	// We could use `.replace()` here with a function replacer, but
 	// `getSourceMappingPrepareStackTrace()` clears its source map caches between
 	// operations. It's likely call sites in this `value` will share source maps,
@@ -80,7 +146,8 @@ export function getSourceMappedString(value: string): string {
 	// of the call site would've been replaced with the same thing.
 	const callSiteLines = Array.from(value.matchAll(CALL_SITE_REGEXP));
 	const callSites = callSiteLines.map(lineMatchToCallSite);
-	const sourceMappedStackTrace: string = getSourceMappingPrepareStackTrace()(
+	const prepareStack = getSourceMappingPrepareStackTrace(retrieveSourceMap);
+	const sourceMappedStackTrace: string = prepareStack(
 		placeholderError,
 		callSites
 	);
