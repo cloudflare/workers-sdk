@@ -953,8 +953,8 @@ importers:
   packages/playground-preview-worker:
     dependencies:
       hono:
-        specifier: ^3.3.2
-        version: 3.5.6
+        specifier: ^3.11.7
+        version: 3.11.7
       zod:
         specifier: ^3.22.3
         version: 3.22.3
@@ -1046,10 +1046,10 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.1.8
-        version: 0.1.8(hono@3.5.6)(zod@3.22.3)
+        version: 0.1.8(hono@3.11.7)(zod@3.22.3)
       hono:
-        specifier: ^3.5.6
-        version: 3.5.6
+        specifier: ^3.11.7
+        version: 3.11.7
       zod:
         specifier: ^3.22.3
         version: 3.22.3
@@ -1130,8 +1130,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       hono:
-        specifier: ^3.3.2
-        version: 3.5.6
+        specifier: ^3.11.7
+        version: 3.11.7
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
@@ -4860,13 +4860,13 @@ packages:
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
     dev: true
 
-  /@hono/zod-validator@0.1.8(hono@3.5.6)(zod@3.22.3):
+  /@hono/zod-validator@0.1.8(hono@3.11.7)(zod@3.22.3):
     resolution: {integrity: sha512-/Kd/p/dUVKM7/1TY3jafTV+ngwEh3fOLmXCJQKb9esWsCom5WOJaNmZYv8jeRhyipu1xBvmN5jceRA3Ev3rmQw==}
     peerDependencies:
       hono: 3.*
       zod: ^3.19.1
     dependencies:
-      hono: 3.5.6
+      hono: 3.11.7
       zod: 3.22.3
     dev: false
 
@@ -11719,8 +11719,8 @@ packages:
     resolution: {integrity: sha512-Yu+q/XWr2fFQ11tHxPq4p4EiNkb2y+lAacJNhAdRXVfRIcDH6gi7htWFnnlIzvqHMHoWeIsfXlNAjZInpAOJDA==}
     dev: true
 
-  /hono@3.5.6:
-    resolution: {integrity: sha512-ycTOpIZJ6yLbjzoE+ojsesC7G7ZXfGSoCIDyvqmzlHc5Mk4Aj48Ed9R5g7gw3v7rOkS81pjcYIvWef/karq1iA==}
+  /hono@3.11.7:
+    resolution: {integrity: sha512-TcfAq7IdipF+9coxnuzYlSSBXbm9mTyWjjagLCv/2ampboNcKJdi+XCK5G48mHQtpI5+9Rj3J4FfcGgw9vzIww==}
     engines: {node: '>=16.0.0'}
     dev: false
 

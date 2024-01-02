@@ -13,7 +13,7 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"hono": "^3.3.2",
+		"hono": "^3.11.7",
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
