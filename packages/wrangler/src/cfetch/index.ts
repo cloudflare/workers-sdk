@@ -1,16 +1,14 @@
 import { URLSearchParams } from "node:url";
 import { logger } from "../logger";
 import { ParseError } from "../parse";
+import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal, performApiFetch } from "./internal";
+import type { FetchError } from "./errors";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
 
-export interface FetchError {
-	code: number;
-	message: string;
-	error_chain?: FetchError[];
-}
+export type { FetchError };
 export interface FetchResult<ResponseType = unknown> {
 	success: boolean;
 	result: ResponseType;
@@ -164,6 +162,8 @@ function throwFetchError(
 	resource: string,
 	response: FetchResult<unknown>
 ): never {
+	for (const error of response.errors) maybeThrowFriendlyError(error);
+
 	const error = new ParseError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,
 		notes: [

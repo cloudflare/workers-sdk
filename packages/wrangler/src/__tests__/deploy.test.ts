@@ -4046,6 +4046,40 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should fail to deploy to the workers.dev domain if email is unverified", async () => {
+			writeWranglerToml({ workers_dev: true });
+			writeWorkerSource();
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockSubDomainRequest();
+			msw.use(
+				rest.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+					async (req, res, ctx) => {
+						return res.once(
+							ctx.json(
+								createFetchResult(null, /* success */ false, [
+									{
+										code: 10034,
+										message: "workers.api.error.email_verification_required",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("deploy ./index")).rejects.toMatchObject({
+				text: "Please verify your account's email address and try again.",
+				notes: [
+					{
+						text: "Check your email for a verification link, or login to https://dash.cloudflare.com and request a new one.",
+					},
+					{},
+				],
+			});
+		});
+
 		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async () => {
 			writeWranglerToml({
 				workers_dev: true,
