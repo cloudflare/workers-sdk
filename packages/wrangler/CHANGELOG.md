@@ -1,5 +1,32 @@
 # wrangler
 
+## 3.22.2
+
+### Patch Changes
+
+- [#4600](https://github.com/cloudflare/workers-sdk/pull/4600) [`4233e514`](https://github.com/cloudflare/workers-sdk/commit/4233e5149d7dafe44c22a59b33310744fc02efc6) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: apply source mapping to deployment validation errors
+
+  Previously if a Worker failed validation during `wrangler deploy`, the displayed error would reference locations in built JavaScript files. This made it more difficult to debug validation errors. This change ensures these errors are now source mapped, referencing locations in source files instead.
+
+* [#4440](https://github.com/cloudflare/workers-sdk/pull/4440) [`15717333`](https://github.com/cloudflare/workers-sdk/commit/157173338a9f6a0701fd47711ff321be0dcbb037) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: automatically create required directories for `wrangler r2 object get`
+
+  Previously, if you tried to use `wrangler r2 object get` with an object name containing a `/` or used the `--file` flag with a path containing a `/`, and the specified directory didn't exist, Wrangler would throw an `ENOENT` error. This change ensures Wrangler automatically creates required parent directories if they don't exist.
+
+- [#4592](https://github.com/cloudflare/workers-sdk/pull/4592) [`20da658e`](https://github.com/cloudflare/workers-sdk/commit/20da658ee3cc2c6684b68fd7b7da389dd5de6a0f) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: throw helpful error if email validation required
+
+  Previously, Wrangler would display the raw API error message and code if email validation was required during `wrangler deploy`. This change ensures a helpful error message is displayed instead, prompting users to check their emails or visit the dashboard for a verification link.
+
+* [#4597](https://github.com/cloudflare/workers-sdk/pull/4597) [`e1d50407`](https://github.com/cloudflare/workers-sdk/commit/e1d504077ab6b0bd996df58ebda76918c2fee076) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: suggest checking permissions on authentication error with API token set
+
+- [#4593](https://github.com/cloudflare/workers-sdk/pull/4593) [`c370026d`](https://github.com/cloudflare/workers-sdk/commit/c370026d3f07f7214e33aa44ad507fe1e97bdfdd) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: include messages from API in errors
+
+* [#4588](https://github.com/cloudflare/workers-sdk/pull/4588) [`4e5ed0b2`](https://github.com/cloudflare/workers-sdk/commit/4e5ed0b28383602db9aa48658811a01ccfb8e5c2) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: require worker name for rollback
+
+  Previously, Wrangler would fail with a cryptic error if you tried to run `wrangler rollback` outside of a directory containing a Wrangler configuration file with a `name` defined. This change validates that a worker name is defined, and allows you to set it from the command line using the `--name` flag.
+
+* Updated dependencies [[`c410ea14`](https://github.com/cloudflare/workers-sdk/commit/c410ea141f02f808ff3dddfa9ee21ccbb530acec)]:
+  - miniflare@3.20231218.0
+
 ## 3.22.1
 
 ### Patch Changes

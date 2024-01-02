@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.8.5
+
+### Patch Changes
+
+- [#4617](https://github.com/cloudflare/workers-sdk/pull/4617) [`45972200`](https://github.com/cloudflare/workers-sdk/commit/45972200e571bc48693fb678114c64827f15c4d4) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-vue` from `3.9.0` to `3.9.1`
+
+* [#4618](https://github.com/cloudflare/workers-sdk/pull/4618) [`10e267fc`](https://github.com/cloudflare/workers-sdk/commit/10e267fce70b45ae37070a5393a52cd9851de85b) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.5.2` to `4.6.0`
+
+- [#4679](https://github.com/cloudflare/workers-sdk/pull/4679) [`873d7dd6`](https://github.com/cloudflare/workers-sdk/commit/873d7dd6ec02e58d64838cc0389201af4232ca3e) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.1` to `1.3.2`
+
+* [#4680](https://github.com/cloudflare/workers-sdk/pull/4680) [`ba298d08`](https://github.com/cloudflare/workers-sdk/commit/ba298d085c8e5c69cc8d944160fa7487d969b953) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.4.0` to `2.4.1`
+
+- [#4681](https://github.com/cloudflare/workers-sdk/pull/4681) [`6fb72f8b`](https://github.com/cloudflare/workers-sdk/commit/6fb72f8bd0be07b66d3226b3ba5d7d44cb841104) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `6.0.3` to `6.0.5`
+
+* [#4627](https://github.com/cloudflare/workers-sdk/pull/4627) [`44cbd66f`](https://github.com/cloudflare/workers-sdk/commit/44cbd66ff2283384569756ef578b08ec1556cdb8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make the workerd compatibility date retrieval more stable by fetching it directly from the npm registry
+
 ## 2.8.4
 
 ### Patch Changes
