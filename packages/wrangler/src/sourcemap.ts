@@ -144,11 +144,13 @@ export function getSourceMappedString(
 		callSites
 	);
 	const sourceMappedCallSiteLines = sourceMappedStackTrace.split("\n").slice(1);
+
 	for (let i = 0; i < callSiteLines.length; i++) {
-		value = value.replace(
-			callSiteLines[i][0],
-			sourceMappedCallSiteLines[i].substring(4) // Trim indent from stack
-		);
+		// If a call site doesn't have a file name, it's likely invalid, so don't
+		// apply source mapping (see cloudflare/workers-sdk#4668)
+		if (callSites[i].getFileName() === undefined) continue;
+
+		value = value.replace(callSiteLines[i][0], sourceMappedCallSiteLines[i]);
 	}
 	return value;
 }
@@ -177,7 +179,7 @@ export function getSourceMappedString(
  */
 
 const CALL_SITE_REGEXP =
-	/at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/g;
+	/ {4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/g;
 function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	let object: string | null = null;
 	let method: string | null = null;

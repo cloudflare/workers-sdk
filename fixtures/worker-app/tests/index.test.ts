@@ -43,6 +43,11 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(output).toMatch(
 			/Error: logged error three.+fixtures\/worker-app\/src\/log.ts:9:23/s
 		);
+
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4668
+		expect(output).toContain("some normal text to log");
+		expect(output).toContain("text with at in the middle");
+		expect(output).toContain("more text with    at in the middle");
 	});
 
 	it("renders pretty error after logging", async ({ expect }) => {
