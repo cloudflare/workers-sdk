@@ -8,6 +8,17 @@ export const config = {
 }
 
 export default async function handler(req: NextRequest) {
+	// https://developers.cloudflare.com/workers/configuration/bindings/
+	// In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
+	// are exposed via process.env, as shown below:
+	//
+  // const myKv = process.env['MY_KV_NAMESPACE'];
+  // await myKv.put('foo', 'bar');
+  // const valueFromKv = await myKv.get('foo');
+	//
+  // Each binding must be configured in your project's next.config.js file:
+	// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+
   return new Response(JSON.stringify({ name: 'John Doe' }))
 }
 `;
@@ -20,6 +31,17 @@ export const config = {
 }
 
 export default async function handler(req) {
+	// https://developers.cloudflare.com/workers/configuration/bindings/
+	// In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
+	// are exposed via process.env, as shown below:
+	//
+  // const myKv = process.env['MY_KV_NAMESPACE'];
+  // await myKv.put('foo', 'bar');
+  // const valueFromKv = await myKv.get('foo');
+	//
+  // Each binding must be configured in your project's next.config.js file:
+	// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+
   return new Response(JSON.stringify({ name: 'John Doe' }))
 }
 `;
@@ -32,6 +54,18 @@ import type { NextRequest } from 'next/server'
 export const runtime = 'edge'
 
 export async function GET(request: NextRequest) {
+	// https://developers.cloudflare.com/workers/configuration/bindings/
+	// In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
+	// are exposed via process.env, as shown below:
+	//
+  // const myKv = process.env['MY_KV_NAMESPACE'];
+  // await myKv.put('foo', 'bar');
+  // const valueFromKv = await myKv.get('foo');
+	//
+  // Each binding must be configured in your project's next.config.js file:
+	// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+
+
   return new Response(JSON.stringify({ name: 'John Doe' }))
 }
 `;
@@ -42,6 +76,17 @@ export const apiAppDirHelloJs = `
 export const runtime = 'edge'
 
 export async function GET(request) {
+	// https://developers.cloudflare.com/workers/configuration/bindings/
+	// In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
+	// are exposed via process.env, as shown below:
+	//
+  // const myKv = process.env['MY_KV_NAMESPACE'];
+  // await myKv.put('foo', 'bar');
+  // const valueFromKv = await myKv.get('foo');
+	//
+  // Each binding must be configured in your project's next.config.js file:
+	// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+
   return new Response(JSON.stringify({ name: 'John Doe' }))
 }
 `;
@@ -169,3 +214,27 @@ const styles = {
   },
 } as const;
 `;
+
+
+export const nextConfig = `
+/** @type {import('next').NextConfig} */
+const nextConfig = {}
+
+module.exports = nextConfig
+
+// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+// This code ensures that bindings to resources like
+// KV, R2, Durable Objects, Queues, D1 are available in
+// local development when running the next dev command, which
+// runs a Node.js based local development server.
+if (process.env.NODE_ENV === 'development') {
+    import('@cloudflare/next-on-pages/__experimental__next-dev').then(({ setupDevBindings }) => {
+
+				// https://developers.cloudflare.com/workers/configuration/bindings/
+				// Each binding you want to expose via process.env must be configured via setupDevBindings()
+        setupDevBindings({
+            kvNamespaces: ['MY_KV_NAMESPACE'],
+        });
+    });
+}
+`
