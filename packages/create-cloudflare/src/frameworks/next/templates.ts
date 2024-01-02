@@ -1,14 +1,16 @@
-const bindings = `
+const handlerCode = `
 	// https://developers.cloudflare.com/workers/configuration/bindings/
 	// In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
 	// are exposed via process.env, as shown below:
 	//
-	// const myKv = process.env['MY_KV_NAMESPACE'];
-	// await myKv.put('foo', 'bar');
-	// const valueFromKv = await myKv.get('foo');
-	//
+	const myKv = process.env['MY_KV_NAMESPACE'];
+	await myKv.put('foo', 'bar');
+	const valueFromKv = await myKv.get('foo');
+
 	// Each binding must be configured in your project's next.config.js file:
 	// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+
+	return new Response(JSON.stringify({ value: valueFromKv }))
 `;
 
 export const apiPagesDirHelloTs = `
@@ -21,9 +23,7 @@ export const config = {
 }
 
 export default async function handler(req: NextRequest) {
-${bindings}
-
-  return new Response(JSON.stringify({ name: 'John Doe' }))
+${handlerCode}
 }
 `;
 
@@ -35,9 +35,7 @@ export const config = {
 }
 
 export default async function handler(req) {
-${bindings}
-
-  return new Response(JSON.stringify({ name: 'John Doe' }))
+${handlerCode}
 }
 `;
 
@@ -49,10 +47,8 @@ import type { NextRequest } from 'next/server'
 export const runtime = 'edge'
 
 export async function GET(request: NextRequest) {
-${bindings}
+${handlerCode}
 
-
-  return new Response(JSON.stringify({ name: 'John Doe' }))
 }
 `;
 
@@ -62,9 +58,7 @@ export const apiAppDirHelloJs = `
 export const runtime = 'edge'
 
 export async function GET(request) {
-${bindings}
-
-  return new Response(JSON.stringify({ name: 'John Doe' }))
+${handlerCode}
 }
 `;
 
