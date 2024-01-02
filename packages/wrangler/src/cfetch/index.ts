@@ -166,9 +166,10 @@ function throwFetchError(
 ): never {
 	const error = new ParseError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,
-		notes: response.errors.map((err) => ({
-			text: renderError(err),
-		})),
+		notes: [
+			...response.errors.map((err) => ({ text: renderError(err) })),
+			...response.messages.map((text) => ({ text })),
+		],
 	});
 	// add the first error code directly to this error
 	// so consumers can use it for specific behaviour
