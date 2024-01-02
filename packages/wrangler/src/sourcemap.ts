@@ -14,10 +14,12 @@ function maybeGetFile(filePath: string | URL) {
 	}
 }
 
-export type RetrieveSourceMap = NonNullable<Options["retrieveSourceMap"]>;
+export type RetrieveSourceMapFunction = NonNullable<
+	Options["retrieveSourceMap"]
+>;
 export function maybeRetrieveFileSourceMap(
 	filePath?: string
-): ReturnType<RetrieveSourceMap> {
+): ReturnType<RetrieveSourceMapFunction> {
 	if (filePath === undefined) return null;
 	const contents = maybeGetFile(filePath);
 	if (contents === undefined) return null;
@@ -48,9 +50,10 @@ export function maybeRetrieveFileSourceMap(
 }
 
 let sourceMappingPrepareStackTrace: typeof Error.prepareStackTrace;
-let retrieveSourceMapOverride: RetrieveSourceMap | undefined;
+let retrieveSourceMapOverride: RetrieveSourceMapFunction | undefined;
+
 function getSourceMappingPrepareStackTrace(
-	retrieveSourceMap?: RetrieveSourceMap
+	retrieveSourceMap?: RetrieveSourceMapFunction
 ): NonNullable<typeof Error.prepareStackTrace> {
 	// Source mapping is synchronous, so setting a module level variable is fine
 	retrieveSourceMapOverride = retrieveSourceMap;
@@ -125,7 +128,7 @@ function callFrameToCallSite(frame: Protocol.Runtime.CallFrame): CallSite {
 const placeholderError = new Error();
 export function getSourceMappedString(
 	value: string,
-	retrieveSourceMap?: RetrieveSourceMap
+	retrieveSourceMap?: RetrieveSourceMapFunction
 ): string {
 	// We could use `.replace()` here with a function replacer, but
 	// `getSourceMappingPrepareStackTrace()` clears its source map caches between

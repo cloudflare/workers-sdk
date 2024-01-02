@@ -48,7 +48,7 @@ import type { Entry } from "../deployment-bundle/entry";
 import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
-import type { RetrieveSourceMap } from "../sourcemap";
+import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
 	config: Config;
@@ -714,7 +714,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							if (moduleName === module.name) return module.filePath;
 						}
 					};
-					const retrieveSourceMap: RetrieveSourceMap = (moduleName) =>
+					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
 						maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
 
 					err.notes[0].text = getSourceMappedString(
