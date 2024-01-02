@@ -79,6 +79,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	const appDirPath = getAppDirPath(projectName);
 	if (appDirPath) {
 		// Add a custom app not-found edge route as recommended in next-on-pages
+		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
 		const notFoundPath = `${appDirPath}/not-found.${usesTs ? "tsx" : "js"}`;
 		if (!existsSync(notFoundPath)) {
 			const notFoundContent = usesTs ? appDirNotFoundTs : appDirNotFoundJs;
