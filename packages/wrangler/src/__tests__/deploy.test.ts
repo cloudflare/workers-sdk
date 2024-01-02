@@ -8324,6 +8324,9 @@ export default{
 		  Authentication error [code: 10000]
 
 
+		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+		Please ensure it has the correct permissions for this operation.
+
 		Getting User settings...
 		👋 You are logged in with an API Token, associated with the email user@example.com!
 		┌───────────────┬────────────┐

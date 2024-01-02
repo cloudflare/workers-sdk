@@ -1,6 +1,7 @@
 import module from "node:module";
 import os from "node:os";
 import TOML from "@iarna/toml";
+import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
@@ -56,7 +57,13 @@ import {
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	getAuthFromEnv,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
 import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
@@ -724,6 +731,13 @@ export async function main(argv: string[]): Promise<void> {
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
 			logger.log(formatMessage(e));
+			const envAuth = getAuthFromEnv();
+			if (envAuth !== undefined && "apiToken" in envAuth) {
+				const message =
+					"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.\n" +
+					"Please ensure it has the correct permissions for this operation.\n";
+				logger.log(chalk.yellow(message));
+			}
 			await whoami();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
