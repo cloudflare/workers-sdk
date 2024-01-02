@@ -7,6 +7,7 @@ import * as TOML from "@iarna/toml";
 import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
+import dedent from "ts-dedent";
 import { FormData } from "undici";
 import {
 	printBundleSize,
@@ -1854,15 +1855,15 @@ addEventListener('fetch', event => {});`
 				writeWranglerToml();
 				fs.writeFileSync(
 					`index.ts`,
-					`interface Env {
-	THING: string;
-}
-x;
-export default {
-	fetch() {
-		return new Response("body");
-	}
-}`
+					dedent`interface Env {
+						THING: string;
+					}
+					x;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
 				);
 				mockDeployWithValidationError(
 					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
@@ -1882,10 +1883,10 @@ export default {
 
 				fs.writeFileSync(
 					"dep.ts",
-					`interface Env {
-}
-y;
-export default "message";`
+					dedent`interface Env {
+					}
+					y;
+					export default "message";`
 				);
 				await esbuild.build({
 					bundle: true,
@@ -1897,12 +1898,12 @@ export default "message";`
 
 				fs.writeFileSync(
 					"index.js",
-					`import dep from "./dep.js";
-export default {
-	fetch() {
-		return new Response(dep);
-	}
-}`
+					dedent`import dep from "./dep.js";
+					export default {
+						fetch() {
+							return new Response(dep);
+						}
+					}`
 				);
 
 				mockDeployWithValidationError(
@@ -1922,13 +1923,13 @@ export default {
 
 				fs.writeFileSync(
 					"index.ts",
-					`interface Env {}
-z;
-export default {
-	fetch() {
-		return new Response("body");
-	}
-}`
+					dedent`interface Env {}
+					z;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
 				);
 				await esbuild.build({
 					bundle: true,
