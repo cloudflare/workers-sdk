@@ -49,6 +49,12 @@ export function maybeRetrieveFileSourceMap(
 	}
 }
 
+// `sourceMappingPrepareStackTrace` is initialised on the first call to
+// `getSourceMappingPrepareStackTrace()`. Subsequent calls to
+// `getSourceMappingPrepareStackTrace()` will not update it. We'd like to be
+// able to customise source map retrieval on each call though. Therefore, we
+// make `retrieveSourceMapOverride` a module level variable, so
+// `sourceMappingPrepareStackTrace` always has access to the latest override.
 let sourceMappingPrepareStackTrace: typeof Error.prepareStackTrace;
 let retrieveSourceMapOverride: RetrieveSourceMapFunction | undefined;
 
