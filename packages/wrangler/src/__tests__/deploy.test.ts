@@ -1836,42 +1836,116 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should source map validation errors", async () => {
-			writeWranglerToml();
-			fs.writeFileSync(
-				`index.ts`,
-				`interface Env {
+		describe("should source map validation errors", () => {
+			function mockDeployWithValidationError(message: string) {
+				const handler = rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					async (req, res, ctx) => {
+						const body = createFetchResult(null, false, [
+							{ code: 10021, message },
+						]);
+						return res(ctx.json(body));
+					}
+				);
+				msw.use(handler);
+			}
+
+			it("with TypeScript source file", async () => {
+				writeWranglerToml();
+				fs.writeFileSync(
+					`index.ts`,
+					`interface Env {
 	THING: string;
 }
 x;
 export default {
-	async fetch() {
+	fetch() {
 		return new Response("body");
 	}
 }`
-			);
-			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(_, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult(null, false, [
-									{
-										code: 10021,
-										message:
-											"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n",
-									},
-								])
-							)
-						);
-					}
-				)
-			);
-			mockSubDomainRequest();
+				);
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
 
-			await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
-				notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+				await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+				});
+			});
+
+			it("with additional modules", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
+				});
+
+				fs.writeFileSync(
+					"dep.ts",
+					`interface Env {
+}
+y;
+export default "message";`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("dep.ts")],
+					outdir: process.cwd(),
+					sourcemap: true,
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					`import dep from "./dep.js";
+export default {
+	fetch() {
+		return new Response(dep);
+	}
+}`
+				);
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: y is not defined\n  at dep.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("dep.ts:3:1") }, {}],
+				});
+			});
+
+			it("with inline source map", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+				});
+
+				fs.writeFileSync(
+					"index.ts",
+					`interface Env {}
+z;
+export default {
+	fetch() {
+		return new Response("body");
+	}
+}`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("index.ts")],
+					outdir: process.cwd(),
+					sourcemap: "inline",
+				});
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: y is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:2:1") }, {}],
+				});
 			});
 		});
 	});
