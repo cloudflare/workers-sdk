@@ -734,7 +734,7 @@ export async function main(argv: string[]): Promise<void> {
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
 				const message =
-					"📎 It looks like you've set a custom API token with an environment variable.\n" +
+					"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.\n" +
 					"Please ensure it has the correct permissions for this operation.\n";
 				logger.log(chalk.yellow(message));
 			}
