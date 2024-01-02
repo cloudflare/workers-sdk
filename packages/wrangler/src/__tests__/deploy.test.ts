@@ -1940,7 +1940,7 @@ addEventListener('fetch', event => {});`
 				});
 
 				mockDeployWithValidationError(
-					"Uncaught ReferenceError: y is not defined\n  at index.js:2:1\n"
+					"Uncaught ReferenceError: z is not defined\n  at index.js:2:1\n"
 				);
 				mockSubDomainRequest();
 
