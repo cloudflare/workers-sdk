@@ -29,6 +29,9 @@ export interface TypedSqlStorage {
 export interface TypedSqlStorageCursor<R extends TypedResult = TypedResult> {
 	raw(): IterableIterator<R[keyof R][]>;
 	[Symbol.iterator](): IterableIterator<R>;
+	readonly columnNames: string[];
+	readonly rowsRead: number;
+	readonly rowsWritten: number;
 }
 export interface TypedSqlStorageStatement<
 	P extends TypedValue[] = TypedValue[],

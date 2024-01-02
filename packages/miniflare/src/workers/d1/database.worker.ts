@@ -37,8 +37,10 @@ interface D1SuccessResponse {
 		duration: number;
 		changes: number;
 		last_row_id: number;
-		changed_db?: boolean;
-		size_after?: number;
+		changed_db: boolean;
+		size_after: number;
+		rows_read: number;
+		rows_written: number;
 	};
 }
 interface D1FailureResponse {
@@ -143,6 +145,8 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 				last_row_id: afterChanges.lastRowId,
 				changed_db: changed,
 				size_after: afterSize,
+				rows_read: cursor.rowsRead,
+				rows_written: cursor.rowsWritten,
 			},
 		};
 	};
