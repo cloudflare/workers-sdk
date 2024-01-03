@@ -18,22 +18,10 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const configure = async (ctx: PagesGeneratorContext) => {
 	process.chdir(ctx.project.path);
 
-	// Install the pages adapter
-	const pkg = "solid-start-cloudflare-pages";
-	await installPackages([pkg], {
-		dev: true,
-		startText: "Adding the Cloudflare Pages adapter",
-		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
-	});
-
-	// modify the vite config
-	const viteConfigPath = usesTypescript()
-		? `./vite.config.ts`
-		: `./vite.config.js`;
-	writeFile(viteConfigPath, viteConfig);
-	updateStatus(
-		`Adding the Cloudflare Pages adapter to ${blue(viteConfigPath)}`
-	);
+	// Note: we should update the vite.config.ts/js file here and set the preset on
+	// start.server.preset (as described in the solidStart docs: https://start.solidjs.com/api/vite#configuring-your-application)
+	// but that doesn't seem to work, so for now we just set the PRESET env variable in the build script
+	// later we should amend this when it's properly handled on solidStart's side
 };
 
 const config: FrameworkConfig = {
@@ -41,8 +29,9 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Solid",
 	getPackageScripts: async () => ({
+		build: (cmd) => `PRESET=cloudflare-pages ${cmd}`,
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist/public`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
 	}),
 };
 export default config;
