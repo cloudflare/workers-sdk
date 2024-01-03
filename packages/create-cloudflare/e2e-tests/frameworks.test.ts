@@ -121,7 +121,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			quarantine: true,
 		},
 		svelte: {
 			expectResponseToContain: "SvelteKit app",
