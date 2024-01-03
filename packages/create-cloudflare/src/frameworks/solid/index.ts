@@ -1,9 +1,7 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { brandColor, dim, blue } from "@cloudflare/cli/colors";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
+import { logRaw } from "@cloudflare/cli";
+import { runFrameworkGenerator } from "helpers/command";
+import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { viteConfig } from "./templates";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
