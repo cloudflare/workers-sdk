@@ -30,6 +30,8 @@ type Env = {
 		| undefined; // Won't have a `Fetcher` for every possible `string`
 };
 
+const encoder = new TextEncoder();
+
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env
@@ -52,7 +54,6 @@ function getUserRequest(
 		CoreHeaders.PROXY_SHARED_SECRET
 	);
 	if (proxySharedSecret) {
-		const encoder = new TextEncoder();
 		const secretFromHeader = encoder.encode(proxySharedSecret);
 		const configuredSecret = env[CoreBindings.DATA_PROXY_SHARED_SECRET];
 		if (
@@ -254,6 +255,7 @@ export default <ExportedHandler<Env>>{
 			if (e instanceof HttpError) {
 				return e.toResponse();
 			}
+			throw e;
 		}
 		const url = new URL(request.url);
 		const service = getTargetService(request, url, env);
