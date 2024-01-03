@@ -32,7 +32,9 @@ export default {
 			new Request("http://example.com", { method: "POST", body: "foo" })
 		);
 
-		return new Response(`${request.url} ${now()}`);
+		return new Response(
+			`${request.url} ${now()} ${request.headers.get("Host")}`
+		);
 	},
 
 	/**

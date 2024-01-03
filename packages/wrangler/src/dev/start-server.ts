@@ -412,7 +412,10 @@ export async function startLocalServer(
 					hostname: props.localUpstream,
 					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 				},
-				headers: {},
+				headers: {
+					// Passing this signature from Proxy Worker allows the User Worker to trust the request.
+					"MF-Proxy-Shared-Secret": event.proxyToUserWorkerAuthenticationSecret,
+				},
 				liveReload: props.liveReload,
 				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
 				// workers written in "service-worker" format still need to proxy logs to the ProxyController
