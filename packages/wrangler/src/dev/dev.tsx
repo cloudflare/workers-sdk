@@ -216,13 +216,9 @@ function InteractiveDevSession(props: DevProps) {
 	useTunnel(toggles.tunnel);
 
 	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
-		if (newIp !== props.initialIp || newPort !== props.initialPort) {
-			ip = newIp;
-			port = newPort;
-			if (props.onReady) {
-				props.onReady(newIp, newPort, proxyData);
-			}
-		}
+		ip = newIp;
+		port = newPort;
+		props.onReady?.(newIp, newPort, proxyData);
 	};
 
 	return (
