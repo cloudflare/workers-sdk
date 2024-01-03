@@ -719,9 +719,11 @@ export async function main(argv: string[]): Promise<void> {
 	addBreadcrumb(`wrangler ${argv.join(" ")}`);
 
 	const wrangler = createCLIParser(argv);
+	let cliHandlerThrew = false;
 	try {
 		await wrangler.parse();
 	} catch (e) {
+		cliHandlerThrew = true;
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
@@ -783,17 +785,25 @@ export async function main(argv: string[]): Promise<void> {
 		}
 		throw e;
 	} finally {
-		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
-		// IPC messages from this process are propagated through the bootstrapper.
-		// Make sure this channel is closed once it's no longer needed, so we can
-		// cleanly exit. Note, we don't want to disconnect if this file was imported
-		// in Jest, as that would stop communication with the test runner.
-		if (typeof jest === "undefined") process.disconnect?.();
+		try {
+			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
+			// so IPC messages from this process are propagated through the
+			// bootstrapper. Normally, Node's SIGINT handler would close this for us,
+			// but interactive dev mode enables raw mode on stdin which disables the
+			// built-in handler. Make sure this channel is closed once it's no longer
+			// needed, so we can cleanly exit. Note, we don't want to disconnect if
+			// this file was imported in Jest, as that would stop communication with
+			// the test runner.
+			if (typeof jest === "undefined") process.disconnect?.();
 
-		// Close Sentry after disconnecting the IPC channel. Doing this before leads
-		// to hanging `workerd` processes.
-		// TODO(soon): work out why
-		await closeSentry();
+			await closeSentry();
+		} catch (e) {
+			logger.error(e);
+			// Only re-throw if we haven't already re-thrown an exception from a
+			// command handler.
+			// eslint-disable-next-line no-unsafe-finally
+			if (!cliHandlerThrew) throw e;
+		}
 	}
 }
 
