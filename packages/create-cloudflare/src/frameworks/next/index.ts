@@ -55,21 +55,18 @@ const getApiTemplate = (
 const configure = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
 
-	let probedPath = "";
-	try {
-		probedPath = probePaths([
-			`${projectName}/pages/api`,
-			`${projectName}/src/pages/api`,
-			`${projectName}/src/app/api`,
-			`${projectName}/app/api`,
-			`${projectName}/src/app`,
-			`${projectName}/app`,
-		]);
-	} catch {
-		crash("Could not find the `/api` or `/app` directory");
-	}
+	const path = probePaths([
+		`${projectName}/pages/api`,
+		`${projectName}/src/pages/api`,
+		`${projectName}/src/app/api`,
+		`${projectName}/app/api`,
+		`${projectName}/src/app`,
+		`${projectName}/app`,
+	]);
 
-	const path = probedPath;
+	if (!path) {
+		return crash("Could not find the `/api` or `/app` directory");
+	}
 
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
 	const apiPath = path.replace(/\/app$/, "/app/api");
