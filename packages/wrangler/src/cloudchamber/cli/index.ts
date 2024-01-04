@@ -1,5 +1,5 @@
 import {
-	error,
+	crash,
 	updateStatus,
 	log,
 	endSection,
@@ -165,7 +165,7 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		error(err.message);
+		crash(err.message);
 		return;
 	}
 
@@ -179,7 +179,7 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	}
 
 	if (eventPlacement.event.name == "ImagePullError") {
-		error(
+		crash(
 			"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?",
 			`Run ${brandColor(
 				process.argv0 + " cloudchamber modify " + deployment.id
@@ -217,7 +217,7 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		error(err.message);
+		crash(err.message);
 		return;
 	}
 
@@ -276,7 +276,7 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	}
 
 	if (err) {
-		error(err.message);
+		crash(err.message);
 		return;
 	}
 
@@ -312,7 +312,7 @@ export async function waitForPlacement(deployment: DeploymentV2) {
 					DeploymentsService.getDeploymentV2(deployment.id)
 				);
 				if (getDeploymentError) {
-					error(
+					crash(
 						"Couldn't retrieve a new deployment: " + getDeploymentError.message
 					);
 					return;

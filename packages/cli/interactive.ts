@@ -2,14 +2,15 @@ import {
 	ConfirmPrompt,
 	isCancel,
 	MultiSelectPrompt,
-	Prompt,
 	SelectPrompt,
 	TextPrompt,
 } from "@clack/core";
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
+import SelectRefreshablePrompt from "./select-list";
 import { cancel, newline, shapes, space, status } from "./index";
-import SelectRefreshablePrompt, { OptionWithDetails } from "./select-list";
+import type { OptionWithDetails } from "./select-list";
+import type { Prompt } from "@clack/core";
 
 const logUpdate = createLogUpdate(process.stdout);
 
@@ -30,7 +31,7 @@ export type BasePromptConfig = {
 	// Further clarifies the question
 	helpText?: string;
 	// The value to use by default
-	defaultValue?: string | boolean | string[];
+	defaultValue?: Arg;
 	// The status label to be shown after submitting
 	label: string;
 	// Pretty-prints the value in the interactive prompt
@@ -280,11 +281,7 @@ const getSelectRenderers = (
 				return options.length - i <= maxItemsPerPage;
 			}
 
-			if (i >= cursor && cursor + maxItemsPerPage > i) {
-				return true;
-			}
-
-			return false;
+			return cursor + maxItemsPerPage > i;
 		};
 
 		return [
@@ -357,20 +354,20 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 			const isInListOfValues =
 				Array.isArray(value) && value.includes(optionValue);
 			const color = isInListOfValues || active ? blue : white;
-			const text = active
-				? color.underline(optionLabel?.toString() ?? "")
-				: color(optionLabel?.toString() ?? "");
+			const text = active ? color.underline(optionLabel) : color(optionLabel);
 
 			const indicator =
 				isInListOfValues || (active && !Array.isArray(value))
 					? color(shapes.radioActive)
 					: color(shapes.radioInactive);
 
+			const indicatorMargin = 2;
+			const detailBulletpointMargin = indicatorMargin + 4;
 			return [
-				`${space(2)}${indicator} ${text}`,
+				`${space(indicatorMargin)}${indicator} ${text}`,
 				...opt.details.map(
 					(detail, j) =>
-						`${space(6)}${
+						`${space(detailBulletpointMargin)}${
 							j === opt.details.length - 1 ? gray(shapes.corners.bl) : grayBar
 						} ${detail}`
 				),
@@ -384,19 +381,23 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 			size: 0,
 			options: [],
 		};
-		for (let index = 0; index < options.length; index++) {
-			const option = options[index];
-			if (current.size + option.details.length + 1 > rows - 6) {
+		const VERTICAL_MARGIN = 6;
+		for (const option of options) {
+			// If current accumulation of options + title row + option details size
+			// is bigger than console rows substracted by a bit of vertical margin,
+			// add a new page.
+			const optionHeight = option.details.length + 1;
+			if (current.size + optionHeight > rows - VERTICAL_MARGIN) {
 				pages.push(current.options);
-				current = { size: option.details.length + 1, options: [option] };
+				current = { size: optionHeight, options: [option] };
 				continue;
 			}
 
-			current.size += option.details.length + 1;
+			current.size += optionHeight;
 			current.options.push(option);
 		}
 
-		// add the last current
+		// add the last current as the last page
 		if (current.size !== 0) {
 			pages.push(current.options);
 		}

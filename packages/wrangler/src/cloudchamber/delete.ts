@@ -1,4 +1,4 @@
-import { startSection, error, endSection, cancel } from "@cloudflare/cli";
+import { startSection, crash, endSection, cancel } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { DeploymentsService } from "./client";
@@ -63,7 +63,7 @@ async function handleDeleteCommand(
 		DeploymentsService.deleteDeploymentV2(deployment.id)
 	);
 	if (err) {
-		error(
+		crash(
 			`There has been an internal error deleting your deployment.\n ${err.message}`
 		);
 		return;

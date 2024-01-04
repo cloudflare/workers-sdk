@@ -2,7 +2,7 @@ import { readdir, stat, readFile } from "fs/promises";
 import { homedir, userInfo } from "os";
 import { exit } from "process";
 import {
-	error,
+	crash,
 	updateStatus,
 	log,
 	startSection,
@@ -374,7 +374,7 @@ export async function promptForSSHKey(
 	);
 	stop();
 	if (err != null) {
-		error("Error adding your public ssh key: " + err.message);
+		crash("Error adding your public ssh key: " + err.message);
 		exit(1);
 	}
 

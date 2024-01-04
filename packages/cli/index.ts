@@ -4,7 +4,6 @@ import {
 	dim,
 	gray,
 	white,
-	red,
 	hidden,
 	bgRed,
 	bgYellow,
@@ -129,15 +128,12 @@ export const stripAnsi = (str: string) => {
 	return str.replace(regex, "");
 };
 
-export const crash: (msg?: string) => never = (msg) => {
-	if (msg) {
-		process.stderr.write(red(msg));
-		process.stderr.write("\n");
-	}
+export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
+	error(msg, extra);
 	exit(1);
 };
 
-export const error = (msg?: string, extra?: string): never => {
+export const error = (msg?: string, extra?: string) => {
 	if (msg) {
 		process.stderr.write(
 			`${gray(shapes.corners.bl)} ${status.error} ${dim(msg)}\n${
@@ -145,6 +141,4 @@ export const error = (msg?: string, extra?: string): never => {
 			}`
 		);
 	}
-
-	exit(1);
 };

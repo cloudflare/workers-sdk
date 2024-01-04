@@ -1,5 +1,5 @@
 import { getRenderers, inputPrompt } from "./interactive";
-import { logRaw } from ".";
+import { crash, logRaw } from ".";
 import type { Arg, PromptConfig } from "./interactive";
 
 export const processArgument = async <T>(
@@ -12,7 +12,10 @@ export const processArgument = async <T>(
 
 	// If the value has already been set via args, use that
 	if (value !== undefined) {
-		promptConfig.validate?.(value);
+		const error = promptConfig.validate?.(value);
+		if (error) {
+			crash(error);
+		}
 
 		const lines = renderSubmitted({ value });
 		logRaw(lines.join("\n"));

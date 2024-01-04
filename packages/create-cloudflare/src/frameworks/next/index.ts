@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from "fs";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import {
 	installPackages,
@@ -28,7 +29,6 @@ import {
 	readme,
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
-import { processArgument } from "@cloudflare/cli/args";
 
 const { npm, npx } = detectPackageManager();
 
