@@ -27,7 +27,7 @@ import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
-import { Local } from "./local";
+import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
@@ -386,6 +386,14 @@ function DevSession(props: DevSessionProps) {
 		const url = await proxyWorker.ready;
 		finalIp = url.hostname;
 		finalPort = parseInt(url.port);
+
+		if (props.local) {
+			await maybeRegisterLocalWorker(
+				url,
+				props.name,
+				proxyData.internalDurableObjects
+			);
+		}
 
 		if (process.send) {
 			process.send(
