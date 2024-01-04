@@ -2,14 +2,15 @@ import {
 	ConfirmPrompt,
 	isCancel,
 	MultiSelectPrompt,
-	Prompt,
 	SelectPrompt,
 	TextPrompt,
 } from "@clack/core";
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
+import SelectRefreshablePrompt from "./select-list";
 import { cancel, newline, shapes, space, status } from "./index";
-import SelectRefreshablePrompt, { OptionWithDetails } from "./select-list";
+import type { OptionWithDetails } from "./select-list";
+import type { Prompt } from "@clack/core";
 
 const logUpdate = createLogUpdate(process.stdout);
 

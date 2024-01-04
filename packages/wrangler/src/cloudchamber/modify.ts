@@ -22,7 +22,7 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { Deployment, DeploymentV2, SSHPublicKeyID } from "./client";
+import type { DeploymentV2, SSHPublicKeyID } from "./client";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs

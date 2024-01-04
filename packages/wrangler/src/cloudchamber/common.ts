@@ -1,6 +1,6 @@
 import { mkdir } from "fs/promises";
 import { exit } from "process";
-import { error, logRaw, space, status, updateStatus } from "@cloudflare/cli";
+import { crash, logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { dim, brandColor } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { version as wranglerVersion } from "../../package.json";
@@ -170,7 +170,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
 		const [, err] = await wrap(requireAuth(config));
 		if (err) {
-			error("authenticating with the Cloudflare API:", err.message);
+			crash("authenticating with the Cloudflare API:", err.message);
 			return;
 		}
 	}
@@ -178,14 +178,14 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	// Get the loaded API token
 	const token = getAPIToken();
 	if (!token) {
-		error("unexpected apiToken not existing in credentials");
+		crash("unexpected apiToken not existing in credentials");
 		exit(1);
 	}
 
 	const val = "apiToken" in token ? token.apiToken : null;
 	// Don't try to support this method of authentication
 	if (!val) {
-		error(
+		crash(
 			"we don't allow for authKey/email credentials, use `wrangler login` or CLOUDFLARE_API_TOKEN env variable to authenticate"
 		);
 	}
@@ -197,14 +197,14 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	OpenAPI.CREDENTIALS = "omit";
 	const [base, errApiURL] = await wrap(getAPIUrl(config));
 	if (errApiURL) {
-		error("getting the API url:" + errApiURL.message);
+		crash("getting the API url:" + errApiURL.message);
 		return;
 	}
 
 	OpenAPI.BASE = base;
 	OpenAPI.HEADERS = headers;
 	const [, err] = await wrap(loadAccountSpinner({ json }));
-	if (err) error("loading Cloudchamber account failed:" + err.message);
+	if (err) crash("loading Cloudchamber account failed:" + err.message);
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
@@ -300,23 +300,23 @@ export function renderDeploymentMutationError(
 	err: Error
 ) {
 	if (!(err instanceof ApiError)) {
-		error(err.message);
+		crash(err.message);
 		return;
 	}
 
 	if (typeof err.body === "string") {
-		error("There has been an internal error, please try again!");
+		crash("There has been an internal error, please try again!");
 		return;
 	}
 
 	if (!("error" in err.body)) {
-		error(err.message);
+		crash(err.message);
 		return;
 	}
 
 	const errorMessage = err.body.error;
 	if (!(errorMessage in DeploymentMutationError)) {
-		error(err.message);
+		crash(err.message);
 		return;
 	}
 
@@ -359,7 +359,7 @@ export function renderDeploymentMutationError(
 				"You have to configure the domain of the image you're trying to set\n",
 		};
 
-	error(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
+	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
 }
 
 export function sortEnvironmentVariables(

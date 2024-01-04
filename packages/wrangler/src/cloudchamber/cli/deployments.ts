@@ -1,5 +1,5 @@
 import { exit } from "process";
-import { error, endSection, log, cancel } from "@cloudflare/cli";
+import { crash, endSection, log, cancel } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { yellow, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -77,7 +77,7 @@ export async function loadDeployments(
 
 	stop();
 	if (err) {
-		error(
+		crash(
 			"There has been an error while loading your deployments: \n " +
 				err.message
 		);

@@ -1,4 +1,4 @@
-import { startSection, error, endSection } from "@cloudflare/cli";
+import { startSection, crash, endSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import {
 	ApiError,
@@ -114,7 +114,7 @@ export const registriesCommand = (yargs: CommonYargsArgvJSON) => {
 						_config
 					) => {
 						if (!imageArgs.pull && !imageArgs.push) {
-							error(
+							crash(
 								"You have to specify either --push or --pull in the command."
 							);
 
@@ -179,13 +179,13 @@ export async function handleConfigureImageRegistryCommand(
 		const { error: errString } = err.body as { error: string };
 		switch (errString) {
 			case ImageRegistryAlreadyExistsError.error.IMAGE_REGISTRY_ALREADY_EXISTS:
-				error("The domain already exists!");
+				crash("The domain already exists!");
 				break;
 			case ImageRegistryNotAllowedError.error.IMAGE_REGISTRY_NOT_ALLOWED:
-				error("This domain is not allowed!");
+				crash("This domain is not allowed!");
 				break;
 			default:
-				error(
+				crash(
 					"An unexpected error happened, please try again or send us the error for troubleshooting\n" +
 						errString
 				);
@@ -195,7 +195,7 @@ export async function handleConfigureImageRegistryCommand(
 	}
 
 	if (err) {
-		error("There has been an internal error:", `${JSON.stringify(err)}`);
+		crash("There has been an internal error:", `${JSON.stringify(err)}`);
 		return;
 	}
 
