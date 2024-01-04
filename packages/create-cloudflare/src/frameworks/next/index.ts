@@ -73,7 +73,10 @@ const configure = async (ctx: PagesGeneratorContext) => {
 
 	const usesTs = usesTypescript(projectName);
 
-	const appDirPath = getAppDirPath(projectName);
+	const appDirPath = probePaths([
+		`${projectName}/src/app`,
+		`${projectName}/app`,
+	]);
 	if (appDirPath) {
 		// Add a custom app not-found edge route as recommended in next-on-pages
 		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
@@ -181,11 +184,3 @@ const config: FrameworkConfig = {
 	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;
-
-const getAppDirPath = (projectName: string) => {
-	try {
-		return probePaths([`${projectName}/src/app`, `${projectName}/app`]);
-	} catch {
-		return null;
-	}
-};
