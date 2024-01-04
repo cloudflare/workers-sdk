@@ -73,6 +73,13 @@
 			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch",
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch"
+		},
+		"packageExtensions": {
+			"node-pty": {
+				"optionalDependencies": {
+					"node-gyp": "^10.0.1"
+				}
+			}
 		}
 	}
 }
