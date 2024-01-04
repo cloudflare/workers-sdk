@@ -62,7 +62,6 @@ jobs:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
 
           NODE_ENV: "production"
           # This is the "production" key for sparrow analytics.
