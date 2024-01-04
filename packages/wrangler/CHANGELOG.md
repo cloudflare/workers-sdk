@@ -1,5 +1,44 @@
 # wrangler
 
+## 3.22.3
+
+### Patch Changes
+
+- [#4693](https://github.com/cloudflare/workers-sdk/pull/4693) [`93e88c43`](https://github.com/cloudflare/workers-sdk/commit/93e88c433fdd82db63b332559efaabef6c482e88) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `wrangler dev` exits with code `0` on clean exit
+
+  Previously, `wrangler dev` would exit with a non-zero exit code when pressing <kbd>CTRL</kbd>+<kbd>C</kbd> or <kbd>x</kbd>. This change ensures `wrangler` exits with code `0` in these cases.
+
+* [#4630](https://github.com/cloudflare/workers-sdk/pull/4630) [`037de5ec`](https://github.com/cloudflare/workers-sdk/commit/037de5ec77efc8261860c6d625bc90cd1f2fdd41) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure User Worker gets the correct Host header in wrangler dev local mode
+
+  Some full-stack frameworks, such as Next.js, check that the Host header for a server
+  side action request matches the host where the application is expected to run.
+
+  In `wrangler dev` we have a Proxy Worker in between the browser and the actual User Worker.
+  This Proxy Worker is forwarding on the request from the browser, but then the actual User
+  Worker is running on a different host:port combination than that which the browser thinks
+  it should be on. This was causing the framework to think the request is malicious and blocking
+  it.
+
+  Now we update the request's Host header to that passed from the Proxy Worker in a custom `MF-Original-Url`
+  header, but only do this if the request also contains a shared secret between the Proxy Worker
+  and User Worker, which is passed via the `MF-Proxy-Shared-Secret` header. This last feature is to
+  prevent a malicious website from faking the Host header in a request directly to the User Worker.
+
+  Fixes https://github.com/cloudflare/next-on-pages/issues/588
+
+- [#4695](https://github.com/cloudflare/workers-sdk/pull/4695) [`0f8a03c0`](https://github.com/cloudflare/workers-sdk/commit/0f8a03c06aa3180799cf03b1e60c348620115600) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure API failures without additional messages logged correctly
+
+* [#4693](https://github.com/cloudflare/workers-sdk/pull/4693) [`93e88c43`](https://github.com/cloudflare/workers-sdk/commit/93e88c433fdd82db63b332559efaabef6c482e88) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `wrangler pages dev` exits cleanly
+
+  Previously, pressing <kbd>CTRL</kbd>+<kbd>C</kbd> or <kbd>x</kbd> when running `wrangler pages dev` wouldn't actually exit `wrangler`. You'd need to press <kbd>CTRL</kbd>+<kbd>C</kbd> a second time to exit the process. This change ensures `wrangler` exits the first time.
+
+- [#4696](https://github.com/cloudflare/workers-sdk/pull/4696) [`624084c4`](https://github.com/cloudflare/workers-sdk/commit/624084c447a4898c4273c26e3ea24ea069a2900b) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: include additional modules in `largest dependencies` warning
+
+  If your Worker fails to deploy because it's too large, Wrangler will display of list of your Worker's largest dependencies. Previously, this just included JavaScript dependencies. This change ensures additional module dependencies (e.g. WebAssembly, text blobs, etc.) are included when computing this list.
+
+- Updated dependencies [[`037de5ec`](https://github.com/cloudflare/workers-sdk/commit/037de5ec77efc8261860c6d625bc90cd1f2fdd41)]:
+  - miniflare@3.20231218.1
+
 ## 3.22.2
 
 ### Patch Changes

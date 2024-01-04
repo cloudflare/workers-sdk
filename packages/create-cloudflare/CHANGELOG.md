@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.9.0
+
+### Minor Changes
+
+- [#4625](https://github.com/cloudflare/workers-sdk/pull/4625) [`e8053554`](https://github.com/cloudflare/workers-sdk/commit/e8053554e04cde99d874377b92bd83af6f9e9ee8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Create a custom not-found edge route for Next.js applications using the app router
+
+### Patch Changes
+
+- [#4690](https://github.com/cloudflare/workers-sdk/pull/4690) [`9e032723`](https://github.com/cloudflare/workers-sdk/commit/9e0327232b339df803abe62690c66e11f6576fac) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.12` to `5.13.1`
+
 ## 2.8.5
 
 ### Patch Changes
