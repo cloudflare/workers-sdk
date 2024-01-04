@@ -105,11 +105,11 @@ export const runCli = async (args: Partial<C3Args>) => {
 	});
 
 	if (!type) {
-		return crash("An application type must be specified to continue.");
+		crash("An application type must be specified to continue.");
 	}
 
 	if (!Object.keys(templateMap).includes(type)) {
-		return crash(`Unknown application type provided: ${type}.`);
+		crash(`Unknown application type provided: ${type}.`);
 	}
 
 	const validatedArgs: C3Args = {

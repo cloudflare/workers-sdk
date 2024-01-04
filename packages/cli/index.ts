@@ -112,7 +112,7 @@ export const stripAnsi = (str: string) => {
 	return str.replace(regex, "");
 };
 
-export const crash = (msg?: string): never => {
+export const crash: (msg?: string) => never = (msg) => {
 	if (msg) {
 		process.stderr.write(red(msg));
 		process.stderr.write("\n");

@@ -65,7 +65,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	]);
 
 	if (!path) {
-		return crash("Could not find the `/api` or `/app` directory");
+		crash("Could not find the `/api` or `/app` directory");
 	}
 
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
