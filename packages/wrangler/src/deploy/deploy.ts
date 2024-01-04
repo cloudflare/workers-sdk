@@ -518,6 +518,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						}
 				  );
 
+		// Add modules to dependencies for size warning
+		for (const module of modules) {
+			const modulePath =
+				module.filePath === undefined
+					? module.name
+					: path.relative("", module.filePath);
+			const bytesInOutput =
+				typeof module.content === "string"
+					? Buffer.byteLength(module.content)
+					: module.content.byteLength;
+			dependencies[modulePath] = { bytesInOutput };
+		}
+
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
 		});
@@ -1137,7 +1150,7 @@ async function noBundleWorker(
 
 	return {
 		modules,
-		dependencies: {},
+		dependencies: {} as { [path: string]: { bytesInOutput: number } },
 		resolvedEntryPointPath: entry.file,
 		bundleType: getBundleType(entry.format),
 	};

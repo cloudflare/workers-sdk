@@ -8114,15 +8114,25 @@ export default{
 				)
 			);
 
+			fs.writeFileSync(
+				"add.wasm",
+				"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=",
+				"base64"
+			);
+			fs.writeFileSync("message.txt", "👋");
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
 			fs.writeFileSync(
 				"index.js",
-				`import { thing } from "./dependency";
+				`
+				import addModule from "./add.wasm";
+				import message from "./message.txt";
+				import { thing } from "./dependency";
 
         export default {
           async fetch() {
-            return new Response('response plus ' + thing);
+          	const instance = new WebAssembly.Instance(addModule);
+          	return Response.json({ add: instance.exports.add(1, 2), message, thing });
           }
         }`
 			);
@@ -8150,10 +8160,12 @@ export default{
 			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
 			  - index.js - xx KiB
+			  - add.wasm - xx KiB
 			  - dependency.js - xx KiB
+			  - message.txt - xx KiB
 			  If these are unnecessary, consider removing them
 
 			",
