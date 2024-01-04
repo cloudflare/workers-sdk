@@ -78,4 +78,22 @@ describe("throwFetchError", () => {
 			],
 		});
 	});
+
+	it("should include api errors without messages", async () => {
+		msw.use(
+			rest.get("*/user", (req, res, ctx) => {
+				return res(
+					ctx.json({
+						result: null,
+						success: false,
+						errors: [{ code: 10000, message: "error" }],
+					})
+				);
+			})
+		);
+		await expect(runWrangler("whoami")).rejects.toMatchObject({
+			text: "A request to the Cloudflare API (/user) failed.",
+			notes: [{ text: "error [code: 10000]" }],
+		});
+	});
 });

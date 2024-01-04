@@ -13,7 +13,7 @@ export interface FetchResult<ResponseType = unknown> {
 	success: boolean;
 	result: ResponseType;
 	errors: FetchError[];
-	messages: string[];
+	messages?: string[];
 	result_info?: unknown;
 }
 
@@ -168,7 +168,7 @@ function throwFetchError(
 		text: `A request to the Cloudflare API (${resource}) failed.`,
 		notes: [
 			...response.errors.map((err) => ({ text: renderError(err) })),
-			...response.messages.map((text) => ({ text })),
+			...(response.messages?.map((text) => ({ text })) ?? []),
 		],
 	});
 	// add the first error code directly to this error
