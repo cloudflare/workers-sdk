@@ -40,7 +40,7 @@ export const getFrameworkCli = (
 	withVersion = true
 ) => {
 	if (!ctx.framework) {
-		return crash("Framework not specified.");
+		crash("Framework not specified.");
 	}
 
 	const framework = ctx.framework

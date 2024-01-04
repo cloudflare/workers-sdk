@@ -34,20 +34,15 @@ export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
 };
 
-// Probes a list of paths and returns the first one that exists
-// If one isn't found, throws an error with the given message
-export const probePaths = (
-	paths: string[],
-	errorMsg = "Failed to find required file."
-) => {
+// Probes a list of paths and returns the first one that exists or null if none does
+export const probePaths = (paths: string[]) => {
 	for (const path of paths) {
 		if (existsSync(path)) {
 			return path;
 		}
 	}
 
-	crash(errorMsg);
-	process.exit(1); // hack to make typescript happy
+	return null;
 };
 
 export const usesTypescript = (projectRoot = ".") => {

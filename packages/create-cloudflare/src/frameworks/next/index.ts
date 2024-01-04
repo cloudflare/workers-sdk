@@ -1,5 +1,5 @@
-import { mkdirSync } from "fs";
-import { updateStatus, warn } from "@cloudflare/cli";
+import { existsSync, mkdirSync } from "fs";
+import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
@@ -18,6 +18,8 @@ import {
 	apiAppDirHelloTs,
 	apiPagesDirHelloJs,
 	apiPagesDirHelloTs,
+	appDirNotFoundJs,
+	appDirNotFoundTs,
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
@@ -53,26 +55,41 @@ const getApiTemplate = (
 const configure = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
 
-	// Add a compatible function handler example
-	const path = probePaths(
-		[
-			`${projectName}/pages/api`,
-			`${projectName}/src/pages/api`,
-			`${projectName}/src/app/api`,
-			`${projectName}/app/api`,
-			`${projectName}/src/app`,
-			`${projectName}/app`,
-		],
-		"Could not find the `/api` or `/app` directory"
-	);
+	const path = probePaths([
+		`${projectName}/pages/api`,
+		`${projectName}/src/pages/api`,
+		`${projectName}/src/app/api`,
+		`${projectName}/app/api`,
+		`${projectName}/src/app`,
+		`${projectName}/app`,
+	]);
+
+	if (!path) {
+		crash("Could not find the `/api` or `/app` directory");
+	}
 
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
 	const apiPath = path.replace(/\/app$/, "/app/api");
 
-	const [handlerPath, handlerFile] = getApiTemplate(
-		apiPath,
-		usesTypescript(projectName)
-	);
+	const usesTs = usesTypescript(projectName);
+
+	const appDirPath = probePaths([
+		`${projectName}/src/app`,
+		`${projectName}/app`,
+	]);
+	if (appDirPath) {
+		// Add a custom app not-found edge route as recommended in next-on-pages
+		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
+		const notFoundPath = `${appDirPath}/not-found.${usesTs ? "tsx" : "js"}`;
+		if (!existsSync(notFoundPath)) {
+			const notFoundContent = usesTs ? appDirNotFoundTs : appDirNotFoundJs;
+			writeFile(notFoundPath, notFoundContent);
+			updateStatus("Created a custom edge not-found route");
+		}
+	}
+
+	// Add a compatible function handler example
+	const [handlerPath, handlerFile] = getApiTemplate(apiPath, usesTs);
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 
