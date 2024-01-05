@@ -4,6 +4,7 @@ import * as path from "node:path";
 import chalk from "chalk";
 import ignore from "ignore";
 import xxhash from "xxhash-wasm";
+import { UserError } from "./errors";
 import {
 	createKVNamespace,
 	listKVNamespaceKeys,
@@ -405,7 +406,7 @@ async function validateAssetSize(
 ): Promise<void> {
 	const { size } = await stat(absFilePath);
 	if (size > 25 * 1024 * 1024) {
-		throw new Error(
+		throw new UserError(
 			`File ${relativeFilePath} is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits`
 		);
 	}
@@ -413,7 +414,7 @@ async function validateAssetSize(
 
 function validateAssetKey(assetKey: string) {
 	if (assetKey.length > 512) {
-		throw new Error(
+		throw new UserError(
 			`The asset path key "${assetKey}" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",`
 		);
 	}

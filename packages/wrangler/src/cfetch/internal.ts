@@ -3,8 +3,9 @@ import { fetch, File, Headers } from "undici";
 import { Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
+import { UserError } from "../errors";
 import { logger } from "../logger";
-import { ParseError, parseJSON } from "../parse";
+import { APIError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
@@ -94,7 +95,7 @@ export async function fetchInternal<ResponseType>(
 	try {
 		return parseJSON<ResponseType>(jsonText);
 	} catch (err) {
-		throw new ParseError({
+		throw new APIError({
 			text: "Received a malformed response from the API",
 			notes: [
 				{
@@ -129,7 +130,7 @@ function cloneHeaders(
 async function requireLoggedIn(): Promise<void> {
 	const loggedIn = await loginOrRefreshIfRequired();
 	if (!loggedIn) {
-		throw new Error("Not logged in.");
+		throw new UserError("Not logged in.");
 	}
 }
 

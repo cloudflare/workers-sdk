@@ -1,4 +1,5 @@
 import { fetchResult } from "../../cfetch";
+import { UserError } from "../../errors";
 import { getDatabaseInfoFromId } from "../utils";
 import type { BookmarkResponse } from "./types";
 
@@ -37,7 +38,7 @@ export const checkIfDatabaseIsExperimental = async (
 ): Promise<void> => {
 	const dbInfo = await getDatabaseInfoFromId(accountId, databaseId);
 	if (dbInfo.version !== "beta") {
-		throw new Error(
+		throw new UserError(
 			"Time travel is only available for D1 databases created with the --experimental-backend flag"
 		);
 	}
@@ -77,7 +78,7 @@ export const convertTimestampToISO = (timestamp: string): string => {
 		: new Date(Number(timestamp.length === 10 ? timestamp + "000" : timestamp));
 
 	if (parsedTimestamp.toString() === "Invalid Date") {
-		throw new Error(
+		throw new UserError(
 			`Invalid timestamp '${timestamp}'. Please provide a valid Unix timestamp or ISO string, for example: ${getLocalISOString(
 				new Date()
 			)}\nFor accepted format, see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format`
@@ -89,12 +90,12 @@ export const convertTimestampToISO = (timestamp: string): string => {
 	const thirtyDaysAgo = new Date();
 	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 	if (parsedTimestamp > now) {
-		throw new Error(
+		throw new UserError(
 			`Invalid timestamp '${timestamp}'. Please provide a timestamp in the past`
 		);
 	}
 	if (parsedTimestamp < thirtyDaysAgo) {
-		throw new Error(
+		throw new UserError(
 			`Invalid timestamp '${timestamp}'. Please provide a timestamp within the last 30 days`
 		);
 	}

@@ -1,4 +1,5 @@
 import { fetchListResult } from "./cfetch";
+import { UserError } from "./errors";
 import type { Route } from "./config/environment";
 
 /**
@@ -115,7 +116,7 @@ export async function getZoneIdFromHost(host: string): Promise<string> {
 		hostPieces.shift();
 	}
 
-	throw new Error(`Could not find zone for ${host}`);
+	throw new UserError(`Could not find zone for ${host}`);
 }
 
 /**
@@ -184,7 +185,7 @@ export function findClosestRoute(
 export async function getWorkerForZone(worker: string) {
 	const zone = await getZoneForRoute(worker);
 	if (!zone) {
-		throw new Error(
+		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`
 		);
 	}
@@ -196,11 +197,11 @@ export async function getWorkerForZone(worker: string) {
 		const closestRoute = findClosestRoute(worker, routes)?.[0];
 
 		if (!closestRoute) {
-			throw new Error(
+			throw new UserError(
 				`The route '${worker}' has no workers assigned. You can assign a worker to it from wrangler.toml or the Cloudflare dashboard`
 			);
 		} else {
-			throw new Error(
+			throw new UserError(
 				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`
 			);
 		}

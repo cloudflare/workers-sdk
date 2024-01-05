@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
+import { UserError } from "../errors";
 import {
 	getRules,
 	getScriptName,
@@ -253,16 +254,18 @@ export async function deployHandler(
 	);
 
 	if (args.public) {
-		throw new Error("The --public field has been renamed to --assets");
+		throw new UserError("The --public field has been renamed to --assets");
 	}
 	if (args.experimentalPublic) {
-		throw new Error(
+		throw new UserError(
 			"The --experimental-public field has been renamed to --assets"
 		);
 	}
 
 	if ((args.assets || config.assets) && (args.site || config.site)) {
-		throw new Error("Cannot use Assets and Workers Sites in the same Worker.");
+		throw new UserError(
+			"Cannot use Assets and Workers Sites in the same Worker."
+		);
 	}
 
 	if (args.assets) {

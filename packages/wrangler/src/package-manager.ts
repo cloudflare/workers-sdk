@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { env } from "node:process";
 import { execa, execaCommandSync } from "execa";
+import { UserError } from "./errors";
 import { logger } from "./logger";
 
 export interface PackageManager {
@@ -86,7 +87,7 @@ export async function getPackageManager(cwd: string): Promise<PackageManager> {
 		logger.log("Using pnpm as package manager.");
 		return { ...PnpmPackageManager, cwd };
 	} else {
-		throw new Error(
+		throw new UserError(
 			"Unable to find a package manager. Supported managers are: npm, yarn, and pnpm."
 		);
 	}

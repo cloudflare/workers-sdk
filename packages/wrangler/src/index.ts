@@ -34,6 +34,7 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
+import { UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
@@ -43,7 +44,7 @@ import * as metrics from "./metrics";
 
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
-import { formatMessage, ParseError } from "./parse";
+import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
@@ -94,7 +95,7 @@ export function getRules(config: Config): Config["rules"] {
 	const rules = config.rules ?? config.build?.upload?.rules ?? [];
 
 	if (config.rules && config.build?.upload?.rules) {
-		throw new Error(
+		throw new UserError(
 			`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
 		);
 	}
@@ -169,7 +170,7 @@ export function demandOneOfOption(...options: string[]) {
 	};
 }
 
-export class CommandLineArgsError extends Error {}
+export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
 	// Type check result against CommonYargsOptions to make sure we've included

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
 import { exports as resolveExports } from "resolve.exports";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { BUILD_CONDITIONS } from "./bundle";
 import {
@@ -367,7 +368,7 @@ export function createModuleCollector(props: {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },
 							async (args: esbuild.OnResolveArgs) => {
-								throw new Error(
+								throw new UserError(
 									`The file ${
 										args.path
 									} matched a module rule in your configuration (${JSON.stringify(

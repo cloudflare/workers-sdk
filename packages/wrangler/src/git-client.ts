@@ -4,6 +4,7 @@ import path from "node:path";
 import { execa } from "execa";
 import { findUp } from "find-up";
 import semiver from "semiver";
+import { UserError } from "./errors";
 import { logger } from "./logger";
 /**
  * Check whether the given current working directory is within a git repository
@@ -82,7 +83,7 @@ export async function cloneIntoDirectory(
 
 	const gitVersion = await getGitVersioon();
 	if (!gitVersion) {
-		throw new Error("Failed to find git installation");
+		throw new UserError("Failed to find git installation");
 	}
 
 	// sparse checkouts were added in git 2.26.0, and allow for...sparse...checkouts...
@@ -129,7 +130,7 @@ export async function cloneIntoDirectory(
 		// @ts-expect-error non standard property on Error
 		if (err.code !== "EXDEV") {
 			logger.debug(err);
-			throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
+			throw new UserError(`Failed to find "${subdirectory}" in ${remote}`);
 		}
 		// likely on a different filesystem, so we need to copy instead of rename
 		// and then remove the original directory
@@ -141,7 +142,7 @@ export async function cloneIntoDirectory(
 			});
 		} catch (moveErr) {
 			logger.debug(moveErr);
-			throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
+			throw new UserError(`Failed to find "${subdirectory}" in ${remote}`);
 		}
 	}
 	fs.rmSync(path.join(targetDirectory, ".git"), {

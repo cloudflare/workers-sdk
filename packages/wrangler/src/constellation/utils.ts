@@ -1,5 +1,6 @@
 import { fetchResult } from "../cfetch";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
+import { UserError } from "../errors";
 import type { Config } from "../config";
 import type { Project, Model, CatalogEntry } from "./types";
 
@@ -20,7 +21,7 @@ export const getProjectByName = async (
 	const allProjects = await listProjects(accountId);
 	const matchingProj = allProjects.find((proj) => proj.name === name);
 	if (!matchingProj) {
-		throw new Error(`Couldn't find Project with name '${name}'`);
+		throw new UserError(`Couldn't find Project with name '${name}'`);
 	}
 	return matchingProj;
 };
@@ -34,7 +35,7 @@ export const getProjectModelByName = async (
 	const allModels = await listModels(accountId, proj);
 	const matchingModel = allModels.find((model) => model.name === modelName);
 	if (!matchingModel) {
-		throw new Error(`Couldn't find Model with name '${modelName}'`);
+		throw new UserError(`Couldn't find Model with name '${modelName}'`);
 	}
 	return matchingModel;
 };

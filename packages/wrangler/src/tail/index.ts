@@ -4,6 +4,7 @@ import onExit from "signal-exit";
 import { fetchResult, fetchScriptContent } from "../cfetch";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
+import { UserError } from "../errors";
 import {
 	isLegacyEnv,
 	printWranglerBanner,
@@ -108,7 +109,7 @@ export async function tailHandler(args: TailArgs) {
 	}
 
 	if (!scriptName) {
-		throw new Error(
+		throw new UserError(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
 		);
 	}

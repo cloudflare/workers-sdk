@@ -7,7 +7,9 @@ import {
 	printParseErrorCode,
 	type ParseError as JsoncParseError,
 } from "jsonc-parser";
+import { UserError } from "./errors";
 import { logger } from "./logger";
+
 export type Message = {
 	text: string;
 	location?: Location;
@@ -51,7 +53,7 @@ export function formatMessage(
 /**
  * An error that's thrown when something fails to parse.
  */
-export class ParseError extends Error implements Message {
+export class ParseError extends UserError implements Message {
 	readonly text: string;
 	readonly notes: Message[];
 	readonly location?: Location;
@@ -64,6 +66,21 @@ export class ParseError extends Error implements Message {
 		this.notes = notes ?? [];
 		this.location = location;
 		this.kind = kind ?? "error";
+	}
+}
+
+// `ParseError`s shouldn't generally be reported to Sentry, but Wrangler has
+// relied on `ParseError` for any sort of error with additional notes.
+// In particular, API errors which we'd like to report are `ParseError`s.
+// Therefore, allow particular `ParseError`s to be marked `reportable`.
+export class APIError extends ParseError {
+	// Allow `APIError`s to be marked as handled.
+	#reportable = true;
+	get reportable() {
+		return this.#reportable;
+	}
+	preventReport() {
+		this.#reportable = false;
 	}
 }
 

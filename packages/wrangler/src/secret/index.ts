@@ -8,6 +8,7 @@ import {
 	createWorkerUploadForm,
 } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
+import { UserError } from "../errors";
 import {
 	getLegacyScriptName,
 	isLegacyEnv,
@@ -141,7 +142,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
-					throw new Error(
+					throw new UserError(
 						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 					);
 				}
@@ -223,7 +224,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
-					throw new Error(
+					throw new UserError(
 						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 					);
 				}
@@ -273,7 +274,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
-					throw new Error(
+					throw new UserError(
 						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 					);
 				}
@@ -359,9 +360,11 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
-		throw logger.error(
+		const error = new UserError(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 		);
+		logger.error(error.message);
+		throw error;
 	}
 
 	const accountId = await requireAuth(config);

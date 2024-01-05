@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "path";
 import { confirm } from "../../dialogs";
+import { UserError } from "../../errors";
 import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
@@ -35,7 +36,7 @@ export async function getMigrationsPath({
 		logger.warn(warning);
 	}
 
-	throw new Error(`No migrations present at ${dir}.`);
+	throw new UserError(`No migrations present at ${dir}.`);
 }
 
 export async function getUnappliedMigrations({

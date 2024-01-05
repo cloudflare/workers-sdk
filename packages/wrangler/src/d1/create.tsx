@@ -2,6 +2,7 @@ import { Box, Text } from "ink";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
@@ -35,7 +36,7 @@ export const Handler = withConfig<HandlerOptions>(
 
 		if (location) {
 			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
-				throw new Error(
+				throw new UserError(
 					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
 						","
 					)}`
@@ -58,7 +59,7 @@ export const Handler = withConfig<HandlerOptions>(
 			});
 		} catch (e) {
 			if ((e as { code: number }).code === 7502) {
-				throw new Error("A database with that name already exists");
+				throw new UserError("A database with that name already exists");
 			}
 			throw e;
 		}

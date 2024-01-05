@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { execaCommand } from "execa";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { Config } from "../config";
 
@@ -51,7 +52,7 @@ function assertEntryPointExists(
 	errorMessage: string
 ) {
 	if (!fileExists(expectedEntryAbsolute)) {
-		throw new Error(
+		throw new UserError(
 			getMissingEntryPointMessage(
 				errorMessage,
 				expectedEntryAbsolute,

@@ -3,6 +3,7 @@ import { fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
+import { UserError } from "../errors";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
@@ -80,7 +81,7 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 } {
 	const match = /^([^/]+)\/(.*)/.exec(objectPath);
 	if (match === null) {
-		throw new Error(
+		throw new UserError(
 			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
 		);
 	}

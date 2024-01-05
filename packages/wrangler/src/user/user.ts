@@ -220,6 +220,7 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
+import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
@@ -452,14 +453,14 @@ interface AccessContext {
  * A list of OAuth2AuthCodePKCE errors.
  */
 // To "namespace" all errors.
-class ErrorOAuth2 extends Error {
+class ErrorOAuth2 extends UserError {
 	toString(): string {
 		return "ErrorOAuth2";
 	}
 }
 
 // For really unknown errors.
-class ErrorUnknown extends ErrorOAuth2 {
+class ErrorUnknown extends Error {
 	toString(): string {
 		return "ErrorUnknown";
 	}
@@ -1123,7 +1124,7 @@ export async function getAccountId(): Promise<string | undefined> {
 	} catch (e) {
 		// Did we try to select an account in CI or a non-interactive terminal?
 		if (e instanceof NoDefaultValueProvided) {
-			throw new Error(
+			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
 Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
 Available accounts are (\`<name>\`: \`<account_id>\`):
@@ -1145,17 +1146,17 @@ export async function requireAuth(config: {
 	const loggedIn = await loginOrRefreshIfRequired();
 	if (!loggedIn) {
 		if (!isInteractive() || CI.isCI()) {
-			throw new Error(
+			throw new UserError(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."
 			);
 		} else {
 			// didn't login, let's just quit
-			throw new Error("Did not login, quitting...");
+			throw new UserError("Did not login, quitting...");
 		}
 	}
 	const accountId = config.account_id || (await getAccountId());
 	if (!accountId) {
-		throw new Error("No account id found, quitting...");
+		throw new UserError("No account id found, quitting...");
 	}
 
 	return accountId;
@@ -1167,7 +1168,7 @@ export async function requireAuth(config: {
 export function requireApiToken(): ApiCredentials {
 	const credentials = getAPIToken();
 	if (!credentials) {
-		throw new Error("No API token found.");
+		throw new UserError("No API token found.");
 	}
 	return credentials;
 }

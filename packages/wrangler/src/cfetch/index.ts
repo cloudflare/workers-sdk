@@ -1,6 +1,6 @@
 import { URLSearchParams } from "node:url";
 import { logger } from "../logger";
-import { ParseError } from "../parse";
+import { APIError } from "../parse";
 import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal, performApiFetch } from "./internal";
 import type { FetchError } from "./errors";
@@ -164,7 +164,7 @@ function throwFetchError(
 ): never {
 	for (const error of response.errors) maybeThrowFriendlyError(error);
 
-	const error = new ParseError({
+	const error = new APIError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,
 		notes: [
 			...response.errors.map((err) => ({ text: renderError(err) })),
