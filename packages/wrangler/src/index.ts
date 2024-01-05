@@ -736,6 +736,8 @@ export async function main(argv: string[]): Promise<void> {
 		await wranglerWithMiddleware.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
+		let mayReport = true;
+
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
@@ -744,6 +746,7 @@ export async function main(argv: string[]): Promise<void> {
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
+			mayReport = false;
 			logger.log(formatMessage(e));
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -765,6 +768,7 @@ export async function main(argv: string[]): Promise<void> {
 			// the current terminal doesn't support raw mode, which Ink needs to render
 			// Ink doesn't throw a typed error or subclass or anything, so we just check the message content.
 			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
+			mayReport = false;
 
 			const currentPlatform = os.platform();
 
@@ -785,6 +789,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
+			mayReport = false;
 			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
@@ -793,8 +798,19 @@ export async function main(argv: string[]): Promise<void> {
 				`${fgGreenColor}%s${resetColor}`,
 				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
+		}
+
+		if (
+			// Only report the error if we didn't just handle it
+			mayReport &&
+			// ...and it's not a user error
+			!(e instanceof UserError) &&
+			// ...and it's not an un-reportable API error
+			!(e instanceof APIError && !e.reportable)
+		) {
 			await captureGlobalException(e);
 		}
+
 		throw e;
 	} finally {
 		try {
