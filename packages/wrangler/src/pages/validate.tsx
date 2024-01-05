@@ -48,8 +48,8 @@ export const validate = async (args: {
 		"_headers",
 		"_routes.json",
 		"functions",
+		"node_modules",
 		"**/.DS_Store",
-		"**/node_modules",
 		"**/.git",
 	].map((pattern) => new Minimatch(pattern));
 
