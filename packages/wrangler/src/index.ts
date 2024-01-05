@@ -716,12 +716,23 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
-	addBreadcrumb(`wrangler ${argv.join(" ")}`);
 
 	const wrangler = createCLIParser(argv);
+
+	// Register Yargs middleware to record command as Sentry breadcrumb
+	let recordedCommand = false;
+	const wranglerWithMiddleware = wrangler.middleware((args) => {
+		// Middleware called for each sub-command, but only want to record once
+		if (recordedCommand) return;
+		recordedCommand = true;
+		// `args._` doesn't include any positional arguments (e.g. script name,
+		// key to fetch) or flags
+		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+	}, /* applyBeforeValidation */ true);
+
 	let cliHandlerThrew = false;
 	try {
-		await wrangler.parse();
+		await wranglerWithMiddleware.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
 		logger.log(""); // Just adds a bit of space
