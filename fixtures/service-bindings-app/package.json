@@ -4,14 +4,15 @@
 	"description": "A test for service bindings",
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8300\" \"wrangler dev b/index.ts --local --port 8301\"",
+		"dev": "concurrently -s first -k \"wrangler dev a/index.ts --port=8300 --inspector-port=0\" \"wrangler dev b/index.ts --port=8301 --inspector-port=0\"",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"wrangler": "workspace:*",
-		"undici": "^5.23.0"
+		"concurrently": "^8.2.2",
+		"undici": "^5.23.0",
+		"wrangler": "workspace:*"
 	}
 }

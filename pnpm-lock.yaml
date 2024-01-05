@@ -511,6 +511,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
       undici:
         specifier: ^5.23.0
         version: 5.23.0
