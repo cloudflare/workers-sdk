@@ -8,11 +8,15 @@ import { MiniflareServer } from "./miniflare";
 import { DEFAULT_WORKER_NAME } from "./miniflare";
 import type { ProxyData } from "../api";
 import type { Config } from "../config";
-import type { CfWorkerInit, CfScriptFormat } from "../deployment-bundle/worker";
+import type {
+	CfWorkerInit,
+	CfScriptFormat,
+	CfDurableObject,
+} from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
-import type { ConfigBundle, ReloadedEvent } from "./miniflare";
+import type { ConfigBundle } from "./miniflare";
 import type { EsbuildBundle } from "./use-esbuild";
 
 export interface LocalProps {
@@ -95,24 +99,28 @@ export async function localPropsToConfigBundle(
 	};
 }
 
-export function maybeRegisterLocalWorker(event: ReloadedEvent, name?: string) {
+export function maybeRegisterLocalWorker(
+	url: URL,
+	name?: string,
+	internalDurableObjects?: CfDurableObject[]
+) {
 	if (name === undefined) return;
 
-	let protocol = event.url.protocol;
-	protocol = protocol.substring(0, event.url.protocol.length - 1);
+	let protocol = url.protocol;
+	protocol = protocol.substring(0, url.protocol.length - 1);
 	if (protocol !== "http" && protocol !== "https") return;
 
-	const port = parseInt(event.url.port);
+	const port = parseInt(url.port);
 	return registerWorker(name, {
 		protocol,
 		mode: "local",
 		port,
-		host: event.url.hostname,
-		durableObjects: event.internalDurableObjects.map((binding) => ({
+		host: url.hostname,
+		durableObjects: (internalDurableObjects ?? []).map((binding) => ({
 			name: binding.name,
 			className: binding.class_name,
 		})),
-		durableObjectsHost: event.url.hostname,
+		durableObjectsHost: url.hostname,
 		durableObjectsPort: port,
 	});
 }
@@ -157,8 +165,6 @@ function useLocalWorker(props: LocalProps) {
 			const newServer = new MiniflareServer();
 			miniflareServerRef.current = server = newServer;
 			server.addEventListener("reloaded", async (event) => {
-				await maybeRegisterLocalWorker(event, props.name);
-
 				const proxyData: ProxyData = {
 					userWorkerUrl: {
 						protocol: event.url.protocol,
@@ -185,6 +191,7 @@ function useLocalWorker(props: LocalProps) {
 					// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
 					// workers written in "service-worker" format still need to proxy logs to the ProxyController
 					proxyLogsToController: props.format === "service-worker",
+					internalDurableObjects: event.internalDurableObjects,
 				};
 
 				props.onReady?.(

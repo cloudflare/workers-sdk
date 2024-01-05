@@ -1,3 +1,4 @@
+import type { CfDurableObject } from "../../deployment-bundle/worker";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DevToolsEvent } from "./devtools";
 import type { StartDevWorkerOptions } from "./types";
@@ -147,4 +148,5 @@ export type ProxyData = {
 	headers: Record<string, string | undefined>;
 	liveReload?: boolean;
 	proxyLogsToController?: boolean;
+	internalDurableObjects?: CfDurableObject[];
 };

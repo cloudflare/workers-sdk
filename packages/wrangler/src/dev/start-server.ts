@@ -177,6 +177,12 @@ export async function startDevServer(
 				ip = url.hostname;
 				port = parseInt(url.port);
 
+				await maybeRegisterLocalWorker(
+					url,
+					props.name,
+					proxyData.internalDurableObjects
+				);
+
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
@@ -393,8 +399,6 @@ export async function startLocalServer(
 	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(event, props.name);
-
 			const proxyData: ProxyData = {
 				userWorkerUrl: {
 					protocol: event.url.protocol,
@@ -420,6 +424,7 @@ export async function startLocalServer(
 				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
 				// workers written in "service-worker" format still need to proxy logs to the ProxyController
 				proxyLogsToController: props.format === "service-worker",
+				internalDurableObjects: event.internalDurableObjects,
 			};
 
 			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);
