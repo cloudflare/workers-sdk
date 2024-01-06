@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
@@ -14,9 +14,10 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 function mockStandardEnabled(enabled: boolean, enterprise = false) {
 	msw.use(
-		rest.get("*/accounts/:accountId/workers/standard", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get<{ accountId: string }>(
+			"*/accounts/:accountId/workers/standard",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						{
 							standard: enabled,
@@ -24,9 +25,9 @@ function mockStandardEnabled(enabled: boolean, enterprise = false) {
 						},
 						true
 					)
-				)
-			);
-		})
+				);
+			}
+		)
 	);
 }
 

@@ -6,7 +6,7 @@ import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import commandExists from "command-exists";
 import * as esbuild from "esbuild";
-import { MockedRequest, rest } from "msw";
+import { http, HttpResponse, StrictRequest } from "msw";
 import dedent from "ts-dedent";
 import { FormData } from "undici";
 import {
@@ -53,7 +53,6 @@ import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { PutConsumerBody } from "../queues/client";
-import type { RestRequest } from "msw";
 
 describe("deploy", () => {
 	mockAccountId();
@@ -1839,13 +1838,13 @@ addEventListener('fetch', event => {});`
 
 		describe("should source map validation errors", () => {
 			function mockDeployWithValidationError(message: string) {
-				const handler = rest.put(
+				const handler = http.put(
 					"*/accounts/:accountId/workers/scripts/:scriptName",
-					async (req, res, ctx) => {
+					async () => {
 						const body = createFetchResult(null, false, [
 							{ code: 10021, message },
 						]);
-						return res(ctx.json(body));
+						return HttpResponse.json(body);
 					}
 				);
 				msw.use(handler);
@@ -3461,17 +3460,15 @@ addEventListener('fetch', event => {});`
 			const bulkUrl =
 				"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk";
 			msw.use(
-				rest.put(bulkUrl, async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.namespaceId).toEqual(kvNamespace.id);
+				http.put(bulkUrl, async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.namespaceId).toEqual(kvNamespace.id);
 					requestCount++;
-					return res(
-						ctx.status(500),
-						ctx.json(
-							createFetchResult([], false, [
-								{ code: 1000, message: "Whoops! Something went wrong!" },
-							])
-						)
+					return HttpResponse.json(
+						createFetchResult([], false, [
+							{ code: 1000, message: "Whoops! Something went wrong!" },
+						]),
+						{ status: 500 }
 					);
 				})
 			);
@@ -4166,20 +4163,19 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({ available_on_subdomain: false });
 			mockSubDomainRequest();
 			msw.use(
-				rest.post(
+				http.post(
 					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
-					async (req, res, ctx) => {
-						return res.once(
-							ctx.json(
-								createFetchResult(null, /* success */ false, [
-									{
-										code: 10034,
-										message: "workers.api.error.email_verification_required",
-									},
-								])
-							)
+					async () => {
+						return HttpResponse.json(
+							createFetchResult(null, /* success */ false, [
+								{
+									code: 10034,
+									message: "workers.api.error.email_verification_required",
+								},
+							])
 						);
-					}
+					},
+					{ once: true }
 				)
 			);
 
@@ -8065,22 +8061,17 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(_, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult(null, false, [
-									{
-										code: 11337,
-										message:
-											"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
-									},
-								])
-							)
-						);
-					}
-				)
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 11337,
+								message:
+									"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+							},
+						])
+					);
+				})
 			);
 
 			fs.writeFileSync(
@@ -8137,21 +8128,16 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(req, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult({}, false, [
-									{
-										code: 10027,
-										message: "workers.api.error.script_too_large",
-									},
-								])
-							)
-						);
-					}
-				)
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({}, false, [
+							{
+								code: 10027,
+								message: "workers.api.error.script_too_large",
+							},
+						])
+					);
+				})
 			);
 
 			fs.writeFileSync(
@@ -8218,21 +8204,16 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(req, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult({}, false, [
-									{
-										code: 10021,
-										message: "Error: Script startup exceeded CPU time limit.",
-									},
-								])
-							)
-						);
-					}
-				)
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({}, false, [
+							{
+								code: 10021,
+								message: "Error: Script startup exceeded CPU time limit.",
+							},
+						])
+					);
+				})
 			);
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
@@ -8486,27 +8467,20 @@ export default{
 		mockUploadWorkerRequest();
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		msw.use(
-			rest.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult(null, false, [
-								{ code: 10000, message: "Authentication error" },
-							])
-						)
-					);
-				}
-			),
-			rest.get(
+			http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					])
+				);
+			}),
+			http.get(
 				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult({
-								latest: { number: "2" },
-							})
-						)
+				() => {
+					return HttpResponse.json(
+						createFetchResult({
+							latest: { number: "2" },
+						})
 					);
 				}
 			)
@@ -8960,20 +8934,21 @@ function mockUpdateWorkerRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		rest.post(
+		http.post(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				const body = await req.json();
+				const body = await request.json();
 				expect(body).toEqual({ enabled });
-				return res.once(ctx.json(createFetchResult(null)));
-			}
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
 		)
 	);
 	return requests;
@@ -8992,24 +8967,25 @@ function mockPublishRoutesRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				const body = await req.json();
+				const body = await request.json();
 				expect(body).toEqual(
 					routes.map((route) =>
 						typeof route !== "object" ? { pattern: route } : route
 					)
 				);
-				return res.once(ctx.json(createFetchResult(null)));
-			}
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -9025,53 +9001,47 @@ function mockUnauthorizedPublishRoutesRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(null, false, [
-							{ message: "Authentication error", code: 10000 },
-						])
-					)
+			() => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ message: "Authentication error", code: 10000 },
+					])
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 }
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+		http.get("*/zones", ({ request }) => {
+			const url = new URL(request.url);
+			expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
 
-			return res(
-				ctx.status(200),
-				ctx.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: zones,
-				})
-			);
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: zones,
+			});
 		})
 	);
 }
 
 function mockGetWorkerRoutes(zoneId: string) {
 	msw.use(
-		rest.get("*/zones/:zoneId/workers/routes", (req, res, ctx) => {
-			expect(req.params.zoneId).toEqual(zoneId);
+		http.get("*/zones/:zoneId/workers/routes", ({ params }) => {
+			expect(params.zoneId).toEqual(zoneId);
 
-			return res(
-				ctx.status(200),
-				ctx.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: [],
-				})
-			);
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: [],
+			});
 		})
 	);
 }
@@ -9081,25 +9051,29 @@ function mockPublishRoutesFallbackRequest(route: {
 	script: string;
 }) {
 	msw.use(
-		rest.post(`*/zones/:zoneId/workers/routes`, async (req, res, ctx) => {
-			const body = await req.json();
-			expect(body).toEqual(route);
-			return res.once(ctx.json(createFetchResult(route.pattern)));
-		})
+		http.post(
+			`*/zones/:zoneId/workers/routes`,
+			async ({ request }) => {
+				const body = await request.json();
+				expect(body).toEqual(route);
+				return HttpResponse.json(createFetchResult(route.pattern));
+			},
+			{ once: true }
+		)
 	);
 }
 
 function mockCustomDomainLookup(origin: CustomDomain) {
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/domains/records/:domainTag`,
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.domainTag).toEqual(origin.id);
 
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.domainTag).toEqual(origin.id);
-
-				return res.once(ctx.json(createFetchResult(origin)));
-			}
+				return HttpResponse.json(createFetchResult(origin));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -9118,28 +9092,31 @@ function mockCustomDomainsChangesetRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		rest.post(
+		http.post<
+			{ accountId: string; scriptName: string; envName: string },
+			Array<
+				{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+			>
+		>(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
 
-				const domains: Array<
-					{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
-				> = await req.json();
+				const domains = await request.json();
 
 				const changeset: CustomDomainChangeset = {
 					added: domains.map((domain) => {
 						return {
 							...domain,
 							id: "",
-							service: req.params.scriptName as string,
-							environment: req.params.envName as string,
+							service: params.scriptName as string,
+							environment: params.envName as string,
 							zone_name: "",
 							zone_id: "",
 						};
@@ -9155,8 +9132,9 @@ function mockCustomDomainsChangesetRequest({
 					conflicting: dnsRecordConflicts,
 				};
 
-				return res.once(ctx.json(createFetchResult(changeset)));
-			}
+				return HttpResponse.json(createFetchResult(changeset));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -9182,24 +9160,25 @@ function mockPublishCustomDomainsRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				const body = await req.json();
+				const body = await request.json();
 				expect(body).toEqual({
 					...publishFlags,
 					origins: domains,
 				});
 
-				return res.once(ctx.json(createFetchResult(null)));
-			}
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -9207,10 +9186,14 @@ function mockPublishCustomDomainsRequest({
 /** Create a mock handler for the request to get a list of all KV namespaces. */
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 	msw.use(
-		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
-			return res.once(ctx.json(createFetchResult(namespaces)));
-		})
+		http.get(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json(createFetchResult(namespaces));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -9238,12 +9221,12 @@ function mockUploadAssetsToKVRequest(
 		uploads: StaticAssetUpload[];
 	}[] = [];
 	msw.use(
-		rest.put(
+		http.put<{ accountId: string; namespaceId: string }, []>(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-				const uploads = await req.json();
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
+				const uploads = await request.json();
 				if (assets) {
 					expect(assets.length).toEqual(uploads.length);
 					for (let i = 0; i < uploads.length; i++) {
@@ -9252,7 +9235,7 @@ function mockUploadAssetsToKVRequest(
 				}
 
 				requests.push({ uploads });
-				return res(ctx.json(createFetchResult([])));
+				return HttpResponse.json(createFetchResult([]));
 			}
 		)
 	);
@@ -9279,22 +9262,21 @@ function mockDeleteUnusedAssetsRequest(
 	assets: string[]
 ) {
 	msw.use(
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-				const deletes = await req.json();
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
+				const deletes = await request.json();
 				expect(assets).toEqual(deletes);
-				return res.once(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
+			},
+			{ once: true }
 		)
 	);
 }
@@ -9304,17 +9286,19 @@ type LegacyScriptInfo = { id: string; migration_tag?: string };
 function mockLegacyScriptData(options: { scripts: LegacyScriptInfo[] }) {
 	const { scripts } = options;
 	msw.use(
-		rest.get("*/accounts/:accountId/workers/scripts", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
-			return res.once(
-				ctx.json({
+		http.get(
+			"*/accounts/:accountId/workers/scripts",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json({
 					success: true,
 					errors: [],
 					messages: [],
 					result: scripts,
-				})
-			);
-		})
+				});
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -9329,88 +9313,80 @@ function mockServiceScriptData(options: {
 	if (options.env) {
 		if (!script) {
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-					(_, res, ctx) => {
-						return res.once(
-							ctx.json({
-								success: false,
-								errors: [
-									{
-										code: 10092,
-										message: "workers.api.error.environment_not_found",
-									},
-								],
-								messages: [],
-								result: null,
-							})
-						);
-					}
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 10092,
+									message: "workers.api.error.environment_not_found",
+								},
+							],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
 				)
 			);
 			return;
 		}
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.scriptName).toEqual(
-						options.scriptName || "test-name"
-					);
-					expect(req.params.envName).toEqual(options.env);
-					return res.once(
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { script },
-						})
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.scriptName).toEqual(options.scriptName || "test-name");
+					expect(params.envName).toEqual(options.env);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { script },
+					});
+				},
+				{ once: true }
 			)
 		);
 	} else {
 		if (!script) {
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/workers/services/:scriptName",
-					(req, res, ctx) => {
-						return res.once(
-							ctx.json({
-								success: false,
-								errors: [
-									{
-										code: 10090,
-										message: "workers.api.error.service_not_found",
-									},
-								],
-								messages: [],
-								result: null,
-							})
-						);
-					}
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 10090,
+									message: "workers.api.error.service_not_found",
+								},
+							],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
 				)
 			);
 			return;
 		}
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.scriptName).toEqual(
-						options.scriptName || "test-name"
-					);
-					return res.once(
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { default_environment: { script } },
-						})
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.scriptName).toEqual(options.scriptName || "test-name");
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { default_environment: { script } },
+					});
+				},
+				{ once: true }
 			)
 		);
 	}
@@ -9419,19 +9395,17 @@ function mockServiceScriptData(options: {
 function mockGetQueue(expectedQueueName: string) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/queues/${expectedQueueName}`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
 				requests.count += 1;
-				return res(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: { queue: expectedQueueName },
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: { queue: expectedQueueName },
+				});
 			}
 		)
 	);
@@ -9441,25 +9415,23 @@ function mockGetQueue(expectedQueueName: string) {
 function mockGetQueueMissing(expectedQueueName: string) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/queues/${expectedQueueName}`,
-			(req, res, ctx) => {
+			({ params }) => {
 				requests.count += 1;
-				expect(req.params.accountId).toEqual("some-account-id");
+				expect(params.accountId).toEqual("some-account-id");
 
-				return res(
-					ctx.json({
-						success: false,
-						errors: [
-							{
-								code: 11000,
-								message: "workers.api.error.queue_not_found",
-							},
-						],
-						messages: [],
-						result: null,
-					})
-				);
+				return HttpResponse.json({
+					success: false,
+					errors: [
+						{
+							code: 11000,
+							message: "workers.api.error.queue_not_found",
+						},
+					],
+					messages: [],
+					result: null,
+				});
 			}
 		)
 	);
@@ -9473,21 +9445,19 @@ function mockPutQueueConsumer(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/queues/${expectedQueueName}/consumers/${expectedConsumerName}`,
-			async (req, res, ctx) => {
-				const body = await req.json();
-				expect(req.params.accountId).toEqual("some-account-id");
+			async ({ request, params }) => {
+				const body = await request.json();
+				expect(params.accountId).toEqual("some-account-id");
 				expect(body).toEqual(expectedBody);
 				requests.count += 1;
-				return res(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: { queue: expectedQueueName },
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: { queue: expectedQueueName },
+				});
 			}
 		)
 	);
@@ -9511,26 +9481,3 @@ function mockFormDataToString(this: FormData) {
 		__formdata: entries,
 	});
 }
-
-async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
-	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
-
-	const form = new FormData();
-	for (const [key, value] of __formdata) {
-		form.set(key, value);
-	}
-	return form;
-}
-
-// The following two functions workaround the fact that MSW does not yet support FormData in requests.
-// We use the fact that MSW relies upon `node-fetch` internally, which will call `toString()` on the FormData object,
-// rather than passing it through or serializing it as a proper FormData object.
-// The hack is to serialize FormData to a JSON string by overriding `FormData.toString()`.
-// And then to deserialize back to a FormData object by monkey-patching a `formData()` helper onto `MockedRequest`.
-FormData.prototype.toString = mockFormDataToString;
-export interface RestRequestWithFormData extends MockedRequest, RestRequest {
-	formData(): Promise<FormData>;
-}
-(MockedRequest.prototype as RestRequestWithFormData).formData =
-	mockFormDataFromString;

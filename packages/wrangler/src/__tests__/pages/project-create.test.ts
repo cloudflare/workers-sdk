@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { mockConsoleMethods } from "./../helpers/mock-console";
@@ -23,12 +23,12 @@ describe("project create", () => {
 
 	it("should create a project with a production branch", async () => {
 		msw.use(
-			rest.post(
+			http.post<{ accountId: string }, Record<string, unknown>>(
 				"*/accounts/:accountId/pages/projects",
-				async (req, res, ctx) => {
-					const body = await req.json();
+				async ({ request, params }) => {
+					const body = await request.json();
 
-					expect(req.params.accountId).toEqual("some-account-id");
+					expect(params.accountId).toEqual("some-account-id");
 					expect(body).toEqual({
 						name: "a-new-project",
 						production_branch: "main",
@@ -38,19 +38,17 @@ describe("project create", () => {
 						},
 					});
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								...body,
-								subdomain: "a-new-project.pages.dev",
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							...body,
+							subdomain: "a-new-project.pages.dev",
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -66,10 +64,10 @@ describe("project create", () => {
 
 	it("should create a project with compatibility flags", async () => {
 		msw.use(
-			rest.post(
+			http.post<{}, Record<string, unknown>>(
 				"*/accounts/:accountId/pages/projects",
-				async (req, res, ctx) => {
-					const body = await req.json();
+				async ({ request }) => {
+					const body = await request.json();
 					expect(body).toEqual({
 						name: "a-new-project",
 						production_branch: "main",
@@ -79,19 +77,17 @@ describe("project create", () => {
 						},
 					});
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								...body,
-								subdomain: "a-new-project.pages.dev",
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							...body,
+							subdomain: "a-new-project.pages.dev",
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -107,10 +103,10 @@ describe("project create", () => {
 
 	it("should create a project with a compatibility date", async () => {
 		msw.use(
-			rest.post(
+			http.post<{}, Record<string, unknown>>(
 				"*/accounts/:accountId/pages/projects",
-				async (req, res, ctx) => {
-					const body = await req.json();
+				async ({ request }) => {
+					const body = await request.json();
 					expect(body).toEqual({
 						name: "a-new-project",
 						production_branch: "main",
@@ -120,19 +116,17 @@ describe("project create", () => {
 						},
 					});
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								...body,
-								subdomain: "a-new-project.pages.dev",
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							...body,
+							subdomain: "a-new-project.pages.dev",
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 

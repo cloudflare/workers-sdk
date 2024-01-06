@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
 import { File, FormData, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
@@ -2734,190 +2734,169 @@ describe("init", () => {
 			function mockSupportingDashRequests(expectedAccountId: string) {
 				msw.use(
 					// This is fetched twice in normal usage
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: worker.service,
-								})
-							);
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: worker.service,
+							});
+						},
+						{ once: true }
+					),
+					http.get(
+						`*/accounts/:accountId/workers/services/:scriptName`,
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: worker.service,
+							});
 						}
 					),
-					rest.get(
-						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: worker.service,
-								})
-							);
-						}
-					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: worker.bindings,
-								})
-							);
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: worker.bindings,
+							});
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: worker.routes,
-								})
-							);
-						}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: worker.routes,
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/domains/records`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: worker.customDomains,
-								})
-							);
-						}
+						({ params }) => {
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: worker.customDomains,
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: { enabled: worker.workersDev },
-								})
-							);
-						}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { enabled: worker.workersDev },
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: worker.service.default_environment,
-								})
-							);
-						}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: worker.service.default_environment,
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {
-										schedules: worker.schedules,
-									},
-								})
-							);
-						}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									schedules: worker.schedules,
+								},
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
-						async (_, res, ctx) => {
+						async () => {
 							if (typeof worker.content === "string") {
-								return res(ctx.text(worker.content));
+								return HttpResponse.text(worker.content);
 							}
 
 							const response = new Response(worker.content);
 
-							return res.once(
-								ctx.set(
-									"Content-Type",
-									response.headers.get("Content-Type") ?? ""
-								),
-								ctx.set("cf-entrypoint", `index.js`),
-								ctx.body(await response.text())
-							);
-						}
+							return new HttpResponse(response.body, {
+								headers: {
+									"Content-Type": response.headers.get("Content-Type") ?? "",
+									"cf-entrypoint": `index.js`,
+								},
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/standard`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {
-										standard:
-											worker.service.default_environment.script.usage_model ===
-											"standard",
-									},
-								})
-							);
-						}
+						() => {
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									standard:
+										worker.service.default_environment.script.usage_model ===
+										"standard",
+								},
+							});
+						},
+						{ once: true }
 					)
 				);
 			}
@@ -3057,12 +3036,11 @@ describe("init", () => {
 
 			it("should fail on init --from-dash on non-existent worker name", async () => {
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(404),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: false,
 									errors: [
 										{
@@ -3072,9 +3050,11 @@ describe("init", () => {
 									],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 404 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await expect(
@@ -3319,10 +3299,10 @@ describe("init", () => {
 					id: "isolinear-optical-chip",
 				});
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res) => {
-							return res.networkError("Mock Network Error");
+						() => {
+							return HttpResponse.error();
 						}
 					)
 				);

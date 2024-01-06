@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { createFetchResult, msw } from "./msw";
 import type { NamespaceKeyInfo } from "../../kv/helpers";
 
@@ -11,32 +11,31 @@ export function mockKeyListRequest(
 	const requests = { count: 0 };
 	// See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
 	msw.use(
-		rest.get(
+		http.get<{ accountId: string; namespaceId: string }>(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
-			(req, res, ctx) => {
+			({ params, request }) => {
 				requests.count++;
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
 				let response: undefined | NamespaceKeyInfo[];
 				if (expectedKeys.length <= keysPerRequest) {
 					response = expectedKeys;
 				}
 
-				const start = parseInt(req.url.searchParams.get("cursor") ?? "0") || 0;
+				const url = new URL(request.url);
+				const start = parseInt(url.searchParams.get("cursor") ?? "0") || 0;
 				const end = start + keysPerRequest;
 				const cursor = end < expectedKeys.length ? end : blankCursorValue;
 
-				return res(
-					ctx.json(
-						createFetchResult(
-							response ? response : expectedKeys.slice(start, end),
-							true,
-							[],
-							[],
-							{
-								cursor,
-							}
-						)
+				return HttpResponse.json(
+					createFetchResult(
+						response ? response : expectedKeys.slice(start, end),
+						true,
+						[],
+						[],
+						{
+							cursor,
+						}
 					)
 				);
 			}

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import module from "node:module";
 import getPort from "get-port";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
@@ -439,29 +439,23 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 
 			msw.use(
-				rest.get("*/zones", (req, res, ctx) => {
+				http.get("*/zones", ({ request }) => {
+					const url = new URL(request.url);
 					let zone: [] | [{ id: "some-zone-id" }] = [];
-					if (
-						req.url.searchParams.get("name") === "111.222.333.some-host.com"
-					) {
+					if (url.searchParams.get("name") === "111.222.333.some-host.com") {
 						zone = [];
-					} else if (
-						req.url.searchParams.get("name") === "222.333.some-host.com"
-					) {
+					} else if (url.searchParams.get("name") === "222.333.some-host.com") {
 						zone = [];
-					} else if (req.url.searchParams.get("name") === "333.some-host.com") {
+					} else if (url.searchParams.get("name") === "333.some-host.com") {
 						zone = [{ id: "some-zone-id" }];
 					}
 
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: zone,
-						})
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: zone,
+					});
 				})
 			);
 
@@ -1563,18 +1557,16 @@ describe("wrangler dev", () => {
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+		http.get("*/zones", ({ request }) => {
+			const url = new URL(request.url);
+			expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
 
-			return res(
-				ctx.status(200),
-				ctx.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: zones,
-				})
-			);
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: zones,
+			});
 		})
 	);
 }

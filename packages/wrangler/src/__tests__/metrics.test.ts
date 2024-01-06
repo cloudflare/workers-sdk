@@ -1,5 +1,5 @@
 import { mkdirSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
@@ -101,8 +101,8 @@ describe("metrics", () => {
 
 			it("should write a debug log if the request fails", async () => {
 				msw.use(
-					rest.post("*/identify", async (req, res) => {
-						return res.networkError("BAD REQUEST");
+					http.post("*/identify", async () => {
+						return HttpResponse.error();
 					})
 				);
 
@@ -182,8 +182,8 @@ describe("metrics", () => {
 
 			it("should write a debug log if the request fails", async () => {
 				msw.use(
-					rest.post("*/event", async (_, res) => {
-						return res.networkError("BAD REQUEST");
+					http.post("*/event", async () => {
+						return HttpResponse.error();
 					})
 				);
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
@@ -449,17 +449,14 @@ function mockUserRequest() {
 	beforeEach(() => {
 		msw.use(
 			...mswSuccessOauthHandlers,
-			rest.get("*/user", (_, res, cxt) => {
+			http.get("*/user", () => {
 				requests.count++;
-				return res(
-					cxt.status(200),
-					cxt.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: { id: "MOCK_USER_ID" },
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: { id: "MOCK_USER_ID" },
+				});
 			})
 		);
 	});
@@ -476,12 +473,16 @@ function mockMetricRequest(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.post(`*/${endpoint}`, async (req, res, cxt) => {
-			requests.count++;
-			expect(await req.json()).toEqual(body);
-			expect(req.headers).toContain(header);
-			return res.once(cxt.status(200), cxt.json({}));
-		})
+		http.post(
+			`*/${endpoint}`,
+			async ({ request }) => {
+				requests.count++;
+				expect(await request.json()).toEqual(body);
+				expect(request.headers).toContain(header);
+				return HttpResponse.json({});
+			},
+			{ once: true }
+		)
 	);
 
 	return requests;

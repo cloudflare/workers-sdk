@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -231,40 +231,40 @@ describe("deployments", () => {
 				setIsTTY(true);
 				requests.count = 0;
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountID/workers/scripts/:scriptName",
-						(req, res, ctx) => {
-							expect(req.url.searchParams.get("rollback_to")).toMatch(
+						({ request }) => {
+							const url = new URL(request.url);
+							expect(url.searchParams.get("rollback_to")).toMatch(
 								/^3mEgaU1T-Intrepid-someThing-tag:/
 							);
 
 							requests.count++;
 
-							return res.once(
-								ctx.json(
-									createFetchResult({
-										created_on: "2222-11-18T16:40:48.50545Z",
-										modified_on: "2222-01-20T18:08:47.464024Z",
-										id: "space_craft_1",
-										tag: "alien_tech_001",
-										tags: ["hyperdrive", "laser_cannons", "shields"],
-										deployment_id: "galactic_mission_alpha",
-										logpush: true,
-										etag: "13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794",
-										handlers: [
-											"interstellar_communication",
-											"hyperspace_navigation",
-										],
-										last_deployed_from: "spaceport_alpha",
-										usage_model: "intergalactic",
-										script: `addEventListener('interstellar_communication', event =\u003e
+							return HttpResponse.json(
+								createFetchResult({
+									created_on: "2222-11-18T16:40:48.50545Z",
+									modified_on: "2222-01-20T18:08:47.464024Z",
+									id: "space_craft_1",
+									tag: "alien_tech_001",
+									tags: ["hyperdrive", "laser_cannons", "shields"],
+									deployment_id: "galactic_mission_alpha",
+									logpush: true,
+									etag: "13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794",
+									handlers: [
+										"interstellar_communication",
+										"hyperspace_navigation",
+									],
+									last_deployed_from: "spaceport_alpha",
+									usage_model: "intergalactic",
+									script: `addEventListener('interstellar_communication', event =\u003e
 							{ event.respondWith(transmit(event.request)) }
 							)`,
-										size: "1 light-year",
-									})
-								)
+									size: "1 light-year",
+								})
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 			});
