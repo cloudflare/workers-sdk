@@ -74,7 +74,7 @@ export const validate = async (args: {
 				return false;
 			}
 
-			return false;
+			return true;
 		});
 	}
 
