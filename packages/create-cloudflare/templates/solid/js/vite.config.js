@@ -1,7 +1,12 @@
-import cloudflare from "solid-start-cloudflare-pages";
-import solid from "solid-start/vite";
-import { defineConfig } from "vite";
+import { defineConfig } from "@solidjs/start/config";
 
 export default defineConfig({
-	plugins: [solid({ adapter: cloudflare({}) })],
+    start: {
+        server: {
+            preset: "cloudflare-pages",
+            rollupConfig: {
+                external: ["node:async_hooks"]
+            },
+        }
+    }
 });
