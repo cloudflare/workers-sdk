@@ -63,7 +63,19 @@ export const validate = async (args: {
 			encoding: "utf-8"
 		});
 
-		return ignoreListContents.split('\n');
+		return ignoreListContents.split('\n').filter((line) => {
+			const trimmedLine = line.trim();
+
+			if(trimmedLine.length === 0) {
+				return false;
+			}
+
+			if(trimmedLine.startsWith('#')) {
+				return false;
+			}
+
+			return false;
+		});
 	}
 
 	const directory = resolve(args.directory);
