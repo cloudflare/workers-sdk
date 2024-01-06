@@ -1,5 +1,5 @@
 import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import path, { join, relative, resolve, sep } from "node:path";
 import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
@@ -11,6 +11,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import { existsSync, readFileSync } from "node:fs";
 
 type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -42,18 +43,32 @@ export type FileContainer = {
 export const validate = async (args: {
 	directory: string;
 }): Promise<Map<string, FileContainer>> => {
-	const IGNORE_LIST = [
-		"_worker.js",
-		"_redirects",
-		"_headers",
-		"_routes.json",
-		"functions",
-		"node_modules",
-		"**/.DS_Store",
-		"**/.git",
-	].map((pattern) => new Minimatch(pattern));
+	function getIgnoreList(directory: string): string[] {
+		const ignoreListPath = path.join(directory, ".pagesignore");
+
+		if(!existsSync(ignoreListPath)) {
+			return [
+				"_worker.js",
+				"_redirects",
+				"_headers",
+				"_routes.json",
+				"functions",
+				"**/.DS_Store",
+				"**/node_modules",
+				"**/.git"
+			];
+		}
+
+		const ignoreListContents = readFileSync(ignoreListPath, {
+			encoding: "utf-8"
+		});
+
+		return ignoreListContents.split('\n');
+	}
 
 	const directory = resolve(args.directory);
+
+	const IGNORE_LIST = getIgnoreList(directory).map((pattern) => new Minimatch(pattern));
 
 	// TODO(future): Use this to more efficiently load files in and speed up uploading
 	// Limit memory to 1 GB unless more is specified
