@@ -291,7 +291,7 @@ export const Handler = async ({
 	const workerScriptPath =
 		directory !== undefined
 			? join(directory, singleWorkerScriptPath)
-			: singleWorkerScriptPath;
+			: resolve(singleWorkerScriptPath);
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
