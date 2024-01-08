@@ -96,7 +96,6 @@ export function r2(r2Yargs: CommonYargsArgv) {
 					},
 					async (objectGetYargs) => {
 						const config = readConfig(objectGetYargs.config, objectGetYargs);
-						const accountId = await requireAuth(config);
 						const { objectPath, pipe, jurisdiction } = objectGetYargs;
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						let fullBucketName = bucket;
@@ -135,6 +134,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								}
 							);
 						} else {
+							const accountId = await requireAuth(config);
 							const input = await getR2Object(
 								accountId,
 								bucket,
@@ -228,7 +228,6 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						await printWranglerBanner();
 
 						const config = readConfig(objectPutYargs.config, objectPutYargs);
-						const accountId = await requireAuth(config);
 						const {
 							objectPath,
 							file,
@@ -336,6 +335,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								}
 							);
 						} else {
+							const accountId = await requireAuth(config);
 							await putR2Object(
 								accountId,
 								bucket,
@@ -382,7 +382,6 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						await printWranglerBanner();
 
 						const config = readConfig(args.config, args);
-						const accountId = await requireAuth(config);
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						let fullBucketName = bucket;
 						if (jurisdiction !== undefined) {
@@ -401,6 +400,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								(r2Bucket) => r2Bucket.delete(key)
 							);
 						} else {
+							const accountId = await requireAuth(config);
 							await deleteR2Object(accountId, bucket, key, jurisdiction);
 						}
 

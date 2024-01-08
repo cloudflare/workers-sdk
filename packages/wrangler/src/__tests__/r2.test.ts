@@ -13,11 +13,12 @@ describe("r2", () => {
 	const std = mockConsoleMethods();
 	beforeEach(() => msw.use(...mswSuccessR2handlers));
 
-	mockAccountId();
-	mockApiToken();
 	runInTempDir();
 
 	describe("bucket", () => {
+		mockAccountId();
+		mockApiToken();
+
 		it("should show the correct help when an invalid command is passed", async () => {
 			await expect(() =>
 				runWrangler("r2 bucket foo")
@@ -285,68 +286,73 @@ describe("r2", () => {
 	});
 
 	describe("r2 object", () => {
-		it("should download R2 object from bucket", async () => {
-			await runWrangler(
-				`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
-			);
+		describe("remote", () => {
+			// Only login for remote tests, local tests shouldn't require auth
+			mockAccountId();
+			mockApiToken();
 
-			expect(std.out).toMatchInlineSnapshot(`
+			it("should download R2 object from bucket", async () => {
+				await runWrangler(
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 			Download complete."
 		`);
-		});
+			});
 
-		it("should download R2 object from bucket into directory", async () => {
-			await runWrangler(
-				`r2 object get bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
-			);
-			expect(fs.readFileSync("a/b/c/wormhole-img.png", "utf8")).toBe(
-				"wormhole-img.png"
-			);
-		});
+			it("should download R2 object from bucket into directory", async () => {
+				await runWrangler(
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
+				);
+				expect(fs.readFileSync("a/b/c/wormhole-img.png", "utf8")).toBe(
+					"wormhole-img.png"
+				);
+			});
 
-		it("should upload R2 object to bucket", async () => {
-			fs.writeFileSync("wormhole-img.png", "passageway");
-			await runWrangler(
-				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
-			);
+			it("should upload R2 object to bucket", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+				);
 
-			expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete."
 		`);
-		});
+			});
 
-		it("should fail to upload R2 object to bucket if too large", async () => {
-			const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
-			fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
-			await expect(
-				runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(`
+			it("should fail to upload R2 object to bucket if too large", async () => {
+				const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
+				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
+				await expect(
+					runWrangler(
+						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
 			"Error: Wrangler only supports uploading files up to ${prettyBytes(
 				MAX_UPLOAD_SIZE,
 				{ binary: true }
 			)} in size
 			wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
 		`);
-		});
+			});
 
-		it("should pass all fetch option flags into requestInit & check request inputs", async () => {
-			msw.use(
-				rest.put(
-					"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-					(request, response, context) => {
-						const { accountId, bucketName, objectName } = request.params;
-						expect(accountId).toEqual("some-account-id");
-						expect(bucketName).toEqual("bucketName-object-test");
-						expect(objectName).toEqual("wormhole-img.png");
-						const headersObject = request.headers.all();
-						delete headersObject["user-agent"];
-						//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
-						delete headersObject["content-length"];
-						expect(headersObject).toMatchInlineSnapshot(`
+			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
+				msw.use(
+					rest.put(
+						"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
+						(request, response, context) => {
+							const { accountId, bucketName, objectName } = request.params;
+							expect(accountId).toEqual("some-account-id");
+							expect(bucketName).toEqual("bucketName-object-test");
+							expect(objectName).toEqual("wormhole-img.png");
+							const headersObject = request.headers.all();
+							delete headersObject["user-agent"];
+							//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
+							delete headersObject["content-length"];
+							expect(headersObject).toMatchInlineSnapshot(`
 					Object {
 					  "accept": "*/*",
 					  "accept-encoding": "gzip,deflate",
@@ -361,74 +367,76 @@ describe("r2", () => {
 					  "host": "api.cloudflare.com",
 					}
 				`);
-						return response.once(
-							context.json(
-								createFetchResult({
-									accountId: "some-account-id",
-									bucketName: "bucketName-object-test",
-									objectName: "wormhole-img.png",
-								})
-							)
-						);
-					}
-				)
-			);
-			fs.writeFileSync("wormhole-img.png", "passageway");
-			const flags =
-				"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
+							return response.once(
+								context.json(
+									createFetchResult({
+										accountId: "some-account-id",
+										bucketName: "bucketName-object-test",
+										objectName: "wormhole-img.png",
+									})
+								)
+							);
+						}
+					)
+				);
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				const flags =
+					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
 
-			await runWrangler(
-				`r2 object put bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
-			);
+				await runWrangler(
+					`r2 object put bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
+				);
 
-			expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete."
 		`);
-		});
+			});
 
-		it("should delete R2 object from bucket", async () => {
-			await runWrangler(
-				`r2 object delete bucketName-object-test/wormhole-img.png`
-			);
+			it("should delete R2 object from bucket", async () => {
+				await runWrangler(
+					`r2 object delete bucketName-object-test/wormhole-img.png`
+				);
 
-			expect(std.out).toMatchInlineSnapshot(`
+				expect(std.out).toMatchInlineSnapshot(`
 			"Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
 			Delete complete."
 		`);
-		});
+			});
 
-		it("should not allow `--pipe` & `--file` to run together", async () => {
-			fs.writeFileSync("wormhole-img.png", "passageway");
-			await expect(
-				runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Arguments pipe and file are mutually exclusive"`
-			);
+			it("should not allow `--pipe` & `--file` to run together", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await expect(
+					runWrangler(
+						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"Arguments pipe and file are mutually exclusive"`
+				);
 
-			expect(std.err).toMatchInlineSnapshot(`
+				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments pipe and file are mutually exclusive[0m
 
 			"
 		`);
+			});
 		});
 
-		it("should put R2 object from local bucket", async () => {
-			await expect(() =>
-				runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The specified key does not exist."`
-			);
+		describe("local", () => {
+			it("should put R2 object from local bucket", async () => {
+				await expect(() =>
+					runWrangler(
+						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"The specified key does not exist."`
+				);
 
-			fs.writeFileSync("wormhole-img.png", "passageway");
-			await runWrangler(
-				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
-			);
-			expect(std.out).toMatchInlineSnapshot(`
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
@@ -436,10 +444,10 @@ describe("r2", () => {
 			Upload complete."
 		`);
 
-			await runWrangler(
-				`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
-			);
-			expect(std.out).toMatchInlineSnapshot(`
+				await runWrangler(
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
@@ -448,28 +456,28 @@ describe("r2", () => {
 			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 			Download complete."
 		`);
-		});
+			});
 
-		it("should delete R2 object from local bucket", async () => {
-			fs.writeFileSync("wormhole-img.png", "passageway");
-			await runWrangler(
-				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
-			);
+			it("should delete R2 object from local bucket", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+				);
 
-			await runWrangler(
-				`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
-			);
-			expect(std.out).toMatchInlineSnapshot(`
+				await runWrangler(
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete.
 			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 			Download complete."
 		`);
 
-			await runWrangler(
-				`r2 object delete bucketName-object-test/wormhole-img.png --local`
-			);
-			expect(std.out).toMatchInlineSnapshot(`
+				await runWrangler(
+					`r2 object delete bucketName-object-test/wormhole-img.png --local`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete.
 			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
@@ -478,37 +486,37 @@ describe("r2", () => {
 			Delete complete."
 		`);
 
-			await expect(() =>
-				runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The specified key does not exist."`
-			);
-		});
+				await expect(() =>
+					runWrangler(
+						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"The specified key does not exist."`
+				);
+			});
 
-		it("should follow persist-to for object bucket", async () => {
-			fs.writeFileSync("wormhole-img.png", "passageway");
-			await runWrangler(
-				`r2 object put bucketName-object-test/file-one --file ./wormhole-img.png --local`
-			);
+			it("should follow persist-to for object bucket", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucketName-object-test/file-one --file ./wormhole-img.png --local`
+				);
 
-			await runWrangler(
-				`r2 object put bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
-			);
+				await runWrangler(
+					`r2 object put bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
+				);
 
-			await expect(() =>
-				runWrangler(
-					`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png --local --persist-to ./different-dir`
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The specified key does not exist."`
-			);
+				await expect(() =>
+					runWrangler(
+						`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png --local --persist-to ./different-dir`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"The specified key does not exist."`
+				);
 
-			await runWrangler(
-				`r2 object get bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
-			);
-			expect(std.out).toMatchInlineSnapshot(`
+				await runWrangler(
+					`r2 object get bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"file-one\\" in bucket \\"bucketName-object-test\\".
 			Upload complete.
 			Creating object \\"file-two\\" in bucket \\"bucketName-object-test\\".
@@ -519,6 +527,7 @@ describe("r2", () => {
 			Downloading \\"file-two\\" from \\"bucketName-object-test\\".
 			Download complete."
 		`);
+			});
 		});
 	});
 });
