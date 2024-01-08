@@ -274,3 +274,5 @@ export async function handlePrettyErrorRequest(
 		headers: { "Content-Type": "text/html;charset=utf-8" },
 	});
 }
+
+export { getFreshSourceMapSupport } from "./sourcemap";

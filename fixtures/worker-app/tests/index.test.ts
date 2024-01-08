@@ -45,6 +45,16 @@ describe("'wrangler dev' correctly renders pages", () => {
 		);
 	});
 
+	it("renders pretty error after logging", async ({ expect }) => {
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4715
+		const response = await fetch(`http://${ip}:${port}/error`);
+		const text = await response.text();
+		expect(text).toContain("Oops!");
+		expect(response.headers.get("Content-Type")).toBe(
+			"text/html;charset=utf-8"
+		);
+	});
+
 	it("uses `workerd` condition when bundling", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/random`);
 		const text = await response.text();

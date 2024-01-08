@@ -93,6 +93,7 @@ export {
 	ModuleDefinitionSchema,
 	SourceOptionsSchema,
 	ProxyClient,
+	getFreshSourceMapSupport,
 } from "./core";
 export type {
 	ModuleRuleType,
