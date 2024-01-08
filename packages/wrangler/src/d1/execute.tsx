@@ -1,10 +1,9 @@
 import assert from "node:assert";
-import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
+import { Miniflare } from "miniflare";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
@@ -18,18 +17,14 @@ import { renderToString } from "../utils/render";
 import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
-import {
-	d1BetaWarning,
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromConfig,
-} from "./utils";
+import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
-import type { D1SuccessResponse } from "miniflare";
+import type { D1Result } from "@cloudflare/workers-types/experimental";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -103,7 +98,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "error";
 	}
 	const config = readConfig(args.config, args);
-	logger.log(d1BetaWarning);
+
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
 
@@ -204,10 +199,8 @@ export async function executeSql({
 		? await executeLocally({
 				config,
 				name,
-				shouldPrompt,
 				queries,
 				persistTo,
-				json,
 		  })
 		: await executeRemotely({
 				config,
@@ -224,17 +217,13 @@ export async function executeSql({
 async function executeLocally({
 	config,
 	name,
-	shouldPrompt,
 	queries,
 	persistTo,
-	json,
 }: {
 	config: Config;
 	name: string;
-	shouldPrompt: boolean | undefined;
 	queries: string[];
 	persistTo: string | undefined;
-	json: boolean | undefined;
 }) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
@@ -245,30 +234,29 @@ async function executeLocally({
 
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
 	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
-	const dbDir = path.join(persistencePath, "v3", "d1", id);
-	const dbPath = path.join(dbDir, `db.sqlite`);
+	const d1Persist = path.join(persistencePath, "v3", "d1");
 
-	// eslint-disable-next-line @typescript-eslint/no-var-requires
-	const { D1Gateway, NoOpLog, createFileStorage } = require("miniflare");
-	const storage = createFileStorage(dbDir);
+	logger.log(
+		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
+			d1Persist
+		)}:`
+	);
 
-	if (!existsSync(dbDir)) {
-		const ok =
-			json ||
-			!shouldPrompt ||
-			(await confirm(`About to create ${readableRelative(dbPath)}, ok?`));
-		if (!ok) return null;
-		await mkdir(dbDir, { recursive: true });
-	}
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		d1Persist,
+		d1Databases: { DATABASE: id },
+	});
+	const db = await mf.getD1Database("DATABASE");
 
-	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
-
-	const db = new D1Gateway(new NoOpLog(), storage);
-	let results: D1SuccessResponse | D1SuccessResponse[];
+	let results: D1Result<Record<string, string | number | boolean>>[];
 	try {
-		results = db.query(queries.map((query) => ({ sql: query })));
+		results = await db.batch(queries.map((query) => db.prepare(query)));
 	} catch (e: unknown) {
 		throw (e as { cause?: unknown })?.cause ?? e;
+	} finally {
+		await mf.dispose();
 	}
 	assert(Array.isArray(results));
 	return results.map<QueryResult>((result) => ({
@@ -329,7 +317,10 @@ async function executeRemotely({
 		);
 	}
 	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
-	logger.log(`🌀 Executing on ${name} (${dbUuid}):`);
+	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);
+	logger.log(
+		"🌀 To execute on your local development database, pass the --local flag to 'wrangler d1 execute'"
+	);
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {

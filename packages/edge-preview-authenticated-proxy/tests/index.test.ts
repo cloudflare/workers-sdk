@@ -19,10 +19,10 @@ describe("Preview Worker", () => {
 	let tmpDir: string;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.ts", {
+		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
+			config: path.join(__dirname, "../wrangler.toml"),
 			experimental: {
 				disableExperimentalWarning: true,
-				// experimentalLocal: true,
 			},
 		});
 
@@ -63,9 +63,17 @@ describe("Preview Worker", () => {
 			`.trim()
 		);
 
+		await fs.writeFile(
+			path.join(tmpDir, "wrangler.toml"),
+			/*toml*/ `
+name = "remote-worker"
+compatibility_date = "2023-01-01"
+			`.trim()
+		);
+
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
+			config: path.join(tmpDir, "wrangler.toml"),
 			experimental: { disableExperimentalWarning: true },
-			port: 6756,
 		});
 	});
 
@@ -83,7 +91,7 @@ describe("Preview Worker", () => {
 	it("should obtain token from exchange_url", async () => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
-				"http://127.0.0.1:6756/exchange"
+				`http://127.0.0.1:${remote.port}/exchange`
 			)}`,
 			{
 				method: "POST",
@@ -108,9 +116,9 @@ describe("Preview Worker", () => {
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
 			)}&prewarm=${encodeURIComponent(
-				"http://127.0.0.1:6756/prewarm"
+				`http://127.0.0.1:${remote.port}/prewarm`
 			)}&remote=${encodeURIComponent(
-				"http://127.0.0.1:6756"
+				`http://127.0.0.1:${remote.port}`
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -121,10 +129,14 @@ describe("Preview Worker", () => {
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(
 			'"/hello?world"'
 		);
-		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
 		);
-		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
 		resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev`,
 			{
@@ -135,21 +147,20 @@ describe("Preview Worker", () => {
 			}
 		);
 
-		const json = await resp.json();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
+		const json = (await resp.json()) as any;
 
-		expect(
-			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
-		).toBe(token);
-		expect(json.url).toMatchInlineSnapshot(
-			'"http://preview.devprod.cloudflare.dev/"'
-		);
+		expect(json).toMatchObject({
+			url: `http://127.0.0.1:${remote.port}/`,
+			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
+		});
 	});
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				"http://127.0.0.1:6756/prewarm"
+				`http://127.0.0.1:${remote.port}/prewarm`
 			)}&remote=${encodeURIComponent(
-				"http://127.0.0.1:6756"
+				`http://127.0.0.1:${remote.port}`
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -159,10 +170,14 @@ describe("Preview Worker", () => {
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(
 			'"/hello?world"'
 		);
-		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
 		);
-		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
 	});
 
 	it("should convert cookie to header", async () => {
@@ -177,12 +192,12 @@ describe("Preview Worker", () => {
 		);
 
 		const json = (await resp.json()) as { headers: string[][]; url: string };
-		expect(Object.fromEntries([...json.headers])).toMatchObject({
-			"cf-workers-preview-token": "TEST_TOKEN",
+		expect(json).toMatchObject({
+			url: `http://127.0.0.1:${remote.port}/`,
+			headers: expect.arrayContaining([
+				["cf-workers-preview-token", "TEST_TOKEN"],
+			]),
 		});
-		expect(json.url).toMatchInlineSnapshot(
-			'"http://preview.devprod.cloudflare.dev/"'
-		);
 	});
 	it("should not follow redirects", async () => {
 		const resp = await worker.fetch(
@@ -198,7 +213,7 @@ describe("Preview Worker", () => {
 
 		expect(resp.status).toMatchInlineSnapshot("302");
 		expect(resp.headers.get("Location")).toMatchInlineSnapshot(
-			'"https://example.com/"'
+			'"https://example.com"'
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
@@ -244,5 +259,38 @@ describe("Preview Worker", () => {
 		);
 
 		expect(await resp.text()).toMatchInlineSnapshot('"407"');
+	});
+});
+
+describe("Raw HTTP preview", () => {
+	let worker: UnstableDevWorker;
+
+	beforeAll(async () => {
+		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
+			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
+			host: "0000.rawhttp.devprod.cloudflare.dev",
+			experimental: {
+				disableExperimentalWarning: true,
+			},
+		});
+	});
+
+	afterAll(async () => {
+		await worker.stop();
+	});
+
+	it("should allow arbitrary headers in cross-origin requests", async () => {
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev`,
+			{
+				method: "OPTIONS",
+				headers: {
+					"Access-Control-Request-Headers": "foo",
+					origin: "https://cloudflare.dev",
+				},
+			}
+		);
+
+		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
 	});
 });

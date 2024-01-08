@@ -7,9 +7,12 @@ export default defineConfig({
 		include: ["e2e-tests/**/*.test.ts"],
 		cache: false,
 		root: ".",
-		singleThread: true,
-		threads: false,
-		testTimeout: 1000 * 60 * 3, // 3 min for lengthy installs
+		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs
+		maxConcurrency: 3,
 		setupFiles: ["e2e-tests/setup.ts"],
+		reporters: ["json", "verbose", "hanging-process"],
+		outputFile: {
+			json: "./.e2e-logs/" + process.env.TEST_PM + "/results.json",
+		},
 	},
 });

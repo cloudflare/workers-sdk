@@ -2,26 +2,35 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
-import { bundleWorker, dedupeModulesByName } from "../bundle";
+import { DevEnv, type StartDevWorkerOptions } from "../api";
+import { bundleWorker } from "../deployment-bundle/bundle";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
+} from "../deployment-bundle/module-collection";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
+import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
-import { MiniflareServer } from "./miniflare";
+import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { CfModule } from "../worker";
-import type { DevProps, DirectorySyncResult } from "./dev";
+import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -45,7 +54,7 @@ export async function startDevServer(
 	}
 
 	//implement a react-free version of useTmpDir
-	const directory = setupTempDir();
+	const directory = setupTempDir(props.projectRoot);
 	if (!directory) {
 		throw new Error("Failed to create temporary directory.");
 	}
@@ -72,12 +81,42 @@ export async function startDevServer(
 		}
 	}
 
-	const betaD1Shims = props.bindings.d1_databases?.map((db) => db.binding);
+	const devEnv = new DevEnv();
+	const startDevWorkerOptions: StartDevWorkerOptions = {
+		name: props.name ?? "worker",
+		script: { contents: "" },
+		dev: {
+			server: {
+				hostname: props.initialIp,
+				port: props.initialPort,
+				secure: props.localProtocol === "https",
+			},
+			inspector: {
+				port: props.inspectorPort,
+			},
+			urlOverrides: {
+				secure: props.localProtocol === "https",
+				hostname: props.localUpstream,
+			},
+			liveReload: props.liveReload,
+			remote: !props.local,
+		},
+	};
+
+	// temp: fake these events by calling the handler directly
+	devEnv.proxy.onConfigUpdate({
+		type: "configUpdate",
+		config: startDevWorkerOptions,
+	});
+	devEnv.proxy.onBundleStart({
+		type: "bundleStart",
+		config: startDevWorkerOptions,
+	});
 
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
-		destination: directory.name,
+		destination: directory,
 		jsxFactory: props.jsxFactory,
 		processEntrypoint: props.processEntrypoint,
 		additionalModules: props.additionalModules,
@@ -92,17 +131,24 @@ export async function startDevServer(
 		nodejsCompat: props.nodejsCompat,
 		define: props.define,
 		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		betaD1Shims,
 		workerDefinitions,
 		services: props.bindings.services,
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
+		projectRoot: props.projectRoot,
 	});
 
 	if (props.local) {
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onReloadStart({
+			type: "reloadStart",
+			config: startDevWorkerOptions,
+			bundle,
+		});
+
 		const { stop } = await startLocalServer({
 			name: props.name,
 			bundle: bundle,
@@ -122,8 +168,31 @@ export async function startDevServer(
 			queueConsumers: props.queueConsumers,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
-			inspect: props.inspect,
-			onReady: props.onReady,
+			inspect: true,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				await maybeRegisterLocalWorker(
+					url,
+					props.name,
+					proxyData.internalDurableObjects
+				);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
 			workerDefinitions,
@@ -132,8 +201,7 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
@@ -159,26 +227,40 @@ export async function startDevServer(
 			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
-			onReady: props.onReady,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
 		});
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
 	}
 }
 
-function setupTempDir(): DirectorySyncResult | undefined {
-	let dir: DirectorySyncResult | undefined;
+function setupTempDir(projectRoot: string | undefined): string | undefined {
 	try {
-		dir = tmp.dirSync({ unsafeCleanup: true });
-
-		return dir;
+		const dir = getWranglerTmpDir(projectRoot, "dev");
+		return dir.path;
 	} catch (err) {
 		logger.error("Failed to create temporary directory to store built files.");
 	}
@@ -193,7 +275,6 @@ async function runEsbuild({
 	additionalModules,
 	rules,
 	assets,
-	betaD1Shims,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -201,22 +282,22 @@ async function runEsbuild({
 	nodejsCompat,
 	define,
 	noBundle,
+	findAdditionalModules,
 	workerDefinitions,
 	services,
-	firstPartyWorkerDevFacade,
 	testScheduled,
 	local,
 	doBindings,
+	projectRoot,
 }: {
 	entry: Entry;
-	destination: string | undefined;
+	destination: string;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
 	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
-	betaD1Shims?: string[];
 	define: Config["define"];
 	services: Config["services"];
 	serveAssetsFromWorker: boolean;
@@ -225,77 +306,77 @@ async function runEsbuild({
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
-	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
-}): Promise<EsbuildBundle | undefined> {
-	if (!destination) return;
-
-	let traverseModuleGraphResult:
-		| Awaited<ReturnType<typeof bundleWorker>>
-		| undefined;
-	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
+	projectRoot: string | undefined;
+}): Promise<EsbuildBundle> {
 	if (noBundle) {
-		traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+		additionalModules = dedupeModulesByName([
+			...((await doFindAdditionalModules(entry, rules)) ?? []),
+			...additionalModules,
+		]);
 	}
 
-	if (processEntrypoint || !noBundle) {
-		bundleResult = await bundleWorker(entry, destination, {
-			bundle: !noBundle,
-			disableModuleCollection: noBundle,
-			serveAssetsFromWorker,
-			jsxFactory,
-			jsxFragment,
-			rules,
-			tsconfig,
-			minify,
-			legacyNodeCompat,
-			nodejsCompat,
-			define,
-			checkFetch: true,
-			assets: assets && {
-				...assets,
-				// disable the cache in dev
-				bypassCache: true,
-			},
-			betaD1Shims,
-			workerDefinitions,
-			services,
-			firstPartyWorkerDevFacade,
-			targetConsumer: "dev", // We are starting a dev server
-			testScheduled,
-			local,
-			doBindings,
-			additionalModules: dedupeModulesByName([
-				...(traverseModuleGraphResult?.modules ?? []),
-				...additionalModules,
-			]),
-		});
-	}
+	const entryDirectory = path.dirname(entry.file);
+	const moduleCollector = noBundle
+		? noopModuleCollector
+		: createModuleCollector({
+				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+					entryDirectory,
+					entry.file
+				),
+				entry,
+				findAdditionalModules: findAdditionalModules ?? false,
+				rules,
+		  });
+
+	const bundleResult =
+		processEntrypoint || !noBundle
+			? await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					additionalModules,
+					moduleCollector,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					define,
+					checkFetch: true,
+					assets,
+					// disable the cache in dev
+					bypassAssetCache: true,
+					workerDefinitions,
+					services,
+					targetConsumer: "dev", // We are starting a dev server
+					local,
+					testScheduled,
+					doBindings,
+					projectRoot,
+			  })
+			: undefined;
 
 	return {
 		id: 0,
 		entry,
 		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-		type:
-			bundleResult?.bundleType ??
-			(entry.format === "modules" ? "esm" : "commonjs"),
-		modules: bundleResult
-			? bundleResult.modules
-			: dedupeModulesByName([
-					...(traverseModuleGraphResult?.modules ?? []),
-					...additionalModules,
-			  ]),
+		type: bundleResult?.bundleType ?? getBundleType(entry.format),
+		modules: bundleResult ? bundleResult.modules : additionalModules,
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,
 	};
 }
 
-export async function startLocalServer(props: LocalProps) {
-	if (!props.bundle || !props.format) return Promise.resolve({ stop() {} });
+export async function startLocalServer(
+	props: LocalProps
+): Promise<{ stop: () => Promise<void> }> {
+	if (!props.bundle || !props.format) return { async stop() {} };
 
 	// Log warnings for experimental dev-registry-dependent options
 	if (props.bindings.services && props.bindings.services.length > 0) {
@@ -315,20 +396,47 @@ export async function startLocalServer(props: LocalProps) {
 	logger.log(chalk.dim("⎔ Starting local server..."));
 
 	const config = await localPropsToConfigBundle(props);
-	return new Promise<{ stop: () => void }>((resolve, reject) => {
+	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(event, props.name);
-			props.onReady?.(event.url.hostname, parseInt(event.url.port));
+			const proxyData: ProxyData = {
+				userWorkerUrl: {
+					protocol: event.url.protocol,
+					hostname: event.url.hostname,
+					port: event.url.port,
+				},
+				userWorkerInspectorUrl: {
+					protocol: "ws:",
+					hostname: "127.0.0.1",
+					port: props.runtimeInspectorPort.toString(),
+					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
+				},
+				userWorkerInnerUrlOverrides: {
+					protocol: props.localProtocol,
+					hostname: props.localUpstream,
+					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
+				},
+				headers: {
+					// Passing this signature from Proxy Worker allows the User Worker to trust the request.
+					"MF-Proxy-Shared-Secret": event.proxyToUserWorkerAuthenticationSecret,
+				},
+				liveReload: props.liveReload,
+				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
+				// workers written in "service-worker" format still need to proxy logs to the ProxyController
+				proxyLogsToController: props.format === "service-worker",
+				internalDurableObjects: event.internalDurableObjects,
+			};
+
+			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);
 			// Note `unstable_dev` doesn't do anything with the inspector URL yet
 			resolve({
-				stop: () => {
+				stop: async () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
-					// Initialisation errors are also thrown asynchronously by dispose().
-					// The `addEventListener("error")` above should've caught them though.
-					server.onDispose().catch(() => {});
 					removeMiniflareServerExitListener();
+					// Initialization errors are also thrown asynchronously by dispose().
+					// The `addEventListener("error")` above should've caught them though.
+					await server.onDispose();
 				},
 			});
 		});

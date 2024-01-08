@@ -5,32 +5,42 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
 import { fetch } from "undici";
+import { DevEnv } from "../api";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
-import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { Local } from "./local";
+import { getWranglerTmpDir } from "../paths";
+import { openInspector } from "./inspect";
+import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
-import type { CfModule, CfWorkerInit } from "../worker";
+import type { EsbuildBundle } from "./use-esbuild";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -44,6 +54,8 @@ function useDevRegistry(
 	mode: "local" | "remote"
 ): WorkerRegistry {
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
+
+	const hasFailedToFetch = useRef(false);
 
 	useEffect(() => {
 		// Let's try to start registry
@@ -73,7 +85,10 @@ function useDevRegistry(
 								});
 							},
 							(err) => {
-								logger.warn("Failed to get worker definitions", err);
+								if (!hasFailedToFetch.current) {
+									hasFailedToFetch.current = true;
+									logger.warn("Failed to get worker definitions", err);
+								}
 							}
 						);
 				  }, 300)
@@ -112,6 +127,7 @@ function useDevRegistry(
 export type DevProps = {
 	name: string | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	entry: Entry;
 	initialPort: number;
 	initialIp: string;
@@ -150,13 +166,16 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	onReady: ((ip: string, port: number) => void) | undefined;
+	onReady:
+		| ((ip: string, port: number, proxyData: ProxyData) => void)
+		| undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
+	projectRoot: string | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -196,14 +215,10 @@ function InteractiveDevSession(props: DevProps) {
 
 	useTunnel(toggles.tunnel);
 
-	const onReady = (newIp: string, newPort: number) => {
-		if (newIp !== props.initialIp || newPort !== props.initialPort) {
-			ip = newIp;
-			port = newPort;
-			if (props.onReady) {
-				props.onReady(newIp, newPort);
-			}
-		}
+	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
+		ip = newIp;
+		port = newPort;
+		props.onReady?.(newIp, newPort, proxyData);
 	};
 
 	return (
@@ -239,28 +254,62 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
-	useCustomBuild(props.entry, props.build);
-
-	const directory = useTmpDir();
-	const handleError = useErrorHandler();
-
-	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
-	// Additionally, useMemo is used so that new arrays aren't created on every render
-	// cause re-rendering further down.
-	const betaD1Shims = useMemo(
-		() => props.bindings.d1_databases?.map((db) => db.binding),
-		[props.bindings.d1_databases]
+	const [devEnv] = useState(() => new DevEnv());
+	useEffect(() => {
+		return () => {
+			void devEnv.teardown();
+		};
+	}, [devEnv]);
+	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
+		() => ({
+			name: props.name ?? "worker",
+			script: { contents: "" },
+			dev: {
+				server: {
+					hostname: props.initialIp,
+					port: props.initialPort,
+					secure: props.localProtocol === "https",
+				},
+				inspector: {
+					port: props.inspectorPort,
+				},
+				urlOverrides: {
+					secure: props.localProtocol === "https",
+					hostname: props.localUpstream,
+				},
+				liveReload: props.liveReload,
+			},
+		}),
+		[
+			props.name,
+			props.initialIp,
+			props.initialPort,
+			props.localProtocol,
+			props.localUpstream,
+			props.inspectorPort,
+			props.liveReload,
+		]
+	);
+	const onBundleStart = useCallback(() => {
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: startDevWorkerOptions,
+		});
+	}, [devEnv, startDevWorkerOptions]);
+	const onReloadStart = useCallback(
+		(bundle: EsbuildBundle) => {
+			devEnv.proxy.onReloadStart({
+				type: "reloadStart",
+				config: startDevWorkerOptions,
+				bundle,
+			});
+		},
+		[devEnv, startDevWorkerOptions]
 	);
 
-	// If we are using d1 bindings, and are not bundling the worker
-	// we should error here as the d1 shim won't be added
-	if (Array.isArray(betaD1Shims) && betaD1Shims.length > 0 && props.noBundle) {
-		handleError(
-			new Error(
-				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
-			)
-		);
-	}
+	useCustomBuild(props.entry, props.build, onBundleStart);
+
+	const directory = useTmpDir(props.projectRoot);
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -268,6 +317,13 @@ function DevSession(props: DevSessionProps) {
 		props.bindings.durable_objects,
 		props.local ? "local" : "remote"
 	);
+	useEffect(() => {
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: startDevWorkerOptions,
+		});
+	}, [devEnv, startDevWorkerOptions]);
 
 	const bundle = useEsbuild({
 		entry: props.entry,
@@ -284,20 +340,24 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		legacyNodeCompat: props.legacyNodeCompat,
 		nodejsCompat: props.nodejsCompat,
-		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
+		projectRoot: props.projectRoot,
+		onBundleStart,
 	});
+	useEffect(() => {
+		if (bundle) onReloadStart(bundle);
+	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -309,7 +369,32 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	const announceAndOnReady: typeof props.onReady = (finalIp, finalPort) => {
+	if (props.local && props.bindings.hyperdrive?.length) {
+		logger.warn(
+			"Hyperdrive does not currently support 'wrangler dev' in local mode at this stage of the beta. Use the '--remote' flag to test a Hyperdrive configuration before deploying."
+		);
+	}
+
+	const announceAndOnReady: typeof props.onReady = async (
+		finalIp,
+		finalPort,
+		proxyData
+	) => {
+		// at this point (in the layers of onReady callbacks), we have devEnv in scope
+		// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+		const { proxyWorker } = await devEnv.proxy.ready.promise;
+		const url = await proxyWorker.ready;
+		finalIp = url.hostname;
+		finalPort = parseInt(url.port);
+
+		if (props.local) {
+			await maybeRegisterLocalWorker(
+				url,
+				props.name,
+				proxyData.internalDurableObjects
+			);
+		}
+
 		if (process.send) {
 			process.send(
 				JSON.stringify({
@@ -320,8 +405,17 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
+		if (bundle) {
+			devEnv.proxy.onReloadComplete({
+				type: "reloadComplete",
+				config: startDevWorkerOptions,
+				bundle,
+				proxyData,
+			});
+		}
+
 		if (props.onReady) {
-			props.onReady(finalIp, finalPort);
+			props.onReady(finalIp, finalPort, proxyData);
 		}
 	};
 
@@ -336,8 +430,8 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
 			assetPaths={props.assetPaths}
-			initialPort={props.initialPort}
-			initialIp={props.initialIp}
+			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			runtimeInspectorPort={props.runtimeInspectorPort}
@@ -345,7 +439,7 @@ function DevSession(props: DevSessionProps) {
 			liveReload={props.liveReload}
 			crons={props.crons}
 			queueConsumers={props.queueConsumers}
-			localProtocol={props.localProtocol}
+			localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			localUpstream={props.localUpstream}
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
@@ -383,19 +477,14 @@ function DevSession(props: DevSessionProps) {
 	);
 }
 
-export interface DirectorySyncResult {
-	name: string;
-	removeCallback: () => void;
-}
-
-function useTmpDir(): string | undefined {
-	const [directory, setDirectory] = useState<DirectorySyncResult>();
+function useTmpDir(projectRoot: string | undefined): string | undefined {
+	const [directory, setDirectory] = useState<string>();
 	const handleError = useErrorHandler();
 	useEffect(() => {
-		let dir: DirectorySyncResult | undefined;
+		let dir: EphemeralDirectory | undefined;
 		try {
-			dir = tmp.dirSync({ unsafeCleanup: true });
-			setDirectory(dir);
+			dir = getWranglerTmpDir(projectRoot, "dev");
+			setDirectory(dir.path);
 			return;
 		} catch (err) {
 			logger.error(
@@ -403,14 +492,16 @@ function useTmpDir(): string | undefined {
 			);
 			handleError(err);
 		}
-		return () => {
-			dir?.removeCallback();
-		};
-	}, [handleError]);
-	return directory?.name;
+		return () => dir?.remove();
+	}, [projectRoot, handleError]);
+	return directory;
 }
 
-function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
+function useCustomBuild(
+	expectedEntry: Entry,
+	build: Config["build"],
+	onBundleStart: () => void
+): void {
 	useEffect(() => {
 		if (!build.command) return;
 		let watcher: ReturnType<typeof watch> | undefined;
@@ -423,6 +514,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 					path.relative(expectedEntry.directory, expectedEntry.file) || ".";
 				//TODO: we should buffer requests to the proxy until this completes
 				logger.log(`The file ${filePath} changed, restarting build...`);
+				onBundleStart();
 				runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
 					logger.error("Custom build failed:", err);
 				});
@@ -432,7 +524,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry]);
+	}, [build, expectedEntry, onBundleStart]);
 }
 
 function sleep(period: number) {
@@ -552,7 +644,7 @@ function useHotkeys(props: {
 					break;
 				// open browser
 				case "b": {
-					if (ip === "0.0.0.0") {
+					if (ip === "0.0.0.0" || ip === "*") {
 						await openInBrowser(`${localProtocol}://127.0.0.1:${port}`);
 						return;
 					}

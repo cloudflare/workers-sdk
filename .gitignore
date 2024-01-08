@@ -196,6 +196,15 @@ packages/quick-edit/web
 
 # VSCode Theme
 *.vsix
-vendor/vscode
+vendor/vscode/
 
 .wrangler/
+
+# Turbo Repo
+build/**
+dist/**
+.next/**
+.turbo
+
+# Runtime dependencies report
+runtime-versions.md

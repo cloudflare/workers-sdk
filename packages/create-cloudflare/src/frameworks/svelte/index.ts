@@ -1,26 +1,21 @@
-import { logRaw, updateStatus } from "helpers/cli";
+import { logRaw, updateStatus } from "@cloudflare/cli";
+import { brandColor, dim, blue } from "@cloudflare/cli/colors";
 import { parseTs, transformFile } from "helpers/codemod";
-import { blue, dim, brandColor } from "helpers/colors";
 import {
-	detectPackageManager,
 	installPackages,
 	npmInstall,
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
-import { getFrameworkVersion } from "../index";
+import { detectPackageManager } from "helpers/packages";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
-	await runFrameworkGenerator(
-		ctx,
-		`${npm} create svelte@${version} ${ctx.project.name}`
-	);
+	await runFrameworkGenerator(ctx, [ctx.project.name]);
 
 	logRaw("");
 };
@@ -74,9 +69,9 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Svelte",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages publish .svelte-kit/cloudflare`,
-	},
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
+	}),
 };
 export default config;

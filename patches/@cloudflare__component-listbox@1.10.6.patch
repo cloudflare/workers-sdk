@@ -1,0 +1,85 @@
+diff --git a/es/Listbox.js b/es/Listbox.js
+index e079b915d678be215210f47bfc891f7e8b074f3f..d2ab428c162a61ed9baeefc483632c960853b592 100644
+--- a/es/Listbox.js
++++ b/es/Listbox.js
+@@ -43,7 +43,6 @@ import React, { useCallback, useRef } from 'react';
+ import { useSelect } from 'downshift';
+ import { Trans, useI18n } from '@cloudflare/intl-react';
+ import { createStyledComponent } from '@cloudflare/style-container';
+-import { Checkbox } from '@cloudflare/component-forms';
+ import { Div } from '@cloudflare/elements';
+ import { SelectToggle, SelectMenu, SelectOption } from './components';
+ import { Icon } from '@cloudflare/component-icon';
+@@ -237,27 +236,7 @@ var UnstyledListbox = _ref => {
+       // Override downshift's onClick handling. Deselecting
+       // items doesn't work otherwise
+       onClick: () => handleMultiClick(item)
+-    } : {}), multi ? /*#__PURE__*/React.createElement(Checkbox, {
+-      label: content,
+-      checked: (values === null || values === void 0 ? void 0 : (_values$includes = values.includes) === null || _values$includes === void 0 ? void 0 : _values$includes.call(values, item.value)) || false,
+-      onChange: e => undefined,
+-      componentStyleProps: {
+-        marginRight: 2
+-      },
+-      labelProps: {
+-        // Clicking on the label caused the menu to close.
+-        // Disabling events on the label mitigates the problem.
+-        pointerEvents: 'none',
+-        userSelect: 'none'
+-      },
+-      display: "flex",
+-      alignItems: "center",
+-      marginBottom: 0 // Prevent checkboxes getting focus. Otherwise this blocks
+-      // directly tabbing to the next element. Keyboard and
+-      // click events are handled by the parent.
+-      ,
+-      tabIndex: -1
+-    }) : content);
++    } : {}), content);
+   })));
+ };
+ 
+diff --git a/lib/Listbox.js b/lib/Listbox.js
+index a14e279e59315a073d867504f0840a53b487fbb0..b8dbac0657cdc7394c680212eaa436613bf255f2 100644
+--- a/lib/Listbox.js
++++ b/lib/Listbox.js
+@@ -15,8 +15,6 @@ var _intlReact = require("@cloudflare/intl-react");
+ 
+ var _styleContainer = require("@cloudflare/style-container");
+ 
+-var _componentForms = require("@cloudflare/component-forms");
+-
+ var _elements = require("@cloudflare/elements");
+ 
+ var _components = require("./components");
+@@ -244,29 +242,7 @@ var UnstyledListbox = function UnstyledListbox(_ref) {
+       onClick: function onClick() {
+         return handleMultiClick(item);
+       }
+-    } : {}), multi ? /*#__PURE__*/_react.default.createElement(_componentForms.Checkbox, {
+-      label: content,
+-      checked: (values === null || values === void 0 ? void 0 : (_values$includes = values.includes) === null || _values$includes === void 0 ? void 0 : _values$includes.call(values, item.value)) || false,
+-      onChange: function onChange(e) {
+-        return undefined;
+-      },
+-      componentStyleProps: {
+-        marginRight: 2
+-      },
+-      labelProps: {
+-        // Clicking on the label caused the menu to close.
+-        // Disabling events on the label mitigates the problem.
+-        pointerEvents: 'none',
+-        userSelect: 'none'
+-      },
+-      display: "flex",
+-      alignItems: "center",
+-      marginBottom: 0 // Prevent checkboxes getting focus. Otherwise this blocks
+-      // directly tabbing to the next element. Keyboard and
+-      // click events are handled by the parent.
+-      ,
+-      tabIndex: -1
+-    }) : content);
++    } : {}), content);
+   })));
+ };
+ 

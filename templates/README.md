@@ -10,29 +10,15 @@ Questions about Workers? Please join the [Cloudflare Developers Discord](https:/
 
 There are a few ways to quickly jumpstart your next project using one of the templates found within this repository:
 
-<!-- todo(eidam): is workers.new/<name> still hardcoded or ready for all? -->
-<!-- 2. In-browser development, via `workers.new` -->
-
 1. **Local development, via CLI quickstart utility**
 
-   You may use `yarn`, `pnpm`, or `npm` to invoke the [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) package.
+   We recommend using the `npx wrangler generate [folder-name] [template-name]` command to create new projects with templates.
 
-   > **Note:** All recent versions of `npm`, `yarn`, and `pnpm` support this feature!
+   To create a `my-project` directory using the [`worker-typescript`](/worker-typescript) template, you would run the following command:
 
-   You may select the name of any subdirectory within this repository to create your project; for example, `worker-typescript` and `examples/fast-google-fonts` are both valid subdirectory names.
+   `npx wrangler generate my-project worker-typescript`
 
-   To create a `my-project` directory using the [`worker-typescript`](/worker-typescript) template, you may run one of the following commands:
-
-   > **Note**
-   > This package has now been sunsetted! We recommend using the `wrangler generate [name] [template]` command to create new projects with templates.
-
-   ```sh
-   $ npm init cloudflare my-project worker-typescript
-   # or
-   $ yarn create cloudflare my-project worker-typescript
-   # or
-   $ pnpm create cloudflare my-project worker-typescript
-   ```
+   Each template also comes with explicit installation and setup instructions in the README.
 
 1. **Local development, via full repository clone**
 

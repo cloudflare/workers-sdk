@@ -1,0 +1,28 @@
+function reduceError(e) {
+  return {
+    name: e?.name,
+    message: e?.message ?? String(e),
+    stack: e?.stack,
+    cause: e?.cause === undefined ? undefined : reduceError(e.cause)
+  };
+}
+
+const jsonError = async (request, env, _ctx, middlewareCtx) => {
+  try {
+    return await middlewareCtx.next(request, env);
+  } catch (e) {
+    console.error(e);
+    const error = reduceError(e);
+    return fetch('https://format-errors.devprod.cloudflare.dev', {
+      method: 'POST',
+      body: JSON.stringify({
+        error,
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries())
+      })
+    });
+  }
+};
+
+export default jsonError;

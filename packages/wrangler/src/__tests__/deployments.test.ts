@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -15,6 +16,12 @@ import { mswSuccessDeployments } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+
+function isFileNotFound(e: unknown) {
+	return (
+		typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT"
+	);
+}
 
 describe("deployments", () => {
 	const std = mockConsoleMethods();
@@ -34,6 +41,13 @@ describe("deployments", () => {
 			...mswSuccessDeploymentScriptMetadata,
 			...mswSuccessDeploymentDetails
 		);
+	});
+	afterEach(() => {
+		try {
+			fs.unlinkSync("wrangler.toml");
+		} catch (e) {
+			if (!isFileNotFound(e)) throw e;
+		}
 	});
 
 	it("should log a help message for deployments command", async () => {
@@ -71,24 +85,24 @@ describe("deployments", () => {
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-			Deployment ID: Constitution-Class
+			Deployment ID: Constitution-Class-tag:test-name
 			Created on:    2021-01-01T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Upload from Wrangler 🤠
 
-			Deployment ID: Intrepid-Class
+			Deployment ID: Intrepid-Class-tag:test-name
 			Created on:    2021-02-02T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Rollback from Wrangler 🤠
 			Rollback from: MOCK-DEPLOYMENT-ID-1111
 			Message:       Rolled back for this version
 
-			Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Created on:    2021-02-03T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Wrangler 🤠
 
-			Deployment ID: Galaxy-Class
+			Deployment ID: Galaxy-Class-tag:test-name
 			Created on:    2021-01-04T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Rollback from Wrangler 🤠
@@ -103,24 +117,24 @@ describe("deployments", () => {
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-			Deployment ID: Constitution-Class
+			Deployment ID: Constitution-Class-tag:something-else
 			Created on:    2021-01-01T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Upload from Wrangler 🤠
 
-			Deployment ID: Intrepid-Class
+			Deployment ID: Intrepid-Class-tag:something-else
 			Created on:    2021-02-02T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Rollback from Wrangler 🤠
 			Rollback from: MOCK-DEPLOYMENT-ID-1111
 			Message:       Rolled back for this version
 
-			Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
 			Created on:    2021-02-03T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Wrangler 🤠
 
-			Deployment ID: Galaxy-Class
+			Deployment ID: Galaxy-Class-tag:something-else
 			Created on:    2021-01-04T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Rollback from Wrangler 🤠
@@ -220,8 +234,8 @@ describe("deployments", () => {
 					rest.put(
 						"*/accounts/:accountID/workers/scripts/:scriptName",
 						(req, res, ctx) => {
-							expect(req.url.searchParams.get("rollback_to")).toBe(
-								"3mEgaU1T-Intrepid-someThing"
+							expect(req.url.searchParams.get("rollback_to")).toMatch(
+								/^3mEgaU1T-Intrepid-someThing-tag:/
 							);
 
 							requests.count++;
@@ -266,12 +280,13 @@ describe("deployments", () => {
 					result: "",
 				});
 
-				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing");
+				writeWranglerToml();
+				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing-tag:test-name");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha"
 		`);
 
@@ -284,7 +299,8 @@ describe("deployments", () => {
 					result: false,
 				});
 
-				await runWrangler("rollback 3mEgaU1T-Intrpid-someThing");
+				writeWranglerToml();
+				await runWrangler("rollback 3mEgaU1T-Intrpid-someThing-tag:test-name");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			"
@@ -296,16 +312,17 @@ describe("deployments", () => {
 			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
 				setIsTTY(false);
 
-				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing");
+				writeWranglerToml();
+				await runWrangler("rollback 3mEgaU1T-Intrepid-someThing-tag:test-name");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 			? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
-			🤖 Using default value in non-interactive context: yes
+			🤖 Using fallback value in non-interactive context: yes
 			? Please provide a message for this rollback (120 characters max)
 			🤖 Using default value in non-interactive context:
 
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha"
 		`);
 
@@ -313,14 +330,15 @@ describe("deployments", () => {
 			});
 
 			it("should skip prompt automatically in rollback if message flag is provided", async () => {
+				writeWranglerToml();
 				await runWrangler(
-					`rollback 3mEgaU1T-Intrepid-someThing --message "test"`
+					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha"
 		`);
 
@@ -328,14 +346,15 @@ describe("deployments", () => {
 			});
 
 			it("should skip prompt automatically in rollback with empty message", async () => {
+				writeWranglerToml();
 				await runWrangler(
-					`rollback 3mEgaU1T-Intrepid-someThing --message "test"`
+					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha"
 		`);
 
@@ -353,12 +372,44 @@ describe("deployments", () => {
 					result: "",
 				});
 
+				writeWranglerToml();
 				await runWrangler("rollback");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+			Current Deployment ID: galactic_mission_alpha"
+		`);
+
+				expect(requests.count).toEqual(1);
+			});
+
+			it("should require a worker name", async () => {
+				await expect(runWrangler("rollback")).rejects.toMatchInlineSnapshot(
+					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
+			it("should automatically rollback to previous deployment with specified name", async () => {
+				mockConfirm({
+					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).",
+					result: true,
+				});
+
+				mockPrompt({
+					text: "Please provide a message for this rollback (120 characters max)",
+					result: "",
+				});
+
+				await runWrangler("rollback --name something-else");
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+
+
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
 			Current Deployment ID: galactic_mission_alpha"
 		`);
 

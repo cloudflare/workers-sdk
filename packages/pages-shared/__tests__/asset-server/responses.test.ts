@@ -1,7 +1,8 @@
+import { describe, test, expect } from "vitest";
 import { stripLeadingDoubleSlashes } from "../../asset-server/responses";
 
 describe("stripLeadingDoubleSlashes", () => {
-	it("strips extra leading `/`, `%2F`, `%2f`s, spaces, and tabs", () => {
+	test("strips extra leading `/`, `%2F`, `%2f`s, spaces, and tabs", () => {
 		expect(stripLeadingDoubleSlashes("/")).toMatchInlineSnapshot(`"/"`);
 		expect(stripLeadingDoubleSlashes("/%2Ffoo")).toMatchInlineSnapshot(
 			`"/foo"`

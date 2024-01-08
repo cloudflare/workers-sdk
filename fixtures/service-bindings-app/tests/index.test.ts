@@ -1,94 +1,44 @@
-import { fork } from "child_process";
-import * as path from "path";
-import { fetch } from "undici";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import type { ChildProcess } from "child_process";
+import { UnstableDevWorker, unstable_dev } from "wrangler";
+import path from "node:path";
 
-describe.concurrent.skip("Service Bindings", () => {
-	let aProcess: ChildProcess;
-	let aIP: string;
-	let aPort: number;
-	let aResolveReadyPromise: (value: unknown) => void;
-	const aReadyPromise = new Promise((resolve) => {
-		aResolveReadyPromise = resolve;
-	});
+// TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
+// and improves reliability of this test.
+describe.skip("Service Bindings", () => {
+	let aWorker: UnstableDevWorker;
 
-	let bProcess: ChildProcess;
-	let bIP: string;
-	let bPort: number;
-	let bResolveReadyPromise: (value: unknown) => void;
-	const bReadyPromise = new Promise((resolve) => {
-		bResolveReadyPromise = resolve;
-	});
+	let bWorker: UnstableDevWorker;
 
-	beforeAll(() => {
-		aProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["dev", "index.ts", "--local", "--port=0"],
-			{
-				stdio: ["ignore", "ignore", "ignore", "ipc"],
-				cwd: path.resolve(__dirname, "..", "a"),
-			}
-		).on("message", (message) => {
-			const parsedMessage = JSON.parse(message.toString());
-			aIP = parsedMessage.ip;
-			aPort = parsedMessage.port;
-			aResolveReadyPromise(undefined);
+	beforeAll(async () => {
+		bWorker = await unstable_dev(path.join(__dirname, "../b/index.ts"), {
+			config: path.join(__dirname, "../b/wrangler.toml"),
 		});
-
-		bProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["dev", "index.ts", "--local", "--port=0"],
-			{
-				stdio: ["ignore", "ignore", "ignore", "ipc"],
-				cwd: path.resolve(__dirname, "..", "b"),
-			}
-		).on("message", (message) => {
-			const parsedMessage = JSON.parse(message.toString());
-			bIP = parsedMessage.ip;
-			bPort = parsedMessage.port;
-			bResolveReadyPromise(undefined);
+		aWorker = await unstable_dev(path.join(__dirname, "../a/index.ts"), {
+			config: path.join(__dirname, "../a/wrangler.toml"),
 		});
-	});
+		// Service registry is polled every 300ms,
+		// so let's give worker A some time to find B
 
-	afterAll(async () => {
-		await aReadyPromise;
-		await bReadyPromise;
-		await new Promise((resolve, reject) => {
-			aProcess.once("exit", (code) => {
-				if (!code) {
-					resolve(code);
-				} else {
-					reject(code);
-				}
-			});
-			aProcess.kill("SIGTERM");
-
-			bProcess.once("exit", (code) => {
-				if (!code) {
-					resolve(code);
-				} else {
-					reject(code);
-				}
-			});
-			bProcess.kill("SIGTERM");
-		});
+		await new Promise((resolve) => setTimeout(resolve, 700));
 	});
 
 	it("connects up Durable Objects and keeps state across wrangler instances", async () => {
-		await aReadyPromise;
-		await bReadyPromise;
-
-		// Service registry is polled every 300ms,
-		// so let's give worker A some time to find B
-		await new Promise((resolve) => setTimeout(resolve, 700));
-
-		const responseA = await fetch(`http://${aIP}:${aPort}/`);
+		const responseA = await aWorker.fetch(`https://example.com/`);
 		const textA = await responseA.text();
 		expect(textA).toEqual("hello world");
 
-		const responseB = await fetch(`http://${bIP}:${bPort}/`);
+		const responseB = await bWorker.fetch(`/`);
 		const textB = await responseB.text();
 		expect(textB).toEqual("hello world");
+	});
+
+	it("gives facade service workers a constructor name of Fetcher", async () => {
+		const responseA = await aWorker.fetch(`/constructor`);
+		const textA = await responseA.text();
+		expect(textA).toEqual("Fetcher");
+	});
+	afterAll(async () => {
+		await aWorker?.stop();
+		await bWorker?.stop();
 	});
 });

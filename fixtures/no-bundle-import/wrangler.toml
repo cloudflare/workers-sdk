@@ -1,6 +1,7 @@
 name = "no-bundle-import"
 main = "src/index.js"
 compatibility_date = "2023-02-20"
+no_bundle = true
 
 rules = [
   { type = "CommonJS", globs = ["nested/say-hello.js", "**/*.cjs"]},

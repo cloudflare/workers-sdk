@@ -34,13 +34,13 @@ describe("wrangler", () => {
 			Commands:
 			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
-			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
 			  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
-			  wrangler secret:bulk <json>          🗄️  Bulk upload secrets for a Worker
+			  wrangler secret:bulk [json]          🗄️  Bulk upload secrets for a Worker
 			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
@@ -49,7 +49,9 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
-			  wrangler constellation               🤖 Interact with Constellation models
+			  wrangler hyperdrive                  🚀 Configure Hyperdrive databases
+			  wrangler ai                          🤖 Interact with AI models
+			  wrangler vectorize                   🧮 Interact with Vectorize indexes
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
@@ -86,13 +88,13 @@ describe("wrangler", () => {
 			Commands:
 			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
-			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
 			  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
-			  wrangler secret:bulk <json>          🗄️  Bulk upload secrets for a Worker
+			  wrangler secret:bulk [json]          🗄️  Bulk upload secrets for a Worker
 			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
@@ -101,7 +103,9 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
-			  wrangler constellation               🤖 Interact with Constellation models
+			  wrangler hyperdrive                  🚀 Configure Hyperdrive databases
+			  wrangler ai                          🤖 Interact with AI models
+			  wrangler vectorize                   🧮 Interact with Vectorize indexes
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare

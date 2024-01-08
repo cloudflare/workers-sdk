@@ -4,8 +4,9 @@ import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
 import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
-import { FormData } from "undici";
+import { File, FormData, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
+import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -14,6 +15,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { RawConfig } from "../config";
 import type { PackageManager } from "../package-manager";
 
 /**
@@ -68,8 +70,8 @@ describe("init", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Running \`mockpm create cloudflare@2\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "out": "Running \`mockpm create cloudflare/@2\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -87,13 +89,74 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@2", "--", "--wrangler-defaults"],
+				["create", "cloudflare@2", "--wrangler-defaults"],
 				{ stdio: "inherit" }
 			);
 		});
+
+		describe("with custom C3 command", () => {
+			const ORIGINAL_ENV = process.env;
+
+			beforeEach(() => {
+				process.env = {
+					...ORIGINAL_ENV,
+					WRANGLER_C3_COMMAND: "run create-cloudflare",
+				};
+			});
+
+			afterEach(() => {
+				process.env = ORIGINAL_ENV;
+			});
+
+			test("shows deprecation message and delegates to C3", async () => {
+				await runWrangler("init");
+
+				checkFiles({
+					items: {
+						"./src/index.js": false,
+						"./src/index.ts": false,
+						"./tsconfig.json": false,
+						"./package.json": false,
+						"./wrangler.toml": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Running \`mockpm run create-cloudflare\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm run create-cloudflare\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
+			}
+		`);
+
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					["run", "create-cloudflare"],
+					{
+						stdio: "inherit",
+					}
+				);
+			});
+
+			it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+				await runWrangler("init -y");
+
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					["run", "create-cloudflare", "--wrangler-defaults"],
+					{ stdio: "inherit" }
+				);
+			});
+		});
 	});
 
-	describe("deprecated behaviour is retained with --no-delegate-c3", () => {
+	describe("deprecated behavior is retained with --no-delegate-c3", () => {
 		describe("options", () => {
 			it("should initialize with no interactive prompts if `--yes` is used", async () => {
 				await runWrangler("init --yes --no-delegate-c3");
@@ -123,7 +186,7 @@ describe("init", () => {
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -162,7 +225,7 @@ describe("init", () => {
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 my-worker --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -199,7 +262,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -279,7 +342,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -318,7 +381,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 my-worker\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -623,7 +686,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Initialized git repository",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -668,7 +731,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -700,7 +763,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 path/to/worker/my-worker --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -733,7 +796,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Initialized git repository",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -795,7 +858,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Created package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -851,7 +914,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml
 			✨ Created my-worker/package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 my-worker\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -901,7 +964,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -960,7 +1023,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
 			✨ Created path/to/worker/my-worker/package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 path/to/worker/my-worker\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1018,7 +1081,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Installed wrangler into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1083,7 +1146,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Installed wrangler into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1143,7 +1206,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1210,7 +1273,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1274,7 +1337,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1453,7 +1516,7 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Created tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1503,7 +1566,7 @@ describe("init", () => {
 			✨ Created my-worker/package.json
 			✨ Created my-worker/tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 my-worker\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1564,7 +1627,7 @@ describe("init", () => {
 			✨ Created package.json
 			✨ Created tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1626,7 +1689,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1707,7 +1770,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 path/to/worker/my-worker\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1769,7 +1832,7 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Installed @cloudflare/workers-types into devDependencies
 			🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1833,7 +1896,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -1890,13 +1953,13 @@ describe("init", () => {
 					},
 				});
 				expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created src/index.js
+			"✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created src/index.js
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 			});
 			it("should add a jest test for a non-ts project with .js extension", async () => {
 				mockConfirm(
@@ -2080,12 +2143,12 @@ describe("init", () => {
 					},
 				});
 				expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Created src/index.js
+			"✨ Created wrangler.toml
+			✨ Created src/index.js
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler deploy\`"
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`"
+		`);
 			});
 
 			it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
@@ -2125,7 +2188,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2176,7 +2239,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 my-worker\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2242,7 +2305,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 . --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2278,7 +2341,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 path/to/worker --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2316,7 +2379,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 WEIRD_w0rkr_N4m3.js.tsx.tar.gz --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2399,147 +2462,185 @@ describe("init", () => {
 		});
 
 		describe("from dashboard", () => {
-			mockApiToken();
-			mockAccountId({ accountId: "LCARS" });
-
-			const mockDashboardScript = `
+			function makeWorker({
+				id = "memory-crystal",
+				usage_model = "bundled",
+				compatibility_date = "1987-09-27",
+				content = `
 		export default {
 			async fetch(request, env, ctx) {
 				return new Response("Hello World!");
 			},
 		};
-		`;
-			afterEach(() => {
-				// some test has a side-effect which is overwriting the compatibility_date
-				mockServiceMetadata.default_environment.script.compatibility_date =
-					"1987-9-27";
-				mockConfigExpected.compatibility_date = "1987-9-27";
-			});
-			const mockServiceMetadata = {
-				id: "memory-crystal",
-				default_environment: {
-					environment: "test",
-					created_on: "1987-9-27",
-					modified_on: "1987-9-27",
-					script: {
-						id: "memory-crystal",
-						tag: "test-tag",
-						etag: "some-etag",
-						handlers: [],
-						modified_on: "1987-9-27",
-						created_on: "1987-9-27",
-						migration_tag: "some-migration-tag",
-						usage_model: "bundled",
-						compatibility_date: "1987-9-27",
-						tail_consumers: [{ service: "listener" }],
-					},
-				},
-				created_on: "1987-9-27",
-				modified_on: "1987-9-27",
-				usage_model: "bundled",
-				environments: [
+		`,
+				schedules = [
 					{
-						environment: "test",
-						created_on: "1987-9-27",
-						modified_on: "1987-9-27",
-					},
-					{
-						environment: "staging",
-						created_on: "1987-9-27",
-						modified_on: "1987-9-27",
+						cron: "0 0 0 * * *",
+						created_on: new Date(1987, 9, 27),
+						modified_on: new Date(1987, 9, 27),
 					},
 				],
-			};
-			const mockBindingsRes = [
-				{
-					type: "secret_text",
-					name: "ABC",
-				},
-				{
-					type: "plain_text",
-					name: "ANOTHER-NAME",
-					text: "thing-TEXT",
-				},
-				{
-					type: "durable_object_namespace",
-					name: "DURABLE_TEST",
-					class_name: "Durability",
-					script_name: "another-durable-object-worker",
-					environment: "production",
-				},
-				{
-					type: "kv_namespace",
-					name: "kv_testing",
-					namespace_id: "some-namespace-id",
-				},
-				{
-					type: "r2_bucket",
-					bucket_name: "test-bucket",
-					name: "test-bucket",
-				},
-				{
-					environment: "production",
-					name: "website",
-					service: "website",
-					type: "service",
-				},
-				{
-					type: "dispatch_namespace",
-					name: "name-namespace-mock",
-					namespace: "namespace-mock",
-				},
-				{
-					name: "httplogs",
-					type: "logfwdr",
-					destination: "httplogs",
-				},
-				{
-					name: "trace",
-					type: "logfwdr",
-					destination: "trace",
-				},
-				{
-					type: "wasm_module",
-					name: "WASM_MODULE_ONE",
-					part: "./some_wasm.wasm",
-				},
-				{
-					type: "wasm_module",
-					name: "WASM_MODULE_TWO",
-					part: "./more_wasm.wasm",
-				},
-				{
-					type: "text_blob",
-					name: "TEXT_BLOB_ONE",
-					part: "./my-entire-app-depends-on-this.cfg",
-				},
-				{
-					type: "text_blob",
-					name: "TEXT_BLOB_TWO",
-					part: "./the-entirety-of-human-knowledge.txt",
-				},
-				{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
-				{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
-				{
-					type: "some unsafe thing",
-					name: "UNSAFE_BINDING_ONE",
-					data: { some: { unsafe: "thing" } },
-				},
-				{
-					type: "another unsafe thing",
-					name: "UNSAFE_BINDING_TWO",
-					data: 1337,
-				},
-			];
-			const mockRoutesRes = [
-				{
-					id: "some-route-id",
-					pattern: "delta.quadrant",
-				},
-			];
-			const mockConfigExpected = {
-				main: "src/index.ts",
-				compatibility_date: "1987-9-27",
+				bindings = [
+					{
+						type: "secret_text",
+						name: "ABC",
+					},
+					{
+						type: "plain_text",
+						name: "ANOTHER-NAME",
+						text: "thing-TEXT",
+					},
+					{
+						type: "durable_object_namespace",
+						name: "DURABLE_TEST",
+						class_name: "Durability",
+						script_name: "another-durable-object-worker",
+						environment: "production",
+					},
+					{
+						type: "kv_namespace",
+						name: "kv_testing",
+						namespace_id: "some-namespace-id",
+					},
+					{
+						type: "r2_bucket",
+						bucket_name: "test-bucket",
+						name: "test-bucket",
+					},
+					{
+						environment: "production",
+						name: "website",
+						service: "website",
+						type: "service",
+					},
+					{
+						type: "dispatch_namespace",
+						name: "name-namespace-mock",
+						namespace: "namespace-mock",
+					},
+					{
+						name: "httplogs",
+						type: "logfwdr",
+						destination: "httplogs",
+					},
+					{
+						name: "trace",
+						type: "logfwdr",
+						destination: "trace",
+					},
+					{
+						type: "wasm_module",
+						name: "WASM_MODULE_ONE",
+						part: "./some_wasm.wasm",
+					},
+					{
+						type: "wasm_module",
+						name: "WASM_MODULE_TWO",
+						part: "./more_wasm.wasm",
+					},
+					{
+						type: "text_blob",
+						name: "TEXT_BLOB_ONE",
+						part: "./my-entire-app-depends-on-this.cfg",
+					},
+					{
+						type: "text_blob",
+						name: "TEXT_BLOB_TWO",
+						part: "./the-entirety-of-human-knowledge.txt",
+					},
+					{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
+					{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
+					{
+						type: "some unsafe thing",
+						name: "UNSAFE_BINDING_ONE",
+						data: { some: { unsafe: "thing" } },
+					},
+					{
+						type: "another unsafe thing",
+						name: "UNSAFE_BINDING_TWO",
+						data: 1337,
+					},
+				],
+				routes = [
+					{
+						id: "some-route-id",
+						pattern: "delta.quadrant",
+						zone_name: "delta.quadrant",
+					},
+				],
+				customDomains = [],
+				workersDev = true,
+			}: {
+				id?: string;
+				usage_model?: string;
+				compatibility_date?: string | null;
+				content?: string | FormData;
+				schedules?: { cron: string; created_on: Date; modified_on: Date }[];
+				bindings?: unknown[];
+				routes?: unknown[];
+				customDomains?: unknown[];
+				workersDev?: boolean;
+			} = {}) {
+				return {
+					schedules,
+					service: {
+						id,
+						default_environment: {
+							environment: "test",
+							created_on: "1987-09-27",
+							modified_on: "1987-09-27",
+							script: {
+								id,
+								tag: "test-tag",
+								etag: "some-etag",
+								handlers: [],
+								modified_on: "1987-09-27",
+								created_on: "1987-09-27",
+								migration_tag: "some-migration-tag",
+								usage_model,
+								compatibility_date,
+								tail_consumers: [{ service: "listener" }],
+							},
+						},
+						created_on: "1987-09-27",
+						modified_on: "1987-09-27",
+						environments: [
+							{
+								environment: "test",
+								created_on: "1987-09-27",
+								modified_on: "1987-09-27",
+							},
+							{
+								environment: "staging",
+								created_on: "1987-09-27",
+								modified_on: "1987-09-27",
+							},
+						],
+					},
+					usage_model,
+					content,
+					bindings,
+					routes,
+					customDomains,
+					workersDev,
+				} as const;
+			}
+			mockApiToken();
+			const MOCK_ACCOUNT_ID = "LCARS";
+			mockAccountId({ accountId: MOCK_ACCOUNT_ID });
+
+			let worker: ReturnType<typeof makeWorker>;
+
+			beforeEach(() => {
+				worker = makeWorker();
+				mockSupportingDashRequests(MOCK_ACCOUNT_ID);
+			});
+
+			const mockConfigExpected: RawConfig = {
+				workers_dev: true,
+				usage_model: "bundled",
+				main: "src/index.js",
+				compatibility_date: "1987-09-27",
 				name: "isolinear-optical-chip",
 				migrations: [
 					{
@@ -2575,7 +2676,7 @@ describe("init", () => {
 						namespace: "namespace-mock",
 					},
 				],
-				route: "delta.quadrant",
+				routes: [{ pattern: "delta.quadrant", zone_name: "delta.quadrant" }],
 				services: [
 					{
 						environment: "production",
@@ -2586,13 +2687,8 @@ describe("init", () => {
 				triggers: {
 					crons: ["0 0 0 * * *"],
 				},
-				usage_model: "bundled",
 				vars: {
 					"ANOTHER-NAME": "thing-TEXT",
-				},
-				env: {
-					test: {},
-					staging: {},
 				},
 				unsafe: {
 					bindings: [
@@ -2621,7 +2717,6 @@ describe("init", () => {
 					DATA_BLOB_TWO: "DATA_BLOB_TWO",
 				},
 				logfwdr: {
-					schema: "",
 					bindings: [
 						{
 							name: "httplogs",
@@ -2636,27 +2731,14 @@ describe("init", () => {
 				tail_consumers: [{ service: "listener" }],
 			};
 
-			function mockSupportingDashRequests({
-				expectedAccountId = "",
-				expectedScriptName = "",
-				expectedEnvironment = "",
-				expectedCompatDate,
-			}: {
-				expectedAccountId: string;
-				expectedScriptName: string;
-				expectedEnvironment: string;
-				expectedCompatDate: string | undefined;
-			}) {
+			function mockSupportingDashRequests(expectedAccountId: string) {
 				msw.use(
+					// This is fetched twice in normal usage
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
 							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(expectedScriptName);
-
-							if (expectedCompatDate === undefined)
-								(mockServiceMetadata.default_environment.script
-									.compatibility_date as unknown) = expectedCompatDate;
+							expect(req.params.scriptName).toEqual(worker.service.id);
 
 							return res.once(
 								ctx.status(200),
@@ -2664,7 +2746,24 @@ describe("init", () => {
 									success: true,
 									errors: [],
 									messages: [],
-									result: mockServiceMetadata,
+									result: worker.service,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(worker.service.id);
+
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: worker.service,
 								})
 							);
 						}
@@ -2673,16 +2772,18 @@ describe("init", () => {
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
 						(req, res, ctx) => {
 							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(expectedScriptName);
-							expect(req.params.environment).toEqual(expectedEnvironment);
+							expect(req.params.scriptName).toEqual(worker.service.id);
+							expect(req.params.environment).toEqual(
+								worker.service.default_environment.environment
+							);
 
-							return res.once(
+							return res(
 								ctx.status(200),
 								ctx.json({
 									success: true,
 									errors: [],
 									messages: [],
-									result: mockBindingsRes,
+									result: worker.bindings,
 								})
 							);
 						}
@@ -2691,8 +2792,10 @@ describe("init", () => {
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
 						(req, res, ctx) => {
 							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(expectedScriptName);
-							expect(req.params.environment).toEqual(expectedEnvironment);
+							expect(req.params.scriptName).toEqual(worker.service.id);
+							expect(req.params.environment).toEqual(
+								worker.service.default_environment.environment
+							);
 
 							return res.once(
 								ctx.status(200),
@@ -2700,7 +2803,41 @@ describe("init", () => {
 									success: true,
 									errors: [],
 									messages: [],
-									result: mockRoutesRes,
+									result: worker.routes,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/domains/records`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: worker.customDomains,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(worker.service.id);
+							expect(req.params.environment).toEqual(
+								worker.service.default_environment.environment
+							);
+
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: { enabled: worker.workersDev },
 								})
 							);
 						}
@@ -2710,8 +2847,10 @@ describe("init", () => {
 
 						(req, res, ctx) => {
 							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(expectedScriptName);
-							expect(req.params.environment).toEqual(expectedEnvironment);
+							expect(req.params.scriptName).toEqual(worker.service.id);
+							expect(req.params.environment).toEqual(
+								worker.service.default_environment.environment
+							);
 
 							return res.once(
 								ctx.status(200),
@@ -2719,7 +2858,7 @@ describe("init", () => {
 									success: true,
 									errors: [],
 									messages: [],
-									result: mockServiceMetadata.default_environment,
+									result: worker.service.default_environment,
 								})
 							);
 						}
@@ -2728,7 +2867,7 @@ describe("init", () => {
 						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
 						(req, res, ctx) => {
 							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(expectedScriptName);
+							expect(req.params.scriptName).toEqual(worker.service.id);
 
 							return res.once(
 								ctx.status(200),
@@ -2737,13 +2876,44 @@ describe("init", () => {
 									errors: [],
 									messages: [],
 									result: {
-										schedules: [
-											{
-												cron: "0 0 0 * * *",
-												created_on: new Date(1987, 9, 27),
-												modified_on: new Date(1987, 9, 27),
-											},
-										],
+										schedules: worker.schedules,
+									},
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
+						async (_, res, ctx) => {
+							if (typeof worker.content === "string") {
+								return res(ctx.text(worker.content));
+							}
+
+							const response = new Response(worker.content);
+
+							return res.once(
+								ctx.set(
+									"Content-Type",
+									response.headers.get("Content-Type") ?? ""
+								),
+								ctx.set("cf-entrypoint", `index.js`),
+								ctx.body(await response.text())
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/standard`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										standard:
+											worker.service.default_environment.script.usage_model ===
+											"standard",
 									},
 								})
 							);
@@ -2753,14 +2923,6 @@ describe("init", () => {
 			}
 
 			test("shows deprecation warning and delegates to C3 --type pre-existing", async () => {
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "existing-memory-crystal",
-					expectedEnvironment: "test",
-					expectedCompatDate: "1987-9-27",
-				});
-				setMockFetchDashScript(mockDashboardScript);
-
 				await runWrangler("init --from-dash existing-memory-crystal");
 
 				checkFiles({
@@ -2778,8 +2940,8 @@ describe("init", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing --existing-script existing-memory-crystal\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing --existing-script existing-memory-crystal\` instead.[0m
+			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal --type pre-existing --existing-script existing-memory-crystal\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal --type pre-existing --existing-script existing-memory-crystal\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2787,28 +2949,38 @@ describe("init", () => {
 			}
 		`);
 
+				expect(execa).toHaveBeenCalledTimes(1);
 				expect(execa).toHaveBeenCalledWith(
 					"mockpm",
-					["create", "cloudflare@2"],
+					[
+						"create",
+						"cloudflare@2",
+						"existing-memory-crystal",
+						"--type",
+						"pre-existing",
+						"--existing-script",
+						"existing-memory-crystal",
+					],
 					{ stdio: "inherit" }
 				);
-				expect(execa).toHaveBeenCalledWith("git", ["--version"]);
-				expect(execa).toHaveBeenCalledWith("git", [
-					"config",
-					"--get",
-					"init.defaultBranch",
-				]);
 			});
-
-			//TODO: Tests for a case when a worker name doesn't exist - JACOB & CASS
-			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "memory-crystal",
-					expectedEnvironment: "test",
-					expectedCompatDate: "1987-9-27",
+			it("should download routes + custom domains + workers dev", async () => {
+				worker = makeWorker({
+					customDomains: [
+						{
+							id: "some-id",
+							zone_id: "some-zone-id",
+							zone_name: "some-zone-name",
+							hostname: "random.host.name",
+							service: "memory-crystal",
+							environment: "test",
+							cert_id: "some-id",
+						},
+					],
+					workersDev: false,
+					bindings: [],
+					schedules: [],
 				});
-				setMockFetchDashScript(mockDashboardScript);
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2817,9 +2989,45 @@ describe("init", () => {
 					{
 						text: "No package.json found. Would you like to create one?",
 						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
+				);
+
+				expect(
+					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
+				).toMatchInlineSnapshot(`
+			"name = \\"isolinear-optical-chip\\"
+			main = \\"src/index.js\\"
+			compatibility_date = \\"1987-09-27\\"
+			workers_dev = false
+			usage_model = \\"bundled\\"
+
+			[[routes]]
+			pattern = \\"delta.quadrant\\"
+			zone_name = \\"delta.quadrant\\"
+
+			[[routes]]
+			pattern = \\"random.host.name\\"
+			zone_name = \\"some-zone-name\\"
+			custom_domain = true
+
+			[[tail_consumers]]
+			service = \\"listener\\"
+			"
+		`);
+			});
+
+			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
 					{
-						text: "Would you like to use TypeScript?",
+						text: "No package.json found. Would you like to create one?",
 						result: true,
 					}
 				);
@@ -2832,16 +3040,14 @@ describe("init", () => {
 
 				checkFiles({
 					items: {
-						"isolinear-optical-chip/src/index.js": false,
-						"isolinear-optical-chip/src/index.ts": {
-							contents: mockDashboardScript,
+						"isolinear-optical-chip/src/index.js": {
+							contents: worker.content,
 						},
 						"isolinear-optical-chip/package.json": {
 							contents: expect.objectContaining({
 								name: "isolinear-optical-chip",
 							}),
 						},
-						"isolinear-optical-chip/tsconfig.json": true,
 						"isolinear-optical-chip/wrangler.toml": wranglerToml({
 							...mockConfigExpected,
 						}),
@@ -2855,48 +3061,42 @@ describe("init", () => {
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
 							return res.once(
-								ctx.status(200),
+								ctx.status(404),
 								ctx.json({
-									success: true,
-									errors: [],
+									success: false,
+									errors: [
+										{
+											code: 10090,
+											message: "workers.api.error.service_not_found",
+										},
+									],
 									messages: [],
-									result: mockServiceMetadata,
+									result: worker.service,
 								})
 							);
 						}
 					)
 				);
-				setMockFetchDashScript(mockDashboardScript);
-				mockConfirm(
-					{
-						text: "Would you like to use git to manage this Worker?",
-						result: false,
-					},
-					{
-						text: "No package.json found. Would you like to create one?",
-						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
-						result: true,
-					}
-				);
-
 				await expect(
 					runWrangler(
 						"init isolinear-optical-chip --from-dash i-dont-exist --no-delegate-c3"
 					)
 				).rejects.toThrowError();
+
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mwrangler couldn't find a Worker script with that name in your account.[0m
+
+			  Run \`wrangler whoami\` to confirm you're logged into the correct account.
+
+			"
+		`);
 			});
 
 			it("should download source script from dashboard w/ out positional <name>", async () => {
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "isolinear-optical-chip",
-					expectedEnvironment: "test",
-					expectedCompatDate: "1987-9-27",
+				worker = makeWorker({
+					id: "isolinear-optical-chip",
 				});
-				setMockFetchDashScript(mockDashboardScript);
+
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2904,10 +3104,6 @@ describe("init", () => {
 					},
 					{
 						text: "No package.json found. Would you like to create one?",
-						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
 						result: true,
 					}
 				);
@@ -2920,10 +3116,14 @@ describe("init", () => {
 					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
 				).toMatchInlineSnapshot(`
 			"name = \\"isolinear-optical-chip\\"
-			main = \\"src/index.ts\\"
-			compatibility_date = \\"1987-9-27\\"
-			route = \\"delta.quadrant\\"
+			main = \\"src/index.js\\"
+			compatibility_date = \\"1987-09-27\\"
+			workers_dev = true
 			usage_model = \\"bundled\\"
+
+			[[routes]]
+			pattern = \\"delta.quadrant\\"
+			zone_name = \\"delta.quadrant\\"
 
 			[[migrations]]
 			tag = \\"some-migration-tag\\"
@@ -2931,10 +3131,6 @@ describe("init", () => {
 
 			[triggers]
 			crons = [ \\"0 0 0 * * *\\" ]
-
-			[env]
-			test = { }
-			staging = { }
 
 			[[tail_consumers]]
 			service = \\"listener\\"
@@ -2965,16 +3161,13 @@ describe("init", () => {
 			binding = \\"name-namespace-mock\\"
 			namespace = \\"namespace-mock\\"
 
-			[logfwdr]
-			schema = \\"\\"
+			[[logfwdr.bindings]]
+			name = \\"httplogs\\"
+			destination = \\"httplogs\\"
 
-			  [[logfwdr.bindings]]
-			  name = \\"httplogs\\"
-			  destination = \\"httplogs\\"
-
-			  [[logfwdr.bindings]]
-			  name = \\"trace\\"
-			  destination = \\"trace\\"
+			[[logfwdr.bindings]]
+			name = \\"trace\\"
+			destination = \\"trace\\"
 
 			[wasm_modules]
 			WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
@@ -3006,16 +3199,14 @@ describe("init", () => {
 
 				checkFiles({
 					items: {
-						"isolinear-optical-chip/src/index.js": false,
-						"isolinear-optical-chip/src/index.ts": {
-							contents: mockDashboardScript,
+						"isolinear-optical-chip/src/index.js": {
+							contents: worker.content,
 						},
 						"isolinear-optical-chip/package.json": {
 							contents: expect.objectContaining({
 								name: "isolinear-optical-chip",
 							}),
 						},
-						"isolinear-optical-chip/tsconfig.json": true,
 						"isolinear-optical-chip/wrangler.toml": wranglerToml({
 							...mockConfigExpected,
 							name: "isolinear-optical-chip",
@@ -3025,13 +3216,7 @@ describe("init", () => {
 			});
 
 			it("should download source script from dashboard as plain JavaScript", async () => {
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "isolinear-optical-chip",
-					expectedEnvironment: "test",
-					expectedCompatDate: "1987-9-27",
-				});
-				setMockFetchDashScript(mockDashboardScript);
+				worker = makeWorker({ id: "isolinear-optical-chip" });
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -3040,10 +3225,6 @@ describe("init", () => {
 					{
 						text: "No package.json found. Would you like to create one?",
 						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
-						result: false,
 					}
 				);
 
@@ -3054,7 +3235,7 @@ describe("init", () => {
 				checkFiles({
 					items: {
 						"isolinear-optical-chip/src/index.js": {
-							contents: mockDashboardScript,
+							contents: worker.content,
 						},
 						"isolinear-optical-chip/src/index.ts": false,
 						"isolinear-optical-chip/package.json": {
@@ -3071,20 +3252,34 @@ describe("init", () => {
 					},
 				});
 			});
+			it("should ignore usage_model = standard", async () => {
+				worker = makeWorker({
+					id: "isolinear-optical-chip",
+					usage_model: "standard",
+				});
+
+				await expect(
+					downloadWorker("LCARS", "isolinear-optical-chip")
+				).resolves.toMatchObject({
+					config: {
+						...mockConfigExpected,
+						main: "index.js",
+						usage_model: undefined,
+					},
+				});
+			});
 
 			it("should use fallback compatibility date if none is upstream", async () => {
-				const mockDate = "1988-08-07";
+				worker = makeWorker({
+					id: "isolinear-optical-chip",
+					compatibility_date: null,
+				});
+
+				const mockDate = "2000-01-01";
 				jest
 					.spyOn(Date.prototype, "toISOString")
 					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
 
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "isolinear-optical-chip",
-					expectedEnvironment: "test",
-					expectedCompatDate: undefined,
-				});
-				setMockFetchDashScript(mockDashboardScript);
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -3093,10 +3288,6 @@ describe("init", () => {
 					{
 						text: "No package.json found. Would you like to create one?",
 						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
-						result: true,
 					}
 				);
 
@@ -3104,20 +3295,19 @@ describe("init", () => {
 					"init  --from-dash isolinear-optical-chip --no-delegate-c3"
 				);
 
-				mockConfigExpected.compatibility_date = "1988-08-07";
 				checkFiles({
 					items: {
-						"isolinear-optical-chip/src/index.ts": {
-							contents: mockDashboardScript,
+						"isolinear-optical-chip/src/index.js": {
+							contents: worker.content,
 						},
 						"isolinear-optical-chip/package.json": {
 							contents: expect.objectContaining({
 								name: "isolinear-optical-chip",
 							}),
 						},
-						"isolinear-optical-chip/tsconfig.json": true,
 						"isolinear-optical-chip/wrangler.toml": wranglerToml({
 							...mockConfigExpected,
+							compatibility_date: mockDate,
 							name: "isolinear-optical-chip",
 						}),
 					},
@@ -3125,23 +3315,10 @@ describe("init", () => {
 			});
 
 			it("should throw an error to retry if a request fails", async () => {
+				worker = makeWorker({
+					id: "isolinear-optical-chip",
+				});
 				msw.use(
-					rest.get(
-						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toBe("LCARS");
-							expect(req.params.scriptName).toBe("isolinear-optical-chip");
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: mockServiceMetadata,
-								})
-							);
-						}
-					),
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
 						(req, res) => {
@@ -3150,15 +3327,14 @@ describe("init", () => {
 					)
 				);
 
-				setMockFetchDashScript(mockDashboardScript);
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
 						result: false,
 					},
 					{
-						text: "Would you like to use TypeScript?",
-						result: false,
+						text: "No package.json found. Would you like to create one?",
+						result: true,
 					}
 				);
 
@@ -3167,107 +3343,22 @@ describe("init", () => {
 						"init --from-dash isolinear-optical-chip --no-delegate-c3"
 					)
 				).rejects.toThrowError();
+
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred FetchError: request to https://api.cloudflare.com/client/v4/accounts/LCARS/workers/services/isolinear-optical-chip/environments/test/bindings failed, reason: Mock Network Error: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
+
+			"
+		`);
 			});
 
 			it("should not include migrations in config file when none are necessary", async () => {
-				const mockDate = "1988-08-07";
-				jest
-					.spyOn(Date.prototype, "toISOString")
-					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
-				const mockData = {
-					id: "memory-crystal",
-					default_environment: {
-						environment: "test",
-						created_on: "1988-08-07",
-						modified_on: "1988-08-07",
-						script: {
-							id: "memory-crystal",
-							tag: "test-tag",
-							etag: "some-etag",
-							handlers: [],
-							modified_on: "1988-08-07",
-							created_on: "1988-08-07",
-							usage_model: "bundled",
-							compatibility_date: "1988-08-07",
-							tail_consumers: [{ service: "listener" }],
-						},
-					},
-					environments: [],
-				};
-				msw.use(
-					rest.get(
-						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: mockData,
-								})
-							);
-						}
-					),
-					rest.get(
-						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: [],
-								})
-							);
-						}
-					),
-					rest.get(
-						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: [],
-								})
-							);
-						}
-					),
-					rest.get(
-						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: mockData.default_environment,
-								})
-							);
-						}
-					),
-					rest.get(
-						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: { schedules: [] },
-								})
-							);
-						}
-					)
-				);
-
-				setMockFetchDashScript(mockDashboardScript);
+				worker = makeWorker({
+					id: "isolinear-optical-chip",
+					schedules: [],
+					bindings: [],
+					routes: [],
+					compatibility_date: "1988-08-07",
+				});
 
 				mockConfirm(
 					{
@@ -3278,26 +3369,19 @@ describe("init", () => {
 					{
 						text: "No package.json found. Would you like to create one?",
 						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
-						result: true,
 					}
 				);
 
 				await runWrangler(
-					"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+					"init --from-dash isolinear-optical-chip --no-delegate-c3"
 				);
 
 				checkFiles({
 					items: {
 						"isolinear-optical-chip/wrangler.toml": wranglerToml({
 							compatibility_date: "1988-08-07",
-							env: {},
-							main: "src/index.ts",
-							triggers: {
-								crons: [],
-							},
+							main: "src/index.js",
+							workers_dev: true,
 							usage_model: "bundled",
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
@@ -3308,7 +3392,7 @@ describe("init", () => {
 
 			it("should not continue if no worker name is provided", async () => {
 				await expect(
-					runWrangler("init  --from-dash")
+					runWrangler("init --from-dash")
 				).rejects.toMatchInlineSnapshot(
 					`[Error: Not enough arguments following: from-dash]`
 				);
@@ -3324,30 +3408,44 @@ describe("init", () => {
 			});
 
 			it("should download multi-module source scripts from dashboard", async () => {
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "isolinear-optical-chip",
-					expectedEnvironment: "test",
-					expectedCompatDate: "1987-9-27",
-				});
-				const indexjs = `
-					import handleRequest from './handleRequest.js';
+				const fd = new FormData();
+				fd.set(
+					"index.js",
+					new File(
+						[
+							`
+				import handleRequest from './other.js';
 
-					export default {
-						async fetch(request, env, ctx) {
-							return handleRequest(request, env, ctx);
-						},
-					};
-				`;
-				const otherjs = `
+				export default {
+					async fetch(request, env, ctx) {
+						return handleRequest(request, env, ctx);
+					},
+				};
+			`,
+						],
+						"index.js",
+						{ type: "application/javascript+module" }
+					)
+				);
+				fd.set(
+					"other.js",
+					new File(
+						[
+							`
 					export default function (request, env, ctx) {
 						return new Response("Hello World!");
 					}
-				`;
-				setMockFetchDashScript([
-					{ name: "index.js", contents: indexjs },
-					{ name: "nested/other.js", contents: otherjs },
-				]);
+				`,
+						],
+						"other.js",
+						{ type: "application/javascript+module" }
+					)
+				);
+				worker = makeWorker({
+					id: "isolinear-optical-chip",
+					content: fd,
+				});
+
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -3356,10 +3454,6 @@ describe("init", () => {
 					{
 						text: "No package.json found. Would you like to create one?",
 						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
-						result: false,
 					}
 				);
 
@@ -3370,10 +3464,10 @@ describe("init", () => {
 				checkFiles({
 					items: {
 						"isolinear-optical-chip/src/index.js": {
-							contents: indexjs,
+							contents: await (fd.get("index.js") as File).text(),
 						},
-						"isolinear-optical-chip/src/nested/other.js": {
-							contents: otherjs,
+						"isolinear-optical-chip/src/other.js": {
+							contents: await (fd.get("other.js") as File).text(),
 						},
 						"isolinear-optical-chip/src/index.ts": false,
 						"isolinear-optical-chip/package.json": {
@@ -3386,6 +3480,34 @@ describe("init", () => {
 							...mockConfigExpected,
 							name: "isolinear-optical-chip",
 							main: "src/index.js",
+						}),
+					},
+				});
+			});
+
+			it("should have an explicit usage model for non-standard users", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
+				);
+
+				expect(std.out).toContain("cd isolinear-optical-chip");
+
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
+							usage_model: "bundled",
 						}),
 					},
 				});
@@ -3407,46 +3529,6 @@ function getDefaultBranchName() {
 		// ew
 		return "master";
 	}
-}
-
-/**
- * Mock setter for usage within test blocks for dashboard script
- */
-export function setMockFetchDashScript(
-	mockResponse: string | { name: string; contents: string }[]
-) {
-	msw.use(
-		rest.get(
-			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content`,
-			(_, res, ctx) => {
-				if (typeof mockResponse === "string") {
-					return res(ctx.text(mockResponse));
-				}
-
-				const fd = new FormData();
-
-				for (const { name, contents } of mockResponse) {
-					fd.set(name, contents);
-				}
-
-				const boundary = "--------boundary-12761293712";
-				const responseText =
-					`--${boundary}\r\n` +
-					mockResponse
-						.map(
-							({ name, contents }) =>
-								`Content-Disposition: form-data; name="${name}"\r\n\r\n${contents}`
-						)
-						.join(`\r\n--${boundary}\r\n`) +
-					`\r\n--${boundary}--`;
-
-				return res(
-					ctx.set("Content-Type", `multipart/form-data; boundary=${boundary}`),
-					ctx.body(responseText)
-				);
-			}
-		)
-	);
 }
 
 /**
@@ -3523,7 +3605,7 @@ function parse(name: string, value: string): unknown {
 	return value;
 }
 
-function wranglerToml(options: TOML.JsonMap = {}): TestFile {
+function wranglerToml(options: RawConfig = {}): TestFile {
 	return {
 		contents: options,
 	};

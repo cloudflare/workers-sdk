@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parsePackageJSON } from "../src/parse";
 
 /**
  * Dependencies that _are not_ bundled along with wrangler
@@ -13,6 +12,8 @@ export const EXTERNAL_DEPENDENCIES = [
 	// todo - bundle miniflare too
 	"selfsigned",
 	"source-map",
+	// CommonJS module using `module.require()` which isn't provided by `esbuild`
+	"@cspotcode/source-map-support",
 	"@esbuild-plugins/node-globals-polyfill",
 	"@esbuild-plugins/node-modules-polyfill",
 	"chokidar",
@@ -20,10 +21,7 @@ export const EXTERNAL_DEPENDENCIES = [
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
 const packageJson = fs.readFileSync(pathToPackageJson, { encoding: "utf-8" });
-const { dependencies, devDependencies } = parsePackageJSON(
-	packageJson,
-	pathToPackageJson
-);
+const { dependencies, devDependencies } = JSON.parse(packageJson);
 
 /**
  * Dependencies that _are_ bundled along with wrangler

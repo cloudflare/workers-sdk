@@ -1,43 +1,23 @@
-import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
-import type { ChildProcess } from "child_process";
+import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Functions", () => {
-	let wranglerProcess: ChildProcess;
+describe("Pages Functions", () => {
 	let ip: string;
 	let port: number;
+	let stop: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
-		await new Promise((resolve) => {
-			wranglerProcess = fork(
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-				["pages", "dev", "public", "--port=0"],
-				{
-					stdio: ["inherit", "inherit", "inherit", "ipc"],
-					cwd: path.resolve(__dirname, ".."),
-				}
-			).on("message", (message) => {
-				const parsedMessage = JSON.parse(message.toString());
-				ip = parsedMessage.ip;
-				port = parsedMessage.port;
-				resolve(null);
-			});
-		});
+		({ ip, port, stop } = await runWranglerPagesDev(
+			path.resolve(__dirname, ".."),
+			"public",
+			["--port=0", "--inspector-port=0"]
+		));
 	});
 
 	afterAll(async () => {
-		await new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
-				if (!code) {
-					resolve(code);
-				} else {
-					reject(code);
-				}
-			});
-			wranglerProcess.kill("SIGTERM");
-		});
+		await stop?.();
 	});
 
 	it("mounts a plugin correctly at root", async ({ expect }) => {

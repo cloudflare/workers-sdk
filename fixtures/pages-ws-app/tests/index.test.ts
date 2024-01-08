@@ -6,7 +6,7 @@ import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
 
-describe.concurrent.skip("Pages Functions", () => {
+describe.skip("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -22,7 +22,15 @@ describe.concurrent.skip("Pages Functions", () => {
 		});
 		wranglerProcess = fork(
 			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["pages", "dev", "--port=0", "--proxy=8791", "--", "npm run server"],
+			[
+				"pages",
+				"dev",
+				"--port=0",
+				"--inspector-port=0",
+				"--proxy=8791",
+				"--",
+				"pnpm run server",
+			],
 			{
 				cwd: path.resolve(__dirname, ".."),
 			}

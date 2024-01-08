@@ -1,5 +1,8 @@
-import { now } from "./dep";
 import { randomBytes } from "isomorphic-random-example";
+import { now } from "./dep";
+import { logErrors } from "./log";
+
+console.log("startup log");
 
 /** @param {Uint8Array} array */
 function hexEncode(array) {
@@ -10,6 +13,8 @@ function hexEncode(array) {
 
 export default {
 	async fetch(request) {
+		console.log("request log");
+
 		const { pathname } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 
@@ -20,12 +25,16 @@ export default {
 			request.cf
 		);
 
+		logErrors();
+
 		await fetch(new URL("http://example.com"));
 		await fetch(
 			new Request("http://example.com", { method: "POST", body: "foo" })
 		);
 
-		return new Response(`${request.url} ${now()}`);
+		return new Response(
+			`${request.url} ${now()} ${request.headers.get("Host")}`
+		);
 	},
 
 	/**

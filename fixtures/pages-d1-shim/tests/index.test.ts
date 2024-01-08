@@ -5,8 +5,10 @@ import * as path from "path";
 import { join } from "path";
 import { describe, it } from "vitest";
 
-describe.concurrent("Pages D1 shim", () => {
-	it("applies the D1 shim", async ({ expect }) => {
+describe("Pages D1 shim", () => {
+	it("builds functions with D1 binding, without the shim", async ({
+		expect,
+	}) => {
 		const dir = tmpdir();
 		const file = join(dir, "./d1-pages.js");
 
@@ -17,6 +19,6 @@ describe.concurrent("Pages D1 shim", () => {
 			}
 		);
 
-		expect(readFileSync(file, "utf-8")).toContain("D1_ERROR");
+		expect(readFileSync(file, "utf-8")).not.toContain("D1_ERROR");
 	});
 });

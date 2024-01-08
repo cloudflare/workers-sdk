@@ -1,0 +1,81 @@
+{
+	"name": "playground-preview-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2023-08-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": false,
+	"account_id": "e35fd947284363a46fd7061634477114",
+	"rules": [
+		{ "type": "Text", "globs": ["**/*.template"], "fallthrough": true }
+	],
+
+	"vars": {
+		"ACCOUNT_ID": "f2ba8b5dd703a7dca481f2ea46e19296",
+		"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978",
+		"workersDev": "workers-playground-users.workers.dev"
+	},
+
+	"define": {
+		"ROOT": "'playground/devprod/cloudflare/dev'",
+		"PREVIEW": "':any/cloudflarepreviews/com'"
+	},
+
+	"routes": [
+		{
+			"pattern": "playground.devprod.cloudflare.dev/*",
+			"zone_name": "playground.devprod.cloudflare.dev"
+		},
+		{
+			"pattern": "*.cloudflarepreviews.com/*",
+			"zone_name": "cloudflarepreviews.com"
+		}
+	],
+
+	"durable_objects": {
+		"bindings": [{ "name": "UserSession", "class_name": "UserSession" }]
+	},
+
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["UserSession"]
+		}
+	],
+
+	"env": {
+		"testing": {
+			"vars": {
+				"ACCOUNT_ID": "f2ba8b5dd703a7dca481f2ea46e19296",
+				"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978",
+				"workersDev": "workers-playground-users.workers.dev"
+			},
+
+			"define": {
+				"ROOT": "'playground-testing/devprod/cloudflare/dev'",
+				"PREVIEW": "':any/playground-testing/devprod/cloudflare/dev'"
+			},
+
+			"routes": [
+				{
+					"pattern": "playground-testing.devprod.cloudflare.dev/*",
+					"zone_name": "devprod.cloudflare.dev"
+				},
+				{
+					"pattern": "*.playground-testing.devprod.cloudflare.dev/*",
+					"zone_name": "devprod.cloudflare.dev"
+				}
+			],
+
+			"durable_objects": {
+				"bindings": [{ "name": "UserSession", "class_name": "UserSession" }]
+			},
+
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_classes": ["UserSession"]
+				}
+			]
+		}
+	}
+}

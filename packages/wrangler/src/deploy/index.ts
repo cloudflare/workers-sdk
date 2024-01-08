@@ -1,6 +1,8 @@
 import path from "node:path";
+import chalk from "chalk";
+import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
-import { getEntry } from "../entry";
+import { getEntry } from "../deployment-bundle/entry";
 import {
 	getRules,
 	getScriptName,
@@ -13,10 +15,44 @@ import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import deploy from "./deploy";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+async function standardPricingWarning(
+	accountId: string | undefined,
+	config: Config
+) {
+	try {
+		const { standard, reason } = await fetchResult<{
+			standard: boolean;
+			reason: string;
+		}>(`/accounts/${accountId}/workers/standard`);
+
+		if (!standard && reason !== "enterprise without override") {
+			logger.log(
+				chalk.blue(
+					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
+				)
+			);
+			if (config.limits?.cpu_ms !== undefined) {
+				logger.warn(
+					"The `limits` defined in wrangler.toml can only be applied to scripts opted into Workers Standard pricing. Agree to the new pricing details to set limits for your script."
+				);
+			}
+			return;
+		}
+		if (standard && config.usage_model !== undefined) {
+			logger.warn(
+				"The `usage_model` defined in wrangler.toml is no longer used because you have opted into Workers Standard pricing. Please remove this setting from your wrangler.toml and use the dashboard to configure the usage model for your script."
+			);
+			return;
+		}
+		// Ignore 404 errors for the enablement check
+	} catch {}
+}
 
 export function deployOptions(yargs: CommonYargsArgv) {
 	return (
@@ -181,6 +217,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
+			.option("old-asset-ttl", {
+				describe:
+					"Expire old assets in given seconds rather than immediate deletion.",
+				type: "number",
+			})
 	);
 }
 
@@ -198,6 +239,7 @@ export async function deployHandler(
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
 	await metrics.sendMetricsEvent(
@@ -248,7 +290,7 @@ export async function deployHandler(
 					args.siteInclude,
 					args.siteExclude
 			  );
-
+	await standardPricingWarning(accountId, config);
 	await deploy({
 		config,
 		accountId,
@@ -277,5 +319,7 @@ export async function deployHandler(
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
+		oldAssetTtl: args.oldAssetTtl,
+		projectRoot,
 	});
 }

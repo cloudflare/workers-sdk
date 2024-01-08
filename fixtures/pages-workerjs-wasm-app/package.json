@@ -7,11 +7,14 @@
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8776",
 		"publish": "npx wrangler pages deploy public",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"undici": "^5.9.1"
+		"undici": "^5.9.1",
+		"wrangler": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

@@ -1,4 +1,4 @@
-import { crash } from "helpers/cli";
+import { crash } from "@cloudflare/cli";
 import angular from "./angular";
 import astro from "./astro";
 import docusaurus from "./docusaurus";
@@ -6,12 +6,12 @@ import gatsby from "./gatsby";
 import hono from "./hono";
 import next from "./next";
 import nuxt from "./nuxt";
+import clisPackageJson from "./package.json";
 import qwik from "./qwik";
 import react from "./react";
 import remix from "./remix";
 import solid from "./solid";
 import svelte from "./svelte";
-import versionMap from "./versionMap.json";
 import vue from "./vue";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
@@ -31,15 +31,23 @@ export const FrameworkMap: Record<string, FrameworkConfig> = {
 	vue,
 };
 
-export const getFrameworkVersion = (ctx: PagesGeneratorContext) => {
-	if (!ctx.framework) {
-		return crash("Framework not specified.");
-	}
-
-	const framework = ctx.framework.name as keyof typeof versionMap;
-	return versionMap[framework];
-};
-
 export const supportedFramework = (framework: string) => {
 	return Object.keys(FrameworkMap).includes(framework);
+};
+
+export const getFrameworkCli = (
+	ctx: PagesGeneratorContext,
+	withVersion = true
+) => {
+	if (!ctx.framework) {
+		crash("Framework not specified.");
+	}
+
+	const framework = ctx.framework
+		.name as keyof typeof clisPackageJson.frameworkCliMap;
+	const frameworkCli = clisPackageJson.frameworkCliMap[
+		framework
+	] as keyof typeof clisPackageJson.dependencies;
+	const version = clisPackageJson.dependencies[frameworkCli];
+	return withVersion ? `${frameworkCli}@${version}` : frameworkCli;
 };

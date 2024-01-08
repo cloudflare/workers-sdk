@@ -25,22 +25,15 @@ export function Options(yargs: CommonYargsArgv) {
 				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
 		})
-		.option("experimental-backend", {
-			default: false,
-			describe: "Use new experimental DB backend",
-			type: "boolean",
-		})
 		.epilogue(d1BetaWarning);
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, location, experimentalBackend }): Promise<void> => {
+	async ({ name, config, location }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
-		logger.log(d1BetaWarning);
-
-		if (!experimentalBackend && location) {
+		if (location) {
 			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
 				throw new Error(
 					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
@@ -59,8 +52,8 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 				body: JSON.stringify({
 					name,
+					experimental: true,
 					...(location && { primary_location_hint: location }),
-					...(experimentalBackend && { experimental: true }),
 				}),
 			});
 		} catch (e) {
@@ -81,13 +74,11 @@ export const Handler = withConfig<HandlerOptions>(
 							? ` using primary location hint ${location}`
 							: ``}
 					</Text>
-					{experimentalBackend && (
-						<Text>
-							Created your database using D1&apos;s new storage backend. The new
-							storage backend is not yet recommended for production workloads
-							and does not yet support backups.
-						</Text>
-					)}
+					<Text>
+						Created your database using D1&apos;s new storage backend. The new
+						storage backend is not yet recommended for production workloads, but
+						backs up your data via point-in-time restore.
+					</Text>
 					<Text>&nbsp;</Text>
 					<Text>[[d1_databases]]</Text>
 					<Text>

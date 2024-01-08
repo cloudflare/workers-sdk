@@ -24,9 +24,10 @@ process.env.LC_ALL = "en";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 jest.mock("get-port", () => {
+	const { default: getPort } = jest.requireActual("get-port");
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(async (options) => options.port),
+		default: jest.fn(getPort),
 	};
 });
 
@@ -34,11 +35,19 @@ jest.mock("child_process", () => {
 	return {
 		__esModule: true,
 		...jest.requireActual("child_process"),
-		spawnSync: jest.fn().mockImplementation(async (binary, ...args) => {
+		default: jest.requireActual("child_process"),
+		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
 			return jest.requireActual("child_process").spawnSync(binary, ...args);
 		}),
 	};
+});
+
+jest.mock("log-update", () => {
+	const fn = function (..._: string[]) {};
+	fn["clear"] = () => {};
+	fn["done"] = () => {};
+	return fn;
 });
 
 jest.mock("ws", () => {
@@ -85,12 +94,20 @@ fetchMock.doMock(() => {
 
 jest.mock("../package-manager");
 
+jest.mock("../update-check");
+
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
 fetchMock.dontMock();
 beforeAll(() => {
 	msw.listen({
 		onUnhandledRequest: (request) => {
+			const { hostname } = request.url;
+			const localHostnames = ["localhost", "127.0.0.1"]; // TODO: add other local hostnames if you need them
+			if (localHostnames.includes(hostname)) {
+				return request.passthrough();
+			}
+
 			throw new Error(
 				`No mock found for ${request.method} ${request.url.href}
 				`
@@ -213,3 +230,39 @@ jest.mock("execa", () => {
 		}),
 	};
 });
+
+afterEach(() => {
+	// It is important that we clear mocks between tests to avoid leakage.
+	jest.clearAllMocks();
+});
+
+// make jest understand virtual `worker:` imports
+jest.mock(
+	"worker:startDevWorker/ProxyWorker",
+	() => {
+		const path = jest.requireActual("path");
+		const { getBasePath } = jest.requireActual("../paths");
+
+		return {
+			__esModule: true,
+			default: path.resolve(getBasePath(), `wrangler-dist/ProxyWorker.js`),
+		};
+	},
+	{ virtual: true }
+);
+jest.mock(
+	"worker:startDevWorker/InspectorProxyWorker",
+	() => {
+		const path = jest.requireActual("path");
+		const { getBasePath } = jest.requireActual("../paths");
+
+		return {
+			__esModule: true,
+			default: path.resolve(
+				getBasePath(),
+				`wrangler-dist/InspectorProxyWorker.js`
+			),
+		};
+	},
+	{ virtual: true }
+);

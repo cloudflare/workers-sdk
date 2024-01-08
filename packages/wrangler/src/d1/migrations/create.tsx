@@ -7,7 +7,7 @@ import { logger } from "../../logger";
 import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { Database } from "../options";
-import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
+import { getDatabaseInfoFromConfig } from "../utils";
 import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
 import type {
 	CommonYargsArgv,
@@ -26,8 +26,6 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, database, message }): Promise<void> => {
-		logger.log(d1BetaWarning);
-
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new Error(

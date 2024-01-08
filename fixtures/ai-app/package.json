@@ -1,0 +1,21 @@
+{
+	"name": "ai-app",
+	"version": "1.0.1",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"main": "src/index.js",
+	"scripts": {
+		"check:type": "tsc",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"undici": "^5.23.0",
+		"wrangler": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"@cloudflare/ai": "^1.0.35"
+	}
+}

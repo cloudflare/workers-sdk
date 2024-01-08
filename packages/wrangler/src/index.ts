@@ -1,16 +1,18 @@
+import module from "node:module";
 import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
-import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { isBuildFailure } from "./bundle";
+import { ai } from "./ai";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
+import { isAuthenticationError } from "./deploy/deploy";
+import { isBuildFailure } from "./deployment-bundle/build-failures";
 import {
 	deployments,
 	commonDeploymentCMDSetup,
@@ -33,10 +35,12 @@ import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
+import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
+
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
@@ -44,10 +48,23 @@ import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import {
+	captureGlobalException,
+	addBreadcrumb,
+	closeSentry,
+	setupSentry,
+} from "./sentry";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
-import { updateCheck } from "./update-check";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import { printWranglerBanner } from "./update-check";
+import {
+	getAuthFromEnv,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
+import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -59,7 +76,7 @@ const fgGreenColor = "\x1b[32m";
 export const DEFAULT_LOCAL_PORT = 8787;
 export const DEFAULT_INSPECTOR_PORT = 9229;
 
-const proxy =
+export const proxy =
 	process.env.https_proxy ||
 	process.env.HTTPS_PROXY ||
 	process.env.http_proxy ||
@@ -90,41 +107,6 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
 		);
 	}
 	return rules;
-}
-
-export async function printWranglerBanner() {
-	// Let's not print this in tests
-	if (typeof jest !== "undefined") {
-		return;
-	}
-
-	let text = ` ⛅️ wrangler ${wranglerVersion}`;
-	const maybeNewVersion = await updateCheck();
-	if (maybeNewVersion !== undefined) {
-		text += ` (update available ${chalk.green(maybeNewVersion)})`;
-	}
-
-	logger.log(
-		text +
-			"\n" +
-			(supportsColor.stdout
-				? chalk.hex("#FF8800")("-".repeat(text.length))
-				: "-".repeat(text.length))
-	);
-
-	// Log a slightly more noticeable message if this is a major bump
-	if (maybeNewVersion !== undefined) {
-		const currentMajor = parseInt(wranglerVersion.split(".")[0]);
-		const newMajor = parseInt(maybeNewVersion.split(".")[0]);
-		if (newMajor > currentMajor) {
-			logger.warn(
-				`The version of Wrangler you are using is now out-of-date.
-Please update to the latest version to prevent critical errors.
-Run \`npm install --save-dev wrangler@${newMajor}\` to update to the latest version.
-After installation, run Wrangler with \`npx wrangler\`.`
-			);
-		}
-	}
 }
 
 export function isLegacyEnv(config: Config): boolean {
@@ -307,7 +289,7 @@ export function createCLIParser(argv: string[]) {
 	// generate
 	wrangler.command(
 		"generate [name] [template]",
-		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates",
+		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates",
 		generateOptions,
 		generateHandler
 	);
@@ -388,7 +370,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	wrangler.command(
-		"secret:bulk <json>",
+		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler
@@ -450,12 +432,31 @@ export function createCLIParser(argv: string[]) {
 		return d1(d1Yargs.command(subHelp));
 	});
 
-	// ai
+	// hyperdrive
 	wrangler.command(
-		"constellation",
-		"🤖 Interact with Constellation models",
-		(aiYargs) => {
-			return constellation(aiYargs.command(subHelp));
+		"hyperdrive",
+		"🚀 Configure Hyperdrive databases",
+		(hyperdriveYargs) => {
+			return hyperdrive(hyperdriveYargs.command(subHelp));
+		}
+	);
+
+	// ai
+	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
+		return ai(aiYargs.command(subHelp));
+	});
+
+	// [DEPRECATED] constellation
+	wrangler.command("constellation", false, (aiYargs) => {
+		return constellation(aiYargs.command(subHelp));
+	});
+
+	// vectorize
+	wrangler.command(
+		"vectorize",
+		"🧮 Interact with Vectorize indexes",
+		(vectorYargs) => {
+			return vectorize(vectorYargs.command(subHelp));
 		}
 	);
 
@@ -521,7 +522,7 @@ export function createCLIParser(argv: string[]) {
 				}
 				if (!validateScopeKeys(args.scopes)) {
 					throw new CommandLineArgsError(
-						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
+						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
 					);
 				}
 				await login({ scopes: args.scopes, browser: args.browser });
@@ -670,6 +671,10 @@ export function createCLIParser(argv: string[]) {
 					type: "string",
 					default: undefined,
 				})
+				.option("name", {
+					describe: "The name of your worker",
+					type: "string",
+				})
 				.epilogue(rollbackWarning),
 		async (rollbackYargs) => {
 			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
@@ -710,10 +715,15 @@ export function createCLIParser(argv: string[]) {
 }
 
 export async function main(argv: string[]): Promise<void> {
+	setupSentry();
+	addBreadcrumb(`wrangler ${argv.join(" ")}`);
+
 	const wrangler = createCLIParser(argv);
+	let cliHandlerThrew = false;
 	try {
 		await wrangler.parse();
 	} catch (e) {
+		cliHandlerThrew = true;
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
@@ -721,6 +731,16 @@ export async function main(argv: string[]): Promise<void> {
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
+		} else if (isAuthenticationError(e)) {
+			logger.log(formatMessage(e));
+			const envAuth = getAuthFromEnv();
+			if (envAuth !== undefined && "apiToken" in envAuth) {
+				const message =
+					"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.\n" +
+					"Please ensure it has the correct permissions for this operation.\n";
+				logger.log(chalk.yellow(message));
+			}
+			await whoami();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
@@ -753,7 +773,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
-			logBuildFailure(e);
+			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
@@ -761,19 +781,47 @@ export async function main(argv: string[]): Promise<void> {
 				`${fgGreenColor}%s${resetColor}`,
 				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
+			await captureGlobalException(e);
 		}
 		throw e;
+	} finally {
+		try {
+			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
+			// so IPC messages from this process are propagated through the
+			// bootstrapper. Normally, Node's SIGINT handler would close this for us,
+			// but interactive dev mode enables raw mode on stdin which disables the
+			// built-in handler. Make sure this channel is closed once it's no longer
+			// needed, so we can cleanly exit. Note, we don't want to disconnect if
+			// this file was imported in Jest, as that would stop communication with
+			// the test runner.
+			if (typeof jest === "undefined") process.disconnect?.();
+
+			await closeSentry();
+		} catch (e) {
+			logger.error(e);
+			// Only re-throw if we haven't already re-thrown an exception from a
+			// command handler.
+			// eslint-disable-next-line no-unsafe-finally
+			if (!cliHandlerThrew) throw e;
+		}
 	}
 }
 
 export function getDevCompatibilityDate(
 	config: Config,
 	compatibilityDate = config.compatibility_date
-) {
-	const currentDate = new Date().toISOString().substring(0, 10);
+): string {
+	// Get the maximum compatibility date supported by the installed Miniflare
+	const miniflareEntry = require.resolve("miniflare");
+	const miniflareRequire = module.createRequire(miniflareEntry);
+	const miniflareWorkerd = miniflareRequire("workerd") as {
+		compatibilityDate: string;
+	};
+	const currentDate = miniflareWorkerd.compatibilityDate;
+
 	if (config.configPath !== undefined && compatibilityDate === undefined) {
 		logger.warn(
-			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
+			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
 				"Add one to your wrangler.toml file:\n" +
 				"```\n" +
 				`compatibility_date = "${currentDate}"\n` +
@@ -787,3 +835,5 @@ export function getDevCompatibilityDate(
 	}
 	return compatibilityDate ?? currentDate;
 }
+
+export { printWranglerBanner };

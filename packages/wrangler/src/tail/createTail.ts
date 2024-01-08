@@ -1,6 +1,8 @@
+import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
+import { proxy } from "../index";
 import type { TailFilterMessage, Outcome } from "./filters";
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
@@ -100,11 +102,14 @@ export async function createPagesTail({
 			{ method: "DELETE" }
 		);
 
+	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
+
 	const tail = new WebSocket(tailRecord.url, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
+		...p,
 	});
 
 	// send filters when we open up
@@ -165,12 +170,15 @@ export async function createTail(
 		await fetchResult(deleteUrl, { method: "DELETE" });
 	}
 
+	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
+
 	// connect to the tail
 	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
+		...p,
 	});
 
 	// send filters when we open up
@@ -242,7 +250,8 @@ export type TailEventMessage = {
 	 * The event that triggered the worker. In the case of an HTTP request,
 	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
 	 * ScheduledEvent. If it's a durable object alarm, it's an AlarmEvent.
-	 * If it's a email, it'a an EmailEvent
+	 * If it's a email, it'a an EmailEvent. If it's a Queue consumer event,
+	 * it's a QueueEvent.
 	 *
 	 * Until workers-types exposes individual types for export, we'll have
 	 * to just re-define these types ourselves.
@@ -252,7 +261,9 @@ export type TailEventMessage = {
 		| ScheduledEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailEvent
 		| TailInfo
+		| QueueEvent
 		| undefined
 		| null;
 };
@@ -407,9 +418,40 @@ export type EmailEvent = {
 };
 
 /**
+ * An event that was triggered for a tail receiving TailEventMessages
+ * Only seen when tailing a tail worker
+ */
+export type TailEvent = {
+	/**
+	 * A minimal representation of the TailEventMessages that were delivered to the tail handler
+	 */
+	consumedEvents: {
+		/**
+		 * The name of script being tailed
+		 */
+		scriptName?: string;
+	}[];
+};
+
+/**
  * Message from tail with information about the tail itself
  */
 export type TailInfo = {
 	message: string;
 	type: string;
+};
+
+/*
+ * A event that was triggered by receiving a batch of messages from a Queue for consumption.
+ */
+export type QueueEvent = {
+	/**
+	 * The name of the queue that the message batch came from.
+	 */
+	queue: string;
+
+	/**
+	 * The number of messages in the batch.
+	 */
+	batchSize: number;
 };

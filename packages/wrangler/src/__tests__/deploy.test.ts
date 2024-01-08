@@ -1,15 +1,18 @@
 import { Blob, Buffer } from "node:buffer";
+import childProcess from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
+import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
+import dedent from "ts-dedent";
 import { FormData } from "undici";
 import {
 	printBundleSize,
 	printOffendingDependencies,
-} from "../bundle-reporter";
+} from "../deployment-bundle/bundle-reporter";
 import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -29,11 +32,16 @@ import {
 	mockGetMemberships,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
+import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
 	msw,
 	mswSuccessDeployments,
 	mswSuccessDeploymentScriptMetadata,
+	mswSuccessDeploymentScriptAPI,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -42,12 +50,10 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 import type { Config } from "../config";
-import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { PutConsumerBody } from "../queues/client";
-import type { CfWorkerInit } from "../worker";
-import type { ResponseComposition, RestContext, RestRequest } from "msw";
+import type { RestRequest } from "msw";
 
 describe("deploy", () => {
 	mockAccountId();
@@ -105,6 +111,7 @@ describe("deploy", () => {
 			Worker ID:  abc12345
 			Worker ETag:  etag98765
 			Worker PipelineHash:  hash9999
+			Worker Mutable PipelineID (Development ONLY!): mutableId
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -140,7 +147,7 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20ai%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -180,7 +187,7 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20ai%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -360,6 +367,30 @@ describe("deploy", () => {
 			          "
 		        `);
 			});
+		});
+	});
+
+	describe("warnings", () => {
+		it("should warn user when worker was last deployed from api", async () => {
+			msw.use(...mswSuccessDeploymentScriptAPI);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: false,
+			});
+
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+
+			  Edits that have been made via the script API will be overridden by your local code and config.
+
+			"
+		`);
 		});
 	});
 
@@ -677,6 +708,84 @@ describe("deploy", () => {
 			  *another-boring-website.com (zone name: some-zone.com)
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should deploy to a route with a SaaS domain", async () => {
+			writeWranglerToml({
+				workers_dev: false,
+				routes: [
+					{
+						pattern: "partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerRequest({ enabled: false });
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetWorkerRoutes("owned-zone-id-1");
+			mockPublishRoutesRequest({
+				routes: [
+					{
+						pattern: "partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			await runWrangler("deploy ./index");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  partner.com/* (zone name: owned-zone.com)
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should deploy to a route with a SaaS subdomain", async () => {
+			writeWranglerToml({
+				workers_dev: false,
+				routes: [
+					{
+						pattern: "subdomain.partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerRequest({ enabled: false });
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetWorkerRoutes("owned-zone-id-1");
+			mockPublishRoutesRequest({
+				routes: [
+					{
+						pattern: "subdomain.partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			await runWrangler("deploy ./index");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  subdomain.partner.com/* (zone name: owned-zone.com)
 			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
@@ -1060,6 +1169,8 @@ Update them to point to this script instead?`,
 					],
 				});
 				writeWorkerSource();
+				mockServiceScriptData({});
+
 				await expect(
 					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1725,6 +1836,119 @@ addEventListener('fetch', event => {});`
 			}
 		`);
 		});
+
+		describe("should source map validation errors", () => {
+			function mockDeployWithValidationError(message: string) {
+				const handler = rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					async (req, res, ctx) => {
+						const body = createFetchResult(null, false, [
+							{ code: 10021, message },
+						]);
+						return res(ctx.json(body));
+					}
+				);
+				msw.use(handler);
+			}
+
+			it("with TypeScript source file", async () => {
+				writeWranglerToml();
+				fs.writeFileSync(
+					`index.ts`,
+					dedent`interface Env {
+						THING: string;
+					}
+					x;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+				});
+			});
+
+			it("with additional modules", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
+				});
+
+				fs.writeFileSync(
+					"dep.ts",
+					dedent`interface Env {
+					}
+					y;
+					export default "message";`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("dep.ts")],
+					outdir: process.cwd(),
+					sourcemap: true,
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					dedent`import dep from "./dep.js";
+					export default {
+						fetch() {
+							return new Response(dep);
+						}
+					}`
+				);
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: y is not defined\n  at dep.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("dep.ts:3:1") }, {}],
+				});
+			});
+
+			it("with inline source map", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+				});
+
+				fs.writeFileSync(
+					"index.ts",
+					dedent`interface Env {}
+					z;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("index.ts")],
+					outdir: process.cwd(),
+					sourcemap: "inline",
+				});
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: z is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:2:1") }, {}],
+				});
+			});
+		});
 	});
 
 	describe("asset upload", () => {
@@ -2180,8 +2404,10 @@ addEventListener('fetch', event => {});`
 
 		it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async () => {
 			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
+				// Using `.text` extension instead of `.txt` means files won't be
+				// treated as additional modules
+				{ filePath: "file-1.text", content: "Content of file-1" },
+				{ filePath: "file-2.text", content: "Content of file-2" },
 			];
 			const kvNamespace = {
 				title: "__test-name-workers_sites_assets",
@@ -2192,8 +2418,27 @@ addEventListener('fetch', event => {});`
 				site: {
 					bucket: "assets",
 				},
+				find_additional_modules: true,
+				rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],
 			});
 			writeWorkerSource({ type: "esm" });
+			fs.mkdirSync("a/b/c", { recursive: true });
+			fs.writeFileSync(
+				"a/1.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
+			fs.writeFileSync(
+				"a/b/2.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
+			fs.writeFileSync(
+				"a/b/3.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
+			fs.writeFileSync(
+				"a/b/c/4.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
 			writeAssets(assets);
 			mockUploadWorkerRequest({
 				expectedBindings: [
@@ -2205,7 +2450,13 @@ addEventListener('fetch', event => {});`
 				],
 				expectedModules: {
 					__STATIC_CONTENT_MANIFEST:
-						'{"file-1.txt":"file-1.2ca234f380.txt","file-2.txt":"file-2.5938485188.txt"}',
+						'{"file-1.text":"file-1.2ca234f380.text","file-2.text":"file-2.5938485188.text"}',
+					"a/__STATIC_CONTENT_MANIFEST":
+						'export { default } from "../__STATIC_CONTENT_MANIFEST";',
+					"a/b/__STATIC_CONTENT_MANIFEST":
+						'export { default } from "../../__STATIC_CONTENT_MANIFEST";',
+					"a/b/c/__STATIC_CONTENT_MANIFEST":
+						'export { default } from "../../../__STATIC_CONTENT_MANIFEST";',
 				},
 			});
 			mockSubDomainRequest();
@@ -2216,15 +2467,27 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
-			"Fetching list of already uploaded assets...
+			"Attaching additional modules:
+			Fetching list of already uploaded assets...
 			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			 + file-1.2ca234f380.text (uploading new version of file-1.text)
+			 + file-2.5938485188.text (uploading new version of file-2.text)
 			Uploading 2 new assets...
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
+			"┌─────────────┬──────┬──────────┐
+			│ Name        │ Type │ Size     │
+			├─────────────┼──────┼──────────┤
+			│ a/1.mjs     │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/2.mjs   │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/3.mjs   │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/c/4.mjs │ esm  │ xx KiB │
+			└─────────────┴──────┴──────────┘
+			↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -3897,6 +4160,40 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should fail to deploy to the workers.dev domain if email is unverified", async () => {
+			writeWranglerToml({ workers_dev: true });
+			writeWorkerSource();
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockSubDomainRequest();
+			msw.use(
+				rest.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+					async (req, res, ctx) => {
+						return res.once(
+							ctx.json(
+								createFetchResult(null, /* success */ false, [
+									{
+										code: 10034,
+										message: "workers.api.error.email_verification_required",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("deploy ./index")).rejects.toMatchObject({
+				text: "Please verify your account's email address and try again.",
+				notes: [
+					{
+						text: "Check your email for a verification link, or login to https://dash.cloudflare.com and request a new one.",
+					},
+					{},
+				],
+			});
+		});
+
 		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async () => {
 			writeWranglerToml({
 				workers_dev: true,
@@ -4292,7 +4589,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			await runWrangler(
-				"deploy --dry-run --outdir dist --define abc:'https://www.abc.net.au/news/'"
+				`deploy --dry-run --outdir dist --define "abc:'https://www.abc.net.au/news/'"`
 			);
 
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
@@ -5008,6 +5305,29 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("user limits", () => {
+		it("should allow specifying a cpu millisecond limit", async () => {
+			writeWranglerToml({
+				limits: { cpu_ms: 15_000 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { cpu_ms: 15_000 },
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("bindings", () => {
 		it("should allow bindings with different names", async () => {
 			writeWranglerToml({
@@ -5039,6 +5359,16 @@ addEventListener('fetch', event => {});`
 				r2_buckets: [
 					{ binding: "R2_BUCKET_ONE", bucket_name: "r2-bucket-one-name" },
 					{ binding: "R2_BUCKET_TWO", bucket_name: "r2-bucket-two-name" },
+					{
+						binding: "R2_BUCKET_ONE_EU",
+						bucket_name: "r2-bucket-one-name",
+						jurisdiction: "eu",
+					},
+					{
+						binding: "R2_BUCKET_TWO_EU",
+						bucket_name: "r2-bucket-two-name",
+						jurisdiction: "eu",
+					},
 				],
 				analytics_engine_datasets: [
 					{ binding: "AE_DATASET_ONE", dataset: "ae-dataset-one-name" },
@@ -5079,7 +5409,6 @@ addEventListener('fetch', event => {});`
 					DATA_BLOB_TWO: "./more-data-blob.bin",
 				},
 				logfwdr: {
-					schema: "./message.capnp.compiled",
 					bindings: [
 						{
 							name: "httplogs",
@@ -5104,8 +5433,6 @@ addEventListener('fetch', event => {});`
 
 			fs.writeFileSync("./some-data-blob.bin", "some data");
 			fs.writeFileSync("./more-data-blob.bin", "more data");
-
-			fs.writeFileSync("./message.capnp.compiled", "compiled capnp messages");
 
 			mockUploadWorkerRequest({
 				expectedType: "sw",
@@ -5151,6 +5478,18 @@ addEventListener('fetch', event => {});`
 					{
 						bucket_name: "r2-bucket-two-name",
 						name: "R2_BUCKET_TWO",
+						type: "r2_bucket",
+					},
+					{
+						bucket_name: "r2-bucket-one-name",
+						jurisdiction: "eu",
+						name: "R2_BUCKET_ONE_EU",
+						type: "r2_bucket",
+					},
+					{
+						bucket_name: "r2-bucket-two-name",
+						jurisdiction: "eu",
+						name: "R2_BUCKET_TWO_EU",
 						type: "r2_bucket",
 					},
 					{
@@ -5218,6 +5557,8 @@ addEventListener('fetch', event => {});`
 			- R2 Buckets:
 			  - R2_BUCKET_ONE: r2-bucket-one-name
 			  - R2_BUCKET_TWO: r2-bucket-two-name
+			  - R2_BUCKET_ONE_EU: r2-bucket-one-name (eu)
+			  - R2_BUCKET_TWO_EU: r2-bucket-two-name (eu)
 			- logfwdr:
 			  - httplogs: httplogs
 			  - trace: trace
@@ -5237,8 +5578,8 @@ addEventListener('fetch', event => {});`
 			  - WASM_MODULE_ONE: some_wasm.wasm
 			  - WASM_MODULE_TWO: more_wasm.wasm
 			- Unsafe Metadata:
-			  - extra_data: interesting value
-			  - more_data: dubious value
+			  - extra_data: \\"interesting value\\"
+			  - more_data: \\"dubious value\\"
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -6104,11 +6445,8 @@ addEventListener('fetch', event => {});`
 
 		describe("[logfwdr]", () => {
 			it("should support logfwdr bindings", async () => {
-				fs.writeFileSync("./message.capnp.compiled", "compiled capnp messages");
-
 				writeWranglerToml({
 					logfwdr: {
-						schema: "./message.capnp.compiled",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6152,6 +6490,31 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error when logfwdr schemas are specified", async () => {
+				writeWranglerToml({
+					logfwdr: {
+						// @ts-expect-error this property been replaced with the unsafe.capnp section
+						schema: "./message.capnp.compiled",
+						bindings: [
+							{
+								name: "httplogs",
+								destination: "httplogs",
+							},
+							{
+								name: "trace",
+								destination: "trace",
+							},
+						],
+					},
+				});
+
+				await expect(() => runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+			"Processing wrangler.toml configuration:
+			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with the \\"unsafe.capnp\\" object, which expects a \\"base_path\\" and an array of \\"source_schemas\\" to compile, or a \\"compiled_schema\\" property."
+		`);
 			});
 		});
 
@@ -6338,25 +6701,12 @@ addEventListener('fetch', event => {});`
 			--dry-run: exiting now."
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - D1 Bindings are currently in alpha to allow the API to evolve before general availability.
-			      Please report any issues to [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-			      Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
-
-			      For example: \`export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>\`
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 				const output = fs.readFileSync("tmp/index.js", "utf-8");
-				expect(output).toContain(
-					`var ExampleDurableObject2 = maskDurableObjectDefinition(ExampleDurableObject);`
-				);
-				expect(output).toContain(
-					`ExampleDurableObject2 as ExampleDurableObject,`
-				);
-				expect(output).toContain(`shim_default as default`);
+				// D1 no longer injects middleware, so we can pass through the user's code unchanged
+				expect(output).not.toContain(`ExampleDurableObject2`);
+				// ExampleDurableObject is exported directly
+				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
 			it("should error when detecting a service-worker worker implementing durable objects", async () => {
@@ -6420,13 +6770,7 @@ addEventListener('fetch', event => {});`
 			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 
@@ -6618,100 +6962,282 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[unsafe]", () => {
-			it("should warn if using unsafe bindings", async () => {
-				writeWranglerToml({
-					unsafe: {
-						bindings: [
+			describe("[unsafe.bindings]", () => {
+				it("should stringify object in unsafe metadata", async () => {
+					writeWranglerToml({
+						unsafe: {
+							metadata: {
+								stringify: true,
+								something: "else",
+								undefined: undefined,
+								null: null,
+								nested: {
+									stuff: "here",
+								},
+							},
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedUnsafeMetaData: {
+							stringify: true,
+							something: "else",
+							nested: {
+								stuff: "here",
+							},
+						},
+					});
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Your worker has access to the following bindings:
+				- Unsafe Metadata:
+				  - stringify: true
+				  - something: \\"else\\"
+				  - nested: {\\"stuff\\":\\"here\\"}
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+				});
+
+				it("should warn if using unsafe bindings", async () => {
+					writeWranglerToml({
+						unsafe: {
+							bindings: [
+								{
+									name: "my-binding",
+									type: "binding-type",
+									param: "binding-param",
+								},
+							],
+							metadata: undefined,
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedBindings: [
 							{
 								name: "my-binding",
 								type: "binding-type",
 								param: "binding-param",
 							},
 						],
-						metadata: undefined,
-					},
+					});
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+							"Total Upload: xx KiB / gzip: xx KiB
+							Your worker has access to the following bindings:
+							- Unsafe:
+							  - binding-type: my-binding
+							Uploaded test-name (TIMINGS)
+							Published test-name (TIMINGS)
+							  https://test-name.test-sub-domain.workers.dev
+							Current Deployment ID: Galaxy-Class"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+							"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+							    - \\"unsafe\\" fields are experimental and may change or break at any time.
+
+							"
+					`);
 				});
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedBindings: [
-						{
-							name: "my-binding",
-							type: "binding-type",
-							param: "binding-param",
+
+				it("should warn if using unsafe bindings already handled by wrangler", async () => {
+					writeWranglerToml({
+						unsafe: {
+							bindings: [
+								{
+									name: "my-binding",
+									type: "plain_text",
+									text: "text",
+								},
+							],
+							metadata: undefined,
 						},
-					],
-				});
-
-				await runWrangler("deploy index.js");
-				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Unsafe:
-			  - binding-type: my-binding
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"unsafe\\" fields are experimental and may change or break at any time.
-
-			"
-		`);
-			});
-			it("should warn if using unsafe bindings already handled by wrangler", async () => {
-				writeWranglerToml({
-					unsafe: {
-						bindings: [
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedBindings: [
 							{
 								name: "my-binding",
 								type: "plain_text",
 								text: "text",
 							},
 						],
-						metadata: undefined,
-					},
+					});
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+							"Total Upload: xx KiB / gzip: xx KiB
+							Your worker has access to the following bindings:
+							- Unsafe:
+							  - plain_text: my-binding
+							Uploaded test-name (TIMINGS)
+							Published test-name (TIMINGS)
+							  https://test-name.test-sub-domain.workers.dev
+							Current Deployment ID: Galaxy-Class"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+							"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+							    - \\"unsafe\\" fields are experimental and may change or break at any time.
+							    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
+							      - The binding type \\"plain_text\\" is directly supported by wrangler.
+							        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is
+							  supported by wrangler for optimal support.
+							        For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
+
+							"
+					`);
 				});
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedBindings: [
-						{
-							name: "my-binding",
-							type: "plain_text",
-							text: "text",
+			});
+			describe("[unsafe.capnp]", () => {
+				it("should accept a pre-compiled capnp schema", async () => {
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								compiled_schema: "./my-compiled-schema",
+							},
 						},
-					],
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedCapnpSchema: "my compiled capnp data",
+					});
+					fs.writeFileSync("./my-compiled-schema", "my compiled capnp data");
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - \\"unsafe\\" fields are experimental and may change or break at any time.
+
+				"
+			`);
 				});
+				it("should error when both pre-compiled and uncompiled-capnp schemas are used", async () => {
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								compiled_schema: "./my-compiled-schema",
+								// @ts-expect-error This should error as the types don't accept having both
+								source_schemas: ["./my-src-schema"],
+							},
+						},
+					});
+					writeWorkerSource();
 
-				await runWrangler("deploy index.js");
-				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Unsafe:
-			  - plain_text: my-binding
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+					await expect(() => runWrangler("deploy index.js")).rejects
+						.toThrowErrorMatchingInlineSnapshot(`
+				"Processing wrangler.toml configuration:
+				  - The field \\"unsafe.capnp\\" cannot contain both \\"compiled_schema\\" and one of \\"base_path\\" or \\"source_schemas\\"."
+			`);
+				});
+				it("should error when no schemas are specified", async () => {
+					writeWranglerToml({
+						unsafe: {
+							// @ts-expect-error This should error as the types expect something to be present
+							capnp: {},
+						},
+					});
+					writeWorkerSource();
 
-			    - \\"unsafe\\" fields are experimental and may change or break at any time.
-			    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
-			      - The binding type \\"plain_text\\" is directly supported by wrangler.
-			        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is
-			  supported by wrangler for optimal support.
-			        For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
+					await expect(() => runWrangler("deploy index.js")).rejects
+						.toThrowErrorMatchingInlineSnapshot(`
+				"Processing wrangler.toml configuration:
+				  - The field \\"unsafe.capnp.base_path\\", when present, should be a string but got undefined
+				  - Expected \\"unsafe.capnp.source_schemas\\" to be an array of strings but got undefined"
+			`);
+				});
+				it("should error when the capnp compiler is not present, but is required", async () => {
+					jest.spyOn(commandExists, "sync").mockReturnValue(false);
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								base_path: "./",
+								source_schemas: ["./my-src-schema"],
+							},
+						},
+					});
+					writeWorkerSource();
 
-			"
-		`);
+					await expect(() =>
+						runWrangler("deploy index.js")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"The capnp compiler is required to upload capnp schemas, but is not present."`
+					);
+				});
+				it("should accept an uncompiled capnp schema", async () => {
+					jest.spyOn(commandExists, "sync").mockReturnValue(true);
+					jest
+						.spyOn(childProcess, "spawnSync")
+						.mockImplementation((cmd, args) => {
+							expect(cmd).toBe("capnp");
+							expect(args?.[0]).toBe("compile");
+							expect(args?.[1]).toBe("-o-");
+							expect(args?.[2]).toContain("--src-prefix=");
+							expect(args?.[3]).toContain("my-compiled-schema");
+							return {
+								pid: -1,
+								error: undefined,
+								stderr: Buffer.from([]),
+								stdout: Buffer.from("my compiled capnp data"),
+								status: 0,
+								signal: null,
+								output: [null],
+							};
+						});
+
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								base_path: "./",
+								source_schemas: ["./my-compiled-schema"],
+							},
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedCapnpSchema: "my compiled capnp data",
+					});
+					fs.writeFileSync("./my-compiled-schema", "my compiled capnp data");
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - \\"unsafe\\" fields are experimental and may change or break at any time.
+
+				"
+			`);
+				});
 			});
 		});
 	});
@@ -6918,10 +7444,10 @@ addEventListener('fetch', event => {});`
 			);
 			// and the warnings because fallthrough was not explicitly set
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.[0m
+			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.[0m
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.[0m
+			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.[0m
 
 			        "
 		      `);
@@ -7314,7 +7840,15 @@ export default{
 				},
 				migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
 			});
-			writeWorkerSource();
+			fs.writeFileSync(
+				"index.js",
+				`export default {
+        	async fetch(request) {
+          	return new Response('Hello' + foo);
+        	},
+      	};
+				export class SomeClass {};`
+			);
 			process.env.CLOUDFLARE_ACCOUNT_ID = "";
 			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`
@@ -7371,7 +7905,7 @@ export default{
 			expect(
 				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
 			).toMatch(
-				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file to enable Node.js compatibility\./
+				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file and make sure to prefix the module name with "node:" to enable Node.js compatibility\./
 			);
 		});
 
@@ -7620,15 +8154,25 @@ export default{
 				)
 			);
 
+			fs.writeFileSync(
+				"add.wasm",
+				"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=",
+				"base64"
+			);
+			fs.writeFileSync("message.txt", "👋");
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
 			fs.writeFileSync(
 				"index.js",
-				`import { thing } from "./dependency";
+				`
+				import addModule from "./add.wasm";
+				import message from "./message.txt";
+				import { thing } from "./dependency";
 
         export default {
           async fetch() {
-            return new Response('response plus ' + thing);
+          	const instance = new WebAssembly.Instance(addModule);
+          	return Response.json({ add: instance.exports.add(1, 2), message, thing });
           }
         }`
 			);
@@ -7656,10 +8200,12 @@ export default{
 			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
 			  - index.js - xx KiB
+			  - add.wasm - xx KiB
 			  - dependency.js - xx KiB
+			  - message.txt - xx KiB
 			  If these are unnecessary, consider removing them
 
 			",
@@ -7744,7 +8290,12 @@ export default{
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
-					{ name: "index.js", content: bigModule, type: "buffer" },
+					{
+						name: "index.js",
+						filePath: undefined,
+						content: bigModule,
+						type: "buffer",
+					},
 				]);
 
 				expect(std).toMatchInlineSnapshot(`
@@ -7753,7 +8304,7 @@ export default{
 			  "err": "",
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding this can affect cold start time. Consider using Wrangler's \`--minify\` option to reduce your bundle size.[0m
 
 			",
 			}
@@ -7767,7 +8318,12 @@ export default{
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
-					{ name: "index.js", content: bigModule, type: "buffer" },
+					{
+						name: "index.js",
+						filePath: undefined,
+						content: bigModule,
+						type: "buffer",
+					},
 				]);
 
 				expect(std).toMatchInlineSnapshot(`
@@ -7928,7 +8484,7 @@ export default{
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		msw.use(
 			rest.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
@@ -7956,10 +8512,34 @@ export default{
 			)
 		);
 
-		await runWrangler("deploy index.js");
-		expect(std.err).toContain(
-			`A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed`
+		await expect(
+			runWrangler("deploy index.js")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed."`
 		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"
+		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+
+		  Authentication error [code: 10000]
+
+
+		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+		Please ensure it has the correct permissions for this operation.
+
+		Getting User settings...
+		👋 You are logged in with an API Token, associated with the email user@example.com!
+		┌───────────────┬────────────┐
+		│ Account Name  │ Account ID │
+		├───────────────┼────────────┤
+		│ Account One   │ account-1  │
+		├───────────────┼────────────┤
+		│ Account Two   │ account-2  │
+		├───────────────┼────────────┤
+		│ Account Three │ account-3  │
+		└───────────────┴────────────┘
+		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
+	`);
 	});
 
 	describe("queues", () => {
@@ -8156,6 +8736,79 @@ export default{
 		});
 	});
 
+	describe("ai", () => {
+		it("should upload ai bindings", async () => {
+			writeWranglerToml({
+				ai: { binding: "AI_BIND" },
+				browser: { binding: "MYBROWSER" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "browser",
+						name: "MYBROWSER",
+					},
+					{
+						type: "ai",
+						name: "AI_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Browser:
+			  - Name: MYBROWSER
+			- AI:
+			  - Name: AI_BIND
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
+	describe("hyperdrive", () => {
+		it("should upload hyperdrive bindings", async () => {
+			writeWranglerToml({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE",
+						id: "343cd4f1d58c42fbb5bd082592fd7143",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "hyperdrive",
+						name: "HYPERDRIVE",
+						id: "343cd4f1d58c42fbb5bd082592fd7143",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Hyperdrive Configs:
+			  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("mtls_certificates", () => {
 		it("should upload mtls_certificate bindings", async () => {
 			writeWranglerToml({
@@ -8288,160 +8941,6 @@ function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
-/** Create a mock handler for the request to upload a worker script. */
-function mockUploadWorkerRequest(
-	options: {
-		available_on_subdomain?: boolean;
-		expectedEntry?: string | RegExp;
-		expectedMainModule?: string;
-		expectedType?: "esm" | "sw";
-		expectedBindings?: unknown;
-		expectedModules?: Record<string, string>;
-		expectedCompatibilityDate?: string;
-		expectedCompatibilityFlags?: string[];
-		expectedMigrations?: CfWorkerInit["migrations"];
-		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
-		expectedUnsafeMetaData?: Record<string, string>;
-		env?: string;
-		legacyEnv?: boolean;
-		keepVars?: boolean;
-		tag?: string;
-	} = {}
-) {
-	const {
-		available_on_subdomain = true,
-		expectedEntry,
-		expectedMainModule = "index.js",
-		expectedType = "esm",
-		expectedBindings,
-		expectedModules = {},
-		expectedCompatibilityDate,
-		expectedCompatibilityFlags,
-		env = undefined,
-		legacyEnv = false,
-		expectedMigrations,
-		expectedTailConsumers,
-		expectedUnsafeMetaData,
-		keepVars,
-	} = options;
-	if (env && !legacyEnv) {
-		msw.use(
-			rest.put(
-				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				handleUpload
-			)
-		);
-	} else {
-		msw.use(
-			rest.put(
-				"*/accounts/:accountId/workers/scripts/:scriptName",
-				handleUpload
-			)
-		);
-	}
-
-	async function handleUpload(
-		req: RestRequest,
-		res: ResponseComposition,
-		ctx: RestContext
-	) {
-		expect(req.params.accountId).toEqual("some-account-id");
-		expect(req.params.scriptName).toEqual(
-			legacyEnv && env ? `test-name-${env}` : "test-name"
-		);
-		if (!legacyEnv) {
-			expect(req.params.envName).toEqual(env);
-		}
-		expect(req.url.searchParams.get("include_subdomain_availability")).toEqual(
-			"true"
-		);
-		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
-
-		const formBody = await (
-			req as MockedRequest as RestRequestWithFormData
-		).formData();
-		if (expectedEntry !== undefined) {
-			expect(formBody.get("index.js")).toMatch(expectedEntry);
-		}
-		const metadata = JSON.parse(
-			formBody.get("metadata") as string
-		) as WorkerMetadata;
-		if (expectedType === "esm") {
-			expect(metadata.main_module).toEqual(expectedMainModule);
-		} else {
-			expect(metadata.body_part).toEqual("index.js");
-		}
-
-		if (keepVars) {
-			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
-		} else {
-			expect(metadata.keep_bindings).toBeFalsy();
-		}
-
-		if ("expectedBindings" in options) {
-			expect(metadata.bindings).toEqual(expectedBindings);
-		}
-		if ("expectedCompatibilityDate" in options) {
-			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
-		}
-		if ("expectedCompatibilityFlags" in options) {
-			expect(metadata.compatibility_flags).toEqual(expectedCompatibilityFlags);
-		}
-		if ("expectedMigrations" in options) {
-			expect(metadata.migrations).toEqual(expectedMigrations);
-		}
-		if ("expectedTailConsumers" in options) {
-			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
-		}
-		if (expectedUnsafeMetaData !== undefined) {
-			Object.keys(expectedUnsafeMetaData).forEach((key) => {
-				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
-			});
-		}
-		for (const [name, content] of Object.entries(expectedModules)) {
-			expect(formBody.get(name)).toEqual(content);
-		}
-
-		return res(
-			ctx.json(
-				createFetchResult({
-					available_on_subdomain,
-					id: "abc12345",
-					etag: "etag98765",
-					pipeline_hash: "hash9999",
-					tag: "sample-tag",
-					deployment_id: "Galaxy-Class",
-				})
-			)
-		);
-	}
-}
-
-/** Create a mock handler for the request to get the account's subdomain. */
-function mockSubDomainRequest(
-	subdomain = "test-sub-domain",
-	registeredWorkersDev = true
-) {
-	if (registeredWorkersDev) {
-		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult({ subdomain })));
-			})
-		);
-	} else {
-		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(null, false, [
-							{ code: 10007, message: "haven't registered workers.dev" },
-						])
-					)
-				);
-			})
-		);
-	}
-}
 //
 //
 //
@@ -8538,6 +9037,42 @@ function mockUnauthorizedPublishRoutesRequest({
 				);
 			}
 		)
+	);
+}
+
+function mockGetZones(domain: string, zones: { id: string }[] = []) {
+	msw.use(
+		rest.get("*/zones", (req, res, ctx) => {
+			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: zones,
+				})
+			);
+		})
+	);
+}
+
+function mockGetWorkerRoutes(zoneId: string) {
+	msw.use(
+		rest.get("*/zones/:zoneId/workers/routes", (req, res, ctx) => {
+			expect(req.params.zoneId).toEqual(zoneId);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [],
+				})
+			);
+		})
 	);
 }
 

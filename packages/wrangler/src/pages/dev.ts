@@ -1,35 +1,69 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { esbuildAliasExternalPlugin } from "../bundle";
+import { isBuildFailure } from "../deployment-bundle/build-failures";
+import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
+import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import {
+	FunctionsBuildError,
+	FunctionsNoRoutesError,
+	getFunctionsBuildWarning,
+	getFunctionsNoRoutesWarning,
+} from "./errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
-import type { CfModule } from "../worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 
+/*
+ * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
+ * - "binding=className"
+ * - "BINDING=MyClass"
+ * - "BINDING=MyClass@service-name"
+ * Every DO needs a binding (the JS reference) and the exported class name it refers to.
+ * Optionally, users can also provide a service name if they want to reference a DO from another dev session over the dev registry.
+ */
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
+);
+
+/* BINDING_REGEXP matches strings like:
+ * - "binding"
+ * - "BINDING"
+ * - "BINDING=ref"
+ * This is used to capture both the binding name (how the binding is used in JS) as well as the reference if provided.
+ * In the case of a D1 database, that's the database ID.
+ * This is useful to people who want to reference the same database in multiple bindings, or a Worker and Pages project dev session want to reference the same database.
+ */
+const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
+
+/* SERVICE_BINDING_REGEXP matches strings like:
+ * - "binding=service"
+ * - "binding=service@environment"
+ * This is used to capture both the binding name (how the binding is used in JS) alongside the name of the service it needs to bind to.
+ * Additionally it can also accept an environment which indicates what environment the service has to be running for.
+ */
+const SERVICE_BINDING_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
 );
 
 export function Options(yargs: CommonYargsArgv) {
@@ -64,7 +98,14 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			ip: {
 				type: "string",
-				default: "0.0.0.0",
+				// On Windows, when specifying `localhost` as the socket hostname,
+				// `workerd` will only listen on the IPv4 loopback `127.0.0.1`, not the
+				// IPv6 `::1`: https://github.com/cloudflare/workerd/issues/1408
+				// On Node 17+, `fetch()` will only try to fetch the IPv6 address.
+				// For now, on Windows, we default to listening on IPv4 only and using
+				// `127.0.0.1` when sending control requests to `workerd` (e.g. with the
+				// `ProxyController`).
+				default: process.platform === "win32" ? "127.0.0.1" : "localhost",
 				description: "The IP address to listen on",
 			},
 			port: {
@@ -108,16 +149,26 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			d1: {
 				type: "array",
-				description: "D1 database to bind",
+				description: "D1 database to bind (--d1 D1_BINDING)",
 			},
 			do: {
 				type: "array",
-				description: "Durable Object to bind (--do NAME=CLASS)",
+				description:
+					"Durable Object to bind (--do DO_BINDING=CLASS_NAME@SCRIPT_NAME)",
 				alias: "o",
 			},
 			r2: {
 				type: "array",
 				description: "R2 bucket to bind (--r2 R2_BINDING)",
+			},
+			ai: {
+				type: "string",
+				description: "AI to bind (--ai AI_BINDING)",
+			},
+			service: {
+				type: "array",
+				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
+				alia: "s",
 			},
 			"live-reload": {
 				type: "boolean",
@@ -174,6 +225,8 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
+	ai,
+	service: requestedServices = [],
 	liveReload,
 	localProtocol,
 	persistTo,
@@ -270,7 +323,15 @@ export const Handler = async ({
 			persistent: true,
 			ignoreInitial: true,
 		}).on("all", async () => {
-			await runBuild();
+			try {
+				await runBuild();
+			} catch (e) {
+				if (isBuildFailure(e)) {
+					logger.warn("Error building worker script:", e.message);
+					return;
+				}
+				throw e;
+			}
 		});
 	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
@@ -282,7 +343,10 @@ export const Handler = async ({
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
 			// change the `runBuild()` function to bundle the `_worker.js`.
-			scriptPath = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			scriptPath = join(
+				getPagesTmpDir(),
+				`./bundledWorker-${Math.random()}.mjs`
+			);
 			runBuild = async () => {
 				try {
 					await buildRawWorker({
@@ -312,7 +376,14 @@ export const Handler = async ({
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		scriptPath = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
+		scriptPath = join(
+			getPagesTmpDir(),
+			`./functionsWorker-${Math.random()}.mjs`
+		);
+		const routesModule = join(
+			getPagesTmpDir(),
+			`./functionsRoutes-${Math.random()}.mjs`
+		);
 
 		if (legacyNodeCompat) {
 			console.warn(
@@ -341,6 +412,7 @@ export const Handler = async ({
 					legacyNodeCompat,
 					nodejsCompat,
 					local: true,
+					routesModule,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};
@@ -357,6 +429,10 @@ export const Handler = async ({
 					if (e instanceof FunctionsNoRoutesError) {
 						logger.warn(
 							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+						);
+					} else if (e instanceof FunctionsBuildError) {
+						logger.warn(
+							getFunctionsBuildWarning(functionsDirectory, e.message)
 						);
 					} else {
 						throw e;
@@ -446,7 +522,7 @@ export const Handler = async ({
 				validateRoutes(JSON.parse(routesJSONContents), directory);
 
 				entrypoint = join(
-					tmpdir(),
+					getPagesTmpDir(),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
 				await runBuild(scriptPath, entrypoint, routesJSONContents);
@@ -507,6 +583,40 @@ export const Handler = async ({
 		}
 	}
 
+	const services = requestedServices
+		.map((serviceBinding) => {
+			const { binding, service, environment } =
+				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
+
+			if (!binding || !service) {
+				logger.warn(
+					"Could not parse Service binding:",
+					serviceBinding.toString()
+				);
+				return;
+			}
+
+			// Envs get appended to the end of the name
+			let serviceName = service;
+			if (environment) {
+				serviceName = `${service}-${environment}`;
+			}
+
+			return {
+				binding,
+				service: serviceName,
+				environment,
+			};
+		})
+		.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
+
+	if (services.find(({ environment }) => !!environment)) {
+		// We haven't yet properly defined how environments of service bindings should
+		// work, so if the user is using an environment for any of their service
+		// bindings we warn them that they are experimental
+		logger.warn("Support for service binding environments is experimental.");
+	}
+
 	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
 		ip,
 		port,
@@ -520,10 +630,23 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
-		kv: kvs.map((binding) => ({
-			binding: binding.toString(),
-			id: binding.toString(),
-		})),
+		services,
+		kv: kvs
+			.map((kv) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(kv.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse KV binding:", kv.toString());
+					return;
+				}
+
+				return {
+					binding,
+					id: ref || kv.toString(),
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["kv"],
 		durableObjects: durableObjects
 			.map((durableObject) => {
 				const { binding, className, scriptName } =
@@ -545,14 +668,25 @@ export const Handler = async ({
 				};
 			})
 			.filter(Boolean) as AdditionalDevProps["durableObjects"],
-		r2: r2s.map((binding) => {
-			return { binding: binding.toString(), bucket_name: binding.toString() };
-		}),
+		r2: r2s
+			.map((r2) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(r2.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse R2 binding:", r2.toString());
+					return;
+				}
+
+				return { binding, bucket_name: ref || binding.toString() };
+			})
+			.filter(Boolean) as AdditionalDevProps["r2"],
+		ai: ai ? { binding: ai.toString() } : undefined,
 		rules: usingWorkerDirectory
 			? [
 					{
 						type: "ESModule",
-						globs: ["**/*.js"],
+						globs: ["**/*.js", "**/*.mjs"],
 					},
 			  ]
 			: undefined,
@@ -560,14 +694,27 @@ export const Handler = async ({
 		persistTo,
 		inspect: undefined,
 		logLevel,
+		updateCheck: true,
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
-			d1Databases: d1s.map((binding) => ({
-				binding: binding.toString(),
-				database_id: binding.toString(),
-				database_name: `local-${binding}`,
-			})),
+			d1Databases: d1s
+				.map((d1) => {
+					const { binding, ref } =
+						BINDING_REGEXP.exec(d1.toString())?.groups || {};
+
+					if (!binding) {
+						logger.warn("Could not parse D1 binding:", d1.toString());
+						return;
+					}
+
+					return {
+						binding,
+						database_id: ref || d1.toString(),
+						database_name: `local-${d1}`,
+					};
+				})
+				.filter(Boolean) as AdditionalDevProps["d1Databases"],
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
@@ -584,14 +731,13 @@ export const Handler = async ({
 
 	CLEANUP_CALLBACKS.push(stop);
 
-	void waitUntilExit().then(() => {
-		CLEANUP();
-		process.exit(0);
-	});
-
 	process.on("exit", CLEANUP);
 	process.on("SIGINT", CLEANUP);
 	process.on("SIGTERM", CLEANUP);
+
+	await waitUntilExit();
+	CLEANUP();
+	process.exit(0);
 };
 
 function isWindows() {
@@ -675,7 +821,7 @@ async function spawnProxyProcess({
 		);
 	}
 
-	logger.log(`Running ${command.join(" ")}...`);
+	logger.log(`Running ${shellquote.quote(command)}...`);
 	const proxy = spawn(
 		command[0].toString(),
 		command.slice(1).map((value) => value.toString()),

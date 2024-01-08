@@ -6,10 +6,10 @@ import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 const isWindows = process.platform === "win32";
 
-describe.concurrent("Remix", () => {
+describe("Remix", () => {
 	let ip: string;
 	let port: number;
-	let stop: () => void;
+	let stop: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
 		spawnSync("npm", ["run", "build"], {
@@ -19,11 +19,13 @@ describe.concurrent("Remix", () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0"]
+			["--port=0", "--inspector-port=0"]
 		));
 	});
 
-	afterAll(async () => await stop());
+	afterAll(async () => {
+		await stop?.();
+	});
 
 	it("renders", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);

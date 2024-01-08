@@ -38,11 +38,9 @@ export async function performApiFetch(
 	);
 	const logHeaders = cloneHeaders(headers);
 	delete logHeaders["Authorization"];
-	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
-	logger.debug(
-		"INIT:",
-		JSON.stringify({ ...init, headers: logHeaders }, null, 2)
-	);
+	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
+
+	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
 	logger.debug("-- END CF API REQUEST");
 	return await fetch(`${getCloudflareApiBaseUrl()}${resource}${queryString}`, {
 		method,
@@ -82,9 +80,16 @@ export async function fetchInternal<ResponseType>(
 	);
 	const logHeaders = cloneHeaders(response.headers);
 	delete logHeaders["Authorization"];
-	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
-	logger.debug("RESPONSE:", jsonText);
+	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logger.debugWithSanitization("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
+
+	// HTTP 204 and HTTP 205 responses do not return a body. We need to special-case this
+	// as otherwise parseJSON will throw an error back to the user.
+	if (!jsonText && (response.status === 204 || response.status === 205)) {
+		const emptyBody = `{"result": {}, "success": true, "errors": [], "messages": []}`;
+		return parseJSON<ResponseType>(emptyBody);
+	}
 
 	try {
 		return parseJSON<ResponseType>(jsonText);
@@ -215,10 +220,10 @@ export async function fetchR2Objects(
 /**
  * This is a wrapper STOPGAP for getting the script which returns a raw text response.
  */
-export async function fetchDashboardScript(
+export async function fetchWorker(
 	resource: string,
 	bodyInit: RequestInit = {}
-): Promise<File[]> {
+): Promise<{ entrypoint: string; modules: File[] }> {
 	await requireLoggedIn();
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
@@ -252,12 +257,17 @@ export async function fetchDashboardScript(
 			contents instanceof File ? contents : new File([contents], filename)
 		);
 
-		return files;
+		return {
+			entrypoint: response.headers.get("cf-entrypoint") ?? "src/index.js",
+			modules: files,
+		};
 	} else {
 		const contents = await response.text();
-		const filename = response.headers.get("cf-entrypoint") ?? "index.js";
-		const file = new File([contents], filename, { type: "text" });
+		const file = new File([contents], "index.js", { type: "text" });
 
-		return [file];
+		return {
+			entrypoint: "index.js",
+			modules: [file],
+		};
 	}
 }

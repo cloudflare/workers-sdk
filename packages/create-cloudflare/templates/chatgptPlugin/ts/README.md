@@ -12,13 +12,13 @@ The sample plugin allows ChatGPT users to search for repositories using GitHub's
 1. Install [wrangler](https://developers.cloudflare.com/workers/cli-wrangler/install-update), the Cloudflare Workers CLI
 2. Clone this project and install dependencies with `npm install`
 3. Run `wrangler login` to login to your Cloudflare account in wrangler
-4. Run `wrangler publish` to publish the plugin to Cloudflare Workers
+4. Run `wrangler deploy` to publish the plugin to Cloudflare Workers
 
 ## Usage
 
 1. You can configure the `.well-known/ai-plugin.json` route in `index.ts`.
-2. Update the OpenAPI schema in `openapi.ts`.
-3. You can set up any new routes and the associated OpenAPI schema by defining new routes. See `search.ts` for an example.
+2. You can set up any new routes and the associated OpenAPI schema by defining new routes. See `search.ts` for an example.
+3. For more information read the [itty-router-openapi official documentation](https://cloudflare.github.io/itty-router-openapi/).
 
 ## Deploying to OpenAI's API
 

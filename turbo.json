@@ -1,0 +1,39 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"remoteCache": {
+		"signature": true
+	},
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"pipeline": {
+		"wrangler#dev": {
+			"persistent": true,
+			"cache": false
+		},
+		"miniflare#dev": {
+			"persistent": true,
+			"cache": false
+		},
+		"build": { "dependsOn": ["^build"] },
+		"test": {
+			"dependsOn": ["^build"],
+			"cache": false
+		},
+		"test:watch": {
+			"cache": false
+		},
+		"check:lint": {
+			"dependsOn": ["^topological"]
+		},
+		"check:type": {
+			"dependsOn": ["^topological"]
+		},
+		"topological": {
+			"dependsOn": ["^topological"]
+		},
+		"type:tests": {},
+		"test:ci": {
+			"cache": false
+		},
+		"//#check:format": { "cache": true }
+	}
+}

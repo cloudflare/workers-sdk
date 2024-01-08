@@ -17,10 +17,30 @@ export interface CreateQueueBody {
 	queue_name: string;
 }
 
+export interface ScriptReference {
+	namespace?: string;
+	script?: string;
+	service?: string;
+	environment?: string;
+}
+
+export type Consumer = ScriptReference & {
+	dead_letter_queue?: string;
+	settings: ConsumerSettings;
+	consumer_id: string;
+	bucket_name?: string;
+	type: string;
+};
+
 export interface QueueResponse {
+	queue_id: string;
 	queue_name: string;
 	created_on: string;
 	modified_on: string;
+	producers: ScriptReference[];
+	producers_total_count: number;
+	consumers: Consumer[];
+	consumers_total_count: number;
 }
 
 export async function deleteQueue(

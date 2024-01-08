@@ -1,117 +1,6 @@
-import { exit } from "process";
+import { updateStatus, warn } from "@cloudflare/cli";
+import Haikunator from "haikunator";
 import open from "open";
-import { brandColor, dim, gray, white, red, hidden, bgRed } from "./colors";
-
-export const shapes = {
-	diamond: "◇",
-	dash: "─",
-	radioInactive: "○",
-	radioActive: "●",
-
-	bar: "│",
-	leftT: "├",
-	rigthT: "┤",
-
-	arrows: {
-		left: "‹",
-		right: "›",
-	},
-
-	corners: {
-		tl: "╭",
-		bl: "╰",
-		tr: "╮",
-		br: "╯",
-	},
-};
-
-export const status = {
-	error: bgRed(` ERROR `),
-	warning: bgRed(` WARNING `),
-	info: bgRed(` INFO `),
-	success: bgRed(` SUCCESS `),
-};
-
-// Returns a string containing n non-trimmable spaces
-// This is useful for places where clack trims lines of output
-// but we need leading spaces
-export const space = (n = 1) => {
-	return [...Array(n)].map(() => hidden("-")).join("");
-};
-
-// Primitive for printing to stdout. Use this instead of
-// console.log or printing to stdout directly
-export const logRaw = (msg: string) => {
-	// squelch test output
-	if (process.env.VITEST) return;
-
-	process.stdout.write(`${msg}\n`);
-};
-
-// A simple stylized log for use within a prompt
-export const log = (msg: string) => {
-	const lines = msg.split("\n").map((ln) => `${gray(shapes.bar)} ${white(ln)}`);
-
-	logRaw(lines.join("\n"));
-};
-
-export const newline = () => {
-	log("");
-};
-
-// Log a simple status update with a style similar to the clack spinner
-export const updateStatus = (msg: string) => {
-	logRaw(`${gray(shapes.leftT)} ${msg}`);
-	newline();
-};
-
-export const startSection = (heading: string, subheading?: string) => {
-	logRaw(
-		`${gray(shapes.corners.tl)} ${brandColor(heading)} ${
-			subheading ? dim(subheading) : ""
-		}`
-	);
-	newline();
-};
-
-export const endSection = (heading: string, subheading?: string) => {
-	logRaw(
-		`${gray(shapes.corners.bl)} ${brandColor(heading)} ${
-			subheading ? dim(subheading) : ""
-		}\n`
-	);
-};
-
-export const cancel = (msg: string) => {
-	newline();
-	logRaw(`${gray(shapes.corners.bl)} ${white.bgRed(` X `)} ${dim(msg)}`);
-};
-
-export const warn = (msg: string) => {
-	newline();
-	logRaw(`${gray(shapes.corners.bl)} ${status.warning} ${dim(msg)}`);
-};
-
-// Strip the ansi color characters out of the line when calculating
-// line length, otherwise the padding will be thrown off
-// Used from https://github.com/natemoo-re/clack/blob/main/packages/prompts/src/index.ts
-export const stripAnsi = (str: string) => {
-	const pattern = [
-		"[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-		"(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))",
-	].join("|");
-	const regex = RegExp(pattern, "g");
-
-	return str.replace(regex, "");
-};
-
-export const crash = (msg?: string): never => {
-	if (msg) {
-		process.stderr.write(red(msg));
-		process.stderr.write("\n");
-	}
-	exit(1);
-};
 
 /**
  * An extremely simple wrapper around the open command.
@@ -128,3 +17,20 @@ export async function openInBrowser(url: string): Promise<void> {
 		warn("Failed to open browser");
 	});
 }
+
+export const C3_DEFAULTS = {
+	projectName: new Haikunator().haikunate({ tokenHex: true }),
+	type: "hello-world",
+	framework: "angular",
+	autoUpdate: true,
+	deploy: true,
+	git: true,
+	open: true,
+	ts: true,
+};
+
+export const WRANGLER_DEFAULTS = {
+	...C3_DEFAULTS,
+	type: "hello-world",
+	deploy: false,
+};

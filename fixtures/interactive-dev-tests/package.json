@@ -1,0 +1,17 @@
+{
+	"name": "interactive-dev-tests",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"test": "vitest run",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"strip-ansi": "^7.1.0",
+		"undici": "^5.28.2"
+	},
+	"optionalDependencies": {
+		"node-pty": "^1.0.0"
+	}
+}

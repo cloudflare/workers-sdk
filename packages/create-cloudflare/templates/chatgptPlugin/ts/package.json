@@ -3,14 +3,14 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
 		"start": "wrangler dev"
 	},
 	"dependencies": {
-		"@cloudflare/itty-router-openapi": "^0.1.2"
+		"@cloudflare/itty-router-openapi": "^1.0.1"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230404.0",
 		"wrangler": "^3.0.0"
 	}
 }

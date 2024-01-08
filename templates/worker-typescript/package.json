@@ -4,13 +4,13 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy src/index.ts",
-		"dev": "wrangler dev src/index.ts --local",
-		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev src/index.ts --local",
-		"test": "vitest"
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.0.0",
-		"vitest": "^0.31.0",
+		"@cloudflare/workers-types": "^4.20231016.0",
+		"typescript": "^5.0.4",
 		"wrangler": "^3.0.0"
 	}
 }

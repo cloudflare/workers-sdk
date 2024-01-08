@@ -1,0 +1,18 @@
+{
+	"name": "cloudflare-workers-openapi",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev"
+	},
+	"dependencies": {
+		"@cloudflare/itty-router-openapi": "^1.0.1"
+	},
+	"devDependencies": {
+		"@types/node": "^20.5.7",
+		"@types/service-worker-mock": "^2.0.1",
+		"wrangler": "^3.0.0"
+	}
+}

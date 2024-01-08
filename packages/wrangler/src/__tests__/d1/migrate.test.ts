@@ -145,6 +145,28 @@ Your database may not be available to serve requests during the migration, conti
 					}
 				)
 			);
+			msw.use(
+				rest.get(
+					"*/accounts/:accountId/d1/database/:databaseId",
+					async (req, res, ctx) => {
+						return res(
+							ctx.status(200),
+							ctx.json({
+								result: {
+									file_size: 7421952,
+									name: "benchmark3-v1",
+									num_tables: 2,
+									uuid: "7b0c1d24-ec57-4179-8663-9b82dafe9277",
+									version: "alpha",
+								},
+								success: true,
+								errors: [],
+								messages: [],
+							})
+						);
+					}
+				)
+			);
 			writeWranglerToml({
 				d1_databases: [
 					{

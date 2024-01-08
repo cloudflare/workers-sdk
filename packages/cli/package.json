@@ -1,0 +1,38 @@
+{
+	"name": "@cloudflare/cli",
+	"version": "1.0.0",
+	"description": "An SDK to build workers-sdk CLIs",
+	"private": true,
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare workers",
+		"cli"
+	],
+	"scripts": {
+		"check:type": "tsc",
+		"test": "vitest run",
+		"check:lint": "eslint ."
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/cli"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"devDependencies": {
+		"@clack/core": "^0.3.2",
+		"@clack/prompts": "^0.6.3",
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@typescript-eslint/eslint-plugin": "^5.55.0",
+		"@typescript-eslint/parser": "^5.55.0",
+		"ansi-escapes": "^6.2.0",
+		"chalk": "^5.2.0",
+		"esbuild": "^0.17.12",
+		"log-update": "^5.0.1",
+		"pnpm": "^8.6.11",
+		"undici": "5.20.0"
+	}
+}

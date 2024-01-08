@@ -4,9 +4,11 @@ import { logger } from "../logger";
 
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfModule } from "../worker";
+import type { ProxyData } from "./startDevWorker";
+import type { Json } from "miniflare";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {
@@ -26,9 +28,7 @@ export interface UnstableDevOptions {
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
 	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;
@@ -40,17 +40,26 @@ export interface UnstableDevOptions {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
+	services?: {
+		binding: string;
+		service: string;
+		environment?: string | undefined;
+	}[];
 	r2?: {
 		binding: string;
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	ai?: {
+		binding: string;
+	};
 	moduleRoot?: string;
 	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
 	inspect?: boolean;
 	local?: boolean;
 	accountId?: string;
+	updateCheck?: boolean;
 	experimental?: {
 		processEntrypoint?: boolean;
 		additionalModules?: CfModule[];
@@ -70,6 +79,7 @@ export interface UnstableDevOptions {
 export interface UnstableDevWorker {
 	port: number;
 	address: string;
+	proxyData: ProxyData;
 	stop: () => Promise<void>;
 	fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 	waitUntilExit: () => Promise<void>;
@@ -123,23 +133,26 @@ export async function unstable_dev(
 		);
 	}
 
-	type ReadyInformation = { address: string; port: number };
+	type ReadyInformation = {
+		address: string;
+		port: number;
+		proxyData: ProxyData;
+	};
 	let readyResolve: (info: ReadyInformation) => void;
 	const readyPromise = new Promise<ReadyInformation>((resolve) => {
 		readyResolve = resolve;
 	});
 
 	const defaultLogLevel = testMode ? "none" : "log";
+	const local = options?.local ?? true;
 
 	const devOptions: StartDevOptions = {
 		script: script,
 		inspect: false,
-		logLevel: options?.logLevel ?? defaultLogLevel,
 		_: [],
 		$0: "",
-		port: options?.port ?? 0,
-		remote: false,
-		local: undefined,
+		remote: !local,
+		local,
 		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,
@@ -148,8 +161,8 @@ export async function unstable_dev(
 		forceLocal,
 		liveReload,
 		showInteractiveDevSession,
-		onReady: (address, port) => {
-			readyResolve({ address, port });
+		onReady: (address, port, proxyData) => {
+			readyResolve({ address, port, proxyData });
 		},
 		config: options?.config,
 		env: options?.env,
@@ -159,7 +172,7 @@ export async function unstable_dev(
 		compatibilityDate: options?.compatibilityDate,
 		compatibilityFlags: options?.compatibilityFlags,
 		ip: options?.ip,
-		inspectorPort: options?.inspectorPort,
+		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,
 		localProtocol: options?.localProtocol,
 		assets: options?.assets,
@@ -189,6 +202,9 @@ export async function unstable_dev(
 		legacyEnv: undefined,
 		public: undefined,
 		...options,
+		logLevel: options?.logLevel ?? defaultLogLevel,
+		port: options?.port ?? 0,
+		updateCheck: options?.updateCheck ?? false,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
@@ -196,10 +212,11 @@ export async function unstable_dev(
 		// in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
 		// once the devServer is ready for requests, we resolve the ready promise
 		const devServer = await startApiDev(devOptions);
-		const { port, address } = await readyPromise;
+		const { port, address, proxyData } = await readyPromise;
 		return {
 			port,
 			address,
+			proxyData,
 			stop: devServer.stop,
 			fetch: async (input?: RequestInfo, init?: RequestInit) => {
 				return await fetch(
@@ -220,10 +237,11 @@ export async function unstable_dev(
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
 		const devServer = await startDev(devOptions);
-		const { port, address } = await readyPromise;
+		const { port, address, proxyData } = await readyPromise;
 		return {
 			port,
 			address,
+			proxyData,
 			stop: devServer.stop,
 			fetch: async (input?: RequestInfo, init?: RequestInit) => {
 				return await fetch(
@@ -254,6 +272,7 @@ export function parseRequestInput(
 	const forward = new Request(input, init);
 	const url = new URL(forward.url);
 	forward.headers.set("MF-Original-URL", url.toString());
+	forward.headers.set("MF-Disable-Pretty-Error", "true");
 	url.protocol = protocol;
 	url.hostname = readyAddress;
 	url.port = readyPort.toString();

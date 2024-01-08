@@ -14,7 +14,9 @@ import type {
 	ScheduledEvent,
 	AlarmEvent,
 	EmailEvent,
+	TailEvent,
 	TailInfo,
+	QueueEvent,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
@@ -426,6 +428,30 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
+		it("logs tail messages in json format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format json");
+
+			const event = generateMockTailEvent(["some-worker", "some-worker"]);
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+		});
+
+		it("logs queue messages in json format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format json");
+
+			const event = generateMockQueueEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+		});
+
 		it("logs request messages in pretty format", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
@@ -518,6 +544,32 @@ describe("tail", () => {
 		`);
 		});
 
+		it("logs tail messages in pretty format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format pretty");
+
+			const event = generateMockTailEvent(["some-worker", "other-worker", ""]);
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(
+				std.out
+					.replace(
+						new Date(mockEventTimestamp).toLocaleString(),
+						"[mock event timestamp]"
+					)
+					.replace(
+						new Date(mockTailExpiration).toISOString(),
+						"[mock expiration date]"
+					)
+			).toMatchInlineSnapshot(`
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Tailing some-worker,other-worker - Ok @ [mock event timestamp]"
+		`);
+		});
+
 		it("logs tail overload message", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
@@ -542,6 +594,29 @@ describe("tail", () => {
 			Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.
 			Tail has exited sampling mode and is no longer dropping messages."
 		`);
+		});
+
+		it("logs queue messages in pretty format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format pretty");
+
+			const event = generateMockQueueEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(
+				std.out
+					.replace(
+						new Date(mockEventTimestamp).toLocaleString(),
+						"[mock timestamp string]"
+					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
+			).toMatchInlineSnapshot(`
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
+		      `);
 		});
 
 		it("should not crash when the tail message has a void event", async () => {
@@ -710,7 +785,9 @@ function isRequest(
 		| RequestEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailEvent
 		| TailInfo
+		| QueueEvent
 		| undefined
 		| null
 ): event is RequestEvent {
@@ -993,6 +1070,14 @@ function generateMockEmailEvent(opts?: Partial<EmailEvent>): EmailEvent {
 	};
 }
 
+function generateMockTailEvent(tailing: string[]): TailEvent {
+	return {
+		consumedEvents: tailing.map((tailedScript) => {
+			return { scriptName: tailedScript };
+		}),
+	};
+}
+
 function generateTailInfo(overload: boolean): TailInfo {
 	return overload
 		? {
@@ -1005,4 +1090,11 @@ function generateTailInfo(overload: boolean): TailInfo {
 					"Tail has exited sampling mode and is no longer dropping messages.",
 				type: "overload-stop",
 		  };
+}
+
+function generateMockQueueEvent(opts?: Partial<QueueEvent>): QueueEvent {
+	return {
+		queue: opts?.queue || "my-queue123",
+		batchSize: opts?.batchSize || 7,
+	};
 }

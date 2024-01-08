@@ -7,18 +7,23 @@ jobs:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish a Prerelease to the Adhoc Registry
     runs-on: ubuntu-latest
-
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Use Node.js 16.13
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
-          node-version: 16.13
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+          node-version: 16.18
+          cache: "pnpm"
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -28,34 +33,79 @@ jobs:
           sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Modify package.json version
+      - name: Build Miniflare
+        # `extract-runtime-versions.mjs` needs to be able to resolve `miniflare`, but we want to have the correct
+        # `package.json` versions when we build packages for packing
+        run: pnpm run build --filter miniflare
+        env:
+          CI_OS: ${{ runner.os }}
+
+      - name: Extract runtime versions
+        run: node .github/extract-runtime-versions.mjs # extract versions before modifying version to include commit hash
+
+      - name: Upload runtime versions
+        uses: actions/upload-artifact@v3
+        with:
+          name: runtime-versions.md
+          path: runtime-versions.md
+
+      - name: Modify miniflare package.json version
+        run: node .github/version-script.js miniflare
+
+      - name: Modify wrangler package.json version
         run: node .github/version-script.js
 
+      - name: Modify wrangler package.json miniflare dependency
+        run: cat <<< $(jq --tab ".dependencies.miniflare = \"$MINIFLARE_VERSION\"" packages/wrangler/package.json) > packages/wrangler/package.json
+        env:
+          MINIFLARE_VERSION: https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ github.run_id }}/npm-package-miniflare-${{ github.event.number }}
+
       - name: Build
-        run: npm run build
+        run: pnpm run build
         env:
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          CI_OS: ${{ runner.os }}
+
+      - name: Pack miniflare
+        run: pnpm pack
+        working-directory: packages/miniflare
+
+      - name: Upload packaged miniflare artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: npm-package-miniflare-${{ github.event.number }} # encode the PR number into the artifact name
+          path: packages/miniflare/miniflare-*.tgz
 
       - name: Pack wrangler
-        run: npm pack
+        run: pnpm pack
         working-directory: packages/wrangler
 
-      - name: Pack @cloudflare/pages-shared
-        run: npm pack
-        working-directory: packages/pages-shared
-
       - name: Upload packaged wrangler artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-package-wrangler-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/wrangler/wrangler-*.tgz
 
+      - name: Pack @cloudflare/pages-shared
+        run: pnpm pack
+        working-directory: packages/pages-shared
+
       - name: Upload packaged @cloudflare/pages-shared artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-package-cloudflare-pages-shared-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/pages-shared/cloudflare-pages-shared-*.tgz
+
+      - name: Pack @cloudflare/create-cloudflare
+        run: pnpm pack
+        working-directory: packages/create-cloudflare
+
+      - name: Upload packaged @cloudflare/create-cloudflare artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: npm-package-create-cloudflare-${{ github.event.number }} # encode the PR number into the artifact name
+          path: packages/create-cloudflare/create-cloudflare-*.tgz

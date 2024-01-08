@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Response } from "undici";
-import { createWorkerUploadForm } from "../../create-worker-upload-form";
-import type { BundleResult } from "../../bundle";
-import type { CfWorkerInit } from "../../worker";
+import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 
@@ -36,6 +36,7 @@ export async function createUploadWorkerBundleContents(
 function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 	const mainModule = {
 		name: path.basename(workerBundle.resolvedEntryPointPath),
+		filePath: workerBundle.resolvedEntryPointPath,
 		content: readFileSync(workerBundle.resolvedEntryPointPath, {
 			encoding: "utf-8",
 		}),
@@ -53,12 +54,15 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 			wasm_modules: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			ai: undefined,
 			data_blobs: undefined,
 			durable_objects: undefined,
 			queues: undefined,
 			r2_buckets: undefined,
 			d1_databases: undefined,
+			vectorize: undefined,
 			constellation: undefined,
+			hyperdrive: undefined,
 			services: undefined,
 			analytics_engine_datasets: undefined,
 			dispatch_namespaces: undefined,
@@ -74,6 +78,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		logpush: undefined,
 		placement: undefined,
 		tail_consumers: undefined,
+		limits: undefined,
 	};
 
 	return createWorkerUploadForm(worker);

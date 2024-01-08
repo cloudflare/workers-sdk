@@ -1,26 +1,31 @@
 import assert from "node:assert";
+import path from "node:path";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
+import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failures";
+import { bundleWorker } from "../deployment-bundle/bundle";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import {
-	bundleWorker,
-	dedupeModulesByName,
-	rewriteNodeCompatBuildFailure,
-} from "../bundle";
-import { logBuildFailure, logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
+	createModuleCollector,
+	noopModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+} from "../deployment-bundle/module-collection";
+import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
+import type { SourceMapMetadata } from "../deployment-bundle/bundle";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { SourceMapMetadata } from "../inspect";
-import type { CfModule } from "../worker";
-import type { WatchMode, Metafile } from "esbuild";
+import type { Metafile, BuildResult, PluginBuild } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;
 	path: string;
 	entry: Entry;
-	type: "esm" | "commonjs";
+	type: CfModuleType;
 	modules: CfModule[];
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
@@ -41,17 +46,18 @@ export function useEsbuild({
 	minify,
 	legacyNodeCompat,
 	nodejsCompat,
-	betaD1Shims,
 	define,
 	noBundle,
+	findAdditionalModules,
 	workerDefinitions,
 	services,
 	durableObjects,
-	firstPartyWorkerDevFacade,
 	local,
 	targetConsumer,
 	testScheduled,
 	experimentalLocal,
+	projectRoot,
+	onBundleStart,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -68,22 +74,46 @@ export function useEsbuild({
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
-	betaD1Shims?: string[];
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
-	firstPartyWorkerDevFacade: boolean | undefined;
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
+	projectRoot: string | undefined;
+	onBundleStart: () => void;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
 
-		function updateBundle() {
+		const entryDirectory = path.dirname(entry.file);
+		const moduleCollector = noBundle
+			? noopModuleCollector
+			: createModuleCollector({
+					wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+						entryDirectory,
+						entry.file
+					),
+					entry,
+					findAdditionalModules: findAdditionalModules ?? false,
+					rules: rules,
+			  });
+
+		async function getAdditionalModules() {
+			return noBundle
+				? dedupeModulesByName([
+						...((await doFindAdditionalModules(entry, rules)) ?? []),
+						...additionalModules,
+				  ])
+				: additionalModules;
+		}
+
+		async function updateBundle() {
+			const newAdditionalModules = await getAdditionalModules();
 			// nothing really changes here, so let's increment the id
 			// to change the return object's identity
 			setBundle((previousBundle) => {
@@ -91,67 +121,77 @@ export function useEsbuild({
 					previousBundle,
 					"Rebuild triggered with no previous build available"
 				);
+				previousBundle.modules = dedupeModulesByName([
+					...(moduleCollector?.modules ?? []),
+					...newAdditionalModules,
+				]);
 				return { ...previousBundle, id: previousBundle.id + 1 };
 			});
 		}
 
-		const watchMode: WatchMode = {
-			async onRebuild(error) {
-				if (error !== null) {
-					if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(error);
-					logBuildFailure(error);
-					logger.error("Watch build failed:", error.message);
-				} else {
-					updateBundle();
-				}
+		let bundled = false;
+		const onEnd = {
+			name: "on-end",
+			setup(b: PluginBuild) {
+				b.onStart(() => {
+					onBundleStart();
+				});
+				b.onEnd(async (result: BuildResult) => {
+					const errors = result.errors;
+					const warnings = result.warnings;
+					if (errors.length > 0) {
+						if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(result.errors);
+						logBuildFailure(errors, warnings);
+						return;
+					}
+
+					if (warnings.length > 0) {
+						logBuildWarnings(warnings);
+					}
+
+					if (!bundled) {
+						// First bundle, no need to update bundle
+						bundled = true;
+					} else {
+						await updateBundle();
+					}
+				});
 			},
 		};
 
 		async function build() {
 			if (!destination) return;
 
-			let traverseModuleGraphResult:
-				| Awaited<ReturnType<typeof bundleWorker>>
-				| undefined;
-			let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
-			if (noBundle) {
-				traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
-			}
-
-			if (processEntrypoint || !noBundle) {
-				bundleResult = await bundleWorker(entry, destination, {
-					bundle: !noBundle,
-					disableModuleCollection: noBundle,
-					serveAssetsFromWorker,
-					jsxFactory,
-					jsxFragment,
-					rules,
-					watch: watchMode,
-					tsconfig,
-					minify,
-					legacyNodeCompat,
-					nodejsCompat,
-					betaD1Shims,
-					doBindings: durableObjects.bindings,
-					define,
-					checkFetch: true,
-					assets: assets && {
-						...assets,
-						// disable the cache in dev
-						bypassCache: true,
-					},
-					workerDefinitions,
-					services,
-					firstPartyWorkerDevFacade,
-					local,
-					targetConsumer,
-					testScheduled,
-					additionalModules: dedupeModulesByName([
-						...(traverseModuleGraphResult?.modules ?? []),
-						...additionalModules,
-					]),
-				});
-			}
+			const newAdditionalModules = await getAdditionalModules();
+			const bundleResult =
+				processEntrypoint || !noBundle
+					? await bundleWorker(entry, destination, {
+							bundle: !noBundle,
+							moduleCollector,
+							additionalModules: newAdditionalModules,
+							serveAssetsFromWorker,
+							jsxFactory,
+							jsxFragment,
+							watch: true,
+							tsconfig,
+							minify,
+							legacyNodeCompat,
+							nodejsCompat,
+							doBindings: durableObjects.bindings,
+							define,
+							checkFetch: true,
+							assets,
+							// disable the cache in dev
+							bypassAssetCache: true,
+							workerDefinitions,
+							services,
+							targetConsumer,
+							testScheduled,
+							plugins: [onEnd],
+							local,
+							projectRoot,
+					  })
+					: undefined;
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
 			stopWatching = bundleResult?.stop;
@@ -162,7 +202,7 @@ export function useEsbuild({
 				const watcher = watch(entry.file, {
 					persistent: true,
 				}).on("change", async (_event) => {
-					updateBundle();
+					await updateBundle();
 				});
 
 				stopWatching = () => {
@@ -173,15 +213,8 @@ export function useEsbuild({
 				id: 0,
 				entry,
 				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-				type:
-					bundleResult?.bundleType ??
-					(entry.format === "modules" ? "esm" : "commonjs"),
-				modules: bundleResult
-					? bundleResult.modules
-					: dedupeModulesByName([
-							...(traverseModuleGraphResult?.modules ?? []),
-							...additionalModules,
-					  ]),
+				type: bundleResult?.bundleType ?? getBundleType(entry.format),
+				modules: bundleResult ? bundleResult.modules : newAdditionalModules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
 				sourceMapMetadata: bundleResult?.sourceMapMetadata,
@@ -210,6 +243,7 @@ export function useEsbuild({
 		tsconfig,
 		exit,
 		noBundle,
+		findAdditionalModules,
 		minify,
 		legacyNodeCompat,
 		nodejsCompat,
@@ -218,12 +252,12 @@ export function useEsbuild({
 		services,
 		durableObjects,
 		workerDefinitions,
-		firstPartyWorkerDevFacade,
-		betaD1Shims,
 		local,
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
+		projectRoot,
+		onBundleStart,
 	]);
 	return bundle;
 }
