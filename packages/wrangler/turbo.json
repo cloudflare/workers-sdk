@@ -38,7 +38,8 @@
 				"http_proxy",
 				"HTTP_PROXY",
 				"CI_OS",
-				"SENTRY_DSN"
+				"SENTRY_DSN",
+				"SYSTEMROOT"
 			]
 		}
 	}
