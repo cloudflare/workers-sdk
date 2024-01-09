@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.22.4
+
+### Patch Changes
+
+- [#4699](https://github.com/cloudflare/workers-sdk/pull/4699) [`4b4c1416`](https://github.com/cloudflare/workers-sdk/commit/4b4c1416fec5f0de74a8abadbf5103b40b9929ea) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: prevent repeated reloads with circular service bindings
+
+  `wrangler@3.19.0` introduced a bug where starting multiple `wrangler dev` sessions with service bindings to each other resulted in a reload loop. This change ensures Wrangler only reloads when dependent `wrangler dev` sessions start/stop.
+
 ## 3.22.3
 
 ### Patch Changes
