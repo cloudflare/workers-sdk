@@ -1,13 +1,23 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 
 export default [
-	rest.get("*access-protected.com*", (_, response, cxt) => {
-		return response.once(
-			cxt.status(302),
-			cxt.set("location", "access-protected-com.cloudflareaccess.com")
-		);
-	}),
-	rest.get("*not-access-protected.com*", (_, response, cxt) => {
-		return response.once(cxt.status(200), cxt.body("OK"));
-	}),
+	http.get(
+		"*access-protected.com*",
+		() => {
+			return new HttpResponse(null, {
+				status: 302,
+				headers: {
+					Location: "access-protected-com.cloudflareaccess.com",
+				},
+			});
+		},
+		{ once: true }
+	),
+	http.get(
+		"*not-access-protected.com*",
+		() => {
+			return HttpResponse.text("OK");
+		},
+		{ once: true }
+	),
 ];

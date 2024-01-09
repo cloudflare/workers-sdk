@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { fetchGraphqlResult } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
@@ -12,18 +12,15 @@ describe("fetchGraphqlResult", () => {
 	it("should make a request against the graphql endpoint by default", async () => {
 		mockOAuthServerCallback();
 		msw.use(
-			rest.post("*/graphql", async (req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
-						data: {
-							viewer: {
-								__typename: "viewer",
-							},
+			http.post("*/graphql", async () => {
+				return HttpResponse.json({
+					data: {
+						viewer: {
+							__typename: "viewer",
 						},
-						errors: null,
-					})
-				);
+					},
+					errors: null,
+				});
 			})
 		);
 		expect(
@@ -43,22 +40,19 @@ describe("fetchGraphqlResult", () => {
 		mockOAuthServerCallback();
 		const now = new Date().toISOString();
 		msw.use(
-			rest.post("*/graphql", async (req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
-						data: null,
-						errors: [
-							{
-								message: "failed to recognize JSON request: 'EOF'",
-								path: null,
-								extensions: {
-									timestamp: now,
-								},
+			http.post("*/graphql", async () => {
+				return HttpResponse.json({
+					data: null,
+					errors: [
+						{
+							message: "failed to recognize JSON request: 'EOF'",
+							path: null,
+							extensions: {
+								timestamp: now,
 							},
-						],
-					})
-				);
+						},
+					],
+				});
 			})
 		);
 		expect(await fetchGraphqlResult()).toEqual({

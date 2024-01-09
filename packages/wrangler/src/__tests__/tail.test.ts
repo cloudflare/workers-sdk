@@ -1,5 +1,5 @@
 import MockWebSocket from "jest-websocket-mock";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -91,24 +91,26 @@ describe("tail", () => {
 			expect(api.requests.creation.length).toStrictEqual(0);
 
 			msw.use(
-				rest.get(`*/zones`, (req, res, ctx) => {
-					expect(req.url.searchParams.get("name")).toBe("example.com");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				http.get(
+					`*/zones`,
+					({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.get("name")).toBe("example.com");
+						return HttpResponse.json({
 							success: true,
 							errors: [],
 							messages: [],
 							result: [{ id: "test-zone" }],
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 			msw.use(
-				rest.get(`*/zones/:zoneId/workers/routes`, (req, res, ctx) => {
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				http.get(
+					`*/zones/:zoneId/workers/routes`,
+					() => {
+						return HttpResponse.json({
 							success: true,
 							errors: [],
 							messages: [],
@@ -118,9 +120,10 @@ describe("tail", () => {
 									script: "test-worker",
 								},
 							],
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 			await runWrangler("tail example.com/*");
 
@@ -134,49 +137,54 @@ describe("tail", () => {
 
 		it("should error if a given route is not assigned to the user's zone", async () => {
 			msw.use(
-				rest.get(`*/zones`, (req, res, ctx) => {
-					expect(req.url.searchParams.get("name")).toBe("example.com");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				http.get(
+					`*/zones`,
+					({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.get("name")).toBe("example.com");
+						return HttpResponse.json({
 							success: true,
 							errors: [],
 							messages: [],
 							result: [{ id: "test-zone" }],
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 			msw.use(
-				rest.get(`*/zones/:zoneId/workers/routes`, (req, res, ctx) => {
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				http.get(
+					`*/zones/:zoneId/workers/routes`,
+					() => {
+						return HttpResponse.json({
 							success: true,
 							errors: [],
 							messages: [],
 							result: [],
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 
 			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
 		});
 		it("should error if a given route is not within the user's zone", async () => {
 			msw.use(
-				rest.get(`*/zones`, (req, res, ctx) => {
-					expect(req.url.searchParams.get("name")).toBe("example.com");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				http.get(
+					`*/zones`,
+					({ request }) => {
+						const url = new URL(request.url);
+						expect(url.searchParams.get("name")).toBe("example.com");
+						return HttpResponse.json({
 							success: true,
 							errors: [],
 							messages: [],
 							result: [],
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 
 			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
@@ -845,26 +853,28 @@ function mockCreateTailRequest(
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		rest.post(
+		http.post<
+			{ accountId: string; scriptName: string; envName: string },
+			RequestInit
+		>(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails`,
-			async (req, res, ctx) => {
-				const request = await req.json();
-				requests.push(request);
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(expectedScriptName);
+			async ({ request, params }) => {
+				const requestBody = await request.json();
+				requests.push(requestBody);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(expectedScriptName);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				return res.once(
-					ctx.json(
-						createFetchResult({
-							url: websocketURL,
-							id: "tail-id",
-							expires_at: mockTailExpiration,
-						})
-					)
+				return HttpResponse.json(
+					createFetchResult({
+						url: websocketURL,
+						id: "tail-id",
+						expires_at: mockTailExpiration,
+					})
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 
@@ -915,19 +925,19 @@ function mockDeleteTailRequest(
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		rest.delete(
+		http.delete(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails/:tailId`,
-			async (req, res, ctx) => {
+			async ({ params }) => {
 				requests.count++;
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(expectedScriptName);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(expectedScriptName);
 				if (!legacyEnv) {
 					if (env) {
-						expect(req.params.tailId).toEqual("tail-id");
+						expect(params.tailId).toEqual("tail-id");
 					}
 				}
-				expect(req.params.tailId).toEqual("tail-id");
-				return res(ctx.json(createFetchResult(null)));
+				expect(params.tailId).toEqual("tail-id");
+				return HttpResponse.json(createFetchResult(null));
 			}
 		)
 	);

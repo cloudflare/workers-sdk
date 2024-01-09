@@ -1,11 +1,8 @@
-import { Blob } from "node:buffer";
 import { writeFileSync } from "node:fs";
-import { MockedRequest, rest, type RestRequest } from "msw";
-import { FormData } from "undici";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
-import { FileReaderSync } from "../helpers/msw/read-file-sync";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { VectorizeVector } from "@cloudflare/workers-types";
@@ -56,14 +53,14 @@ describe("dataset upsert", () => {
 		const batchSize = 3;
 		let insertRequestCount = 0;
 		msw.use(
-			rest.post(
+			http.post(
 				"*/vectorize/indexes/:indexName/insert",
-				async (req, res, ctx) => {
-					expect(req.params.indexName).toEqual("my-index");
-					expect(req.headers.get("Content-Type")).toBe(
+				async ({ params, request }) => {
+					expect(params.indexName).toEqual("my-index");
+					expect(request.headers.get("Content-Type")).toBe(
 						"text/plain;charset=UTF-8"
 					);
-					const formData = await (req as RestRequestWithFormData).formData();
+					const formData = await request.formData();
 					const vectors = formData.get("vectors") as string;
 
 					if (insertRequestCount === 0) {
@@ -94,15 +91,12 @@ describe("dataset upsert", () => {
 					}
 					insertRequestCount++;
 
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { count: vectors.split(`\n`).length },
-						})
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { count: vectors.split(`\n`).length },
+					});
 				}
 			)
 		);
@@ -119,38 +113,3 @@ describe("dataset upsert", () => {
 	`);
 	});
 });
-
-FormData.prototype.toString = mockFormDataToString;
-export interface RestRequestWithFormData extends MockedRequest, RestRequest {
-	formData(): Promise<FormData>;
-}
-(MockedRequest.prototype as RestRequestWithFormData).formData =
-	mockFormDataFromString;
-
-function mockFormDataToString(this: FormData) {
-	const entries = [];
-	for (const [key, value] of this.entries()) {
-		if (value instanceof Blob) {
-			const reader = new FileReaderSync();
-			reader.readAsText(value);
-			const result = reader.result;
-			entries.push([key, result]);
-		} else {
-			entries.push([key, value]);
-		}
-	}
-	return JSON.stringify({
-		__formdata: entries,
-	});
-}
-
-async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
-	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
-
-	const form = new FormData();
-	for (const [key, value] of __formdata) {
-		form.set(key, value);
-	}
-	return form;
-}

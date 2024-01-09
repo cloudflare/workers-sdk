@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -199,67 +199,66 @@ describe("hyperdrive commands", () => {
 /** Create a mock handler for Hyperdrive API */
 function mockHyperdriveRequest() {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/hyperdrive/configs/7a040c1eee714e91a30ea6707a2d125c",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								id: "7a040c1eee714e91a30ea6707a2d125c",
-								name: "test123",
-								origin: {
-									host: "foo.us-east-2.aws.neon.tech",
-									port: 5432,
-									database: "neondb",
-									user: "test",
-								},
-								caching: {
-									disabled: false,
-								},
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "7a040c1eee714e91a30ea6707a2d125c",
+							name: "test123",
+							origin: {
+								host: "foo.us-east-2.aws.neon.tech",
+								port: 5432,
+								database: "neondb",
+								user: "test",
 							},
+							caching: {
+								disabled: false,
+							},
+						},
 
-							true
-						)
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.post(
+		http.post<{ accountId: string }, { origin: { port: number } }>(
 			"*/accounts/:accountId/hyperdrive/configs",
-			async (req, res, ctx) => {
-				const reqBody = await req.json();
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								id: "7a040c1eee714e91a30ea6707a2d125c",
-								name: "test123",
-								origin: {
-									host: "foo.us-east-2.aws.neon.tech",
-									port: reqBody.origin.port,
-									database: "neondb",
-									user: "test",
-								},
-								caching: {
-									disabled: false,
-								},
+			async ({ request }) => {
+				const reqBody = await request.json();
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "7a040c1eee714e91a30ea6707a2d125c",
+							name: "test123",
+							origin: {
+								host: "foo.us-east-2.aws.neon.tech",
+								port: reqBody.origin.port,
+								database: "neondb",
+								user: "test",
 							},
-							true
-						)
+							caching: {
+								disabled: false,
+							},
+						},
+						true
 					)
 				);
 			}
 		),
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/hyperdrive/configs/7a040c1eee714e91a30ea6707a2d125c",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
 		),
-		rest.get("*/accounts/:accountId/hyperdrive/configs", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/hyperdrive/configs",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -291,8 +290,9 @@ function mockHyperdriveRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }

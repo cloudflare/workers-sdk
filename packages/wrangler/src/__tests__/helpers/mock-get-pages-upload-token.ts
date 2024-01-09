@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { msw } from "./msw";
 
 /**
@@ -10,15 +10,17 @@ export function mockGetUploadTokenRequest(
 	projectName: string
 ) {
 	msw.use(
-		rest.get(
+		http.get<{ accountId: string }>(
 			`*/accounts/:accountId/pages/projects/${projectName}/upload-token`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(accountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(accountId);
 
-				return res(
-					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: { jwt } })
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: { jwt },
+				});
 			}
 		)
 	);

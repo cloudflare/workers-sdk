@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -117,15 +117,18 @@ describe("delete", () => {
 		mockListKVNamespacesRequest(...kvNamespaces);
 		// it should only try to delete the site namespace associated with this worker
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-ns",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					return res.once(
-						ctx.status(200),
-						ctx.json({ success: true, errors: [], messages: [], result: null })
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -175,38 +178,34 @@ describe("delete", () => {
 		// it should only try to delete the site namespace associated with this worker
 
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-ns",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {},
-						})
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					});
+				},
+				{ once: true }
 			)
 		);
 
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-preview-ns",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {},
-						})
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -383,30 +382,29 @@ function mockDeleteWorkerRequest(
 ) {
 	const { env, legacyEnv, name } = options;
 	msw.use(
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/workers/services/:scriptName",
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env
 						? `${name ?? "test-name"}-${env}`
 						: `${name ?? "test-name"}`
 				);
 
-				expect(req.url.searchParams.get("force")).toEqual(
+				const url = new URL(request.url);
+				expect(url.searchParams.get("force")).toEqual(
 					options.force ? "true" : "false"
 				);
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
+			},
+			{ once: true }
 		)
 	);
 }
@@ -414,18 +412,19 @@ function mockDeleteWorkerRequest(
 /** Create a mock handler for the request to get a list of all KV namespaces. */
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 	msw.use(
-		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
-			return res.once(
-				ctx.status(200),
-				ctx.json({
+		http.get(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json({
 					success: true,
 					errors: [],
 					messages: [],
 					result: namespaces,
-				})
-			);
-		})
+				});
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -434,42 +433,38 @@ function mockListReferencesRequest(
 	references: ServiceReferenceResponse = {}
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/workers/scripts/:scriptName/references",
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(forScript);
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: references,
-					})
-				);
-			}
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(forScript);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: references,
+				});
+			},
+			{ once: true }
 		)
 	);
 }
 
 function mockListTailsByConsumerRequest(forScript: string, tails: Tail[] = []) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/workers/tails/by-consumer/:scriptName",
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(forScript);
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: tails,
-					})
-				);
-			}
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(forScript);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: tails,
+				});
+			},
+			{ once: true }
 		)
 	);
 }

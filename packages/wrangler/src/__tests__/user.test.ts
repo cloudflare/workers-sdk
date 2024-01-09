@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { CI } from "../is-ci";
 import {
 	loginOrRefreshIfRequired,
@@ -41,18 +41,20 @@ describe("User", () => {
 
 			let counter = 0;
 			msw.use(
-				rest.post("*/oauth2/token", async (_, response, context) => {
-					counter += 1;
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						counter += 1;
 
-					return response.once(
-						context.json({
+						return HttpResponse.json({
 							access_token: "test-access-token",
 							expires_in: 100000,
 							refresh_token: "test-refresh-token",
 							scope: "account:read",
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 
 			await runWrangler("login");

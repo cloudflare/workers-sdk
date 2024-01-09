@@ -1,7 +1,7 @@
 import { Blob } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
-import { MockedRequest, rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
@@ -18,7 +18,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
-import type { RestRequest } from "msw";
 
 describe("deployment create", () => {
 	const std = mockConsoleMethods();
@@ -83,51 +82,57 @@ describe("deployment create", () => {
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = await req.json();
+			http.post<{}, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["2082190357cfd3617ccfe04f340c6247"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["2082190357cfd3617ccfe04f340c6247"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
 						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toMatchInlineSnapshot(
-					`"Bearer <<funfetti-auth-jwt>>"`
-				);
-				expect(await req.json()).toMatchObject([
-					{
-						key: "2082190357cfd3617ccfe04f340c6247",
-						value: Buffer.from("foobar").toString("base64"),
-						metadata: {
-							contentType: "image/png",
+					});
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toMatchInlineSnapshot(
+						`"Bearer <<funfetti-auth-jwt>>"`
+					);
+					expect(await request.json()).toMatchObject([
+						{
+							key: "2082190357cfd3617ccfe04f340c6247",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "image/png",
+							},
+							base64: true,
 						},
-						base64: true,
-					},
-				]);
-				return res.once(
-					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: null })
-				);
-			}),
-			rest.post(
+					]);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
+				},
+				{ once: true }
+			),
+			http.post<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -137,34 +142,30 @@ describe("deployment create", () => {
 				        ],
 				      }
 			    `);
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							url: "https://abcxyz.foo.pages.dev/",
+						},
+					});
+				},
+				{ once: true }
 			),
-			rest.get(
+			http.get<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { deployment_configs: { production: {}, preview: {} } },
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { deployment_configs: { production: {}, preview: {} } },
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -187,34 +188,35 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: Request[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = await req.json();
+			http.post<{}, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
 						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
-				expect(req.headers.get("Authorization")).toBe(
+					});
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/upload", async ({ request }) => {
+				requests.push(request);
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
 						value: Buffer.from("foobar").toString("base64"),
@@ -226,38 +228,31 @@ describe("deployment create", () => {
 				]);
 
 				if (requests.length < 2) {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: false,
-							errors: [
-								{
-									code: ApiErrorCodes.UNKNOWN_ERROR,
-									message: "Something exploded, please retry",
-								},
-							],
-							messages: [],
-							result: null,
-						})
-					);
+					return HttpResponse.json({
+						success: false,
+						errors: [
+							{
+								code: ApiErrorCodes.UNKNOWN_ERROR,
+								message: "Something exploded, please retry",
+							},
+						],
+						messages: [],
+						result: null,
+					});
 				} else {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						})
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
 				}
 			}),
-			rest.post(
+			http.post<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -268,31 +263,26 @@ describe("deployment create", () => {
 				      }
 			    `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { url: "https://abcxyz.foo.pages.dev/" },
+					});
+				},
+				{ once: true }
 			),
-			rest.get(
+			http.get<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { deployment_configs: { production: {}, preview: {} } },
-						})
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { deployment_configs: { production: {}, preview: {} } },
+					});
 				}
 			)
 		);
@@ -319,33 +309,34 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: Request[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = await req.json();
+			http.post<{}, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
 						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+					});
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/upload", async ({ request }) => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
 						value: Buffer.from("foobar").toString("base64"),
@@ -356,23 +347,19 @@ describe("deployment create", () => {
 					},
 				]);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
 			}),
-			rest.post(
+			http.post<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					requests.push(req);
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					requests.push(request);
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -384,9 +371,8 @@ describe("deployment create", () => {
 			    `);
 
 					if (requests.length < 2) {
-						return res(
-							ctx.status(500),
-							ctx.json({
+						return HttpResponse.json(
+							{
 								success: false,
 								errors: [
 									{
@@ -396,28 +382,28 @@ describe("deployment create", () => {
 								],
 								messages: [],
 								result: null,
-							})
+							},
+							{ status: 500 }
 						);
 					} else {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: { url: "https://abcxyz.foo.pages.dev/" },
-							})
-						);
+						/**
+						 * @note This used to be a one-time response.
+						 */
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { url: "https://abcxyz.foo.pages.dev/" },
+						});
 					}
 				}
 			),
-			rest.post(
+			http.post<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					requests.push(req);
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					requests.push(request);
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -428,32 +414,28 @@ describe("deployment create", () => {
 				      }
 			    `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { url: "https://abcxyz.foo.pages.dev/" },
+					});
+				},
+				{ once: true }
 			),
-			rest.get(
+			http.get<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { deployment_configs: { production: {}, preview: {} } },
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { deployment_configs: { production: {}, preview: {} } },
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -477,31 +459,32 @@ describe("deployment create", () => {
 			"foo"
 		);
 
-		const requests: RestRequest[] = [];
+		const requests: Request[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as { hashes: string[] };
+			http.post<{}, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
 						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
-				expect(await req.json()).toMatchObject([
+					});
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/upload", async ({ request }) => {
+				requests.push(request);
+				expect(await request.json()).toMatchObject([
 					{
 						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
 						value: Buffer.from("foobar").toString("base64"),
@@ -518,38 +501,31 @@ describe("deployment create", () => {
 						"some-account-id",
 						"foo"
 					);
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: false,
-							errors: [
-								{
-									code: ApiErrorCodes.UNAUTHORIZED,
-									message: "Authorization failed",
-								},
-							],
-							messages: [],
-							result: null,
-						})
-					);
+					return HttpResponse.json({
+						success: false,
+						errors: [
+							{
+								code: ApiErrorCodes.UNAUTHORIZED,
+								message: "Authorization failed",
+							},
+						],
+						messages: [],
+						result: null,
+					});
 				} else {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						})
-					);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
 				}
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
 				      FormData {
 				        Symbol(state): Array [
 				          Object {
@@ -560,32 +536,28 @@ describe("deployment create", () => {
 				      }
 			    `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { url: "https://abcxyz.foo.pages.dev/" },
+					});
+				},
+				{ once: true }
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { deployment_configs: { production: {}, preview: {} } },
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { deployment_configs: { production: {}, preview: {} } },
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -619,60 +591,59 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: Request[] = [];
 		const bodies: UploadPayloadFile[][] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post<{}, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: expect.arrayContaining([
-						"d96fef225537c9f5e44a3cb27fd0b492",
-						"2082190357cfd3617ccfe04f340c6247",
-						"6be321bef99e758250dac034474ddbb8",
-						"1a98fb08af91aca4a7df1764a2c4ddb0",
-					]),
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
 						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+					});
+				},
+				{ once: true }
+			),
+			http.post<{}, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					requests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				bodies.push((await req.json()) as UploadPayloadFile[]);
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push(await request.json());
 
-				return res(
-					ctx.status(200),
-					ctx.json({
+					return HttpResponse.json({
 						success: true,
 						errors: [],
 						messages: [],
 						result: null,
-					})
-				);
-			}),
-			rest.post(
+					});
+				}
+			),
+			http.post<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					const body = await (req as RestRequestWithFormData).formData();
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 
 					expect(manifest).toMatchInlineSnapshot(`
@@ -684,36 +655,32 @@ describe("deployment create", () => {
 				                                }
 			                          `);
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								url: "https://abcxyz.foo.pages.dev/",
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							url: "https://abcxyz.foo.pages.dev/",
+						},
+					});
+				},
+				{ once: true }
 			),
-			rest.get(
+			http.get<{ accountId: string }>(
 				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 
@@ -776,15 +743,15 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: Request[] = [];
 		const bodies: UploadPayloadFile[][] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -806,13 +773,13 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+			http.post("*/pages/assets/upload", async () => {
+				requests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				bodies.push((await req.json()) as UploadPayloadFile[]);
+				bodies.push((await request.json()) as UploadPayloadFile[]);
 
 				return res(
 					ctx.status(200),
@@ -824,11 +791,11 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					expect(params.accountId).toEqual("some-account-id");
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					expect(manifest).toMatchInlineSnapshot(`
 				                                Object {
@@ -850,24 +817,21 @@ describe("deployment create", () => {
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler(`pages publish public --project-name=foo`);
@@ -928,15 +892,15 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: Request[] = [];
 		const bodies: UploadPayloadFile[][] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -958,13 +922,13 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+			http.post("*/pages/assets/upload", async () => {
+				requests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				bodies.push((await req.json()) as UploadPayloadFile[]);
+				bodies.push((await request.json()) as UploadPayloadFile[]);
 
 				return res(
 					ctx.status(200),
@@ -976,12 +940,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async () => {
+					expect(params.accountId).toEqual("some-account-id");
 
-					const body = await (req as RestRequestWithFormData).formData();
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					expect(manifest).toMatchInlineSnapshot(`
 				                                Object {
@@ -1003,24 +967,21 @@ describe("deployment create", () => {
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		chdir("public");
@@ -1079,12 +1040,12 @@ describe("deployment create", () => {
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -1102,11 +1063,11 @@ describe("deployment create", () => {
 				);
 			}),
 
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				const body = (await req.json()) as UploadPayloadFile[];
+				const body = (await request.json()) as UploadPayloadFile[];
 				expect(body).toMatchObject([
 					{
 						key: "7b764dacfd211bebd8077828a7ddefd7",
@@ -1127,10 +1088,10 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+				async () => {
+					expect(params.accountId).toEqual("some-account-id");
 
 					return res.once(
 						ctx.status(200),
@@ -1143,24 +1104,21 @@ describe("deployment create", () => {
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy . --project-name=foo");
@@ -1204,12 +1162,12 @@ describe("deployment create", () => {
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -1226,12 +1184,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -1251,12 +1209,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post(`*/pages/assets/upsert-hashes`, async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject({
+				expect(await request.json()).toMatchObject({
 					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
 				});
 
@@ -1271,11 +1229,11 @@ describe("deployment create", () => {
 				);
 			}),
 
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					expect(params.accountId).toEqual("some-account-id");
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 
 					// for Functions projects, we auto-generate a `_worker.bundle`,
@@ -1351,24 +1309,21 @@ describe("deployment create", () => {
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -1410,12 +1365,12 @@ describe("deployment create", () => {
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -1432,12 +1387,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -1457,11 +1412,11 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					expect(params.accountId).toEqual("some-account-id");
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					const workerBundle = body.get("_worker.bundle");
 
@@ -1494,31 +1449,28 @@ describe("deployment create", () => {
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: {
-									production: {
-										d1_databases: { MY_D1_DB: { id: "fake-db" } },
-									},
-									preview: {
-										d1_databases: { MY_D1_DB: { id: "fake-db" } },
-									},
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: {
+								production: {
+									d1_databases: { MY_D1_DB: { id: "fake-db" } },
 								},
-							} as Partial<Project>,
-						})
-					);
-				}
-			)
+								preview: {
+									d1_databases: { MY_D1_DB: { id: "fake-db" } },
+								},
+							},
+						} as Partial<Project>,
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -1578,12 +1530,12 @@ describe("deployment create", () => {
 			"foo"
 		);
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -1600,12 +1552,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -1626,12 +1578,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post(`*/pages/assets/upsert-hashes`, async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject({
+				expect(await request.json()).toMatchObject({
 					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
 				});
 
@@ -1645,11 +1597,11 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					expect(params.accountId).toEqual("some-account-id");
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					const generatedWorkerBundle = body.get("_worker.bundle") as string;
 					const customRoutesJSON = body.get("_routes.json") as string;
@@ -1723,24 +1675,21 @@ describe("deployment create", () => {
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -1792,12 +1741,12 @@ describe("deployment create", () => {
 			"foo"
 		);
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -1814,12 +1763,12 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -1840,24 +1789,21 @@ describe("deployment create", () => {
 					})
 				);
 			}),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await expect(runWrangler("pages deploy public --project-name=foo")).rejects
@@ -1910,12 +1856,12 @@ and that at least one include rule is provided.
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -1932,12 +1878,12 @@ and that at least one include rule is provided.
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -1958,12 +1904,12 @@ and that at least one include rule is provided.
 					})
 				);
 			}),
-			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post(`*/pages/assets/upsert-hashes`, async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject({
+				expect(await request.json()).toMatchObject({
 					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
 				});
 
@@ -1977,10 +1923,10 @@ and that at least one include rule is provided.
 					})
 				);
 			}),
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					const body = await request.formData();
 
 					const manifest = JSON.parse(body.get("manifest") as string);
 					const workerBundle = body.get("_worker.bundle") as string;
@@ -1992,7 +1938,7 @@ and that at least one include rule is provided.
 						"_worker.bundle",
 						"_routes.json",
 					]);
-					expect(req.params.accountId).toEqual("some-account-id");
+					expect(params.accountId).toEqual("some-account-id");
 					expect(manifest).toMatchInlineSnapshot(`
 				            Object {
 				              "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
@@ -2060,24 +2006,21 @@ and that at least one include rule is provided.
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -2132,12 +2075,12 @@ and that at least one include rule is provided.
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -2154,12 +2097,12 @@ and that at least one include rule is provided.
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -2181,23 +2124,20 @@ and that at least one include rule is provided.
 				);
 			}),
 
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await expect(runWrangler("pages deploy public --project-name=foo")).rejects
@@ -2248,12 +2188,12 @@ and that at least one include rule is provided.
 		);
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -2270,12 +2210,12 @@ and that at least one include rule is provided.
 					})
 				);
 			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -2297,14 +2237,14 @@ and that at least one include rule is provided.
 				);
 			}),
 
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					const customWorkerBundle = body.get("_worker.bundle") as string;
 
-					expect(req.params.accountId).toEqual("some-account-id");
+					expect(params.accountId).toEqual("some-account-id");
 					// make sure this is all we uploaded
 					expect([...body.keys()].sort()).toEqual(
 						["manifest", "_worker.bundle"].sort()
@@ -2369,24 +2309,21 @@ and that at least one include rule is provided.
 					);
 				}
 			),
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -2435,12 +2372,12 @@ and that at least one include rule is provided.
 
 		msw.use(
 			// /pages/assets/check-missing
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -2459,12 +2396,12 @@ and that at least one include rule is provided.
 			}),
 
 			// /pages/assets/upload
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -2487,14 +2424,14 @@ and that at least one include rule is provided.
 			}),
 
 			// /accounts/:accountId/pages/projects/<project-name>/deployments
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					const workerBundle = body.get("_worker.bundle") as string;
 
-					expect(req.params.accountId).toEqual("some-account-id");
+					expect(params.accountId).toEqual("some-account-id");
 					// make sure this is all we uploaded
 					expect([...body.keys()].sort()).toEqual(
 						[
@@ -2584,24 +2521,21 @@ async function onRequest() {
 			),
 
 			// /accounts/:accountId/pages/projects/<project-name>
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -2662,12 +2596,12 @@ async function onRequest() {
 
 		msw.use(
 			// /pages/assets/check-missing
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
+			http.post("*/pages/assets/check-missing", async () => {
+				const body = (await request.json()) as {
 					hashes: string[];
 				};
 
-				expect(req.headers.get("Authorization")).toBe(
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 				expect(body).toMatchObject({
@@ -2686,12 +2620,12 @@ async function onRequest() {
 			}),
 
 			// /pages/assets/upload
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
+			http.post("*/pages/assets/upload", async () => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
 
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						key: "13a03eaf24ae98378acd36ea00f77f2f",
 						value: Buffer.from("This is a readme").toString("base64"),
@@ -2714,14 +2648,14 @@ async function onRequest() {
 			}),
 
 			// /accounts/:accountId/pages/projects/<project-name>/deployments
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/pages/projects/foo/deployments",
-				async (req, res, ctx) => {
-					const body = await (req as RestRequestWithFormData).formData();
+				async () => {
+					const body = await request.formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 					const workerBundle = body.get("_worker.bundle") as string;
 
-					expect(req.params.accountId).toEqual("some-account-id");
+					expect(params.accountId).toEqual("some-account-id");
 					// make sure this is all we uploaded
 					expect([...body.keys()].sort()).toEqual(
 						["manifest", "_worker.bundle"].sort()
@@ -2815,24 +2749,21 @@ async function onRequest() {
 			),
 
 			// /accounts/:accountId/pages/projects/<project-name>
-			rest.get(
-				"*/accounts/:accountId/pages/projects/foo",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				expect(params.accountId).toEqual("some-account-id");
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								deployment_configs: { production: {}, preview: {} },
-							},
-						})
-					);
-				}
-			)
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					})
+				);
+			})
 		);
 
 		await runWrangler("pages deploy public --project-name=foo");
@@ -2876,18 +2807,18 @@ async function onRequest() {
 				"foo"
 			);
 			msw.use(
-				rest.post("*/pages/assets/check-missing", async (req, res, ctx) =>
+				http.post("*/pages/assets/check-missing", async () =>
 					res.once(
 						ctx.status(200),
 						ctx.json({
 							success: true,
 							errors: [],
 							messages: [],
-							result: (await req.json()).hashes,
+							result: (await request.json()).hashes,
 						})
 					)
 				),
-				rest.post("*/pages/assets/upload", async (_req, res, ctx) =>
+				http.post("*/pages/assets/upload", async (_) =>
 					res.once(
 						ctx.status(200),
 						ctx.json({
@@ -2898,10 +2829,10 @@ async function onRequest() {
 						})
 					)
 				),
-				rest.post(
+				http.post(
 					"*/accounts/:accountId/pages/projects/foo/deployments",
-					async (req, res, ctx) => {
-						const body = await (req as RestRequestWithFormData).formData();
+					async () => {
+						const body = await request.formData();
 						const generatedWorkerBundle = body.get("_worker.bundle") as string;
 
 						generatedWorkerBundleCheck(generatedWorkerBundle);
@@ -2919,20 +2850,18 @@ async function onRequest() {
 						);
 					}
 				),
-				rest.get(
-					"*/accounts/:accountId/pages/projects/foo",
-					async (_req, res, ctx) =>
-						res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									deployment_configs: { production: {}, preview: {} },
-								},
-							})
-						)
+				http.get("*/accounts/:accountId/pages/projects/foo", async (_) =>
+					res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						})
+					)
 				)
 			);
 		};

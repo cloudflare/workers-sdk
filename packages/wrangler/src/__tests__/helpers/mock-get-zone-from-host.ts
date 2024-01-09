@@ -1,11 +1,12 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { msw, createFetchResult } from "./msw";
 
 export function mockGetZoneFromHostRequest(host: string, zone?: string) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect(req.url.searchParams.get("name")).toEqual(host);
-			return res(ctx.json(createFetchResult(zone ? [{ id: zone }] : [])));
+		http.get("*/zones", ({ request }) => {
+			const url = new URL(request.url);
+			expect(url.searchParams.get("name")).toEqual(host);
+			return HttpResponse.json(createFetchResult(zone ? [{ id: zone }] : []));
 		})
 	);
 }

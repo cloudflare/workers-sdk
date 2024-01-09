@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 
 import { createFetchResult, msw } from "./msw";
 
@@ -9,21 +9,27 @@ export function mockSubDomainRequest(
 ) {
 	if (registeredWorkersDev) {
 		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult({ subdomain })));
-			})
+			http.get(
+				"*/accounts/:accountId/workers/subdomain",
+				() => {
+					return HttpResponse.json(createFetchResult({ subdomain }));
+				},
+				{ once: true }
+			)
 		);
 	} else {
 		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(
-					ctx.json(
+			http.get(
+				"*/accounts/:accountId/workers/subdomain",
+				() => {
+					return HttpResponse.json(
 						createFetchResult(null, false, [
 							{ code: 10007, message: "haven't registered workers.dev" },
 						])
-					)
-				);
-			})
+					);
+				},
+				{ once: true }
+			)
 		);
 	}
 }

@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -96,11 +96,11 @@ describe("sentry", () => {
 function mockSentryEndpoint() {
 	const requests = { count: 0 };
 	msw.use(
-		rest.post(
+		http.post(
 			`https://platform.dash.cloudflare.com/sentry/envelope`,
-			async (req, res, cxt) => {
+			async () => {
 				requests.count++;
-				return res(cxt.status(200), cxt.json({}));
+				return HttpResponse.json({});
 			}
 		)
 	);

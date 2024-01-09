@@ -1,5 +1,5 @@
 import { writeFileSync } from "fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import {
 	uploadMTlsCertificateFromFs,
 	uploadMTlsCertificate,
@@ -34,29 +34,31 @@ describe("wrangler", () => {
 	) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.post(
+			http.post<
+				{ accountId: string },
+				{ name: string; certificates: unknown[] }
+			>(
 				"*/accounts/:accountId/mtls_certificates",
-				async (request, response, context) => {
+				async ({ request }) => {
 					config.calls++;
 
 					const body = await request.json();
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "1234",
-								name: body.name,
-								certificates: body.certificates,
-								issuer: "example.com...",
-								uploaded_on: now.toISOString(),
-								expires_on: oneYearLater.toISOString(),
-								...resp,
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "1234",
+							name: body.name,
+							certificates: body.certificates,
+							issuer: "example.com...",
+							uploaded_on: now.toISOString(),
+							expires_on: oneYearLater.toISOString(),
+							...resp,
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -67,40 +69,39 @@ describe("wrangler", () => {
 	) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/mtls_certificates",
-				async (request, response, context) => {
+				async () => {
 					config.calls++;
 
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result:
-								typeof certs === "undefined"
-									? [
-											{
-												id: "1234",
-												name: "cert one",
-												certificates: "BEGIN CERTIFICATE...",
-												issuer: "example.com...",
-												uploaded_on: now.toISOString(),
-												expires_on: oneYearLater.toISOString(),
-											},
-											{
-												id: "5678",
-												name: "cert two",
-												certificates: "BEGIN CERTIFICATE...",
-												issuer: "example.com...",
-												uploaded_on: now.toISOString(),
-												expires_on: oneYearLater.toISOString(),
-											},
-									  ]
-									: certs,
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result:
+							typeof certs === "undefined"
+								? [
+										{
+											id: "1234",
+											name: "cert one",
+											certificates: "BEGIN CERTIFICATE...",
+											issuer: "example.com...",
+											uploaded_on: now.toISOString(),
+											expires_on: oneYearLater.toISOString(),
+										},
+										{
+											id: "5678",
+											name: "cert two",
+											certificates: "BEGIN CERTIFICATE...",
+											issuer: "example.com...",
+											uploaded_on: now.toISOString(),
+											expires_on: oneYearLater.toISOString(),
+										},
+								  ]
+								: certs,
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -109,27 +110,26 @@ describe("wrangler", () => {
 	function mockGetMTlsCertificate(resp: Partial<MTlsCertificateResponse> = {}) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/mtls_certificates/:certId",
-				async (request, response, context) => {
+				async () => {
 					config.calls++;
 
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "1234",
-								certificates: "BEGIN CERTIFICATE...",
-								issuer: "example.com...",
-								uploaded_on: now.toISOString(),
-								expires_on: oneYearLater.toISOString(),
-								...resp,
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "1234",
+							certificates: "BEGIN CERTIFICATE...",
+							issuer: "example.com...",
+							uploaded_on: now.toISOString(),
+							expires_on: oneYearLater.toISOString(),
+							...resp,
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -138,20 +138,19 @@ describe("wrangler", () => {
 	function mockDeleteMTlsCertificate() {
 		const config = { calls: 0 };
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/mtls_certificates/:certId",
-				async (request, response, context) => {
+				async () => {
 					config.calls++;
 
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;

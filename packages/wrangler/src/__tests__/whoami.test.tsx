@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo } from "../whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -43,23 +43,25 @@ describe("getUserInfo()", () => {
 			CLOUDFLARE_API_TOKEN: "123456789",
 		};
 		msw.use(
-			rest.get("*/user", (_, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult({}, false, [
-							{
-								code: 9109,
-								message: "Uauthorized to access requested resource",
-							},
-						])
-					)
+			http.get("*/user", () => {
+				return HttpResponse.json(
+					createFetchResult({}, false, [
+						{
+							code: 9109,
+							message: "Uauthorized to access requested resource",
+						},
+					])
 				);
 			}),
-			rest.get("*/accounts", (request, res, ctx) => {
-				const headersObject = request.headers.all();
-				delete headersObject["user-agent"];
+			http.get(
+				"*/accounts",
+				({ request }) => {
+					const headersObject = Object.fromEntries(request.headers.entries());
+					delete headersObject["user-agent"];
 
-				expect(headersObject).toMatchInlineSnapshot(`
+					request.headers.delete("user-agent");
+
+					expect(headersObject).toMatchInlineSnapshot(`
 			Object {
 			  "accept": "*/*",
 			  "accept-encoding": "gzip,deflate",
@@ -68,8 +70,10 @@ describe("getUserInfo()", () => {
 			  "host": "api.cloudflare.com",
 			}
 		`);
-				return res.once(ctx.json(createFetchResult([])));
-			})
+					return HttpResponse.json(createFetchResult([]));
+				},
+				{ once: true }
+			)
 		);
 		const userInfo = await getUserInfo();
 		expect(userInfo?.email).toBeUndefined();

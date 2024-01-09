@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
 import type { WorkerMetadata } from "../../../../deployment-bundle/create-worker-upload-form";
 
@@ -29,28 +29,32 @@ function getScript(scriptName: string | readonly string[]): string {
   }}`;
 }
 export default [
-	rest.get(
+	http.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/content",
-		({ params: { scriptName } }, res, context) => {
-			return res(context.text(getScript(scriptName)));
+		({ params }) => {
+			return HttpResponse.text(getScript(params.scriptName));
 		}
 	),
-	rest.get(
+	http.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName",
-		({ params: { scriptName } }, res, context) => {
-			return res(context.text(getScript(scriptName)));
+		({ params }) => {
+			return HttpResponse.text(getScript(params.scriptName));
 		}
 	),
-	rest.get(
+	http.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/bindings",
-		({ params: { scriptName } }, res, context) => {
-			return res(context.json(createFetchResult(getBindings(scriptName))));
+		({ params }) => {
+			return HttpResponse.json(
+				createFetchResult(getBindings(params.scriptName))
+			);
 		}
 	),
-	rest.get(
+	http.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName/bindings",
-		({ params: { scriptName } }, res, context) => {
-			return res(context.json(createFetchResult(getBindings(scriptName))));
+		({ params }) => {
+			return HttpResponse.json(
+				createFetchResult(getBindings(params.scriptName))
+			);
 		}
 	),
 ];

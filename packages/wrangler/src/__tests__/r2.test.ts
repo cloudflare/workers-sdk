@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -55,29 +55,28 @@ describe("r2", () => {
 					{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
 				];
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.text()).toEqual("");
-							return response.once(
-								context.json(
-									createFetchResult({
-										buckets: [
-											{
-												name: "bucket-1-local-once",
-												creation_date: "01-01-2001",
-											},
-											{
-												name: "bucket-2-local-once",
-												creation_date: "01-01-2001",
-											},
-										],
-									})
-								)
+							return HttpResponse.json(
+								createFetchResult({
+									buckets: [
+										{
+											name: "bucket-1-local-once",
+											creation_date: "01-01-2001",
+										},
+										{
+											name: "bucket-2-local-once",
+											creation_date: "01-01-2001",
+										},
+									],
+								})
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket list");
@@ -155,14 +154,15 @@ describe("r2", () => {
 
 			it("should create a bucket & check request inputs", async () => {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(context.json(createFetchResult({})));
-						}
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket create testBucket");
@@ -174,15 +174,16 @@ describe("r2", () => {
 
 			it("should create a bucket with the expected jurisdiction", async () => {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(context.json(createFetchResult({})));
-						}
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
@@ -260,10 +261,10 @@ describe("r2", () => {
 
 			it("should delete a bucket specified by name & check requests inputs", async () => {
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/r2/buckets/:bucketName",
-						async (request, response, context) => {
-							const { accountId, bucketName } = request.params;
+						async ({ request, params }) => {
+							const { accountId, bucketName } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(bucketName).toEqual("some-bucket");
 							expect(await request.text()).toEqual("");
@@ -271,8 +272,9 @@ describe("r2", () => {
 								"Bearer some-api-token"
 							);
 
-							return response.once(context.json(createFetchResult(null)));
-						}
+							return HttpResponse.json(createFetchResult(null));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler(`r2 bucket delete some-bucket`);
@@ -335,14 +337,14 @@ describe("r2", () => {
 
 		it("should pass all fetch option flags into requestInit & check request inputs", async () => {
 			msw.use(
-				rest.put(
+				http.put(
 					"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-					(request, response, context) => {
-						const { accountId, bucketName, objectName } = request.params;
+					({ request, params }) => {
+						const { accountId, bucketName, objectName } = params;
 						expect(accountId).toEqual("some-account-id");
 						expect(bucketName).toEqual("bucketName-object-test");
 						expect(objectName).toEqual("wormhole-img.png");
-						const headersObject = request.headers.all();
+						const headersObject = Object.fromEntries(request.headers.entries());
 						delete headersObject["user-agent"];
 						//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
 						delete headersObject["content-length"];
@@ -361,16 +363,15 @@ describe("r2", () => {
 					  "host": "api.cloudflare.com",
 					}
 				`);
-						return response.once(
-							context.json(
-								createFetchResult({
-									accountId: "some-account-id",
-									bucketName: "bucketName-object-test",
-									objectName: "wormhole-img.png",
-								})
-							)
+						return HttpResponse.json(
+							createFetchResult({
+								accountId: "some-account-id",
+								bucketName: "bucketName-object-test",
+								objectName: "wormhole-img.png",
+							})
 						);
-					}
+					},
+					{ once: true }
 				)
 			);
 			fs.writeFileSync("wormhole-img.png", "passageway");

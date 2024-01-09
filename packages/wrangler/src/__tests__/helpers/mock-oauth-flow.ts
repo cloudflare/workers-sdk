@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
@@ -8,16 +8,24 @@ export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (_, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(accounts)));
-		})
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult(accounts));
+			},
+			{ once: true }
+		)
 	);
 }
 export function mockGetMembershipsFail() {
 	msw.use(
-		rest.get("*/memberships", (_, res, ctx) => {
-			return res.once(ctx.json(createFetchResult([], false)));
-		})
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult([], false));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -98,11 +106,15 @@ export const mockOAuthFlow = () => {
 			expected: `https://${domain}/oauth2/token`,
 		};
 		msw.use(
-			rest.post(outcome.expected, async (req, res, ctx) => {
-				// TODO: update Miniflare typings to match full undici Request
-				outcome.actual = req.url.toString();
-				return res.once(ctx.json(makeTokenResponse(respondWith)));
-			})
+			http.post(
+				outcome.expected,
+				async ({ request }) => {
+					// TODO: update Miniflare typings to match full undici Request
+					outcome.actual = request.url;
+					return HttpResponse.json(makeTokenResponse(respondWith));
+				},
+				{ once: true }
+			)
 		);
 
 		return outcome;
@@ -118,17 +130,24 @@ export const mockOAuthFlow = () => {
 		// If the domain relies upon Cloudflare Access, then a request to the domain
 		// will result in a redirect to the `cloudflareaccess.com` domain.
 		msw.use(
-			rest.get(`https://${domain}/`, (_, res, ctx) => {
-				let status = 200;
-				let headers: Record<string, string> = {
-					"Content-Type": "application/json",
-				};
-				if (usesAccess) {
-					status = 302;
-					headers = { location: "cloudflareaccess.com" };
-				}
-				return res.once(ctx.status(status), ctx.set(headers));
-			})
+			http.get(
+				`https://${domain}/`,
+				() => {
+					let status = 200;
+					let headers: Record<string, string> = {
+						"Content-Type": "application/json",
+					};
+					if (usesAccess) {
+						status = 302;
+						headers = { location: "cloudflareaccess.com" };
+					}
+					return new HttpResponse(null, {
+						status,
+						headers,
+					});
+				},
+				{ once: true }
+			)
 		);
 	}
 
@@ -149,44 +168,45 @@ export function mockExchangeRefreshTokenForAccessToken({
 	domain?: string;
 }) {
 	msw.use(
-		rest.post(`https://${domain}/oauth2/token`, async (_, res, ctx) => {
-			switch (respondWith) {
-				case "refreshSuccess":
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+		http.post<{}, any, any>(
+			`https://${domain}/oauth2/token`,
+			async () => {
+				switch (respondWith) {
+					case "refreshSuccess":
+						return HttpResponse.json({
 							access_token: "access_token_success_mock",
 							expires_in: 1701,
 							refresh_token: "refresh_token_success_mock",
 							scope: "scope_success_mock",
 							token_type: "bearer",
-						})
-					);
-				case "refreshError":
-					return res.once(
-						ctx.status(400),
-						ctx.json({
-							error: "invalid_request",
-							error_description: "error_description_mock",
-							error_hint: "error_hint_mock",
-							error_verbose: "error_verbose_mock",
-							status_code: 400,
-						})
-					);
-				case "badResponse":
-					return res.once(
-						ctx.status(400),
-						ctx.text(
-							`<html> <body> This shouldn't be sent, but should be handled </body> </html>`
-						)
-					);
+						});
+					case "refreshError":
+						return HttpResponse.json(
+							{
+								error: "invalid_request",
+								error_description: "error_description_mock",
+								error_hint: "error_hint_mock",
+								error_verbose: "error_verbose_mock",
+								status_code: 400,
+							},
+							{
+								status: 400,
+							}
+						);
+					case "badResponse":
+						return HttpResponse.text(
+							`<html> <body> This shouldn't be sent, but should be handled </body> </html>`,
+							{ status: 400 }
+						);
 
-				default:
-					throw new Error(
-						"Not a respondWith option for `mockExchangeRefreshTokenForAccessToken`"
-					);
-			}
-		})
+					default:
+						throw new Error(
+							"Not a respondWith option for `mockExchangeRefreshTokenForAccessToken`"
+						);
+				}
+			},
+			{ once: true }
+		)
 	);
 }
 

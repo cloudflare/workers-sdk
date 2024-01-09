@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -84,27 +84,28 @@ describe("project list", () => {
 function mockProjectListRequest(projects: unknown[]) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get("*/accounts/:accountId/pages/projects", async (req, res, ctx) => {
-			requests.count++;
-			const pageSize = Number(req.url.searchParams.get("per_page"));
-			const page = Number(req.url.searchParams.get("page"));
-			const expectedPageSize = 10;
-			const expectedPage = requests.count;
-			expect(req.params.accountId).toEqual("some-account-id");
-			expect(pageSize).toEqual(expectedPageSize);
-			expect(page).toEqual(expectedPage);
-			expect(await req.text()).toEqual("");
+		http.get(
+			"*/accounts/:accountId/pages/projects",
+			async ({ request, params }) => {
+				requests.count++;
+				const url = new URL(request.url);
+				const pageSize = Number(url.searchParams.get("per_page"));
+				const page = Number(url.searchParams.get("page"));
+				const expectedPageSize = 10;
+				const expectedPage = requests.count;
+				expect(params.accountId).toEqual("some-account-id");
+				expect(pageSize).toEqual(expectedPageSize);
+				expect(page).toEqual(expectedPage);
+				expect(await request.text()).toEqual("");
 
-			return res(
-				ctx.status(200),
-				ctx.json({
+				return HttpResponse.json({
 					success: true,
 					errors: [],
 					messages: [],
 					result: projects.slice((page - 1) * pageSize, page * pageSize),
-				})
-			);
-		})
+				});
+			}
+		)
 	);
 	return requests;
 }

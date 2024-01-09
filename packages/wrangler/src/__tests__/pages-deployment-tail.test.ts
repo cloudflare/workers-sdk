@@ -1,5 +1,5 @@
 import MockWebSocket from "jest-websocket-mock";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -750,38 +750,36 @@ type MockAPI = {
 function mockListDeployments(): RequestCounter {
 	const requests: RequestCounter = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments`,
-			(_, res, ctx) => {
+			() => {
 				requests.count++;
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: [
-							{
-								id: "mock-deployment-id",
-								url: "https://87bbc8fe.mock.pages.dev",
-								environment: "production",
-								created_on: "2021-11-17T14:52:26.133835Z",
-								latest_stage: {
-									ended_on: "2021-11-17T14:52:26.133835Z",
-									status: "success",
-								},
-								deployment_trigger: {
-									metadata: {
-										branch: "main",
-										commit_hash: "c7649364c4cb32ad4f65b530b9424e8be5bec9d6",
-									},
-								},
-								project_name: "mock-project",
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [
+						{
+							id: "mock-deployment-id",
+							url: "https://87bbc8fe.mock.pages.dev",
+							environment: "production",
+							created_on: "2021-11-17T14:52:26.133835Z",
+							latest_stage: {
+								ended_on: "2021-11-17T14:52:26.133835Z",
+								status: "success",
 							},
-						],
-					})
-				);
-			}
+							deployment_trigger: {
+								metadata: {
+									branch: "main",
+									commit_hash: "c7649364c4cb32ad4f65b530b9424e8be5bec9d6",
+								},
+							},
+							project_name: "mock-project",
+						},
+					],
+				});
+			},
+			{ once: true }
 		)
 	);
 
@@ -805,24 +803,25 @@ type RequestCounter = {
 function mockCreateTailRequest(): RequestInit[] {
 	const requests: RequestInit[] = [];
 	msw.use(
-		rest.post(
+		http.post<
+			{ accountId: string; projectName: string; deploymentId: string },
+			RequestInit
+		>(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails`,
-			async (req, res, ctx) => {
-				requests.push(await req.json());
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: {
-							id: "tail-id",
-							url: websocketURL,
-							expires_at: mockTailExpiration,
-						},
-					})
-				);
-			}
+			async ({ request }) => {
+				requests.push(await request.json());
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						id: "tail-id",
+						url: websocketURL,
+						expires_at: mockTailExpiration,
+					},
+				});
+			},
+			{ once: true }
 		)
 	);
 
@@ -867,15 +866,18 @@ const mockEmailEventSize = 45416;
 function mockDeleteTailRequest(): RequestCounter {
 	const requests = { count: 0 };
 	msw.use(
-		rest.delete(
+		http.delete(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails/:tailId`,
-			(_, res, ctx) => {
+			() => {
 				requests.count++;
-				return res.once(
-					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: null })
-				);
-			}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
+			},
+			{ once: true }
 		)
 	);
 
