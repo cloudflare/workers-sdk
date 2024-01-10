@@ -229,6 +229,8 @@ test("D1PreparedStatement: run", async (t) => {
 			last_row_id: result.meta.last_row_id,
 			served_by: "miniflare.db",
 			size_after: result.meta.size_after,
+			rows_read: 3,
+			rows_written: 0,
 		},
 	});
 
@@ -251,6 +253,8 @@ test("D1PreparedStatement: run", async (t) => {
 			last_row_id: 4,
 			served_by: "miniflare.db",
 			size_after: result.meta.size_after,
+			rows_read: 2,
+			rows_written: 2,
 		},
 	});
 
@@ -282,6 +286,8 @@ test("D1PreparedStatement: run", async (t) => {
 			last_row_id: 5,
 			served_by: "miniflare.db",
 			size_after: result.meta.size_after,
+			rows_read: 1,
+			rows_written: 1,
 		},
 	});
 });
@@ -309,6 +315,8 @@ test("D1PreparedStatement: all", async (t) => {
 			last_row_id: result.meta.last_row_id,
 			served_by: "miniflare.db",
 			size_after: result.meta.size_after,
+			rows_read: 3,
+			rows_written: 0,
 		},
 	});
 
