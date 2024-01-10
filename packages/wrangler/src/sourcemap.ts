@@ -150,7 +150,14 @@ export function getSourceMappedString(
 		// apply source mapping (see cloudflare/workers-sdk#4668)
 		if (callSites[i].getFileName() === undefined) continue;
 
-		value = value.replace(callSiteLines[i][0], sourceMappedCallSiteLines[i]);
+		const callSiteLine = callSiteLines[i][0];
+		const callSiteAtIndex = callSiteLine.indexOf("    at");
+		assert(callSiteAtIndex !== -1); // Matched against `CALL_SITE_REGEXP`
+		const callSiteLineLeftPad = callSiteLine.substring(0, callSiteAtIndex);
+		value = value.replace(
+			callSiteLine,
+			callSiteLineLeftPad + sourceMappedCallSiteLines[i]
+		);
 	}
 	return value;
 }
@@ -179,7 +186,8 @@ export function getSourceMappedString(
  */
 
 const CALL_SITE_REGEXP =
-	/ {4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/g;
+	// eslint-disable-next-line no-control-regex
+	/^(?:\s+(?:\x1B\[32m)?'?)? {4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/gm;
 function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	let object: string | null = null;
 	let method: string | null = null;
