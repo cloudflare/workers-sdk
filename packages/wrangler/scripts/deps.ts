@@ -12,8 +12,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	// todo - bundle miniflare too
 	"selfsigned",
 	"source-map",
-	// CommonJS module using `module.require()` which isn't provided by `esbuild`
-	"@cspotcode/source-map-support",
 	"@esbuild-plugins/node-globals-polyfill",
 	"@esbuild-plugins/node-modules-polyfill",
 	"chokidar",

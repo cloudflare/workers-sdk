@@ -2,6 +2,40 @@ import assert from "assert";
 import type { Options } from "@cspotcode/source-map-support";
 import { parseStack } from "./callsite";
 
+// `source-map-support` will only modify `Error.prepareStackTrace` if this is
+// the first time `install()` has been called. This is governed by shared data
+// stored using a well-known symbol on `globalThis`. To ensure...
+//
+// a) `miniflare` and `wrangler` can have differing `install()` options
+// b) We're not affecting external user's use of this package
+// c) `Error.prepareStackTrace` is always updated on `install()`
+//
+// ...load a fresh copy, by resetting then restoring the `require` cache, and
+// overriding `Symbol.for()` to return a unique symbol.
+export function getFreshSourceMapSupport(): typeof import("@cspotcode/source-map-support") {
+	const resolvedSupportPath = require.resolve("@cspotcode/source-map-support");
+
+	const originalSymbolFor = Symbol.for;
+	const originalSupport = require.cache[resolvedSupportPath];
+	try {
+		Symbol.for = (key) => {
+			// Make sure we only override the expected symbol. If we upgrade this
+			// package, and new symbols are used, this assertion will fail in tests.
+			// We want to guard against `source-map-support/sharedData` changing to
+			// something else. If this new symbol *should* be shared across package
+			// instances, we'll need to add an
+			// `if (key === "...") return originalSymbolFor(key);` here.
+			assert.strictEqual(key, "source-map-support/sharedData");
+			return Symbol(key);
+		};
+		delete require.cache[resolvedSupportPath];
+		return require(resolvedSupportPath);
+	} finally {
+		Symbol.for = originalSymbolFor;
+		require.cache[resolvedSupportPath] = originalSupport;
+	}
+}
+
 const sourceMapInstallBaseOptions: Options = {
 	environment: "node",
 	// Don't add Node `uncaughtException` handler
@@ -30,18 +64,7 @@ let sourceMapper: SourceMapper;
 export function getSourceMapper(): SourceMapper {
 	if (sourceMapper !== undefined) return sourceMapper;
 
-	// `source-map-support` will only modify `Error.prepareStackTrace` if this is
-	// the first time `install()` has been called. This is governed by a module
-	// level variable: `errorFormatterInstalled`. To ensure we're not affecting
-	// external user's use of this package, and so `Error.prepareStackTrace` is
-	// always updated, load a fresh copy, by resetting then restoring the
-	// `require` cache.
-
-	const originalSupport = require.cache["@cspotcode/source-map-support"];
-	delete require.cache["@cspotcode/source-map-support"];
-	const support: typeof import("@cspotcode/source-map-support") = require("@cspotcode/source-map-support");
-	require.cache["@cspotcode/source-map-support"] = originalSupport;
-
+	const support = getFreshSourceMapSupport();
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	support.install(sourceMapInstallBaseOptions);
 	const prepareStackTrace = Error.prepareStackTrace;

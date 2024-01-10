@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import url from "node:url";
+import { getFreshSourceMapSupport } from "miniflare";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
 
@@ -68,18 +69,9 @@ function getSourceMappingPrepareStackTrace(
 		return sourceMappingPrepareStackTrace;
 	}
 
-	// `source-map-support` will only modify `Error.prepareStackTrace` if this
-	// is the first time `install()` has been called. This is governed by a
-	// module level variable: `errorFormatterInstalled`. To ensure we're not
-	// affecting external user's use of this package, and so
-	// `Error.prepareStackTrace` is always updated, load a fresh copy, by
-	// resetting then restoring the `require` cache.
-	const originalSupport = require.cache["@cspotcode/source-map-support"];
-	delete require.cache["@cspotcode/source-map-support"];
-	// eslint-disable-next-line @typescript-eslint/consistent-type-imports,@typescript-eslint/no-var-requires
-	const support: typeof import("@cspotcode/source-map-support") = require("@cspotcode/source-map-support");
-	require.cache["@cspotcode/source-map-support"] = originalSupport;
-
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	const support: typeof import("@cspotcode/source-map-support") =
+		getFreshSourceMapSupport();
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	support.install({
 		environment: "node",

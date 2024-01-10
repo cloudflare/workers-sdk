@@ -102,7 +102,6 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "^0.2.0",
-		"@cspotcode/source-map-support": "0.8.1",
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
@@ -124,6 +123,7 @@
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20230914.0",
+		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
 		"@sentry/node": "^7.86.0",
