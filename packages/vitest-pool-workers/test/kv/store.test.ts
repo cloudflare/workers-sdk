@@ -30,6 +30,10 @@ describe("kv", () => {
 		expect(await env.TEST_NAMESPACE.get("key")).toBe("value");
 	});
 
+	it("uses seeded data", async () => {
+		expect(await env.TEST_NAMESPACE.get("seeded")).toBe("🌱");
+	});
+
 	it("stores in Durable Objects", async () => {
 		const id = env.COUNTER.idFromName("a");
 		const stub = env.COUNTER.get(id);

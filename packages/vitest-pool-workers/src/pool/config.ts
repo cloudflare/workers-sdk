@@ -16,6 +16,11 @@ const WorkersPoolOptionsSchema = z.object({
 	main: z.ostring(),
 	isolatedStorage: z.boolean().default(false),
 	singleWorker: z.boolean().default(false),
+	setupEnvironment: z
+		.custom<(env: CloudflareTestEnv) => Awaitable<void>>(
+			(v) => typeof v === "function"
+		)
+		.optional(),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),

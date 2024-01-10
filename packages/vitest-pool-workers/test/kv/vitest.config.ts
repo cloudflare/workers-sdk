@@ -16,6 +16,9 @@ export default defineConfig({
 			workers: defineWorkersPoolOptions({
 				main: "./worker.ts",
 				isolatedStorage: true,
+				async setupEnvironment(env) {
+					await env.TEST_NAMESPACE.put("seeded", "🌱");
+				},
 				miniflare: {
 					kvNamespaces: ["TEST_NAMESPACE"],
 					compatibilityFlags: ["global_navigator"],

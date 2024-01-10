@@ -121,6 +121,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/console.ts#L16
 		if (!patchedPrepareStackTrace) {
 			patchedPrepareStackTrace = true;
+			// Need to patch this after Vitest's own source mapping handler installed
 			const originalPrepareStackTrace = Error.prepareStackTrace;
 			assert(originalPrepareStackTrace !== undefined);
 			Error.prepareStackTrace = (err, callSites) => {

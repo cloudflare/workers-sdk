@@ -16,7 +16,13 @@ import {
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
-import { handleLoopbackRequest } from "./loopback";
+import { WORKER_NAME_PREFIX } from "./helpers";
+import {
+	ABORT_ALL_WORKER,
+	handleLoopbackRequest,
+	scheduleStorageReset,
+	waitForStorageReset,
+} from "./loopback";
 import { handleModuleFallbackRequest, modulesRoot } from "./module-fallback";
 import type { WorkersProjectOptions, SourcelessWorkerOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
@@ -118,9 +124,8 @@ interface Project {
 const allProjects = new Map<string /* projectName */, Project>();
 
 // User worker names must not start with this
-const RUNNER_WORKER_NAME_PREFIX = "vitest-pool-workers:";
 function getRunnerName(project: WorkspaceProject, testFile?: string) {
-	const name = `${RUNNER_WORKER_NAME_PREFIX}runner:${project.getName()}`;
+	const name = `${WORKER_NAME_PREFIX}runner:${project.getName()}`;
 	if (testFile === undefined) return name;
 	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
 	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
@@ -140,7 +145,6 @@ function isDurableObjectDesignatorToSelf(
 		value !== null &&
 		"className" in value &&
 		typeof value.className === "string" &&
-		//
 		(!("scriptName" in value) || value.scriptName === undefined)
 	);
 }
@@ -300,9 +304,9 @@ function buildProjectWorkerOptions(
 				);
 			}
 			// ...that doesn't start with our reserved prefix
-			if (worker.name.startsWith(RUNNER_WORKER_NAME_PREFIX)) {
+			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${RUNNER_WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
 
@@ -327,7 +331,7 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		buildProjectWorkerOptions(project);
 
 	assert(runnerWorker.name !== undefined);
-	assert(runnerWorker.name.startsWith(RUNNER_WORKER_NAME_PREFIX));
+	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
 
 	if (project.options.singleWorker || project.options.isolatedStorage) {
 		// Single Worker, Isolated or Shared Storage
@@ -336,7 +340,7 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		//  --> multiple instances each with single runner worker
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
-			workers: [runnerWorker, ...auxiliaryWorkers],
+			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
 	} else {
 		// Multiple Workers, Shared Storage:
@@ -349,7 +353,7 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		}
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
-			workers: [...testWorkers, ...auxiliaryWorkers],
+			workers: [...testWorkers, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
 	}
 }
@@ -383,6 +387,7 @@ async function getProjectMiniflare(
 				project.mf.set(testFile, new Miniflare(mfOptions));
 			}
 		}
+		await forEachMiniflare(project.mf, (mf) => mf.ready);
 	} else if (changed) {
 		// Otherwise, update the existing instances if options have changed
 		log.info(`Options changed for ${project.relativePath}, updating...`);
@@ -405,18 +410,16 @@ function maybeGetResolvedMainPath(project: Project): string | undefined {
 	}
 }
 
-type MiniflareDurableObjectNamespace = Awaited<
-	ReturnType<Miniflare["getDurableObjectNamespace"]>
->;
 async function runTests(
 	ctx: Vitest,
-	runnerNs: MiniflareDurableObjectNamespace,
-	project: WorkspaceProject,
+	mf: Miniflare,
+	workerName: string,
+	project: Project,
 	config: ResolvedConfig,
 	files: string[],
 	invalidates: string[] = []
 ) {
-	ctx.state.clearFiles(project, files);
+	ctx.state.clearFiles(project.project, files);
 	const data: WorkerContext = {
 		port: undefined as unknown as MessagePort,
 		config,
@@ -424,12 +427,24 @@ async function runTests(
 		invalidates,
 		environment: { name: "node", options: null },
 		workerId: 0,
-		projectName: project.getName(),
-		providedContext: project.getProvidedContext(),
+		projectName: project.project.getName(),
+		providedContext: project.project.getProvidedContext(),
 	};
 
+	// We reset storage at the end of tests when the user is presumably looking at
+	// results. We don't need to reset storage on the first run as instances were
+	// just created.
+	await waitForStorageReset(mf);
+	if (project.options.setupEnvironment !== undefined) {
+		const env = await mf.getBindings<CloudflareTestEnv>(workerName);
+		await project.options.setupEnvironment(env);
+	}
+	const ns = await mf.getDurableObjectNamespace(
+		RUNNER_OBJECT_BINDING,
+		workerName
+	);
 	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
-	const stub = runnerNs.get("singleton");
+	const stub = ns.get("singleton");
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
@@ -443,7 +458,7 @@ async function runTests(
 	const webSocket = res.webSocket;
 	assert(webSocket !== null);
 
-	const localRpcFunctions = createMethodsRPC(project);
+	const localRpcFunctions = createMethodsRPC(project.project);
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
@@ -482,7 +497,7 @@ async function runTests(
 			});
 		},
 	});
-	project.ctx.onCancel((reason) => rpc.onCancel(reason));
+	project.project.ctx.onCancel((reason) => rpc.onCancel(reason));
 	webSocket.accept();
 
 	const [event] = (await events.once(webSocket, "close")) as [CloseEvent];
@@ -498,32 +513,6 @@ async function runTests(
 	}
 
 	debuglog("DONE", files);
-
-	// TODO(now): implement cancellation, can simulate this by CTRL-C'ing while
-	//  tests are running
-	// try {
-	// 	await pool.run(data, { transferList: [workerPort], name: "run" });
-	// } catch (error) {
-	// 	// Worker got stuck and won't terminate - this may cause process to hang
-	// 	if (
-	// 		error instanceof Error &&
-	// 		/Failed to terminate worker/.test(error.message)
-	// 	)
-	// 		ctx.state.addProcessTimeoutCause(
-	// 			`Failed to terminate worker while running ${files.join(", ")}.`
-	// 		);
-	// 	// Intentionally cancelled
-	// 	else if (
-	// 		ctx.isCancelling &&
-	// 		error instanceof Error &&
-	// 		/The task has been cancelled/.test(error.message)
-	// 	)
-	// 		ctx.state.cancelFiles(files, ctx.config.root, project.getName());
-	// 	else throw error;
-	// } finally {
-	// 	port.close();
-	// 	workerPort.close();
-	// }
 }
 
 function getRelativeProjectPath(projectPath: string | number) {
@@ -535,8 +524,12 @@ export default function (ctx: Vitest): ProcessPool {
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
-			// TODO(soon): will probably want to reset all storage here, up to `setup(env)` hook end state?
-			//  (even if isolated storage not enabled)
+			// Vitest waits for the previous `runTests()` to complete before calling
+			// `runTests()` again:
+			// https://github.com/vitest-dev/vitest/blob/v1.0.4/packages/vitest/src/node/core.ts#L458-L459
+			// This behaviour is required for stacked storage to work correctly.
+			// If we had concurrent runs, stack pushes/pops would interfere. We should
+			// always have an empty, fully-popped stacked at the end of a run.
 
 			// 1. Collect new specs
 			const parsedProjectOptions = new Set<WorkspaceProject>();
@@ -570,12 +563,12 @@ export default function (ctx: Vitest): ProcessPool {
 				([project]) => project,
 				([, file]) => file
 			);
-			for (const [project, files] of filesByProject) {
-				const workersProject = allProjects.get(project.getName());
-				assert(workersProject !== undefined); // Defined earlier in this function
-				const options = workersProject.options;
+			for (const [workspaceProject, files] of filesByProject) {
+				const project = allProjects.get(workspaceProject.getName());
+				assert(project !== undefined); // Defined earlier in this function
+				const options = project.options;
 
-				const config = project.getSerializableConfig();
+				const config = workspaceProject.getSerializableConfig();
 
 				// Use our custom test runner
 				config.runner = "cloudflare:test-runner";
@@ -594,43 +587,35 @@ export default function (ctx: Vitest): ProcessPool {
 				// Include resolved `main` if defined, and the names of Durable Object
 				// bindings that point to classes in the current isolate in the
 				// serialized config
-				const main = maybeGetResolvedMainPath(workersProject);
+				const main = maybeGetResolvedMainPath(project);
 				const isolateDurableObjectBindings = Array.from(
-					getDurableObjectBindingNamesToSelf(workersProject.options)
+					getDurableObjectBindingNamesToSelf(project.options)
 				);
 				config.poolOptions.workers = {
 					main,
 					isolateDurableObjectBindings,
-					isolatedStorage: workersProject.options.isolatedStorage,
+					isolatedStorage: project.options.isolatedStorage,
 				};
 
-				const mf = await getProjectMiniflare(workersProject);
+				const mf = await getProjectMiniflare(project);
 				if (options.singleWorker) {
 					// Single Worker, Isolated or Shared Storage
 					//  --> single instance with single runner worker
 					assert(mf instanceof Miniflare, "Expected single instance");
-					const workerName = getRunnerName(project);
-					const ns = await mf.getDurableObjectNamespace(
-						RUNNER_OBJECT_BINDING,
-						workerName
-					);
+					const name = getRunnerName(workspaceProject);
 					resultPromises.push(
-						runTests(ctx, ns, project, config, files, invalidates)
+						runTests(ctx, mf, name, project, config, files, invalidates)
 					);
 				} else if (options.isolatedStorage) {
 					// Multiple Workers, Isolated Storage:
 					//  --> multiple instances each with single runner worker
 					assert(mf instanceof Map, "Expected multiple isolated instances");
-					const workerName = getRunnerName(project);
+					const name = getRunnerName(workspaceProject);
 					for (const file of files) {
 						const fileMf = mf.get(file);
 						assert(fileMf !== undefined);
-						const ns = await fileMf.getDurableObjectNamespace(
-							RUNNER_OBJECT_BINDING,
-							workerName
-						);
 						resultPromises.push(
-							runTests(ctx, ns, project, config, [file], invalidates)
+							runTests(ctx, fileMf, name, project, config, [file], invalidates)
 						);
 					}
 				} else {
@@ -638,25 +623,31 @@ export default function (ctx: Vitest): ProcessPool {
 					//  --> single instance with multiple runner workers
 					assert(mf instanceof Miniflare, "Expected single instance");
 					for (const file of files) {
-						const workerName = getRunnerName(project, file);
-						const ns = await mf.getDurableObjectNamespace(
-							RUNNER_OBJECT_BINDING,
-							workerName
-						);
+						const name = getRunnerName(workspaceProject, file);
 						resultPromises.push(
-							runTests(ctx, ns, project, config, [file], invalidates)
+							runTests(ctx, mf, name, project, config, [file], invalidates)
 						);
 					}
 				}
 			}
-
-			// Debug started Miniflare instances
 
 			// 3. Wait for all tests to complete, and throw if any failed
 			const results = await Promise.allSettled(resultPromises);
 			const errors = results
 				.filter((r): r is PromiseRejectedResult => r.status === "rejected")
 				.map((r) => r.reason);
+
+			// 4. Clean up persistence directories. Note we do this in the background
+			//    at the end of tests as opposed to before tests start, so re-runs
+			//    start quickly, and results are displayed as soon as they're ready.
+			for (const project of allProjects.values()) {
+				if (project.mf !== undefined) {
+					void forEachMiniflare(project.mf, async (mf) =>
+						scheduleStorageReset(mf)
+					);
+				}
+			}
+
 			if (errors.length > 0) {
 				throw new AggregateError(
 					errors,

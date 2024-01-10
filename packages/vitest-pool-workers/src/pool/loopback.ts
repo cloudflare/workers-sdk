@@ -2,8 +2,8 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Mutex, Response } from "miniflare";
-import { isFileNotFoundError } from "./helpers";
-import type { Awaitable, Miniflare, Request } from "miniflare";
+import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
+import type { Awaitable, Miniflare, Request, WorkerOptions } from "miniflare";
 
 // Based on https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/snapshot/src/env/node.ts
 async function handleSnapshotRequest(
@@ -46,6 +46,19 @@ async function handleSnapshotRequest(
 	return new Response(null, { status: 405 });
 }
 
+async function emptyDir(dirPath: string) {
+	let names: string[];
+	try {
+		names = await fs.readdir(dirPath);
+	} catch (e) {
+		if (isFileNotFoundError(e)) return;
+		throw e;
+	}
+	for (const name of names) {
+		await fs.rm(path.join(dirPath, name), { recursive: true, force: true });
+	}
+}
+
 interface StackedStorageState {
 	// Only one stack operation per instance may be in-progress at a given time
 	mutex: Mutex;
@@ -56,8 +69,69 @@ interface StackedStorageState {
 	// `*Persist` settings in `setOptions()` calls, so persistence paths for a given
 	// `Miniflare` instance will always be the same.
 	persistPaths: string[]; // (unique)
+	// `Promise` that will resolve when the background persistence directory
+	// cleanup completes. We do this in the background at the end of tests as
+	// opposed to before tests start, so re-runs start quickly, and results are
+	// displayed as soon as they're ready. `waitForStorageReset(mf)` should be
+	// called before using `mf` for a new test run.
+	storageResetPromise?: Promise<void>;
 }
 const stackStates = new WeakMap<Miniflare, StackedStorageState>();
+function getState(mf: Miniflare) {
+	let state = stackStates.get(mf);
+	if (state === undefined) {
+		state = {
+			mutex: new Mutex(),
+			depth: 0,
+			persistPaths: Array.from(mf.unsafeGetPersistPaths()),
+		};
+		stackStates.set(mf, state);
+	}
+	return state;
+}
+
+const ABORT_ALL_WORKER_NAME = `${WORKER_NAME_PREFIX}:helper`;
+export const ABORT_ALL_WORKER: WorkerOptions = {
+	name: ABORT_ALL_WORKER_NAME,
+	compatibilityFlags: ["unsafe_module"],
+	modules: [
+		{
+			type: "ESModule",
+			path: "index.mjs",
+			contents: `
+			import workerdUnsafe from "workerd:unsafe";
+			export default {
+				async fetch(request) {
+					if (request.method !== "DELETE") return new Response(null, { status: 405 });
+					await workerdUnsafe.abortAllDurableObjects();
+					return new Response(null, { status: 204 });
+				}
+			};
+			`,
+		},
+	],
+};
+export function scheduleStorageReset(mf: Miniflare) {
+	const state = getState(mf);
+	assert(state.storageResetPromise === undefined);
+	state.storageResetPromise = state.mutex.runWith(async () => {
+		const abortAllWorker = await mf.getWorker(ABORT_ALL_WORKER_NAME);
+		await abortAllWorker.fetch("http://placeholder", { method: "DELETE" });
+		for (const persistPath of state.persistPaths) {
+			// Clear directory rather than removing it so `workerd` can retain handle
+			await emptyDir(persistPath);
+		}
+		state.depth = 0;
+		// If any of the code in this callback throws, the `storageResetPromise`
+		// won't be reset, and `await`ing it will throw the error. This is what we
+		// want, as failing to clean up means the persistence directory is in an
+		// invalid state.
+		state.storageResetPromise = undefined;
+	});
+}
+export async function waitForStorageReset(mf: Miniflare): Promise<void> {
+	await getState(mf).storageResetPromise;
+}
 
 const BLOBS_DIR_NAME = "blobs";
 const STACK_DIR_NAME = "__vitest_pool_workers_stack";
@@ -124,22 +198,13 @@ async function handleStorageRequest(
 	mf: Miniflare,
 	request: Request
 ): Promise<Response> {
-	let maybeState = stackStates.get(mf);
-	if (maybeState === undefined) {
-		maybeState = {
-			mutex: new Mutex(),
-			depth: 0,
-			persistPaths: Array.from(mf.unsafeGetPersistPaths()),
-		};
-		stackStates.set(mf, maybeState);
-	}
-	const state = maybeState;
+	const state = getState(mf);
 
 	// Assuming all Durable Objects have been aborted at this point, so we can
 	// copy/delete `.sqlite` files as required
 
 	if (request.method === "POST" /* push */) {
-		await maybeState.mutex.runWith(async () => {
+		await state.mutex.runWith(async () => {
 			state.depth++;
 			await Promise.all(
 				state.persistPaths.map((persistPath) =>
@@ -151,7 +216,7 @@ async function handleStorageRequest(
 	}
 
 	if (request.method === "DELETE" /* pop */) {
-		await maybeState.mutex.runWith(async () => {
+		await state.mutex.runWith(async () => {
 			assert(state.depth > 0, "Stack underflow");
 			await Promise.all(
 				state.persistPaths.map((persistPath) =>
