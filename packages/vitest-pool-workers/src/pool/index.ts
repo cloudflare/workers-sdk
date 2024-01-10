@@ -548,14 +548,14 @@ export default function (ctx: Vitest): ProcessPool {
 				if (workersProject === undefined) {
 					workersProject = {
 						project,
-						options: parseProjectOptions(project),
+						options: await parseProjectOptions(project),
 						testFiles: new Set(),
 						relativePath: getRelativeProjectPath(project.path),
 					};
 					allProjects.set(projectName, workersProject);
 				} else if (!parsedProjectOptions.has(project)) {
 					workersProject.project = project;
-					workersProject.options = parseProjectOptions(project);
+					workersProject.options = await parseProjectOptions(project);
 					workersProject.relativePath = getRelativeProjectPath(project.path);
 				}
 				workersProject.testFiles.add(testFile);

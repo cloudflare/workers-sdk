@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, inject } from "vitest";
 
 describe("maths", () => {
 	it("adds", () => {
@@ -7,5 +7,9 @@ describe("maths", () => {
 
 	it("subtracts", () => {
 		expect(1 - 1).toBe(0);
+	});
+
+	it("gets port", () => {
+		expect(inject("port")).toBe(42);
 	});
 });

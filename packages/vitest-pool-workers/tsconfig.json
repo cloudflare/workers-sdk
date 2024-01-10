@@ -14,6 +14,7 @@
 		"./src/config/**/*.ts",
 		"./src/pool/**/*.ts",
 		"./test/*/vitest.config.ts",
+		"./test/*/env.d.ts",
 		"./vitest.workers.config.ts",
 		"./vitest.workspace.ts"
 	]

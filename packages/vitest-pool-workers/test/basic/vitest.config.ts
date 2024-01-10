@@ -3,14 +3,23 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		setupFiles: ["./setup/setup.ts"],
+		globalSetup: ["./setup/global-setup.ts"],
 		pool: "../..",
 		poolOptions: {
-			workers: defineWorkersPoolOptions({
+			workers: defineWorkersPoolOptions(({ inject }) => ({
 				singleWorker: true,
 				miniflare: {
+					compatibilityFlags: ["global_navigator"],
 					bindings: { KEY: "value" },
+					// This doesn't actually do anything in tests
+					upstream: `http://localhost:${inject("port")}`,
+					// TODO(soon): allow object for hyperdrive bindings
+					// hyperdrives: {
+					// 	DATABASE: `postgres://user:pass@example.com:${inject("port")}/db`,
+					// },
 				},
-			}),
+			})),
 		},
 	},
 });
