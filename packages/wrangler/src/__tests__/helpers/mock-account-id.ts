@@ -1,8 +1,5 @@
 import { reinitialiseAuthTokens } from "../../user";
 
-const ORIGINAL_CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
-
 /**
  * Mock the API token so that we don't need to read it from user configuration files.
  *
@@ -12,6 +9,7 @@ const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 export function mockApiToken({
 	apiToken = "some-api-token",
 }: { apiToken?: string | null } = {}) {
+	const ORIGINAL_CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 	beforeEach(() => {
 		if (apiToken === null) {
 			delete process.env.CLOUDFLARE_API_TOKEN;
@@ -22,7 +20,12 @@ export function mockApiToken({
 		reinitialiseAuthTokens();
 	});
 	afterEach(() => {
-		process.env.CLOUDFLARE_API_TOKEN = ORIGINAL_CLOUDFLARE_API_TOKEN;
+		if (ORIGINAL_CLOUDFLARE_API_TOKEN === undefined) {
+			// `process.env`'s assigned property values are coerced to strings
+			delete process.env.CLOUDFLARE_API_TOKEN;
+		} else {
+			process.env.CLOUDFLARE_API_TOKEN = ORIGINAL_CLOUDFLARE_API_TOKEN;
+		}
 	});
 }
 
@@ -35,14 +38,22 @@ export function mockApiToken({
 export function mockAccountId({
 	accountId = "some-account-id",
 }: { accountId?: string | null } = {}) {
+	const ORIGINAL_CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 	beforeEach(() => {
 		if (accountId === null) {
 			delete process.env.CLOUDFLARE_ACCOUNT_ID;
 		} else {
 			process.env.CLOUDFLARE_ACCOUNT_ID = accountId;
 		}
+		// Now we have updated the environment, we must reinitialize the user auth state.
+		reinitialiseAuthTokens();
 	});
 	afterEach(() => {
-		process.env.CLOUDFLARE_ACCOUNT_ID = ORIGINAL_CLOUDFLARE_ACCOUNT_ID;
+		if (ORIGINAL_CLOUDFLARE_ACCOUNT_ID === undefined) {
+			// `process.env`'s assigned property values are coerced to strings
+			delete process.env.CLOUDFLARE_ACCOUNT_ID;
+		} else {
+			process.env.CLOUDFLARE_ACCOUNT_ID = ORIGINAL_CLOUDFLARE_ACCOUNT_ID;
+		}
 	});
 }

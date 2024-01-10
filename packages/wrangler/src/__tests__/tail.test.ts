@@ -30,18 +30,21 @@ describe("tail", () => {
 		mockWs.useOriginal = false;
 	});
 
+	// This `afterEach()` must come before `mockAccountId()` and `mockApiToken()`.
+	// Closing the sockets will trigger an authenticated fetch call which would
+	// otherwise fail.
+	afterEach(() => {
+		mockWebSockets.forEach((ws) => ws.close());
+		mockWebSockets.splice(0);
+		clearDialogs();
+	});
+
 	beforeEach(() => msw.use(...mswSucessScriptHandlers));
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
 
 	const std = mockConsoleMethods();
-
-	afterEach(() => {
-		mockWebSockets.forEach((ws) => ws.close());
-		mockWebSockets.splice(0);
-		clearDialogs();
-	});
 
 	/**
 	 * Interaction with the tailing API, including tail creation,

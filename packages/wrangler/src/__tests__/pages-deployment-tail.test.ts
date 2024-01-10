@@ -22,6 +22,15 @@ import type WebSocket from "ws";
 
 describe("pages deployment tail", () => {
 	runInTempDir();
+
+	// This `afterEach()` must come before `mockAccountId()` and `mockApiToken()`.
+	// Closing the sockets will trigger an authenticated fetch call which would
+	// otherwise fail.
+	afterEach(() => {
+		mockWebSockets.forEach((ws) => ws.close());
+		mockWebSockets.splice(0);
+	});
+
 	mockAccountId();
 	mockApiToken();
 	const std = mockConsoleMethods();
@@ -40,11 +49,6 @@ describe("pages deployment tail", () => {
 	});
 	afterAll(() => {
 		delete process.env.CF_PAGES;
-	});
-
-	afterEach(() => {
-		mockWebSockets.forEach((ws) => ws.close());
-		mockWebSockets.splice(0);
 	});
 
 	/**
