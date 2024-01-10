@@ -152,7 +152,7 @@ export async function unstable_dev(
 		_: [],
 		$0: "",
 		remote: !local,
-		local,
+		local: undefined,
 		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,
