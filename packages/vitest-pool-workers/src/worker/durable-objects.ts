@@ -27,7 +27,8 @@ function isDurableObjectStub(v: unknown): v is DurableObjectStub {
 	return (
 		typeof v === "object" &&
 		v !== null &&
-		v.constructor.name === "DurableObject" &&
+		(v.constructor.name === "DurableObject" ||
+			v.constructor.name === "WorkerRpc") &&
 		"fetch" in v &&
 		typeof v.fetch === "function" &&
 		"id" in v &&
