@@ -144,10 +144,19 @@ export function getSourceMappedString(
 		callSites
 	);
 	const sourceMappedCallSiteLines = sourceMappedStackTrace.split("\n").slice(1);
+
 	for (let i = 0; i < callSiteLines.length; i++) {
+		// If a call site doesn't have a file name, it's likely invalid, so don't
+		// apply source mapping (see cloudflare/workers-sdk#4668)
+		if (callSites[i].getFileName() === undefined) continue;
+
+		const callSiteLine = callSiteLines[i][0];
+		const callSiteAtIndex = callSiteLine.indexOf("at");
+		assert(callSiteAtIndex !== -1); // Matched against `CALL_SITE_REGEXP`
+		const callSiteLineLeftPad = callSiteLine.substring(0, callSiteAtIndex);
 		value = value.replace(
-			callSiteLines[i][0],
-			sourceMappedCallSiteLines[i].substring(4) // Trim indent from stack
+			callSiteLine,
+			callSiteLineLeftPad + sourceMappedCallSiteLines[i].trimStart()
 		);
 	}
 	return value;
@@ -177,7 +186,10 @@ export function getSourceMappedString(
  */
 
 const CALL_SITE_REGEXP =
-	/at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/g;
+	// Validation errors from `wrangler deploy` have a 2 space indent, whereas
+	// regular stack traces have a 4 space indent.
+	// eslint-disable-next-line no-control-regex
+	/^(?:\s+(?:\x1B\[\d+m)?'?)? {2,4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/gm;
 function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	let object: string | null = null;
 	let method: string | null = null;
