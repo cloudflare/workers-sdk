@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "packages/format-errors/**"
+
 jobs:
   publish_worker:
     if: ${{ github.repository_owner == 'cloudflare' }}
