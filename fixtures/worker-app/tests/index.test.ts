@@ -1,4 +1,5 @@
 import { resolve } from "path";
+import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
@@ -12,7 +13,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 	beforeAll(async () => {
 		({ ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
-			["--local", "--port=0", "--inspector-port=0"]
+			["--port=0", "--inspector-port=0"]
 		));
 	});
 
@@ -23,7 +24,14 @@ describe("'wrangler dev' correctly renders pages", () => {
 	it("renders ", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
+		expect(response.status).toBe(200);
 		expect(text).toContain(`http://${ip}:${port}/`);
+
+		// Wait up to 5s for all request logs to be flushed
+		for (let i = 0; i < 10; i++) {
+			if (getOutput().includes("end of request")) break;
+			await setTimeout(500);
+		}
 
 		// Ensure `console.log()`s from startup and requests are shown
 		const output = getOutput();

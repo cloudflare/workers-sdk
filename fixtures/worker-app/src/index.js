@@ -33,6 +33,7 @@ export default {
 			new Request("http://example.com", { method: "POST", body: "foo" })
 		);
 
+		console.log("end of request");
 		return new Response(
 			`${request.url} ${now()} ${request.headers.get("Host")}`
 		);
