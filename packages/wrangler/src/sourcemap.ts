@@ -189,7 +189,7 @@ const CALL_SITE_REGEXP =
 	// Validation errors from `wrangler deploy` have a 2 space indent, whereas
 	// regular stack traces have a 4 space indent.
 	// eslint-disable-next-line no-control-regex
-	/^(?:\s+(?:\x1B\[32m)?'?)? {2,4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/gm;
+	/^(?:\s+(?:\x1B\[\d+m)?'?)? {2,4}at (?:(.+?)\s+\()?(?:(.+?):(\d+)(?::(\d+))?|([^)]+))\)?/gm;
 function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	let object: string | null = null;
 	let method: string | null = null;

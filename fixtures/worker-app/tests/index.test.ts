@@ -35,16 +35,16 @@ describe("'wrangler dev' correctly renders pages", () => {
 
 		// Check logged strings are source mapped
 		expect(output).toMatch(
-			/Error: logged error one.+fixtures\/worker-app\/src\/log\.ts:7:14/s
+			/Error: logged error one\n.+at logErrors.+fixtures\/worker-app\/src\/log\.ts:7:14/
 		);
 		expect(output).toMatch(
-			/Error: logged error two.+fixtures\/worker-app\/src\/log\.ts:8:14/s
+			/Error: logged error two\n.+at logErrors.+fixtures\/worker-app\/src\/log\.ts:8:14/
 		);
 		expect(output).toMatch(
-			/Error: logged error three.+fixtures\/worker-app\/src\/log\.ts:9:23/s
+			/Error: logged error three\n.+at logErrors.+fixtures\/worker-app\/src\/log\.ts:9:23/
 		);
 		expect(output).toMatch(
-			/Error: logged error four.+fixtures\/worker-app\/src\/log\.ts:10:33/s
+			/Error: logged error four\\n' \+\n.+at logErrors.+fixtures\/worker-app\/src\/log\.ts:10:33/
 		);
 
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4668
