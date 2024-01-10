@@ -58,6 +58,11 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
 			},
+			"private-host": {
+				type: "boolean",
+				describe: "Disables the caching of SQL responses",
+				default: false,
+			},
 		})
 		.epilogue(hyperdriveBetaWarning);
 }
@@ -116,6 +121,7 @@ export async function handler(
 			database: args.database,
 			user: args.originUser,
 			password: args.originPassword,
+			privateHost: args.privateHost,
 		};
 	}
 

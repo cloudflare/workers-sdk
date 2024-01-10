@@ -18,6 +18,7 @@ export type PublicOrigin = Origin & {
 	scheme?: string;
 	database?: string;
 	user?: string;
+	privateHost?: boolean;
 };
 
 export type OriginWithPassword = PublicOrigin & {
