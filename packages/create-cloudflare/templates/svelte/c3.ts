@@ -1,11 +1,7 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { parseTs, transformFile } from "helpers/codemod";
-import {
-	installPackages,
-	npmInstall,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { platformInterface } from "./templates";
@@ -22,10 +18,6 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	// Navigate to the directory and install dependencies
-	process.chdir(ctx.project.path);
-	await npmInstall();
-
 	// Install the adapter
 	const pkg = `@sveltejs/adapter-cloudflare`;
 	await installPackages([pkg], {

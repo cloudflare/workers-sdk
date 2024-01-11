@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { npmInstall, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import type { C3Context } from "types";
@@ -22,17 +22,12 @@ const generate = async (ctx: C3Context) => {
 		gitFlag,
 	]);
 
+	writeFile("./.node-version", "17");
+
 	logRaw(""); // newline
 };
 
 const configure = async (ctx: C3Context) => {
-	process.chdir(ctx.project.path);
-	writeFile("./.node-version", "17");
-	updateNuxtConfig();
-	await npmInstall();
-};
-
-function updateNuxtConfig() {
 	const configFileName = "nuxt.config.ts";
 	const configFilePath = resolve(configFileName);
 	const s = spinner();
@@ -45,7 +40,7 @@ function updateNuxtConfig() {
 	);
 	writeFile(configFilePath, updatedConfigFile);
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFileName}\``)}`);
-}
+};
 
 const config: TemplateConfig = {
 	configVersion: 1,

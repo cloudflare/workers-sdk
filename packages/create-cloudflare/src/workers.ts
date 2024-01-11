@@ -1,20 +1,14 @@
-import { cp, mkdtemp, readdir, rename, rm } from "fs/promises";
+import { cp, mkdtemp, readdir, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-<<<<<<< HEAD
-import { chdir } from "process";
-import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
-=======
->>>>>>> e028ee6e (Moving generate step to runTemplate)
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { C3_DEFAULTS } from "helpers/cli";
 import { spinner } from "@cloudflare/cli/interactive";
-import { processArgument } from "helpers/args";
 import {
 	getWorkerdCompatibilityDate,
 	installWorkersTypes,
 	npmInstall,
+	installPackages,
 	runCommand,
 } from "helpers/command";
 import { appendFile, readFile, usesTypescript, writeFile } from "helpers/files";
@@ -25,17 +19,6 @@ import type { C3Context } from "types";
 const { dlx } = detectPackageManager();
 
 export const runWorkersGenerator = async (ctx: C3Context) => {
-<<<<<<< HEAD
-	await copyTemplateFiles(ctx);
-	chdir(ctx.project.path);
-
-	await updateFiles(ctx);
-	await offerGit(ctx);
-	endSection("Application created");
-
-	startSection("Installing dependencies", "Step 2 of 3");
-=======
->>>>>>> a837604a (Moving generate step to runTemplate)
 	await npmInstall();
 	if (ctx.args.ts) {
 		await installWorkersTypes(ctx);

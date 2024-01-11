@@ -61,20 +61,20 @@ const getApiTemplate = (
 };
 
 const configure = async (ctx: C3Context) => {
-	const projectName = ctx.project.name;
+	const projectPath = ctx.project.path;
 
-	const path = probePaths([
-		`${projectName}/pages/api`,
-		`${projectName}/src/pages/api`,
-		`${projectName}/src/app/api`,
-		`${projectName}/app/api`,
-		`${projectName}/src/app`,
-		`${projectName}/app`,
-	]);
-
-	if (!path) {
-		crash("Could not find the `/api` or `/app` directory");
-	}
+	// Add a compatible function handler example
+	const path = probePaths(
+		[
+			`${projectPath}/pages/api`,
+			`${projectPath}/src/pages/api`,
+			`${projectPath}/src/app/api`,
+			`${projectPath}/app/api`,
+			`${projectPath}/src/app`,
+			`${projectPath}/app`,
+		],
+		"Could not find the `/api` or `/app` directory"
+	);
 
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
 	const apiPath = path.replace(/\/app$/, "/app/api");
@@ -129,7 +129,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 };
 
 export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
-	const eslintConfig = readJSON(`${ctx.project.name}/.eslintrc.json`);
+	const eslintConfig = readJSON(`${ctx.project.path}/.eslintrc.json`);
 
 	eslintConfig.plugins ??= [];
 	eslintConfig.plugins.push("eslint-plugin-next-on-pages");
@@ -140,7 +140,7 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 	eslintConfig.extends ??= [];
 	eslintConfig.extends.push("plugin:eslint-plugin-next-on-pages/recommended");
 
-	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig);
+	writeJSON(`${ctx.project.path}/.eslintrc.json`, eslintConfig);
 };
 
 const config: TemplateConfig = {

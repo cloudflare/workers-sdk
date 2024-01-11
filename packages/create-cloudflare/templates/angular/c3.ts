@@ -17,7 +17,6 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	process.chdir(ctx.project.path);
 	updateAngularJson(ctx);
 	await updateAppCode();
 	await installCFWorker(ctx);

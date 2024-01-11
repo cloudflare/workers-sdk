@@ -16,8 +16,6 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	process.chdir(ctx.project.path);
-
 	// Install the pages adapter
 	const pkg = "solid-start-cloudflare-pages";
 	await installPackages([pkg], {

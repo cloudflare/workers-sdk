@@ -1,5 +1,5 @@
 import { endSection } from "@cloudflare/cli";
-import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
+import { runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { quoteShellArgs } from "../../src/common";
@@ -13,10 +13,6 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	// Run npm install so the `qwik` command in the next step exists
-	process.chdir(ctx.project.path);
-	await npmInstall();
-
 	// Add the pages integration
 	const cmd = [npx, "qwik", "add", "cloudflare-pages"];
 	endSection(`Running ${quoteShellArgs(cmd)}`);

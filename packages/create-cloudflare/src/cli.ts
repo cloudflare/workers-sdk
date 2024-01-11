@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { dirname } from "path";
-import { processArgument } from "@cloudflare/cli/args";
+import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { blue, dim } from "@cloudflare/cli/colors";
 import {
 	isInteractive,
@@ -10,7 +11,7 @@ import {
 } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { runCommand } from "helpers/command";
+import { npmInstall, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { generateTypes } from "helpers/wrangler";
 import semver from "semver";
@@ -34,7 +35,6 @@ import {
 } from "./templateMap";
 import { createWranglerToml, runWorkersGenerator } from "./workers";
 import type { C3Args, C3Context } from "types";
-import { chdir } from "process";
 
 const { npm } = detectPackageManager();
 
@@ -113,7 +113,10 @@ const runTemplate = async (ctx: C3Context) => {
 	}
 
 	await copyTemplateFiles(ctx);
+
 	chdir(ctx.project.path);
+	await npmInstall(ctx);
+
 	endSection(`Application created`);
 
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");

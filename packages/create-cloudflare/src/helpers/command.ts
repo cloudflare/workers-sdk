@@ -293,7 +293,13 @@ const needsPackageManagerReset = (ctx: C3Context) => {
 	}
 };
 
-export const npmInstall = async () => {
+export const npmInstall = async (ctx: C3Context) => {
+	// Skip this step if packages have already been installed
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	if (existsSync(nodeModulesPath)) {
+		return;
+	}
+
 	const { npm } = detectPackageManager();
 
 	await runCommand([npm, "install"], {

@@ -3,6 +3,7 @@ import { detectPackageManager } from "helpers/packages";
 import { fetch, Response } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
+import { createTestContext } from "../../__tests__/helpers";
 import {
 	getWorkerdCompatibilityDate,
 	installPackages,
@@ -97,7 +98,7 @@ describe("Command Helpers", () => {
 	});
 
 	test("npmInstall", async () => {
-		await npmInstall();
+		await npmInstall(createTestContext());
 		expectSilentSpawnWith("npm install");
 	});
 
@@ -107,7 +108,7 @@ describe("Command Helpers", () => {
 			version: "8.5.1",
 		});
 
-		await npmInstall();
+		await npmInstall(createTestContext());
 		expectSilentSpawnWith("pnpm install");
 	});
 
