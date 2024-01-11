@@ -223,7 +223,9 @@ export function createModuleCollector(props: {
 								.createHash("sha1")
 								.update(fileContent)
 								.digest("hex");
-							const fileName = `./${fileHash}-${path.basename(args.path)}`;
+							const fileName = props.preserveFileNames
+									? filePath
+									: `./${fileHash}-${path.basename(args.path)}`;
 
 							const { rule } =
 								rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};
