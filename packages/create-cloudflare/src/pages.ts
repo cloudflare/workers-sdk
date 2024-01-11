@@ -22,20 +22,8 @@ const VERIFY_PROJECT_RETRIES = 3;
 
 const { npx } = detectPackageManager();
 
-const defaultFrameworkConfig = {
-	deployCommand: ["pages:deploy"],
-	devCommand: ["pages:dev"],
-};
-
 export const runPagesGenerator = async (ctx: C3Context) => {
 	const frameworkConfig = ctx.template as unknown as FrameworkConfig;
-	ctx.framework = {
-		config: {
-			...defaultFrameworkConfig,
-			...frameworkConfig,
-		},
-		args: ctx.args.additionalArgs ?? [],
-	};
 
 	// Generate
 	const { generate, configure } = frameworkConfig;
@@ -69,7 +57,7 @@ export const createProject = async (ctx: C3Context) => {
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 
 	try {
-		const compatFlags = ctx.framework?.config.compatibilityFlags ?? [];
+		const compatFlags = ctx.template.compatibilityFlags ?? [];
 		const productionBranch = await getProductionBranch(ctx.project.path);
 		const cmd: string[] = [
 			npx,

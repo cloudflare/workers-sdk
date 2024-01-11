@@ -189,12 +189,12 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	const cmd = [...(npm === "yarn" ? ["npx"] : dlx), cli, ...args];
 	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
 
-	if (ctx.framework?.args?.length) {
-		cmd.push(...ctx.framework.args);
+	if (ctx.args.additionalArgs?.length) {
+		cmd.push(...ctx.args.additionalArgs);
 	}
 
 	updateStatus(
-		`Continue with ${ctx.framework?.config.displayName} ${dim(
+		`Continue with ${ctx.template.displayName} ${dim(
 			`via \`${quoteShellArgs(cmd)}\``
 		)}`
 	);
@@ -203,7 +203,7 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	logRaw("");
 
 	if (process.env.VITEST) {
-		const flags = ctx.framework?.config.testFlags ?? [];
+		const flags = ctx.template.testFlags ?? [];
 		cmd.push(...flags);
 	}
 

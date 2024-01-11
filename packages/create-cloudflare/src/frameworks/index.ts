@@ -3,8 +3,8 @@ import clisPackageJson from "./package.json";
 import type { C3Context } from "types";
 
 export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
-	if (!ctx.framework) {
-		crash("Framework not specified.");
+	if (!ctx.template) {
+		return crash("Framework not specified.");
 	}
 
 	const framework = ctx.template

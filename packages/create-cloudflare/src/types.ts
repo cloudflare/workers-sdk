@@ -25,32 +25,22 @@ export type C3Context = {
 		path: string;
 	};
 	template: TemplateConfig;
-	framework?: {
-		config: FrameworkConfig;
-		args: string[];
-		commitMessage?: string;
-	};
 	deployment: DeploymentInfo;
 	account?: {
 		id: string;
 		name: string;
 	};
+	commitMessage?: string;
 	originalCWD: string;
 	gitRepoAlreadyExisted: boolean;
 };
 
 type DeploymentInfo = {
 	url?: string;
-	queues: Record<string, string>;
-	kvNamespaces: Record<string, string>;
+	queues?: Record<string, string>;
+	kvNamespaces?: Record<string, string>;
 };
 
 export type FrameworkConfig = TemplateConfig & {
-	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
-	deployCommand?: string[];
-	devCommand?: string[];
-	testFlags?: string[];
-	compatibilityFlags?: string[];
-	type?: "pages" | "workers";
 };

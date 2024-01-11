@@ -35,6 +35,11 @@ export type TemplateConfig = {
 	) => Promise<Record<string, string | object>>;
 
 	path?: string;
+
+	testFlags?: string[];
+	compatibilityFlags?: string[];
+	deployCommand?: string[];
+	devCommand?: string[];
 };
 
 type BindingsDefinition = {
@@ -186,7 +191,15 @@ export const selectFramework = async (args: Partial<C3Args>) => {
 		crash(`Unsupported framework: ${framework}`);
 	}
 
-	return frameworkMap[framework as FrameworkName];
+	const defaultFrameworkConfig = {
+		deployCommand: ["pages:deploy"],
+		devCommand: ["pages:dev"],
+	};
+
+	return {
+		...defaultFrameworkConfig,
+		...frameworkMap[framework as FrameworkName],
+	};
 };
 
 export async function copyTemplateFiles(ctx: C3Context) {

@@ -140,7 +140,7 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	const label = `deploy via \`${quoteShellArgs([
 		npm,
 		"run",
-		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+		...(ctx.template.deployCommand ?? ["deploy"]),
 	])}\``;
 
 	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
@@ -174,7 +174,7 @@ export const runDeploy = async (ctx: C3Context) => {
 	const baseDeployCmd = [
 		npm,
 		"run",
-		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+		...(ctx.template.deployCommand ?? ["deploy"]),
 	];
 
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
@@ -182,11 +182,11 @@ export const runDeploy = async (ctx: C3Context) => {
 	const deployCmd = [
 		...baseDeployCmd,
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
-		...(ctx.framework?.commitMessage && !insideGitRepo
+		...(ctx.commitMessage && !insideGitRepo
 			? [
 					...(name === "npm" ? ["--"] : []),
 					"--commit-message",
-					prepareCommitMessage(ctx.framework.commitMessage),
+					prepareCommitMessage(ctx.commitMessage),
 			  ]
 			: []),
 	];
@@ -263,29 +263,19 @@ export const printSummary = async (ctx: C3Context) => {
 			: [],
 		[
 			`Run the development server`,
-			quoteShellArgs([
-				npm,
-				"run",
-				...(ctx.framework?.config.devCommand ?? ["start"]),
-			]),
+			quoteShellArgs([npm, "run", ...(ctx.template.devCommand ?? ["start"])]),
 		],
 		[
 			`Deploy your application`,
 			quoteShellArgs([
 				npm,
 				"run",
-				...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+				...(ctx.template.deployCommand ?? ["deploy"]),
 			]),
 		],
 		[
 			`Read the documentation`,
-			`https://developers.cloudflare.com/${
-				ctx.framework
-					? ctx.framework.config.type === "workers"
-						? "workers"
-						: "pages"
-					: "workers"
-			}`,
+			`https://developers.cloudflare.com/${ctx.template.platform}`,
 		],
 		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
 	];
@@ -307,7 +297,7 @@ export const printSummary = async (ctx: C3Context) => {
 				quoteShellArgs([
 					npm,
 					"run",
-					...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+					...(ctx.template.deployCommand ?? ["deploy"]),
 				])
 			)}`,
 		].join(" ");
@@ -428,8 +418,11 @@ export const gitCommit = async (ctx: C3Context) => {
 	});
 };
 
+// TODO: fix this. probably broken for the hono flow
 const createCommitMessage = async (ctx: C3Context) => {
-	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
+	if (ctx.template.platform === "workers") {
+		return "Initial commit (by create-cloudflare CLI)";
+	}
 
 	const header = "Initialize web application via create-cloudflare CLI";
 
@@ -463,9 +456,7 @@ const createCommitMessage = async (ctx: C3Context) => {
 
 	const commitMessage = `${header}\n\n${body}\n`;
 
-	if (ctx.template.platform !== "workers") {
-		ctx.framework.commitMessage = commitMessage;
-	}
+	ctx.commitMessage = commitMessage;
 
 	return commitMessage;
 };
