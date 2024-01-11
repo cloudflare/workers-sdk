@@ -1,6 +1,5 @@
 import { chdir } from "process";
-import { crash, endSection, startSection } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import {
 	installWrangler,
@@ -11,7 +10,6 @@ import {
 import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
 import { getProductionBranch, quoteShellArgs } from "./common";
-import { copyTemplateFiles } from "./templateMap";
 import type { TemplateConfig } from "./templateMap";
 import type { C3Context } from "types";
 
@@ -27,13 +25,7 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 	const frameworkConfig = ctx.template as unknown as TemplateConfig;
 
 	// Generate
-	const { generate, configure } = frameworkConfig;
-	await generate({ ...ctx });
-	await copyTemplateFiles(ctx);
-	endSection(`Application created`);
-
-	// Configure
-	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+	const { configure } = frameworkConfig;
 
 	// Rectify discrepancies between installed node_modules and package specific
 	// lockfile before potentially adding new packages in `configure`

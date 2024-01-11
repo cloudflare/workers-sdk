@@ -27,7 +27,7 @@ export type TemplateConfig = {
 	bindings?: BindingsDefinition;
 	copyFiles?: StaticFileMap | VariantInfo;
 
-	generate: (ctx: C3Context) => Promise<void>;
+	generate?: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
 
 	transformPackageJson?: (

@@ -27,9 +27,14 @@ import {
 	validateProjectDirectory,
 } from "./common";
 import { createProject, runPagesGenerator } from "./pages";
-import { selectTemplate, updatePackageJson } from "./templateMap";
+import {
+	copyTemplateFiles,
+	selectTemplate,
+	updatePackageJson,
+} from "./templateMap";
 import { createWranglerToml, runWorkersGenerator } from "./workers";
 import type { C3Args, C3Context } from "types";
+import { chdir } from "process";
 
 const { npm } = detectPackageManager();
 
@@ -101,8 +106,20 @@ export const runCli = async (args: Partial<C3Args>) => {
 };
 
 const runTemplate = async (ctx: C3Context) => {
+	const { platform, generate } = ctx.template;
+
+	if (generate) {
+		await generate(ctx);
+	}
+
+	await copyTemplateFiles(ctx);
+	chdir(ctx.project.path);
+	endSection(`Application created`);
+
+	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+
 	// As time goes on, lift increasingly more logic out of the generators into here
-	if (ctx.template.platform === "workers") {
+	if (platform === "workers") {
 		await runWorkersGenerator(ctx);
 	} else {
 		await runPagesGenerator(ctx);
