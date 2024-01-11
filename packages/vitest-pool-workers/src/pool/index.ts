@@ -579,8 +579,13 @@ export default function (ctx: Vitest): ProcessPool {
 					(method) => method !== "setImmediate" && method !== "clearImmediate"
 				);
 
+				// Make sure we have a deep-clone of `poolOptions` to mutate.
+				// `getSerializableConfig()` may return references to the same objects,
+				// and we don't want changes to `config.poolOptions.workers` to be
+				// visible across projects.
+				config.poolOptions = structuredClone(config.poolOptions) ?? {};
+
 				// Allow workers to be re-used by removing the isolation requirement
-				config.poolOptions ??= {};
 				config.poolOptions.threads ??= {};
 				config.poolOptions.threads.isolate = false;
 

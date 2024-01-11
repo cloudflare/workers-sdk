@@ -177,7 +177,9 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log("onAfterRunFiles");
 			await scheduler.wait(100);
 		}
-		return super.onAfterRunFiles();
+		// @ts-expect-error `VitestTestRunner` doesn't define `onAfterRunFiles`, but
+		//  could in the future.
+		return super.onAfterRunFiles?.();
 	}
 
 	async onBeforeRunSuite(suite: Suite) {
