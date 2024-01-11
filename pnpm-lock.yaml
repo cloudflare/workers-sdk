@@ -285,6 +285,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/pages-dev-proxy-with-script:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20221111.1
+        version: 4.20231025.0
+      undici:
+        specifier: ^5.9.1
+        version: 5.28.2
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/pages-functions-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
