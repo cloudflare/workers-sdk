@@ -367,12 +367,15 @@ app.onError((e, c) => {
 	const sentry = c.get("sentry");
 	const registry = c.get("prometheus");
 
-	const errorCounter = registry.create(
-		"counter",
-		"devprod_playground_preview_worker_error_total",
-		"Error counter for DevProd's playground-preview-worker service"
-	);
-	errorCounter.inc();
+	// Only include reportable `HttpError`s or any other error in error metrics
+	if (!(e instanceof HttpError) || e.reportable) {
+		const errorCounter = registry.create(
+			"counter",
+			"devprod_playground_preview_worker_error_total",
+			"Error counter for DevProd's playground-preview-worker service"
+		);
+		errorCounter.inc();
+	}
 
 	return handleException(e, sentry);
 });
