@@ -1,7 +1,8 @@
 import { logRaw } from "@cloudflare/cli";
 import { runFrameworkGenerator } from "helpers/command.js";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm } = detectPackageManager();
 
@@ -15,7 +16,7 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "remix",
 	displayName: "Remix",

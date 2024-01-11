@@ -6,7 +6,8 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm } = detectPackageManager();
 
@@ -74,7 +75,7 @@ function updateAngularJson(ctx: C3Context) {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
 }
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "angular",
 	displayName: "Angular",

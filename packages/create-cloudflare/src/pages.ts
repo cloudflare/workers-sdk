@@ -12,7 +12,8 @@ import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
 import { getProductionBranch, quoteShellArgs } from "./common";
 import { copyTemplateFiles } from "./templateMap";
-import type { C3Context, FrameworkConfig } from "types";
+import type { TemplateConfig } from "./templateMap";
+import type { C3Context } from "types";
 
 /** How many times to retry the create project command before failing. */
 const CREATE_PROJECT_RETRIES = 3;
@@ -23,7 +24,7 @@ const VERIFY_PROJECT_RETRIES = 3;
 const { npx } = detectPackageManager();
 
 export const runPagesGenerator = async (ctx: C3Context) => {
-	const frameworkConfig = ctx.template as unknown as FrameworkConfig;
+	const frameworkConfig = ctx.template as unknown as TemplateConfig;
 
 	// Generate
 	const { generate, configure } = frameworkConfig;

@@ -40,7 +40,3 @@ type DeploymentInfo = {
 	queues?: Record<string, string>;
 	kvNamespaces?: Record<string, string>;
 };
-
-export type FrameworkConfig = TemplateConfig & {
-	configure?: (ctx: C3Context) => Promise<void>;
-};

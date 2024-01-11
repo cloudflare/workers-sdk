@@ -1,6 +1,7 @@
 import { logRaw } from "@cloudflare/cli";
 import { runFrameworkGenerator } from "helpers/command";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
@@ -12,7 +13,7 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hono",
 	displayName: "Hono",

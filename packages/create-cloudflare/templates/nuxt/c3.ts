@@ -6,7 +6,8 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { npmInstall, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm } = detectPackageManager();
 
@@ -46,7 +47,7 @@ function updateNuxtConfig() {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFileName}\``)}`);
 }
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "nuxt",
 	platform: "pages",

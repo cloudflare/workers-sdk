@@ -3,7 +3,8 @@ import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm } = detectPackageManager();
 
@@ -28,7 +29,7 @@ const configure = async (ctx: C3Context) => {
 	updateStatus(`Adding the Cloudflare Pages adapter to vite config`);
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "solid",
 	displayName: "Solid",

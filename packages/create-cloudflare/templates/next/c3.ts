@@ -28,7 +28,8 @@ import {
 	nextConfig,
 	readme,
 } from "./templates";
-import type { C3Args, FrameworkConfig, C3Context } from "types";
+import type { C3Args, C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm, npx } = detectPackageManager();
 
@@ -142,7 +143,7 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig);
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "next",
 	platform: "pages",

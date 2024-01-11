@@ -1,7 +1,8 @@
 import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { C3Context, FrameworkConfig } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm } = detectPackageManager();
 
@@ -9,7 +10,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "classic"]);
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "docusaurus",
 	platform: "pages",

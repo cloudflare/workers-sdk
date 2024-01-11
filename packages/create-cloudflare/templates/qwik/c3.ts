@@ -3,7 +3,8 @@ import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { quoteShellArgs } from "../../src/common";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm, npx } = detectPackageManager();
 
@@ -22,7 +23,7 @@ const configure = async (ctx: C3Context) => {
 	await runCommand(cmd);
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "qwik",
 	displayName: "Qwik",

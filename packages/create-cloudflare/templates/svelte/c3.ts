@@ -10,7 +10,8 @@ import { compatDateFlag, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npm } = detectPackageManager();
 
@@ -65,7 +66,7 @@ const configure = async (ctx: C3Context) => {
 	}
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "svelte",
 	displayName: "Svelte",

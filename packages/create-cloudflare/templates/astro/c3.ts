@@ -3,7 +3,8 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, C3Context } from "types";
+import type { C3Context } from "types";
+import { TemplateConfig } from "../../src/templateMap";
 
 const { npx } = detectPackageManager();
 
@@ -29,7 +30,7 @@ const configure = async (ctx: C3Context) => {
 	});
 };
 
-const config: FrameworkConfig = {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "astro",
 	platform: "pages",
