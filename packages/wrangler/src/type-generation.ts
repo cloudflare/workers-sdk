@@ -59,12 +59,6 @@ export async function generateTypes(
 		}
 	}
 
-	if (configToDTS.constellation) {
-		for (const service of configToDTS.constellation) {
-			envTypeStructure.push(`${service.binding}: Fetcher;`);
-		}
-	}
-
 	if (configToDTS.analytics_engine_datasets) {
 		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
 			envTypeStructure.push(

@@ -334,7 +334,6 @@ export type AdditionalDevProps = {
 	additionalModules?: CfModule[];
 	moduleRoot?: string;
 	rules?: Rule[];
-	constellation?: Environment["constellation"];
 };
 
 export type StartDevOptions = DevArguments &
@@ -943,7 +942,6 @@ function getBindings(
 			...(args.d1Databases || []),
 		],
 		vectorize: configParam.vectorize,
-		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
 			if (!hyperdrive.localConnectionString) {
 				throw new Error(
@@ -953,12 +951,6 @@ function getBindings(
 			return hyperdrive;
 		}),
 	};
-
-	if (bindings.constellation && bindings.constellation.length > 0) {
-		logger.warn(
-			"`constellation` is deprecated and will be removed in the next major version.\nPlease migrate to Workers AI, learn more here https://developers.cloudflare.com/workers-ai/."
-		);
-	}
 
 	return bindings;
 }
