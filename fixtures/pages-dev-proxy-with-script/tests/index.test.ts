@@ -46,7 +46,6 @@ async function startWranglerPagesDevProxy(extraArgs: string[] = []): Promise<{
 				port: parsedMessage.port,
 			});
 		});
-		debugger;
 	});
 }
 
