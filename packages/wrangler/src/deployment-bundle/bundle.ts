@@ -3,6 +3,7 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
@@ -248,7 +249,7 @@ export async function bundleWorker(
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
 		if (!middleware.supports.includes(entry.format)) {
-			throw new Error(
+			throw new UserError(
 				`Your Worker is written using the "${entry.format}" format, which isn't supported by the "${middleware.name}" middleware. To use "${middleware.name}" middleware, convert your Worker to the "${middleware.supports[0]}" format`
 			);
 		}
@@ -356,7 +357,7 @@ export async function bundleWorker(
 			await ctx.watch();
 			result = await initialBuildResultPromise;
 			if (result.errors.length > 0) {
-				throw new Error("Failed to build");
+				throw new UserError("Failed to build");
 			}
 
 			stop = async function () {
@@ -383,7 +384,7 @@ export async function bundleWorker(
 		.map((x) => x.class_name);
 	if (notExportedDOs.length) {
 		const relativePath = path.relative(process.cwd(), entryFile);
-		throw new Error(
+		throw new UserError(
 			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
 				", "
 			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`

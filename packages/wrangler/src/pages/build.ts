@@ -2,7 +2,7 @@ import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve as resolvePath } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
@@ -358,7 +358,7 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 	}
 	const nodejsCompat = !!args.compatibilityFlags?.includes("nodejs_compat");
 	if (legacyNodeCompat && nodejsCompat) {
-		throw new Error(
+		throw new UserError(
 			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command."
 		);
 	}

@@ -3,6 +3,7 @@ import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
+import { UserError } from "../errors";
 import {
 	demandOneOfOption,
 	printWranglerBanner,
@@ -564,7 +565,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				const content = parseJSON(readFileSync(filename), filename);
 
 				if (!Array.isArray(content)) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of key-value objects but got type "${typeof content}".`
 					);
@@ -596,7 +597,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					);
 				}
 				if (errors.length > 0) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Each item in the array should be an object that matches:\n\n` +
 							`interface KeyValue {\n` +
@@ -699,7 +700,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				const content = parseJSON(readFileSync(filename), filename) as string[];
 
 				if (!Array.isArray(content)) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of strings but got:\n${content}`
 					);
@@ -718,7 +719,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				}
 
 				if (errors.length > 0) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of strings.\n` +
 							errors.join("\n")

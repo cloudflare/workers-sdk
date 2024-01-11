@@ -3,6 +3,7 @@ import { Box, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { withConfig } from "../../config";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
@@ -33,7 +34,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
-			throw new Error(
+			throw new UserError(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}

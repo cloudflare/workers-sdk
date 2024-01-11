@@ -5,7 +5,7 @@ import * as stream from "node:stream";
 import { ReadableStream } from "node:stream/web";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -127,7 +127,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								async (r2Bucket) => {
 									const object = await r2Bucket.get(key);
 									if (object === null) {
-										throw new Error("The specified key does not exist.");
+										throw new UserError("The specified key does not exist.");
 									}
 									// Note `object.body` is only valid inside this closure
 									await stream.promises.pipeline(object.body, output);

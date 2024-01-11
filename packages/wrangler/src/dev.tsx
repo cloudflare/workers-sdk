@@ -11,6 +11,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 
 import { startDevServer } from "./dev/start-server";
+import { UserError } from "./errors";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
@@ -239,7 +240,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 			})
 			.check((argv) => {
 				if (argv["live-reload"] && argv.remote) {
-					throw new Error(
+					throw new UserError(
 						"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
 					);
 				}
@@ -285,7 +286,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 	if (args.remote) {
 		const isLoggedIn = await loginOrRefreshIfRequired();
 		if (!isLoggedIn) {
-			throw new Error(
+			throw new UserError(
 				"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
 			);
 		}
@@ -614,7 +615,9 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const devServer = await getDevServer(config);
 	if (!devServer) {
-		throw logger.error("Failed to start dev server.");
+		const error = new Error("Failed to start dev server.");
+		logger.error(error.message);
+		throw error;
 	}
 
 	return {
@@ -675,7 +678,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 
 			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
 			if (host === undefined) {
-				throw new Error(
+				throw new UserError(
 					`Cannot infer host from first route: ${JSON.stringify(
 						firstRoute
 					)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
@@ -732,17 +735,19 @@ async function validateDevServerSettings(
 		);
 	}
 	if (args.experimentalPublic) {
-		throw new Error(
+		throw new UserError(
 			"The --experimental-public field has been renamed to --assets"
 		);
 	}
 
 	if (args.public) {
-		throw new Error("The --public field has been renamed to --assets");
+		throw new UserError("The --public field has been renamed to --assets");
 	}
 
 	if ((args.assets ?? config.assets) && (args.site ?? config.site)) {
-		throw new Error("Cannot use Assets and Workers Sites in the same Worker.");
+		throw new UserError(
+			"Cannot use Assets and Workers Sites in the same Worker."
+		);
 	}
 
 	if (args.assets) {
@@ -770,7 +775,7 @@ async function validateDevServerSettings(
 		args.compatibilityFlags ?? config.compatibility_flags;
 	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
 	if (legacyNodeCompat && nodejsCompat) {
-		throw new Error(
+		throw new UserError(
 			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
 		);
 	}
@@ -860,7 +865,7 @@ function getBindings(
 					if (!preview_id && !local) {
 						// TODO: This error has to be a _lot_ better, ideally just asking
 						// to create a preview namespace for the user automatically
-						throw new Error(
+						throw new UserError(
 							`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
 						); // Ugh, I really don't like this message very much
 					}
@@ -900,7 +905,7 @@ function getBindings(
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
 					if (!preview_bucket_name && !local) {
-						throw new Error(
+						throw new UserError(
 							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
 						);
 					}
@@ -946,7 +951,7 @@ function getBindings(
 		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
 			if (!hyperdrive.localConnectionString) {
-				throw new Error(
+				throw new UserError(
 					`In development, you should use a local postgres connection string to emulate hyperdrive functionality. Please setup postgres locally and set the value of "${hyperdrive.binding}"'s "localConnectionString" to the postgres connection string in your wrangler.toml`
 				);
 			}

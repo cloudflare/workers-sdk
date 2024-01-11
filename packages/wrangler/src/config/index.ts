@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
@@ -52,7 +53,7 @@ export function readConfig<CommandArgs>(
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
-		throw new Error(diagnostics.renderErrors());
+		throw new UserError(diagnostics.renderErrors());
 	}
 
 	return config;

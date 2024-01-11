@@ -34,6 +34,7 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
+import { UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
@@ -43,7 +44,7 @@ import * as metrics from "./metrics";
 
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
-import { formatMessage, ParseError } from "./parse";
+import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
@@ -94,7 +95,7 @@ export function getRules(config: Config): Config["rules"] {
 	const rules = config.rules ?? config.build?.upload?.rules ?? [];
 
 	if (config.rules && config.build?.upload?.rules) {
-		throw new Error(
+		throw new UserError(
 			`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
 		);
 	}
@@ -169,7 +170,7 @@ export function demandOneOfOption(...options: string[]) {
 	};
 }
 
-export class CommandLineArgsError extends Error {}
+export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
 	// Type check result against CommonYargsOptions to make sure we've included
@@ -716,14 +717,27 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
-	addBreadcrumb(`wrangler ${argv.join(" ")}`);
 
 	const wrangler = createCLIParser(argv);
+
+	// Register Yargs middleware to record command as Sentry breadcrumb
+	let recordedCommand = false;
+	const wranglerWithMiddleware = wrangler.middleware((args) => {
+		// Middleware called for each sub-command, but only want to record once
+		if (recordedCommand) return;
+		recordedCommand = true;
+		// `args._` doesn't include any positional arguments (e.g. script name,
+		// key to fetch) or flags
+		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+	}, /* applyBeforeValidation */ true);
+
 	let cliHandlerThrew = false;
 	try {
-		await wrangler.parse();
+		await wranglerWithMiddleware.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
+		let mayReport = true;
+
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
@@ -732,6 +746,7 @@ export async function main(argv: string[]): Promise<void> {
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
+			mayReport = false;
 			logger.log(formatMessage(e));
 			const envAuth = getAuthFromEnv();
 			if (envAuth !== undefined && "apiToken" in envAuth) {
@@ -753,6 +768,7 @@ export async function main(argv: string[]): Promise<void> {
 			// the current terminal doesn't support raw mode, which Ink needs to render
 			// Ink doesn't throw a typed error or subclass or anything, so we just check the message content.
 			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
+			mayReport = false;
 
 			const currentPlatform = os.platform();
 
@@ -773,6 +789,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
+			mayReport = false;
 			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
@@ -781,8 +798,19 @@ export async function main(argv: string[]): Promise<void> {
 				`${fgGreenColor}%s${resetColor}`,
 				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
+		}
+
+		if (
+			// Only report the error if we didn't just handle it
+			mayReport &&
+			// ...and it's not a user error
+			!(e instanceof UserError) &&
+			// ...and it's not an un-reportable API error
+			!(e instanceof APIError && !e.reportable)
+		) {
 			await captureGlobalException(e);
 		}
+
 		throw e;
 	} finally {
 		try {

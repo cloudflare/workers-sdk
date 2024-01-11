@@ -1,3 +1,5 @@
+import assert from "node:assert";
+import * as Sentry from "@sentry/node";
 import { rest } from "msw";
 
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -10,6 +12,11 @@ import { runWrangler } from "./helpers/run-wrangler";
 
 declare const global: { SENTRY_DSN: string | undefined };
 
+interface EnvelopeRequest {
+	envelope: string;
+	url: string;
+}
+
 describe("sentry", () => {
 	const ORIGINAL_SENTRY_DSN = global.SENTRY_DSN;
 	const std = mockConsoleMethods();
@@ -18,13 +25,14 @@ describe("sentry", () => {
 	mockApiToken();
 	const { setIsTTY } = useMockIsTTY();
 
-	let sentryRequests: { count: number } | undefined;
+	let sentryRequests: EnvelopeRequest[] | undefined;
 
 	beforeEach(() => {
 		global.SENTRY_DSN =
 			"https://9edbb8417b284aa2bbead9b4c318918b@sentry.example.com/24601";
 
 		sentryRequests = mockSentryEndpoint();
+		Sentry.getCurrentScope().clearBreadcrumbs();
 	});
 	afterEach(() => {
 		global.SENTRY_DSN = ORIGINAL_SENTRY_DSN;
@@ -34,20 +42,22 @@ describe("sentry", () => {
 	describe("non interactive", () => {
 		it("should not hit sentry in normal usage", async () => {
 			await runWrangler("version");
-			expect(sentryRequests?.count).toEqual(0);
+			expect(sentryRequests?.length).toEqual(0);
 		});
 
 		it("should not hit sentry after error", async () => {
-			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[AssertionError: A worker name must be defined, either via --name, or in wrangler.toml]`
-			);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
+			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
+							]
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-		? Would you like to report this error to Cloudflare?
-		🤖 Using fallback value in non-interactive context: no"
-	`);
-			expect(sentryRequests?.count).toEqual(0);
+			"Getting User settings...
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			? Would you like to report this error to Cloudflare?
+			🤖 Using fallback value in non-interactive context: no"
+		`);
+			expect(sentryRequests?.length).toEqual(0);
 		});
 	});
 	describe("interactive", () => {
@@ -57,49 +67,262 @@ describe("sentry", () => {
 		afterEach(() => {
 			setIsTTY(false);
 		});
+
 		it("should not hit sentry in normal usage", async () => {
 			await runWrangler("version");
-			expect(sentryRequests?.count).toEqual(0);
+			expect(sentryRequests?.length).toEqual(0);
 		});
-		it("should not hit sentry after error when permission denied", async () => {
+
+		it("should not hit sentry with user error", async () => {
+			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
+				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+			expect(sentryRequests?.length).toEqual(0);
+		});
+
+		it("should not hit sentry after reportable error when permission denied", async () => {
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare?",
 				result: false,
 			});
-			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[AssertionError: A worker name must be defined, either via --name, or in wrangler.toml]`
-			);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
+			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
+							]
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"
+			"Getting User settings...
+
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		`);
-			expect(sentryRequests?.count).toEqual(0);
+			expect(sentryRequests?.length).toEqual(0);
 		});
-		it("should hit sentry after error when permission provided", async () => {
+
+		it("should hit sentry after reportable error when permission provided", async () => {
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare?",
 				result: true,
 			});
-			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[AssertionError: A worker name must be defined, either via --name, or in wrangler.toml]`
-			);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
+			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
+							]
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"
+			"Getting User settings...
+
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		`);
+
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
-			expect(sentryRequests?.count).toBeGreaterThan(0);
+			expect(sentryRequests?.length).toBeGreaterThan(0);
+			assert(sentryRequests !== undefined);
+
+			// Check requests don't include PII
+			const envelopes = sentryRequests.map(({ envelope }) => {
+				const parts = envelope.split("\n").map((line) => JSON.parse(line));
+				expect(parts).toHaveLength(3);
+				return { header: parts[0], type: parts[1], data: parts[2] };
+			});
+			const event = envelopes.find(({ type }) => type.type === "event");
+			assert(event !== undefined);
+
+			// Redact fields with random contents we know don't contain PII
+			event.header.event_id = "";
+			event.header.sent_at = "";
+			event.header.trace.trace_id = "";
+			event.header.trace.release = "";
+			for (const exception of event.data.exception.values) {
+				for (const frame of exception.stacktrace.frames) {
+					if (
+						frame.filename.startsWith("C:\\Project\\") ||
+						frame.filename.startsWith("/project/")
+					) {
+						frame.filename = "/project/...";
+					}
+					frame.function = "";
+					frame.lineno = 0;
+					frame.colno = 0;
+					frame.in_app = false;
+					frame.pre_context = [];
+					frame.context_line = "";
+					frame.post_context = [];
+				}
+			}
+			event.data.event_id = "";
+			event.data.contexts.trace.trace_id = "";
+			event.data.contexts.trace.span_id = "";
+			event.data.contexts.runtime.version = "";
+			event.data.contexts.app.app_start_time = "";
+			event.data.contexts.app.app_memory = 0;
+			event.data.contexts.os = {};
+			event.data.contexts.device = {};
+			event.data.timestamp = 0;
+			event.data.release = "";
+			for (const breadcrumb of event.data.breadcrumbs) {
+				breadcrumb.timestamp = 0;
+			}
+
+			// If more data is included in the Sentry request, we'll need to verify it
+			// couldn't contain PII and update this snapshot
+			expect(event).toMatchInlineSnapshot(`
+			Object {
+			  "data": Object {
+			    "breadcrumbs": Array [
+			      Object {
+			        "level": "log",
+			        "message": "wrangler whoami",
+			        "timestamp": 0,
+			      },
+			    ],
+			    "contexts": Object {
+			      "app": Object {
+			        "app_memory": 0,
+			        "app_start_time": "",
+			      },
+			      "cloud_resource": Object {},
+			      "device": Object {},
+			      "os": Object {},
+			      "runtime": Object {
+			        "name": "node",
+			        "version": "",
+			      },
+			      "trace": Object {
+			        "span_id": "",
+			        "trace_id": "",
+			      },
+			    },
+			    "environment": "production",
+			    "event_id": "",
+			    "exception": Object {
+			      "values": Array [
+			        Object {
+			          "mechanism": Object {
+			            "handled": true,
+			            "type": "generic",
+			          },
+			          "stacktrace": Object {
+			            "frames": Array [
+			              Object {
+			                "colno": 0,
+			                "context_line": "",
+			                "filename": "/project/...",
+			                "function": "",
+			                "in_app": false,
+			                "lineno": 0,
+			                "module": "@mswjs.interceptors.src.interceptors.ClientRequest:NodeClientRequest.ts",
+			                "post_context": Array [],
+			                "pre_context": Array [],
+			              },
+			              Object {
+			                "colno": 0,
+			                "context_line": "",
+			                "filename": "/project/...",
+			                "function": "",
+			                "in_app": false,
+			                "lineno": 0,
+			                "module": "@mswjs.interceptors.src.interceptors.ClientRequest:NodeClientRequest.ts",
+			                "post_context": Array [],
+			                "pre_context": Array [],
+			              },
+			              Object {
+			                "colno": 0,
+			                "context_line": "",
+			                "filename": "node:domain",
+			                "function": "",
+			                "in_app": false,
+			                "lineno": 0,
+			                "module": "node:domain",
+			                "post_context": Array [],
+			                "pre_context": Array [],
+			              },
+			              Object {
+			                "colno": 0,
+			                "context_line": "",
+			                "filename": "node:events",
+			                "function": "",
+			                "in_app": false,
+			                "lineno": 0,
+			                "module": "node:events",
+			                "post_context": Array [],
+			                "pre_context": Array [],
+			              },
+			              Object {
+			                "colno": 0,
+			                "context_line": "",
+			                "filename": "/project/...",
+			                "function": "",
+			                "in_app": false,
+			                "lineno": 0,
+			                "module": "node-fetch.lib:index",
+			                "post_context": Array [],
+			                "pre_context": Array [],
+			              },
+			            ],
+			          },
+			          "type": "FetchError",
+			          "value": "request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
+							",
+			        },
+			      ],
+			    },
+			    "modules": Object {},
+			    "platform": "node",
+			    "release": "",
+			    "sdk": Object {
+			      "integrations": Array [
+			        "InboundFilters",
+			        "FunctionToString",
+			        "LinkedErrors",
+			        "OnUncaughtException",
+			        "OnUnhandledRejection",
+			        "ContextLines",
+			        "Context",
+			        "Modules",
+			      ],
+			      "name": "sentry.javascript.node",
+			      "packages": Array [
+			        Object {
+			          "name": "npm:@sentry/node",
+			          "version": "7.87.0",
+			        },
+			      ],
+			      "version": "7.87.0",
+			    },
+			    "timestamp": 0,
+			  },
+			  "header": Object {
+			    "event_id": "",
+			    "sdk": Object {
+			      "name": "sentry.javascript.node",
+			      "version": "7.87.0",
+			    },
+			    "sent_at": "",
+			    "trace": Object {
+			      "environment": "production",
+			      "public_key": "9edbb8417b284aa2bbead9b4c318918b",
+			      "release": "",
+			      "trace_id": "",
+			    },
+			  },
+			  "type": Object {
+			    "type": "event",
+			  },
+			}
+		`);
 		});
 	});
 });
 
 function mockSentryEndpoint() {
-	const requests = { count: 0 };
+	const requests: EnvelopeRequest[] = [];
 	msw.use(
 		rest.post(
 			`https://platform.dash.cloudflare.com/sentry/envelope`,
 			async (req, res, cxt) => {
-				requests.count++;
+				requests.push(await req.json());
 				return res(cxt.status(200), cxt.json({}));
 			}
 		)

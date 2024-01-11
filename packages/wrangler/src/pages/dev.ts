@@ -471,9 +471,8 @@ export const Handler = async ({
 	if (scriptPath === "") {
 		// Failed to get a script with or without Functions,
 		// something really bad must have happened.
-		throw new FatalError(
-			"Failed to start wrangler pages dev due to an unknown error",
-			1
+		throw new Error(
+			"Failed to start wrangler pages dev due to an unknown error"
 		);
 	}
 

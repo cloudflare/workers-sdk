@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { UserError } from "../errors";
 import { cloneIntoDirectory, initializeGit } from "../git-client";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { initHandler } from "../init";
@@ -252,7 +253,7 @@ function toUrlBase({ httpsUrl, gitUrl, shorthandUrl }: TemplateRegexUrlGroup) {
 			case "bb":
 				return "https://bitbucket.org";
 			default:
-				throw new Error(
+				throw new UserError(
 					`Unable to parse shorthand ${shorthandUrl}. Supported options are "bitbucket" ("bb"), "github" ("gh"), and "gitlab" ("gl")`
 				);
 		}
@@ -285,7 +286,7 @@ function parseTemplatePath(templatePath: string): {
 		| undefined;
 
 	if (!groups) {
-		throw new Error(`Unable to parse ${templatePath} as a template`);
+		throw new UserError(`Unable to parse ${templatePath} as a template`);
 	}
 
 	const { user, repository, subdirectoryPath, tag, ...urlGroups } = groups;

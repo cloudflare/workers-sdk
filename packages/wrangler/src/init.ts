@@ -11,6 +11,7 @@ import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
+import { UserError } from "./errors";
 import { initializeGit, getGitVersioon, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
@@ -233,7 +234,7 @@ export async function initHandler(args: InitArgs) {
 				);
 			} catch (err) {
 				if ((err as { code?: number }).code === 10090) {
-					throw new Error(
+					throw new UserError(
 						"wrangler couldn't find a Worker script with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
 					);
 				}

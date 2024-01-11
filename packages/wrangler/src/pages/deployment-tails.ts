@@ -205,7 +205,7 @@ export async function Handler({
 	}
 
 	if (!deploymentId || !projectName) {
-		throw new FatalError("An unknown error occurred.", 1);
+		throw new Error("An unknown error occurred.");
 	}
 
 	const filters = translateCLICommandToFilterMessage({
