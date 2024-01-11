@@ -94,6 +94,14 @@ interface EnvironmentInheritable {
 	find_additional_modules: boolean | undefined;
 
 	/**
+	 * Determines whether Wrangler will preserve bundled file names.
+	 * Defaults to false.
+	 * If left unset, files will be named using the pattern ${fileHash}-${basename}, 
+	 * for example, `34de60b44167af5c5a709e62a4e20c4f18c9e3b6-favicon.ico`.
+	 */
+	preserve_file_names: boolean | undefined;
+
+	/**
 	 * The directory in which module rules should be evaluated when including additional files into a worker deployment.
 	 * This defaults to the directory containing the `main` entry point of the worker if not specified.
 	 *
