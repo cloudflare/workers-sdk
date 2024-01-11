@@ -30,7 +30,7 @@ index 14d3e0071b..fa96b72fef 100644
    }
  </style>
 -<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-nR3ouvAaRD5oAvx24d8aFSv1EH9XKi9uVvoOsvVuW8U=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
-+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-nR3ouvAaRD5oAvx24d8aFSv1EH9XKi9uVvoOsvVuW8U=' script-src 'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
++<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-nR3ouvAaRD5oAvx24d8aFSv1EH9XKi9uVvoOsvVuW8U=' 'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
  <meta name="referrer" content="no-referrer">
 +<script>
 +// Vendored from https://unpkg.com/@ungap/custom-elements@1.3.0/min.js
