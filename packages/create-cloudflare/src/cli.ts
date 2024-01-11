@@ -11,7 +11,7 @@ import {
 } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { npmInstall, runCommand } from "helpers/command";
+import { npmInstall, resetPackageManager, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { generateTypes } from "helpers/wrangler";
 import semver from "semver";
@@ -106,7 +106,7 @@ export const runCli = async (args: Partial<C3Args>) => {
 };
 
 const runTemplate = async (ctx: C3Context) => {
-	const { platform, generate } = ctx.template;
+	const { platform, generate, configure } = ctx.template;
 
 	if (generate) {
 		await generate(ctx);
@@ -117,15 +117,23 @@ const runTemplate = async (ctx: C3Context) => {
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
 
+	// Rectify discrepancies between installed node_modules and package specific
+	// lockfile before potentially adding new packages in `configure`
+	await resetPackageManager(ctx);
+
 	endSection(`Application created`);
 
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+
+	if (configure) {
+		await configure({ ...ctx });
+	}
 
 	// As time goes on, lift increasingly more logic out of the generators into here
 	if (platform === "workers") {
 		await runWorkersGenerator(ctx);
 	} else {
-		await runPagesGenerator(ctx);
+		await runPagesGenerator();
 	}
 
 	await updatePackageJson(ctx);
