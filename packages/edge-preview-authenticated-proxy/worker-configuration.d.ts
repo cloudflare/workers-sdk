@@ -4,6 +4,7 @@ interface Env {
 	PREVIEW: "preview.devprod.cloudflare.dev";
 	RAW_HTTP: "rawhttp.devprod.cloudflare.dev";
 	// Secrets
+	PROMETHEUS_TOKEN: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
 	TOKEN_LOOKUP: KVNamespace;

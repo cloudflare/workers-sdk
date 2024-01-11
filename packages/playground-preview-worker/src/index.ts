@@ -1,9 +1,13 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
+import prom, { type RegistryType } from "promjs";
 import { Toucan } from "toucan-js";
 import { ZodIssue } from "zod";
 import { handleException, setupSentry } from "./sentry";
-const app = new Hono<{ Bindings: Env; Variables: { sentry: Toucan } }>({
+const app = new Hono<{
+	Bindings: Env;
+	Variables: { sentry: Toucan; prometheus: RegistryType };
+}>({
 	// This replaces . with / in url hostnames, which allows for parameter matching in hostnames as well as paths
 	// e.g. https://something.example.com/hello/world -> something/example/com/hello/world
 	getPath: (req) => {
@@ -178,6 +182,33 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		},
 	});
 }
+
+app.use("*", async (c, next) => {
+	c.set("prometheus", prom());
+
+	const registry = c.get("prometheus");
+	const requestCounter = registry.create(
+		"counter",
+		"devprod_playground_preview_worker_request_total",
+		"Request counter for DevProd's playground-preview-worker service"
+	);
+	requestCounter.inc();
+
+	try {
+		return await next();
+	} finally {
+		c.executionCtx.waitUntil(
+			fetch("https://workers-logging.cfdata.org/prometheus", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${c.env.PROMETHEUS_TOKEN}`,
+				},
+				body: registry.metrics(),
+			})
+		);
+	}
+});
+
 app.use("*", async (c, next) => {
 	c.set(
 		"sentry",
@@ -334,6 +365,15 @@ app.all(`${rootDomain}/*`, (c) => fetch(c.req.raw));
 app.onError((e, c) => {
 	console.log("ONERROR");
 	const sentry = c.get("sentry");
+	const registry = c.get("prometheus");
+
+	const errorCounter = registry.create(
+		"counter",
+		"devprod_playground_preview_worker_error_total",
+		"Error counter for DevProd's playground-preview-worker service"
+	);
+	errorCounter.inc();
+
 	return handleException(e, sentry);
 });
 
