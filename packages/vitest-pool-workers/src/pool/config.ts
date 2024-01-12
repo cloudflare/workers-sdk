@@ -144,6 +144,29 @@ function parseCustomPoolOptions(
 export async function parseProjectOptions(
 	project: WorkspaceProject
 ): Promise<WorkersProjectOptions> {
+	// Make sure the user hasn't specified a custom environment. This was how
+	// users enabled Miniflare 2's Vitest environment, so it's likely users will
+	// hit this case.
+	const environment = project.config.environment;
+	if (environment !== undefined && environment !== "node") {
+		const quotedEnvironment = JSON.stringify(environment);
+
+		let migrationGuide = "";
+		if (environment === "miniflare") {
+			// TODO(soon): include a link to the migration guide once it's written
+			migrationGuide =
+				", and refer to the migration guide if upgrading from `vitest-environment-miniflare`";
+		}
+
+		const message = [
+			`Unexpected custom \`environment\` ${quotedEnvironment} in project ${project.path}.`,
+			"The Workers pool always runs your tests inside of an environment providing Workers runtime APIs.",
+			`Please remove the \`environment\` configuration${migrationGuide}.`,
+			"Use `poolMatchGlobs`/`environmentMatchGlobs` to run a subset of your tests in a different pool/environment.",
+		].join("\n");
+		throw new TypeError(message);
+	}
+
 	const rootPath =
 		typeof project.path === "string" ? path.dirname(project.path) : "";
 	const poolOptions = project.config.poolOptions;
