@@ -3,6 +3,8 @@ import {
 	fetchMock,
 	runInDurableObject,
 	runDurableObjectAlarm,
+	createExecutionContext,
+	getWaitUntil,
 } from "cloudflare:test";
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import worker, { transformResponse, Counter } from "./worker";
@@ -93,11 +95,9 @@ describe("kv", () => {
 		const request = new Request<unknown, IncomingRequestCfProperties>(
 			"http://localhost"
 		);
-		const ctx: ExecutionContext = {
-			waitUntil(_promise) {},
-			passThroughOnException() {},
-		};
+		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, env, ctx);
+		await getWaitUntil(ctx);
 		expect(await response.text()).toBe("body:http://localhost");
 	});
 

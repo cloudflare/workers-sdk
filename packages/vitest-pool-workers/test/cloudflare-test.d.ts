@@ -5,7 +5,6 @@ declare module "cloudflare:test" {
 	export const env: CloudflareTestEnv;
 	export const fetchMock: MockAgent;
 
-	// TODO(soon): ensure all these functions validate their arguments
 	export function runInDurableObject<O extends DurableObject, R>(
 		stub: DurableObjectStub,
 		callback: (instance: O, state: DurableObjectState) => R | Promise<R>
@@ -13,6 +12,26 @@ declare module "cloudflare:test" {
 	export function runDurableObjectAlarm(
 		stub: DurableObjectStub
 	): Promise<boolean /* ran */>;
+
+	export function createExecutionContext(): ExecutionContext;
+	export function getWaitUntil<T extends unknown[]>(
+		ctx: ExecutionContext
+	): Promise<T>;
+	export function createScheduledController(
+		options?: FetcherScheduledOptions
+	): ScheduledController;
+	export function getScheduledResult(
+		ctrl: ScheduledController,
+		ctx: ExecutionContext
+	): Promise<FetcherScheduledResult>;
+	export function createMessageBatch(
+		queueName: string,
+		messages: ServiceBindingQueueMessage[]
+	): MessageBatch;
+	export function getQueueResult(
+		batch: QueueController,
+		ctx: ExecutionContext
+	): Promise<FetcherQueueResult>;
 }
 
 // Taken from `undici` (https://github.com/nodejs/undici/tree/main/types) with
