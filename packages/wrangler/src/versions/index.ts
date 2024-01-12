@@ -3,18 +3,12 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import {
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-	printWranglerBanner,
-} from "../index";
+import { getRules, getScriptName, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
-import deploy from "./deploy";
+import versionsUpload from "./upload";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -54,7 +48,7 @@ async function standardPricingWarning(
 	} catch {}
 }
 
-export function deployOptions(yargs: CommonYargsArgv) {
+export function versionsUploadOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -109,25 +103,6 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
-			.option("experimental-public", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-			.option("public", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-				deprecated: true,
-				hidden: true,
-			})
-			.option("assets", {
-				describe: "Static assets to be served",
-				type: "string",
-				requiresArg: true,
-			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
 				type: "string",
@@ -156,20 +131,6 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			})
 			.option("define", {
 				describe: "A key-value pair to be substituted in the script",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("triggers", {
-				describe: "cron schedules to attach",
-				alias: ["schedule", "schedules"],
-				type: "string",
-				requiresArg: true,
-				array: true,
-			})
-			.option("routes", {
-				describe: "Routes to upload",
-				alias: "route",
 				type: "string",
 				requiresArg: true,
 				array: true,
@@ -207,26 +168,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				default: false,
 				type: "boolean",
 			})
-			.option("legacy-env", {
-				type: "boolean",
-				describe: "Use legacy environments",
-				hidden: true,
-			})
-			.option("logpush", {
-				type: "boolean",
-				describe:
-					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
-			})
-			.option("old-asset-ttl", {
-				describe:
-					"Expire old assets in given seconds rather than immediate deletion.",
-				type: "number",
-			})
 	);
 }
 
-export async function deployHandler(
-	args: StrictYargsOptionsToInterface<typeof deployOptions>
+export async function versionsUploadHandler(
+	args: StrictYargsOptionsToInterface<typeof versionsUploadOptions>
 ) {
 	await printWranglerBanner();
 
@@ -252,24 +198,6 @@ export async function deployHandler(
 		}
 	);
 
-	if (args.public) {
-		throw new Error("The --public field has been renamed to --assets");
-	}
-	if (args.experimentalPublic) {
-		throw new Error(
-			"The --experimental-public field has been renamed to --assets"
-		);
-	}
-
-	if ((args.assets || config.assets) && (args.site || config.site)) {
-		throw new Error("Cannot use Assets and Workers Sites in the same Worker.");
-	}
-
-	if (args.assets) {
-		logger.warn(
-			"The --assets argument is experimental and may change or break at any time"
-		);
-	}
 	if (args.latest) {
 		logger.warn(
 			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
@@ -281,17 +209,8 @@ export async function deployHandler(
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-	const assetPaths =
-		args.assets || config.assets
-			? getAssetPaths(config, args.assets)
-			: getSiteAssetPaths(
-					config,
-					args.site,
-					args.siteInclude,
-					args.siteExclude
-			  );
 	await standardPricingWarning(accountId, config);
-	await deploy({
+	await versionsUpload({
 		config,
 		accountId,
 		name: getScriptName(args, config),
@@ -304,13 +223,9 @@ export async function deployHandler(
 		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
-		triggers: args.triggers,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
-		routes: args.routes,
-		assetPaths,
-		legacyEnv: isLegacyEnv(config),
 		minify: args.minify,
 		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
@@ -318,8 +233,6 @@ export async function deployHandler(
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
-		logpush: args.logpush,
-		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
 	});
 }
