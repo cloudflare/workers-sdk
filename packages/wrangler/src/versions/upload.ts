@@ -60,6 +60,9 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	projectRoot: string | undefined;
+
+	tag: string | undefined;
+	message: string | undefined;
 };
 
 const scriptStartupErrorRegex = /startup/i;
@@ -101,7 +104,7 @@ export default async function versionsUpload(props: Props): Promise<void> {
 	if (accountId && name) {
 		try {
 			const serviceMetaData = await fetchResult(
-				`/accounts/${accountId}/workers/services/${name}`
+				`/accounts/${accountId}/workers/services/${name}` // TODO(consider): should this be a /versions endpoint?
 			);
 			const { default_environment } = serviceMetaData as {
 				default_environment: {
@@ -211,7 +214,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const start = Date.now();
 	const workerName = scriptName;
-	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
+	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}/versions`;
 
 	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
 	let deploymentId: string | null = null;
@@ -413,6 +416,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
 			try {
+				const body = createWorkerUploadForm(worker);
+
+				body.set(
+					"annotations",
+					JSON.stringify({
+						"workers/message": props.message,
+						"workers/tag": props.tag,
+						"workers/triggered_by": "wrangler",
+					})
+				);
+
 				const result = await fetchResult<{
 					available_on_subdomain: boolean;
 					id: string | null;
@@ -423,8 +437,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}>(
 					workerUrl,
 					{
-						method: "PUT",
-						body: createWorkerUploadForm(worker),
+						method: "POST",
+						body,
 						headers: await getMetricsUsageHeaders(config.send_metrics),
 					},
 					new URLSearchParams({

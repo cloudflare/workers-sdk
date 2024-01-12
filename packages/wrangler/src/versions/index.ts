@@ -168,6 +168,17 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				default: false,
 				type: "boolean",
 			})
+			// args only for `versions upload`, not `deploy`
+			.option("tag", {
+				describe: "A tag for this Worker Version",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("message", {
+				describe: "A descriptive message for this Worker Version",
+				type: "string",
+				requiresArg: true,
+			})
 	);
 }
 
@@ -234,5 +245,8 @@ export async function versionsUploadHandler(
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		projectRoot,
+
+		tag: args.tag,
+		message: args.message,
 	});
 }
