@@ -109,14 +109,9 @@ export const getTemplateMap = async () => {
 		common: await import("../templates/common/c3.json"),
 		scheduled: await import("../templates/scheduled/c3.json"),
 		queues: await import("../templates/queues/c3.json"),
-		kv: await import("../templates/kv/c3.json"),
-		r2: await import("../templates/r2/c3.json"),
-		d1: await import("../templates/d1/c3.json"),
-		"env-secrets": await import("../templates/env-secrets/c3.json"),
 		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
 		openapi: await import("../templates/openapi/c3.json"),
 		"remote-template": { displayName: "From a remote git repository" },
-		// "pre-existing": await import("../templates/pre-existing/c3.json"),
 		"pre-existing": (await import("../templates/pre-existing/c3")).default,
 	} as unknown as Record<string, TemplateConfig>;
 };

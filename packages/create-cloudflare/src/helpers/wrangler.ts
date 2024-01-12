@@ -33,29 +33,6 @@ export const wrangler = async (
 	});
 };
 
-// TODO: Consider if this is the best approach, or if we should
-// generate these ourselves so we can add stubbed out definitions
-// for resources the user might create in the future, as well as links
-// to docs for the different resource types
-// This also has a bad experience if the user decides to deploy, since
-// bindings will get skipped and types will be empty
-export const generateTypes = async (ctx: C3Context) => {
-	if (ctx.template.platform !== "workers") {
-		return;
-	}
-
-	try {
-		// We need to use runCommand instead of `wrangler` here because
-		// this runs in unauthenticated contexts
-		await runCommand([npx, "wrangler", "types"], {
-			cwd: ctx.project.path,
-			silent: true,
-		});
-	} catch (error) {
-		return crash("Failed to fetch queues. Please try deploying again later");
-	}
-};
-
 /*
   AUTHENTICATED COMMANDS
 
