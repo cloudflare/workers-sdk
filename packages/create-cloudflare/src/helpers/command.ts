@@ -248,18 +248,19 @@ export const installPackages = async (
 };
 
 /**
- * Resets the package manager context for a project by clearing out existing dependencies
- * and lock files then re-installing.
+ * If a mismatch is detected between the package manager being used and the lockfiles on disk,
+ * reset the state by deleting the lockfile and dependencies then re-installing with the package
+ * manager used by the calling process.
  *
- * This is needed in situations where npm is automatically used by framework creators for the initial
- * install, since using other package managers in a folder with an existing npm install will cause
- * failures when installing subsequent packages
+ * This is needed since some scaffolding tools don't detect and use the pm of the calling process,
+ * and instead always use `npm`. With a project in this state, installing additional dependencies
+ * with `pnpm` or `yarn` can result in install errors.
+ *
  */
-
-export const resetPackageManager = async (ctx: C3Context) => {
+export const rectifyPmMismatch = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 
-	if (!needsPackageManagerReset(ctx)) {
+	if (!detectPmMismatch(ctx)) {
 		return;
 	}
 
@@ -277,7 +278,7 @@ export const resetPackageManager = async (ctx: C3Context) => {
 	});
 };
 
-const needsPackageManagerReset = (ctx: C3Context) => {
+const detectPmMismatch = (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 

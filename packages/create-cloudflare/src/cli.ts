@@ -14,7 +14,7 @@ import { C3_DEFAULTS } from "helpers/cli";
 import {
 	installWrangler,
 	npmInstall,
-	resetPackageManager,
+	rectifyPmMismatch,
 	runCommand,
 } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
@@ -129,19 +129,15 @@ const create = async (ctx: C3Context) => {
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
-
-	// Rectify discrepancies between installed node_modules and package specific
-	// lockfile before potentially adding new packages in `configure`
-	await resetPackageManager(ctx);
+	await rectifyPmMismatch(ctx);
 
 	endSection(`Application created`);
 };
 
 const configure = async (ctx: C3Context) => {
-	const { template } = ctx;
-
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
 
+	const { template } = ctx;
 	if (template.configure) {
 		await template.configure({ ...ctx });
 	}
