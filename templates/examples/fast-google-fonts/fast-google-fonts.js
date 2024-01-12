@@ -24,7 +24,10 @@ export default {
 				// For any browsers that don't (curl, etc), they will just fall-back to non-accelerated.
 				if (url.pathname.startsWith("/fonts.googleapis.com/")) {
 					// Proxy the stylesheet for pages using CSP
-					return proxyStylesheet("https:/" + url.pathname + url.search, request);
+					return proxyStylesheet(
+						"https:/" + url.pathname + url.search,
+						request
+					);
 				} else {
 					ctx.respondWith(processRequest(request));
 				}
