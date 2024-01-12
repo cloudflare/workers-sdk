@@ -182,7 +182,7 @@ export const runDeploy = async (ctx: C3Context) => {
 	const deployCmd = [
 		...baseDeployCmd,
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
-		...(ctx.commitMessage && !insideGitRepo
+		...(ctx.template.platform === "pages" && ctx.commitMessage && !insideGitRepo
 			? [
 					...(name === "npm" ? ["--"] : []),
 					"--commit-message",
@@ -420,11 +420,15 @@ export const gitCommit = async (ctx: C3Context) => {
 
 // TODO: fix this. probably broken for the hono flow
 const createCommitMessage = async (ctx: C3Context) => {
-	if (ctx.template.platform === "workers") {
-		return "Initial commit (by create-cloudflare CLI)";
-	}
+	const isPages = ctx.template.platform === "pages";
 
-	const header = "Initialize web application via create-cloudflare CLI";
+	// if (ctx.template.platform === "workers") {
+	// 	return "Initial commit (by create-cloudflare CLI)";
+	// }
+
+	const header = isPages
+		? "Initialize web application via create-cloudflare CLI"
+		: "Initial commit (by create-cloudflare CLI)";
 
 	const packageManager = detectPackageManager();
 
@@ -434,8 +438,8 @@ const createCommitMessage = async (ctx: C3Context) => {
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
-		{ key: "framework", value: ctx.template.id },
-		{ key: "framework cli", value: getFrameworkCli(ctx) },
+		...(isPages ? [{ key: "framework", value: ctx.template.id }] : []),
+		...(isPages ? [{ key: "framework cli", value: getFrameworkCli(ctx) }] : []),
 		{
 			key: "package manager",
 			value: `${packageManager.name}@${packageManager.version}`,

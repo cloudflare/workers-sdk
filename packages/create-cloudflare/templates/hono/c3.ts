@@ -17,12 +17,9 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hono",
 	displayName: "Hono",
-	// TODO: make this work
-	// platform: 'workers',
-	platform: "pages",
+	platform: "workers",
 	generate,
 	devCommand: ["dev"],
 	deployCommand: ["deploy"],
-	type: "workers",
 };
 export default config;
