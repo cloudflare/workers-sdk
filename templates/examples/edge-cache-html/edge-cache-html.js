@@ -43,7 +43,7 @@ export default {
 
 		if (configured && !isImage && upstreamCache === null) {
 			ctx.passThroughOnException();
-			ctx.respondWith(processRequest(request));
+			return processRequest(request, ctx);
 		}
 	},
 };
