@@ -137,16 +137,16 @@ const create = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
 
-	const { template } = ctx;
-	if (template.configure) {
-		await template.configure({ ...ctx });
-	}
-
 	await installWrangler();
 	await installWorkersTypes(ctx);
 
 	await updatePackageJson(ctx);
 	await createWranglerToml(ctx);
+
+	const { template } = ctx;
+	if (template.configure) {
+		await template.configure({ ...ctx });
+	}
 
 	await offerGit(ctx);
 	await gitCommit(ctx);

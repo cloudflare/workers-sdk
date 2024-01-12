@@ -14,21 +14,19 @@ const config = {
 	displayName: "Pre-existing Worker (from Dashboard)",
 	platform: "workers",
 	hidden: true,
-	languages: ["js", "ts"],
+	languages: ["js"],
 	copyFiles: {
-		js: {
-			path: "../hello-world/js",
-		},
-		ts: {
-			path: "../hello-world/ts",
-		},
+		path: "../hello-world/js",
 	},
 	configure: async (ctx: C3Context) => {
 		await copyExistingWorkerFiles(ctx);
+
+		// Force no-deploy since the worker is already deployed
+		ctx.args.deploy = false;
 	},
 };
 
-async function copyExistingWorkerFiles(ctx: C3Context) {
+export async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { dlx, npm } = detectPackageManager();
 
 	await chooseAccount(ctx);

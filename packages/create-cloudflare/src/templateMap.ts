@@ -302,6 +302,7 @@ export const updatePackageJson = async (ctx: C3Context) => {
 	const placeholderNames = ["<TBD>", "TBD", ""];
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
 	let pkgJson = readJSON(pkgJsonPath);
+
 	if (placeholderNames.includes(pkgJson.name)) {
 		pkgJson.name = ctx.project.name;
 	}
