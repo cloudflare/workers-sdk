@@ -24,7 +24,6 @@ export type TemplateConfig = {
 	platform: "workers" | "pages";
 	hidden?: boolean;
 	languages?: string[];
-	bindings?: BindingsDefinition;
 	copyFiles?: StaticFileMap | VariantInfo;
 
 	generate?: (ctx: C3Context) => Promise<void>;
@@ -40,38 +39,6 @@ export type TemplateConfig = {
 	compatibilityFlags?: string[];
 	deployCommand?: string[];
 	devCommand?: string[];
-};
-
-type BindingsDefinition = {
-	kvNamespaces: BindingInfo[];
-	queues: QueueBindingInfo[];
-	r2Buckets: BindingInfo[];
-	d1Databases: D1BindingInfo[];
-	secrets: EnvBindingInfo[];
-	env: EnvBindingInfo[];
-};
-
-export type BindingInfo = {
-	boundVariable: string;
-	defaultValue: string;
-};
-
-export type QueueBindingInfo = BindingInfo & {
-	producer: boolean;
-	consumer: boolean;
-};
-
-export type EnvBindingInfo = {
-	boundVariable: string;
-	description: string;
-};
-
-export type SeedFileConfig = {
-	path: string;
-};
-
-export type D1BindingInfo = BindingInfo & {
-	seedFiles: SeedFileConfig[];
 };
 
 // A template can have a number of variants, usually js/ts
