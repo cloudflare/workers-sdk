@@ -66,6 +66,7 @@ import {
 	validateScopeKeys,
 } from "./user";
 import { vectorize } from "./vectorize/index";
+import { versionsUploadHandler, versionsUploadOptions } from "./versions";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
@@ -714,6 +715,16 @@ export function createCLIParser(argv: string[]) {
 			}
 		}
 	);
+
+	// versions
+	wrangler.command("versions", false, (versionYargs) => {
+		return versionYargs.command(
+			"upload",
+			"Upload a Worker for Gradual Rollouts [beta]",
+			versionsUploadOptions,
+			versionsUploadHandler
+		);
+	});
 
 	wrangler.exitProcess(false);
 

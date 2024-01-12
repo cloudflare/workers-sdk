@@ -170,12 +170,13 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 			})
 			// args only for `versions upload`, not `deploy`
 			.option("tag", {
-				describe: "A tag for this Worker Version",
+				describe: "A tag for this Worker Gradual Rollouts Version",
 				type: "string",
 				requiresArg: true,
 			})
 			.option("message", {
-				describe: "A descriptive message for this Worker Version",
+				describe:
+					"A descriptive message for this Worker Gradual Rollouts Version",
 				type: "string",
 				requiresArg: true,
 			})
