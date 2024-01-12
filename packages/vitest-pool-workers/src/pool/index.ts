@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import events from "node:events";
+import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { createBirpc } from "birpc";
@@ -16,7 +17,7 @@ import {
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
-import { WORKER_NAME_PREFIX } from "./helpers";
+import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
 import {
 	ABORT_ALL_WORKER,
 	handleLoopbackRequest,
@@ -520,7 +521,67 @@ function getRelativeProjectPath(projectPath: string | number) {
 	else return path.relative("", projectPath);
 }
 
+interface PackageJson {
+	version?: string;
+	peerDependencies?: Record<string, string | undefined>;
+}
+function getPackageJson(dirPath: string): PackageJson | undefined {
+	// eslint-disable-next-line no-constant-condition
+	while (true) {
+		const pkgJsonPath = path.join(dirPath, "package.json");
+		try {
+			const contents = fs.readFileSync(pkgJsonPath, "utf8");
+			return JSON.parse(contents);
+		} catch (e) {
+			if (!isFileNotFoundError(e)) throw e;
+		}
+		const nextDirPath = path.dirname(dirPath);
+		// `path.dirname()` of the root directory is the root directory
+		if (nextDirPath === dirPath) return;
+		dirPath = nextDirPath;
+	}
+}
+
+function assertCompatibleVitestVersion(ctx: Vitest) {
+	// Some package managers don't enforce `peerDependencies` requirements,
+	// so add a runtime sanity check to ensure things don't break in strange ways.
+	const poolPkgJson = getPackageJson(__dirname);
+	const vitestPkgJson = getPackageJson(
+		path.dirname(ctx.projectFiles.workerPath)
+	);
+	assert(
+		poolPkgJson !== undefined,
+		"Expected to find `package.json` for `@cloudflare/vitest-pool-workers`"
+	);
+	assert(
+		vitestPkgJson !== undefined,
+		"Expected to find `package.json` for `vitest`"
+	);
+
+	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
+	const actualVitestVersion = vitestPkgJson.version;
+	assert(
+		expectedVitestVersion !== undefined,
+		"Expected to find `@cloudflare/vitest-pool-workers`'s `vitest` version constraint"
+	);
+	assert(
+		actualVitestVersion !== undefined,
+		"Expected to find `vitest`'s version"
+	);
+
+	if (expectedVitestVersion !== actualVitestVersion) {
+		const message = [
+			`You're running \`vitest@${actualVitestVersion}\`, but this version of \`@cloudflare/vitest-pool-workers\` only supports \`vitest@${expectedVitestVersion}\`.`,
+			"`@cloudflare/vitest-pool-workers` currently depends on internal Vitest APIs that are not protected by semantic-versioning guarantees.",
+			`Please install \`vitest@${expectedVitestVersion}\` to continue using \`@cloudflare/vitest-pool-workers\`.`,
+		].join("\n");
+		throw new Error(message);
+	}
+}
+
 export default function (ctx: Vitest): ProcessPool {
+	assertCompatibleVitestVersion(ctx);
+
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
