@@ -1,6 +1,6 @@
 import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { installWrangler, retry, runCommand } from "helpers/command";
+import { retry, runCommand } from "helpers/command";
 import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
 import { getProductionBranch, quoteShellArgs } from "./common";
@@ -13,11 +13,6 @@ const CREATE_PROJECT_RETRIES = 3;
 const VERIFY_PROJECT_RETRIES = 3;
 
 const { npx } = detectPackageManager();
-
-export const runPagesGenerator = async () => {
-	// Install wrangler so that the dev/deploy commands work
-	await installWrangler();
-};
 
 export const createProject = async (ctx: C3Context) => {
 	if (ctx.args.deploy === false) return;

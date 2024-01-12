@@ -11,7 +11,12 @@ import {
 } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { npmInstall, resetPackageManager, runCommand } from "helpers/command";
+import {
+	installWrangler,
+	npmInstall,
+	resetPackageManager,
+	runCommand,
+} from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { generateTypes } from "helpers/wrangler";
 import semver from "semver";
@@ -27,13 +32,13 @@ import {
 	setupProjectDirectory,
 	validateProjectDirectory,
 } from "./common";
-import { createProject, runPagesGenerator } from "./pages";
+import { createProject } from "./pages";
 import {
 	copyTemplateFiles,
 	selectTemplate,
 	updatePackageJson,
 } from "./templateMap";
-import { createWranglerToml, runWorkersGenerator } from "./workers";
+import { createWranglerToml, installWorkersTypes } from "./workers";
 import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -106,10 +111,18 @@ export const runCli = async (args: Partial<C3Args>) => {
 };
 
 const runTemplate = async (ctx: C3Context) => {
-	const { platform, generate, configure } = ctx.template;
+	await create(ctx);
+	await configure(ctx);
+	await deploy(ctx);
 
-	if (generate) {
-		await generate(ctx);
+	await printSummary(ctx);
+};
+
+const create = async (ctx: C3Context) => {
+	const { template } = ctx;
+
+	if (template.generate) {
+		await template.generate(ctx);
 	}
 
 	await copyTemplateFiles(ctx);
@@ -122,37 +135,35 @@ const runTemplate = async (ctx: C3Context) => {
 	await resetPackageManager(ctx);
 
 	endSection(`Application created`);
+};
+
+const configure = async (ctx: C3Context) => {
+	const { template } = ctx;
 
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
 
-	if (configure) {
-		await configure({ ...ctx });
+	if (template.configure) {
+		await template.configure({ ...ctx });
 	}
 
-	// As time goes on, lift increasingly more logic out of the generators into here
-	if (platform === "workers") {
-		await runWorkersGenerator(ctx);
-	} else {
-		await runPagesGenerator();
-	}
+	await installWrangler();
+	await installWorkersTypes(ctx);
 
 	await updatePackageJson(ctx);
 	await createWranglerToml(ctx);
-	await offerGit(ctx);
-	// TODO: this needs to be moved to after bindings since that might
-	// change wrangler.toml
-	await gitCommit(ctx);
-	endSection(`Application configured`);
 
-	// Deploy
+	await offerGit(ctx);
+	await gitCommit(ctx);
+
+	endSection(`Application configured`);
+};
+
+const deploy = async (ctx: C3Context) => {
 	await offerToDeploy(ctx);
 	await bindResources(ctx);
 	await createProject(ctx);
 	await generateTypes(ctx);
 	await runDeploy(ctx);
-
-	// Summary
-	await printSummary(ctx);
 };
 
 // Detects if a newer version of c3 is available by comparing the version

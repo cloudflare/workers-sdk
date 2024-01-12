@@ -9,10 +9,6 @@ import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-export const runWorkersGenerator = async (ctx: C3Context) => {
-	await installWorkersTypes(ctx);
-};
-
 export async function createWranglerToml(ctx: C3Context) {
 	if (ctx.template.platform !== "workers") {
 		return;
@@ -36,7 +32,7 @@ export async function appendToWranglerToml(ctx: C3Context, content: string) {
 	appendFile(wranglerTomlPath, content);
 }
 
-async function installWorkersTypes(ctx: C3Context) {
+export async function installWorkersTypes(ctx: C3Context) {
 	if (!usesTypescript(ctx)) {
 		return;
 	}
