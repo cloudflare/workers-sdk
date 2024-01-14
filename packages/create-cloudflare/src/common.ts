@@ -322,26 +322,6 @@ export const printSummary = async (ctx: C3Context) => {
 	process.exit(0);
 };
 
-// const printBindings = (ctx: C3Context) => {
-// 	const { queues } = ctx.deployment.queues;
-
-// 	if (Object.keys(queues).length > 0) {
-// 		const header = [`${gray(shapes.leftT)}`, `${brandColor("Queues")}`].join(
-// 			" "
-// 		);
-// 		logRaw(header);
-
-// 		const queueLines = Object.entries(ctx.deployment.queues).map(
-// 			([boundVariable, queue]) => [
-// 				`${gray(shapes.leftT)}`,
-// 				boundVariable,
-// 				`${dim(queue)}`,
-// 			]
-// 		);
-// 		logRaw(queueLines.join(" "));
-// 	}
-// };
-
 export const offerGit = async (ctx: C3Context) => {
 	const gitInstalled = await isGitInstalled();
 	if (!gitInstalled) {

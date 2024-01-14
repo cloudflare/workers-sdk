@@ -1,10 +1,4 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
-import {
-	addWorkersTypesToTsConfig,
-	getLatestTypesEntrypoint,
-} from "helpers/command";
+import { existsSync, readdirSync } from "fs";
 import { readFile, writeFile } from "helpers/files";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "./helpers";
@@ -117,28 +111,5 @@ describe("addWorkersTypesToTsConfig", () => {
 		);
 
 		expect(writeFile).not.toHaveBeenCalled();
-	});
-});
-
-describe("createWranglerToml", () => {
-	let ctx: C3Context;
-	let tmpDirPath: string;
-
-	beforeEach(() => {
-		ctx = createTestContext();
-		tmpDirPath = mkdtempSync(join(tmpdir(), `c3-tests-createWranglerToml`));
-
-		console.log("PATH", tmpDirPath);
-		ctx.project.path = tmpDirPath;
-	});
-
-	afterEach(() => {
-		rmSync(tmpDirPath, { recursive: true, force: true });
-	});
-
-	test.only("happy path", async () => {
-		console.log(tmpDirPath);
-		writeFile(join(tmpDirPath, "wrangler.toml"), "foo");
-		await workers.createWranglerToml(ctx);
 	});
 });
