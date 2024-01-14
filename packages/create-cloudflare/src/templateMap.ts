@@ -227,8 +227,8 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	});
 
 	const path = await downloadRemoteTemplate(templateUrl);
-	const configPath = join(path, "c3.json");
-	const config = readJSON(configPath);
+	validateTemplate(path);
+	const config = inferTemplateConfig(path);
 
 	return {
 		path,
@@ -236,6 +236,52 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	};
 };
 
+const validateTemplate = (path: string) => {
+	const wranglerTomlPath = resolve(path, "wrangler.toml");
+	if (!existsSync(wranglerTomlPath)) {
+		crash(`Worker templates must contain a "wrangler.toml" file.`);
+	}
+};
+
+/**
+ * Remote templates don't require a config file but may in the future. Until then, this
+ * function adapts a remote template to work with c3 by inferring a simple config from
+ * its file structure.
+ */
+const inferTemplateConfig = (path: string): TemplateConfig => {
+	return {
+		configVersion: 1,
+		id: "remote-template",
+		displayName: "A remote C3 template",
+		platform: "workers",
+		copyFiles: inferCopyFilesDefinition(path),
+	};
+};
+
+const inferCopyFilesDefinition = (path: string) => {
+	const copyFiles: StaticFileMap | VariantInfo = {};
+	if (existsSync(join(path, "js"))) {
+		copyFiles["js"] = { path: "./js" };
+	}
+	if (existsSync(join(path, "ts"))) {
+		copyFiles["ts"] = { path: "./ts" };
+	}
+	if (Object.keys(copyFiles).length !== 0) {
+		return copyFiles;
+	}
+
+	return {
+		path: ".",
+	};
+};
+
+/**
+ * Downloads an external template from a git repo using `degit`.
+ *
+ * @param src The url of the git repository to download the template from.
+ *            For convenience, `owner/repo` is also accepted.
+ * @returns A path to a temporary directory containing the downloaded template
+ */
 const downloadRemoteTemplate = async (src: string) => {
 	try {
 		const s = spinner();

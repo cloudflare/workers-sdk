@@ -418,13 +418,8 @@ export const gitCommit = async (ctx: C3Context) => {
 	});
 };
 
-// TODO: fix this. probably broken for the hono flow
 const createCommitMessage = async (ctx: C3Context) => {
 	const isPages = ctx.template.platform === "pages";
-
-	// if (ctx.template.platform === "workers") {
-	// 	return "Initial commit (by create-cloudflare CLI)";
-	// }
 
 	const header = isPages
 		? "Initialize web application via create-cloudflare CLI"

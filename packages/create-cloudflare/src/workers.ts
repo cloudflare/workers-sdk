@@ -3,35 +3,52 @@ import { join, resolve } from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { getWorkerdCompatibilityDate, installPackages } from "helpers/command";
-import { appendFile, readFile, usesTypescript, writeFile } from "helpers/files";
+import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
+import MagicString from "magic-string";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-export async function createWranglerToml(ctx: C3Context) {
-	if (ctx.template.platform !== "workers") {
-		return;
-	}
-
-	// The formatting below is ugly, but necessary to avoid formatting the output file
-	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
-	const wranglerToml = `name = "${ctx.project.name}"
-main = "src/index.ts"
-compatibility_date = "${await getWorkerdCompatibilityDate()}"
-  `;
-	writeFile(wranglerTomlPath, wranglerToml);
-}
-
-export async function appendToWranglerToml(ctx: C3Context, content: string) {
+/**
+ * Update the `wrangler.toml` file for this project by setting the name
+ * to the selected project name and adding the latest compatibility date.
+ */
+export async function updateWranglerToml(ctx: C3Context) {
 	if (ctx.template.platform !== "workers") {
 		return;
 	}
 
 	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
-	appendFile(wranglerTomlPath, content);
+	const wranglerToml = readFile(wranglerTomlPath);
+	const newToml = new MagicString(wranglerToml);
+
+	const compatDateRe = /^compatibility_date\s*=.*/m;
+	if (wranglerToml.match(compatDateRe)) {
+		newToml.replace(
+			compatDateRe,
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
+		);
+	} else {
+		newToml.prepend(
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
+		);
+	}
+
+	const nameRe = /^name\s*=.*/m;
+	if (wranglerToml.match(nameRe)) {
+		newToml.replace(nameRe, `name = "${ctx.project.name}"`);
+	} else {
+		newToml.prepend(`name = "${ctx.project.name}"`);
+	}
+
+	writeFile(wranglerTomlPath, newToml.toString());
 }
 
+/**
+ * Installs the latest version of the `@cloudflare/workers-types` package
+ * and updates the .tsconfig file to use the latest entrypoint version.
+ */
 export async function installWorkersTypes(ctx: C3Context) {
 	if (!usesTypescript(ctx)) {
 		return;

@@ -36,7 +36,7 @@ import {
 	selectTemplate,
 	updatePackageJson,
 } from "./templateMap";
-import { createWranglerToml, installWorkersTypes } from "./workers";
+import { installWorkersTypes, updateWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -139,7 +139,7 @@ const configure = async (ctx: C3Context) => {
 	await installWorkersTypes(ctx);
 
 	await updatePackageJson(ctx);
-	await createWranglerToml(ctx);
+	await updateWranglerToml(ctx);
 
 	const { template } = ctx;
 	if (template.configure) {
