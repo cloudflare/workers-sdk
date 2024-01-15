@@ -1,10 +1,5 @@
 const handlerCode = `  let responseText = 'hello world'
 
-  // https://developers.cloudflare.com/workers/configuration/bindings/
-  // In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
-  // are exposed via process.env, as shown below:
-  //
-  //
   // In the edge runtime you can use Bindings that are available in your application
   // (for more details see:
   //    - https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
