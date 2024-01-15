@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-feat: resolve imports in a more node-like fashion for packages that do not declare exports
+fix: resolve imports in a more node-like fashion for packages that do not declare exports
 
 Previously, trying to import a file that wasn't explicitly exported from a module would result in an error, but now, better attempts are made to resolve the import using node's module resolution algorithm. It's now possible to do things like this:
 
