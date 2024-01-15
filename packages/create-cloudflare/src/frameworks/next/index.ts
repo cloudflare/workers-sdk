@@ -26,6 +26,7 @@ import {
 	appDirNotFoundTs,
 	envDts,
 	nextConfig,
+	readme,
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
@@ -112,6 +113,9 @@ const configure = async (ctx: PagesGeneratorContext) => {
 
 	writeFile(`${ctx.project.path}/next.config.js`, nextConfig);
 	updateStatus("Updated the next.config.js file");
+
+	writeFile(`${ctx.project.path}/README.md`, readme);
+	updateStatus("Updated the README file");
 
 	await addDevDependencies(projectName, usesTs, ctx, installEslintPlugin);
 };
