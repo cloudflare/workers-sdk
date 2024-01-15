@@ -227,8 +227,8 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	});
 
 	const path = await downloadRemoteTemplate(templateUrl);
-	validateTemplate(path);
 	const config = inferTemplateConfig(path);
+	validateTemplate(path, config);
 
 	return {
 		path,
@@ -236,10 +236,30 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	};
 };
 
-const validateTemplate = (path: string) => {
-	const wranglerTomlPath = resolve(path, "wrangler.toml");
-	if (!existsSync(wranglerTomlPath)) {
-		crash(`Worker templates must contain a "wrangler.toml" file.`);
+const validateTemplate = (path: string, config: TemplateConfig) => {
+	if (config.copyFiles?.path) {
+		validateTemplateSrcDirectory(
+			resolve(path, config.copyFiles.path as string),
+			config
+		);
+	} else {
+		for (const variant of Object.values(config.copyFiles as StaticFileMap)) {
+			validateTemplateSrcDirectory(resolve(path, variant.path), config);
+		}
+	}
+};
+
+const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
+	if (config.platform === "workers") {
+		const wranglerTomlPath = resolve(path, "wrangler.toml");
+		if (!existsSync(wranglerTomlPath)) {
+			crash(`create-cloudflare templates must contain a "wrangler.toml" file.`);
+		}
+	}
+
+	const pkgJsonPath = resolve(path, "package.json");
+	if (!existsSync(pkgJsonPath)) {
+		crash(`create-cloudflare templates must contain a "package.json" file.`);
 	}
 };
 
