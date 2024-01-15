@@ -1,4 +1,4 @@
-const handlerCode = `  let responseText = 'hello world'
+const handlerCode = `  let responseText = 'Hello World'
 
   // In the edge runtime you can use Bindings that are available in your application
   // (for more details see:
