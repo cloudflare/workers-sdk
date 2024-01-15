@@ -2,7 +2,11 @@ import { existsSync, mkdirSync } from "fs";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import {
+	installPackages,
+	installWorkersTypes,
+	runFrameworkGenerator,
+} from "helpers/command";
 import {
 	compatDateFlag,
 	probePaths,
@@ -95,9 +99,9 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 
-	if (usesTypescript(projectName)) {
+	if (usesTs) {
 		writeFile(`${projectName}/env.d.ts`, envDts);
-		updateStatus("Created an env.d.ts file for the Cloudflare types");
+		updateStatus("Created an env.d.ts file");
 	}
 
 	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
@@ -106,20 +110,10 @@ const configure = async (ctx: PagesGeneratorContext) => {
 		await writeEslintrc(ctx);
 	}
 
-	// Add some dev dependencies
-	process.chdir(projectName);
-	const packages = [
-		"@cloudflare/next-on-pages@1",
-		"vercel",
-		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
-	];
-	await installPackages(packages, {
-		dev: true,
-		startText: "Adding the Cloudflare Pages adapter",
-		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
-	});
-
 	writeFile(`${ctx.project.path}/next.config.js`, nextConfig);
+	updateStatus("Updated the next.config.js file");
+
+	await addDevDependencies(projectName, usesTs, ctx, installEslintPlugin);
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
@@ -193,3 +187,32 @@ const config: FrameworkConfig = {
 	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;
+
+const addDevDependencies = async (
+	projectName: string,
+	usesTs: boolean,
+	ctx: PagesGeneratorContext,
+	installEslintPlugin: boolean
+) => {
+	const cwd = process.cwd();
+
+	process.chdir(projectName);
+
+	if (usesTs) {
+		await installWorkersTypes(ctx);
+	}
+
+	const packages = [
+		"@cloudflare/next-on-pages@1",
+		"@cloudflare/workers-types",
+		"vercel",
+		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
+	];
+	await installPackages(packages, {
+		dev: true,
+		startText: "Adding the Cloudflare Pages adapter",
+		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
+	});
+
+	process.chdir(cwd);
+};
