@@ -1,4 +1,4 @@
-export const WORKER_NAME_PREFIX = "vitest-pool-workers:";
+export const WORKER_NAME_PREFIX = "vitest-pool-workers-";
 
 export function isFileNotFoundError(e: unknown): boolean {
 	return (

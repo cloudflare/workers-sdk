@@ -24,7 +24,10 @@ import {
 	scheduleStorageReset,
 	waitForStorageReset,
 } from "./loopback";
-import { handleModuleFallbackRequest, modulesRoot } from "./module-fallback";
+import {
+	ensurePosixLikePath,
+	handleModuleFallbackRequest,
+} from "./module-fallback";
 import type { WorkersProjectOptions, SourcelessWorkerOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { MessagePort } from "node:worker_threads";
@@ -126,11 +129,11 @@ const allProjects = new Map<string /* projectName */, Project>();
 
 // User worker names must not start with this
 function getRunnerName(project: WorkspaceProject, testFile?: string) {
-	const name = `${WORKER_NAME_PREFIX}runner:${project.getName()}`;
+	const name = `${WORKER_NAME_PREFIX}runner-${project.getName()}`;
 	if (testFile === undefined) return name;
 	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
 	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
-	return `${name}:${testFileHash}:${testFile}`;
+	return `${name}-${testFileHash}-${testFile}`;
 }
 
 function isDurableObjectDesignatorToSelf(
@@ -274,14 +277,26 @@ function buildProjectWorkerOptions(
 	// Make sure we define the runner script, including Durable Object wrappers
 	if ("script" in runnerWorker) delete runnerWorker.script;
 	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
-	// TODO(soon): will need to consider how this works on Windows, still treat
-	//  `/` as the root, then do things like `/C:/a/b/c/index.mjs`
+
+	// We want module names to be their absolute path without the leading	slash
+	// (i.e. the modules root should be the root directory). On Windows, we'd
+	// like paths to include the drive letter (i.e. `/C:/a/b/c/index.mjs`).
+	// Internally, Miniflare uses `path.relative(modulesRoot, path)` to compute
+	// module names. Setting `modulesRoot` to a drive letter and prepending this
+	// to paths ensures correct names. This requires us to specify `contents`
+	// with module definitions though, as the new paths don't exist.
+	// TODO(now): need to add source URL comments here to ensure those are correct
+	const modulesRoot = process.platform === "win32" ? "Z:\\" : "/";
 	runnerWorker.modulesRoot = modulesRoot;
 	runnerWorker.modules = [
-		{ type: "ESModule", path: POOL_WORKER_PATH },
 		{
 			type: "ESModule",
-			path: USER_OBJECT_MODULE_PATH,
+			path: path.join(modulesRoot, POOL_WORKER_PATH),
+			contents: fs.readFileSync(POOL_WORKER_PATH),
+		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, USER_OBJECT_MODULE_PATH),
 			contents: durableObjectWrappers.join("\n"),
 		},
 	];
@@ -446,11 +461,17 @@ async function runTests(
 	);
 	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
 	const stub = ns.get("singleton");
+
+	let workerPath = ctx.projectFiles.workerPath;
+	if (process.platform === "win32") {
+		workerPath = `/${ensurePosixLikePath(workerPath)}`;
+	}
+
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
 			"MF-Vitest-Worker-Data": structuredSerializableStringify({
-				filePath: ctx.projectFiles.workerPath,
+				filePath: workerPath,
 				name: "run",
 				data,
 			}),

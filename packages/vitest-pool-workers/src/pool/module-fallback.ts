@@ -16,11 +16,18 @@ let debuglog: util.DebugLoggerFunction = util.debuglog(
 	(log) => (debuglog = log)
 );
 
-export const modulesRoot = "/";
+const isWindows = process.platform === "win32";
+
+// Ensures `filePath` uses forward-slashes. Note this doesn't prepend a
+// forward-slash in front of Windows paths, so they can still be passed to Node
+// `fs` functions.
+export function ensurePosixLikePath(filePath: string) {
+	return isWindows ? filePath.replaceAll("\\", "/") : filePath;
+}
 
 // Building to an ES module, but Vite will provide `__dirname`
-const distPath = path.resolve(__dirname, "..");
-const libPath = path.join(distPath, "worker", "lib");
+const distPath = ensurePosixLikePath(path.resolve(__dirname, ".."));
+const libPath = path.posix.join(distPath, "worker", "lib");
 
 // File path suffix to disable CJS to ESM-with-named-exports shimming
 const disableCjsEsmShimSuffix = ".mf_vitest_no_cjs_esm_shim";
@@ -74,13 +81,13 @@ function isFile(filePath: string): boolean {
 
 const dirPathTypeModuleCache = new Map<string, boolean>();
 function isWithinTypeModuleContext(filePath: string): boolean {
-	const dirPath = path.dirname(filePath);
+	const dirPath = path.posix.dirname(filePath);
 	if (dirPath === filePath) return false;
 	let cache = dirPathTypeModuleCache.get(dirPath);
 	if (cache !== undefined) return cache;
 
 	try {
-		const pkgPath = path.join(dirPath, "package.json");
+		const pkgPath = path.posix.join(dirPath, "package.json");
 		const pkgJson = fs.readFileSync(pkgPath, "utf8");
 		const pkg = JSON.parse(pkgJson);
 		cache = pkg.type === "module";
@@ -205,7 +212,7 @@ function requireResolve(specifier: string, referrer: string): string {
 		require = module.createRequire(normalisedReferrer);
 		requires.set(normalisedReferrer, require);
 	}
-	return require.resolve(specifier);
+	return ensurePosixLikePath(require.resolve(specifier));
 }
 
 function importResolve(specifier: string, referrer: string): URL {
@@ -267,12 +274,15 @@ function mustResolve(
 }
 
 function buildRedirectResponse(filePath: string) {
+	if (isWindows && filePath[0] !== "/") filePath = `/${filePath}`;
 	return new Response(null, { status: 301, headers: { Location: filePath } });
 }
 
 type ModuleContents = Omit<Worker_Module, "name">;
 function buildModuleResponse(target: string, contents: ModuleContents) {
-	const name = path.posix.relative(modulesRoot, target);
+	let name = target;
+	if (!isWindows) name = path.posix.relative("/", target);
+	assert(name[0] !== "/");
 	return new Response(JSON.stringify({ name, ...contents }));
 }
 
@@ -351,12 +361,19 @@ export function handleModuleFallbackRequest(request: Request): Response {
 	const method = request.headers.get("X-Resolve-Method");
 	assert(method === "import" || method === "require");
 	const url = new URL(request.url);
-	const target = url.searchParams.get("specifier");
-	const referrer = url.searchParams.get("referrer");
+	let target = url.searchParams.get("specifier");
+	let referrer = url.searchParams.get("referrer");
 	assert(target !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
 	const referrerDir = path.posix.dirname(referrer);
 	const specifier = getApproximateSpecifier(target, referrerDir);
+
+	if (isWindows) {
+		// Convert paths like `/C:/a/index.mjs` to `C:/a/index.mjs` so they can be
+		// passed to Node `fs` functions.
+		if (target[0] === "/") target = target.substring(1);
+		if (referrer[0] === "/") referrer = referrer.substring(1);
+	}
 
 	const quotedTarget = JSON.stringify(target);
 	const logBase = `${method}(${quotedTarget}) relative to ${referrer}:`;
