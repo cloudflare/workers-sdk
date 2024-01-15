@@ -1,20 +1,25 @@
-const handlerCode = `
-	// https://developers.cloudflare.com/workers/configuration/bindings/
-	// In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
-	// are exposed via process.env, as shown below:
-	//
-	const myKv = process.env['MY_KV_NAMESPACE'];
-	await myKv.put('foo', 'bar');
-	const valueFromKv = await myKv.get('foo');
+const handlerCode = `  let responseText = 'hello world'
 
-	// Each binding must be configured in your project's next.config.js file:
-	// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+  // https://developers.cloudflare.com/workers/configuration/bindings/
+  // In Next.js bindings to KV, R2, Durable Objects, Queues, D1 and more
+  // are exposed via process.env, as shown below:
+  //
+  //
+  // In the edge runtime you can use Bindings that are available in your application
+  // (for more details see:
+  //    - https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
+  //    - https://developers.cloudflare.com/pages/functions/bindings/
+  // )
+  //
+  // KV Example:
+  // const myKv = process.env.MY_KV
+  // await myKv.put('suffix', ' from a KV store!')
+  // const suffix = await myKv.get('suffix')
+  // responseText += suffix
 
-	return new Response(JSON.stringify({ value: valueFromKv }))
-`;
+  return new Response(responseText)`;
 
-export const apiPagesDirHelloTs = `
-// Next.js Edge API Routes: https://nextjs.org/docs/pages/building-your-application/routing/api-routes#edge-api-routes
+export const apiPagesDirHelloTs = `// Next.js Edge API Routes: https://nextjs.org/docs/pages/building-your-application/routing/api-routes#edge-api-routes
 
 import type { NextRequest } from 'next/server'
 
@@ -27,8 +32,7 @@ ${handlerCode}
 }
 `;
 
-export const apiPagesDirHelloJs = `
-// Next.js Edge API Routes: https://nextjs.org/docs/pages/building-your-application/routing/api-routes#edge-api-routes
+export const apiPagesDirHelloJs = `// Next.js Edge API Routes: https://nextjs.org/docs/pages/building-your-application/routing/api-routes#edge-api-routes
 
 export const config = {
   runtime: 'edge',
@@ -39,8 +43,7 @@ ${handlerCode}
 }
 `;
 
-export const apiAppDirHelloTs = `
-// Next.js Edge API Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/router-handlers#edge-and-nodejs-runtimes
+export const apiAppDirHelloTs = `// Next.js Edge API Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/router-handlers#edge-and-nodejs-runtimes
 
 import type { NextRequest } from 'next/server'
 
@@ -48,12 +51,10 @@ export const runtime = 'edge'
 
 export async function GET(request: NextRequest) {
 ${handlerCode}
-
 }
 `;
 
-export const apiAppDirHelloJs = `
-// Next.js Edge API Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/router-handlers#edge-and-nodejs-runtimes
+export const apiAppDirHelloJs = `// Next.js Edge API Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/router-handlers#edge-and-nodejs-runtimes
 
 export const runtime = 'edge'
 
@@ -63,8 +64,7 @@ ${handlerCode}
 `;
 
 // Simplified and adjusted version of the Next.js built-in not-found component (https://github.com/vercel/next.js/blob/1c65c5575/packages/next/src/client/components/not-found-error.tsx)
-export const appDirNotFoundJs = `
-export const runtime = "edge";
+export const appDirNotFoundJs = `export const runtime = "edge";
 
 export default function NotFound() {
   return (
@@ -125,8 +125,7 @@ const styles = {
 `;
 
 // Simplified and adjusted version of the Next.js built-in not-found component (https://github.com/vercel/next.js/blob/1c65c5575/packages/next/src/client/components/not-found-error.tsx)
-export const appDirNotFoundTs = `
-export const runtime = "edge";
+export const appDirNotFoundTs = `export const runtime = "edge";
 
 export default function NotFound() {
   return (
@@ -187,25 +186,40 @@ const styles = {
 `;
 
 
-export const nextConfig = `
-/** @type {import('next').NextConfig} */
+export const nextConfig = `/** @type {import('next').NextConfig} */
 const nextConfig = {}
 
 module.exports = nextConfig
 
-// https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#use-bindings-in-your-nextjs-application
-// This code ensures that bindings to resources like
-// KV, R2, Durable Objects, Queues, D1 are available in
-// local development when running the next dev command, which
-// runs a Node.js based local development server.
 if (process.env.NODE_ENV === 'development') {
-    import('@cloudflare/next-on-pages/__experimental__next-dev').then(({ setupDevBindings }) => {
-
-				// https://developers.cloudflare.com/workers/configuration/bindings/
-				// Each binding you want to expose via process.env must be configured via setupDevBindings()
-        setupDevBindings({
-            kvNamespaces: ['MY_KV_NAMESPACE'],
-        });
-    });
+  import('@cloudflare/next-on-pages/next-dev').then(({ setupDevBindings }) => {
+      setupDevBindings({
+          bindings: {
+              // Add here the Cloudflare Bindings you want to have available during local development (with \`next dev\`)
+              // (for more details on Bindings see: https://developers.cloudflare.com/pages/functions/bindings/)
+              //
+              // KV Example
+              // MY_KV: {
+              //   type: 'kv',
+              //   id: 'xxx',
+              // }
+          }
+      })
+  })
 }
+`;
+
+export const envDts = `declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      // Add here the Cloudflare Bindings you want to have available in your application
+      // (for more details on Bindings see: https://developers.cloudflare.com/pages/functions/bindings/)
+      //
+      // KV Example:
+      // MY_KV: KVNamespace
+    }
+  }
+}
+
+export {}
 `;

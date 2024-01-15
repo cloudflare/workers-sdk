@@ -20,6 +20,7 @@ import {
 	apiPagesDirHelloTs,
 	appDirNotFoundJs,
 	appDirNotFoundTs,
+	envDts,
 	nextConfig,
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
@@ -94,6 +95,11 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 
+	if (usesTypescript(projectName)) {
+		writeFile(`${projectName}/env.d.ts`, envDts);
+		updateStatus("Created an env.d.ts file for the Cloudflare types");
+	}
+
 	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
 
 	if (installEslintPlugin) {
@@ -113,7 +119,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
 	});
 
-	writeFile(path, nextConfig);
+	writeFile(`${ctx.project.path}/next.config.js`, nextConfig);
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
