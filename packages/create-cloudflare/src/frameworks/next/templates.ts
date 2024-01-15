@@ -185,7 +185,6 @@ const styles = {
 } as const;
 `;
 
-
 export const nextConfig = `/** @type {import('next').NextConfig} */
 const nextConfig = {}
 
