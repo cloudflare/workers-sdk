@@ -97,5 +97,6 @@
 	},
 	"publishConfig": {
 		"access": "public"
-	}
+	},
+	"workers-sdk:prerelease": true
 }

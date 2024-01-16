@@ -84,5 +84,6 @@
 	},
 	"engines": {
 		"node": ">=18.14.1"
-	}
+	},
+	"workers-sdk:prerelease": true
 }

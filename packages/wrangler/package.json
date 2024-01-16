@@ -213,5 +213,6 @@
 	},
 	"engines": {
 		"node": ">=16.17.0"
-	}
+	},
+	"workers-sdk:prerelease": true
 }
