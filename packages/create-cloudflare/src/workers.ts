@@ -10,17 +10,26 @@ import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
+export const readWranglerToml = async (ctx: C3Context) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return readFile(wranglerTomlPath);
+};
+
+export const writeWranglerToml = async (ctx: C3Context, contents: string) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return writeFile(wranglerTomlPath, contents);
+};
+
 /**
  * Update the `wrangler.toml` file for this project by setting the name
  * to the selected project name and adding the latest compatibility date.
  */
-export async function updateWranglerToml(ctx: C3Context) {
+export const updateWranglerToml = async (ctx: C3Context) => {
 	if (ctx.template.platform !== "workers") {
 		return;
 	}
 
-	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
-	const wranglerToml = readFile(wranglerTomlPath);
+	const wranglerToml = await readWranglerToml(ctx);
 	const newToml = new MagicString(wranglerToml);
 
 	const compatDateRe = /^compatibility_date\s*=.*/m;
@@ -42,8 +51,8 @@ export async function updateWranglerToml(ctx: C3Context) {
 		newToml.prepend(`name = "${ctx.project.name}"`);
 	}
 
-	writeFile(wranglerTomlPath, newToml.toString());
-}
+	await writeWranglerToml(ctx, newToml.toString());
+};
 
 /**
  * Installs the latest version of the `@cloudflare/workers-types` package

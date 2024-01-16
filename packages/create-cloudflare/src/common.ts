@@ -27,6 +27,7 @@ import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
+import { readWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
 
 const { name, npm } = detectPackageManager();
@@ -137,6 +138,11 @@ export const setupProjectDirectory = (args: C3Args) => {
 export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
+	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
+	if (!(await isDeployable(ctx))) {
+		ctx.args.deploy = false;
+	}
+
 	const label = `deploy via \`${quoteShellArgs([
 		npm,
 		"run",
@@ -162,6 +168,26 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	if (!loginSuccess) return;
 
 	await chooseAccount(ctx);
+};
+
+/**
+ * Determines if the current project is deployable.
+ *
+ * Since C3doesn't currently support a way to automatically provision the resources needed
+ * by bindings, templates that have placeholder bindings will need some adjustment by the project author
+ * before they can be deployed.
+ */
+const isDeployable = async (ctx: C3Context) => {
+	if (ctx.template.platform === "pages") {
+		return true;
+	}
+
+	const wranglerToml = await readWranglerToml(ctx);
+	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
+		return false;
+	}
+
+	return true;
 };
 
 export const runDeploy = async (ctx: C3Context) => {
