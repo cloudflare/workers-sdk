@@ -14,7 +14,7 @@
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"cookie": "^0.5.0",
-    "promjs": "^0.4.2",
+		"promjs": "^0.4.2",
 		"toucan-js": "^3.1.0",
 		"wrangler": "workspace:*",
 		"@types/cookie": "^0.5.1"
