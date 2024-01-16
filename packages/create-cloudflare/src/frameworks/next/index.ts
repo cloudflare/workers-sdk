@@ -2,7 +2,11 @@ import { existsSync, mkdirSync } from "fs";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import {
+	installPackages,
+	installWorkersTypes,
+	runFrameworkGenerator,
+} from "helpers/command";
 import {
 	compatDateFlag,
 	probePaths,
@@ -20,6 +24,9 @@ import {
 	apiPagesDirHelloTs,
 	appDirNotFoundJs,
 	appDirNotFoundTs,
+	envDts,
+	nextConfig,
+	readme,
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
@@ -93,24 +100,24 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 
+	if (usesTs) {
+		writeFile(`${projectName}/env.d.ts`, envDts);
+		updateStatus("Created an env.d.ts file");
+	}
+
 	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
 
 	if (installEslintPlugin) {
 		await writeEslintrc(ctx);
 	}
 
-	// Add some dev dependencies
-	process.chdir(projectName);
-	const packages = [
-		"@cloudflare/next-on-pages@1",
-		"vercel",
-		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
-	];
-	await installPackages(packages, {
-		dev: true,
-		startText: "Adding the Cloudflare Pages adapter",
-		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
-	});
+	writeFile(`${ctx.project.path}/next.config.js`, nextConfig);
+	updateStatus("Updated the next.config.js file");
+
+	writeFile(`${ctx.project.path}/README.md`, readme);
+	updateStatus("Updated the README file");
+
+	await addDevDependencies(projectName, usesTs, ctx, installEslintPlugin);
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
@@ -163,12 +170,13 @@ const config: FrameworkConfig = {
 		const nextOnPagesScope = isNpmOrBun ? "@cloudflare/" : "";
 		const nextOnPagesCommand = `${nextOnPagesScope}next-on-pages`;
 		const pmCommand = isNpmOrBun ? npx : npm;
-		const pagesDeployCommand = isNpm ? "npm run" : isBun ? "bun" : pmCommand;
+		const pagesBuildRunCommand = `${
+			isNpm ? "npm run" : isBun ? "bun" : pmCommand
+		} pages:build`;
 		return {
 			"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-			"pages:deploy": `${pagesDeployCommand} pages:build && wrangler pages deploy .vercel/output/static`,
-			"pages:watch": `${pmCommand} ${nextOnPagesCommand} --watch`,
-			"pages:dev": `${pmCommand} wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
+			"pages:preview": `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
+			"pages:deploy": `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
 		};
 	},
 	testFlags: [
@@ -184,3 +192,32 @@ const config: FrameworkConfig = {
 	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;
+
+const addDevDependencies = async (
+	projectName: string,
+	usesTs: boolean,
+	ctx: PagesGeneratorContext,
+	installEslintPlugin: boolean
+) => {
+	const cwd = process.cwd();
+
+	process.chdir(projectName);
+
+	if (usesTs) {
+		await installWorkersTypes(ctx);
+	}
+
+	const packages = [
+		"@cloudflare/next-on-pages@1",
+		"@cloudflare/workers-types",
+		"vercel",
+		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
+	];
+	await installPackages(packages, {
+		dev: true,
+		startText: "Adding the Cloudflare Pages adapter",
+		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
+	});
+
+	process.chdir(cwd);
+};

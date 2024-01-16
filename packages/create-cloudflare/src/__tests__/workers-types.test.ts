@@ -1,7 +1,11 @@
 import { existsSync, readdirSync } from "fs";
+import {
+	addWorkersTypesToTsConfig,
+	getLatestTypesEntrypoint,
+} from "helpers/command";
 import { readFile, writeFile } from "helpers/files";
 import { describe, expect, test, vi, afterEach, beforeEach } from "vitest";
-import * as workers from "../workers";
+
 import { createTestContext } from "./helpers";
 import type { Dirent } from "fs";
 import type { PagesGeneratorContext } from "types";
@@ -35,7 +39,7 @@ describe("getLatestTypesEntrypoint", () => {
 			() => [...mockWorkersTypesDirListing] as unknown as Dirent[]
 		);
 
-		const entrypoint = workers.getLatestTypesEntrypoint(ctx);
+		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe("2023-07-01");
 	});
 
@@ -44,14 +48,14 @@ describe("getLatestTypesEntrypoint", () => {
 			throw new Error("ENOENT: no such file or directory");
 		});
 
-		const entrypoint = workers.getLatestTypesEntrypoint(ctx);
+		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe(null);
 	});
 
 	test("empty directory", async () => {
 		vi.mocked(readdirSync).mockImplementation(() => []);
 
-		const entrypoint = workers.getLatestTypesEntrypoint(ctx);
+		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe(null);
 	});
 
@@ -60,12 +64,12 @@ describe("getLatestTypesEntrypoint", () => {
 			() => ["foo", "bar"] as unknown as Dirent[]
 		);
 
-		const entrypoint = workers.getLatestTypesEntrypoint(ctx);
+		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe(null);
 	});
 });
 
-describe("updateTsConfig", () => {
+describe("addWorkersTypesToTsConfig", () => {
 	let ctx: PagesGeneratorContext;
 
 	beforeEach(() => {
@@ -89,7 +93,7 @@ describe("updateTsConfig", () => {
 	});
 
 	test("happy path", async () => {
-		await workers.updateTsConfig(ctx);
+		await addWorkersTypesToTsConfig(ctx);
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toEqual(
 			`{types: ["@cloudflare/workers-types/2023-07-01"]}`

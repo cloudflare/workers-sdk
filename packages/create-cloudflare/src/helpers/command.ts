@@ -1,12 +1,13 @@
-import { existsSync, rmSync } from "fs";
-import path from "path";
-import { endSection, stripAnsi } from "@cloudflare/cli";
+import { existsSync, readdirSync, rmSync } from "fs";
+import path, { join, resolve } from "path";
+import { endSection, stripAnsi, warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { fetch } from "undici";
 import { quoteShellArgs } from "../common";
+import { readFile, writeFile } from "./files";
 import { detectPackageManager } from "./packages";
 import type { PagesGeneratorContext } from "types";
 
@@ -74,7 +75,7 @@ export const runCommand = async (
 				});
 			}
 
-			return new Promise<string>((resolve, reject) => {
+			return new Promise<string>((resolvePromise, reject) => {
 				cmd.on("close", (code) => {
 					try {
 						if (code !== 0) {
@@ -87,13 +88,13 @@ export const runCommand = async (
 						const processedOutput = transformOutput(stripAnsi(output));
 
 						// Send the captured (and processed) output back to the caller
-						resolve(processedOutput);
+						resolvePromise(processedOutput);
 					} catch (e) {
 						// Something went wrong.
 						// Perhaps the command or the transform failed.
 						// If there is a fallback use the result of calling that
 						if (opts.fallbackOutput) {
-							resolve(opts.fallbackOutput(e));
+							resolvePromise(opts.fallbackOutput(e));
 						} else {
 							reject(new Error(output, { cause: e }));
 						}
@@ -414,4 +415,91 @@ export async function getWorkerdCompatibilityDate() {
 	});
 
 	return workerdCompatibilityDate;
+}
+
+export async function installWorkersTypes(ctx: PagesGeneratorContext) {
+	const { npm } = detectPackageManager();
+
+	await installPackages(["@cloudflare/workers-types"], {
+		dev: true,
+		startText: `Installing @cloudflare/workers-types`,
+		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	});
+	await addWorkersTypesToTsConfig(ctx);
+}
+
+// @cloudflare/workers-types are versioned by compatibility dates, so we must look
+// up the latest entrypoint from the installed dependency on disk.
+// See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
+export function getLatestTypesEntrypoint(ctx: PagesGeneratorContext) {
+	const workersTypesPath = resolve(
+		ctx.project.path,
+		"node_modules",
+		"@cloudflare",
+		"workers-types"
+	);
+
+	try {
+		const entrypoints = readdirSync(workersTypesPath);
+
+		const sorted = entrypoints
+			.filter((filename) => filename.match(/(\d{4})-(\d{2})-(\d{2})/))
+			.sort()
+			.reverse();
+
+		if (sorted.length === 0) {
+			return null;
+		}
+
+		return sorted[0];
+	} catch (error) {
+		return null;
+	}
+}
+
+export async function addWorkersTypesToTsConfig(ctx: PagesGeneratorContext) {
+	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
+	if (!existsSync(tsconfigPath)) {
+		return;
+	}
+
+	const s = spinner();
+	s.start(`Adding latest types to \`tsconfig.json\``);
+
+	const tsconfig = readFile(tsconfigPath);
+	const entrypointVersion = getLatestTypesEntrypoint(ctx);
+	if (entrypointVersion === null) {
+		s.stop(
+			`${brandColor(
+				"skipped"
+			)} couldn't find latest compatible version of @cloudflare/workers-types`
+		);
+		return;
+	}
+
+	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
+
+	let updated = tsconfig;
+
+	if (tsconfig.includes("@cloudflare/workers-types")) {
+		updated = tsconfig.replace("@cloudflare/workers-types", typesEntrypoint);
+	} else {
+		try {
+			// Note: this simple implementation doesn't handle tsconfigs containing comments
+			//       (as it is not needed for the existing use cases)
+			const tsConfigJson = JSON.parse(tsconfig);
+			tsConfigJson.compilerOptions ??= {};
+			tsConfigJson.compilerOptions.types = [
+				...(tsConfigJson.compilerOptions.types ?? []),
+				typesEntrypoint,
+			];
+			updated = JSON.stringify(tsConfigJson, null, 2);
+		} catch {
+			warn("Could not parse tsconfig.json file");
+			updated = tsconfig;
+		}
+	}
+
+	writeFile(tsconfigPath, updated);
+	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
 }
