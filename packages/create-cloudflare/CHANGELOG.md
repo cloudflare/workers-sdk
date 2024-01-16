@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.9.1
+
+### Patch Changes
+
+- [`4667e0ed`](https://github.com/cloudflare/workers-sdk/commit/4667e0ed20078939b8abdd49c4ff1015f828de84) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Update Next.js template to support bindings for dev server
+
 ## 2.9.0
 
 ### Minor Changes

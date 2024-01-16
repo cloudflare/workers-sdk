@@ -1,5 +1,46 @@
 # wrangler
 
+## 3.22.5
+
+### Patch Changes
+
+- [#4707](https://github.com/cloudflare/workers-sdk/pull/4707) [`96a27f3d`](https://github.com/cloudflare/workers-sdk/commit/96a27f3d8a250c995907773d1aa695f80d43d9d0) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: only offer to report unknown errors
+
+  Previously, Wrangler would offer to report any error to Cloudflare. This included errors caused by misconfigurations or invalid commands. This change ensures those types of errors aren't reported.
+
+* [#4676](https://github.com/cloudflare/workers-sdk/pull/4676) [`078cf84d`](https://github.com/cloudflare/workers-sdk/commit/078cf84dcdd8bfce3f80f0ccaf6d2afa714245c4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure the script path is correctly resolved in `pages dev` when no directory is specified
+
+- [#4722](https://github.com/cloudflare/workers-sdk/pull/4722) [`5af6df13`](https://github.com/cloudflare/workers-sdk/commit/5af6df1371166886ce16d8f0cdea04a1bc401cae) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: don't require auth for `wrangler r2 object --local` operations
+
+  Previously, Wrangler would ask you to login when reading or writing from local R2 buckets. This change ensures no login prompt is displayed, as authentication isn't required for these operations.
+
+* [#4719](https://github.com/cloudflare/workers-sdk/pull/4719) [`c37d94b5`](https://github.com/cloudflare/workers-sdk/commit/c37d94b51f4d5517c244f8a4178be6a266d2362e) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `miniflare` and `wrangler` can source map in the same process
+
+  Previously, if in a `wrangler dev` session you called `console.log()` and threw an unhandled error you'd see an error like `[ERR_ASSERTION]: The expression evaluated to a falsy value`. This change ensures you can do both of these things in the same session.
+
+- [#4683](https://github.com/cloudflare/workers-sdk/pull/4683) [`24147166`](https://github.com/cloudflare/workers-sdk/commit/24147166a3cb8f5ca2612646a494dc80cb399f79) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure logs containing `at` not truncated to `at [object Object]`
+
+  Previously, logs containing `at` were always treated as stack trace call sites requiring source mapping. This change updates the call site detection to avoid false positives.
+
+* [#4748](https://github.com/cloudflare/workers-sdk/pull/4748) [`3603a60d`](https://github.com/cloudflare/workers-sdk/commit/3603a60d4b06801cf5ce9ee693d467426afa997f) Thanks [@Cherry](https://github.com/Cherry)! - fix: resolve imports in a more node-like fashion for packages that do not declare exports
+
+  Previously, trying to import a file that wasn't explicitly exported from a module would result in an error, but now, better attempts are made to resolve the import using node's module resolution algorithm. It's now possible to do things like this:
+
+  ```js
+  import JPEG_DEC_WASM from "@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm";
+  ```
+
+  This works even if the `mozjpeg_dec.wasm` file isn't explicitly exported from the `@jsquash/jpeg` module.
+
+  Fixes #4726
+
+- [#4687](https://github.com/cloudflare/workers-sdk/pull/4687) [`0a488f66`](https://github.com/cloudflare/workers-sdk/commit/0a488f6616618ce67ee22a4402d4b7477669b075) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: remove confusing `--local` messaging from `wrangler pages dev`
+
+  Running `wrangler pages dev` would previously log a warning saying `--local is no longer required` even though `--local` was never set. This change removes this warning.
+
+- Updated dependencies [[`4f6999ea`](https://github.com/cloudflare/workers-sdk/commit/4f6999eacd591d0d65180f805f2abc3c8a2c06c4), [`c37d94b5`](https://github.com/cloudflare/workers-sdk/commit/c37d94b51f4d5517c244f8a4178be6a266d2362e)]:
+  - miniflare@3.20231218.2
+
 ## 3.22.4
 
 ### Patch Changes
