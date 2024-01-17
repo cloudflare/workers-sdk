@@ -37,6 +37,4 @@ export type C3Context = {
 
 type DeploymentInfo = {
 	url?: string;
-	queues?: Record<string, string>;
-	kvNamespaces?: Record<string, string>;
 };

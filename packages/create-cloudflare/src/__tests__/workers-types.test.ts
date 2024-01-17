@@ -72,6 +72,7 @@ describe("addWorkersTypesToTsConfig", () => {
 
 		ctx.args.ts = true;
 		vi.mocked(existsSync).mockImplementation(() => true);
+
 		// mock getLatestTypesEntrypoint
 		vi.mocked(readdirSync).mockImplementation(
 			() => ["2023-07-01"] as unknown as Dirent[]

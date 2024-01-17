@@ -159,10 +159,7 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	if (!ctx.args.deploy) return;
 
 	// initialize a deployment object in context
-	ctx.deployment = {
-		queues: {},
-		kvNamespaces: {},
-	};
+	ctx.deployment = {};
 
 	const loginSuccess = await wranglerLogin();
 	if (!loginSuccess) return;
@@ -173,7 +170,7 @@ export const offerToDeploy = async (ctx: C3Context) => {
 /**
  * Determines if the current project is deployable.
  *
- * Since C3doesn't currently support a way to automatically provision the resources needed
+ * Since C3 doesn't currently support a way to automatically provision the resources needed
  * by bindings, templates that have placeholder bindings will need some adjustment by the project author
  * before they can be deployed.
  */

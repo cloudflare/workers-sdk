@@ -152,7 +152,10 @@ export const selectFramework = async (args: Partial<C3Args>) => {
 		defaultValue: C3_DEFAULTS.framework,
 	});
 
-	framework || crash("A framework must be selected to continue.");
+	if (!framework) {
+		crash("A framework must be selected to continue.");
+	}
+
 	if (!Object.keys(frameworkMap).includes(framework)) {
 		crash(`Unsupported framework: ${framework}`);
 	}
@@ -187,6 +190,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		const variantPath = (copyFiles as StaticFileMap)[languageTarget].path;
 		srcdir = join(getTemplatePath(ctx), variantPath);
 	}
+
 	const destdir = ctx.project.path;
 
 	const s = spinner();
@@ -240,11 +244,8 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 };
 
 const validateTemplate = (path: string, config: TemplateConfig) => {
-	if (config.copyFiles?.path) {
-		validateTemplateSrcDirectory(
-			resolve(path, config.copyFiles.path as string),
-			config
-		);
+	if (typeof config.copyFiles?.path == "string") {
+		validateTemplateSrcDirectory(resolve(path, config.copyFiles.path), config);
 	} else {
 		for (const variant of Object.values(config.copyFiles as StaticFileMap)) {
 			validateTemplateSrcDirectory(resolve(path, variant.path), config);
@@ -356,17 +357,3 @@ export const getTemplatePath = (ctx: C3Context) => {
 
 	return resolve(__dirname, "..", "templates", ctx.template.id);
 };
-
-// const readTemplateConfig = async (templatePath: string) => {
-// 	const resolvedTemplatePath = resolve(__dirname, templatePath);
-// 	const importPath = probePaths(
-// 		[
-// 			join(resolvedTemplatePath, "c3.json"),
-// 			join(resolvedTemplatePath, "c3.ts"),
-// 			join(resolvedTemplatePath, "c3.js"),
-// 		],
-// 		`Failed to find a c3 template config file at: ${templatePath}.`
-// 	);
-
-// 	return await require(importPath);
-// };

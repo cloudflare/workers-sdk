@@ -8,24 +8,6 @@ import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 
-const config = {
-	configVersion: 1,
-	id: "pre-existing",
-	displayName: "Pre-existing Worker (from Dashboard)",
-	platform: "workers",
-	hidden: true,
-	languages: ["js"],
-	copyFiles: {
-		path: "../hello-world/js",
-	},
-	configure: async (ctx: C3Context) => {
-		await copyExistingWorkerFiles(ctx);
-
-		// Force no-deploy since the worker is already deployed
-		ctx.args.deploy = false;
-	},
-};
-
 export async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { dlx, npm } = detectPackageManager();
 
@@ -88,4 +70,20 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 	);
 }
 
-export default config;
+export default {
+	configVersion: 1,
+	id: "pre-existing",
+	displayName: "Pre-existing Worker (from Dashboard)",
+	platform: "workers",
+	hidden: true,
+	languages: ["js"],
+	copyFiles: {
+		path: "../hello-world/js",
+	},
+	configure: async (ctx: C3Context) => {
+		await copyExistingWorkerFiles(ctx);
+
+		// Force no-deploy since the worker is already deployed
+		ctx.args.deploy = false;
+	},
+};
