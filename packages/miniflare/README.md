@@ -519,10 +519,11 @@ parameter in module format Workers.
 
 - `d1Databases?: Record<string, string> | string[]`
 
-  Record mapping binding name to D1 database IDs to inject as `Fetcher` bindings
-  into this Worker. Note these bindings must be wrapped with a facade to provide
-  the expected `D1Database` API. Different Workers may bind to the same database
-  ID with different binding names. If a `string[]` of binding names is
+  Record mapping binding name to D1 database IDs to inject as `D1Database`
+  bindings into this Worker. Note binding names starting with `__D1_BETA__` are
+  injected as `Fetcher` bindings instead, and must be wrapped with a facade to
+  provide the expected `D1Database` API. Different Workers may bind to the same
+  database ID with different binding names. If a `string[]` of binding names is
   specified, the binding name and database ID are assumed to be the same.
 
 #### Queues
@@ -541,9 +542,19 @@ parameter in module format Workers.
   have at most one consumer. If a `string[]` of queue names is specified,
   default consumer options will be used.
 
-#### Analytics Engine
+#### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
 
 _Not yet supported_
+
+If you need support for these locally, consider using the `wrappedBindings`
+option to mock them out.
+
+#### Browser Rendering and Workers AI
+
+_Not yet supported_
+
+If you need support for these locally, consider using the `serviceBindings`
+option to mock them out.
 
 ### `interface SharedOptions`
 
@@ -671,7 +682,7 @@ Options shared between all Workers/"nanoservices".
 
   Where to persist data stored in D1 databases. See docs for `Persistence`.
 
-#### Analytics Engine
+#### Analytics Engine, Browser Rendering, Sending Email, Vectorize, Workers AI and Workers for Platforms
 
 _Not yet supported_
 
