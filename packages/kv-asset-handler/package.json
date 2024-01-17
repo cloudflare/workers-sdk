@@ -42,13 +42,13 @@
 		"mime": "^3.0.0"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^3.0.1",
-		"@cloudflare/workers-types": "^4.20221111.1",
-		"@types/mime": "^3.0.1",
+		"@ava/typescript": "^4.1.0",
+		"@cloudflare/workers-types": "^4.20231218.0",
+		"@types/mime": "^3.0.4",
 		"@types/node": "^18.11.12",
-		"ava": "^5.1.0",
-		"prettier": "^2.8.1",
+		"ava": "^6.0.1",
+		"prettier": "^3.2.2",
 		"service-worker-mock": "^2.0.5",
-		"typescript": "^4.9.4"
+		"typescript": "^4.9.5"
 	}
 }
