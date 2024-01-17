@@ -69,15 +69,16 @@ export const getFrameworkMap = async () => ({
 
 export const getTemplateMap = async () => {
 	return {
-		"hello-world": await import("../templates/hello-world/c3.json"),
-		"hello-world-durable-object": await import("../templates/hello-world/c3.json"),
-		// Dummy record
+		"hello-world": (await import("../templates/hello-world/c3")).default,
+		"hello-world-durable-object": (await import("../templates/hello-world-durable-object/c3")).default,
+		// Dummy record -- actual template config resolved in `selectFramework`
 		webFramework: { displayName: "Website or web app" } as TemplateConfig,
-		common: await import("../templates/common/c3.json"),
-		scheduled: await import("../templates/scheduled/c3.json"),
-		queues: await import("../templates/queues/c3.json"),
-		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
-		openapi: await import("../templates/openapi/c3.json"),
+		common: (await import("../templates/common/c3")).default,
+		scheduled: (await import("../templates/scheduled/c3")).default,
+		queues: (await import("../templates/queues/c3")).default,
+		chatgptPlugin: (await import("../templates/chatgptPlugin/c3")).default,
+		openapi: (await import("../templates/openapi/c3")).default,
+		// Dummy record -- actual template config resolved in `processRemoteTemplate`
 		"remote-template": {
 			displayName: "From a remote git repository",
 		} as TemplateConfig,

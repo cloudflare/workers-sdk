@@ -30,6 +30,6 @@ export const createTestTemplate = (
 		platform: "workers",
 		displayName: "Test Template",
 		configVersion: 1,
-		generate: () => new Promise((resolve) => resolve()),
+		generate: async () => {},
 	};
 };
