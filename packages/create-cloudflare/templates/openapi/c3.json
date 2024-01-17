@@ -1,7 +1,7 @@
 {
 	"configVersion": 1,
 	"id": "openapi",
-	"displayName": "OpenAPI 3.1",
+	"displayName": "API starter (OpenAPI compliant)",
 	"platform": "workers",
 	"languages": ["ts"],
 	"copyFiles": {

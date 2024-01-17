@@ -191,25 +191,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const wranglerPath = join(projectPath, "node_modules/wrangler");
 		expect(wranglerPath).toExist();
 
-		// TODO: See if there's a way to test this after the refactor. Not quite as easy
-		// given the switch to a transform function rather than an object
-		// Verify package scripts
-		// const frameworkConfig = frameworkMap[framework as FrameworkName];
-		// const frameworkTargetPackageScripts = {
-		// 	...(await frameworkConfig.getPackageScripts()),
-		// } as Record<string, string>;
-
-		// if (overrides && overrides.packageScripts) {
-		// 	// override packageScripts with testing provided scripts
-		// 	Object.entries(overrides.packageScripts).forEach(([target, cmd]) => {
-		// 		frameworkTargetPackageScripts[target] = cmd;
-		// 	});
-		// }
-
-		// const pkgJson = readJSON(pkgJsonPath);
-		// Object.entries(frameworkTargetPackageScripts).forEach(([target, cmd]) => {
-		// 	expect(pkgJson.scripts[target]).toEqual(cmd);
-		// });
+		// TODO: Before the refactor introduced in https://github.com/cloudflare/workers-sdk/pull/4754
+		//       we used to test the packageJson scripts transformations here, try to re-implement such
+		//       checks (might be harder given the switch to a transform function compared to the old
+		//       object based substitution)
 
 		return { output };
 	};

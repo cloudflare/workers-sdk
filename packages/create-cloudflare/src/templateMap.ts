@@ -72,15 +72,17 @@ export const getTemplateMap = async () => {
 		"hello-world": await import("../templates/hello-world/c3.json"),
 		"hello-world-durable-object": await import("../templates/hello-world/c3.json"),
 		// Dummy record
-		webFramework: { displayName: "Website or web app" },
+		webFramework: { displayName: "Website or web app" } as TemplateConfig,
 		common: await import("../templates/common/c3.json"),
 		scheduled: await import("../templates/scheduled/c3.json"),
 		queues: await import("../templates/queues/c3.json"),
 		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
 		openapi: await import("../templates/openapi/c3.json"),
-		"remote-template": { displayName: "From a remote git repository" },
+		"remote-template": {
+			displayName: "From a remote git repository",
+		} as TemplateConfig,
 		"pre-existing": (await import("../templates/pre-existing/c3")).default,
-	} as unknown as Record<string, TemplateConfig>;
+	} as Record<string, TemplateConfig>;
 };
 
 export const selectTemplate = async (args: Partial<C3Args>) => {

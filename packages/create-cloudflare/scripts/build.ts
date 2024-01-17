@@ -16,14 +16,6 @@ const run = async () => {
 
 	const runBuild = async () => {
 		await build(config);
-		// TODO: This path needs to be fixed up, but angular might not have this problem
-		// post refactor
-		// Now copy over any runtime templates so they are available when published
-		// await cp("src/frameworks/angular/templates", "dist/angular/templates", {
-		// 	recursive: true,
-		// 	force: true,
-		// });
-
 		// npm pack doesn't include .gitignore files (see https://github.com/npm/npm/issues/3763)
 		// To workaround, copy all ".gitignore" files as "__dot__gitignore" so npm pack includes them
 		// The latter has been added to the project's .gitignore file
