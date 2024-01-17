@@ -51,12 +51,17 @@ jobs:
           name: runtime-versions.md
           path: runtime-versions.md
 
+      - name: Expose ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL
+        uses: ./.github/actions/expose-actions-variables
+
       - name: Update versions and dependencies
         run: node .github/prereleases/1-versions.mjs
 
       - name: Build, pack, and upload packages
         run: node .github/prereleases/2-build-pack-upload.mjs
         env:
+          ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
@@ -65,3 +70,6 @@ jobs:
 
       - name: Build and upload prerelease comment
         run: node .github/prereleases/3-comment.mjs
+        env:
+          ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
