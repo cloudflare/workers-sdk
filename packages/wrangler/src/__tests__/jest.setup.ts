@@ -22,6 +22,13 @@ chalk.level = 0;
 // Set `LC_ALL` to fix the language as English for the messages thrown by Yargs.
 process.env.LC_ALL = "en";
 
+jest.mock("ansi-escapes", () => {
+	return {
+		__esModule: true,
+		default: jest.fn().mockImplementation(async (options) => options.port),
+	};
+});
+
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 jest.mock("get-port", () => {
 	const { default: getPort } = jest.requireActual("get-port");
@@ -47,6 +54,7 @@ jest.mock("log-update", () => {
 	const fn = function (..._: string[]) {};
 	fn["clear"] = () => {};
 	fn["done"] = () => {};
+	fn["createLogUpdate"] = () => fn;
 	return fn;
 });
 

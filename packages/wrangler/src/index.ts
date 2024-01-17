@@ -6,6 +6,7 @@ import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
+import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
@@ -68,9 +69,13 @@ import {
 import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
+import {
+	asJson,
+	type CommonYargsArgv,
+	type CommonYargsOptions,
+} from "./yargs-types";
 import type { Config } from "./config";
-import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
-import type Yargs from "yargs";
+import type { Arguments, CommandModule } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -148,7 +153,7 @@ export function getLegacyScriptName(
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 export function demandOneOfOption(...options: string[]) {
-	return function (argv: Yargs.Arguments) {
+	return function (argv: Arguments) {
 		const count = options.filter((option) => argv[option]).length;
 		const lastOption = options.pop();
 
@@ -232,7 +237,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
-	const subHelp: Yargs.CommandModule<CommonYargsOptions, CommonYargsOptions> = {
+	const subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions> = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -445,6 +450,11 @@ export function createCLIParser(argv: string[]) {
 	// ai
 	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
+	});
+
+	// cloudchamber
+	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
+		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
 	});
 
 	// [DEPRECATED] constellation

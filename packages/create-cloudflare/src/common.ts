@@ -11,10 +11,10 @@ import {
 	startSection,
 	updateStatus,
 } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { bgGreen, blue, brandColor, dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
-import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import {
 	listAccounts,

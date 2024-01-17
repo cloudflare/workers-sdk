@@ -1,12 +1,12 @@
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { asJson } from "./options";
-import { constellationBetaWarning, listProjects } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
+import {
+	asJson,
+	type CommonYargsArgv,
+	type StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import { constellationBetaWarning, listProjects } from "./utils";
 
 export function options(yargs: CommonYargsArgv) {
 	return asJson(yargs).epilogue(constellationBetaWarning);

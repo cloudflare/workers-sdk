@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "fs";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { processArgument } from "helpers/args";
 import {
 	installPackages,
 	installWorkersTypes,
