@@ -229,7 +229,7 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 		question:
 			"What's the url of git repo containing the template you'd like to use?",
 		label: "repository",
-		validate: validateTemplateUrl,
+		validate: (val) => validateTemplateUrl(val || C3_DEFAULTS.template),
 		defaultValue: C3_DEFAULTS.template,
 	});
 

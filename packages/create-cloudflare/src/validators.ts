@@ -16,6 +16,6 @@ const TEMPLATE_REGEX =
 
 export const validateTemplateUrl = (value: Arg) => {
 	if (!String(value).match(TEMPLATE_REGEX)) {
-		return "Please enter a valid url.";
+		return "Please enter a valid template url.";
 	}
 };

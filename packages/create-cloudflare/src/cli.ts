@@ -99,10 +99,7 @@ export const runCli = async (args: Partial<C3Args>) => {
 		template,
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
-		deployment: {
-			queues: {},
-			kvNamespaces: {},
-		},
+		deployment: {},
 	};
 
 	await runTemplate(ctx);
