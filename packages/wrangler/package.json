@@ -214,5 +214,7 @@
 	"engines": {
 		"node": ">=16.17.0"
 	},
-	"workers-sdk:prerelease": true
+	"workers-sdk": {
+		"prerelease": true
+	}
 }

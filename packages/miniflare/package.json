@@ -98,5 +98,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"workers-sdk:prerelease": true
+	"workers-sdk": {
+		"prerelease": true
+	}
 }

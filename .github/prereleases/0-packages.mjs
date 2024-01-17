@@ -31,6 +31,11 @@ assert(
 const githubPullRequestNumber = githubEvent.pull_request.number;
 
 /**
+ * @typedef {object} ~PackageJsonWorkersSdk
+ * @property {boolean} [prerelease]
+ */
+
+/**
  * @typedef {object} ~PackageJson
  * @property {string} name
  * @property {string} version
@@ -38,7 +43,7 @@ const githubPullRequestNumber = githubEvent.pull_request.number;
  * @property {Record<string, string>} [devDependencies]
  * @property {Record<string, string>} [peerDependencies]
  * @property {Record<string, string>} [optionalDependencies]
- * @property {boolean} [workers-sdk:prerelease]
+ * @property {~PackageJsonWorkersSdk} [workers-sdk]
  */
 
 /**
@@ -81,7 +86,7 @@ function getPackages() {
 
 /** @returns {~Package[]} */
 export function getPackagesForPrerelease() {
-	return getPackages().filter((pkg) => pkg.json["workers-sdk:prerelease"]);
+	return getPackages().filter((pkg) => pkg.json["workers-sdk"]?.prerelease);
 }
 
 /** @param {string} pkgName */
