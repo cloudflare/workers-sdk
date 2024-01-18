@@ -78,7 +78,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 	});
 
 	it("passes through URL unchanged", async ({ expect }) => {
-		const url = `http://${ip}:${port}//thing`;
+		const url = `http://${ip}:${port}//thing?a=1`;
 		const response = await fetch(url, {
 			headers: { "X-Test-URL": "true" },
 		});
