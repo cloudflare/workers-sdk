@@ -1,17 +1,26 @@
 * @cloudflare/wrangler
 
+# Wrangler core ownership
 /packages/wrangler/CHANGELOG.md @cloudflare/wrangler-admins
 
+# Miniflare ownership
+/packages/miniflare/CHANGELOG.md @cloudflare/wrangler-admins
+
+# Pages ownership
 /packages/pages-shared/ @cloudflare/pages
+/packages/pages-shared/CHANGELOG.md @cloudflare/wrangler-admins
 /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/__tests__/pages/ @cloudflare/pages @cloudflare/wrangler
 
+# D1 ownership
 /packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
 /packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler
 
+# C3 ownership
 /packages/create-cloudflare/ @cloudflare/c3
+/packages/create-cloudflare/CHANGELOG.md @cloudflare/wrangler-admins
 
 # Owners intentionally left blank on these shared directories
 # to avoid noisy review requests
