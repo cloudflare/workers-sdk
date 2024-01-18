@@ -121,6 +121,7 @@ const create = async (ctx: C3Context) => {
 	}
 
 	await copyTemplateFiles(ctx);
+	await updatePackageJson(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
@@ -135,7 +136,6 @@ const configure = async (ctx: C3Context) => {
 	await installWrangler();
 	await installWorkersTypes(ctx);
 
-	await updatePackageJson(ctx);
 	await updateWranglerToml(ctx);
 
 	const { template } = ctx;
