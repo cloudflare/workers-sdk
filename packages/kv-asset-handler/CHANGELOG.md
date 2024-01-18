@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.3.1
+
+- ## Maintenance
+
+  - **Remove tests from npm package to reduce npm package size - [boidolr], [pull/388]**
+
+  This PR removes the tests from the npm package, reducing the size of the package by about half.
+
+  [boidolr]: https://github.com/boidolr
+  [pull/388]: https://github.com/cloudflare/kv-asset-handler/pull/388
+
+  - **Bump dependencies - [Cherry], [pull/367] [pull/361] [pull/362] [pull/359] [pull/390]**
+
+  These PRs bump dependencies of the project to their latest versions.
+
+  [pull/367]: https://github.com/cloudflare/kv-asset-handler/pull/367
+  [pull/361]: https://github.com/cloudflare/kv-asset-handler/pull/361
+  [pull/362]: https://github.com/cloudflare/kv-asset-handler/pull/362
+  [pull/359]: https://github.com/cloudflare/kv-asset-handler/pull/359
+  [pull/390]: https://github.com/cloudflare/kv-asset-handler/pull/390
+
+  - **Fix README anchor links - [johtso] [pull/372]**
+
+  This PR fixes the anchor links in the README.
+
+  [johtso]: https://github.com/johtso
+  [pull/372]: https://github.com/cloudflare/kv-asset-handler/pull/372
 
 ## 0.3.0
 
