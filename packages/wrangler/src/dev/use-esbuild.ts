@@ -268,6 +268,7 @@ export function useEsbuild({
 		experimentalLocal,
 		projectRoot,
 		onBundleStart,
+		onBundleError,
 	]);
 	return bundle;
 }

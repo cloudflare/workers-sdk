@@ -33,7 +33,7 @@ export interface StartDevWorkerOptions {
 	compatibilityFlags?: string[];
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
-	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
+	bindings?: Record<string, BindingDescriptor>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
@@ -57,7 +57,7 @@ export interface StartDevWorkerOptions {
 	 */
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
-	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
+	_bindings?: CfWorkerInit["bindings"];
 	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
@@ -74,8 +74,8 @@ export interface StartDevWorkerOptions {
 		custom: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
 			command: string;
-			/** The cwd to run the command in. */
-			workingDirectory?: string;
+			/** The directory to run the command in. */
+			cwd?: string;
 			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
 			watch?: string | string[];
 		};
@@ -162,40 +162,17 @@ export type Trigger =
 			deadLetterQueue?: string;
 	  };
 
-export type Binding =
+export type BindingDescriptor =
 	| { type: "kv"; id: string }
-	| { type: "r2"; bucket_name: string }
-	| {
-			type: "d1";
-			/** The binding name used to refer to the D1 database in the worker. */
-			binding: string;
-			/** The name of this D1 database. */
-			database_name: string;
-			/** The UUID of this D1 database (not required). */
-			database_id: string;
-			/** The UUID of this D1 database for Wrangler Dev (if specified). */
-			preview_database_id?: string;
-			/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
-			migrations_table?: string;
-			/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
-			migrations_dir?: string;
-			/** Internal use only. */
-			database_internal_env?: string;
-	  }
-	| {
-			type: "durable-object";
-			className: string;
-			service?: ServiceDesignator;
-	  }
-	| {
-			type: "service";
-			name?: string;
-			env?: string;
-			override?: ServiceFetch;
-	  }
-	| { type: "queue"; name: string }
-	| { type: "ai"; project_id: string }
-	| { type: "var"; value: Json }
+	| { type: "r2"; bucketName: string }
+	| { type: "d1"; databaseId: string }
+	| { type: "durable-object"; className: string; service?: ServiceDesignator }
+	| { type: "service"; service: ServiceDesignator | ServiceFetch }
+	| { type: "queue-producer"; name: string }
+	| { type: "var"; value: string | Json | Uint8Array }
+	| { type: "wasm-module"; source: BinaryFile }
+	| { type: "hyperdrive"; id: string; localConnectionString?: string }
+	| { type: "vectorize"; indexName: string }
 	| { type: `unsafe-${string}`; [key: string]: unknown };
 
 export type ServiceFetch = (request: Request) => Promise<Response>;
