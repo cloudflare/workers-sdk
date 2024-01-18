@@ -137,6 +137,7 @@ export async function listDeploymentsAndChoose(
 		})),
 		label: "deployment",
 	});
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	return deployments.find((d) => d.id === deployment)!;
 }
 
