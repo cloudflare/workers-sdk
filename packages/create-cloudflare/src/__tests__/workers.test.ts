@@ -1,13 +1,18 @@
 import { existsSync, readdirSync } from "fs";
+import { getWorkerdCompatibilityDate } from "helpers/command";
 import { readFile, writeFile } from "helpers/files";
 import { describe, expect, test, vi, afterEach, beforeEach } from "vitest";
 import {
 	addWorkersTypesToTsConfig,
 	getLatestTypesEntrypoint,
 } from "../workers";
+import { updateWranglerToml } from "../workers";
 import { createTestContext } from "./helpers";
 import type { Dirent } from "fs";
 import type { C3Context } from "types";
+
+vi.mock("helpers/files");
+vi.mock("helpers/command");
 
 const mockWorkersTypesDirListing = [
 	"2021-11-03",
@@ -115,5 +120,88 @@ describe("addWorkersTypesToTsConfig", () => {
 		);
 
 		expect(writeFile).not.toHaveBeenCalled();
+	});
+});
+
+describe("updateWranglerToml", () => {
+	const ctx = createTestContext();
+
+	const mockCompatDate = "2024-01-17";
+	vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
+		Promise.resolve(mockCompatDate)
+	);
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	test("placeholder replacement", async () => {
+		const toml = [
+			`name = "<TBD>"`,
+			`main = "src/index.ts"`,
+			`compatibility_date = "<TBD>"`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerToml(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
+		expect(newToml).toMatch(`main = "src/index.ts"`);
+		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+	});
+
+	test("empty replacement", async () => {
+		const toml = [
+			`name = `,
+			`main = "src/index.ts"`,
+			`compatibility_date = `,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerToml(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
+		expect(newToml).toMatch(`main = "src/index.ts"`);
+		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+	});
+
+	test("string literal replacement", async () => {
+		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
+			"\n"
+		);
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerToml(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
+		expect(newToml).toMatch(`main = "src/index.ts"`);
+	});
+
+	test("missing name and compat date", async () => {
+		const toml = `main = "src/index.ts"`;
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerToml(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatch(`name = "${ctx.project.name}"`);
+		expect(newToml).toMatch(`main = "src/index.ts"`);
+		expect(newToml).toMatch(`compatibility_date = "${mockCompatDate}"`);
+	});
+
+	test("dont replace valid existing compatibility date", async () => {
+		const toml = [
+			`name = "super-old-worker"`,
+			`compatibility_date = "2001-10-12"`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerToml(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatch(`compatibility_date = "2001-10-12"`);
 	});
 });

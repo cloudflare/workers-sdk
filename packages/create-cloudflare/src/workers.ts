@@ -11,12 +11,12 @@ import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-export const readWranglerToml = async (ctx: C3Context) => {
+export const readWranglerToml = (ctx: C3Context) => {
 	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
 	return readFile(wranglerTomlPath);
 };
 
-export const writeWranglerToml = async (ctx: C3Context, contents: string) => {
+export const writeWranglerToml = (ctx: C3Context, contents: string) => {
 	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
 	return writeFile(wranglerTomlPath, contents);
 };
@@ -30,15 +30,21 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 		return;
 	}
 
-	const wranglerToml = await readWranglerToml(ctx);
+	const wranglerToml = readWranglerToml(ctx);
 	const newToml = new MagicString(wranglerToml);
 
 	const compatDateRe = /^compatibility_date\s*=.*/m;
+
 	if (wranglerToml.match(compatDateRe)) {
-		newToml.replace(
-			compatDateRe,
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
-		);
+		// If the compat date is already a valid one, leave it since it may be there
+		// for a specific compat reason
+		const validCompatDateRe = /^compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/m;
+		if (!wranglerToml.match(validCompatDateRe)) {
+			newToml.replace(
+				compatDateRe,
+				`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
+			);
+		}
 	} else {
 		newToml.prepend(
 			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
@@ -52,7 +58,7 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 		newToml.prepend(`name = "${ctx.project.name}"`);
 	}
 
-	await writeWranglerToml(ctx, newToml.toString());
+	writeWranglerToml(ctx, newToml.toString());
 };
 
 /**
