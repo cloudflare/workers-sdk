@@ -445,20 +445,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					})
 				);
 
-				if (config.first_party_worker) {
-					// Print some useful information returned after publishing
-					// Not all fields will be populated for every worker
-					// These fields are likely to be scraped by tools, so do not rename
-					if (result.id) logger.log("Worker ID: ", result.id);
-					if (result.etag) logger.log("Worker ETag: ", result.etag);
-					if (result.pipeline_hash)
-						logger.log("Worker PipelineHash: ", result.pipeline_hash);
-					if (result.mutable_pipeline_id)
-						logger.log(
-							"Worker Mutable PipelineID (Development ONLY!):",
-							result.mutable_pipeline_id
-						);
-				}
+				logger.log("Worker Version ID:", result.id);
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
 
