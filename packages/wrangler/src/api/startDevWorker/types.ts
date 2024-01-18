@@ -1,4 +1,6 @@
-import type { RawConfig } from "../../config/config";
+import type { Config } from "../../config/config";
+import type { Route } from "../../config/environment";
+import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { Json, Request, Response, DispatchFetch } from "miniflare";
 import type * as undici from "undici";
@@ -24,14 +26,14 @@ export interface StartDevWorkerOptions {
 	 */
 	script: File<string>;
 	/** The configuration of the worker. */
-	config?: File<string | RawConfig> & { env?: string };
+	config?: File<Config>;
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
-	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
+	bindings?: Record<string, BindingDescriptor>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
@@ -41,6 +43,22 @@ export interface StartDevWorkerOptions {
 		include?: string[];
 		exclude?: string[];
 	};
+
+	// -- PASSTHROUGH -- FROM OLD CONFIG TO NEW CONFIG (TEMP)
+	/** Service environments. Providing support for existing workers with this property. Don't use this for new workers. */
+	env?: string;
+	/** Wrangler environments, defaults to true. */
+	legacyEnv?: boolean;
+	/**
+	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
+	 *
+	 * When defined this will override any user settings.
+	 * Otherwise, Wrangler will use the user's preference.
+	 */
+	sendMetrics?: boolean;
+	usageModel?: "bundled" | "unbound";
+	_bindings?: CfWorkerInit["bindings"];
+	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
@@ -56,8 +74,8 @@ export interface StartDevWorkerOptions {
 		custom: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
 			command: string;
-			/** The cwd to run the command in. */
-			workingDirectory?: string;
+			/** The directory to run the command in. */
+			cwd?: string;
 			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
 			watch?: string | string[];
 		};
@@ -82,8 +100,8 @@ export interface StartDevWorkerOptions {
 
 		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
 		server?: { hostname?: string; port?: number; secure?: boolean }; // hostname: --ip, port: --port, secure: --local-protocol
-		/** Controls what request.url looks like inside the worker. */
-		urlOverrides?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
+		/** Controls what request.url looks like inside the worker. Also used to infer the zone for remote preview sessions. */
+		origin?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
 		/** A hook for outbound fetch calls from within the worker. */
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
@@ -91,10 +109,10 @@ export interface StartDevWorkerOptions {
 	};
 }
 
-export type Hook<T, Args extends unknown[] = unknown[]> =
+export type Hook<T extends string | number | object> =
 	| T
 	| Promise<T>
-	| ((...args: Args) => T | Promise<T>);
+	| (() => T | Promise<T>);
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
@@ -109,15 +127,15 @@ export interface Location {
 	secure?: boolean; // Usually `https`, but could be `wss` for inspector
 }
 
-export type PatternRoute = {
-	pattern: string;
-} & (
-	| { pattern: string; customDomain: true }
-	| { pattern: string; zoneId: string; customDomain?: true; zoneName?: never }
-	| { pattern: string; zoneName: string; customDomain?: true; zoneId?: never }
-);
-export type WorkersDevRoute = { workersDev: true };
-export type Route = PatternRoute | WorkersDevRoute;
+// export type PatternRoute = {
+// 	pattern: string;
+// } & (
+// 	| { pattern: string; customDomain: true }
+// 	| { pattern: string; zoneId: string; customDomain?: true; zoneName?: never }
+// 	| { pattern: string; zoneName: string; customDomain?: true; zoneId?: never }
+// );
+// export type WorkersDevRoute = { workersDev: true };
+// export type Route = PatternRoute | WorkersDevRoute;
 
 export interface ModuleRule {
 	type:
@@ -133,21 +151,7 @@ export interface ModuleRule {
 
 export type Trigger =
 	| { type: "workers.dev" }
-	| { type: "route"; pattern: string; customDomain: true }
-	| {
-			type: "route";
-			pattern: string;
-			zoneId: string;
-			customDomain?: true;
-			zoneName?: never;
-	  }
-	| {
-			type: "route";
-			pattern: string;
-			zoneName: string;
-			customDomain?: true;
-			zoneId?: never;
-	  }
+	| ({ type: "route" } & Exclude<Route, string>) // TODO: what should the previous string route be now?
 	| { type: "schedule"; schedule: string }
 	| {
 			type: "queue-consumer";
@@ -158,35 +162,17 @@ export type Trigger =
 			deadLetterQueue?: string;
 	  };
 
-export type Binding =
+export type BindingDescriptor =
 	| { type: "kv"; id: string }
-	| { type: "r2"; bucket_name: string }
-	| {
-			type: "d1";
-			/** The binding name used to refer to the D1 database in the worker. */
-			binding: string;
-			/** The name of this D1 database. */
-			database_name: string;
-			/** The UUID of this D1 database (not required). */
-			database_id: string;
-			/** The UUID of this D1 database for Wrangler Dev (if specified). */
-			preview_database_id?: string;
-			/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
-			migrations_table?: string;
-			/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
-			migrations_dir?: string;
-			/** Internal use only. */
-			database_internal_env?: string;
-	  }
-	| {
-			type: "durable-object";
-			className: string;
-			service?: ServiceDesignator;
-	  }
+	| { type: "r2"; bucketName: string }
+	| { type: "d1"; databaseId: string }
+	| { type: "durable-object"; className: string; service?: ServiceDesignator }
 	| { type: "service"; service: ServiceDesignator | ServiceFetch }
 	| { type: "queue-producer"; name: string }
-	| { type: "constellation"; project_id: string }
 	| { type: "var"; value: string | Json | Uint8Array }
+	| { type: "wasm-module"; source: BinaryFile }
+	| { type: "hyperdrive"; id: string; localConnectionString?: string }
+	| { type: "vectorize"; indexName: string }
 	| { type: `unsafe-${string}`; [key: string]: unknown };
 
 export type ServiceFetch = (request: Request) => Promise<Response>;

@@ -16,6 +16,7 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
+import { createDeferred } from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -26,6 +27,7 @@ import {
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
+import { requireApiToken } from "../user";
 import { openInspector } from "./inspect";
 import { Local } from "./local";
 import { Remote } from "./remote";
@@ -258,6 +260,16 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
+	const [accountId, setAccountId] = useState(props.accountId);
+	const accountIdDeferred = useMemo(createDeferred<string>, []);
+	const setAccountIdAndResolveDeferred = useCallback(
+		(newAccountId: string) => {
+			setAccountId(newAccountId);
+			accountIdDeferred.resolve(newAccountId);
+		},
+		[setAccountId, accountIdDeferred]
+	);
+
 	const [devEnv] = useState(() => new DevEnv());
 	useEffect(() => {
 		return () => {
@@ -267,8 +279,32 @@ function DevSession(props: DevSessionProps) {
 	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
 		() => ({
 			name: props.name ?? "worker",
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
+			_bindings: props.bindings,
+			routes: props.routes,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			zone: props.zone,
+			sendMetrics: props.sendMetrics,
+			usageModel: props.usageModel,
+			site:
+				props.isWorkersSite && props.assetPaths
+					? {
+							path: path.join(
+								props.assetPaths.baseDirectory,
+								props.assetPaths?.assetDirectory
+							),
+							include: props.assetPaths.includePatterns,
+							exclude: props.assetPaths.excludePatterns,
+					  }
+					: undefined,
 			dev: {
+				auth: () => ({
+					accountId: props.accountId!,
+					apiToken: requireApiToken(),
+				}),
 				server: {
 					hostname: props.initialIp,
 					port: props.initialPort,
@@ -282,12 +318,15 @@ function DevSession(props: DevSessionProps) {
 					hostname: props.localUpstream,
 				},
 				liveReload: props.liveReload,
+				remote: !props.local,
 			},
 		}),
 		[
 			props.name,
+			props.bindings,
 			props.initialIp,
 			props.initialPort,
+			props.local,
 			props.localProtocol,
 			props.localUpstream,
 			props.inspectorPort,
@@ -300,6 +339,27 @@ function DevSession(props: DevSessionProps) {
 			config: startDevWorkerOptions,
 		});
 	}, [devEnv, startDevWorkerOptions]);
+	const onBundleComplete = useCallback(
+		(bundle: EsbuildBundle) => {
+			devEnv.runtimes.forEach((runtime) =>
+				runtime.onBundleComplete({
+					type: "bundleComplete",
+					config: startDevWorkerOptions,
+					bundle,
+				})
+			);
+		},
+		[devEnv, startDevWorkerOptions]
+	);
+	const onBundleError = useCallback(
+		() => {
+			// devEnv.proxy.onBundleError(...);
+		},
+		[
+			// devEnv,
+			// startDevWorkerOptions
+		]
+	);
 	const onReloadStart = useCallback(
 		(bundle: EsbuildBundle) => {
 			devEnv.proxy.onReloadStart({
@@ -358,10 +418,20 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onBundleStart,
+		onBundleComplete,
+		onBundleError,
 	});
 	useEffect(() => {
-		if (bundle) onReloadStart(bundle);
-	}, [onReloadStart, bundle]);
+		if (bundle) {
+			devEnv.runtimes.forEach((runtime) =>
+				runtime.onBundleComplete({
+					type: "bundleComplete",
+					config: startDevWorkerOptions,
+					bundle,
+				})
+			);
+		}
+	}, [devEnv.runtimes, startDevWorkerOptions, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -444,31 +514,8 @@ function DevSession(props: DevSessionProps) {
 		/>
 	) : (
 		<Remote
-			name={props.name}
-			bundle={bundle}
-			format={props.entry.format}
-			accountId={props.accountId}
-			bindings={props.bindings}
-			assetPaths={props.assetPaths}
-			isWorkersSite={props.isWorkersSite}
-			port={props.initialPort}
-			ip={props.initialIp}
-			localProtocol={props.localProtocol}
-			inspectorPort={props.inspectorPort}
-			// TODO: @threepointone #1167
-			// liveReload={props.liveReload}
-			inspect={props.inspect}
-			compatibilityDate={props.compatibilityDate}
-			compatibilityFlags={props.compatibilityFlags}
-			usageModel={props.usageModel}
-			env={props.env}
-			legacyEnv={props.legacyEnv}
-			zone={props.zone}
-			host={props.host}
-			routes={props.routes}
-			onReady={announceAndOnReady}
-			sourceMapPath={bundle?.sourceMapPath}
-			sendMetrics={props.sendMetrics}
+			accountId={accountId}
+			setAccountId={setAccountIdAndResolveDeferred}
 		/>
 	);
 }
