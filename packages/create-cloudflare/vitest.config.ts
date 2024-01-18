@@ -1,10 +1,14 @@
 import tsconfigPaths from "vite-tsconfig-paths";
-import { defineConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-export default defineConfig({
-	plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
-	test: {
-		include: ["src/**/__tests__/**.test.ts"],
-		setupFiles: ["vitest.setup.ts"],
-	},
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
+		test: {
+			include: ["src/**/__tests__/**.test.ts"],
+			setupFiles: ["vitest.setup.ts"],
+		},
+	})
+);
