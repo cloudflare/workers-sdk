@@ -1,6 +1,10 @@
 import { existsSync, readdirSync } from "fs";
 import { readFile, writeFile } from "helpers/files";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi, afterEach, beforeEach } from "vitest";
+import {
+	addWorkersTypesToTsConfig,
+	getLatestTypesEntrypoint,
+} from "../workers";
 import { createTestContext } from "./helpers";
 import type { Dirent } from "fs";
 import type { C3Context } from "types";
@@ -72,7 +76,6 @@ describe("addWorkersTypesToTsConfig", () => {
 
 		ctx.args.ts = true;
 		vi.mocked(existsSync).mockImplementation(() => true);
-
 		// mock getLatestTypesEntrypoint
 		vi.mocked(readdirSync).mockImplementation(
 			() => ["2023-07-01"] as unknown as Dirent[]

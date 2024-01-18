@@ -1,13 +1,12 @@
-import { existsSync, readdirSync, rmSync } from "fs";
-import path, { join, resolve } from "path";
-import { endSection, stripAnsi, warn } from "@cloudflare/cli";
+import { existsSync, rmSync } from "fs";
+import path from "path";
+import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { fetch } from "undici";
 import { quoteShellArgs } from "../common";
-import { readFile, writeFile } from "./files";
 import { detectPackageManager } from "./packages";
 import type { C3Context } from "types";
 

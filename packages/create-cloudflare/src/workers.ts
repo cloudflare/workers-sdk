@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "fs";
 import { join, resolve } from "path";
+import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { getWorkerdCompatibilityDate, installPackages } from "helpers/command";
@@ -68,10 +69,10 @@ export async function installWorkersTypes(ctx: C3Context) {
 		startText: `Installing @cloudflare/workers-types`,
 		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
 	});
-	await updateTsConfig(ctx);
+	await addWorkersTypesToTsConfig(ctx);
 }
 
-export async function updateTsConfig(ctx: C3Context) {
+export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
 		return;
@@ -92,10 +93,28 @@ export async function updateTsConfig(ctx: C3Context) {
 	}
 
 	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
-	const updated = tsconfig.replace(
-		"@cloudflare/workers-types",
-		typesEntrypoint
-	);
+
+	let updated = tsconfig;
+
+	if (tsconfig.includes("@cloudflare/workers-types")) {
+		updated = tsconfig.replace("@cloudflare/workers-types", typesEntrypoint);
+	} else {
+		try {
+			// Note: this simple implementation doesn't handle tsconfigs containing comments
+			//       (as it is not needed for the existing use cases)
+
+			const tsConfigJson = JSON.parse(tsconfig);
+			tsConfigJson.compilerOptions ??= {};
+			tsConfigJson.compilerOptions.types = [
+				...(tsConfigJson.compilerOptions.types ?? []),
+				typesEntrypoint,
+			];
+			updated = JSON.stringify(tsConfigJson, null, 2);
+		} catch {
+			warn("Could not parse tsconfig.json file");
+			updated = tsconfig;
+		}
+	}
 
 	writeFile(tsconfigPath, updated);
 	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);

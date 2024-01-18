@@ -2,11 +2,7 @@ import { existsSync, mkdirSync } from "fs";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import {
-	installPackages,
-	installWorkersTypes,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	compatDateFlag,
 	probePaths,
@@ -64,20 +60,39 @@ const configure = async (ctx: C3Context) => {
 	const projectPath = ctx.project.path;
 
 	// Add a compatible function handler example
-	const path = probePaths(
-		[
-			`${projectPath}/pages/api`,
-			`${projectPath}/src/pages/api`,
-			`${projectPath}/src/app/api`,
-			`${projectPath}/app/api`,
-			`${projectPath}/src/app`,
-			`${projectPath}/app`,
-		],
-		"Could not find the `/api` or `/app` directory"
-	);
+	const path = probePaths([
+		`${projectPath}/pages/api`,
+		`${projectPath}/src/pages/api`,
+		`${projectPath}/src/app/api`,
+		`${projectPath}/app/api`,
+		`${projectPath}/src/app`,
+		`${projectPath}/app`,
+	]);
+
+	if (!path) {
+		crash("Could not find the `/api` or `/app` directory");
+	}
 
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
 	const apiPath = path.replace(/\/app$/, "/app/api");
+
+	const usesTs = usesTypescript(ctx);
+
+	const appDirPath = probePaths([
+		`${projectPath}/src/app`,
+		`${projectPath}/app`,
+	]);
+
+	if (appDirPath) {
+		// Add a custom app not-found edge route as recommended in next-on-pages
+		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
+		const notFoundPath = `${appDirPath}/not-found.${usesTs ? "tsx" : "js"}`;
+		if (!existsSync(notFoundPath)) {
+			const notFoundContent = usesTs ? appDirNotFoundTs : appDirNotFoundJs;
+			writeFile(notFoundPath, notFoundContent);
+			updateStatus("Created a custom edge not-found route");
+		}
+	}
 
 	const [handlerPath, handlerFile] = getApiTemplate(
 		apiPath,
@@ -87,7 +102,7 @@ const configure = async (ctx: C3Context) => {
 	updateStatus("Created an example API route handler");
 
 	if (usesTs) {
-		writeFile(`${projectName}/env.d.ts`, envDts);
+		writeFile(`${projectPath}/env.d.ts`, envDts);
 		updateStatus("Created an env.d.ts file");
 	}
 
@@ -97,13 +112,13 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	writeFile(`${ctx.project.path}/next.config.js`, nextConfig);
+	writeFile(`${projectPath}/next.config.js`, nextConfig);
 	updateStatus("Updated the next.config.js file");
 
-	writeFile(`${ctx.project.path}/README.md`, readme);
+	writeFile(`${projectPath}/README.md`, readme);
 	updateStatus("Updated the README file");
 
-	await addDevDependencies(projectName, usesTs, ctx, installEslintPlugin);
+	await addDevDependencies(installEslintPlugin);
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
@@ -143,7 +158,21 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 	writeJSON(`${ctx.project.path}/.eslintrc.json`, eslintConfig);
 };
 
-const config: TemplateConfig = {
+const addDevDependencies = async (installEslintPlugin: boolean) => {
+	const packages = [
+		"@cloudflare/next-on-pages@1",
+		"@cloudflare/workers-types",
+		"vercel",
+		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
+	];
+	await installPackages(packages, {
+		dev: true,
+		startText: "Adding the Cloudflare Pages adapter",
+		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
+	});
+};
+
+export default {
 	configVersion: 1,
 	id: "next",
 	platform: "pages",
@@ -179,34 +208,4 @@ const config: TemplateConfig = {
 		"@/*",
 	],
 	compatibilityFlags: ["nodejs_compat"],
-};
-export default config;
-
-const addDevDependencies = async (
-	projectName: string,
-	usesTs: boolean,
-	ctx: PagesGeneratorContext,
-	installEslintPlugin: boolean
-) => {
-	const cwd = process.cwd();
-
-	process.chdir(projectName);
-
-	if (usesTs) {
-		await installWorkersTypes(ctx);
-	}
-
-	const packages = [
-		"@cloudflare/next-on-pages@1",
-		"@cloudflare/workers-types",
-		"vercel",
-		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
-	];
-	await installPackages(packages, {
-		dev: true,
-		startText: "Adding the Cloudflare Pages adapter",
-		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
-	});
-
-	process.chdir(cwd);
-};
+} as TemplateConfig;
