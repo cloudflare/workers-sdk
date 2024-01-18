@@ -1,7 +1,7 @@
 ---
-"wrangler": minor
+"@cloudflare/cli": minor
 ---
 
-Added `wrangler cloudchamber` commands
+Added `processArguments` helper function
 
 See [#4310](https://github.com/cloudflare/workers-sdk/pull/4310) for more details.
