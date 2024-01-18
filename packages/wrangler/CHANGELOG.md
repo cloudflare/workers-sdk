@@ -1,5 +1,25 @@
 # wrangler
 
+## 3.23.0
+
+### Minor Changes
+
+- [#4310](https://github.com/cloudflare/workers-sdk/pull/4310) [`dae30015`](https://github.com/cloudflare/workers-sdk/commit/dae30015c646502819d79bf8b8ae032c4aa0669d) Thanks [@gabivlj](https://github.com/gabivlj)! - Added `wrangler cloudchamber` commands
+
+  See [#4310](https://github.com/cloudflare/workers-sdk/pull/4310) for more details.
+
+### Patch Changes
+
+- [#4674](https://github.com/cloudflare/workers-sdk/pull/4674) [`54ea6a53`](https://github.com/cloudflare/workers-sdk/commit/54ea6a53bd1f222308135ed96bbb16a019302382) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Fix usage of patch API in bulk secrets update
+
+  Only specifying the name and type of a binding instructs the patch API to copy the existing binding over - but we were including the contents of the binding as well. Normally that's OK, but there are some subtle differences between what you specify to _create_ a binding vs what it looks like once it's _created_, specifically for Durable Objects. So instead, we just use the simpler inheritance.
+
+* [#4772](https://github.com/cloudflare/workers-sdk/pull/4772) [`4a9f03cf`](https://github.com/cloudflare/workers-sdk/commit/4a9f03cf56c3041b5ad77a7d66f6458777d1e655) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure dev server doesn't change request URLs
+
+  Previously, Wrangler's dev server could change incoming request URLs unexpectedly (e.g. rewriting `http://localhost:8787//test` to `http://localhost:8787/test`). This change ensures URLs are passed through without modification.
+
+  Fixes #4743.
+
 ## 3.22.5
 
 ### Patch Changes
