@@ -18,6 +18,9 @@ export default {
 		const { pathname } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");
+		if (request.headers.get("X-Test-URL") !== null) {
+			return new Response(request.url);
+		}
 
 		console.log(
 			request.method,

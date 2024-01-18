@@ -76,4 +76,13 @@ describe("'wrangler dev' correctly renders pages", () => {
 		const text = await response.text();
 		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
 	});
+
+	it("passes through URL unchanged", async ({ expect }) => {
+		const url = `http://${ip}:${port}//thing`;
+		const response = await fetch(url, {
+			headers: { "X-Test-URL": "true" },
+		});
+		const text = await response.text();
+		expect(text).toBe(url);
+	});
 });
