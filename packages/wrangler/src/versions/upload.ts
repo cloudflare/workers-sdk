@@ -210,14 +210,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const destination =
 		props.outDir ?? getWranglerTmpDir(props.projectRoot, "deploy");
-	const envName = props.env ?? "production";
 
 	const start = Date.now();
 	const workerName = scriptName;
 	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}/versions`;
-
-	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
-	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
 
@@ -448,9 +444,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						excludeScript: "true",
 					})
 				);
-
-				available_on_subdomain = result.available_on_subdomain;
-				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
 				if (config.first_party_worker) {
 					// Print some useful information returned after publishing
