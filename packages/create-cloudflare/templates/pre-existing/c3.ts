@@ -7,6 +7,7 @@ import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "@cloudflare/cli/args";
+import { crash } from "@cloudflare/cli";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { dlx, npm } = detectPackageManager();
@@ -51,11 +52,6 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 		}
 	);
 
-	// remove any src/* files from the template
-	for (const filename of await readdir(join(ctx.project.path, "src"))) {
-		await rm(join(ctx.project.path, "src", filename));
-	}
-
 	// copy src/* files from the downloaded worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "src"),
@@ -78,7 +74,7 @@ export default {
 	hidden: true,
 	languages: ["js"],
 	copyFiles: {
-		path: "../hello-world/js",
+		path: "./js",
 	},
 	configure: async (ctx: C3Context) => {
 		await copyExistingWorkerFiles(ctx);

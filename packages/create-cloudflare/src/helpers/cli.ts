@@ -28,7 +28,7 @@ export const C3_DEFAULTS = {
 	open: true,
 	ts: true,
 	template:
-		"https://github.com/cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world",
+		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world",
 };
 
 export const WRANGLER_DEFAULTS = {
