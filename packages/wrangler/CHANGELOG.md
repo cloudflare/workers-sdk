@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.21.0
+
+### Minor Changes
+
+- [#4765](https://github.com/cloudflare/workers-sdk/pull/4765) [`2732007d`](https://github.com/cloudflare/workers-sdk/commit/2732007d32140dc76946756c1b6bc4ad99452a4f) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`2.14.2`](https://github.com/cloudflare/miniflare/releases/tag/v2.14.2)
+
 ## 2.20.2
 
 ### Patch Changes
