@@ -57,15 +57,6 @@ export class ProxyController extends EventEmitter {
 				? getHttpsOptions()
 				: undefined;
 
-		const compatibilityFlags: string[] = [
-			"nodejs_compat",
-			// Required to parse IPv6 hostnames correctly
-			"url_standard",
-			// Required to parse `DurableObjectStub#fetch()` URLs correctly,
-			// cause of https://github.com/cloudflare/workers-sdk/issues/4743
-			"durable_object_fetch_requires_full_url",
-		];
-
 		const proxyWorkerOptions: MiniflareOptions = {
 			host: this.latestConfig.dev?.server?.hostname,
 			port: this.latestConfig.dev?.server?.port,
@@ -76,7 +67,8 @@ export class ProxyController extends EventEmitter {
 			workers: [
 				{
 					name: "ProxyWorker",
-					compatibilityFlags,
+					compatibilityDate: "2023-12-18",
+					compatibilityFlags: ["nodejs_compat"],
 					modulesRoot: path.dirname(proxyWorkerPath),
 					modules: [{ type: "ESModule", path: proxyWorkerPath }],
 					durableObjects: {
@@ -105,7 +97,8 @@ export class ProxyController extends EventEmitter {
 				},
 				{
 					name: "InspectorProxyWorker",
-					compatibilityFlags,
+					compatibilityDate: "2023-12-18",
+					compatibilityFlags: ["nodejs_compat"],
 					modulesRoot: path.dirname(inspectorProxyWorkerPath),
 					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
 					durableObjects: {
