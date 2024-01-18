@@ -778,9 +778,8 @@ describe("wrangler secret", () => {
 						).formData();
 						const settings = formBody.get("settings");
 						expect(settings).not.toBeNull();
-						expect(
-							JSON.parse(formBody.get("settings") as string)
-						).toMatchObject({
+						const parsedSettings = JSON.parse(settings as string);
+						expect(parsedSettings).toMatchObject({
 							bindings: [
 								{ type: "plain_text", name: "env_var" },
 								{ type: "json", name: "another_var" },
@@ -797,6 +796,8 @@ describe("wrangler secret", () => {
 								},
 							],
 						});
+						expect(parsedSettings).not.toHaveProperty(["bindings", 0, "text"]);
+						expect(parsedSettings).not.toHaveProperty(["bindings", 1, "json"]);
 
 						return res(ctx.json(createFetchResult(null)));
 					}
