@@ -1,10 +1,14 @@
 import * as command from "helpers/command";
-import { describe, expect, test, vi } from "vitest";
+import { SemVer } from "semver";
+import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { version as currentVersion } from "../../package.json";
 import {
 	isAllowedExistingFile,
 	isGitConfigured,
 	validateProjectDirectory,
 } from "../common";
+import { isUpdateAvailable } from "../helpers/cli";
 
 function promisify<T>(value: T) {
 	return new Promise<T>((res) => res(value));
@@ -92,4 +96,65 @@ describe("isAllowedExistingFile", () => {
 	test.each(disallowed)("%s", (val) => {
 		expect(isAllowedExistingFile(val)).toBe(false);
 	});
+});
+
+describe("isUpdateAvailable", () => {
+	const originalDispatcher = getGlobalDispatcher();
+	let agent: MockAgent;
+
+	beforeEach(() => {
+		// Mock out the undici Agent
+		agent = new MockAgent();
+		agent.disableNetConnect();
+		setGlobalDispatcher(agent);
+	});
+
+	afterEach(() => {
+		agent.assertNoPendingInterceptors();
+		setGlobalDispatcher(originalDispatcher);
+	});
+
+	test("is not available if fetch fails", async () => {
+		agent
+			.get("https://registry.npmjs.org")
+			.intercept({ path: "/create-cloudflare" })
+			.replyWithError(new Error());
+		expect(await isUpdateAvailable()).toBe(false);
+	});
+
+	test("is not available if fetched latest version is older by a minor", async () => {
+		const latestVersion = new SemVer(currentVersion);
+		latestVersion.minor--;
+		replyWithLatest(latestVersion);
+		expect(await isUpdateAvailable()).toBe(false);
+	});
+
+	test("is available if fetched latest version is newer by a minor", async () => {
+		const latestVersion = new SemVer(currentVersion);
+		latestVersion.minor++;
+		replyWithLatest(latestVersion);
+		expect(await isUpdateAvailable()).toBe(true);
+	});
+
+	test("is not available if fetched latest version is newer by a major", async () => {
+		const latestVersion = new SemVer(currentVersion);
+		latestVersion.major++;
+		replyWithLatest(latestVersion);
+		expect(await isUpdateAvailable()).toBe(false);
+	});
+
+	function replyWithLatest(version: SemVer) {
+		agent
+			.get("https://registry.npmjs.org")
+			.intercept({ path: "/create-cloudflare" })
+			.reply(
+				200,
+				{
+					"dist-tags": { latest: version.format() },
+				},
+				{
+					headers: { "content-type": "application/json" },
+				}
+			);
+	}
 });
