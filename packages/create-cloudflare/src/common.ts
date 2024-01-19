@@ -25,6 +25,7 @@ import {
 } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import { quote } from "shell-quote";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import { readWranglerToml } from "./workers";
@@ -579,7 +580,7 @@ function prepareCommitMessage(commitMessage: string): string {
 
 export function quoteShellArgs(args: string[]): string {
 	if (process.platform !== "win32") {
-		return args.join(" ");
+		return quote(args);
 	} else {
 		// Simple Windows command prompt quoting if there are special characters.
 		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
