@@ -52,6 +52,17 @@ jobs:
           path: runtime-versions.md
 
       - name: Expose ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL
+        # We use the `@actions/artifact` package in the prerelease scripts below.
+        # This is meant to be used from custom JavaScript actions, rather than
+        # workflow `run` steps. This means it expects `ACTIONS_RUNTIME_TOKEN`
+        # and `ACTIONS_RESULTS_URL` environment variables to be set. We'd like
+        # to retain separation between the different stages of pre-releasing,
+        # and easily pass environment variables to the build. Therefore, we use
+        # this stub action that exposes the `ACTIONS_RUNTIME_TOKEN` and
+        # `ACTIONS_RESULTS_URL` action-specific environment variables as
+        # `GITHUB_ACTIONS_RUNTIME_TOKEN` and `GITHUB_ACTIONS_RESULTS_URL` global
+        # environment variables. These can be passed via `env` to `run` steps
+        # that use `@actions/artifact`.
         uses: ./.github/actions/expose-actions-variables
 
       - name: Update versions and dependencies
@@ -60,16 +71,18 @@ jobs:
       - name: Build, pack, and upload packages
         run: node .github/prereleases/2-build-pack-upload.mjs
         env:
-          ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           CI_OS: ${{ runner.os }}
+          # Required by the `@actions/artifact` package
+          ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
+          ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
 
       - name: Build and upload prerelease comment
         run: node .github/prereleases/3-comment.mjs
         env:
+          # Required by the `@actions/artifact` package
           ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
           ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
