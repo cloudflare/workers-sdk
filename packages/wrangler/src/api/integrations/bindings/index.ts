@@ -2,8 +2,10 @@ import { Miniflare } from "miniflare";
 import { readConfig } from "../../../config";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
+import { getVarsForDev } from "../../../dev/dev-vars";
 import { buildMiniflareBindingOptions } from "../../../dev/miniflare";
 import { getServiceBindings } from "./services";
+import type { Config } from "../../../config";
 import type { MiniflareOptions } from "miniflare";
 
 /**
@@ -53,7 +55,18 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 	options: GetBindingsProxyOptions = {}
 ): Promise<BindingsProxy<Bindings>> {
-	const miniflareOptions = await getMiniflareOptionsFromConfig(options);
+	const rawConfig = readConfig(options.configPath, {
+		experimentalJsonConfig: options.experimentalJsonConfig,
+	});
+
+	// getBindingsProxy doesn't currently support selecting an environment
+	const env = undefined;
+
+	const miniflareOptions = await getMiniflareOptionsFromConfig(
+		rawConfig,
+		env,
+		options
+	);
 
 	const mf = new Miniflare({
 		script: "",
@@ -63,22 +76,22 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 
 	const bindings: Bindings = await mf.getBindings();
 
+	const vars = getVarsForDev(rawConfig, env);
+
 	return {
-		bindings,
+		bindings: {
+			...vars,
+			...bindings,
+		},
 		dispose: () => mf.dispose(),
 	};
 }
 
 async function getMiniflareOptionsFromConfig(
-	opts: GetBindingsProxyOptions
+	rawConfig: Config,
+	env: string | undefined,
+	options: GetBindingsProxyOptions
 ): Promise<Partial<MiniflareOptions>> {
-	const rawConfig = readConfig(opts.configPath, {
-		experimentalJsonConfig: opts.experimentalJsonConfig,
-	});
-
-	// getBindingsProxy doesn't currently support selecting an environment
-	const env = undefined;
-
 	const bindings = getBindings(rawConfig, env, true, {});
 
 	const workerDefinitions = await getBoundRegisteredWorkers({
@@ -95,11 +108,11 @@ async function getMiniflareOptionsFromConfig(
 			serviceBindings: {},
 		});
 
-	const persistOptions = getMiniflarePersistOptions(opts.persist);
+	const persistOptions = getMiniflarePersistOptions(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
 
-	const options: MiniflareOptions = {
+	const miniflareOptions: MiniflareOptions = {
 		workers: [
 			{
 				script: "",
@@ -112,7 +125,7 @@ async function getMiniflareOptionsFromConfig(
 		...persistOptions,
 	};
 
-	return options;
+	return miniflareOptions;
 }
 
 /**

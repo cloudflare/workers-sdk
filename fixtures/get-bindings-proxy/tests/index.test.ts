@@ -16,7 +16,9 @@ import path from "path";
 
 type Bindings = {
 	MY_VAR: string;
+	MY_VAR_A: string;
 	MY_JSON_VAR: Object;
+	MY_DEV_VAR: string;
 	MY_SERVICE_A: Fetcher;
 	MY_SERVICE_B: Fetcher;
 	MY_KV: KVNamespace;
@@ -44,35 +46,61 @@ describe("getBindingsProxy", () => {
 		await Promise.allSettled(devWorkers.map((i) => i.stop()));
 	});
 
-	it("correctly obtains var bindings", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
-			configPath: wranglerTomlFilePath,
+	describe("var bindings", () => {
+		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
+			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+				configPath: wranglerTomlFilePath,
+			});
+			const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
+			expect(MY_VAR).toEqual("my-var-value");
+			expect(MY_JSON_VAR).toEqual({
+				test: true,
+			});
+			expect(MY_DEV_VAR).toEqual("my-dev-var-value");
+			await dispose();
 		});
-		const { MY_VAR, MY_JSON_VAR } = bindings;
-		expect(MY_VAR).toEqual("my-var-value");
-		expect(MY_JSON_VAR).toEqual({
-			test: true,
-		});
-		await dispose();
-	});
 
-	it("correctly reads a toml from a custom path", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
-			configPath: path.join(
-				__dirname,
-				"..",
-				"custom-toml",
-				"path",
-				"test-toml"
-			),
+		it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
+			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+				configPath: wranglerTomlFilePath,
+			});
+			const { MY_VAR_A } = bindings;
+			expect(MY_VAR_A).not.toEqual("my-var-a");
+			expect(MY_VAR_A).toEqual("my-dev-var-a");
+			await dispose();
 		});
-		const { MY_VAR, MY_JSON_VAR } = bindings;
-		expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
-		expect(MY_JSON_VAR).toEqual({
-			test: true,
-			customToml: true,
+
+		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
+			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+				configPath: wranglerTomlFilePath,
+			});
+			const { MY_KV } = bindings;
+			expect(MY_KV).not.toEqual("my-dev-kv");
+			["get", "delete", "list", "put", "getWithMetadata"].every((methodName) =>
+				expect(typeof MY_KV[methodName]).toBe("function")
+			);
+			await dispose();
 		});
-		await dispose();
+
+		it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
+			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+				configPath: path.join(
+					__dirname,
+					"..",
+					"custom-toml",
+					"path",
+					"test-toml"
+				),
+			});
+			const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
+			expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
+			expect(MY_JSON_VAR).toEqual({
+				test: true,
+				customToml: true,
+			});
+			expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
+			await dispose();
+		});
 	});
 
 	it("correctly reads a json config file", async () => {
