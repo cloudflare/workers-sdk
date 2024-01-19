@@ -13,6 +13,7 @@ import type { C3Context } from "types";
 
 vi.mock("helpers/files");
 vi.mock("helpers/command");
+vi.mock("fs");
 
 const mockWorkersTypesDirListing = [
 	"2021-11-03",
@@ -27,8 +28,17 @@ const mockWorkersTypesDirListing = [
 	"package.json",
 ];
 
-vi.mock("fs");
-vi.mock("helpers/files");
+const mockWorkersTypesDirectory = (
+	mockImpl: () => string[] = () => [...mockWorkersTypesDirListing]
+) => {
+	vi.mocked(readdirSync).mockImplementation((path) => {
+		if (path.toString().match("workers-types")) {
+			// vitest won't resolve the type for the correct `readdirSync` overload thus the trickery
+			return mockImpl() as unknown as Dirent[];
+		}
+		return [];
+	});
+};
 
 describe("getLatestTypesEntrypoint", () => {
 	const ctx = createTestContext();
@@ -38,17 +48,14 @@ describe("getLatestTypesEntrypoint", () => {
 	});
 
 	test("happy path", async () => {
-		vi.mocked(readdirSync).mockImplementation(
-			// vitest won't resolve the type for the correct overload thus the trickery
-			() => [...mockWorkersTypesDirListing] as unknown as Dirent[]
-		);
+		mockWorkersTypesDirectory();
 
 		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe("2023-07-01");
 	});
 
 	test("read error", async () => {
-		vi.mocked(readdirSync).mockImplementation(() => {
+		mockWorkersTypesDirectory(() => {
 			throw new Error("ENOENT: no such file or directory");
 		});
 
@@ -57,16 +64,14 @@ describe("getLatestTypesEntrypoint", () => {
 	});
 
 	test("empty directory", async () => {
-		vi.mocked(readdirSync).mockImplementation(() => []);
+		mockWorkersTypesDirectory(() => []);
 
 		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe(null);
 	});
 
 	test("no compat dates found", async () => {
-		vi.mocked(readdirSync).mockImplementation(
-			() => ["foo", "bar"] as unknown as Dirent[]
-		);
+		mockWorkersTypesDirectory(() => ["foo", "bar"]);
 
 		const entrypoint = getLatestTypesEntrypoint(ctx);
 		expect(entrypoint).toBe(null);
@@ -78,13 +83,10 @@ describe("addWorkersTypesToTsConfig", () => {
 
 	beforeEach(() => {
 		ctx = createTestContext();
-
 		ctx.args.ts = true;
+
 		vi.mocked(existsSync).mockImplementation(() => true);
-		// mock getLatestTypesEntrypoint
-		vi.mocked(readdirSync).mockImplementation(
-			() => ["2023-07-01"] as unknown as Dirent[]
-		);
+		mockWorkersTypesDirectory();
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
