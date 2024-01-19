@@ -1,7 +1,7 @@
 import { Response } from "miniflare";
 import { fetch, type Request } from "undici";
 import { getRegisteredWorkers } from "../../../dev-registry";
-import type { WorkerDefinition, WorkerRegistry } from "../../../dev-registry";
+import type { WorkerDefinition } from "../../../dev-registry";
 import type { RequestInit } from "undici";
 
 /**
@@ -23,14 +23,7 @@ export async function getServiceBindings(
 		return;
 	}
 
-	let registeredWorkers: WorkerRegistry | undefined;
-
-	try {
-		registeredWorkers = await getRegisteredWorkers();
-	} catch {
-		/* */
-	}
-
+	const registeredWorkers = await maybeGetRegisteredWorkers();
 	if (!registeredWorkers) {
 		return;
 	}
@@ -105,4 +98,12 @@ function getServiceBindingProxyFetch({
 			);
 		}
 	};
+}
+
+async function maybeGetRegisteredWorkers() {
+	try {
+		return await getRegisteredWorkers();
+	} catch {
+		return undefined;
+	}
 }
