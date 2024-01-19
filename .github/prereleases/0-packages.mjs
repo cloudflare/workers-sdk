@@ -19,7 +19,8 @@ const githubEventContents = fs.readFileSync(githubEventPath, "utf8");
 const githubEvent = JSON.parse(githubEventContents);
 const githubPullRequestNumber = githubEvent?.pull_request?.number;
 assert(
-	typeof githubPullRequestNumber`Expected valid pull_request event, got ${githubEventContents}`
+	typeof githubPullRequestNumber === "number",
+	`Expected valid pull_request event, got ${githubEventContents}`
 );
 
 /**
