@@ -85,7 +85,7 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 	}
 
 	const s = spinner();
-	s.start(`Adding latest types to \`tsconfig.json\``);
+	s.start("Adding latest types to `tsconfig.json`");
 
 	const tsconfig = readFile(tsconfigPath);
 	const entrypointVersion = getLatestTypesEntrypoint(ctx);
