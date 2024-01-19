@@ -39,5 +39,5 @@ function updateDependencyVersions(pkgs, newVersion) {
 	const newVersion = getPrereleaseVersion();
 	updateVersions(pkgs, newVersion);
 	updateDependencyVersions(pkgs, newVersion);
-	for (const pkg of pkgs) setPackage(pkg);
+	pkgs.forEach(setPackage);
 }
