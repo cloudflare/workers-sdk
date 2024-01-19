@@ -185,8 +185,8 @@ async function tryToRetrieveAllDefaultSSHKeyPaths(): Promise<string[]> {
  */
 async function tryToRetrieveADefaultPath(): Promise<string> {
 	const paths = await tryToRetrieveAllDefaultSSHKeyPaths();
-	if (paths.length === 0) return "";
-	return paths.pop()!;
+	const path = paths.pop();
+	return path ?? "";
 }
 
 /**

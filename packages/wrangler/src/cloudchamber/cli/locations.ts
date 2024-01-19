@@ -100,6 +100,7 @@ export async function getLocation(
 
 	const pops = locationToPops[location];
 	if (pops.length === 1) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		return pops.pop()!.location;
 	}
 
