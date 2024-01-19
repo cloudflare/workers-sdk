@@ -2,7 +2,7 @@ import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import type { C3Context } from "types";
-import { TemplateConfig } from "../../src/templateMap";
+import { TemplateConfig } from "../../src/templates";
 
 const { npm } = detectPackageManager();
 

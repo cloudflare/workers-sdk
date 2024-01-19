@@ -25,7 +25,7 @@ import {
 	readme,
 } from "./templates";
 import type { C3Args, C3Context } from "types";
-import { TemplateConfig } from "../../src/templateMap";
+import { TemplateConfig } from "../../src/templates";
 
 const { npm, npx } = detectPackageManager();
 

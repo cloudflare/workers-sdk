@@ -35,7 +35,7 @@ import {
 	copyTemplateFiles,
 	selectTemplate,
 	updatePackageJson,
-} from "./templateMap";
+} from "./templates";
 import { installWorkersTypes, updateWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
 

@@ -4,7 +4,7 @@ import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { quoteShellArgs } from "../../src/common";
 import type { C3Context } from "types";
-import { TemplateConfig } from "../../src/templateMap";
+import { TemplateConfig } from "../../src/templates";
 
 const { npm, npx } = detectPackageManager();
 

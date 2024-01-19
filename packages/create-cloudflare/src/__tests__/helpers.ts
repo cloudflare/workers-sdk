@@ -1,5 +1,5 @@
 import { C3_DEFAULTS } from "helpers/cli";
-import type { TemplateConfig } from "../templateMap";
+import type { TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
 
 export const createTestArgs = (args?: Partial<C3Args>) => {

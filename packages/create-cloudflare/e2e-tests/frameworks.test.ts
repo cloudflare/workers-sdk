@@ -3,7 +3,7 @@ import { retry } from "helpers/command";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, test } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
-import { getFrameworkMap } from "../src/templateMap";
+import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
@@ -13,7 +13,7 @@ import {
 	testDeploymentCommitMessage,
 	testProjectDir,
 } from "./helpers";
-import type { FrameworkMap, FrameworkName } from "../src/templateMap";
+import type { FrameworkMap, FrameworkName } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
 import type { Suite, TestContext } from "vitest";
 

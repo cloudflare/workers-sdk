@@ -1,4 +1,4 @@
-import type { TemplateConfig } from "./templateMap";
+import type { TemplateConfig } from "./templates";
 
 export type C3Args = {
 	projectName: string;
