@@ -2,5 +2,25 @@
 "create-cloudflare": minor
 ---
 
-Adds support for external templates in C3 via the `--template <url>` option. A url to a git
-repository may be used as well as the `owner/repo` shorthand supported by `degit`.
+Adds C3 support for external templates hosted in git repositories via the `--template <source>` option.
+
+The source may be specified as any of the following:
+
+- `user/repo`
+- `git@github.com:user/repo`
+- `https://github.com/user/repo`
+- `user/repo/some-template` (subdirectories)
+- `user/repo#canary` (branches)
+- `user/repo#1234abcd` (commit hash)
+- `bitbucket:user/repo` (BitBucket)
+- `gitlab:user/repo` (GitLab)
+
+See the `degit` [docs](https://github.com/Rich-Harris/degit) for more details.
+
+At a minimum, templates must contain the following:
+
+- `package.json`
+- `wrangler.toml`
+- `src/` containing a worker script referenced from `wrangler.toml`
+
+See the [templates folder](https://github.com/cloudflare/workers-sdk/tree/main/templates) of this repo for more examples.

@@ -80,7 +80,7 @@ export const getTemplateMap = async () => {
 		openapi: (await import("../templates/openapi/c3")).default,
 		// Dummy record -- actual template config resolved in `processRemoteTemplate`
 		"remote-template": {
-			displayName: "From a remote git repository",
+			displayName: "Worker built from a template hosted in a git repository",
 		} as TemplateConfig,
 		"pre-existing": (await import("../templates/pre-existing/c3")).default,
 	} as Record<string, TemplateConfig>;
@@ -307,8 +307,8 @@ const inferCopyFilesDefinition = (path: string) => {
  * @returns A path to a temporary directory containing the downloaded template
  */
 const downloadRemoteTemplate = async (src: string) => {
+	const s = spinner();
 	try {
-		const s = spinner();
 		s.start(`Cloning template from: ${blue(src)}`);
 		const emitter = degit(src, {
 			cache: false,
@@ -322,6 +322,7 @@ const downloadRemoteTemplate = async (src: string) => {
 
 		return tmpDir;
 	} catch (error) {
+		s.stop(`${brandColor("template")} ${dim("failed")}`);
 		return crash(`Failed to clone remote template: ${src}`);
 	}
 };

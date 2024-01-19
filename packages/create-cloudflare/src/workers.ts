@@ -72,7 +72,7 @@ export async function installWorkersTypes(ctx: C3Context) {
 
 	await installPackages(["@cloudflare/workers-types"], {
 		dev: true,
-		startText: `Installing @cloudflare/workers-types`,
+		startText: "Installing @cloudflare/workers-types",
 		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
 	});
 	await addWorkersTypesToTsConfig(ctx);
@@ -126,8 +126,8 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
 }
 
-// @cloudflare/workers-types are versioned by compatibility dates, so we must look
-// up the latest entrypiont from the installed dependency on disk.
+// The `@cloudflare/workers-types` package is versioned by compatibility dates, so we
+// must look up the latest entrypiont from the installed dependency on disk.
 // See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
 export function getLatestTypesEntrypoint(ctx: C3Context) {
 	const workersTypesPath = resolve(
