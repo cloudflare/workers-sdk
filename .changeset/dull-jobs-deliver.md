@@ -4,7 +4,7 @@
 
 Add new `getBindingsProxy` utility to the wrangler package
 
-The new utility is part of wrangler's js api (it is not part of the wrangler CLI) and its use is to provide proxy objects to bindings, such objects can be used in nodejs code as if they were actual bindings
+The new utility is part of wrangler's JS API (it is not part of the wrangler CLI) and its use is to provide proxy objects to bindings, such objects can be used in Node.js code as if they were actual bindings
 
 The utility reads the `wrangler.toml` file present in the current working directory in order to discern what bindings should be available (a `wrangler.json` file can be used too, as well as config files with custom paths).
 
