@@ -150,9 +150,10 @@ const configure = async (ctx: C3Context) => {
 };
 
 const deploy = async (ctx: C3Context) => {
-	await offerToDeploy(ctx);
-	await createProject(ctx);
-	await runDeploy(ctx);
+	if (await offerToDeploy(ctx)) {
+		await createProject(ctx);
+		await runDeploy(ctx);
+	}
 };
 
 // Detects if a newer version of c3 is available by comparing the version

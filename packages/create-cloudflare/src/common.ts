@@ -150,14 +150,16 @@ export const offerToDeploy = async (ctx: C3Context) => {
 		...(ctx.template.deployCommand ?? ["deploy"]),
 	])}\``;
 
-	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
+	const shouldDeploy = await processArgument(ctx.args, "deploy", {
 		type: "confirm",
 		question: "Do you want to deploy your application?",
 		label,
 		defaultValue: C3_DEFAULTS.deploy,
 	});
 
-	if (!ctx.args.deploy) return;
+	if (!shouldDeploy) {
+		return false;
+	}
 
 	// initialize a deployment object in context
 	ctx.deployment = {};
@@ -166,6 +168,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	if (!loginSuccess) return;
 
 	await chooseAccount(ctx);
+
+	return true;
 };
 
 /**
@@ -189,7 +193,6 @@ const isDeployable = async (ctx: C3Context) => {
 };
 
 export const runDeploy = async (ctx: C3Context) => {
-	if (ctx.args.deploy === false) return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;

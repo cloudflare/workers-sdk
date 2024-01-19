@@ -15,7 +15,6 @@ const VERIFY_PROJECT_RETRIES = 3;
 const { npx } = detectPackageManager();
 
 export const createProject = async (ctx: C3Context) => {
-	if (ctx.args.deploy === false) return;
 	if (ctx.template.platform === "workers") return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
