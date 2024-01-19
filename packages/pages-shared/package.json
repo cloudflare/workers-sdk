@@ -27,5 +27,8 @@
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",
 		"service-worker-mock": "^2.0.5"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

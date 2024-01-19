@@ -40,6 +40,7 @@
 		"vitest": "^0.34.6"
 	},
 	"devDependencies": {
+		"@actions/artifact": "^2.0.1",
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"@turbo/gen": "^1.10.13",
 		"dotenv-cli": "^7.3.0",
