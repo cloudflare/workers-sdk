@@ -28,19 +28,22 @@ export async function getServiceBindings(
 		return;
 	}
 
-  const foundServices: AvailableBindingInfo[] = [];
-  const _missingServices: Pick<AvailableBindingInfo, "bindingName">[] = [];
-  for (const {binding: bindingName, service: serviceName} of services) {
-     const worker = registeredWorkers[serviceName]
-     if (worker) {
-       foundServices.push({ bindingName, serviceName, workerDefinition: worker });
-     } else {
-       _missingServices.push({bindingName});
-  }
+	const foundServices: AvailableBindingInfo[] = [];
+	for (const { binding: bindingName, service: serviceName } of services) {
+		const worker = registeredWorkers[serviceName];
+		if (worker) {
+			foundServices.push({
+				bindingName,
+				serviceName,
+				workerDefinition: worker,
+			});
+		}
+	}
 
 	const serviceBindings: ServiceBindings = {};
-	for(bindingInfo of foundServices) {
-			serviceBindings[bindingInfo.bindingName] = getServiceBindingProxyFetch(bindingInfo);
+	for (const bindingInfo of foundServices) {
+		serviceBindings[bindingInfo.bindingName] =
+			getServiceBindingProxyFetch(bindingInfo);
 	}
 	return serviceBindings;
 }
