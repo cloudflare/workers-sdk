@@ -17,18 +17,10 @@ const githubEventPath = process.env.GITHUB_EVENT_PATH;
 assert(githubEventPath, "Expected GITHUB_EVENT_PATH variable to be defined");
 const githubEventContents = fs.readFileSync(githubEventPath, "utf8");
 const githubEvent = JSON.parse(githubEventContents);
+const githubPullRequestNumber = githubEvent?.pull_request?.number;
 assert(
-	typeof githubEvent === "object" &&
-		githubEvent !== null &&
-		"pull_request" in githubEvent &&
-		typeof githubEvent.pull_request === "object" &&
-		githubEvent.pull_request !== null &&
-		"number" in githubEvent.pull_request &&
-		typeof githubEvent.pull_request.number === "number",
-	`Expected valid pull_request event, got ${githubEventContents}`
+	typeof githubPullRequestNumber`Expected valid pull_request event, got ${githubEventContents}`
 );
-// noinspection JSUnresolvedReference,JSObjectNullOrUndefined
-const githubPullRequestNumber = githubEvent.pull_request.number;
 
 /**
  * @typedef {object} ~PackageJsonWorkersSdk
