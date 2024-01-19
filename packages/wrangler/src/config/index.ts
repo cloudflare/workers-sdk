@@ -29,7 +29,8 @@ export type {
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
-	args: CommandArgs & OnlyCamelCase<CommonYargsOptions>
+	args: CommandArgs &
+		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {

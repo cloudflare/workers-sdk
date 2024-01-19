@@ -18,7 +18,7 @@ let terminator: HttpTerminator;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
-type WorkerDefinition = {
+export type WorkerDefinition = {
 	port: number | undefined;
 	protocol: "http" | "https" | undefined;
 	host: string | undefined;
