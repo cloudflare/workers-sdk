@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { getConstellationWarningFromEnv } from "../constellation/utils";
@@ -52,7 +53,7 @@ const ENGLISH = new Intl.ListFormat("en");
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: object
+	args: Record<string, unknown>
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -116,9 +117,9 @@ export function normalizeAndValidateConfig(
 
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
-		(args as { "legacy-env": boolean | undefined })["legacy-env"] ??
-		rawConfig.legacy_env ??
-		true;
+		typeof args["legacy-env"] === "boolean"
+			? args["legacy-env"]
+			: rawConfig.legacy_env ?? true;
 
 	// TODO: remove this once service environments goes GA.
 	if (!isLegacyEnv) {
@@ -134,7 +135,8 @@ export function normalizeAndValidateConfig(
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
-	const envName = (args as { env: string | undefined }).env;
+	const envName = args.env;
+	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
 	if (envName !== undefined) {
@@ -388,8 +390,25 @@ function normalizeAndValidateBaseDirField(
 function normalizeAndValidateDev(
 	diagnostics: Diagnostics,
 	rawDev: RawDevConfig,
-	args: unknown
+	args: Record<string, unknown>
 ): DevConfig {
+	assert(typeof args === "object" && args !== null && !Array.isArray(args));
+	const {
+		localProtocol: localProtocolArg,
+		upstreamProtocol: upstreamProtocolArg,
+		remote: remoteArg,
+	} = args;
+	assert(
+		localProtocolArg === undefined ||
+			localProtocolArg === "http" ||
+			localProtocolArg === "https"
+	);
+	assert(
+		upstreamProtocolArg === undefined ||
+			upstreamProtocolArg === "http" ||
+			upstreamProtocolArg === "https"
+	);
+	assert(remoteArg === undefined || typeof remoteArg === "boolean");
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
 		// will only listen on the IPv4 loopback `127.0.0.1`, not the IPv6 `::1`:
@@ -401,11 +420,9 @@ function normalizeAndValidateDev(
 		ip = process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port,
 		inspector_port,
-		local_protocol = (args as { localProtocol: "http" | "https" })
-			.localProtocol ?? "http",
+		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
-		upstream_protocol = (args as { upstreamProtocol: boolean })
-			.upstreamProtocol ?? (args as { remote: boolean }).remote
+		upstream_protocol = upstreamProtocolArg ?? remoteArg
 			? "https"
 			: local_protocol,
 		host,
