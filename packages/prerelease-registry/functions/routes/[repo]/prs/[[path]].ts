@@ -21,13 +21,15 @@ export const onRequestGet: PagesFunction<
 	const { repo, path } = params;
 
 	if (!Array.isArray(path) || !repos.includes(repo as string)) {
-		return new Response(null, { status: 404 });
+		return new Response(`path: "${path}", repo: "${repo}"`, { status: 404 });
 	}
 
 	const pullRequestID = parseInt(path[0]);
 	const name = path[1];
 	if (isNaN(pullRequestID) || name === undefined)
-		return new Response(null, { status: 404 });
+		return new Response(`pullRequestID: "${pullRequestID}", name: "${name}"`, {
+			status: 404,
+		});
 
 	const gitHubFetch = generateGitHubFetch(env);
 
@@ -45,7 +47,10 @@ export const onRequestGet: PagesFunction<
 				return new Response(null, { status: 502 });
 			}
 
-			return new Response(null, { status: 404 });
+			return new Response(
+				`pullRequestsResponse.ok: "${pullRequestsResponse.ok}"`,
+				{ status: 404 }
+			);
 		}
 
 		const {
@@ -65,7 +70,10 @@ export const onRequestGet: PagesFunction<
 				return new Response(null, { status: 502 });
 			}
 
-			return new Response(null, { status: 404 });
+			return new Response(
+				`workflowRunsResponse.ok: "${workflowRunsResponse.ok}"`,
+				{ status: 404 }
+			);
 		}
 
 		const { workflow_runs: workflowRuns } =
@@ -78,7 +86,8 @@ export const onRequestGet: PagesFunction<
 				workflowRunCandidate.head_sha === sha &&
 				workflowRunCandidate.workflow_id === WORKFLOW_ID
 		);
-		if (workflowRun === undefined) return new Response(null, { status: 404 });
+		if (workflowRun === undefined)
+			return new Response("workflowRun === undefined", { status: 404 });
 
 		return getArtifactForWorkflowRun({
 			repo: repo as string,
