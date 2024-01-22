@@ -784,29 +784,7 @@ describe("middleware", () => {
 					.replace(/\/\/ .*/g, "")
 					.trim()
 			).toMatchInlineSnapshot(`
-			"var __facade_middleware__ = [];
-			function __facade_register__(...args) {
-			  __facade_middleware__.push(...args.flat());
-			}
-			function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
-			  const [head, ...tail] = middlewareChain;
-			  const middlewareCtx = {
-			    dispatch,
-			    next(newRequest, newEnv) {
-			      return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
-			    }
-			  };
-			  return head(request, env, ctx, middlewareCtx);
-			}
-			function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
-			  return __facade_invokeChain__(request, env, ctx, dispatch, [
-			    ...__facade_middleware__,
-			    finalMiddleware
-			  ]);
-			}
-
-
-			var src_default = {
+			"var src_default = {
 			  async fetch(request, env) {
 			    return Response.json(env);
 			  }
@@ -840,6 +818,28 @@ describe("middleware", () => {
 			};
 			var DurableObjectExample2 = maskDurableObjectDefinition(DurableObjectExample);
 			var middleware_insertion_facade_default = facade;
+
+
+			var __facade_middleware__ = [];
+			function __facade_register__(...args) {
+			  __facade_middleware__.push(...args.flat());
+			}
+			function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
+			  const [head, ...tail] = middlewareChain;
+			  const middlewareCtx = {
+			    dispatch,
+			    next(newRequest, newEnv) {
+			      return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
+			    }
+			  };
+			  return head(request, env, ctx, middlewareCtx);
+			}
+			function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
+			  return __facade_invokeChain__(request, env, ctx, dispatch, [
+			    ...__facade_middleware__,
+			    finalMiddleware
+			  ]);
+			}
 
 
 			var __Facade_ScheduledController__ = class {

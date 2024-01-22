@@ -166,12 +166,14 @@ describe("find_additional_modules deploy", () => {
 		const bundledEntryPath = path.join(outDir, "index.js");
 		const bundledEntry = await fs.readFile(bundledEntryPath, "utf8");
 		expect(bundledEntry).toMatchInlineSnapshot(`
-			"// src/dep.ts
+			"// src/index.ts
+			import common from \\"./common.cjs\\";
+
+			// src/dep.ts
 			var dep_default = \\"bundled\\";
 
 			// src/index.ts
 			import text from \\"./text.txt\\";
-			import common from \\"./common.cjs\\";
 			var src_default = {
 			  async fetch(request) {
 			    const url = new URL(request.url);
