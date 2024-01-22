@@ -22,7 +22,7 @@ class HttpError extends Error {
 				status: this.status,
 				headers: {
 					"Access-Control-Allow-Origin": "*",
-					"Access-Control-Allow-Method": "GET,PUT,POST",
+					"Access-Control-Allow-Methods": "GET,PUT,POST",
 				},
 			}
 		);
@@ -170,7 +170,7 @@ async function handleRawHttp(request: Request, url: URL) {
 		return new Response(null, {
 			headers: {
 				"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-				"Access-Control-Allow-Method": "*",
+				"Access-Control-Allow-Methods": "*",
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Allow-Headers":
 					request.headers.get("Access-Control-Request-Headers") ??
@@ -218,7 +218,7 @@ async function handleRawHttp(request: Request, url: URL) {
 		headers: {
 			...rawHeaders,
 			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-			"Access-Control-Allow-Method": "*",
+			"Access-Control-Allow-Methods": "*",
 			"Access-Control-Allow-Credentials": "true",
 			"cf-ew-status": workerResponse.status.toString(),
 			"Access-Control-Expose-Headers": "*",
@@ -328,7 +328,7 @@ async function handleTokenExchange(url: URL) {
 	return Response.json(session, {
 		headers: {
 			"Access-Control-Allow-Origin": "*",
-			"Access-Control-Allow-Method": "POST",
+			"Access-Control-Allow-Methods": "POST",
 		},
 	});
 }
