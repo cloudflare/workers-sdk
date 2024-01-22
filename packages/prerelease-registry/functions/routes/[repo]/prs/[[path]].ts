@@ -27,7 +27,7 @@ export const onRequestGet: PagesFunction<
 	const pullRequestID = parseInt(path[0]);
 	const name = path[1];
 	if (isNaN(pullRequestID) || name === undefined)
-		return new Response(`pullRequestID: "${pullRequestID}", name: "${name}"`, {
+		return new Response(`pullRequestID: ${pullRequestID}, name: "${name}"`, {
 			status: 404,
 		});
 
@@ -48,7 +48,7 @@ export const onRequestGet: PagesFunction<
 			}
 
 			return new Response(
-				`pullRequestsResponse.ok: "${pullRequestsResponse.ok}"`,
+				`pullRequestsResponse.ok: ${pullRequestsResponse.ok}, pullRequestsResponse.status: ${pullRequestsResponse.status}, repo: "${repo}", pullRequestID: ${pullRequestID}`,
 				{ status: 404 }
 			);
 		}
@@ -71,7 +71,7 @@ export const onRequestGet: PagesFunction<
 			}
 
 			return new Response(
-				`workflowRunsResponse.ok: "${workflowRunsResponse.ok}"`,
+				`workflowRunsResponse.ok: ${workflowRunsResponse.ok}, workflowRunsResponse.status: ${workflowRunsResponse.status}, repo: "${repo}", branch: "${branch}"`,
 				{ status: 404 }
 			);
 		}
@@ -87,7 +87,9 @@ export const onRequestGet: PagesFunction<
 				workflowRunCandidate.workflow_id === WORKFLOW_ID
 		);
 		if (workflowRun === undefined)
-			return new Response("workflowRun === undefined", { status: 404 });
+			return new Response(`workflowRun === undefined, sha: "${sha}"`, {
+				status: 404,
+			});
 
 		return getArtifactForWorkflowRun({
 			repo: repo as string,
@@ -97,6 +99,6 @@ export const onRequestGet: PagesFunction<
 			waitUntil,
 		});
 	} catch (thrown) {
-		return new Response(null, { status: 500 });
+		return new Response(String(thrown), { status: 500 });
 	}
 };
