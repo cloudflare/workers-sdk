@@ -263,18 +263,29 @@ export async function deleteR2Sippy(
 /**
  * Enable sippy on the bucket with the given name
  */
+export type SippyConfig =
+	| {
+			provider: "AWS";
+			zone: string | undefined;
+			bucket: string;
+			key_id: string;
+			access_key: string;
+			r2_key_id: string;
+			r2_access_key: string;
+	  }
+	| {
+			provider: "GCS";
+			bucket: string;
+			client_email: string;
+			private_key: string;
+			r2_key_id: string;
+			r2_access_key: string;
+	  };
+
 export async function putR2Sippy(
 	accountId: string,
 	bucketName: string,
-	config: {
-		provider: "AWS";
-		zone: string | undefined;
-		bucket: string;
-		key_id: string;
-		access_key: string;
-		r2_key_id: string;
-		r2_access_key: string;
-	},
+	config: SippyConfig,
 	jurisdiction?: string
 ): Promise<void> {
 	const headers: HeadersInit = {};

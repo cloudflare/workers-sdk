@@ -16,14 +16,13 @@ import {
 	createR2Bucket,
 	deleteR2Bucket,
 	deleteR2Object,
-	deleteR2Sippy,
 	getR2Object,
-	getR2Sippy,
 	listR2Buckets,
 	putR2Object,
-	putR2Sippy,
 	usingLocalBucket,
 } from "./helpers";
+
+import * as Sippy from "./sippy";
 import type { CommonYargsArgv } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
@@ -521,127 +520,20 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						.command(
 							"enable <name>",
 							"Enable Sippy on an R2 bucket",
-							(yargs) =>
-								yargs
-									.positional("name", {
-										describe: "The name of the bucket",
-										type: "string",
-										demandOption: true,
-									})
-									.option("jurisdiction", {
-										describe: "The jurisdiction where the bucket exists",
-										alias: "J",
-										requiresArg: true,
-										type: "string",
-									})
-									.option("provider", {
-										choices: ["AWS"],
-										default: "AWS",
-										implies: [
-											"bucket",
-											"key-id",
-											"secret-access-key",
-											"r2-key-id",
-											"r2-secret-access-key",
-										],
-									})
-									.option("bucket", {
-										description: "The name of the upstream bucket",
-										string: true,
-									})
-									.option("region", {
-										description: "The region of the upstream bucket",
-										string: true,
-									})
-									.option("key-id", {
-										description:
-											"The secret access key id for the upstream bucket",
-										string: true,
-									})
-									.option("secret-access-key", {
-										description:
-											"The secret access key for the upstream bucket",
-										string: true,
-									})
-									.option("r2-key-id", {
-										description: "The secret access key id for this R2 bucket",
-										string: true,
-									})
-									.option("r2-secret-access-key", {
-										description: "The secret access key for this R2 bucket",
-										string: true,
-									}),
-
-							async (args) => {
-								const config = readConfig(args.config, args);
-								const accountId = await requireAuth(config);
-
-								await putR2Sippy(
-									accountId,
-									args.name,
-									{
-										provider: "AWS",
-										zone: args["region"],
-										bucket: args.bucket ?? "",
-										key_id: args["key-id"] ?? "",
-										access_key: args["secret-access-key"] ?? "",
-										r2_key_id: args["r2-key-id"] ?? "",
-										r2_access_key: args["r2-secret-access-key"] ?? "",
-									},
-									args.jurisdiction
-								);
-							}
+							Sippy.EnableOptions,
+							Sippy.EnableHandler
 						)
 						.command(
 							"disable <name>",
 							"Disable Sippy on an R2 bucket",
-							(yargs) =>
-								yargs
-									.positional("name", {
-										describe: "The name of the bucket",
-										type: "string",
-										demandOption: true,
-									})
-									.option("jurisdiction", {
-										describe: "The jurisdiction where the bucket exists",
-										alias: "J",
-										requiresArg: true,
-										type: "string",
-									}),
-							async (args) => {
-								const config = readConfig(args.config, args);
-								const accountId = await requireAuth(config);
-
-								await deleteR2Sippy(accountId, args.name, args.jurisdiction);
-							}
+							Sippy.DisableOptions,
+							Sippy.DisableHandler
 						)
 						.command(
 							"get <name>",
 							"Check the status of Sippy on an R2 bucket",
-							(yargs) =>
-								yargs
-									.positional("name", {
-										describe: "The name of the bucket",
-										type: "string",
-										demandOption: true,
-									})
-									.option("jurisdiction", {
-										describe: "The jurisdiction where the bucket exists",
-										alias: "J",
-										requiresArg: true,
-										type: "string",
-									}),
-							async (args) => {
-								const config = readConfig(args.config, args);
-								const accountId = await requireAuth(config);
-
-								const sippyBucket = await getR2Sippy(
-									accountId,
-									args.name,
-									args.jurisdiction
-								);
-								logger.log(`Sippy upstream bucket: ${sippyBucket}.`);
-							}
+							Sippy.GetOptions,
+							Sippy.GetHandler
 						);
 				}
 			);
