@@ -13,6 +13,10 @@ export const templateMap: Record<string, TemplateConfig> = {
 		label: `"Hello World" Worker`,
 		handler: runWorkersGenerator,
 	},
+	"hello-world-durable-object": {
+		label: `"Hello World" Durable Object`,
+		handler: runWorkersGenerator,
+	},
 	webFramework: {
 		label: "Website or web app",
 		handler: runPagesGenerator,
