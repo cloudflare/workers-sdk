@@ -65,7 +65,7 @@ describe("getBindingsProxy", () => {
 				configPath: wranglerTomlFilePath,
 			});
 			const { MY_VAR_A } = bindings;
-			expect(MY_VAR_A).not.toEqual("my-var-a");
+			expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
 			expect(MY_VAR_A).toEqual("my-dev-var-a");
 			await dispose();
 		});
