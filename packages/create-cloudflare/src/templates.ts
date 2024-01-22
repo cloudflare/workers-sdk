@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { cp, rename, mkdtemp } from "fs/promises";
+import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { crash } from "@cloudflare/cli";
@@ -70,7 +70,9 @@ export const getFrameworkMap = async () => ({
 export const getTemplateMap = async () => {
 	return {
 		"hello-world": (await import("../templates/hello-world/c3")).default,
-		"hello-world-durable-object": (await import("../templates/hello-world-durable-object/c3")).default,
+		"hello-world-durable-object": (
+			await import("../templates/hello-world-durable-object/c3")
+		).default,
 		// Dummy record -- actual template config resolved in `selectFramework`
 		webFramework: { displayName: "Website or web app" } as TemplateConfig,
 		common: (await import("../templates/common/c3")).default,

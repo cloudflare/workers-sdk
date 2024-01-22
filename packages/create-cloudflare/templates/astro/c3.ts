@@ -3,8 +3,8 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { C3Context } from "types";
 import { TemplateConfig } from "../../src/templates";
+import type { C3Context } from "types";
 
 const { npx } = detectPackageManager();
 

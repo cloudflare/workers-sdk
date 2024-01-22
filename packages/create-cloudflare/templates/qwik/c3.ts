@@ -3,8 +3,8 @@ import { runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { quoteShellArgs } from "../../src/common";
-import type { C3Context } from "types";
 import { TemplateConfig } from "../../src/templates";
+import type { C3Context } from "types";
 
 const { npm, npx } = detectPackageManager();
 

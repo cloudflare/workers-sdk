@@ -1,13 +1,13 @@
-import type { C3Context } from "types";
-import { chooseAccount } from "../../src/common";
 import { cp, mkdtemp, readdir, rm } from "fs/promises";
-import { join } from "path";
 import { tmpdir } from "os";
+import { join } from "path";
+import { crash } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { processArgument } from "@cloudflare/cli/args";
-import { crash } from "@cloudflare/cli";
+import { chooseAccount } from "../../src/common";
+import type { C3Context } from "types";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { dlx, npm } = detectPackageManager();

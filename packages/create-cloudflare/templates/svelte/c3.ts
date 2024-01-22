@@ -4,10 +4,10 @@ import { parseTs, transformFile } from "helpers/codemod";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
+import { TemplateConfig } from "../../src/templates";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
 import type { C3Context } from "types";
-import { TemplateConfig } from "../../src/templates";
 
 const { npm } = detectPackageManager();
 
