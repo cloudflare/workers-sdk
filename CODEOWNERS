@@ -11,6 +11,9 @@
 /packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
 /packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler
 
+# Cloudchamber ownership
+/packages/wrangler/src/cloudchamber/ @cloudflare/cloudchamber @cloudflare/wrangler
+
 # C3 ownership
 /packages/create-cloudflare/ @cloudflare/c3
 
