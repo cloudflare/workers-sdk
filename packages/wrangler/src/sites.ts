@@ -6,14 +6,14 @@ import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import { UserError } from "./errors";
 import {
+	BATCH_KEY_MAX,
 	createKVNamespace,
+	deleteKVBulkKeyValue,
+	formatNumber,
+	getKVKeyValue,
 	listKVNamespaceKeys,
 	listKVNamespaces,
 	putKVBulkKeyValue,
-	deleteKVBulkKeyValue,
-	BATCH_KEY_MAX,
-	formatNumber,
-	getKVKeyValue,
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";

@@ -9,13 +9,16 @@ import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
-import { WranglerLog, castLogLevel } from "../../dev/miniflare";
-import { handleRuntimeStdio } from "../../dev/miniflare";
+import {
+	castLogLevel,
+	handleRuntimeStdio,
+	WranglerLog,
+} from "../../dev/miniflare";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { castErrorCause } from "./events";
-import { assertNever, createDeferred, type DeferredPromise } from "./utils";
+import { assertNever, createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type {
 	BundleStartEvent,
@@ -34,6 +37,7 @@ import type {
 	SerializedError,
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
+import type { DeferredPromise } from "./utils";
 import type { MiniflareOptions } from "miniflare";
 
 export class ProxyController extends EventEmitter {

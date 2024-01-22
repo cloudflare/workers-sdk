@@ -1,4 +1,4 @@
-import { brandColor, dim, blue } from "@cloudflare/cli/colors";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import dns2 from "dns2";
 import { request } from "undici";

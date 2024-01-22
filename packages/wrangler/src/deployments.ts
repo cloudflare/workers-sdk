@@ -11,7 +11,6 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from ".";
-
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";

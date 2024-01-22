@@ -1,6 +1,6 @@
-import React from "react";
 import { Toast } from "@cloudflare/component-toast";
 import { Div } from "@cloudflare/elements";
+import React from "react";
 
 export const FrameError = ({ children }: { children: React.ReactNode }) => {
 	return (

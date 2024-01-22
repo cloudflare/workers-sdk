@@ -5,7 +5,7 @@ import { UserError } from "../../errors";
 import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
-import { DEFAULT_MIGRATION_PATH, DEFAULT_BATCH_SIZE } from "../constants";
+import { DEFAULT_BATCH_SIZE, DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
 import type { ConfigFields, DevConfig, Environment } from "../../config";
 import type { QueryResult } from "../execute";

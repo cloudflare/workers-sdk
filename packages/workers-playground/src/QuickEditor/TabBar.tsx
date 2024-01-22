@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { isDarkMode, variables as theme } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
-import { variables as theme, isDarkMode } from "@cloudflare/style-const";
 import {
-	TabList as ReactTabList,
-	Tabs as ReactTabs,
-	TabPanel as ReactTabPanel,
 	Tab as ReactTab,
+	TabList as ReactTabList,
+	TabPanel as ReactTabPanel,
 	TabProps as ReactTabProps,
+	Tabs as ReactTabs,
 } from "react-tabs";
-
 import { BORDER_GRAY, STYLED_TAB_HEIGHT } from "./constants";
 
 const HIGHLIGHT_BLUE = theme.colors.blue[4];

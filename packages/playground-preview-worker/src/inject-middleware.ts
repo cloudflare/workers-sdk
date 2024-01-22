@@ -1,7 +1,6 @@
 import commonModule from "./middleware/common.module.template";
-import loaderModule from "./middleware/loader.module.template";
-
 import jsonModule from "./middleware/definitions/json.module.template";
+import loaderModule from "./middleware/loader.module.template";
 
 const encoder = new TextEncoder();
 

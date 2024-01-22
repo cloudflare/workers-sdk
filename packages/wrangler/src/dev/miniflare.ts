@@ -1,8 +1,8 @@
 import assert from "node:assert";
-import { type UUID, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -19,19 +19,20 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	SourceOptions,
-	WorkerOptions,
 	Request,
 	Response,
+	SourceOptions,
+	WorkerOptions,
 } from "miniflare";
+import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
 

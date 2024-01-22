@@ -4,7 +4,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { QueueResponse, PostConsumerBody } from "../queues/client";
+import type { PostConsumerBody, QueueResponse } from "../queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();

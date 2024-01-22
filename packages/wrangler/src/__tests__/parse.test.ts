@@ -1,10 +1,10 @@
 import {
 	formatMessage,
-	searchLocation,
 	indexLocation,
 	parseJSON,
-	parseTOML,
 	parseJSONC,
+	parseTOML,
+	searchLocation,
 } from "../parse";
 import type { Message } from "../parse";
 

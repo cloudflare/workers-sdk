@@ -1,7 +1,10 @@
 import * as command from "helpers/command";
 import { describe, expect, test, vi } from "vitest";
-import { isAllowedExistingFile, isGitConfigured } from "../common";
-import { validateProjectDirectory } from "../common";
+import {
+	isAllowedExistingFile,
+	isGitConfigured,
+	validateProjectDirectory,
+} from "../common";
 
 function promisify<T>(value: T) {
 	return new Promise<T>((res) => res(value));

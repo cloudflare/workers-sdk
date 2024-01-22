@@ -1,13 +1,13 @@
 import { exit } from "process";
-import { crash, endSection, log, cancel } from "@cloudflare/cli";
+import { cancel, crash, endSection, log } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
-import { yellow, brandColor, dim } from "@cloudflare/cli/colors";
+import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { statusToColored } from "./util";
-import type { State, Placement } from "../client";
+import type { Placement, State } from "../client";
 import type { DeploymentV2 } from "../client/models/DeploymentV2";
 import type { Status } from "../enums";
 

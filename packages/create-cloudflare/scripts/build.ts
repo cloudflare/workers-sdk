@@ -1,5 +1,5 @@
-import { build, context, BuildOptions } from "esbuild";
 import { cp } from "fs/promises";
+import { build, BuildOptions, context } from "esbuild";
 import * as glob from "glob";
 
 const run = async () => {

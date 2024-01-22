@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 

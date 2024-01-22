@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import prom, { type RegistryType } from "promjs";
+import prom from "promjs";
 import { Toucan } from "toucan-js";
 import { ZodIssue } from "zod";
 import { handleException, setupSentry } from "./sentry";
+import type { RegistryType } from "promjs";
+
 const app = new Hono<{
 	Bindings: Env;
 	Variables: { sentry: Toucan; prometheus: RegistryType };

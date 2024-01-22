@@ -1,10 +1,12 @@
 import { fork } from "child_process";
-import * as path from "path";
-import type { ChildProcess } from "child_process";
-import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
-import { fetch, type Response } from "undici";
 import { setTimeout } from "node:timers/promises";
-import { type UnstableDevWorker, unstable_dev } from "wrangler";
+import * as path from "path";
+import { fetch } from "undici";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { unstable_dev } from "wrangler";
+import type { ChildProcess } from "child_process";
+import type { Response } from "undici";
+import type { UnstableDevWorker } from "wrangler";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
 	let response: Response | undefined = undefined;

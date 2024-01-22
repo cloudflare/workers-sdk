@@ -1,6 +1,6 @@
+import { execSync } from "node:child_process";
 import { resolve } from "node:path";
 import { assert, describe, it } from "vitest";
-import { execSync } from "node:child_process";
 
 describe("durable objects", () => {
 	it("should throw an error when the worker doesn't export a durable object but requires one", ({

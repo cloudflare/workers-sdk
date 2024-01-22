@@ -1,10 +1,8 @@
 import { Blob } from "node:buffer";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
-
 import { createFetchResult, msw } from "./msw";
 import { FileReaderSync } from "./msw/read-file-sync";
-
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { ResponseComposition, RestContext, RestRequest } from "msw";

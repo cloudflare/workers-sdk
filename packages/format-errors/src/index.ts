@@ -2,6 +2,7 @@ import prom from "promjs";
 import { Toucan } from "toucan-js";
 import { z } from "zod";
 import Youch from "./Youch";
+
 export interface Env {
 	PROMETHEUS_TOKEN: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;

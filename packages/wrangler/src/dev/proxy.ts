@@ -1,7 +1,6 @@
 import { createServer as createHttpServer } from "node:http";
 import { connect } from "node:http2";
-import { createServer as createHttpsServer } from "node:https";
-import https from "node:https";
+import https, { createServer as createHttpsServer } from "node:https";
 import { createHttpTerminator } from "http-terminator";
 import { getAccessibleHosts } from "miniflare";
 import { useEffect, useRef, useState } from "react";
@@ -12,11 +11,11 @@ import { getAccessToken } from "../user/access";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type { HttpTerminator } from "http-terminator";
 import type {
-	IncomingHttpHeaders,
-	RequestListener,
-	IncomingMessage,
-	ServerResponse,
 	Server as HttpServer,
+	IncomingHttpHeaders,
+	IncomingMessage,
+	RequestListener,
+	ServerResponse,
 } from "node:http";
 import type { ClientHttp2Session, ServerHttp2Stream } from "node:http2";
 import type { Server as HttpsServer } from "node:https";

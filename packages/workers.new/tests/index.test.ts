@@ -1,5 +1,5 @@
 import { resolve } from "path";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import { redirects } from "../src/index";
 import type { UnstableDevWorker } from "wrangler";

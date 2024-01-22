@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { type PackageManager, getPackageManager } from "../package-manager";
+import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { PackageManager } from "../package-manager";
 
 describe("generate", () => {
 	runInTempDir();

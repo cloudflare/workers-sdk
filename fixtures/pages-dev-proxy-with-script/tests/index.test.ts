@@ -1,8 +1,8 @@
-import path from "node:path";
-import { Response, fetch } from "undici";
-import { describe, it, expect } from "vitest";
 import { ChildProcess, fork } from "node:child_process";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { fetch, Response } from "undici";
+import { describe, expect, it } from "vitest";
 
 describe("Pages dev with proxy and a script file", () => {
 	it("should handle requests using a script from the default _worker.js path", async () => {

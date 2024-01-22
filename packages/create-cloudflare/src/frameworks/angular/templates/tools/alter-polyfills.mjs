@@ -1,5 +1,5 @@
-import { EOL } from "node:os";
 import fs from "node:fs";
+import { EOL } from "node:os";
 import { join } from "node:path";
 import { worker } from "./paths.mjs";
 

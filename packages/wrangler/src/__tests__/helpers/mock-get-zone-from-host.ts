@@ -1,5 +1,5 @@
 import { rest } from "msw";
-import { msw, createFetchResult } from "./msw";
+import { createFetchResult, msw } from "./msw";
 
 export function mockGetZoneFromHostRequest(host: string, zone?: string) {
 	msw.use(

@@ -3,11 +3,11 @@ import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import * as TOML from "@iarna/toml";
-import { MockedRequest, rest, type RestRequest } from "msw";
+import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, mockPrompt, clearDialogs } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
@@ -15,6 +15,7 @@ import { msw } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { RestRequest } from "msw";
 import type { Interface } from "node:readline";
 
 function createFetchResult(result: unknown, success = true) {

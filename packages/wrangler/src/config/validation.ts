@@ -4,38 +4,38 @@ import { getConstellationWarningFromEnv } from "../constellation/utils";
 import { getHyperdriveWarningFromEnv } from "../hyperdrive/utils";
 import { Diagnostics } from "./diagnostics";
 import {
+	all,
+	appendEnvName,
 	deprecated,
 	experimental,
+	getBindingNames,
 	hasProperty,
 	inheritable,
+	inheritableInLegacyEnvironments,
 	isBoolean,
+	isMutuallyExclusiveWith,
 	isObjectWith,
 	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
 	isString,
 	isStringArray,
-	validateAdditionalProperties,
+	isValidName,
 	notInheritable,
+	validateAdditionalProperties,
 	validateOptionalProperty,
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
-	all,
-	isMutuallyExclusiveWith,
-	inheritableInLegacyEnvironments,
-	appendEnvName,
-	getBindingNames,
-	isValidName,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
-	RawEnvironment,
 	DeprecatedUpload,
+	DispatchNamespaceOutbound,
 	Environment,
+	RawEnvironment,
 	Rule,
 	TailConsumer,
-	DispatchNamespaceOutbound,
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 

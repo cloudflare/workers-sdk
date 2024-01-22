@@ -1,18 +1,18 @@
 import {
 	ANALYTICS_VERSION,
-	REDIRECTS_VERSION,
 	HEADERS_VERSION,
-	SPLAT_REGEX,
 	PLACEHOLDER_REGEX,
+	REDIRECTS_VERSION,
+	SPLAT_REGEX,
 } from "./constants";
 import type { MetadataStaticRedirects } from "../asset-server/metadata";
 import type {
-	Metadata,
-	MetadataRedirects,
-	MetadataHeaders,
-	ParsedRedirects,
-	ParsedHeaders,
 	Logger,
+	Metadata,
+	MetadataHeaders,
+	MetadataRedirects,
+	ParsedHeaders,
+	ParsedRedirects,
 } from "./types";
 
 export function createMetadataObject({

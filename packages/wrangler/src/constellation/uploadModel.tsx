@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { FormData, File } from "undici";
+import { File, FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { UserError } from "../errors";

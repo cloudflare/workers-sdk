@@ -1,4 +1,5 @@
 import stripAnsi from "strip-ansi";
+
 export function normalizeOutput(
 	stdout: string,
 	substitutions?: Record<string, string>

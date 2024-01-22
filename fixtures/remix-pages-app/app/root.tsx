@@ -1,4 +1,3 @@
-import type { MetaFunction } from "@remix-run/cloudflare";
 import {
 	Links,
 	LiveReload,
@@ -7,6 +6,7 @@ import {
 	Scripts,
 	ScrollRestoration,
 } from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/cloudflare";
 
 export const meta: MetaFunction = () => ({
 	charset: "utf-8",

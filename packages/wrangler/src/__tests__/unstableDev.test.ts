@@ -1,8 +1,8 @@
 import { fetch } from "undici";
 import {
-	stopWorkerRegistry,
 	registerWorker,
 	startWorkerRegistry,
+	stopWorkerRegistry,
 } from "../dev-registry";
 
 jest.unmock("undici");

@@ -11,7 +11,6 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

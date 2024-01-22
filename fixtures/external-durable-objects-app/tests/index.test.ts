@@ -1,9 +1,10 @@
 import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { unstable_dev } from "wrangler";
 import type { ChildProcess } from "child_process";
-import { type UnstableDevWorker, unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 // TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
 // and improves reliability of this test.

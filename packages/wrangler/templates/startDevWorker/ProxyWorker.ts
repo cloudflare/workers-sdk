@@ -1,13 +1,13 @@
 import assert from "node:assert";
+import {
+	createDeferred,
+	DeferredPromise,
+} from "../../src/api/startDevWorker/utils";
 import type {
+	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
-	ProxyData,
 } from "../../src/api/startDevWorker/events";
-import {
-	DeferredPromise,
-	createDeferred,
-} from "../../src/api/startDevWorker/utils";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;

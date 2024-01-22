@@ -5,10 +5,6 @@ import {
 	DevToolsCommandResponses,
 	DevToolsEvent,
 	DevToolsEvents,
-	type InspectorProxyWorkerIncomingWebSocketMessage,
-	type InspectorProxyWorkerOutgoingRequestBody,
-	type InspectorProxyWorkerOutgoingWebsocketMessage,
-	type ProxyData,
 	serialiseError,
 } from "../../src/api/startDevWorker/events";
 import {
@@ -18,6 +14,12 @@ import {
 	MaybePromise,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
+import type {
+	InspectorProxyWorkerIncomingWebSocketMessage,
+	InspectorProxyWorkerOutgoingRequestBody,
+	InspectorProxyWorkerOutgoingWebsocketMessage,
+	ProxyData,
+} from "../../src/api/startDevWorker/events";
 
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [

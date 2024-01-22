@@ -1,8 +1,8 @@
 import { Response } from "miniflare";
-import { fetch, type Request } from "undici";
+import { fetch } from "undici";
 import { getRegisteredWorkers } from "../../../dev-registry";
 import type { WorkerDefinition } from "../../../dev-registry";
-import type { RequestInit } from "undici";
+import type { Request, RequestInit } from "undici";
 
 /**
  * Gets service bindings that proxy requests to external workers running locally, so that they

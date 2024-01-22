@@ -1,4 +1,4 @@
-import { startSection, crash, endSection } from "@cloudflare/cli";
+import { crash, endSection, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import {
 	ApiError,

@@ -5,10 +5,10 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
-	PubSubNamespace,
 	PubSubBroker,
-	PubSubBrokerUpdate,
 	PubSubBrokerOnPublish,
+	PubSubBrokerUpdate,
+	PubSubNamespace,
 } from "../pubsub";
 
 describe("wrangler", () => {

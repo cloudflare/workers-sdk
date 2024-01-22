@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import type { generateGitHubFetch } from "./gitHubFetch";
+
 interface Artifact {
 	name: string;
 	archive_download_url: string;

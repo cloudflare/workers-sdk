@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 const isWindows = process.platform === "win32";

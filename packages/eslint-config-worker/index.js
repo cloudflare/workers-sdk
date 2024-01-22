@@ -57,24 +57,6 @@ module.exports = {
 				"@typescript-eslint/no-floating-promises": "error",
 				"@typescript-eslint/no-non-null-assertion": "error",
 				"@typescript-eslint/no-unused-vars": "off",
-				"import/order": [
-					"error",
-					{
-						groups: [
-							"builtin",
-							"external",
-							"internal",
-							"parent",
-							"sibling",
-							"index",
-							"object",
-							"type",
-						],
-						alphabetize: {
-							order: "asc",
-						},
-					},
-				],
 				"unused-imports/no-unused-imports": "error",
 				"unused-imports/no-unused-vars": [
 					"error",

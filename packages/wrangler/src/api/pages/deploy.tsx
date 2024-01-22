@@ -23,7 +23,7 @@ import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Project, Deployment } from "@cloudflare/types";
+import type { Deployment, Project } from "@cloudflare/types";
 
 interface PagesDeployOptions {
 	/**
