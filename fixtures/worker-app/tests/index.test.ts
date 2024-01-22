@@ -13,7 +13,12 @@ describe("'wrangler dev' correctly renders pages", () => {
 	beforeAll(async () => {
 		({ ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
-			["--port=0", "--inspector-port=0", "--upstream-protocol=https"]
+			[
+				"--port=0",
+				"--inspector-port=0",
+				"--upstream-protocol=https",
+				"--host=prod.example.org",
+			]
 		));
 	});
 
@@ -26,8 +31,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(response.status).toBe(200);
-		// Note that the upstream protocol defaults to https
-		expect(text).toContain(`https://${ip}:${port}/`);
+		expect(text).toContain(`https://prod.example.org/`);
 
 		// Wait up to 5s for all request logs to be flushed
 		for (let i = 0; i < 10; i++) {
@@ -41,7 +45,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(output).toContain("request log");
 
 		// check host on request in the Worker is as expected
-		expect(output).toContain(`host' => '${ip}:${port}'`);
+		expect(output).toContain(`host' => 'prod.example.org`);
 
 		// Check logged strings are source mapped
 		expect(output).toMatch(
@@ -79,13 +83,33 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
 	});
 
-	it("passes through URL host and path unchanged", async ({ expect }) => {
-		const url = `http://${ip}:${port}//thing?a=1`;
+	it("passes through URL unchanged", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}//thing?a=1`, {
 			headers: { "X-Test-URL": "true" },
 		});
 		const text = await response.text();
-		// Note that the protocol changes due to the upstream_protocol configuration of Wrangler in the `beforeAll()`.
-		expect(text).toBe(`https://${ip}:${port}//thing?a=1`);
+		expect(text).toBe(`https://prod.example.org//thing?a=1`);
+	});
+
+	it("updates the Host and Origin headers appropriately", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/test`, {
+			// Pass in an Origin header to trigger the rewriting
+			headers: { Origin: `http://${ip}:${port}` },
+		});
+		const text = await response.text();
+		console.log(text);
+		expect(text).toContain(`HOST:prod.example.org`);
+		expect(text).toContain(`ORIGIN:https://prod.example.org`);
+	});
+
+	it("does not update Origin header if one is not passed by the client", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/test`, {});
+		const text = await response.text();
+		expect(text).toContain(`HOST:prod.example.org`);
+		expect(text).toContain(`ORIGIN:null`);
 	});
 });

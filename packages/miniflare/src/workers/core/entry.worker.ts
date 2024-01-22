@@ -48,8 +48,8 @@ function getUserRequest(
 	// The `upstreamHost` is used to override the `Host` header on the request being handled.
 	let upstreamHost: string | undefined;
 
-	// If the request is signed by an upstream proxy then we can use the one from the ORIGINAL_URL.
-	// The shared secret is required to prevent a malicious user being able to change the host header without permission.
+	// If the request is signed by a proxy server then we can use the Host and Origin from the ORIGINAL_URL.
+	// The shared secret is required to prevent a malicious user being able to change the headers without permission.
 	const proxySharedSecret = request.headers.get(
 		CoreHeaders.PROXY_SHARED_SECRET
 	);
@@ -94,6 +94,11 @@ function getUserRequest(
 	}
 	if (upstreamHost !== undefined) {
 		request.headers.set("Host", upstreamHost);
+		if (request.headers.has("Origin")) {
+			// The request contained an Origin header, so replace with a rewritten one based on the original URL
+			request.headers.delete('Origin');
+			request.headers.set('Origin', url.origin);
+		}
 	}
 	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
