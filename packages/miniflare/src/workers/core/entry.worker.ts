@@ -96,7 +96,7 @@ function getUserRequest(
 		request.headers.set("Host", url.host);
 		// Only rewrite Origin header if there is already one
 		if (request.headers.has("Origin")) {
-			request.headers.set('Origin', url.origin);
+			request.headers.set("Origin", url.origin);
 		}
 	}
 
