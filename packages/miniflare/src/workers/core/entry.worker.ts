@@ -45,8 +45,7 @@ function getUserRequest(
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
 	let url = new URL(originalUrl ?? request.url);
 
-	// The `upstreamHost` is used to override the `Host` header on the request being handled.
-	let upstreamHost: string | undefined;
+	let rewriteHeadersFromOriginalUrl = false;
 
 	// If the request is signed by a proxy server then we can use the Host and Origin from the ORIGINAL_URL.
 	// The shared secret is required to prevent a malicious user being able to change the headers without permission.
@@ -60,7 +59,7 @@ function getUserRequest(
 			secretFromHeader.byteLength === configuredSecret?.byteLength &&
 			crypto.subtle.timingSafeEqual(secretFromHeader, configuredSecret)
 		) {
-			upstreamHost = url.host;
+			rewriteHeadersFromOriginalUrl = true;
 		} else {
 			throw new HttpError(
 				400,
@@ -77,7 +76,7 @@ function getUserRequest(
 		// Remove leading slash, so we resolve relative to `upstream`'s path
 		if (path.startsWith("/")) path = `./${path.substring(1)}`;
 		url = new URL(path, upstreamUrl);
-		upstreamHost = url.host;
+		rewriteHeadersFromOriginalUrl = true;
 	}
 
 	// Note when constructing new `Request`s from `request`, we must always pass
@@ -92,14 +91,15 @@ function getUserRequest(
 	if (request.cf === undefined) {
 		request = new Request(request, { cf: env[CoreBindings.JSON_CF_BLOB] });
 	}
-	if (upstreamHost !== undefined) {
-		request.headers.set("Host", upstreamHost);
+
+	if (rewriteHeadersFromOriginalUrl) {
+		request.headers.set("Host", url.host);
+		// Only rewrite Origin header if there is already one
 		if (request.headers.has("Origin")) {
-			// The request contained an Origin header, so replace with a rewritten one based on the original URL
-			request.headers.delete('Origin');
 			request.headers.set('Origin', url.origin);
 		}
 	}
+
 	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
 	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
