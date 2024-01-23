@@ -188,13 +188,6 @@ export async function versionsUploadHandler(
 ) {
 	await printWranglerBanner();
 
-	// Check for deprecated `wrangler publish` command
-	if (args._[0] === "publish") {
-		logger.warn(
-			"`wrangler publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler deploy` instead, which accepts exactly the same arguments."
-		);
-	}
-
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
