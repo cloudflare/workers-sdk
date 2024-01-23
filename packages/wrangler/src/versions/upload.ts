@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
@@ -21,6 +20,7 @@ import {
 } from "../deployment-bundle/module-collection";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
@@ -142,7 +142,7 @@ export default async function versionsUpload(props: Props): Promise<void> {
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new Error(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
     \`\`\`
     compatibility_date = "${compatibilityDateStr}"
     \`\`\`
@@ -166,10 +166,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
 	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	assert(
-		!(legacyNodeCompat && nodejsCompat),
-		"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-	);
+	if (legacyNodeCompat && nodejsCompat) {
+		throw new UserError(
+			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
+		);
+	}
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -185,15 +186,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	const scriptName = props.name;
-	assert(
-		scriptName,
-		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-	);
+	if (!scriptName) {
+		throw new UserError(
+			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+		);
+	}
 
-	assert(
-		!config.site || config.site.bucket,
-		"A [site] definition requires a `bucket` field with a path to the site's assets directory."
-	);
+	if (config.site && !config.site.bucket) {
+		throw new UserError(
+			"A [site] definition requires a `bucket` field with a path to the site's assets directory."
+		);
+	}
 
 	if (props.outDir) {
 		// we're using a custom output directory,
@@ -217,19 +220,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const { format } = props.entry;
 
 	if (config.wasm_modules && format === "modules") {
-		throw new Error(
+		throw new UserError(
 			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
 		);
 	}
 
 	if (config.text_blobs && format === "modules") {
-		throw new Error(
+		throw new UserError(
 			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
-		throw new Error(
+		throw new UserError(
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
@@ -490,7 +493,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
-	assert(accountId, "Missing accountId");
+	if (!accountId) throw new UserError("Missing accountId");
 
 	const uploadMs = Date.now() - start;
 
@@ -542,7 +545,7 @@ async function ensureQueuesExist(config: Config) {
 			const queueErr = err as FetchError;
 			if (queueErr.code === 11000) {
 				// queue_not_found
-				throw new Error(
+				throw new UserError(
 					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
 				);
 			}
