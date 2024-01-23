@@ -1,5 +1,5 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
-import { brandColor, dim, blue } from "@cloudflare/cli/colors";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";

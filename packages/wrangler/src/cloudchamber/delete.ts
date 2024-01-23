@@ -1,4 +1,4 @@
-import { startSection, crash, endSection, cancel } from "@cloudflare/cli";
+import { cancel, crash, endSection, startSection } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { DeploymentsService } from "./client";

@@ -1,5 +1,5 @@
 import { fetch } from "undici";
-import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 function removeUUID(str: string) {
 	return str.replace(
@@ -174,5 +174,18 @@ describe("Raw HTTP preview", () => {
 		});
 
 		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
+	});
+
+	it("should allow arbitrary methods in cross-origin requests", async () => {
+		const resp = await fetch(PREVIEW_REMOTE, {
+			method: "OPTIONS",
+			headers: {
+				"Access-Control-Request-Method": "PUT",
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+			},
+		});
+
+		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
 	});
 });

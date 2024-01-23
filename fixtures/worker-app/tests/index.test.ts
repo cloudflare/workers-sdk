@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' correctly renders pages", () => {
@@ -75,5 +75,14 @@ describe("'wrangler dev' correctly renders pages", () => {
 		const response = await fetch(`http://${ip}:${port}/random`);
 		const text = await response.text();
 		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
+	});
+
+	it("passes through URL unchanged", async ({ expect }) => {
+		const url = `http://${ip}:${port}//thing?a=1`;
+		const response = await fetch(url, {
+			headers: { "X-Test-URL": "true" },
+		});
+		const text = await response.text();
+		expect(text).toBe(url);
 	});
 });

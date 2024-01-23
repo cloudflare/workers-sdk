@@ -1,7 +1,7 @@
 import { URLSearchParams } from "node:url";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
-import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
+import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";

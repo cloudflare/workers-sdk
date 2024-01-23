@@ -1,10 +1,10 @@
 import process from "process";
 import { hideBin } from "yargs/helpers";
-import { unstable_dev, unstable_pages, DevEnv as unstable_DevEnv } from "./api";
+import { unstable_dev, DevEnv as unstable_DevEnv, unstable_pages } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
+import type { UnstableDevOptions, UnstableDevWorker } from "./api";
 
-import type { UnstableDevWorker, UnstableDevOptions } from "./api";
 /**
  * The main entrypoint for the CLI.
  * main only gets called when the script is run directly, not when it's imported as a module.
@@ -26,3 +26,5 @@ if (typeof jest === "undefined" && require.main === module) {
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv };
 export type { UnstableDevWorker, UnstableDevOptions };
+
+export * from "./api/integrations";

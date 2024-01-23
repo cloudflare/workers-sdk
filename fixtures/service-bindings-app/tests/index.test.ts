@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { UnstableDevWorker, unstable_dev } from "wrangler";
 import path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { unstable_dev, UnstableDevWorker } from "wrangler";
 
 // TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
 // and improves reliability of this test.

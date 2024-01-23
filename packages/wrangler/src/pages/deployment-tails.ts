@@ -9,9 +9,9 @@ import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
+	createPagesTail,
 	jsonPrintLogs,
 	prettyPrintLogs,
-	createPagesTail,
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";

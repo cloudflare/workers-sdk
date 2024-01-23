@@ -1,7 +1,7 @@
 import { fork, spawnSync } from "child_process";
 import * as path from "path";
 import { fetch } from "miniflare";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";

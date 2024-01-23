@@ -5,14 +5,14 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
+	createFetchResult,
 	msw,
+	mswSuccessDeploymentDetails,
+	mswSuccessDeployments,
+	mswSuccessDeploymentScriptMetadata,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
-	mswSuccessDeploymentDetails,
-	mswSuccessDeploymentScriptMetadata,
-	createFetchResult,
 } from "./helpers/msw";
-import { mswSuccessDeployments } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";

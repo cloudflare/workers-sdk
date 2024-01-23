@@ -9,16 +9,20 @@ import {
 	Disposable,
 	EventEmitter,
 	FileChangeType,
+	FilePermission,
 	FileSystemError,
 	FileType,
 	Position,
 	Range,
 	Uri,
 	workspace,
-	FilePermission,
 } from "vscode";
-import type { Channel, FromQuickEditMessage, ToQuickEditMessage } from "./ipc";
-import type { WorkerLoadedMessage } from "./ipc";
+import type {
+	Channel,
+	FromQuickEditMessage,
+	ToQuickEditMessage,
+	WorkerLoadedMessage,
+} from "./ipc";
 import type {
 	CancellationToken,
 	Event,
@@ -32,8 +36,8 @@ import type {
 	ProviderResult,
 	TextSearchComplete,
 	TextSearchOptions,
-	TextSearchQuery,
 	TextSearchProvider,
+	TextSearchQuery,
 	TextSearchResult,
 } from "vscode";
 

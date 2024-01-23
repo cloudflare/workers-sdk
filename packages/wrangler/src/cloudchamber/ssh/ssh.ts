@@ -1,25 +1,25 @@
-import { readdir, stat, readFile } from "fs/promises";
+import { readdir, readFile, stat } from "fs/promises";
 import { homedir, userInfo } from "os";
 import { exit } from "process";
 import {
 	crash,
-	updateStatus,
-	log,
-	startSection,
 	endSection,
-	newline,
+	log,
 	logRaw,
+	newline,
+	startSection,
 	status,
 	success,
+	updateStatus,
 } from "@cloudflare/cli";
-import { dim, brandColor } from "@cloudflare/cli/colors";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
 import { SshPublicKeysService } from "../client";
 import {
-	handleFailure,
 	checkEverythingIsSet,
+	handleFailure,
 	interactWithUser,
 } from "../common";
 import { wrap } from "../helpers/wrap";
@@ -185,8 +185,8 @@ async function tryToRetrieveAllDefaultSSHKeyPaths(): Promise<string[]> {
  */
 async function tryToRetrieveADefaultPath(): Promise<string> {
 	const paths = await tryToRetrieveAllDefaultSSHKeyPaths();
-	if (paths.length === 0) return "";
-	return paths.pop()!;
+	const path = paths.pop();
+	return path ?? "";
 }
 
 /**

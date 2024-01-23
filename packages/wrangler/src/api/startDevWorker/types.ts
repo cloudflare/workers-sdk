@@ -1,6 +1,6 @@
 import type { RawConfig } from "../../config/config";
 import type { CfAccount } from "../../dev/create-worker-preview";
-import type { Json, Request, Response, DispatchFetch } from "miniflare";
+import type { DispatchFetch, Json, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
 export interface DevWorker {

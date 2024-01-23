@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import prom, { type RegistryType } from "promjs";
+import prom from "promjs";
 import { Toucan } from "toucan-js";
 import { ZodIssue } from "zod";
 import { handleException, setupSentry } from "./sentry";
+import type { RegistryType } from "promjs";
+
 const app = new Hono<{
 	Bindings: Env;
 	Variables: { sentry: Toucan; prometheus: RegistryType };
@@ -39,7 +41,7 @@ export class HttpError extends Error {
 				status: this.status,
 				headers: {
 					"Access-Control-Allow-Origin": "*",
-					"Access-Control-Allow-Method": "GET,PUT,POST",
+					"Access-Control-Allow-Methods": "GET,PUT,POST",
 				},
 			}
 		);
@@ -174,7 +176,7 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		headers: {
 			...rawHeaders,
 			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-			"Access-Control-Allow-Method": "*",
+			"Access-Control-Allow-Methods": "*",
 			"Access-Control-Allow-Credentials": "true",
 			"cf-ew-status": workerResponse.status.toString(),
 			"Access-Control-Expose-Headers": "*",
@@ -321,7 +323,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 		return new Response(null, {
 			headers: {
 				"Access-Control-Allow-Origin": c.req.headers.get("Origin") ?? "",
-				"Access-Control-Allow-Method": "*",
+				"Access-Control-Allow-Methods": "*",
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Allow-Headers":
 					c.req.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",

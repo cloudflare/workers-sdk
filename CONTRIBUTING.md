@@ -205,17 +205,21 @@ As a reviewer, it's important to be thoughtful about the proposed changes and co
 
 Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Jest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
 
-If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.ts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. A good default example is the following:
+If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.ts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. You should merge your own configuration with the default config from the root of the repo.
+
+A good default example is the following:
 
 ```ts
-import { defineConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-export default defineConfig({
-	test: {
-		testTimeout: 5_000,
-		hookTimeout: 5_000,
-		teardownTimeout: 5_000,
-	},
+export default mergeConfig(
+  configShared,
+  defineProject({
+    test: {
+      // config overrides
+    }
+  })
 });
 ```
 

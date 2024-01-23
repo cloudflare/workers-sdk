@@ -1,10 +1,9 @@
-import { defineConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-export default defineConfig({
-	test: {
-		testTimeout: 10_000,
-		hookTimeout: 10_000,
-		teardownTimeout: 10_000,
-		useAtomics: true,
-	},
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		test: {},
+	})
+);

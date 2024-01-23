@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import type { generateGitHubFetch } from "./gitHubFetch";
+
 interface Artifact {
 	name: string;
 	archive_download_url: string;
@@ -37,11 +38,19 @@ export const getArtifactForWorkflowRun = async ({
 			}
 		);
 		if (!artifactsResponse.ok) {
+			const responseData = {
+				"artifactsResponse.ok": artifactsResponse.ok,
+				"artifactsResponse.status": artifactsResponse.status,
+				"artifactsResponse.text": await artifactsResponse.text(),
+				repo,
+				runID,
+			};
+
 			if (artifactsResponse.status >= 500) {
-				return new Response(null, { status: 502 });
+				return Response.json(responseData, { status: 502 });
 			}
 
-			return new Response(null, { status: 404 });
+			return Response.json(responseData, { status: 404 });
 		}
 
 		const { artifacts } = (await artifactsResponse.json()) as {
@@ -51,15 +60,28 @@ export const getArtifactForWorkflowRun = async ({
 		const artifact = artifacts.find(
 			(artifactCandidate) => artifactCandidate.name === name
 		);
-		if (artifact === undefined) return new Response(null, { status: 404 });
+		if (artifact === undefined)
+			return Response.json(
+				{ artifact, name, "artifacts.length": artifacts.length },
+				{ status: 404 }
+			);
 
 		const zipResponse = await gitHubFetch(artifact.archive_download_url);
 		if (!zipResponse.ok) {
+			const responseData = {
+				"zipResponse.ok": zipResponse.ok,
+				"zipResponse.status": zipResponse.status,
+				"zipResponse.text": await zipResponse.text(),
+				repo,
+				runID,
+				"artifact.archive_download_url": artifact.archive_download_url,
+			};
+
 			if (zipResponse.status >= 500) {
-				return new Response(null, { status: 502 });
+				return Response.json(responseData, { status: 502 });
 			}
 
-			return new Response(null, { status: 404 });
+			return Response.json(responseData, { status: 404 });
 		}
 
 		const zip = new JSZip();
@@ -68,7 +90,8 @@ export const getArtifactForWorkflowRun = async ({
 		const files = zip.files;
 		const fileNames = Object.keys(files);
 		const tgzFileName = fileNames.find((fileName) => fileName.endsWith(".tgz"));
-		if (tgzFileName === undefined) return new Response(null, { status: 404 });
+		if (tgzFileName === undefined)
+			return Response.json({ fileNames }, { status: 404 });
 
 		const tgzBlob = await files[tgzFileName].async("blob");
 		const response = new Response(tgzBlob, {
@@ -79,6 +102,6 @@ export const getArtifactForWorkflowRun = async ({
 
 		return response;
 	} catch (thrown) {
-		return new Response(null, { status: 500 });
+		return new Response(String(thrown), { status: 500 });
 	}
 };

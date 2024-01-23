@@ -1,11 +1,11 @@
 import "./global";
 import "./index.css";
+import { DarkModeSettings, setDarkMode } from "@cloudflare/style-const";
+import { StyleProvider } from "@cloudflare/style-provider";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { StyleProvider } from "@cloudflare/style-provider";
 import { getRenderer } from "./QuickEditor/felaRenderer";
-import { DarkModeSettings, setDarkMode } from "@cloudflare/style-const";
 
 const felaRenderer = getRenderer();
 

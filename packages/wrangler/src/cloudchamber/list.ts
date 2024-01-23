@@ -1,15 +1,15 @@
 import { logRaw, shapes, space } from "@cloudflare/cli";
 import {
-	bgRed,
-	dim,
-	yellow,
-	green,
-	brandColor,
-	gray,
-	white,
 	bgCyan,
+	bgRed,
+	brandColor,
+	dim,
+	gray,
+	green,
+	white,
+	yellow,
 } from "@cloudflare/cli/colors";
-import { spinner, inputPrompt } from "@cloudflare/cli/interactive";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import isInteractive from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { statusToColored } from "./cli/util";
@@ -21,7 +21,6 @@ import type {
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
 import type { PlacementEvent, PlacementWithEvents, State } from "./client";
-
 import type { EventName } from "./enums";
 
 export function listDeploymentsYargs(args: CommonYargsArgvJSON) {

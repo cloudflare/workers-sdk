@@ -1,8 +1,7 @@
 import chalk from "chalk";
 import supportsColor from "supports-color";
 import checkForUpdate from "update-check";
-import pkg from "../package.json";
-import { version as wranglerVersion } from "../package.json";
+import pkg, { version as wranglerVersion } from "../package.json";
 import { logger } from "./logger";
 import type { Result } from "update-check";
 

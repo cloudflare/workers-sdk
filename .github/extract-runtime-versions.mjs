@@ -1,10 +1,10 @@
 import assert from "node:assert";
+import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import module from "node:module";
 import path from "node:path";
 import url from "node:url";
-import { execSync } from "node:child_process";
 
 /**
  * @param {string} from
@@ -67,6 +67,7 @@ const workerdBinary = path.resolve(workerdPackageJsonPath, "../bin/workerd");
 
 const workerdBinaryVersion = execSync(workerdBinary + " --version")
 	.toString()
+	.trim()
 	.split(" ")[1];
 
 // 4. Write basic markdown report

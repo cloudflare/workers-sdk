@@ -1,10 +1,10 @@
 import {
 	crash,
-	updateStatus,
-	log,
 	endSection,
+	log,
 	logRaw,
 	status,
+	updateStatus,
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -16,10 +16,10 @@ import {
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import type {
-	PlacementWithEvents,
-	PlacementEvent,
-	ListSSHPublicKeys,
 	DeploymentV2,
+	ListSSHPublicKeys,
+	PlacementEvent,
+	PlacementWithEvents,
 } from "../client";
 import type { EventName, Status } from "../enums";
 
@@ -266,7 +266,7 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 			}
 
 			return (
-				newDeployment.current_placement.id !== deployment.current_placement!.id
+				newDeployment.current_placement.id !== deployment.current_placement?.id
 			);
 		})
 	);
@@ -283,11 +283,13 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	updateStatus(
 		"Assigned placement in " + idToLocationName(deployment.location.name)
 	);
-	log(
-		`${brandColor("assigned placement")} ${dim(
-			`version ${d.current_placement!.deployment_version}`
-		)}\n`
-	);
+	if (d.current_placement?.deployment_version) {
+		log(
+			`${brandColor("assigned placement")} ${dim(
+				`version ${d.current_placement.deployment_version}`
+			)}\n`
+		);
+	}
 	deployment.current_placement = d.current_placement;
 }
 

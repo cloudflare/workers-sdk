@@ -1,12 +1,13 @@
 import {
+	__facade_invoke__,
+	__facade_register__,
+	__facade_registerInternal__,
 	Awaitable,
 	Dispatcher,
 	IncomingRequest,
 	Middleware,
-	__facade_invoke__,
-	__facade_register__,
-	__facade_registerInternal__,
 } from "./common";
+
 export { __facade_register__, __facade_registerInternal__ };
 
 // Miniflare 2's `EventTarget` follows the spec and doesn't allow exceptions to

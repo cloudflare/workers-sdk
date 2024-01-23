@@ -2,7 +2,7 @@ import { join } from "path";
 import { retry } from "helpers/command";
 import { readToml } from "helpers/files";
 import { fetch } from "undici";
-import { describe, expect, test, beforeAll } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {

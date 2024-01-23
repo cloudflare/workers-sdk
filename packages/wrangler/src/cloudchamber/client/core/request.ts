@@ -1,11 +1,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import { Headers, Response, RequestInit, fetch, FormData } from "undici";
+import { fetch, FormData, Headers, RequestInit, Response } from "undici";
 import { ApiError } from "./ApiError";
+import { CancelablePromise } from "./CancelablePromise";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
-import { CancelablePromise } from "./CancelablePromise";
 import type { OnCancel } from "./CancelablePromise";
 import type { OpenAPIConfig } from "./OpenAPI";
 

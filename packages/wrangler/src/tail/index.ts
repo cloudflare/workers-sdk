@@ -1,14 +1,13 @@
 import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
-
 import { fetchResult, fetchScriptContent } from "../cfetch";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
 import { UserError } from "../errors";
 import {
+	getLegacyScriptName,
 	isLegacyEnv,
 	printWranglerBanner,
-	getLegacyScriptName,
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";

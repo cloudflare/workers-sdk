@@ -3,11 +3,12 @@ import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
 import { proxy } from "../index";
-import type { TailFilterMessage, Outcome } from "./filters";
+import type { Outcome, TailFilterMessage } from "./filters";
+import type { Request } from "undici";
+
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
-import type { Request } from "undici";
 
 const TRACE_VERSION = "trace-v1";
 

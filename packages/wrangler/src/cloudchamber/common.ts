@@ -1,7 +1,7 @@
 import { mkdir } from "fs/promises";
 import { exit } from "process";
 import { crash, logRaw, space, status, updateStatus } from "@cloudflare/cli";
-import { dim, brandColor } from "@cloudflare/cli/colors";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
@@ -11,15 +11,15 @@ import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
-	getAPIToken,
+	getAccountFromCache,
 	getAccountId,
-	requireAuth,
+	getAPIToken,
 	getAuthFromEnv,
-	reinitialiseAuthTokens,
 	getScopes,
 	logout,
+	reinitialiseAuthTokens,
+	requireAuth,
 	setLoginScopeKeys,
-	getAccountFromCache,
 } from "../user";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
@@ -30,8 +30,8 @@ import type {
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
 import type {
-	EnvironmentVariable,
 	CompleteAccountCustomer,
+	EnvironmentVariable,
 	NetworkParameters,
 } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";

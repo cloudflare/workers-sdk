@@ -1,6 +1,6 @@
+import common from "./common.cjs";
 import dep from "./dep";
 import text from "./text.txt";
-import common from "./common.cjs";
 
 export default <ExportedHandler>{
 	async fetch(request) {

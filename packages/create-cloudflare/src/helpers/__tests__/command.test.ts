@@ -1,7 +1,7 @@
 import { spawn } from "cross-spawn";
 import { detectPackageManager } from "helpers/packages";
-import { Response, fetch } from "undici";
-import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
+import { fetch, Response } from "undici";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
 	getWorkerdCompatibilityDate,

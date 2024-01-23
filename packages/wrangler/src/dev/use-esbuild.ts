@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { watch } from "chokidar";
 import { useApp } from "ink";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failures";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
@@ -10,8 +10,8 @@ import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
-	noopModuleCollector,
 	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
 import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
@@ -19,7 +19,7 @@ import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Metafile, BuildResult, PluginBuild } from "esbuild";
+import type { BuildResult, Metafile, PluginBuild } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;

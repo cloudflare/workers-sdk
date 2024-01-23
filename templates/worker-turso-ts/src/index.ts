@@ -1,4 +1,4 @@
-import { Client as LibsqlClient, createClient } from "@libsql/client/web";
+import { createClient, Client as LibsqlClient } from "@libsql/client/web";
 import { Router, RouterType } from "itty-router";
 
 export interface Env {

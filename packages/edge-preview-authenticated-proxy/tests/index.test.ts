@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
@@ -292,5 +292,20 @@ describe("Raw HTTP preview", () => {
 		);
 
 		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
+	});
+
+	it("should allow arbitrary methods in cross-origin requests", async () => {
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev`,
+			{
+				method: "OPTIONS",
+				headers: {
+					"Access-Control-Request-Method": "PUT",
+					origin: "https://cloudflare.dev",
+				},
+			}
+		);
+
+		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
 	});
 });

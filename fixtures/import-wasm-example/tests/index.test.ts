@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { fetch } from "undici";
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("wrangler correctly imports wasm files with npm resolution", () => {

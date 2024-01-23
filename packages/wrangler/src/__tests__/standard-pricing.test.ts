@@ -12,6 +12,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+
 function mockStandardEnabled(enabled: boolean, enterprise = false) {
 	msw.use(
 		rest.get("*/accounts/:accountId/workers/standard", (req, res, ctx) => {

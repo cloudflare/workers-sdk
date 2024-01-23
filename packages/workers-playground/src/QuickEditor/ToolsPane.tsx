@@ -1,13 +1,13 @@
+import { Icon } from "@cloudflare/component-icon";
 import { A, Div } from "@cloudflare/elements";
+import { isDarkMode, theme } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
-
-import SplitPane from "./SplitPane";
-import { TabBar, Tab, TabList, Tabs, TabPanel } from "./TabBar";
-import PreviewTab from "./PreviewTab/PreviewTab";
 import DevtoolsIframe from "./DevtoolsIframe";
 import { HTTPTab } from "./HTTPTab/HTTPTab";
-import { Icon } from "@cloudflare/component-icon";
-import { isDarkMode, theme } from "@cloudflare/style-const";
+import PreviewTab from "./PreviewTab/PreviewTab";
+import SplitPane from "./SplitPane";
+import { Tab, TabBar, TabList, TabPanel, Tabs } from "./TabBar";
+
 const Main = createComponent(() => ({
 	display: "flex",
 	flexDirection: "column",

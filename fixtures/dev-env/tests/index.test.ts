@@ -2,16 +2,15 @@ import assert from "node:assert";
 import events from "node:events";
 import timers from "node:timers/promises";
 import getPort from "get-port";
-import {
-	Miniflare,
-	type Response as MiniflareResponse,
-	type MiniflareOptions,
-	Log,
-} from "miniflare";
+import { Log, Miniflare } from "miniflare";
 import * as undici from "undici";
-import { WebSocket } from "ws";
-import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { unstable_DevEnv as DevEnv } from "wrangler";
+import { WebSocket } from "ws";
+import type {
+	MiniflareOptions,
+	Response as MiniflareResponse,
+} from "miniflare";
 import type { ProxyData } from "wrangler/src/api";
 import type { StartDevWorkerOptions } from "wrangler/src/api/startDevWorker/types";
 import type { EsbuildBundle } from "wrangler/src/dev/use-esbuild";

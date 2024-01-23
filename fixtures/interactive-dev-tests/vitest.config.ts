@@ -1,12 +1,12 @@
-import { defineConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-export default defineConfig({
-	test: {
-		testTimeout: 30_000,
-		hookTimeout: 30_000,
-		teardownTimeout: 30_000,
-		useAtomics: true,
-		// `node-pty` doesn't work inside worker threads
-		threads: false,
-	},
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		test: {
+			// `node-pty` doesn't work inside worker threads
+			threads: false,
+		},
+	})
+);

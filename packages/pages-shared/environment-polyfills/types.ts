@@ -1,13 +1,13 @@
 import {
 	Headers as WorkerHeaders,
+	HTMLRewriter as WorkerHTMLRewriter,
 	Request as WorkerRequest,
 	Response as WorkerResponse,
-	HTMLRewriter as WorkerHTMLRewriter,
 } from "@cloudflare/workers-types/experimental";
 import type {
+	CacheStorage as WorkerCacheStorage,
 	fetch as workerFetch,
 	ReadableStream as WorkerReadableStream,
-	CacheStorage as WorkerCacheStorage,
 } from "@cloudflare/workers-types/experimental";
 
 declare global {
@@ -29,4 +29,9 @@ export type PolyfilledRuntimeEnvironment = {
 	Response: typeof Response;
 };
 
-export { fetch, Headers, Request, Response };
+export {
+	workerFetch as fetch,
+	WorkerHeaders as Headers,
+	WorkerRequest as Request,
+	WorkerResponse as Response,
+};

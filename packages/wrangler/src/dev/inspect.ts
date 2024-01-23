@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import os from "node:os";
-import { URL, fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
 import path from "path";
 import open from "open";
 import {

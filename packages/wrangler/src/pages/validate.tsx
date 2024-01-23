@@ -6,7 +6,6 @@ import prettyBytes from "pretty-bytes";
 import { FatalError } from "../errors";
 import { MAX_ASSET_COUNT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";
-
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

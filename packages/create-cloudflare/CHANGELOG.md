@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.9.2
+
+### Patch Changes
+
+- [#4717](https://github.com/cloudflare/workers-sdk/pull/4717) [`05e3b544`](https://github.com/cloudflare/workers-sdk/commit/05e3b5446390c41c9e1846714e4f6020ca34c490) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-docusaurus` from `3.0.1` to `3.1.0`
+
+* [#4728](https://github.com/cloudflare/workers-sdk/pull/4728) [`38d656b0`](https://github.com/cloudflare/workers-sdk/commit/38d656b0108453ef9fafee6108c145a0abbcf95e) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `6.0.5` to `6.0.6`
+
+- [#4769](https://github.com/cloudflare/workers-sdk/pull/4769) [`fd1e9aa9`](https://github.com/cloudflare/workers-sdk/commit/fd1e9aa96cc44308f2e1e6213b4da57ff9b53f10) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.2` to `1.3.5`
+
+* [#4770](https://github.com/cloudflare/workers-sdk/pull/4770) [`f2bfa5e2`](https://github.com/cloudflare/workers-sdk/commit/f2bfa5e26a1f0e61f81ee699f04fa7ab88c1e315) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.4.1` to `2.5.0`
+
+- [#4776](https://github.com/cloudflare/workers-sdk/pull/4776) [`eefd232e`](https://github.com/cloudflare/workers-sdk/commit/eefd232efbfb3c57b8f03d205ae1831ee1a3f536) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.6.0` to `4.7.1`
+
 ## 2.9.1
 
 ### Patch Changes

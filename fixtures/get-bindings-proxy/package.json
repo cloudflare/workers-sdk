@@ -1,0 +1,15 @@
+{
+	"name": "get-bindings-proxy-fixture",
+	"private": true,
+	"description": "A test for the getBindingsProxy utility",
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"wrangler": "workspace:*"
+	}
+}

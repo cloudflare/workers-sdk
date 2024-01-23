@@ -5,7 +5,6 @@ import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
 import { logger } from "./logger";
-
 import type { Config } from "./config";
 import type { HttpTerminator } from "http-terminator";
 import type { Server } from "node:http";
@@ -18,7 +17,7 @@ let terminator: HttpTerminator;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
-type WorkerDefinition = {
+export type WorkerDefinition = {
 	port: number | undefined;
 	protocol: "http" | "https" | undefined;
 	host: string | undefined;

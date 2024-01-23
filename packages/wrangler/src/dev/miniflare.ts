@@ -1,8 +1,8 @@
 import assert from "node:assert";
-import { type UUID, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -19,19 +19,20 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	SourceOptions,
-	WorkerOptions,
 	Request,
 	Response,
+	SourceOptions,
+	WorkerOptions,
 } from "miniflare";
+import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
 
@@ -145,7 +146,7 @@ export class WranglerLog extends Log {
 }
 
 export const DEFAULT_WORKER_NAME = "worker";
-function getName(config: ConfigBundle) {
+function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
@@ -229,9 +230,40 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	};
 	return [consumer.queue, options] as const;
 }
+
+type WorkerOptionsBindings = Pick<
+	WorkerOptions,
+	| "bindings"
+	| "textBlobBindings"
+	| "dataBlobBindings"
+	| "wasmBindings"
+	| "kvNamespaces"
+	| "r2Buckets"
+	| "d1Databases"
+	| "queueProducers"
+	| "queueConsumers"
+	| "hyperdrives"
+	| "durableObjects"
+	| "serviceBindings"
+>;
+
+type MiniflareBindingsConfig = Pick<
+	ConfigBundle,
+	| "bindings"
+	| "workerDefinitions"
+	| "queueConsumers"
+	| "name"
+	| "serviceBindings"
+> &
+	Partial<Pick<ConfigBundle, "format" | "bundle">>;
+
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-function buildBindingOptions(config: ConfigBundle) {
+export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+	bindingOptions: WorkerOptionsBindings;
+	internalObjects: CfDurableObject[];
+	externalDurableObjectWorker: WorkerOptions;
+} {
 	const bindings = config.bindings;
 
 	// Setup blob and module bindings
@@ -239,7 +271,7 @@ function buildBindingOptions(config: ConfigBundle) {
 	const textBlobBindings = { ...bindings.text_blobs };
 	const dataBlobBindings = { ...bindings.data_blobs };
 	const wasmBindings = { ...bindings.wasm_modules };
-	if (config.format === "service-worker") {
+	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
 		const scriptPath = realpathSync(config.bundle.path);
 		const modulesRoot = path.dirname(scriptPath);
@@ -537,7 +569,7 @@ async function buildMiniflareOptions(
 
 	const sourceOptions = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
-		buildBindingOptions(config);
+		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 

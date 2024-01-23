@@ -2,6 +2,7 @@ import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { getLocations } from "../locations";
 import type { Location, LocationID } from "../client";
+
 const whichLocationQuestion = "Choose where you want to deploy your container";
 const whichRegionQuestion =
 	"Choose which region you want to deploy your container in";
@@ -100,6 +101,7 @@ export async function getLocation(
 
 	const pops = locationToPops[location];
 	if (pops.length === 1) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		return pops.pop()!.location;
 	}
 
