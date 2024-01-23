@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
+import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -284,7 +285,7 @@ describe("r2", () => {
 			});
 		});
 
-		describe.only("sippy", () => {
+		describe("sippy", () => {
 			const { setIsTTY } = useMockIsTTY();
 
 			it("should show the correct help when an invalid command is passed", async () => {
@@ -419,6 +420,23 @@ describe("r2", () => {
 				"
 			`);
 				});
+
+				it("should disable Sippy for the given bucket", async () => {
+					setIsTTY(false);
+
+					msw.use(
+						rest.delete(
+							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
+							async (request, response, context) => {
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await runWrangler("r2 bucket sippy disable testBucket");
+					expect(std.out).toMatchInlineSnapshot(
+						`"✨ Successfully disabled Sippy on the 'testBucket' bucket."`
+					);
+				});
 			});
 
 			describe("get", () => {
@@ -453,6 +471,32 @@ describe("r2", () => {
 				"
 			`);
 				});
+			});
+
+			it("should get the status of Sippy for the given bucket", async () => {
+				setIsTTY(false);
+
+				msw.use(
+					rest.get(
+						"*/accounts/:accountId/r2/buckets/:bucketName/sippy",
+						async (request, response, context) => {
+							const { accountId } = request.params;
+							expect(accountId).toEqual("some-account-id");
+							expect(await request.text()).toEqual("");
+							return response.once(
+								context.json(
+									createFetchResult(
+										"https://storage.googleapis.com/storage/v1/b/testBucket"
+									)
+								)
+							);
+						}
+					)
+				);
+				await runWrangler("r2 bucket sippy get testBucket");
+				expect(std.out).toMatchInlineSnapshot(
+					`"Sippy upstream bucket: https://storage.googleapis.com/storage/v1/b/testBucket."`
+				);
 			});
 		});
 	});
@@ -503,7 +547,12 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-			"Error: Wrangler only supports uploading files up to `);
+				"Error: Wrangler only supports uploading files up to ${prettyBytes(
+					MAX_UPLOAD_SIZE,
+					{ binary: true }
+				)} in size
+				wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
+			`);
 			});
 
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
