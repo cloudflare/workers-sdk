@@ -48,7 +48,7 @@
 		"exit-hook": "^2.2.1",
 		"glob-to-regexp": "^0.4.1",
 		"stoppable": "^1.1.0",
-		"undici": "^5.22.1",
+		"undici": "^5.28.2",
 		"workerd": "1.20231218.0",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",
