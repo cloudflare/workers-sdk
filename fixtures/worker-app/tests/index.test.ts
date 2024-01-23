@@ -13,7 +13,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 	beforeAll(async () => {
 		({ ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
-			["--port=0", "--inspector-port=0"]
+			["--port=0", "--inspector-port=0", "--upstream-protocol=https"]
 		));
 	});
 
@@ -22,10 +22,12 @@ describe("'wrangler dev' correctly renders pages", () => {
 	});
 
 	it("renders ", async ({ expect }) => {
+		// Note that the local protocol defaults to http
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(response.status).toBe(200);
-		expect(text).toContain(`http://${ip}:${port}/`);
+		// Note that the upstream protocol defaults to https
+		expect(text).toContain(`https://${ip}:${port}/`);
 
 		// Wait up to 5s for all request logs to be flushed
 		for (let i = 0; i < 10; i++) {
@@ -77,12 +79,13 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
 	});
 
-	it("passes through URL unchanged", async ({ expect }) => {
+	it("passes through URL host and path unchanged", async ({ expect }) => {
 		const url = `http://${ip}:${port}//thing?a=1`;
-		const response = await fetch(url, {
+		const response = await fetch(`http://${ip}:${port}//thing?a=1`, {
 			headers: { "X-Test-URL": "true" },
 		});
 		const text = await response.text();
-		expect(text).toBe(url);
+		// Note that the protocol changes due to the upstream_protocol configuration of Wrangler in the `beforeAll()`.
+		expect(text).toBe(`https://${ip}:${port}//thing?a=1`);
 	});
 });
