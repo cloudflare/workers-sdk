@@ -9,6 +9,7 @@ services = [
 
 [vars]
 MY_VAR = "my-var-value"
+MY_VAR_A = "my-var-a"
 MY_JSON_VAR = { test = true }
 
 [[kv_namespaces]]
