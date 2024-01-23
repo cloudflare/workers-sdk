@@ -1,6 +1,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import { Agent } from "undici";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 
 type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
@@ -16,10 +17,11 @@ export type OpenAPIConfig = {
 	PASSWORD?: string | Resolver<string>;
 	HEADERS?: Headers | Resolver<Headers>;
 	ENCODE_PATH?: (path: string) => string;
+	AGENT?: Agent;
 };
 
 export const OpenAPI: OpenAPIConfig = {
-	BASE: "https://api.cloudflare.com/client/v4/accounts/<account-tag>/cloudchamber",
+	BASE: "",
 	VERSION: "1.0.0",
 	WITH_CREDENTIALS: false,
 	CREDENTIALS: "include",
