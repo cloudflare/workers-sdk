@@ -5,12 +5,11 @@ import { logger } from "../logger";
 import { APIError, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import { deleteR2Sippy, getR2Sippy, putR2Sippy } from "./helpers";
-
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { SippyConfig } from "./helpers";
+import type { SippyPutConfig } from "./helpers";
 
 export function EnableOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -79,34 +78,23 @@ export async function EnableHandler(
 	const accountId = await requireAuth(config);
 
 	if (isInteractive) {
-		if (!args.provider) {
-			args.provider = await prompt(
-				"Enter the cloud storage provider of your bucket (AWS or GCS):"
-			);
-		}
-
-		if (!args.bucket) {
-			args.bucket = await prompt(
-				`Enter the name of your ${args.provider} bucket:`
-			);
-		}
+		args.provider ??= await prompt(
+			"Enter the cloud storage provider of your bucket (AWS or GCS):"
+		);
+		args.bucket ??= await prompt(
+			`Enter the name of your ${args.provider} bucket:`
+		);
 
 		if (args.provider == "AWS") {
-			if (!args.region) {
-				args.region = await prompt(
-					"Enter the AWS region where your S3 bucket is located (example: us-west-2):"
-				);
-			}
-			if (!args.keyId) {
-				args.keyId = await prompt(
-					"Enter your AWS Access Key ID (requires read and list access):"
-				);
-			}
-			if (!args.secretAccessKey) {
-				args.secretAccessKey = await prompt(
-					"Enter your AWS Secret Access Key:"
-				);
-			}
+			args.region ??= await prompt(
+				"Enter the AWS region where your S3 bucket is located (example: us-west-2):"
+			);
+			args.keyId ??= await prompt(
+				"Enter your AWS Access Key ID (requires read and list access):"
+			);
+			args.secretAccessKey ??= await prompt(
+				"Enter your AWS Secret Access Key:"
+			);
 		} else if (args.provider == "GCS") {
 			if (
 				!(args.clientEmail && args.privateKey) &&
@@ -117,21 +105,17 @@ export async function EnableHandler(
 				);
 			}
 		}
-		if (!args.r2KeyId) {
-			args.r2KeyId = await prompt(
-				"Enter your R2 Access Key ID (requires read and write access):"
-			);
-		}
-		if (!args.r2SecretAccessKey) {
-			args.r2SecretAccessKey = await prompt("Enter your R2 Secret Access Key:");
-		}
+		args.r2KeyId ??= await prompt(
+			"Enter your R2 Access Key ID (requires read and write access):"
+		);
+		args.r2SecretAccessKey ??= await prompt("Enter your R2 Secret Access Key:");
 	}
 
 	let sippyConfig = {
 		bucket: args.bucket ?? "",
 		r2_key_id: args.r2KeyId ?? "",
 		r2_access_key: args.r2SecretAccessKey ?? "",
-	} as SippyConfig;
+	} as SippyPutConfig;
 
 	if (args.provider == "AWS") {
 		if (!(args.keyId && args.secretAccessKey)) {
