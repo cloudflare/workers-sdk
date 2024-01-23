@@ -13,6 +13,10 @@
 			"persistent": true,
 			"cache": false
 		},
+		"@cloudflare/vitest-pool-workers#dev": {
+			"persistent": true,
+			"cache": false
+		},
 		"build": { "dependsOn": ["^build"] },
 		"test": {
 			"dependsOn": ["^build"],

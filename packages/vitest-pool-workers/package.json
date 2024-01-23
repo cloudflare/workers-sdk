@@ -16,7 +16,7 @@
 		"check:lint": "eslint .",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p test/tsconfig.json",
 		"test": "vitest --config vitest.workers.config.ts --reporter=basic",
-		"test:ci": "vitest --config vitest.workers.config.ts --reporter=basic"
+		"test:ci": "vitest run --config vitest.workers.config.ts --reporter=basic"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
@@ -38,5 +38,8 @@
 		"@vitest/runner": "1.1.3",
 		"@vitest/snapshot": "1.1.3",
 		"vitest": "1.1.3"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

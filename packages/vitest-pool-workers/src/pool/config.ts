@@ -1,6 +1,10 @@
 import path from "node:path";
-import { PLUGINS } from "miniflare";
-import { formatZodError, getRootPath, parseWithRootPath } from "miniflare";
+import {
+	formatZodError,
+	getRootPath,
+	parseWithRootPath,
+	PLUGINS,
+} from "miniflare";
 import { z } from "zod";
 import type { Awaitable, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
@@ -17,6 +21,7 @@ const WorkersPoolOptionsSchema = z.object({
 	isolatedStorage: z.boolean().default(false),
 	singleWorker: z.boolean().default(false),
 	setupEnvironment: z
+		// eslint-disable-next-line unused-imports/no-unused-vars
 		.custom<(env: CloudflareTestEnv) => Awaitable<void>>(
 			(v) => typeof v === "function"
 		)

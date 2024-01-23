@@ -37,6 +37,7 @@ fixtures/**/dist/**
 
 # Miniflare shouldn't be formatted with the root `prettier` version
 packages/miniflare
+packages/vitest-pool-workers
 
 # In the C3 templates, in particular framework templates, we want to be able to
 # use any format that the framework authors prefer/use in their own templates,
