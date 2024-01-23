@@ -217,6 +217,11 @@ export function createCLIParser(argv: string[]) {
 			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
 		})
+		.option("experimental-gradual-rollouts", {
+			describe: `Experimental: Support Gradual Rollouts`,
+			type: "boolean",
+			hidden: true,
+		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
@@ -717,14 +722,19 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// versions
-	wrangler.command("versions", false, (versionYargs) => {
-		return versionYargs.command(
-			"upload",
-			"Upload a Worker for Gradual Rollouts [beta]",
-			versionsUploadOptions,
-			versionsUploadHandler
-		);
-	});
+	const experimentalGradualRollouts = argv.includes(
+		"--experimental-gradual-rollouts"
+	);
+	if (experimentalGradualRollouts) {
+		wrangler.command("versions", false, (versionYargs) => {
+			return versionYargs.command(
+				"upload",
+				"Upload a Worker for Gradual Rollouts [beta]",
+				versionsUploadOptions,
+				versionsUploadHandler
+			);
+		});
+	}
 
 	wrangler.exitProcess(false);
 
