@@ -1,6 +1,6 @@
 {
 	"name": "playground-preview-worker",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
@@ -24,6 +24,6 @@
 		"promjs": "^0.4.2",
 		"toucan-js": "^3.2.2",
 		"undici": "5.28.2",
-		"wrangler": "^3.5.1"
+		"wrangler": "^3.24.0"
 	}
 }
