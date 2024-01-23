@@ -62,18 +62,11 @@ describe
 		});
 
 		const runCli = async (
-			framework: string,
+			template: string,
 			projectPath: string,
 			{ ctx, argv = [], promptHandlers = [] }: RunnerConfig
 		) => {
-			const args = [
-				projectPath,
-				"--type",
-				framework,
-				"--deploy",
-				"--no-open",
-				"--no-git",
-			];
+			const args = [projectPath, "--type", template, "--no-open", "--no-git"];
 
 			args.push(...argv);
 
@@ -81,7 +74,7 @@ describe
 				ctx,
 				argv: args,
 				promptHandlers,
-				outputPrefix: `[${framework}]`,
+				outputPrefix: `[${template}]`,
 			});
 
 			// Relevant project files should have been created
@@ -118,7 +111,11 @@ describe
 				ctx,
 				overrides,
 				promptHandlers,
-				argv: [...(argv ?? [])],
+				argv: [
+					// Skip deployment if the test config has no response expectation
+					expectResponseToContain ? "--deploy" : "--no-deploy",
+					...(argv ?? []),
+				],
 			});
 
 			if (expectResponseToContain) {

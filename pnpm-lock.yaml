@@ -668,6 +668,12 @@ importers:
       '@types/cross-spawn':
         specifier: ^6.0.2
         version: 6.0.2
+      '@types/deepmerge':
+        specifier: ^2.2.0
+        version: 2.2.0
+      '@types/degit':
+        specifier: ^2.8.6
+        version: 2.8.6
       '@types/dns2':
         specifier: ^2.0.3
         version: 2.0.3
@@ -704,6 +710,12 @@ importers:
       cross-spawn:
         specifier: ^7.0.3
         version: 7.0.3
+      deepmerge:
+        specifier: ^4.3.1
+        version: 4.3.1
+      degit:
+        specifier: ^2.8.4
+        version: 2.8.4
       dns2:
         specifier: ^2.1.0
         version: 2.1.0
@@ -719,6 +731,9 @@ importers:
       haikunator:
         specifier: ^2.1.2
         version: 2.1.2
+      magic-string:
+        specifier: ^0.30.5
+        version: 0.30.5
       open:
         specifier: ^8.4.0
         version: 8.4.0
@@ -1933,7 +1948,7 @@ packages:
       '@babel/helper-plugin-utils': 7.22.5
       debug: 4.3.4(supports-color@9.2.2)
       lodash.debounce: 4.0.8
-      resolve: 1.22.2
+      resolve: 1.22.8
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -6654,6 +6669,17 @@ packages:
       '@types/ms': 0.7.31
     dev: true
 
+  /@types/deepmerge@2.2.0:
+    resolution: {integrity: sha512-FEQYDHh6+Q+QXKSrIY46m+/lAmAj/bk4KpLaam+hArmzaVpMBHLcfwOH2Q2UOkWM7XsdY9PmZpGyPAjh/JRGhQ==}
+    deprecated: This is a stub types definition. deepmerge provides its own type definitions, so you do not need this installed.
+    dependencies:
+      deepmerge: 4.3.1
+    dev: true
+
+  /@types/degit@2.8.6:
+    resolution: {integrity: sha512-y0M7sqzsnHB6cvAeTCBPrCQNQiZe8U4qdzf8uBVmOWYap5MMTN/gB2iEqrIqFiYcsyvP74GnGD5tgsHttielFw==}
+    dev: true
+
   /@types/dns2@2.0.3:
     resolution: {integrity: sha512-sO14jUYelc2DzwHcCbwp7tZsZfB2x17/zIdHCAeUBINAz2cc36iVFLqCPCB7rn73CzoyoCmpkEnh1rA8C0puPw==}
     dependencies:
@@ -9929,6 +9955,11 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
+  /deepmerge@4.3.1:
+    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
+    engines: {node: '>=0.10.0'}
+    dev: true
+
   /default-browser-id@3.0.0:
     resolution: {integrity: sha512-OZ1y3y0SqSICtE8DE4S8YOE9UZOJ8wO16fKWVP5J1Qz42kV9jcnMVFrEE/noXb/ss3Q4pZIH79kxofzyNNtUNA==}
     engines: {node: '>=12'}
@@ -10031,6 +10062,12 @@ packages:
       ast-types: 0.13.4
       escodegen: 2.1.0
       esprima: 4.0.1
+    dev: true
+
+  /degit@2.8.4:
+    resolution: {integrity: sha512-vqYuzmSA5I50J882jd+AbAhQtgK6bdKUJIex1JNfEUPENCgYsxugzKVZlFyMwV4i06MmnV47/Iqi5Io86zf3Ng==}
+    engines: {node: '>=8.0.0'}
+    hasBin: true
     dev: true
 
   /del@5.1.0:
@@ -14406,6 +14443,13 @@ packages:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.4.15
 
+  /magic-string@0.30.5:
+    resolution: {integrity: sha512-7xlpfBaQaP/T6Vh8MO/EqXSW5En6INHEvEXQiuff7Gku0PWjU3uf6w/j9o7O+SpB5fOAkrI5HeoNgwjEO0pFsA==}
+    engines: {node: '>=12'}
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.4.15
+    dev: true
+
   /make-dir@3.1.0:
     resolution: {integrity: sha512-g3FeP20LNwhALb/6Cz6Dd4F2ngze0jz7tbzrD2wAV+o9FeNHe4rL+yK2md0J/fiSf1sa1ADhXqi5+oVwOM/eGw==}
     engines: {node: '>=8'}
@@ -15438,7 +15482,7 @@ packages:
     resolution: {integrity: sha512-/5CMN3T0R4XTj4DcGaexo+roZSdSFW/0AOOTROrjxzCG1wrWXEsGbRKevjlIL+ZDE4sZlJr5ED4YW0yqmkK+eA==}
     dependencies:
       hosted-git-info: 2.8.9
-      resolve: 1.22.2
+      resolve: 1.22.8
       semver: 5.7.1
       validate-npm-package-license: 3.0.4
 

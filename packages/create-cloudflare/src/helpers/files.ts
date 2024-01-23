@@ -1,12 +1,21 @@
 import fs, { existsSync } from "fs";
+import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "./command";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 export const writeFile = (path: string, content: string) => {
 	try {
 		fs.writeFileSync(path, content);
+	} catch (error) {
+		crash(error as string);
+	}
+};
+
+export const appendFile = (path: string, content: string) => {
+	try {
+		fs.appendFileSync(path, content);
 	} catch (error) {
 		crash(error as string);
 	}
@@ -45,8 +54,8 @@ export const probePaths = (paths: string[]) => {
 	return null;
 };
 
-export const usesTypescript = (projectRoot = ".") => {
-	return existsSync(`${projectRoot}/tsconfig.json`);
+export const usesTypescript = (ctx: C3Context) => {
+	return existsSync(join(`${ctx.project.path}`, `tsconfig.json`));
 };
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
@@ -68,7 +77,7 @@ type EslintUsageInfo =
 		- https://eslint.org/docs/latest/use/configure/configuration-files#configuration-file-formats
 		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
 */
-export const usesEslint = (ctx: PagesGeneratorContext): EslintUsageInfo => {
+export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	for (const ext of eslintRcExts) {
 		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
 		if (existsSync(`${ctx.project.path}/${eslintRcFilename}`)) {

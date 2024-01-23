@@ -1,7 +1,6 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
-import { templateMap } from "../templateMap";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
 import type { C3Args } from "types";
 
@@ -51,7 +50,12 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		})
 		.option("existing-script", {
 			type: "string",
-			hidden: templateMap["pre-existing"].hidden,
+			hidden: true,
+		})
+		.option("template", {
+			type: "string",
+			description:
+				"A degit compatible string or the url to a git repository (with optionally a directory path) containing the C3 template to use",
 		})
 		.option("accept-defaults", {
 			alias: "y",
