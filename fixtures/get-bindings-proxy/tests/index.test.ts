@@ -48,35 +48,44 @@ describe("getBindingsProxy", () => {
 			const { bindings, dispose } = await getBindingsProxy<Bindings>({
 				configPath: wranglerTomlFilePath,
 			});
-			const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
-			expect(MY_VAR).toEqual("my-var-value");
-			expect(MY_JSON_VAR).toEqual({
-				test: true,
-			});
-			expect(MY_DEV_VAR).toEqual("my-dev-var-value");
-			await dispose();
+			try {
+				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
+				expect(MY_VAR).toEqual("my-var-value");
+				expect(MY_JSON_VAR).toEqual({
+					test: true,
+				});
+				expect(MY_DEV_VAR).toEqual("my-dev-var-value");
+			} finally {
+				await dispose();
+			}
 		});
 
 		it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
 			const { bindings, dispose } = await getBindingsProxy<Bindings>({
 				configPath: wranglerTomlFilePath,
 			});
-			const { MY_VAR_A } = bindings;
-			expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
-			expect(MY_VAR_A).toEqual("my-dev-var-a");
-			await dispose();
+			try {
+				const { MY_VAR_A } = bindings;
+				expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
+				expect(MY_VAR_A).toEqual("my-dev-var-a");
+			} finally {
+				await dispose();
+			}
 		});
 
 		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
 			const { bindings, dispose } = await getBindingsProxy<Bindings>({
 				configPath: wranglerTomlFilePath,
 			});
-			const { MY_KV } = bindings;
-			expect(MY_KV).not.toEqual("my-dev-kv");
-			["get", "delete", "list", "put", "getWithMetadata"].every((methodName) =>
-				expect(typeof MY_KV[methodName]).toBe("function")
-			);
-			await dispose();
+			try {
+				const { MY_KV } = bindings;
+				expect(MY_KV).not.toEqual("my-dev-kv");
+				["get", "delete", "list", "put", "getWithMetadata"].every(
+					(methodName) => expect(typeof MY_KV[methodName]).toBe("function")
+				);
+			} finally {
+				await dispose();
+			}
 		});
 
 		it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
@@ -89,14 +98,17 @@ describe("getBindingsProxy", () => {
 					"test-toml"
 				),
 			});
-			const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
-			expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
-			expect(MY_JSON_VAR).toEqual({
-				test: true,
-				customToml: true,
-			});
-			expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
-			await dispose();
+			try {
+				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
+				expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
+				expect(MY_JSON_VAR).toEqual({
+					test: true,
+					customToml: true,
+				});
+				expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
+			} finally {
+				await dispose();
+			}
 		});
 	});
 
@@ -104,23 +116,29 @@ describe("getBindingsProxy", () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: path.join(__dirname, "..", "wrangler.json"),
 		});
-		const { MY_VAR, MY_JSON_VAR } = bindings;
-		expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
-		expect(MY_JSON_VAR).toEqual({
-			test: true,
-			fromJson: true,
-		});
-		await dispose();
+		try {
+			const { MY_VAR, MY_JSON_VAR } = bindings;
+			expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
+			expect(MY_JSON_VAR).toEqual({
+				test: true,
+				fromJson: true,
+			});
+		} finally {
+			await dispose();
+		}
 	});
 
 	it("provides service bindings to external local workers", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
-		const { MY_SERVICE_A, MY_SERVICE_B } = bindings;
-		await testServiceBinding(MY_SERVICE_A, "Hello World from hello-worker-a");
-		await testServiceBinding(MY_SERVICE_B, "Hello World from hello-worker-b");
-		await dispose();
+		try {
+			const { MY_SERVICE_A, MY_SERVICE_B } = bindings;
+			await testServiceBinding(MY_SERVICE_A, "Hello World from hello-worker-a");
+			await testServiceBinding(MY_SERVICE_B, "Hello World from hello-worker-b");
+		} finally {
+			await dispose();
+		}
 	});
 
 	it("correctly obtains functioning KV bindings", async () => {
@@ -142,50 +160,59 @@ describe("getBindingsProxy", () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
-		const { MY_DO_A, MY_DO_B } = bindings;
-		await testDoBinding(MY_DO_A, "Hello from DurableObject A");
-		await testDoBinding(MY_DO_B, "Hello from DurableObject B");
-		await dispose();
+		try {
+			const { MY_DO_A, MY_DO_B } = bindings;
+			await testDoBinding(MY_DO_A, "Hello from DurableObject A");
+			await testDoBinding(MY_DO_B, "Hello from DurableObject B");
+		} finally {
+			await dispose();
+		}
 	});
 
 	it("correctly obtains functioning R2 bindings", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
-		const { MY_BUCKET } = bindings;
-		let numOfObjects = (await MY_BUCKET.list()).objects.length;
-		expect(numOfObjects).toBe(0);
-		await MY_BUCKET.put("my-object", "my-value");
-		numOfObjects = (await MY_BUCKET.list()).objects.length;
-		expect(numOfObjects).toBe(1);
-		const value = await MY_BUCKET.get("my-object");
-		expect(await value?.text()).toBe("my-value");
-		await dispose();
+		try {
+			const { MY_BUCKET } = bindings;
+			let numOfObjects = (await MY_BUCKET.list()).objects.length;
+			expect(numOfObjects).toBe(0);
+			await MY_BUCKET.put("my-object", "my-value");
+			numOfObjects = (await MY_BUCKET.list()).objects.length;
+			expect(numOfObjects).toBe(1);
+			const value = await MY_BUCKET.get("my-object");
+			expect(await value?.text()).toBe("my-value");
+		} finally {
+			await dispose();
+		}
 	});
 
 	it("correctly obtains functioning D1 bindings", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
-		const { MY_D1 } = bindings;
-		await MY_D1.exec(
-			`CREATE TABLE IF NOT EXISTS users ( id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL )`
-		);
-		const stmt = MY_D1.prepare("insert into users (name) values (?1)");
-		await MY_D1.batch([
-			stmt.bind("userA"),
-			stmt.bind("userB"),
-			stmt.bind("userC"),
-		]);
-		const { results } = await MY_D1.prepare(
-			"SELECT name FROM users LIMIT 5"
-		).all();
-		expect(results).toEqual([
-			{ name: "userA" },
-			{ name: "userB" },
-			{ name: "userC" },
-		]);
-		await dispose();
+		try {
+			const { MY_D1 } = bindings;
+			await MY_D1.exec(
+				`CREATE TABLE IF NOT EXISTS users ( id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL )`
+			);
+			const stmt = MY_D1.prepare("insert into users (name) values (?1)");
+			await MY_D1.batch([
+				stmt.bind("userA"),
+				stmt.bind("userB"),
+				stmt.bind("userC"),
+			]);
+			const { results } = await MY_D1.prepare(
+				"SELECT name FROM users LIMIT 5"
+			).all();
+			expect(results).toEqual([
+				{ name: "userA" },
+				{ name: "userB" },
+				{ name: "userC" },
+			]);
+		} finally {
+			await dispose();
+		}
 	});
 });
 
