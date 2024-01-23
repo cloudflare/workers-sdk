@@ -201,7 +201,7 @@ export async function versionsUploadHandler(
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
 	await metrics.sendMetricsEvent(
-		"deploy worker script",
+		"upload worker version",
 		{
 			usesTypeScript: /\.tsx?$/.test(entry.file),
 		},
