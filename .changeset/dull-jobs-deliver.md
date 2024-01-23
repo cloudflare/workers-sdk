@@ -28,18 +28,15 @@ import { getBindingsProxy } from "wrangler";
 const { bindings, dispose } = await getBindingsProxy();
 
 try {
-    // we get access to the KV binding proxy
-    const myKv = bindings.MY_KV;
-    // we can then use the proxy in the same exact way we'd use the
-    // KV binding in the workerd runtime, without any API discrepancies
-    const kvValue = await myKv.get("my-kv-key");
+	// we get access to the KV binding proxy
+	const myKv = bindings.MY_KV;
+	// we can then use the proxy in the same exact way we'd use the
+	// KV binding in the workerd runtime, without any API discrepancies
+	const kvValue = await myKv.get("my-kv-key");
 
-    console.log(`
-        KV Value = ${kvValue}
-    `);
-}
-finally {
-    // we need to dispose of the underlying child process in order for this nodejs script to properly terminate
-    await dispose();
+	console.log(`KV Value = ${kvValue}`);
+} finally {
+	// we need to dispose of the underlying child process in order for this nodejs script to properly terminate
+	await dispose();
 }
 ```

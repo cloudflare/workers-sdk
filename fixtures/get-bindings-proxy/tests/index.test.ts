@@ -80,8 +80,8 @@ describe("getBindingsProxy", () => {
 			try {
 				const { MY_KV } = bindings;
 				expect(MY_KV).not.toEqual("my-dev-kv");
-				["get", "delete", "list", "put", "getWithMetadata"].every((methodName) =>
-					expect(typeof MY_KV[methodName]).toBe("function")
+				["get", "delete", "list", "put", "getWithMetadata"].every(
+					(methodName) => expect(typeof MY_KV[methodName]).toBe("function")
 				);
 			} finally {
 				await dispose();
