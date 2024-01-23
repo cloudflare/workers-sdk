@@ -55,7 +55,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.option("template", {
 			type: "string",
 			description:
-				"The url to a git repository (with optionally a directory path) containing the C3 template to use",
+				"A degit compatible string or the url to a git repository (with optionally a directory path) containing the C3 template to use",
 		})
 		.option("accept-defaults", {
 			alias: "y",

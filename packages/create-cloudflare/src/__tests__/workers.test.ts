@@ -106,13 +106,9 @@ describe("addWorkersTypesToTsConfig", () => {
 		);
 	});
 
-	test("not using ts", async () => {
-		ctx.args.ts = false;
-		expect(writeFile).not.toHaveBeenCalled();
-	});
-
 	test("tsconfig.json not found", async () => {
 		vi.mocked(existsSync).mockImplementation(() => false);
+		await addWorkersTypesToTsConfig(ctx);
 		expect(writeFile).not.toHaveBeenCalled();
 	});
 
@@ -120,8 +116,20 @@ describe("addWorkersTypesToTsConfig", () => {
 		vi.mocked(readdirSync).mockImplementation(
 			() => ["README.md"] as unknown as Dirent[]
 		);
+		await addWorkersTypesToTsConfig(ctx);
 
 		expect(writeFile).not.toHaveBeenCalled();
+	});
+
+	test("don't clobber existing entrypoints", async () => {
+		vi.mocked(readFile).mockImplementation(
+			() => `{types: ["@cloudflare/workers-types/2021-03-20"]}`
+		);
+		await addWorkersTypesToTsConfig(ctx);
+
+		expect(vi.mocked(writeFile).mock.calls[0][1]).toEqual(
+			`{types: ["@cloudflare/workers-types/2021-03-20"]}`
+		);
 	});
 });
 

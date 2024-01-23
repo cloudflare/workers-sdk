@@ -6,7 +6,7 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();

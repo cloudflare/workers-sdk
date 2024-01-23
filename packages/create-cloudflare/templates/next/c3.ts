@@ -13,7 +13,6 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { TemplateConfig } from "../../src/templates";
 import {
 	apiAppDirHelloJs,
 	apiAppDirHelloTs,
@@ -25,6 +24,7 @@ import {
 	nextConfig,
 	readme,
 } from "./templates";
+import type { TemplateConfig } from "../../src/templates";
 import type { C3Args, C3Context } from "types";
 
 const { npm, npx } = detectPackageManager();

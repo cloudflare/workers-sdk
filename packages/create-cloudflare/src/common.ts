@@ -142,6 +142,11 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
 	if (!(await isDeployable(ctx))) {
 		ctx.args.deploy = false;
+		updateStatus(
+			`Bindings must be configured in ${blue(
+				"`wrangler.toml`"
+			)} before your application can be deployed`
+		);
 	}
 
 	const label = `deploy via \`${quoteShellArgs([
@@ -165,7 +170,7 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	ctx.deployment = {};
 
 	const loginSuccess = await wranglerLogin();
-	if (!loginSuccess) return;
+	if (!loginSuccess) return false;
 
 	await chooseAccount(ctx);
 
@@ -437,11 +442,15 @@ const createCommitMessage = async (ctx: C3Context) => {
 	const gitVersion = await getGitVersion();
 	const insideRepo = await isInsideGitRepo(ctx.project.path);
 
+	const showFramework = isPages || ctx.template.id === "hono";
+
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
-		...(isPages ? [{ key: "framework", value: ctx.template.id }] : []),
-		...(isPages ? [{ key: "framework cli", value: getFrameworkCli(ctx) }] : []),
+		...(showFramework ? [{ key: "framework", value: ctx.template.id }] : []),
+		...(showFramework
+			? [{ key: "framework cli", value: getFrameworkCli(ctx) }]
+			: []),
 		{
 			key: "package manager",
 			value: `${packageManager.name}@${packageManager.version}`,

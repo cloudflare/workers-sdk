@@ -102,8 +102,11 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 
 	let updated = tsconfig;
 
-	if (tsconfig.includes("@cloudflare/workers-types")) {
-		updated = tsconfig.replace("@cloudflare/workers-types", typesEntrypoint);
+	if (tsconfig.match(`@cloudflare/workers-types`)) {
+		// Don't update existing instances if they contain an explicit entrypoint
+		if (tsconfig.match(`"@cloudflare/workers-types"`)) {
+			updated = tsconfig.replace("@cloudflare/workers-types", typesEntrypoint);
+		}
 	} else {
 		try {
 			// Note: this simple implementation doesn't handle tsconfigs containing comments
