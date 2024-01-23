@@ -19,7 +19,6 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
-import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
@@ -35,7 +34,7 @@ import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
+import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
@@ -494,7 +493,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	assert(accountId, "Missing accountId");
 
 	const uploadMs = Date.now() - start;
-	const deployments: Promise<string[]>[] = [];
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 }
