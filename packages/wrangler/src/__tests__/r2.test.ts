@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
-import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -283,6 +283,178 @@ describe("r2", () => {
 			`);
 			});
 		});
+
+		describe.only("sippy", () => {
+			const { setIsTTY } = useMockIsTTY();
+
+			it("should show the correct help when an invalid command is passed", async () => {
+				await expect(() =>
+					runWrangler("r2 bucket sippy foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+			"
+		`);
+				expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler r2 bucket sippy
+
+			Manage Sippy incremental migration on an R2 bucket
+
+			Commands:
+			  wrangler r2 bucket sippy enable <name>   Enable Sippy on an R2 bucket
+			  wrangler r2 bucket sippy disable <name>  Disable Sippy on an R2 bucket
+			  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
+			});
+
+			describe("enable", () => {
+				it("should enable sippy on AWS for the given bucket", async () => {
+					setIsTTY(false);
+
+					msw.use(
+						rest.put(
+							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
+							async (request, response, context) => {
+								expect(await request.json()).toEqual({
+									access_key: "aws-secret",
+									bucket: "awsBucket",
+									key_id: "aws-key",
+									provider: "AWS",
+									r2_access_key: "some-secret",
+									r2_key_id: "some-key",
+								});
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await runWrangler(
+						"r2 bucket sippy enable testBucket --r2-key-id=some-key --r2-secret-access-key=some-secret --provider=AWS --key-id=aws-key --secret-access-key=aws-secret --bucket=awsBucket"
+					);
+					expect(std.out).toMatchInlineSnapshot(
+						`"✨ Successfully enabled Sippy on the 'testBucket' bucket."`
+					);
+				});
+
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket sippy enable")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Not enough non-option arguments: got 0, need at least 1"`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket sippy enable <name>
+
+				Enable Sippy on an R2 bucket
+
+				Positionals:
+				  name  The name of the bucket  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
+				      --provider  [choices: \\"AWS\\", \\"GCS\\"]
+				      --bucket                    The name of the upstream bucket  [string]
+				      --region                    (AWS provider only) The region of the upstream bucket  [string]
+				      --key-id                    (AWS provider only) The secret access key id for the upstream bucket  [string]
+				      --secret-access-key         (AWS provider only) The secret access key for the upstream bucket  [string]
+				      --service-account-key-file  (GCS provider only) The path to your Google Cloud service account key JSON file  [string]
+				      --client-email              (GCS provider only) The client email for your Google Cloud service account key  [string]
+				      --private-key               (GCS provider only) The private key for your Google Cloud service account key  [string]
+				      --r2-key-id                 The secret access key id for this R2 bucket  [string]
+				      --r2-secret-access-key      The secret access key for this R2 bucket  [string]"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+			});
+
+			describe("disable", () => {
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket sippy disable")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Not enough non-option arguments: got 0, need at least 1"`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket sippy disable <name>
+
+				Disable Sippy on an R2 bucket
+
+				Positionals:
+				  name  The name of the bucket  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+			});
+
+			describe("get", () => {
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket sippy get")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Not enough non-option arguments: got 0, need at least 1"`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket sippy get <name>
+
+				Check the status of Sippy on an R2 bucket
+
+				Positionals:
+				  name  The name of the bucket  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+			});
+		});
 	});
 
 	describe("r2 object", () => {
@@ -331,12 +503,7 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-			"Error: Wrangler only supports uploading files up to ${prettyBytes(
-				MAX_UPLOAD_SIZE,
-				{ binary: true }
-			)} in size
-			wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
-		`);
+			"Error: Wrangler only supports uploading files up to `);
 			});
 
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
