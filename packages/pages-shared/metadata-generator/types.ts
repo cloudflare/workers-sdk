@@ -87,4 +87,10 @@ export type Metadata = {
 	failOpen?: boolean;
 };
 
-export type Logger = (message: string) => void;
+export interface Logger {
+	debug: (message: string) => void;
+	log: (message: string) => void;
+	info: (message: string) => void;
+	warn: (message: string) => void;
+	error: (error: Error) => void;
+}
