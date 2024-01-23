@@ -144,7 +144,7 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0
       miniflare:
-        specifier: 3.20231218.2
+        specifier: 3.20231218.3
         version: link:../../packages/miniflare
       undici:
         specifier: ^5.28.2
@@ -1035,7 +1035,7 @@ importers:
         specifier: 5.28.2
         version: 5.28.2
       wrangler:
-        specifier: ^3.5.1
+        specifier: ^3.24.0
         version: link:../wrangler
 
   packages/prerelease-registry:

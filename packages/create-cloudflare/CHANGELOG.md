@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.9.3
+
+### Patch Changes
+
+- [#4780](https://github.com/cloudflare/workers-sdk/pull/4780) [`a75ef752`](https://github.com/cloudflare/workers-sdk/commit/a75ef752fc444abff67efd77559cb0fa3c527a88) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.6` to `17.1.0`
+
+* [#4786](https://github.com/cloudflare/workers-sdk/pull/4786) [`7273efca`](https://github.com/cloudflare/workers-sdk/commit/7273efca019900f0514ab111bf71fd8025c6daae) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `6.0.6` to `6.0.8`
+
+- [#4788](https://github.com/cloudflare/workers-sdk/pull/4788) [`d4676266`](https://github.com/cloudflare/workers-sdk/commit/d46762667b08f398e7ce04c2a32e7628966f5086) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.5.0` to `2.5.1`
+
+* [#4789](https://github.com/cloudflare/workers-sdk/pull/4789) [`475da3a6`](https://github.com/cloudflare/workers-sdk/commit/475da3a60e2e396e56c9a3bd43290ac83c1bbef5) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.5` to `1.4.0`
+
+- [#4803](https://github.com/cloudflare/workers-sdk/pull/4803) [`fa09f4a2`](https://github.com/cloudflare/workers-sdk/commit/fa09f4a2e421e402bf0f82f24b5c884c90c667ff) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add "Hello World" example for Durable Objects
+
+  This new starter corresponds to the getting started guide in the docs.
+
+  See #4747
+
+* [#4768](https://github.com/cloudflare/workers-sdk/pull/4768) [`c3e410c2`](https://github.com/cloudflare/workers-sdk/commit/c3e410c2797f5c59b9ea0f63c20feef643366df2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: bump undici versions to 5.28.2
+
 ## 2.9.2
 
 ### Patch Changes

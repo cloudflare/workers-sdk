@@ -1,5 +1,54 @@
 # wrangler
 
+## 3.24.0
+
+### Minor Changes
+
+- [#4523](https://github.com/cloudflare/workers-sdk/pull/4523) [`9f96f28b`](https://github.com/cloudflare/workers-sdk/commit/9f96f28b88252dc62f1901f6533a69218f96c2dd) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add new `getBindingsProxy` utility to the wrangler package
+
+  The new utility is part of wrangler's JS API (it is not part of the wrangler CLI) and its use is to provide proxy objects to bindings, such objects can be used in Node.js code as if they were actual bindings
+
+  The utility reads the `wrangler.toml` file present in the current working directory in order to discern what bindings should be available (a `wrangler.json` file can be used too, as well as config files with custom paths).
+
+  ## Example
+
+  Assuming that in the current working directory there is a `wrangler.toml` file with the following
+  content:
+
+  ```
+  [[kv_namespaces]]
+  binding = "MY_KV"
+  id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ```
+
+  The utility could be used in a nodejs script in the following way:
+
+  ```js
+  import { getBindingsProxy } from "wrangler";
+
+  const { bindings, dispose } = await getBindingsProxy();
+
+  try {
+  	const myKv = bindings.MY_KV;
+  	const kvValue = await myKv.get("my-kv-key");
+
+  	console.log(`KV Value = ${kvValue}`);
+  } finally {
+  	await dispose();
+  }
+  ```
+
+### Patch Changes
+
+- [#3427](https://github.com/cloudflare/workers-sdk/pull/3427) [`b79e93a3`](https://github.com/cloudflare/workers-sdk/commit/b79e93a37c4231e2406efde3b1ff390481828a18) Thanks [@ZakKemble](https://github.com/ZakKemble)! - fix: Use Windows SYSTEMROOT env var for finding netstat
+
+  Currently, the drive letter of os.homedir() (the user's home directory) is used to build the path to netstat.exe. However, user directories are not always on the same drive as the Windows installation, in which case the path to netstat will be incorrect. Now we use the %SYSTEMROOT% environment variable which correctly points to the installation path of Windows.
+
+* [#4768](https://github.com/cloudflare/workers-sdk/pull/4768) [`c3e410c2`](https://github.com/cloudflare/workers-sdk/commit/c3e410c2797f5c59b9ea0f63c20feef643366df2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: bump undici versions to 5.28.2
+
+* Updated dependencies [[`c3e410c2`](https://github.com/cloudflare/workers-sdk/commit/c3e410c2797f5c59b9ea0f63c20feef643366df2)]:
+  - miniflare@3.20231218.3
+
 ## 3.23.0
 
 ### Minor Changes
@@ -1271,7 +1320,6 @@
   const worker = await unstable_dev("script.js");
   const res = await worker.fetch("http://worker?name=Walshy");
   const text = await res.text();
-  // Following fails, as returned text is 'Hello, null'
   expect(text).toBe("Hello, Walshy");
   ```
 
@@ -2558,11 +2606,6 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   ```js
   import { unstable_dev } from "wrangler";
 
-  /**
-   * Note: if you shut down the first worker you spun up,
-   * the parent worker won't know the child worker exists
-   * and your tests will fail
-   */
   describe("multi-worker testing", () => {
   	let childWorker;
   	let parentWorker;
@@ -5052,9 +5095,8 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
 
   ```jsx
   import SomeDependency from "some-dependency.js";
-  addEventListener("fetch", event => {
-  	// ...
-  });
+
+  addEventListener("fetch", event => {});
   ```
 
   `wrangler` 1.x would resolve `import SomeDependency from "some-dependency.js";` to the file `some-dependency.js`. This will work in `wrangler` v2, but it will log a deprecation warning. Instead, you should rewrite the import to specify that it's a relative path, like so:
