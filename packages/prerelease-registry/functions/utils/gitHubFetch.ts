@@ -17,6 +17,7 @@ export const generateGitHubFetch = ({
 			"User-Agent",
 			"@cloudflare/workers-sdk/packages/prerelease-registry"
 		);
+		gitHubRequest.headers.set("X-GitHub-Api-Version", "2022-11-28");
 
 		return fetch(gitHubRequest);
 	};

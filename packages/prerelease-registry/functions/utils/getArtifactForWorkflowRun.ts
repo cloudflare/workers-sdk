@@ -66,7 +66,45 @@ export const getArtifactForWorkflowRun = async ({
 				{ status: 404 }
 			);
 
-		const zipResponse = await gitHubFetch(artifact.archive_download_url);
+		const redirResponse = await gitHubFetch(artifact.archive_download_url, {
+			// Azure will block the request if we auto redirect because
+			// it doesn't like the auth header. To work around this, we
+			// can fetch the new location in a separate fetch call.
+			redirect: "manual",
+		});
+		if (redirResponse.status !== 302) {
+			const responseData = {
+				"redirResponse.status": redirResponse.status,
+				"redirResponse.text": await redirResponse.text(),
+				repo,
+				runID,
+				"artifact.archive_download_url": artifact.archive_download_url,
+			};
+
+			if (redirResponse.status >= 500) {
+				return Response.json(responseData, { status: 502 });
+			}
+
+			return Response.json(responseData, { status: 404 });
+		}
+
+		const location = redirResponse.headers.get("location");
+		if (!location) {
+			const responseData = {
+				"redirResponse.status": redirResponse.status,
+				"redirResponse.text": await redirResponse.text(),
+				repo,
+				runID,
+				"artifact.archive_download_url": artifact.archive_download_url,
+			};
+			return Response.json(responseData, { status: 502 });
+		}
+
+		const zipResponse = await fetch(location, {
+			headers: {
+				"User-Agent": "@cloudflare/workers-sdk/packages/prerelease-registry",
+			},
+		});
 		if (!zipResponse.ok) {
 			const responseData = {
 				"zipResponse.ok": zipResponse.ok,
