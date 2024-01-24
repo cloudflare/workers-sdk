@@ -3,14 +3,10 @@ import { dirname } from "path";
 import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
-import { blue, dim } from "@cloudflare/cli/colors";
-import {
-	isInteractive,
-	spinner,
-	spinnerFrames,
-} from "@cloudflare/cli/interactive";
+import { dim } from "@cloudflare/cli/colors";
+import { isInteractive } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
-import { C3_DEFAULTS } from "helpers/cli";
+import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
 import {
 	installWrangler,
 	npmInstall,
@@ -18,7 +14,6 @@ import {
 	runCommand,
 } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
-import semver from "semver";
 import { version } from "../package.json";
 import {
 	gitCommit,
@@ -47,7 +42,13 @@ export const main = async (argv: string[]) => {
 	// Print a newline
 	logRaw("");
 
-	if (args.autoUpdate && (await isUpdateAvailable())) {
+	if (
+		args.autoUpdate &&
+		!process.env.VITEST &&
+		!process.env.CI &&
+		isInteractive() &&
+		(await isUpdateAvailable())
+	) {
 		await runLatest();
 	} else {
 		await runCli(args);
@@ -154,28 +155,6 @@ const deploy = async (ctx: C3Context) => {
 		await createProject(ctx);
 		await runDeploy(ctx);
 	}
-};
-
-// Detects if a newer version of c3 is available by comparing the version
-// specified in package.json with the `latest` tag from npm
-const isUpdateAvailable = async () => {
-	if (process.env.VITEST || process.env.CI || !isInteractive()) {
-		return false;
-	}
-
-	// Use a spinner when running this check since it may take some time
-	const s = spinner(spinnerFrames.vertical, blue);
-	s.start("Checking if a newer version is available");
-	const latestVersion = await runCommand(
-		["npm", "info", "create-cloudflare@latest", "dist-tags.latest"],
-		{ silent: true, useSpinner: false }
-	);
-	s.stop();
-
-	// Don't auto-update to major versions
-	if (semver.diff(latestVersion, version) === "major") return false;
-
-	return semver.gt(latestVersion, version);
 };
 
 const printBanner = () => {

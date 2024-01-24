@@ -5,8 +5,8 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
-import { fetch } from "undici";
 import { quoteShellArgs } from "../common";
+import { getLatestPackageVersion } from "./latestPackageVersion";
 import { detectPackageManager } from "./packages";
 import type { C3Context } from "types";
 
@@ -406,14 +406,12 @@ export async function getWorkerdCompatibilityDate() {
 			} ${dim(compatDate)}`,
 		async promise() {
 			try {
-				const resp = await fetch("https://registry.npmjs.org/workerd");
-				const workerdNpmInfo = (await resp.json()) as {
-					"dist-tags": { latest: string };
-				};
-				const result = workerdNpmInfo["dist-tags"].latest;
+				const latestWorkerdVersion = await getLatestPackageVersion("workerd");
 
 				// The format of the workerd version is `major.yyyymmdd.patch`.
-				const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+				const match = latestWorkerdVersion.match(
+					/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/
+				);
 
 				if (match) {
 					const [, year, month, date] = match ?? [];

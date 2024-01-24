@@ -1,6 +1,11 @@
 import { updateStatus, warn } from "@cloudflare/cli";
+import { blue } from "@cloudflare/cli/colors";
+import { spinner, spinnerFrames } from "@cloudflare/cli/interactive";
 import Haikunator from "haikunator";
 import open from "open";
+import semver from "semver";
+import { version } from "../../package.json";
+import { getLatestPackageVersion } from "./latestPackageVersion";
 
 /**
  * An extremely simple wrapper around the open command.
@@ -17,6 +22,27 @@ export async function openInBrowser(url: string): Promise<void> {
 		warn("Failed to open browser");
 	});
 }
+
+// Detects if a newer version of c3 is available by comparing the version
+// specified in package.json with the `latest` tag from npm
+export const isUpdateAvailable = async () => {
+	// Use a spinner when running this check since it may take some time
+	const s = spinner(spinnerFrames.vertical, blue);
+	s.start("Checking if a newer version is available");
+	try {
+		const latestVersion = await getLatestPackageVersion("create-cloudflare");
+		return (
+			// Don't auto-update to major versions
+			semver.diff(latestVersion, version) !== "major" &&
+			semver.gt(latestVersion, version)
+		);
+	} catch {
+		s.update("Failed to read latest version from npm.");
+		return false;
+	} finally {
+		s.stop();
+	}
+};
 
 export const C3_DEFAULTS = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),

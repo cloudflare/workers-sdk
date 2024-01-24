@@ -122,7 +122,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 const showMoreInfoNote = () => {
 	const c3CliArgsDocsPage =
 		"https://developers.cloudflare.com/pages/get-started/c3/#cli-arguments";
-	console.log(
+	console.error(
 		`\nFor more information regarding how to invoke C3 please visit ${c3CliArgsDocsPage}`
 	);
 };
