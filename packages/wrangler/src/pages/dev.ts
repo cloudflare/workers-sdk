@@ -371,7 +371,10 @@ export const Handler = async ({
 		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
-		}).on("all", async () => {
+		}).on("all", async (event) => {
+			if (event === "unlink") {
+				return;
+			}
 			await runBuild();
 		});
 	} else if (usingFunctions) {
@@ -539,8 +542,11 @@ export const Handler = async ({
 			watch([routesJSONPath], {
 				persistent: true,
 				ignoreInitial: true,
-			}).on("all", async () => {
+			}).on("all", async (event) => {
 				try {
+					if (event === "unlink") {
+						return;
+					}
 					/**
 					 * Watch for _routes.json file changes and validate file each time.
 					 * If file is valid proceed to running the build.
