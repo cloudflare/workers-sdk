@@ -150,7 +150,7 @@ export async function EnableHandler(
 	if (args.provider == "AWS") {
 		if (!(args.keyId && args.secretAccessKey)) {
 			throw new UserError(
-				`Error: must provide --key_id and --secret_access_key.`
+				`Error: must provide --key-id and --secret-access-key.`
 			);
 		}
 		sippyConfig = {
@@ -172,7 +172,7 @@ export async function EnableHandler(
 		}
 		if (!(args.clientEmail && args.privateKey)) {
 			throw new UserError(
-				`Error: must provide --service-account-key-file or --client_email and --private_key.`
+				`Error: must provide --service-account-key-file or --client-email and --private-key.`
 			);
 		}
 		args.privateKey = args.privateKey.replace(/\\n/g, "\n");
