@@ -10,6 +10,9 @@
 			"types": "./dist/config/index.d.ts"
 		}
 	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
 		"dev": "node scripts/bundle.mjs watch",
