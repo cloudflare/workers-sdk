@@ -345,6 +345,33 @@ describe("r2", () => {
 					);
 				});
 
+				it("should enable sippy on GCS for the given bucket", async () => {
+					setIsTTY(false);
+
+					msw.use(
+						rest.put(
+							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
+							async (request, response, context) => {
+								expect(await request.json()).toEqual({
+									private_key: "gcs-private-key",
+									bucket: "gcsBucket",
+									client_email: "gcs-client-email",
+									provider: "GCS",
+									r2_access_key: "some-secret",
+									r2_key_id: "some-key",
+								});
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await runWrangler(
+						"r2 bucket sippy enable testBucket --r2-key-id=some-key --r2-secret-access-key=some-secret --provider=GCS --client-email=gcs-client-email --private-key=gcs-private-key --bucket=gcsBucket"
+					);
+					expect(std.out).toMatchInlineSnapshot(
+						`"✨ Successfully enabled Sippy on the 'testBucket' bucket."`
+					);
+				});
+
 				it("should error if no bucket name is given", async () => {
 					await expect(
 						runWrangler("r2 bucket sippy enable")
