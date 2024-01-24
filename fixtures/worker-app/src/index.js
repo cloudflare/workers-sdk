@@ -36,7 +36,9 @@ export default {
 
 		console.log("end of request");
 		return new Response(
-			`${request.url} ${now()} ${request.headers.get("Host")}`
+			`${request.url} ${now()} HOST:${request.headers.get(
+				"Host"
+			)} ORIGIN:${request.headers.get("Origin")}`
 		);
 	},
 
