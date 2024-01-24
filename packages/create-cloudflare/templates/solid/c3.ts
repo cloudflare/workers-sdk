@@ -27,7 +27,7 @@ const config: TemplateConfig = {
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
+			"pages:preview": `${npm} run build && npx wrangler pages dev dist ${await compatDateFlag()} --compatibility-flag nodejs_compat`,
 			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
 		},
 	}),
