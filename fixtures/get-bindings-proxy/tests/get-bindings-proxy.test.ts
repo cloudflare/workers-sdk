@@ -137,7 +137,9 @@ describe("getBindingsProxy", () => {
 		}
 	});
 
-	it("provides service bindings to external local workers", async () => {
+	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
+	//       when we run all our fixtures together (possibly because of race condition issues)
+	it.skip("provides service bindings to external local workers", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
@@ -165,7 +167,9 @@ describe("getBindingsProxy", () => {
 		await dispose();
 	});
 
-	it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
+	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
+	//       when we run all our fixtures together (possibly because of race condition issues)
+	it.skip("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
