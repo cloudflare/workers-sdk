@@ -8,10 +8,22 @@ import { sshCommand } from "./ssh/ssh";
 import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
+function internalCommands(args: CommonYargsArgvJSON) {
+	try {
+		// Add dynamically an internal module that we can attach internal commands
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		const cloudchamberInternalRequireEntry = require("./internal/index");
+		return cloudchamberInternalRequireEntry.internalCommands(args);
+	} catch {
+		return args;
+	}
+}
+
 export const cloudchamber = (
 	yargs: CommonYargsArgvJSON,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
 ) => {
+	yargs = internalCommands(yargs);
 	return yargs
 		.command(
 			"delete [deploymentId]",

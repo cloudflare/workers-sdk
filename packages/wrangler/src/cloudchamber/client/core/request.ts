@@ -4,10 +4,10 @@
 import { fetch, FormData, Headers, RequestInit, Response } from "undici";
 import { ApiError } from "./ApiError";
 import { CancelablePromise } from "./CancelablePromise";
+import { type OpenAPIConfig } from "./OpenAPI";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";
 import type { OnCancel } from "./CancelablePromise";
-import type { OpenAPIConfig } from "./OpenAPI";
 
 const isDefined = <T>(
 	value: T | null | undefined
@@ -213,6 +213,7 @@ export const sendRequest = async (
 		body: body ?? formData,
 		method: options.method,
 		signal: controller.signal,
+		dispatcher: config.AGENT ?? undefined,
 	};
 
 	if (config.WITH_CREDENTIALS) {

@@ -126,7 +126,8 @@ export async function promiseSpinner<T>(
 }
 
 export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
-	const headers: Record<string, string> = {};
+	const headers: Record<string, string> =
+		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
 	// if the config cache folder doesn't exist, it means that there is not a node_modules folder in the tree
 	if (Object.keys(getConfigCache("wrangler-account.json")).length === 0) {
@@ -195,16 +196,26 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	// due to our OpenAPI codegenerated client.
 	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 	OpenAPI.CREDENTIALS = "omit";
-	const [base, errApiURL] = await wrap(getAPIUrl(config));
-	if (errApiURL) {
-		crash("getting the API url:" + errApiURL.message);
-		return;
+	if (OpenAPI.BASE.length === 0) {
+		const [base, errApiURL] = await wrap(getAPIUrl(config));
+		if (errApiURL) {
+			crash("getting the API url:" + errApiURL.message);
+		}
+
+		OpenAPI.BASE = base;
 	}
 
-	OpenAPI.BASE = base;
 	OpenAPI.HEADERS = headers;
 	const [, err] = await wrap(loadAccountSpinner({ json }));
-	if (err) crash("loading Cloudchamber account failed:" + err.message);
+
+	if (err) {
+		let message = err.message;
+		if (json && err instanceof ApiError) {
+			message = JSON.stringify(err);
+		}
+
+		crash("loading Cloudchamber account failed:" + message);
+	}
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
