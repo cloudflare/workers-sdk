@@ -14,26 +14,55 @@ import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context } from "types";
 
 export type TemplateConfig = {
-	// The version of this configuration schema to use. This will be used
-	// to handle config version skew between different versions of c3
+	/**
+	 * The version of this configuration schema to use. This will be used
+	 * to handle config version skew between different versions of c3
+	 */
 	configVersion: number;
-	// How this template is referred to internally and keyed in lookup maps
+	/** The id by which template is referred to internally and keyed in lookup maps*/
 	id: string;
-	// How this template is presented to the user
+	/** A string that controls how the template is presented to the user in the selection menu*/
 	displayName: string;
+	/** The deployment platform for this template */
 	platform: "workers" | "pages";
+	/** When set to true, hides this template from the selection menu */
 	hidden?: boolean;
-	languages?: string[];
+	/** Specifies a set of files that will be copied to the project directory during creation.
+	 *
+	 * This can be either a single directory:
+	 * ```js
+	 * {
+	 *    copyFiles: { path: './ts' }
+	 * }
+	 * ```
+	 *
+	 * Or an object with a file paths for `js` and `ts` versions:
+	 * ```js
+	 * {
+	 *    copyFiles: {
+	 *      js: { path: "./js"},
+	 *      ts: { path: "./ts"},
+	 *    }
+	 * }
+	 * ```
+	 *
+	 */
 	copyFiles?: StaticFileMap | VariantInfo;
 
+	/** A function invoked as the first step of project creation.
+	 * Used to invoke framework creation cli in the internal web framework templates.
+	 */
 	generate?: (ctx: C3Context) => Promise<void>;
+	/** A function invoked after project creation but before deployment.
+	 * Used when a template needs to run additional install steps or wrangler commands before
+	 * finalizing the project.
+	 */
 	configure?: (ctx: C3Context) => Promise<void>;
 
+	/** A transformer that is run on the project's `package.json` during the creation step */
 	transformPackageJson?: (
 		pkgJson: Record<string, string | object>
 	) => Promise<Record<string, string | object>>;
-
-	path?: string;
 
 	/** An array of flags that will be added to the call to the framework cli during tests.*/
 	testFlags?: string[];
@@ -44,6 +73,9 @@ export type TemplateConfig = {
 	deployCommand?: string;
 	/** The package.json "scripts" entry for developing the project. Defaults to `pages:dev` */
 	devCommand?: string;
+
+	/** The file path of the template. This is used internally and isn't a user facing config value.*/
+	path?: string;
 };
 
 // A template can have a number of variants, usually js/ts

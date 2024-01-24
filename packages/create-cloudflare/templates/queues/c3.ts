@@ -3,7 +3,6 @@ export default {
 	id: "queues",
 	displayName: "Queue consumer & producer Worker",
 	platform: "workers",
-	languages: ["js", "ts"],
 	copyFiles: {
 		js: {
 			path: "./js",

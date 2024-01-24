@@ -3,7 +3,6 @@ export default {
 	id: "chatgptPlugin",
 	displayName: "ChatGPT plugin",
 	platform: "workers",
-	languages: ["ts"],
 	copyFiles: {
 		path: "./ts",
 	},

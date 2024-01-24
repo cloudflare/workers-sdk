@@ -72,7 +72,6 @@ export default {
 	displayName: "Pre-existing Worker (from Dashboard)",
 	platform: "workers",
 	hidden: true,
-	languages: ["js"],
 	copyFiles: {
 		path: "./js",
 	},
