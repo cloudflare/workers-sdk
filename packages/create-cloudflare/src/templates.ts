@@ -35,10 +35,15 @@ export type TemplateConfig = {
 
 	path?: string;
 
+	/** An array of flags that will be added to the call to the framework cli during tests.*/
 	testFlags?: string[];
+	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
 	compatibilityFlags?: string[];
-	deployCommand?: string[];
-	devCommand?: string[];
+
+	/** The package.json "scripts" entry for deploying the project. Defaults to `pages:deploy` */
+	deployCommand?: string;
+	/** The package.json "scripts" entry for developing the project. Defaults to `pages:dev` */
+	devCommand?: string;
 };
 
 // A template can have a number of variants, usually js/ts
@@ -163,8 +168,8 @@ export const selectFramework = async (args: Partial<C3Args>) => {
 	}
 
 	const defaultFrameworkConfig = {
-		deployCommand: ["pages:deploy"],
-		devCommand: ["pages:dev"],
+		deployCommand: "pages:deploy",
+		devCommand: "pages:dev",
 	};
 
 	return {

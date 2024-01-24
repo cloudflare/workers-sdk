@@ -19,7 +19,7 @@ const config: TemplateConfig = {
 	displayName: "Hono",
 	platform: "workers",
 	generate,
-	devCommand: ["dev"],
-	deployCommand: ["deploy"],
+	devCommand: "dev",
+	deployCommand: "deploy",
 };
 export default config;
