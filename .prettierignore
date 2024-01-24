@@ -37,3 +37,9 @@ fixtures/**/dist/**
 
 # Miniflare shouldn't be formatted with the root `prettier` version
 packages/miniflare
+
+# In the C3 templates, in particular framework templates, we want to be able to
+# use any format that the framework authors prefer/use in their own templates,
+# so let's ignore all the c3 template files, exlcuding the c3.ts ones
+packages/create-cloudflare/templates/**/*.*
+!packages/create-cloudflare/templates/**/c3.ts
