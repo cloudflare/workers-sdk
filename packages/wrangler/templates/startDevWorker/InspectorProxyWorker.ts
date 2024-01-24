@@ -293,6 +293,13 @@ export class InspectorProxyWorker implements DurableObject {
 
 		this.sendDebugLog("NEW RUNTIME WEBSOCKET", runtimeWebSocketUrl);
 
+		// Make sure DevTools re-fetches script contents,
+		// and uses the newly created execution context
+		this.sendDevToolsMessage({
+			method: "Runtime.executionContextsCleared",
+			params: undefined,
+		});
+
 		const upgrade = await fetch(runtimeWebSocketUrl, {
 			headers: {
 				...this.proxyData.headers,

@@ -202,6 +202,17 @@ function fakeReloadComplete(
 	return { config, mfOpts }; // convenience to allow calling and defining new config/mfOpts inline but also store the new objects
 }
 
+function waitForMessageContaining<T>(ws: WebSocket, value: string): Promise<T> {
+	return new Promise((resolve) => {
+		ws.addEventListener("message", (event) => {
+			assert(typeof event.data === "string");
+			if (event.data.includes(value)) {
+				resolve(JSON.parse(event.data));
+			}
+		});
+	});
+}
+
 describe("startDevWorker: ProxyController", () => {
 	test("ProxyWorker buffers requests while runtime reloads", async () => {
 		const run = await fakeStartUserWorker({
@@ -248,25 +259,16 @@ describe("startDevWorker: ProxyController", () => {
 		ws = new WebSocket(
 			`ws://${run.inspectorProxyWorkerUrl.host}/core:user:${run.config.name}`
 		);
-		const openPromise = new Promise((resolve) => {
-			ws?.addEventListener("open", resolve);
-		});
-		const consoleAPICalledPromise = new Promise((resolve) => {
-			ws?.addEventListener("message", (event) => {
-				assert(typeof event.data === "string");
-				if (event.data.includes("Runtime.consoleAPICalled")) {
-					resolve(JSON.parse(event.data));
-				}
-			});
-		});
-		const executionContextCreatedPromise = new Promise((resolve) => {
-			ws?.addEventListener("message", (event) => {
-				assert(typeof event.data === "string");
-				if (event.data.includes("Runtime.executionContextCreated")) {
-					resolve(JSON.parse(event.data));
-				}
-			});
-		});
+		const openPromise = events.once(ws, "open");
+
+		const consoleAPICalledPromise = waitForMessageContaining(
+			ws,
+			"Runtime.consoleAPICalled"
+		);
+		const executionContextCreatedPromise = waitForMessageContaining(
+			ws,
+			"Runtime.executionContextCreated"
+		);
 
 		await openPromise;
 		await run.worker.fetch("http://localhost");
@@ -285,6 +287,18 @@ describe("startDevWorker: ProxyController", () => {
 				context: { id: expect.any(Number) },
 			},
 		});
+
+		// Ensure execution contexts cleared on reload
+		const executionContextClearedPromise = waitForMessageContaining(
+			ws,
+			"Runtime.executionContextsCleared"
+		);
+		fireAndForgetFakeUserWorkerChanges({
+			mfOpts: run.mfOpts,
+			config: run.config,
+			script: run.mfOpts.script.replace("1", "2"),
+		});
+		await executionContextClearedPromise;
 	});
 
 	test("InspectorProxyWorker rejects unauthorised requests", async () => {
