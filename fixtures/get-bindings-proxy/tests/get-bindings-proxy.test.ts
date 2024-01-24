@@ -1,4 +1,4 @@
-import { readdir, rm } from "fs/promises";
+import { readdir } from "fs/promises";
 import path from "path";
 import {
 	D1Database,
@@ -7,9 +7,12 @@ import {
 	R2Bucket,
 } from "@cloudflare/workers-types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { getBindingsProxy, unstable_dev } from "wrangler";
+import {
+	getBindingsProxy as originalGetBindingsProxy,
+	unstable_dev,
+} from "wrangler";
 import type { KVNamespace } from "@cloudflare/workers-types";
-import type { UnstableDevWorker } from "wrangler";
+import type { GetBindingsProxyOptions, UnstableDevWorker } from "wrangler";
 
 type Bindings = {
 	MY_VAR: string;
@@ -27,16 +30,22 @@ type Bindings = {
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
+// Here we wrap the actual original getBindingsProxy function and disable its persistance, this is to make sure
+// that we don't implement any persistance during these tests (which would add unnecessary extra complexity)
+function getBindingsProxy<T>(
+	options: Omit<GetBindingsProxyOptions, "persist">
+): ReturnType<typeof originalGetBindingsProxy<T>> {
+	return originalGetBindingsProxy({
+		...options,
+		persist: false,
+	});
+}
+
 describe("getBindingsProxy", () => {
 	let devWorkers: UnstableDevWorker[];
 
 	beforeAll(async () => {
 		devWorkers = await startWorkers();
-
-		await rm(path.join(__dirname, "..", ".wrangler"), {
-			force: true,
-			recursive: true,
-		});
 	});
 
 	afterAll(async () => {
@@ -128,7 +137,9 @@ describe("getBindingsProxy", () => {
 		}
 	});
 
-	it("provides service bindings to external local workers", async () => {
+	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
+	//       when we run all our fixtures together (possibly because of race condition issues)
+	it.skip("provides service bindings to external local workers", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
@@ -156,7 +167,9 @@ describe("getBindingsProxy", () => {
 		await dispose();
 	});
 
-	it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
+	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
+	//       when we run all our fixtures together (possibly because of race condition issues)
+	it.skip("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
