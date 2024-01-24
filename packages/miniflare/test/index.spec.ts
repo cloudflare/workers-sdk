@@ -576,15 +576,106 @@ test("Miniflare: custom upstream as origin", async (t) => {
 		upstream: new URL("/extra/", upstream.http.toString()).toString(),
 		modules: true,
 		script: `export default {
-      fetch(request) {
-        return fetch(request);
+      async fetch(request) {
+        const resp = await (await fetch(request)).text();
+				return Response.json({
+					resp,
+					host: request.headers.get("Host")
+				});
       }
     }`,
 	});
 	t.teardown(() => mf.dispose());
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
 	const res = await mf.dispatchFetch("https://random:0/path?a=1");
-	t.is(await res.text(), "upstream: http://upstream/extra/path?a=1");
+	t.deepEqual(await res.json(), {
+		resp: "upstream: http://upstream/extra/path?a=1",
+		host: upstream.http.host,
+	});
+});
+test("Miniflare: set origin to original URL if proxy shared secret matches", async (t) => {
+	const mf = new Miniflare({
+		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
+		modules: true,
+		script: `export default {
+      async fetch(request) {
+				return Response.json({
+					host: request.headers.get("Host")
+				});
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
+		headers: { "MF-Proxy-Shared-Secret": "SOME_PROXY_SHARED_SECRET_VALUE" },
+	});
+	t.deepEqual(await res.json(), {
+		host: "random:0",
+	});
+});
+test("Miniflare: keep origin as listening host if proxy shared secret not provided", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+      async fetch(request) {
+				return Response.json({
+					host: request.headers.get("Host")
+				});
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://random:0/path?a=1");
+	t.deepEqual(await res.json(), {
+		host: (await mf.ready).host,
+	});
+});
+test("Miniflare: 400 error on proxy shared secret header when not configured", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+      async fetch(request) {
+				return Response.json({
+					host: request.headers.get("Host")
+				});
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
+		headers: { "MF-Proxy-Shared-Secret": "SOME_PROXY_SHARED_SECRET_VALUE" },
+	});
+	t.is(res.status, 400);
+	t.is(
+		await res.text(),
+		"Disallowed header in request: MF-Proxy-Shared-Secret=SOME_PROXY_SHARED_SECRET_VALUE"
+	);
+});
+test("Miniflare: 400 error on proxy shared secret header mismatch with configuration", async (t) => {
+	const mf = new Miniflare({
+		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
+		modules: true,
+		script: `export default {
+      async fetch(request) {
+				return Response.json({
+					host: request.headers.get("Host")
+				});
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
+		headers: { "MF-Proxy-Shared-Secret": "BAD_PROXY_SHARED_SECRET" },
+	});
+	t.is(res.status, 400);
+	t.is(
+		await res.text(),
+		"Disallowed header in request: MF-Proxy-Shared-Secret=BAD_PROXY_SHARED_SECRET"
+	);
 });
 
 test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
@@ -1228,7 +1319,7 @@ test("Miniflare: supports wrapped bindings", async (t) => {
 						await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
 					}
 				}
-				
+
 				export default function (env) {
 					return new MiniKV(env);
 				}

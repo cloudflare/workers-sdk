@@ -1,13 +1,16 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions", () => {
-	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
+	let ip: string,
+		port: number,
+		stop: (() => Promise<unknown>) | undefined,
+		getOutput: () => string;
 
 	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerPagesDev(
+		({ ip, port, stop, getOutput } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
 			[
@@ -92,6 +95,13 @@ describe("Pages Functions", () => {
 		const response = await fetch(`http://${ip}:${port}/next`);
 		const text = await response.text();
 		expect(text).toContain("<h1>An asset</h1>");
+	});
+
+	it("doesn't warn about local mode", async ({ expect }) => {
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4210
+		expect(getOutput()).not.toContain(
+			"--local is no longer required and will be removed in a future version"
+		);
 	});
 
 	describe("can mount a plugin", () => {

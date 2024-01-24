@@ -2,7 +2,7 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import { DevEnv, type StartDevWorkerOptions } from "../api";
+import { DevEnv } from "../api";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -24,7 +24,7 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData } from "../api";
+import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -95,7 +95,7 @@ export async function startDevServer(
 				port: props.inspectorPort,
 			},
 			urlOverrides: {
-				secure: props.localProtocol === "https",
+				secure: props.upstreamProtocol === "https",
 				hostname: props.localUpstream,
 			},
 			liveReload: props.liveReload,
@@ -168,6 +168,7 @@ export async function startDevServer(
 			queueConsumers: props.queueConsumers,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
+			upstreamProtocol: props.upstreamProtocol,
 			inspect: true,
 			onReady: async (ip, port, proxyData) => {
 				// at this point (in the layers of onReady callbacks), we have devEnv in scope
@@ -176,6 +177,12 @@ export async function startDevServer(
 				const url = await proxyWorker.ready;
 				ip = url.hostname;
 				port = parseInt(url.port);
+
+				await maybeRegisterLocalWorker(
+					url,
+					props.name,
+					proxyData.internalDurableObjects
+				);
 
 				props.onReady?.(ip, port, proxyData);
 
@@ -393,8 +400,6 @@ export async function startLocalServer(
 	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(event, props.name);
-
 			const proxyData: ProxyData = {
 				userWorkerUrl: {
 					protocol: event.url.protocol,
@@ -408,15 +413,19 @@ export async function startLocalServer(
 					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
 				},
 				userWorkerInnerUrlOverrides: {
-					protocol: props.localProtocol,
+					protocol: props.upstreamProtocol,
 					hostname: props.localUpstream,
 					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 				},
-				headers: {},
+				headers: {
+					// Passing this signature from Proxy Worker allows the User Worker to trust the request.
+					"MF-Proxy-Shared-Secret": event.proxyToUserWorkerAuthenticationSecret,
+				},
 				liveReload: props.liveReload,
 				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
 				// workers written in "service-worker" format still need to proxy logs to the ProxyController
 				proxyLogsToController: props.format === "service-worker",
+				internalDurableObjects: event.internalDurableObjects,
 			};
 
 			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);

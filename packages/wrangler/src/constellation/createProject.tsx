@@ -1,5 +1,6 @@
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { takeName } from "./options";
@@ -41,7 +42,7 @@ export const handler = withConfig<HandlerOptions>(
 			});
 		} catch (e) {
 			if ((e as { code: number }).code === 7409) {
-				throw new Error("A project with that name already exists");
+				throw new UserError("A project with that name already exists");
 			}
 			throw e;
 		}

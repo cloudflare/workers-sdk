@@ -1,13 +1,14 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
-import { endSection, stripAnsi } from "@cloudflare/cli";
+import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { quoteShellArgs } from "../common";
+import { getLatestPackageVersion } from "./latestPackageVersion";
 import { detectPackageManager } from "./packages";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
@@ -73,7 +74,7 @@ export const runCommand = async (
 				});
 			}
 
-			return new Promise<string>((resolve, reject) => {
+			return new Promise<string>((resolvePromise, reject) => {
 				cmd.on("close", (code) => {
 					try {
 						if (code !== 0) {
@@ -86,13 +87,13 @@ export const runCommand = async (
 						const processedOutput = transformOutput(stripAnsi(output));
 
 						// Send the captured (and processed) output back to the caller
-						resolve(processedOutput);
+						resolvePromise(processedOutput);
 					} catch (e) {
 						// Something went wrong.
 						// Perhaps the command or the transform failed.
 						// If there is a fallback use the result of calling that
 						if (opts.fallbackOutput) {
-							resolve(opts.fallbackOutput(e));
+							resolvePromise(opts.fallbackOutput(e));
 						} else {
 							reject(new Error(output, { cause: e }));
 						}
@@ -178,10 +179,7 @@ export const retry = async <T>(
 	throw error;
 };
 
-export const runFrameworkGenerator = async (
-	ctx: PagesGeneratorContext,
-	args: string[]
-) => {
+export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	const cli = getFrameworkCli(ctx, true);
 	const { npm, dlx } = detectPackageManager();
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
@@ -190,17 +188,21 @@ export const runFrameworkGenerator = async (
 	const cmd = [...(npm === "yarn" ? ["npx"] : dlx), cli, ...args];
 	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
 
-	if (ctx.framework?.args?.length) {
-		cmd.push(...ctx.framework.args);
+	if (ctx.args.additionalArgs?.length) {
+		cmd.push(...ctx.args.additionalArgs);
 	}
 
-	endSection(
-		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${quoteShellArgs(cmd)}\``
+	updateStatus(
+		`Continue with ${ctx.template.displayName} ${dim(
+			`via \`${quoteShellArgs(cmd)}\``
+		)}`
 	);
 
+	// newline
+	logRaw("");
+
 	if (process.env.VITEST) {
-		const flags = ctx.framework?.config.testFlags ?? [];
+		const flags = ctx.template.testFlags ?? [];
 		cmd.push(...flags);
 	}
 
@@ -244,15 +246,20 @@ export const installPackages = async (
 	});
 };
 
-// Resets the package manager context for a project by clearing out existing dependencies
-// and lock files then re-installing.
-// This is needed in situations where npm is automatically used by framework creators for the initial
-// install, since using other package managers in a folder with an existing npm install will cause failures
-// when installing subsequent packages
-export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+/**
+ * If a mismatch is detected between the package manager being used and the lockfiles on disk,
+ * reset the state by deleting the lockfile and dependencies then re-installing with the package
+ * manager used by the calling process.
+ *
+ * This is needed since some scaffolding tools don't detect and use the pm of the calling process,
+ * and instead always use `npm`. With a project in this state, installing additional dependencies
+ * with `pnpm` or `yarn` can result in install errors.
+ *
+ */
+export const rectifyPmMismatch = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 
-	if (!needsPackageManagerReset(ctx)) {
+	if (!detectPmMismatch(ctx)) {
 		return;
 	}
 
@@ -270,7 +277,7 @@ export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-const needsPackageManagerReset = (ctx: PagesGeneratorContext) => {
+const detectPmMismatch = (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 
@@ -286,7 +293,13 @@ const needsPackageManagerReset = (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const npmInstall = async () => {
+export const npmInstall = async (ctx: C3Context) => {
+	// Skip this step if packages have already been installed
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	if (existsSync(nodeModulesPath)) {
+		return;
+	}
+
 	const { npm } = detectPackageManager();
 
 	await runCommand([npm, "install"], {
@@ -381,23 +394,34 @@ export const listAccounts = async () => {
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
 export async function getWorkerdCompatibilityDate() {
-	const { npm } = detectPackageManager();
-
-	return runCommand([npm, "info", "workerd", "dist-tags.latest"], {
-		silent: true,
-		captureOutput: true,
+	const { compatDate: workerdCompatibilityDate } = await printAsyncStatus<{
+		compatDate: string;
+		isFallback: boolean;
+	}>({
+		useSpinner: true,
 		startText: "Retrieving current workerd compatibility date",
-		transformOutput: (result) => {
-			// The format of the workerd version is `major.yyyymmdd.patch`.
-			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+		doneText: ({ compatDate, isFallback }) =>
+			`${brandColor("compatibility date")}${
+				isFallback ? dim(" Could not find workerd date, falling back to") : ""
+			} ${dim(compatDate)}`,
+		async promise() {
+			try {
+				const latestWorkerdVersion = await getLatestPackageVersion("workerd");
 
-			if (!match) {
-				throw new Error("Could not find workerd date");
-			}
-			const [, year, month, date] = match;
-			return `${year}-${month}-${date}`;
+				// The format of the workerd version is `major.yyyymmdd.patch`.
+				const match = latestWorkerdVersion.match(
+					/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/
+				);
+
+				if (match) {
+					const [, year, month, date] = match ?? [];
+					return { compatDate: `${year}-${month}-${date}`, isFallback: false };
+				}
+			} catch {}
+
+			return { compatDate: "2023-05-18", isFallback: true };
 		},
-		fallbackOutput: () => "2023-05-18",
-		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,
 	});
+
+	return workerdCompatibilityDate;
 }

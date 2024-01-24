@@ -1,7 +1,9 @@
 import { spawn } from "cross-spawn";
 import { detectPackageManager } from "helpers/packages";
-import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
+import { fetch, Response } from "undici";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
+import { createTestContext } from "../../__tests__/helpers";
 import {
 	getWorkerdCompatibilityDate,
 	installPackages,
@@ -14,6 +16,7 @@ import {
 let spawnResultCode = 0;
 let spawnStdout: string | undefined = undefined;
 let spawnStderr: string | undefined = undefined;
+let fetchResult: Response | undefined = undefined;
 
 describe("Command Helpers", () => {
 	afterEach(() => {
@@ -21,6 +24,7 @@ describe("Command Helpers", () => {
 		spawnResultCode = 0;
 		spawnStdout = undefined;
 		spawnStderr = undefined;
+		fetchResult = undefined;
 	});
 
 	beforeEach(() => {
@@ -48,6 +52,20 @@ describe("Command Helpers", () => {
 
 			return { spawn: mockedSpawn };
 		});
+
+		// Mock out the undici fetch function
+		vi.mock("undici", async () => {
+			const actual = (await vi.importActual("undici")) as Record<
+				string,
+				unknown
+			>;
+			const mockedFetch = vi.fn().mockImplementation(() => {
+				return fetchResult;
+			});
+
+			return { ...actual, fetch: mockedFetch };
+		});
+
 		vi.mock("which-pm-runs");
 		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 
@@ -80,7 +98,7 @@ describe("Command Helpers", () => {
 	});
 
 	test("npmInstall", async () => {
-		await npmInstall();
+		await npmInstall(createTestContext());
 		expectSilentSpawnWith("npm install");
 	});
 
@@ -90,7 +108,7 @@ describe("Command Helpers", () => {
 			version: "8.5.1",
 		});
 
-		await npmInstall();
+		await npmInstall(createTestContext());
 		expectSilentSpawnWith("pnpm install");
 	});
 
@@ -160,31 +178,31 @@ describe("Command Helpers", () => {
 
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("normal flow", async () => {
-			spawnStdout = "2.20250110.5";
+			fetchResult = new Response(
+				JSON.stringify({
+					"dist-tags": { latest: "2.20250110.5" },
+				})
+			);
 			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2025-01-10");
 		});
 
 		test("empty result", async () => {
-			spawnStdout = "";
+			fetchResult = new Response(
+				JSON.stringify({
+					"dist-tags": { latest: "" },
+				})
+			);
 			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2023-05-18");
 		});
 
-		test("verbose output (e.g. yarn or debug mode)", async () => {
-			spawnStdout =
-				"Debugger attached.\nyarn info v1.22.19\n2.20250110.5\n✨  Done in 0.83s.";
-			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
-			expect(date).toBe("2025-01-10");
-		});
-
 		test("command failed", async () => {
-			spawnResultCode = 1;
+			fetchResult = new Response("Unknown error");
 			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2023-05-18");
 		});
 	});

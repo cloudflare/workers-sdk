@@ -27,7 +27,7 @@ import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
-import { Local } from "./local";
+import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
@@ -216,13 +216,9 @@ function InteractiveDevSession(props: DevProps) {
 	useTunnel(toggles.tunnel);
 
 	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
-		if (newIp !== props.initialIp || newPort !== props.initialPort) {
-			ip = newIp;
-			port = newPort;
-			if (props.onReady) {
-				props.onReady(newIp, newPort, proxyData);
-			}
-		}
+		ip = newIp;
+		port = newPort;
+		props.onReady?.(newIp, newPort, proxyData);
 	};
 
 	return (
@@ -391,6 +387,14 @@ function DevSession(props: DevSessionProps) {
 		finalIp = url.hostname;
 		finalPort = parseInt(url.port);
 
+		if (props.local) {
+			await maybeRegisterLocalWorker(
+				url,
+				props.name,
+				proxyData.internalDurableObjects
+			);
+		}
+
 		if (process.send) {
 			process.send(
 				JSON.stringify({
@@ -437,6 +441,7 @@ function DevSession(props: DevSessionProps) {
 			queueConsumers={props.queueConsumers}
 			localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			localUpstream={props.localUpstream}
+			upstreamProtocol={props.upstreamProtocol}
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}

@@ -1,12 +1,14 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
+import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import type { Config } from "../config";
 import type {
@@ -17,19 +19,20 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	SourceOptions,
-	WorkerOptions,
 	Request,
 	Response,
+	SourceOptions,
+	WorkerOptions,
 } from "miniflare";
+import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
 
@@ -109,6 +112,7 @@ export interface ConfigBundle {
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
+	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
 }
@@ -143,7 +147,7 @@ export class WranglerLog extends Log {
 }
 
 export const DEFAULT_WORKER_NAME = "worker";
-function getName(config: ConfigBundle) {
+function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
@@ -227,9 +231,40 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	};
 	return [consumer.queue, options] as const;
 }
+
+type WorkerOptionsBindings = Pick<
+	WorkerOptions,
+	| "bindings"
+	| "textBlobBindings"
+	| "dataBlobBindings"
+	| "wasmBindings"
+	| "kvNamespaces"
+	| "r2Buckets"
+	| "d1Databases"
+	| "queueProducers"
+	| "queueConsumers"
+	| "hyperdrives"
+	| "durableObjects"
+	| "serviceBindings"
+>;
+
+type MiniflareBindingsConfig = Pick<
+	ConfigBundle,
+	| "bindings"
+	| "workerDefinitions"
+	| "queueConsumers"
+	| "name"
+	| "serviceBindings"
+> &
+	Partial<Pick<ConfigBundle, "format" | "bundle">>;
+
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-function buildBindingOptions(config: ConfigBundle) {
+export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+	bindingOptions: WorkerOptionsBindings;
+	internalObjects: CfDurableObject[];
+	externalDurableObjectWorker: WorkerOptions;
+} {
 	const bindings = config.bindings;
 
 	// Setup blob and module bindings
@@ -237,7 +272,7 @@ function buildBindingOptions(config: ConfigBundle) {
 	const textBlobBindings = { ...bindings.text_blobs };
 	const dataBlobBindings = { ...bindings.data_blobs };
 	const wasmBindings = { ...bindings.wasm_modules };
-	if (config.format === "service-worker") {
+	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
 		const scriptPath = realpathSync(config.bundle.path);
 		const modulesRoot = path.dirname(scriptPath);
@@ -415,12 +450,19 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			const containsLlvmSymbolizerWarning = chunk.includes(
 				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
 			);
+			const containsRecursiveIsolateLockWarning = chunk.includes(
+				"took recursive isolate lock"
+			);
 			// Matches stack traces from workerd
 			//  - on unix: groups of 9 hex digits separated by spaces
 			//  - on windows: groups of 12 hex digits, or a single digit 0, separated by spaces
 			const containsHexStack = /stack:( (0|[a-f\d]{4,})){3,}/.test(chunk);
 
-			return containsLlvmSymbolizerWarning || containsHexStack;
+			return (
+				containsLlvmSymbolizerWarning ||
+				containsRecursiveIsolateLockWarning ||
+				containsHexStack
+			);
 		},
 		// Is this chunk an Address In Use error?
 		isAddressInUse(chunk: string) {
@@ -455,7 +497,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 
 		// anything not exlicitly handled above should be logged as info (via stdout)
 		else {
-			logger.info(chunk);
+			logger.info(getSourceMappedString(chunk));
 		}
 	});
 
@@ -494,14 +536,15 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 
 		// anything not exlicitly handled above should be logged as an error (via stderr)
 		else {
-			logger.error(chunk);
+			logger.error(getSourceMappedString(chunk));
 		}
 	});
 }
 
 async function buildMiniflareOptions(
 	log: Log,
-	config: ConfigBundle
+	config: ConfigBundle,
+	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
@@ -522,12 +565,12 @@ async function buildMiniflareOptions(
 
 	const upstream =
 		typeof config.localUpstream === "string"
-			? `${config.localProtocol}://${config.localUpstream}`
+			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
 	const sourceOptions = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
-		buildBindingOptions(config);
+		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 
@@ -546,6 +589,7 @@ async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
+		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 
 		log,
 		verbose: logger.loggerLevel === "debug",
@@ -572,15 +616,19 @@ async function buildMiniflareOptions(
 export interface ReloadedEventOptions {
 	url: URL;
 	internalDurableObjects: CfDurableObject[];
+	proxyToUserWorkerAuthenticationSecret: UUID;
 }
 export class ReloadedEvent extends Event implements ReloadedEventOptions {
 	readonly url: URL;
 	readonly internalDurableObjects: CfDurableObject[];
+	readonly proxyToUserWorkerAuthenticationSecret: UUID;
 
 	constructor(type: "reloaded", options: ReloadedEventOptions) {
 		super(type);
 		this.url = options.url;
 		this.internalDurableObjects = options.internalDurableObjects;
+		this.proxyToUserWorkerAuthenticationSecret =
+			options.proxyToUserWorkerAuthenticationSecret;
 	}
 }
 
@@ -603,6 +651,10 @@ export type MiniflareServerEventMap = {
 export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 	#log = buildLog();
 	#mf?: Miniflare;
+	// This is given as a shared secret to the Proxy and User workers
+	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
+	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
+	#proxyToUserWorkerAuthenticationSecret = randomUUID();
 
 	// `buildMiniflareOptions()` is asynchronous, meaning if multiple bundle
 	// updates were submitted, the second may apply before the first. Therefore,
@@ -614,7 +666,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 		try {
 			const { options, internalObjects } = await buildMiniflareOptions(
 				this.#log,
-				config
+				config,
+				this.#proxyToUserWorkerAuthenticationSecret
 			);
 			if (opts?.signal?.aborted) return;
 			if (this.#mf === undefined) {
@@ -627,6 +680,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 			const event = new ReloadedEvent("reloaded", {
 				url,
 				internalDurableObjects: internalObjects,
+				proxyToUserWorkerAuthenticationSecret:
+					this.#proxyToUserWorkerAuthenticationSecret,
 			});
 			this.dispatchEvent(event);
 		} catch (error: unknown) {

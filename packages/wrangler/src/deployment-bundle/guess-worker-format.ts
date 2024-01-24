@@ -1,5 +1,6 @@
 import path from "node:path";
 import * as esbuild from "esbuild";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
@@ -54,11 +55,11 @@ export default async function guessWorkerFormat(
 	if (hint) {
 		if (hint !== guessedWorkerFormat) {
 			if (hint === "service-worker") {
-				throw new Error(
+				throw new UserError(
 					"You configured this worker to be a 'service-worker', but the file you are trying to build appears to have a `default` export like a module worker. Please pass `--format modules`, or simply remove the configuration."
 				);
 			} else {
-				throw new Error(
+				throw new UserError(
 					"You configured this worker to be 'modules', but the file you are trying to build doesn't export a handler. Please pass `--format service-worker`, or simply remove the configuration."
 				);
 			}

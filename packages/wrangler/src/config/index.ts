@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
@@ -28,7 +29,8 @@ export type {
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
-	args: CommandArgs & OnlyCamelCase<CommonYargsOptions>
+	args: CommandArgs &
+		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {
@@ -52,7 +54,7 @@ export function readConfig<CommandArgs>(
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
-		throw new Error(diagnostics.renderErrors());
+		throw new UserError(diagnostics.renderErrors());
 	}
 
 	return config;
@@ -401,7 +403,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "Unsafe Metadata",
 			entries: Object.entries(unsafe.metadata).map(([key, value]) => ({
 				key,
-				value: `${value}`,
+				value: JSON.stringify(value),
 			})),
 		});
 	}

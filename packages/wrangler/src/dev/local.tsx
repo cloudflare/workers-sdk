@@ -4,15 +4,18 @@ import { useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
 import { logger } from "../logger";
-import { MiniflareServer } from "./miniflare";
-import { DEFAULT_WORKER_NAME } from "./miniflare";
+import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import type { ProxyData } from "../api";
 import type { Config } from "../config";
-import type { CfWorkerInit, CfScriptFormat } from "../deployment-bundle/worker";
+import type {
+	CfDurableObject,
+	CfScriptFormat,
+	CfWorkerInit,
+} from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
-import type { ConfigBundle, ReloadedEvent } from "./miniflare";
+import type { ConfigBundle } from "./miniflare";
 import type { EsbuildBundle } from "./use-esbuild";
 
 export interface LocalProps {
@@ -35,6 +38,7 @@ export interface LocalProps {
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
+	upstreamProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady:
@@ -90,29 +94,34 @@ export async function localPropsToConfigBundle(
 		queueConsumers: props.queueConsumers,
 		localProtocol: props.localProtocol,
 		localUpstream: props.localUpstream,
+		upstreamProtocol: props.upstreamProtocol,
 		inspect: props.inspect,
 		serviceBindings,
 	};
 }
 
-export function maybeRegisterLocalWorker(event: ReloadedEvent, name?: string) {
+export function maybeRegisterLocalWorker(
+	url: URL,
+	name?: string,
+	internalDurableObjects?: CfDurableObject[]
+) {
 	if (name === undefined) return;
 
-	let protocol = event.url.protocol;
-	protocol = protocol.substring(0, event.url.protocol.length - 1);
+	let protocol = url.protocol;
+	protocol = protocol.substring(0, url.protocol.length - 1);
 	if (protocol !== "http" && protocol !== "https") return;
 
-	const port = parseInt(event.url.port);
+	const port = parseInt(url.port);
 	return registerWorker(name, {
 		protocol,
 		mode: "local",
 		port,
-		host: event.url.hostname,
-		durableObjects: event.internalDurableObjects.map((binding) => ({
+		host: url.hostname,
+		durableObjects: (internalDurableObjects ?? []).map((binding) => ({
 			name: binding.name,
 			className: binding.class_name,
 		})),
-		durableObjectsHost: event.url.hostname,
+		durableObjectsHost: url.hostname,
 		durableObjectsPort: port,
 	});
 }
@@ -157,8 +166,6 @@ function useLocalWorker(props: LocalProps) {
 			const newServer = new MiniflareServer();
 			miniflareServerRef.current = server = newServer;
 			server.addEventListener("reloaded", async (event) => {
-				await maybeRegisterLocalWorker(event, props.name);
-
 				const proxyData: ProxyData = {
 					userWorkerUrl: {
 						protocol: event.url.protocol,
@@ -172,15 +179,20 @@ function useLocalWorker(props: LocalProps) {
 						pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
 					},
 					userWorkerInnerUrlOverrides: {
-						protocol: props.localProtocol,
+						protocol: props.upstreamProtocol,
 						hostname: props.localUpstream,
 						port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 					},
-					headers: {}, // no headers needed in local-mode
+					headers: {
+						// Passing this signature from Proxy Worker allows the User Worker to trust the request.
+						"MF-Proxy-Shared-Secret":
+							event.proxyToUserWorkerAuthenticationSecret,
+					},
 					liveReload: props.liveReload,
 					// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
 					// workers written in "service-worker" format still need to proxy logs to the ProxyController
 					proxyLogsToController: props.format === "service-worker",
+					internalDurableObjects: event.internalDurableObjects,
 				};
 
 				props.onReady?.(

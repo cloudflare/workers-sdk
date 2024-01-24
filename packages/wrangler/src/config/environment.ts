@@ -29,6 +29,14 @@ export type Route =
 	| CustomDomainRoute;
 
 /**
+ * Configuration in wrangler for Cloudchamber
+ */
+export type CloudchamberConfig = {
+	vcpu?: number;
+	memory?: string;
+};
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -351,6 +359,17 @@ interface EnvironmentNonInheritable {
 	};
 
 	/**
+	 * Cloudchamber configuration
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `{}`
+	 * @nonInheritable
+	 */
+	cloudchamber: CloudchamberConfig;
+
+	/**
 	 * These specify any Workers KV Namespaces you want to
 	 * access from inside your Worker.
 	 *
@@ -606,7 +625,7 @@ interface EnvironmentNonInheritable {
 		 * here will always be applied to metadata last, so can add new or override existing fields.
 		 */
 		metadata?: {
-			[key: string]: string;
+			[key: string]: unknown;
 		};
 
 		/**

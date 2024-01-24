@@ -748,12 +748,12 @@ describe("wrangler dev", () => {
 	});
 
 	describe("upstream-protocol", () => {
-		it("should default upstream-protocol to `https`", async () => {
+		it("should default upstream-protocol to `https` if remote mode", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
 				"https"
 			);
@@ -762,24 +762,52 @@ describe("wrangler dev", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn if `--upstream-protocol=http` is used", async () => {
+		it("should warn if `--upstream-protocol=http` is used in remote mode", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --upstream-protocol=http");
+			await runWrangler("dev --upstream-protocol=http --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
 				"http"
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently implemented.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
 
-			          If this is required in your project, please add your use case to the following issue:
-			          [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
+			  If this is required in your project, please add your use case to the following issue:
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
 
-			        "
-		      `);
+			"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should default upstream-protocol to local-protocol if local mode", async () => {
+			writeWranglerToml({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev --local-protocol=https");
+			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
+				"https"
+			);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should default upstream-protocol to http if no local-protocol in local mode", async () => {
+			writeWranglerToml({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
+				"http"
+			);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});

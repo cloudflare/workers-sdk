@@ -21,6 +21,7 @@ fixtures/pages-functions-app/public/cdn-cgi/
 fixtures/remix-pages-app/functions/**
 fixtures/**/dist/**
 **/vendor/**
+**/.wrangler/**
 
 **/*.d.ts
 

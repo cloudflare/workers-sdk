@@ -3,6 +3,7 @@ import path from "path";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { confirm } from "./dialogs";
+import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -105,11 +106,11 @@ export async function deleteHandler(args: DeleteArgs) {
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 	const scriptName = getScriptName(args, config);
-
-	assert(
-		scriptName,
-		"A worker name must be defined, either via --name, or in wrangler.toml"
-	);
+	if (!scriptName) {
+		throw new UserError(
+			"A worker name must be defined, either via --name, or in wrangler.toml"
+		);
+	}
 
 	if (args.dryRun) {
 		logger.log(`--dry-run: exiting now.`);

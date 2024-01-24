@@ -3,10 +3,11 @@ import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
+import { UserError } from "../errors";
 import {
+	CommandLineArgsError,
 	demandOneOfOption,
 	printWranglerBanner,
-	CommandLineArgsError,
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -14,15 +15,15 @@ import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import {
 	createKVNamespace,
-	deleteKVNamespace,
-	getKVNamespaceId,
-	isValidKVNamespaceBinding,
-	listKVNamespaces,
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
+	deleteKVNamespace,
 	getKVKeyValue,
+	getKVNamespaceId,
 	isKVKeyValue,
+	isValidKVNamespaceBinding,
 	listKVNamespaceKeys,
+	listKVNamespaces,
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
@@ -564,7 +565,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				const content = parseJSON(readFileSync(filename), filename);
 
 				if (!Array.isArray(content)) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of key-value objects but got type "${typeof content}".`
 					);
@@ -596,7 +597,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					);
 				}
 				if (errors.length > 0) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Each item in the array should be an object that matches:\n\n` +
 							`interface KeyValue {\n` +
@@ -699,7 +700,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				const content = parseJSON(readFileSync(filename), filename) as string[];
 
 				if (!Array.isArray(content)) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of strings but got:\n${content}`
 					);
@@ -718,7 +719,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				}
 
 				if (errors.length > 0) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of strings.\n` +
 							errors.join("\n")

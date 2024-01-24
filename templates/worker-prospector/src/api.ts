@@ -1,11 +1,8 @@
-import { Hono } from "hono";
-
-import { DBNotifier, DBUrl, DBSitemap } from "./types";
-
-import { scheduled } from "./functions";
-
 // @ts-ignore - it gets bundled by wrangler
 import index from "./index.html";
+import { Hono } from "hono";
+import { scheduled } from "./functions";
+import { DBNotifier, DBSitemap, DBUrl } from "./types";
 
 const h = new Hono();
 

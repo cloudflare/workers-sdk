@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import os from "node:os";
-import { URL, fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
 import path from "path";
 import open from "open";
 import {
@@ -8,6 +8,7 @@ import {
 	isAllowedSourcePath,
 } from "../api/startDevWorker/bundle-allowed-paths";
 import { logger } from "../logger";
+import { getSourceMappedString } from "../sourcemap";
 import type { EsbuildBundle } from "../dev/use-esbuild";
 import type Protocol from "devtools-protocol";
 import type { RawSourceMap } from "source-map";
@@ -57,6 +58,9 @@ export function logConsoleMessage(
 			case "undefined":
 			case "symbol":
 			case "bigint":
+				if (typeof ro.value === "string") {
+					ro.value = getSourceMappedString(ro.value);
+				}
 				args.push(ro.value);
 				break;
 			case "function":

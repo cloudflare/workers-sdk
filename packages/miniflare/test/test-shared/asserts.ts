@@ -18,9 +18,9 @@ export function isWithin(
 	);
 }
 
-export function escapeRegexp(value: string): RegExp {
+export function escapeRegexpComponent(value: string): string {
 	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
-	return new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function flaky(

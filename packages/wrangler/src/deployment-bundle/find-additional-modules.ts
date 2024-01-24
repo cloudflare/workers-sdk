@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
@@ -112,7 +113,7 @@ async function matchFiles(
 			for (const glob of rule.globs) {
 				const regexp = globToRegExp(glob);
 				if (regexp.test(filePath)) {
-					throw new Error(
+					throw new UserError(
 						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
 							rule
 						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`

@@ -1,8 +1,15 @@
 {
 	"root": true,
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
-	"include": ["**/*.ts"],
-	"exclude": ["node_modules", "dist", "templates", "**/templates/**"],
+	"include": ["**/*.ts", "templates/*/c3.ts"],
+	"exclude": [
+		"node_modules",
+		"dist",
+		// exclude all template files other than the top level ones so
+		// that we can catch `c3.ts`. For example, any top level files in
+		// templates/angular/ will be included, but any directories will not
+		"templates/*/*/**"
+	],
 	"compilerOptions": {
 		"target": "ESNext",
 		"module": "CommonJS",
@@ -15,6 +22,7 @@
 		"resolveJsonModule": true,
 		"paths": {
 			"helpers/*": ["./src/helpers/*"],
+			"templates/*": ["./templates/*"],
 			"frameworks/*": ["./src/frameworks/*"],
 			"types": ["./src/types.ts"]
 		}

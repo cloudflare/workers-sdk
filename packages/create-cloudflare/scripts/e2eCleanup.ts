@@ -1,9 +1,9 @@
 import {
-	Project,
 	deleteProject,
 	deleteWorker,
 	listC3Projects,
 	listC3Workers,
+	Project,
 } from "./common";
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {

@@ -1,14 +1,14 @@
-import { Buffer } from "node:buffer";
 import assert from "node:assert";
-import { ServiceWorkerNotSupported, WorkerTimeout } from ".";
+import { Buffer } from "node:buffer";
 import { constructMiddleware } from "./inject-middleware";
 import {
-	RealishPreviewConfig,
-	UploadResult,
 	doUpload,
+	RealishPreviewConfig,
 	setupTokens,
+	UploadResult,
 } from "./realish";
 import { handleException, setupSentry } from "./sentry";
+import { ServiceWorkerNotSupported, WorkerTimeout } from ".";
 
 const encoder = new TextEncoder();
 

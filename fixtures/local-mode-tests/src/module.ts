@@ -2,7 +2,6 @@
 // as esbuild can resolve that instead:
 // https://github.com/cloudflare/workers-sdk/issues/2038
 import { Buffer } from "buffer";
-
 // @ts-expect-error non standard module
 import data from "./some-data.bin";
 // @ts-expect-error non standard module

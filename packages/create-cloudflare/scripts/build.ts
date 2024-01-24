@@ -1,5 +1,5 @@
-import { build, context, BuildOptions } from "esbuild";
 import { cp } from "fs/promises";
+import { build, BuildOptions, context } from "esbuild";
 import * as glob from "glob";
 
 const run = async () => {
@@ -16,12 +16,6 @@ const run = async () => {
 
 	const runBuild = async () => {
 		await build(config);
-		// Now copy over any runtime templates so they are available when published
-		await cp("src/frameworks/angular/templates", "dist/angular/templates", {
-			recursive: true,
-			force: true,
-		});
-
 		// npm pack doesn't include .gitignore files (see https://github.com/npm/npm/issues/3763)
 		// To workaround, copy all ".gitignore" files as "__dot__gitignore" so npm pack includes them
 		// The latter has been added to the project's .gitignore file

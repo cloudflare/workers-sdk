@@ -1,7 +1,10 @@
+import prom from "promjs";
 import { Toucan } from "toucan-js";
 import { z } from "zod";
 import Youch from "./Youch";
+
 export interface Env {
+	PROMETHEUS_TOKEN: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_DSN: string;
@@ -122,6 +125,14 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
+		const registry = prom();
+		const requestCounter = registry.create(
+			"counter",
+			"devprod_format_errors_request_total",
+			"Request counter for DevProd's format-errors service"
+		);
+		requestCounter.inc();
+
 		const sentry = new Toucan({
 			dsn: env.SENTRY_DSN,
 			context: ctx,
@@ -149,6 +160,13 @@ export default {
 			return handlePrettyErrorRequest(payload);
 		} catch (e) {
 			sentry.captureException(e);
+			const errorCounter = registry.create(
+				"counter",
+				"devprod_format_errors_error_total",
+				"Error counter for DevProd's format-errors service"
+			);
+			errorCounter.inc();
+
 			return Response.json(
 				{
 					error: "UnexpectedError",
@@ -157,6 +175,16 @@ export default {
 				{
 					status: 500,
 				}
+			);
+		} finally {
+			ctx.waitUntil(
+				fetch("https://workers-logging.cfdata.org/prometheus", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+					},
+					body: registry.metrics(),
+				})
 			);
 		}
 	},

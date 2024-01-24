@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import prompts from "prompts";
+import { UserError } from "./errors";
 import { CI } from "./is-ci";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -9,7 +10,7 @@ function isNonInteractiveOrCI(): boolean {
 	return !isInteractive() || CI.isCI();
 }
 
-export class NoDefaultValueProvided extends Error {
+export class NoDefaultValueProvided extends UserError {
 	constructor() {
 		// This is user-facing, so make the message something understandable
 		// It _should_ always be caught and replaced with a more descriptive error

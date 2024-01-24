@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { UserError } from "../../errors";
 import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
 import type { UrlPath } from "../../paths";
 
@@ -85,12 +86,12 @@ export function parseConfig(config: Config, baseDir: string) {
 
 			// ensure the filepath isn't attempting to resolve to anything outside of the project
 			if (path.relative(baseDir, resolvedPath).startsWith("..")) {
-				throw new Error(`Invalid module path "${filepath}"`);
+				throw new UserError(`Invalid module path "${filepath}"`);
 			}
 
 			// ensure the module name (if provided) is a valid identifier to guard against injection attacks
 			if (name !== "default" && !isValidIdentifier(name)) {
-				throw new Error(`Invalid module identifier "${name}"`);
+				throw new UserError(`Invalid module identifier "${name}"`);
 			}
 
 			if (!identifier) {

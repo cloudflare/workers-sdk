@@ -180,6 +180,7 @@ dist
 wrangler-dist/
 miniflare-dist
 packages/wrangler/wrangler.toml
+packages/wrangler/src/cloudchamber/internal
 packages/prerelease-registry/_worker.bundle
 packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache

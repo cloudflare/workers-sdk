@@ -3,7 +3,9 @@ import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
+import { sync as resolveSync } from "resolve";
 import { exports as resolveExports } from "resolve.exports";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { BUILD_CONDITIONS } from "./bundle";
 import {
@@ -315,6 +317,19 @@ export function createModuleCollector(props: {
 									}
 								}
 
+								// Next try to resolve using the node module resolution algorithm
+								try {
+									const resolved = resolveSync(args.path, {
+										basedir: args.resolveDir,
+									});
+									filePath = resolved;
+								} catch (e) {
+									// We tried, now it'll just fall-through to the previous behaviour
+									// and ENOENT if the absolute file path doesn't exist.
+								}
+
+								// Finally, load the file and hash it
+								// If we didn't do any smart resolution above, this will attempt to load as an absolute path
 								const fileContent = await readFile(filePath);
 								const fileHash = crypto
 									.createHash("sha1")
@@ -367,7 +382,7 @@ export function createModuleCollector(props: {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },
 							async (args: esbuild.OnResolveArgs) => {
-								throw new Error(
+								throw new UserError(
 									`The file ${
 										args.path
 									} matched a module rule in your configuration (${JSON.stringify(

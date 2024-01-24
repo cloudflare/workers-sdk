@@ -1,10 +1,11 @@
 import { Blob } from "node:buffer";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import * as stream from "node:stream";
 import { ReadableStream } from "node:stream/web";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -15,12 +16,14 @@ import {
 	createR2Bucket,
 	deleteR2Bucket,
 	deleteR2Object,
+	deleteR2Sippy,
 	getR2Object,
+	getR2Sippy,
 	listR2Buckets,
 	putR2Object,
+	putR2Sippy,
 	usingLocalBucket,
 } from "./helpers";
-
 import type { CommonYargsArgv } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
@@ -92,7 +95,6 @@ export function r2(r2Yargs: CommonYargsArgv) {
 					},
 					async (objectGetYargs) => {
 						const config = readConfig(objectGetYargs.config, objectGetYargs);
-						const accountId = await requireAuth(config);
 						const { objectPath, pipe, jurisdiction } = objectGetYargs;
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						let fullBucketName = bucket;
@@ -109,7 +111,13 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							logger.log(`Downloading "${key}" from "${fullBucketName}".`);
 						}
 
-						const output = file ? fs.createWriteStream(file) : process.stdout;
+						let output: stream.Writable;
+						if (file) {
+							fs.mkdirSync(path.dirname(file), { recursive: true });
+							output = fs.createWriteStream(file);
+						} else {
+							output = process.stdout;
+						}
 						if (objectGetYargs.local) {
 							await usingLocalBucket(
 								objectGetYargs.persistTo,
@@ -118,13 +126,14 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								async (r2Bucket) => {
 									const object = await r2Bucket.get(key);
 									if (object === null) {
-										throw new Error("The specified key does not exist.");
+										throw new UserError("The specified key does not exist.");
 									}
 									// Note `object.body` is only valid inside this closure
 									await stream.promises.pipeline(object.body, output);
 								}
 							);
 						} else {
+							const accountId = await requireAuth(config);
 							const input = await getR2Object(
 								accountId,
 								bucket,
@@ -218,7 +227,6 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						await printWranglerBanner();
 
 						const config = readConfig(objectPutYargs.config, objectPutYargs);
-						const accountId = await requireAuth(config);
 						const {
 							objectPath,
 							file,
@@ -326,6 +334,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								}
 							);
 						} else {
+							const accountId = await requireAuth(config);
 							await putR2Object(
 								accountId,
 								bucket,
@@ -372,7 +381,6 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						await printWranglerBanner();
 
 						const config = readConfig(args.config, args);
-						const accountId = await requireAuth(config);
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						let fullBucketName = bucket;
 						if (jurisdiction !== undefined) {
@@ -391,6 +399,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								(r2Bucket) => r2Bucket.delete(key)
 							);
 						} else {
+							const accountId = await requireAuth(config);
 							await deleteR2Object(accountId, bucket, key, jurisdiction);
 						}
 
@@ -501,6 +510,139 @@ export function r2(r2Yargs: CommonYargsArgv) {
 					await metrics.sendMetricsEvent("delete r2 bucket", {
 						sendMetrics: config.send_metrics,
 					});
+				}
+			);
+
+			r2BucketYargs.command(
+				"sippy",
+				"Manage Sippy incremental migration on an R2 bucket",
+				(sippyYargs) => {
+					return sippyYargs
+						.command(
+							"enable <name>",
+							"Enable Sippy on an R2 bucket",
+							(yargs) =>
+								yargs
+									.positional("name", {
+										describe: "The name of the bucket",
+										type: "string",
+										demandOption: true,
+									})
+									.option("jurisdiction", {
+										describe: "The jurisdiction where the bucket exists",
+										alias: "J",
+										requiresArg: true,
+										type: "string",
+									})
+									.option("provider", {
+										choices: ["AWS"],
+										default: "AWS",
+										implies: [
+											"bucket",
+											"key-id",
+											"secret-access-key",
+											"r2-key-id",
+											"r2-secret-access-key",
+										],
+									})
+									.option("bucket", {
+										description: "The name of the upstream bucket",
+										string: true,
+									})
+									.option("region", {
+										description: "The region of the upstream bucket",
+										string: true,
+									})
+									.option("key-id", {
+										description:
+											"The secret access key id for the upstream bucket",
+										string: true,
+									})
+									.option("secret-access-key", {
+										description:
+											"The secret access key for the upstream bucket",
+										string: true,
+									})
+									.option("r2-key-id", {
+										description: "The secret access key id for this R2 bucket",
+										string: true,
+									})
+									.option("r2-secret-access-key", {
+										description: "The secret access key for this R2 bucket",
+										string: true,
+									}),
+
+							async (args) => {
+								const config = readConfig(args.config, args);
+								const accountId = await requireAuth(config);
+
+								await putR2Sippy(
+									accountId,
+									args.name,
+									{
+										provider: "AWS",
+										zone: args["region"],
+										bucket: args.bucket ?? "",
+										key_id: args["key-id"] ?? "",
+										access_key: args["secret-access-key"] ?? "",
+										r2_key_id: args["r2-key-id"] ?? "",
+										r2_access_key: args["r2-secret-access-key"] ?? "",
+									},
+									args.jurisdiction
+								);
+							}
+						)
+						.command(
+							"disable <name>",
+							"Disable Sippy on an R2 bucket",
+							(yargs) =>
+								yargs
+									.positional("name", {
+										describe: "The name of the bucket",
+										type: "string",
+										demandOption: true,
+									})
+									.option("jurisdiction", {
+										describe: "The jurisdiction where the bucket exists",
+										alias: "J",
+										requiresArg: true,
+										type: "string",
+									}),
+							async (args) => {
+								const config = readConfig(args.config, args);
+								const accountId = await requireAuth(config);
+
+								await deleteR2Sippy(accountId, args.name, args.jurisdiction);
+							}
+						)
+						.command(
+							"get <name>",
+							"Check the status of Sippy on an R2 bucket",
+							(yargs) =>
+								yargs
+									.positional("name", {
+										describe: "The name of the bucket",
+										type: "string",
+										demandOption: true,
+									})
+									.option("jurisdiction", {
+										describe: "The jurisdiction where the bucket exists",
+										alias: "J",
+										requiresArg: true,
+										type: "string",
+									}),
+							async (args) => {
+								const config = readConfig(args.config, args);
+								const accountId = await requireAuth(config);
+
+								const sippyBucket = await getR2Sippy(
+									accountId,
+									args.name,
+									args.jurisdiction
+								);
+								logger.log(`Sippy upstream bucket: ${sippyBucket}.`);
+							}
+						);
 				}
 			);
 			return r2BucketYargs;

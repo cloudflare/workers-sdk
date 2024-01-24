@@ -11,10 +11,10 @@ import {
 	startSection,
 	updateStatus,
 } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { bgGreen, blue, brandColor, dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
-import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import {
 	listAccounts,
@@ -28,7 +28,8 @@ import { poll } from "helpers/poll";
 import { quote } from "shell-quote";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
-import type { C3Args, PagesGeneratorContext } from "types";
+import { readWranglerToml } from "./workers";
+import type { C3Args, C3Context } from "types";
 
 const { name, npm } = detectPackageManager();
 
@@ -135,32 +136,68 @@ export const setupProjectDirectory = (args: C3Args) => {
 	return { name: pathBasename, path };
 };
 
-export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
+export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
+
+	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
+	if (!(await isDeployable(ctx))) {
+		ctx.args.deploy = false;
+		updateStatus(
+			`Bindings must be configured in ${blue(
+				"`wrangler.toml`"
+			)} before your application can be deployed`
+		);
+	}
 
 	const label = `deploy via \`${quoteShellArgs([
 		npm,
 		"run",
-		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+		...(ctx.template.deployCommand ?? ["deploy"]),
 	])}\``;
 
-	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
+	const shouldDeploy = await processArgument(ctx.args, "deploy", {
 		type: "confirm",
 		question: "Do you want to deploy your application?",
 		label,
 		defaultValue: C3_DEFAULTS.deploy,
 	});
 
-	if (!ctx.args.deploy) return;
+	if (!shouldDeploy) {
+		return false;
+	}
+
+	// initialize a deployment object in context
+	ctx.deployment = {};
 
 	const loginSuccess = await wranglerLogin();
-	if (!loginSuccess) return;
+	if (!loginSuccess) return false;
 
 	await chooseAccount(ctx);
+
+	return true;
 };
 
-export const runDeploy = async (ctx: PagesGeneratorContext) => {
-	if (ctx.args.deploy === false) return;
+/**
+ * Determines if the current project is deployable.
+ *
+ * Since C3 doesn't currently support a way to automatically provision the resources needed
+ * by bindings, templates that have placeholder bindings will need some adjustment by the project author
+ * before they can be deployed.
+ */
+const isDeployable = async (ctx: C3Context) => {
+	if (ctx.template.platform === "pages") {
+		return true;
+	}
+
+	const wranglerToml = await readWranglerToml(ctx);
+	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
+		return false;
+	}
+
+	return true;
+};
+
+export const runDeploy = async (ctx: C3Context) => {
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
@@ -169,7 +206,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const baseDeployCmd = [
 		npm,
 		"run",
-		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+		...(ctx.template.deployCommand ?? ["deploy"]),
 	];
 
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
@@ -177,11 +214,11 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const deployCmd = [
 		...baseDeployCmd,
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
-		...(ctx.framework?.commitMessage && !insideGitRepo
+		...(ctx.template.platform === "pages" && ctx.commitMessage && !insideGitRepo
 			? [
 					...(name === "npm" ? ["--"] : []),
 					"--commit-message",
-					prepareCommitMessage(ctx.framework.commitMessage),
+					prepareCommitMessage(ctx.commitMessage),
 			  ]
 			: []),
 	];
@@ -199,21 +236,21 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
 	const deployedUrlMatch = result.match(deployedUrlRegex);
 	if (deployedUrlMatch) {
-		ctx.deployedUrl = deployedUrlMatch[0];
+		ctx.deployment.url = deployedUrlMatch[0];
 	} else {
 		crash("Failed to find deployment url.");
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
-	if (ctx.deployedUrl?.endsWith(".pages.dev")) {
-		const [proto, hostname] = ctx.deployedUrl.split("://");
+	if (ctx.deployment.url?.endsWith(".pages.dev")) {
+		const [proto, hostname] = ctx.deployment.url.split("://");
 		const hostnameWithoutSHA1 = hostname.split(".").slice(-3).join("."); // only keep the last 3 parts (discard the 4th, i.e. the SHA1)
 
-		ctx.deployedUrl = `${proto}://${hostnameWithoutSHA1}`;
+		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
 	}
 };
 
-export const chooseAccount = async (ctx: PagesGeneratorContext) => {
+export const chooseAccount = async (ctx: C3Context) => {
 	const s = spinner();
 	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
 	const accounts = await listAccounts();
@@ -250,48 +287,37 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 	ctx.account = { id: accountId, name: accountName };
 };
 
-export const printSummary = async (ctx: PagesGeneratorContext) => {
+export const printSummary = async (ctx: C3Context) => {
 	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
-
 	const nextSteps = [
 		dirRelativePath
 			? [`Navigate to the new directory`, `cd ${dirRelativePath}`]
 			: [],
 		[
 			`Run the development server`,
-			quoteShellArgs([
-				npm,
-				"run",
-				...(ctx.framework?.config.devCommand ?? ["start"]),
-			]),
+			quoteShellArgs([npm, "run", ...(ctx.template.devCommand ?? ["start"])]),
 		],
 		[
 			`Deploy your application`,
 			quoteShellArgs([
 				npm,
 				"run",
-				...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+				...(ctx.template.deployCommand ?? ["deploy"]),
 			]),
 		],
 		[
 			`Read the documentation`,
-			`https://developers.cloudflare.com/${
-				ctx.framework
-					? ctx.framework.config.type === "workers"
-						? "workers"
-						: "pages"
-					: "workers"
-			}`,
+			`https://developers.cloudflare.com/${ctx.template.platform}`,
 		],
 		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
 	];
 
-	if (ctx.deployedUrl) {
+	if (ctx.deployment.url) {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" SUCCESS ")}`,
 			`${dim(`View your deployed application at`)}`,
-			`${blue(ctx.deployedUrl)}`,
+			`${blue(ctx.deployment.url)}`,
 		].join(" ");
 		logRaw(msg);
 	} else {
@@ -303,7 +329,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 				quoteShellArgs([
 					npm,
 					"run",
-					...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+					...(ctx.template.deployCommand ?? ["deploy"]),
 				])
 			)}`,
 		].join(" ");
@@ -316,11 +342,11 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	});
 	newline();
 
-	if (ctx.deployedUrl) {
-		const success = await poll(ctx.deployedUrl);
+	if (ctx.deployment.url) {
+		const success = await poll(ctx.deployment.url);
 		if (success) {
 			if (ctx.args.open) {
-				await openInBrowser(ctx.deployedUrl);
+				await openInBrowser(ctx.deployment.url);
 			}
 		}
 	}
@@ -328,7 +354,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	process.exit(0);
 };
 
-export const offerGit = async (ctx: PagesGeneratorContext) => {
+export const offerGit = async (ctx: C3Context) => {
 	const gitInstalled = await isGitInstalled();
 	if (!gitInstalled) {
 		// haven't prompted yet, if provided as --git arg
@@ -379,7 +405,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const gitCommit = async (ctx: PagesGeneratorContext) => {
+export const gitCommit = async (ctx: C3Context) => {
 	// Note: createCommitMessage stores the message in ctx so that it can
 	//       be used later even if we're not in a git repository, that's why
 	//       we unconditionally run this command here
@@ -404,21 +430,27 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-const createCommitMessage = async (ctx: PagesGeneratorContext) => {
-	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
+const createCommitMessage = async (ctx: C3Context) => {
+	const isPages = ctx.template.platform === "pages";
 
-	const header = "Initialize web application via create-cloudflare CLI";
+	const header = isPages
+		? "Initialize web application via create-cloudflare CLI"
+		: "Initial commit (by create-cloudflare CLI)";
 
 	const packageManager = detectPackageManager();
 
 	const gitVersion = await getGitVersion();
 	const insideRepo = await isInsideGitRepo(ctx.project.path);
 
+	const showFramework = isPages || ctx.template.id === "hono";
+
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
-		{ key: "framework", value: ctx.framework.name },
-		{ key: "framework cli", value: getFrameworkCli(ctx) },
+		...(showFramework ? [{ key: "framework", value: ctx.template.id }] : []),
+		...(showFramework
+			? [{ key: "framework cli", value: getFrameworkCli(ctx) }]
+			: []),
 		{
 			key: "package manager",
 			value: `${packageManager.name}@${packageManager.version}`,
@@ -439,9 +471,7 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
 
 	const commitMessage = `${header}\n\n${body}\n`;
 
-	if (ctx.type !== "workers") {
-		ctx.framework.commitMessage = commitMessage;
-	}
+	ctx.commitMessage = commitMessage;
 
 	return commitMessage;
 };

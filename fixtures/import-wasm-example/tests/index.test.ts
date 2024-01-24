@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { fetch } from "undici";
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("wrangler correctly imports wasm files with npm resolution", () => {
@@ -21,6 +21,6 @@ describe("wrangler correctly imports wasm files with npm resolution", () => {
 	it("responds", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
-		expect(text).toBe("21");
+		expect(text).toBe("21, 21");
 	});
 });

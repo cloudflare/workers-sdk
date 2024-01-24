@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { sync as commandExistsSync } from "command-exists";
+import { UserError } from "../errors";
 import type { CfCapnp } from "./worker";
 
 export function handleUnsafeCapnp(capnp: CfCapnp): Buffer {
@@ -14,7 +15,7 @@ export function handleUnsafeCapnp(capnp: CfCapnp): Buffer {
 		resolve(base_path as string, x)
 	);
 	if (!commandExistsSync("capnp")) {
-		throw new Error(
+		throw new UserError(
 			"The capnp compiler is required to upload capnp schemas, but is not present."
 		);
 	}

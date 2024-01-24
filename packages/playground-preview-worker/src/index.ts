@@ -1,9 +1,15 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
+import prom from "promjs";
 import { Toucan } from "toucan-js";
 import { ZodIssue } from "zod";
 import { handleException, setupSentry } from "./sentry";
-const app = new Hono<{ Bindings: Env; Variables: { sentry: Toucan } }>({
+import type { RegistryType } from "promjs";
+
+const app = new Hono<{
+	Bindings: Env;
+	Variables: { sentry: Toucan; prometheus: RegistryType };
+}>({
 	// This replaces . with / in url hostnames, which allows for parameter matching in hostnames as well as paths
 	// e.g. https://something.example.com/hello/world -> something/example/com/hello/world
 	getPath: (req) => {
@@ -35,7 +41,7 @@ export class HttpError extends Error {
 				status: this.status,
 				headers: {
 					"Access-Control-Allow-Origin": "*",
-					"Access-Control-Allow-Method": "GET,PUT,POST",
+					"Access-Control-Allow-Methods": "GET,PUT,POST",
 				},
 			}
 		);
@@ -120,6 +126,13 @@ class UploadFailed extends HttpError {
 	}
 }
 
+class PreviewRequestForbidden extends HttpError {
+	name = "PreviewRequestForbidden";
+	constructor() {
+		super("Preview request forbidden", 403, false);
+	}
+}
+
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
  *
@@ -163,7 +176,7 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		headers: {
 			...rawHeaders,
 			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-			"Access-Control-Allow-Method": "*",
+			"Access-Control-Allow-Methods": "*",
 			"Access-Control-Allow-Credentials": "true",
 			"cf-ew-status": workerResponse.status.toString(),
 			"Access-Control-Expose-Headers": "*",
@@ -171,6 +184,33 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		},
 	});
 }
+
+app.use("*", async (c, next) => {
+	c.set("prometheus", prom());
+
+	const registry = c.get("prometheus");
+	const requestCounter = registry.create(
+		"counter",
+		"devprod_playground_preview_worker_request_total",
+		"Request counter for DevProd's playground-preview-worker service"
+	);
+	requestCounter.inc();
+
+	try {
+		return await next();
+	} finally {
+		c.executionCtx.waitUntil(
+			fetch("https://workers-logging.cfdata.org/prometheus", {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${c.env.PROMETHEUS_TOKEN}`,
+				},
+				body: registry.metrics(),
+			})
+		);
+	}
+});
+
 app.use("*", async (c, next) => {
 	c.set(
 		"sentry",
@@ -257,6 +297,14 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
 	const token = url.searchParams.get("token");
+
+	if (
+		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
+		!c.req.header("Referer")?.startsWith("https://workers.cloudflare.com")
+	) {
+		throw new PreviewRequestForbidden();
+	}
+
 	if (!token) {
 		throw new TokenUpdateFailed();
 	}
@@ -275,7 +323,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 		return new Response(null, {
 			headers: {
 				"Access-Control-Allow-Origin": c.req.headers.get("Origin") ?? "",
-				"Access-Control-Allow-Method": "*",
+				"Access-Control-Allow-Methods": "*",
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Allow-Headers":
 					c.req.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",
@@ -319,6 +367,18 @@ app.all(`${rootDomain}/*`, (c) => fetch(c.req.raw));
 app.onError((e, c) => {
 	console.log("ONERROR");
 	const sentry = c.get("sentry");
+	const registry = c.get("prometheus");
+
+	// Only include reportable `HttpError`s or any other error in error metrics
+	if (!(e instanceof HttpError) || e.reportable) {
+		const errorCounter = registry.create(
+			"counter",
+			"devprod_playground_preview_worker_error_total",
+			"Error counter for DevProd's playground-preview-worker service"
+		);
+		errorCounter.inc();
+	}
+
 	return handleException(e, sentry);
 });
 

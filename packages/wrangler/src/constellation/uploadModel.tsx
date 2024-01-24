@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
-import { FormData, File } from "undici";
+import { File, FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { constellationBetaWarning, getProjectByName } from "./utils";
@@ -74,7 +75,7 @@ export const handler = withConfig<HandlerOptions>(
 			);
 		} catch (e) {
 			if ((e as { code: number }).code === 7408) {
-				throw new Error("A model with that name already exists");
+				throw new UserError("A model with that name already exists");
 			}
 			throw e;
 		}

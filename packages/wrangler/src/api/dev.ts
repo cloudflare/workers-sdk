@@ -1,7 +1,6 @@
 import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
-
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
@@ -9,7 +8,7 @@ import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { ProxyData } from "./startDevWorker";
 import type { Json } from "miniflare";
-import type { RequestInit, Response, RequestInfo } from "undici";
+import type { RequestInfo, RequestInit, Response } from "undici";
 
 export interface UnstableDevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
@@ -152,7 +151,7 @@ export async function unstable_dev(
 		_: [],
 		$0: "",
 		remote: !local,
-		local,
+		local: undefined,
 		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,

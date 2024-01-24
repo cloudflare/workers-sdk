@@ -5,12 +5,12 @@ import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
+import { UserError } from "./errors";
 import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from ".";
-
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";
@@ -55,12 +55,6 @@ export async function deployments(
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
 ) {
-	if (!scriptName) {
-		throw new Error(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
-		);
-	}
-
 	await metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
@@ -161,14 +155,14 @@ export async function rollbackDeployment(
 		);
 
 		if (deploys.length < 2) {
-			throw new Error(
-				"Cannot rollback to previous deployment since there are less than 2 deployemnts"
+			throw new UserError(
+				"Cannot rollback to previous deployment since there are less than 2 deployments"
 			);
 		}
 
 		deploymentId = deploys.at(-2)?.id;
 		if (deploymentId === undefined) {
-			throw new Error("Cannot find previous deployment");
+			throw new UserError("Cannot find previous deployment");
 		}
 	}
 
@@ -270,7 +264,7 @@ export async function viewDeployment(
 
 		deploymentId = latest.id;
 		if (deploymentId === undefined) {
-			throw new Error("Cannot find previous deployment");
+			throw new UserError("Cannot find previous deployment");
 		}
 	}
 
@@ -341,6 +335,11 @@ export async function commonDeploymentCMDSetup(
 	);
 
 	logger.log(`${deploymentsWarning}\n`);
+	if (!scriptName) {
+		throw new UserError(
+			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
+		);
+	}
 
 	return { accountId, scriptName, config };
 }

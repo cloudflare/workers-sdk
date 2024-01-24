@@ -27,6 +27,7 @@
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",
 		"@changesets/cli": "^2.22.0",
+		"@ianvs/prettier-plugin-sort-imports": "4.1.0",
 		"@types/node": "^20.0.0",
 		"cross-env": "^7.0.3",
 		"esbuild-register": "^3.5.0",
@@ -40,8 +41,10 @@
 		"vitest": "^0.34.6"
 	},
 	"devDependencies": {
+		"@actions/artifact": "^2.0.1",
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"@turbo/gen": "^1.10.13",
+		"@vue/compiler-sfc": "^3.3.4",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
 		"turbo": "^1.10.14"
@@ -73,6 +76,13 @@
 			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch",
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch"
+		},
+		"packageExtensions": {
+			"node-pty": {
+				"optionalDependencies": {
+					"node-gyp": "^10.0.1"
+				}
+			}
 		}
 	}
 }

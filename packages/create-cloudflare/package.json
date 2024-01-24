@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.8.2",
+	"version": "2.9.3",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -49,8 +49,11 @@
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20230419.0",
+		"@iarna/toml": "^3.0.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
+		"@types/deepmerge": "^2.2.0",
+		"@types/degit": "^2.8.6",
 		"@types/dns2": "^2.0.3",
 		"@types/esprima": "^4.0.3",
 		"@types/node": "^18.15.3",
@@ -63,18 +66,21 @@
 		"chalk": "^5.2.0",
 		"command-exists": "^1.2.9",
 		"cross-spawn": "^7.0.3",
+		"deepmerge": "^4.3.1",
+		"degit": "^2.8.4",
 		"dns2": "^2.1.0",
 		"esbuild": "^0.17.12",
 		"execa": "^7.1.1",
 		"glob": "^10.3.3",
 		"haikunator": "^2.1.2",
+		"magic-string": "^0.30.5",
 		"open": "^8.4.0",
 		"pnpm": "^8.10.0",
 		"recast": "^0.22.0",
 		"semver": "^7.5.1",
 		"shell-quote": "^1.8.1",
 		"typescript": "^5.0.2",
-		"undici": "5.20.0",
+		"undici": "5.28.2",
 		"vite-tsconfig-paths": "^4.0.8",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
@@ -83,5 +89,8 @@
 	},
 	"engines": {
 		"node": ">=18.14.1"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

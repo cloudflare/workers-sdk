@@ -23,27 +23,33 @@ import {
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
-import { ParseError } from "../parse";
+import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
+import {
+	getSourceMappedString,
+	maybeRetrieveFileSourceMap,
+} from "../sourcemap";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
+	CustomDomainRoute,
 	Route,
+	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
-	CustomDomainRoute,
-	Rule,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
+import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
+import type { RetrieveSourceMapFunction } from "../sourcemap";
 
 type Props = {
 	config: Config;
@@ -317,7 +323,7 @@ export default async function deploy(props: Props): Promise<void> {
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new Error(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
     \`\`\`
     compatibility_date = "${compatibilityDateStr}"
     \`\`\`
@@ -333,12 +339,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			if (route.pattern.includes("*")) {
-				throw new Error(
+				throw new UserError(
 					`Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
 				);
 			}
 			if (route.pattern.includes("/")) {
-				throw new Error(
+				throw new UserError(
 					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
 				);
 			}
@@ -429,25 +435,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		Boolean(props.assetPaths) &&
 		format === "service-worker"
 	) {
-		throw new Error(
+		throw new UserError(
 			"You cannot use the service-worker format with an `assets` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
 		);
 	}
 
 	if (config.wasm_modules && format === "modules") {
-		throw new Error(
+		throw new UserError(
 			"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"
 		);
 	}
 
 	if (config.text_blobs && format === "modules") {
-		throw new Error(
+		throw new UserError(
 			"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
-		throw new Error(
+		throw new UserError(
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
@@ -512,6 +518,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							projectRoot: props.projectRoot,
 						}
 				  );
+
+		// Add modules to dependencies for size warning
+		for (const module of modules) {
+			const modulePath =
+				module.filePath === undefined
+					? module.name
+					: path.relative("", module.filePath);
+			const bytesInOutput =
+				typeof module.content === "string"
+					? Buffer.byteLength(module.content)
+					: module.content.byteLength;
+			dependencies[modulePath] = { bytesInOutput };
+		}
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
@@ -593,10 +612,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const placement: CfPlacement | undefined =
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
+		const entryPointName = path.basename(resolvedEntryPointPath);
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main: {
-				name: path.basename(resolvedEntryPointPath),
+				name: entryPointName,
 				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
@@ -689,6 +709,36 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
+
+				// Apply source mapping to validation startup errors if possible
+				if (
+					err instanceof APIError &&
+					"code" in err &&
+					err.code === 10021 /* validation error */ &&
+					err.notes.length > 0
+				) {
+					err.preventReport();
+
+					const maybeNameToFilePath = (moduleName: string) => {
+						// If this is a service worker, always return the entrypoint path.
+						// Service workers can't have additional JavaScript modules.
+						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						// Similarly, if the name matches the entrypoint, return its path
+						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						// Otherwise, return the file path of the matching module (if any)
+						for (const module of modules) {
+							if (moduleName === module.name) return module.filePath;
+						}
+					};
+					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
+						maybeRetrieveFileSourceMap(maybeNameToFilePath(moduleName));
+
+					err.notes[0].text = getSourceMappedString(
+						err.notes[0].text,
+						retrieveSourceMap
+					);
+				}
+
 				throw err;
 			}
 		}
@@ -802,7 +852,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				)} to unassign a worker from a route.`;
 
-				throw new Error(`${errorMessage}\n${resolution}\n${dashLink}`);
+				throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
 			}
 		}
 	}
@@ -939,7 +989,7 @@ async function publishRoutesFallback(
 	{ scriptName, notProd }: { scriptName: string; notProd: boolean }
 ) {
 	if (notProd) {
-		throw new Error(
+		throw new UserError(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
 				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
 		);
@@ -1000,7 +1050,7 @@ async function publishRoutesFallback(
 				alreadyDeployedRoutes.delete(routePattern);
 				continue;
 			} else {
-				throw new Error(
+				throw new UserError(
 					`The route with pattern "${routePattern}" is already associated with another worker called "${knownScript}".`
 				);
 			}
@@ -1036,6 +1086,7 @@ async function publishRoutesFallback(
 }
 
 export function isAuthenticationError(e: unknown): e is ParseError {
+	// TODO: don't want to report these
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
@@ -1055,7 +1106,7 @@ async function ensureQueuesExist(config: Config) {
 			const queueErr = err as FetchError;
 			if (queueErr.code === 11000) {
 				// queue_not_found
-				throw new Error(
+				throw new UserError(
 					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
 				);
 			}
@@ -1081,7 +1132,7 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 
 		if (config.name === undefined) {
 			// TODO: how can we reliably get the current script name?
-			throw new Error("Script name is required to update queue consumers");
+			throw new UserError("Script name is required to update queue consumers");
 		}
 		const scriptName = config.name;
 		const envName = undefined; // TODO: script environment for wrangler deploy?
@@ -1103,7 +1154,7 @@ async function noBundleWorker(
 
 	return {
 		modules,
-		dependencies: {},
+		dependencies: {} as { [path: string]: { bytesInOutput: number } },
 		resolvedEntryPointPath: entry.file,
 		bundleType: getBundleType(entry.format),
 	};

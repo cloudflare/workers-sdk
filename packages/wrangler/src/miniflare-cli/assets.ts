@@ -5,12 +5,12 @@ import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseH
 import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
 import { watch } from "chokidar";
 import { getType } from "mime";
-import { Request, Response, fetch } from "miniflare";
+import { fetch, Request, Response } from "miniflare";
 import { hashFile } from "../pages/hash";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
-	ParsedRedirects,
 	ParsedHeaders,
+	ParsedRedirects,
 } from "@cloudflare/pages-shared/metadata-generator/types";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";

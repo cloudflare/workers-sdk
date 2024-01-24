@@ -1,6 +1,5 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
@@ -291,7 +290,7 @@ export const Handler = async ({
 	const workerScriptPath =
 		directory !== undefined
 			? join(directory, singleWorkerScriptPath)
-			: singleWorkerScriptPath;
+			: resolve(singleWorkerScriptPath);
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
@@ -471,9 +470,8 @@ export const Handler = async ({
 	if (scriptPath === "") {
 		// Failed to get a script with or without Functions,
 		// something really bad must have happened.
-		throw new FatalError(
-			"Failed to start wrangler pages dev due to an unknown error",
-			1
+		throw new Error(
+			"Failed to start wrangler pages dev due to an unknown error"
 		);
 	}
 
@@ -780,8 +778,7 @@ function getPort(pid: number) {
 	let command: string, regExp: RegExp;
 
 	if (isWindows()) {
-		const drive = homedir().split(":\\")[0];
-		command = drive + ":\\windows\\system32\\netstat.exe -nao";
+		command = process.env.SYSTEMROOT + "\\system32\\netstat.exe -nao";
 		regExp = new RegExp(`TCP\\s+.*:(\\d+)\\s+.*:\\d+\\s+LISTENING\\s+${pid}`);
 	} else {
 		command = "lsof -nPi";

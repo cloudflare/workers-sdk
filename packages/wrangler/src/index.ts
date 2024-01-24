@@ -1,20 +1,22 @@
 import module from "node:module";
 import os from "node:os";
 import TOML from "@iarna/toml";
+import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
+import { cloudchamber } from "./cloudchamber";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployOptions, deployHandler } from "./deploy";
+import { deployHandler, deployOptions } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import { isBuildFailure } from "./deployment-bundle/build-failures";
 import {
-	deployments,
 	commonDeploymentCMDSetup,
+	deployments,
 	rollbackDeployment,
 	viewDeployment,
 } from "./deployments";
@@ -33,36 +35,43 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
+import { UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
-import { kvNamespace, kvKey, kvBulk } from "./kv";
+import { kvBulk, kvKey, kvNamespace } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
-
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
-import { formatMessage, ParseError } from "./parse";
+import { APIError, formatMessage, ParseError } from "./parse";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
-	captureGlobalException,
 	addBreadcrumb,
+	captureGlobalException,
 	closeSentry,
 	setupSentry,
 } from "./sentry";
-import { tailOptions, tailHandler } from "./tail";
+import { tailHandler, tailOptions } from "./tail";
 import { generateTypes } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	getAuthFromEnv,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
 import { vectorize } from "./vectorize/index";
+import { versionsUploadHandler, versionsUploadOptions } from "./versions";
 import { whoami } from "./whoami";
-
+import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
-import type Yargs from "yargs";
+import type { Arguments, CommandModule } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -87,7 +96,7 @@ export function getRules(config: Config): Config["rules"] {
 	const rules = config.rules ?? config.build?.upload?.rules ?? [];
 
 	if (config.rules && config.build?.upload?.rules) {
-		throw new Error(
+		throw new UserError(
 			`You cannot configure both [rules] and [build.upload.rules] in your wrangler.toml. Delete the \`build.upload\` section.`
 		);
 	}
@@ -140,7 +149,7 @@ export function getLegacyScriptName(
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 export function demandOneOfOption(...options: string[]) {
-	return function (argv: Yargs.Arguments) {
+	return function (argv: Arguments) {
 		const count = options.filter((option) => argv[option]).length;
 		const lastOption = options.pop();
 
@@ -162,7 +171,7 @@ export function demandOneOfOption(...options: string[]) {
 	};
 }
 
-export class CommandLineArgsError extends Error {}
+export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
 	// Type check result against CommonYargsOptions to make sure we've included
@@ -208,6 +217,11 @@ export function createCLIParser(argv: string[]) {
 			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
 		})
+		.option("experimental-gradual-rollouts", {
+			describe: `Experimental: Support Gradual Rollouts`,
+			type: "boolean",
+			hidden: true,
+		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
@@ -224,7 +238,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
-	const subHelp: Yargs.CommandModule<CommonYargsOptions, CommonYargsOptions> = {
+	const subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions> = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -439,14 +453,15 @@ export function createCLIParser(argv: string[]) {
 		return ai(aiYargs.command(subHelp));
 	});
 
-	// constellation
-	wrangler.command(
-		"constellation",
-		"🤖 Interact with Constellation models",
-		(aiYargs) => {
-			return constellation(aiYargs.command(subHelp));
-		}
-	);
+	// cloudchamber
+	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
+		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
+	});
+
+	// [DEPRECATED] constellation
+	wrangler.command("constellation", false, (aiYargs) => {
+		return constellation(aiYargs.command(subHelp));
+	});
 
 	// vectorize
 	wrangler.command(
@@ -519,7 +534,7 @@ export function createCLIParser(argv: string[]) {
 				}
 				if (!validateScopeKeys(args.scopes)) {
 					throw new CommandLineArgsError(
-						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
+						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
 					);
 				}
 				await login({ scopes: args.scopes, browser: args.browser });
@@ -668,6 +683,10 @@ export function createCLIParser(argv: string[]) {
 					type: "string",
 					default: undefined,
 				})
+				.option("name", {
+					describe: "The name of your worker",
+					type: "string",
+				})
 				.epilogue(rollbackWarning),
 		async (rollbackYargs) => {
 			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
@@ -702,6 +721,21 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// versions
+	const experimentalGradualRollouts = argv.includes(
+		"--experimental-gradual-rollouts"
+	);
+	if (experimentalGradualRollouts) {
+		wrangler.command("versions", false, (versionYargs) => {
+			return versionYargs.command(
+				"upload",
+				"Upload a Worker for Gradual Rollouts [beta]",
+				versionsUploadOptions,
+				versionsUploadHandler
+			);
+		});
+	}
+
 	wrangler.exitProcess(false);
 
 	return wrangler;
@@ -709,12 +743,27 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
-	addBreadcrumb(`wrangler ${argv.join(" ")}`);
 
 	const wrangler = createCLIParser(argv);
+
+	// Register Yargs middleware to record command as Sentry breadcrumb
+	let recordedCommand = false;
+	const wranglerWithMiddleware = wrangler.middleware((args) => {
+		// Middleware called for each sub-command, but only want to record once
+		if (recordedCommand) return;
+		recordedCommand = true;
+		// `args._` doesn't include any positional arguments (e.g. script name,
+		// key to fetch) or flags
+		addBreadcrumb(`wrangler ${args._.join(" ")}`);
+	}, /* applyBeforeValidation */ true);
+
+	let cliHandlerThrew = false;
 	try {
-		await wrangler.parse();
+		await wranglerWithMiddleware.parse();
 	} catch (e) {
+		cliHandlerThrew = true;
+		let mayReport = true;
+
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
@@ -723,7 +772,15 @@ export async function main(argv: string[]): Promise<void> {
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (isAuthenticationError(e)) {
+			mayReport = false;
 			logger.log(formatMessage(e));
+			const envAuth = getAuthFromEnv();
+			if (envAuth !== undefined && "apiToken" in envAuth) {
+				const message =
+					"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.\n" +
+					"Please ensure it has the correct permissions for this operation.\n";
+				logger.log(chalk.yellow(message));
+			}
 			await whoami();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
@@ -737,6 +794,7 @@ export async function main(argv: string[]): Promise<void> {
 			// the current terminal doesn't support raw mode, which Ink needs to render
 			// Ink doesn't throw a typed error or subclass or anything, so we just check the message content.
 			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
+			mayReport = false;
 
 			const currentPlatform = os.platform();
 
@@ -757,6 +815,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
+			mayReport = false;
 			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
@@ -765,17 +824,40 @@ export async function main(argv: string[]): Promise<void> {
 				`${fgGreenColor}%s${resetColor}`,
 				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
+		}
+
+		if (
+			// Only report the error if we didn't just handle it
+			mayReport &&
+			// ...and it's not a user error
+			!(e instanceof UserError) &&
+			// ...and it's not an un-reportable API error
+			!(e instanceof APIError && !e.reportable)
+		) {
 			await captureGlobalException(e);
 		}
+
 		throw e;
 	} finally {
-		await closeSentry();
-		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
-		// IPC messages from this process are propagated through the bootstrapper.
-		// Make sure this channel is closed once it's no longer needed, so we can
-		// cleanly exit. Note, we don't want to disconnect if this file was imported
-		// in Jest, as that would stop communication with the test runner.
-		if (typeof jest === "undefined") process.disconnect?.();
+		try {
+			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
+			// so IPC messages from this process are propagated through the
+			// bootstrapper. Normally, Node's SIGINT handler would close this for us,
+			// but interactive dev mode enables raw mode on stdin which disables the
+			// built-in handler. Make sure this channel is closed once it's no longer
+			// needed, so we can cleanly exit. Note, we don't want to disconnect if
+			// this file was imported in Jest, as that would stop communication with
+			// the test runner.
+			if (typeof jest === "undefined") process.disconnect?.();
+
+			await closeSentry();
+		} catch (e) {
+			logger.error(e);
+			// Only re-throw if we haven't already re-thrown an exception from a
+			// command handler.
+			// eslint-disable-next-line no-unsafe-finally
+			if (!cliHandlerThrew) throw e;
+		}
 	}
 }
 

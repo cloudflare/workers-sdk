@@ -1,41 +1,42 @@
+import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { getConstellationWarningFromEnv } from "../constellation/utils";
 import { getHyperdriveWarningFromEnv } from "../hyperdrive/utils";
 import { Diagnostics } from "./diagnostics";
 import {
+	all,
+	appendEnvName,
 	deprecated,
 	experimental,
+	getBindingNames,
 	hasProperty,
 	inheritable,
+	inheritableInLegacyEnvironments,
 	isBoolean,
+	isMutuallyExclusiveWith,
 	isObjectWith,
 	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
 	isString,
 	isStringArray,
-	validateAdditionalProperties,
+	isValidName,
 	notInheritable,
+	validateAdditionalProperties,
 	validateOptionalProperty,
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
-	all,
-	isMutuallyExclusiveWith,
-	inheritableInLegacyEnvironments,
-	appendEnvName,
-	getBindingNames,
-	isValidName,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
-	RawEnvironment,
 	DeprecatedUpload,
+	DispatchNamespaceOutbound,
 	Environment,
+	RawEnvironment,
 	Rule,
 	TailConsumer,
-	DispatchNamespaceOutbound,
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
@@ -52,7 +53,7 @@ const ENGLISH = new Intl.ListFormat("en");
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: unknown
+	args: Record<string, unknown>
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -116,9 +117,9 @@ export function normalizeAndValidateConfig(
 
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
-		(args as { "legacy-env": boolean | undefined })["legacy-env"] ??
-		rawConfig.legacy_env ??
-		true;
+		typeof args["legacy-env"] === "boolean"
+			? args["legacy-env"]
+			: rawConfig.legacy_env ?? true;
 
 	// TODO: remove this once service environments goes GA.
 	if (!isLegacyEnv) {
@@ -134,7 +135,8 @@ export function normalizeAndValidateConfig(
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
-	const envName = (args as { env: string | undefined }).env;
+	const envName = args.env;
+	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
 	if (envName !== undefined) {
@@ -196,7 +198,7 @@ export function normalizeAndValidateConfig(
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
-		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}),
+		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
 		migrations: normalizeAndValidateMigrations(
 			diagnostics,
 			rawConfig.migrations ?? [],
@@ -387,8 +389,26 @@ function normalizeAndValidateBaseDirField(
  */
 function normalizeAndValidateDev(
 	diagnostics: Diagnostics,
-	rawDev: RawDevConfig
+	rawDev: RawDevConfig,
+	args: Record<string, unknown>
 ): DevConfig {
+	assert(typeof args === "object" && args !== null && !Array.isArray(args));
+	const {
+		localProtocol: localProtocolArg,
+		upstreamProtocol: upstreamProtocolArg,
+		remote: remoteArg,
+	} = args;
+	assert(
+		localProtocolArg === undefined ||
+			localProtocolArg === "http" ||
+			localProtocolArg === "https"
+	);
+	assert(
+		upstreamProtocolArg === undefined ||
+			upstreamProtocolArg === "http" ||
+			upstreamProtocolArg === "https"
+	);
+	assert(remoteArg === undefined || typeof remoteArg === "boolean");
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
 		// will only listen on the IPv4 loopback `127.0.0.1`, not the IPv6 `::1`:
@@ -400,8 +420,11 @@ function normalizeAndValidateDev(
 		ip = process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port,
 		inspector_port,
-		local_protocol = "http",
-		upstream_protocol = "https",
+		local_protocol = localProtocolArg ?? "http",
+		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
+		upstream_protocol = upstreamProtocolArg ?? remoteArg
+			? "https"
+			: local_protocol,
 		host,
 		...rest
 	} = rawDev;
@@ -1206,6 +1229,16 @@ function normalizeAndValidateEnvironment(
 			"kv_namespaces",
 			validateBindingArray(envName, validateKVBinding),
 			[]
+		),
+		cloudchamber: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"cloudchamber",
+			validateCloudchamberConfig,
+			{}
 		),
 		send_email: notInheritable(
 			diagnostics,
@@ -2064,6 +2097,29 @@ const validateBindingArray =
 		}
 		return isValid;
 	};
+
+const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"cloudchamber" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	const requiredKeys: string[] = [];
+	requiredKeys.forEach((key) => {
+		if (!isRequiredProperty(value, key, "string")) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have a string "${key}" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		}
+	});
+	return isValid;
+};
 
 const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {

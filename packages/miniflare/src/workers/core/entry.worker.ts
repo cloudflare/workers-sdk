@@ -8,7 +8,7 @@ import {
 	reset,
 	yellow,
 } from "kleur/colors";
-import { LogLevel, SharedHeaders } from "miniflare:shared";
+import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
 import { WorkerRoute, matchRoutes } from "./routing";
@@ -23,25 +23,60 @@ type Env = {
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
+	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: Uint8Array;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
 		| undefined; // Won't have a `Fetcher` for every possible `string`
 };
 
+const encoder = new TextEncoder();
+
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env
 ) {
+	// The ORIGINAL_URL header is added to outbound requests from Miniflare,
+	// triggered either by calling Miniflare.#dispatchFetch(request),
+	// or as part of a loopback request in a Custom Service.
+	// The ORIGINAL_URL is extracted from the `request` being sent.
+	// This is relevant here in the case that a Miniflare implemented Proxy Worker is
+	// sitting in front of this User Worker, which is hosted on a different URL.
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
-	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
 	let url = new URL(originalUrl ?? request.url);
+
+	let rewriteHeadersFromOriginalUrl = false;
+
+	// If the request is signed by a proxy server then we can use the Host and Origin from the ORIGINAL_URL.
+	// The shared secret is required to prevent a malicious user being able to change the headers without permission.
+	const proxySharedSecret = request.headers.get(
+		CoreHeaders.PROXY_SHARED_SECRET
+	);
+	if (proxySharedSecret) {
+		const secretFromHeader = encoder.encode(proxySharedSecret);
+		const configuredSecret = env[CoreBindings.DATA_PROXY_SHARED_SECRET];
+		if (
+			secretFromHeader.byteLength === configuredSecret?.byteLength &&
+			crypto.subtle.timingSafeEqual(secretFromHeader, configuredSecret)
+		) {
+			rewriteHeadersFromOriginalUrl = true;
+		} else {
+			throw new HttpError(
+				400,
+				`Disallowed header in request: ${CoreHeaders.PROXY_SHARED_SECRET}=${proxySharedSecret}`
+			);
+		}
+	}
+
+	// If Miniflare was configured with `upstream`, then we use this to override the url and host in the request.
+	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
 	if (upstreamUrl !== undefined) {
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
 		// Remove leading slash, so we resolve relative to `upstream`'s path
 		if (path.startsWith("/")) path = `./${path.substring(1)}`;
 		url = new URL(path, upstreamUrl);
+		rewriteHeadersFromOriginalUrl = true;
 	}
 
 	// Note when constructing new `Request`s from `request`, we must always pass
@@ -56,6 +91,16 @@ function getUserRequest(
 	if (request.cf === undefined) {
 		request = new Request(request, { cf: env[CoreBindings.JSON_CF_BLOB] });
 	}
+
+	if (rewriteHeadersFromOriginalUrl) {
+		request.headers.set("Host", url.host);
+		// Only rewrite Origin header if there is already one
+		if (request.headers.has("Origin")) {
+			request.headers.set("Origin", url.origin);
+		}
+	}
+
+	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
 	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
 	return request;
@@ -209,7 +254,14 @@ export default <ExportedHandler<Env>>{
 		const disablePrettyErrorPage =
 			request.headers.get(CoreHeaders.DISABLE_PRETTY_ERROR) !== null;
 
-		request = getUserRequest(request, env);
+		try {
+			request = getUserRequest(request, env);
+		} catch (e) {
+			if (e instanceof HttpError) {
+				return e.toResponse();
+			}
+			throw e;
+		}
 		const url = new URL(request.url);
 		const service = getTargetService(request, url, env);
 		if (service === undefined) {

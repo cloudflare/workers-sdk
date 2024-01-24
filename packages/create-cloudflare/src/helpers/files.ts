@@ -1,11 +1,21 @@
 import fs, { existsSync } from "fs";
+import { join } from "path";
 import { crash } from "@cloudflare/cli";
+import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "./command";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 export const writeFile = (path: string, content: string) => {
 	try {
 		fs.writeFileSync(path, content);
+	} catch (error) {
+		crash(error as string);
+	}
+};
+
+export const appendFile = (path: string, content: string) => {
+	try {
+		fs.appendFileSync(path, content);
 	} catch (error) {
 		crash(error as string);
 	}
@@ -24,28 +34,28 @@ export const readJSON = (path: string) => {
 	return contents ? JSON.parse(contents) : contents;
 };
 
+export const readToml = (path: string) => {
+	const contents = readFile(path);
+	return contents ? TOML.parse(contents) : contents;
+};
+
 export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
 };
 
-// Probes a list of paths and returns the first one that exists
-// If one isn't found, throws an error with the given message
-export const probePaths = (
-	paths: string[],
-	errorMsg = "Failed to find required file."
-) => {
+// Probes a list of paths and returns the first one that exists or null if none does
+export const probePaths = (paths: string[]) => {
 	for (const path of paths) {
 		if (existsSync(path)) {
 			return path;
 		}
 	}
 
-	crash(errorMsg);
-	process.exit(1); // hack to make typescript happy
+	return null;
 };
 
-export const usesTypescript = (projectRoot = ".") => {
-	return existsSync(`${projectRoot}/tsconfig.json`);
+export const usesTypescript = (ctx: C3Context) => {
+	return existsSync(join(`${ctx.project.path}`, `tsconfig.json`));
 };
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
@@ -67,7 +77,7 @@ type EslintUsageInfo =
 		- https://eslint.org/docs/latest/use/configure/configuration-files#configuration-file-formats
 		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
 */
-export const usesEslint = (ctx: PagesGeneratorContext): EslintUsageInfo => {
+export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	for (const ext of eslintRcExts) {
 		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
 		if (existsSync(`${ctx.project.path}/${eslintRcFilename}`)) {

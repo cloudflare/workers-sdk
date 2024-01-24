@@ -1,5 +1,89 @@
 # create-cloudflare
 
+## 2.9.3
+
+### Patch Changes
+
+- [#4780](https://github.com/cloudflare/workers-sdk/pull/4780) [`a75ef752`](https://github.com/cloudflare/workers-sdk/commit/a75ef752fc444abff67efd77559cb0fa3c527a88) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.6` to `17.1.0`
+
+* [#4786](https://github.com/cloudflare/workers-sdk/pull/4786) [`7273efca`](https://github.com/cloudflare/workers-sdk/commit/7273efca019900f0514ab111bf71fd8025c6daae) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `6.0.6` to `6.0.8`
+
+- [#4788](https://github.com/cloudflare/workers-sdk/pull/4788) [`d4676266`](https://github.com/cloudflare/workers-sdk/commit/d46762667b08f398e7ce04c2a32e7628966f5086) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.5.0` to `2.5.1`
+
+* [#4789](https://github.com/cloudflare/workers-sdk/pull/4789) [`475da3a6`](https://github.com/cloudflare/workers-sdk/commit/475da3a60e2e396e56c9a3bd43290ac83c1bbef5) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.5` to `1.4.0`
+
+- [#4803](https://github.com/cloudflare/workers-sdk/pull/4803) [`fa09f4a2`](https://github.com/cloudflare/workers-sdk/commit/fa09f4a2e421e402bf0f82f24b5c884c90c667ff) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add "Hello World" example for Durable Objects
+
+  This new starter corresponds to the getting started guide in the docs.
+
+  See #4747
+
+* [#4768](https://github.com/cloudflare/workers-sdk/pull/4768) [`c3e410c2`](https://github.com/cloudflare/workers-sdk/commit/c3e410c2797f5c59b9ea0f63c20feef643366df2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: bump undici versions to 5.28.2
+
+## 2.9.2
+
+### Patch Changes
+
+- [#4717](https://github.com/cloudflare/workers-sdk/pull/4717) [`05e3b544`](https://github.com/cloudflare/workers-sdk/commit/05e3b5446390c41c9e1846714e4f6020ca34c490) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-docusaurus` from `3.0.1` to `3.1.0`
+
+* [#4728](https://github.com/cloudflare/workers-sdk/pull/4728) [`38d656b0`](https://github.com/cloudflare/workers-sdk/commit/38d656b0108453ef9fafee6108c145a0abbcf95e) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `6.0.5` to `6.0.6`
+
+- [#4769](https://github.com/cloudflare/workers-sdk/pull/4769) [`fd1e9aa9`](https://github.com/cloudflare/workers-sdk/commit/fd1e9aa96cc44308f2e1e6213b4da57ff9b53f10) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.2` to `1.3.5`
+
+* [#4770](https://github.com/cloudflare/workers-sdk/pull/4770) [`f2bfa5e2`](https://github.com/cloudflare/workers-sdk/commit/f2bfa5e26a1f0e61f81ee699f04fa7ab88c1e315) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.4.1` to `2.5.0`
+
+- [#4776](https://github.com/cloudflare/workers-sdk/pull/4776) [`eefd232e`](https://github.com/cloudflare/workers-sdk/commit/eefd232efbfb3c57b8f03d205ae1831ee1a3f536) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.6.0` to `4.7.1`
+
+## 2.9.1
+
+### Patch Changes
+
+- [`4667e0ed`](https://github.com/cloudflare/workers-sdk/commit/4667e0ed20078939b8abdd49c4ff1015f828de84) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Update Next.js template to support bindings for dev server
+
+## 2.9.0
+
+### Minor Changes
+
+- [#4625](https://github.com/cloudflare/workers-sdk/pull/4625) [`e8053554`](https://github.com/cloudflare/workers-sdk/commit/e8053554e04cde99d874377b92bd83af6f9e9ee8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Create a custom not-found edge route for Next.js applications using the app router
+
+### Patch Changes
+
+- [#4690](https://github.com/cloudflare/workers-sdk/pull/4690) [`9e032723`](https://github.com/cloudflare/workers-sdk/commit/9e0327232b339df803abe62690c66e11f6576fac) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.12` to `5.13.1`
+
+## 2.8.5
+
+### Patch Changes
+
+- [#4617](https://github.com/cloudflare/workers-sdk/pull/4617) [`45972200`](https://github.com/cloudflare/workers-sdk/commit/45972200e571bc48693fb678114c64827f15c4d4) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-vue` from `3.9.0` to `3.9.1`
+
+* [#4618](https://github.com/cloudflare/workers-sdk/pull/4618) [`10e267fc`](https://github.com/cloudflare/workers-sdk/commit/10e267fce70b45ae37070a5393a52cd9851de85b) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.5.2` to `4.6.0`
+
+- [#4679](https://github.com/cloudflare/workers-sdk/pull/4679) [`873d7dd6`](https://github.com/cloudflare/workers-sdk/commit/873d7dd6ec02e58d64838cc0389201af4232ca3e) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.1` to `1.3.2`
+
+* [#4680](https://github.com/cloudflare/workers-sdk/pull/4680) [`ba298d08`](https://github.com/cloudflare/workers-sdk/commit/ba298d085c8e5c69cc8d944160fa7487d969b953) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.4.0` to `2.4.1`
+
+- [#4681](https://github.com/cloudflare/workers-sdk/pull/4681) [`6fb72f8b`](https://github.com/cloudflare/workers-sdk/commit/6fb72f8bd0be07b66d3226b3ba5d7d44cb841104) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `6.0.3` to `6.0.5`
+
+* [#4627](https://github.com/cloudflare/workers-sdk/pull/4627) [`44cbd66f`](https://github.com/cloudflare/workers-sdk/commit/44cbd66ff2283384569756ef578b08ec1556cdb8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make the workerd compatibility date retrieval more stable by fetching it directly from the npm registry
+
+## 2.8.4
+
+### Patch Changes
+
+- [#4616](https://github.com/cloudflare/workers-sdk/pull/4616) [`e2205e35`](https://github.com/cloudflare/workers-sdk/commit/e2205e354ed9c142c7bbaaed1d4457893ceec8ce) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.0` to `1.3.1`
+
+* [#4626](https://github.com/cloudflare/workers-sdk/pull/4626) [`421cd584`](https://github.com/cloudflare/workers-sdk/commit/421cd584a678a97de2f24e1c1b28a766f984148e) Thanks [@jculvey](https://github.com/jculvey)! - C3: Bumped `create-svelte` from `5.3.3` to `6.0.3`
+
+## 2.8.3
+
+### Patch Changes
+
+- [#4603](https://github.com/cloudflare/workers-sdk/pull/4603) [`6db2c2a8`](https://github.com/cloudflare/workers-sdk/commit/6db2c2a816b1140951f5fe6a8618312d83a62d44) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.3.1` to `2.4.0`
+
+* [#4598](https://github.com/cloudflare/workers-sdk/pull/4598) [`ffa01a7d`](https://github.com/cloudflare/workers-sdk/commit/ffa01a7d9df25d3ac31e18498659762d67e234f7) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensure C3 can be used to create TypeScript workers
+
+- [#4594](https://github.com/cloudflare/workers-sdk/pull/4594) [`850c4d64`](https://github.com/cloudflare/workers-sdk/commit/850c4d64a517329be2ec7fdffef26d3bbd77e9b0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - amend broken cd instruction
+
 ## 2.8.2
 
 ### Patch Changes

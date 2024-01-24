@@ -1,5 +1,6 @@
-import { now } from "./dep";
 import { randomBytes } from "isomorphic-random-example";
+import { now } from "./dep";
+import { logErrors } from "./log";
 
 console.log("startup log");
 
@@ -16,20 +17,29 @@ export default {
 
 		const { pathname } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
+		if (pathname === "/error") throw new Error("Oops!");
+		if (request.headers.get("X-Test-URL") !== null) {
+			return new Response(request.url);
+		}
 
-		console.log(
-			request.method,
-			request.url,
-			new Map([...request.headers]),
-			request.cf
-		);
+		console.log("METHOD =", request.method);
+		console.log("URL = ", request.url);
+		console.log("HEADERS =", new Map([...request.headers]));
+		console.log("CF =", request.cf);
+
+		logErrors();
 
 		await fetch(new URL("http://example.com"));
 		await fetch(
 			new Request("http://example.com", { method: "POST", body: "foo" })
 		);
 
-		return new Response(`${request.url} ${now()}`);
+		console.log("end of request");
+		return new Response(
+			`${request.url} ${now()} HOST:${request.headers.get(
+				"Host"
+			)} ORIGIN:${request.headers.get("Origin")}`
+		);
 	},
 
 	/**

@@ -3,11 +3,9 @@ import readline from "node:readline";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
-import {
-	type WorkerMetadataBinding,
-	createWorkerUploadForm,
-} from "../deployment-bundle/create-worker-upload-form";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
+import { UserError } from "../errors";
 import {
 	getLegacyScriptName,
 	isLegacyEnv,
@@ -17,8 +15,8 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
-
 import type { Config } from "../config";
+import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -141,7 +139,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
-					throw new Error(
+					throw new UserError(
 						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 					);
 				}
@@ -223,7 +221,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
-					throw new Error(
+					throw new UserError(
 						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 					);
 				}
@@ -273,7 +271,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
-					throw new Error(
+					throw new UserError(
 						"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 					);
 				}
@@ -359,9 +357,11 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
-		throw logger.error(
+		const error = new UserError(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 		);
+		logger.error(error.message);
+		throw error;
 	}
 
 	const accountId = await requireAuth(config);
@@ -444,9 +444,18 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 			throw e;
 		}
 	}
-	const inheritBindings = existingBindings.filter((binding) => {
-		return binding.type !== "secret_text" || !content[binding.name];
-	});
+	// any existing bindings can be "inherited" from the previous deploy via the PATCH settings api
+	// by just providing the "name" and "type" fields for the binding.
+	// so after fetching the bindings in the script settings, we can map over and just pick out those fields
+	const inheritBindings = existingBindings
+		.filter((binding) => {
+			// secrets that currently exist for the worker but are not provided for bulk update
+			// are inherited over with other binding types
+			return binding.type !== "secret_text" || !content[binding.name];
+		})
+		.map((binding) => ({ type: binding.type, name: binding.name }));
+	// secrets to upload are provided as bindings in their full form
+	// so when we PATCH, we patch in [...current bindings, ...updated / new secrets]
 	const upsertBindings: Array<SecretBindingUpload> = Object.entries(
 		content
 	).map(([key, value]) => {

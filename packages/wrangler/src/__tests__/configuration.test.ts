@@ -3,8 +3,8 @@ import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
 import type {
 	ConfigFields,
-	RawDevConfig,
 	RawConfig,
+	RawDevConfig,
 	RawEnvironment,
 } from "../config";
 
@@ -33,9 +33,10 @@ describe("normalizeAndValidateConfig()", () => {
 				ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
 				local_protocol: "http",
 				port: undefined, // the default of 8787 is set at runtime
-				upstream_protocol: "https",
+				upstream_protocol: "http",
 				host: undefined,
 			},
+			cloudchamber: {},
 			durable_objects: {
 				bindings: [],
 			},
@@ -887,6 +888,7 @@ describe("normalizeAndValidateConfig()", () => {
 					VAR1: "VALUE_1",
 					VAR2: "VALUE_2",
 				},
+				cloudchamber: {},
 				durable_objects: {
 					bindings: [
 						{ name: "DO_BINDING_1", class_name: "CLASS1" },

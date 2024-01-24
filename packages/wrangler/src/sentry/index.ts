@@ -83,12 +83,45 @@ export const makeSentry10Transport = (options: BaseTransportOptions) => {
 	return Sentry.createTransport(options, transportSentry10);
 };
 
+const disabledDefaultIntegrations = [
+	"Console", // Console logs may contain PII
+	"LocalVariables", // Local variables may contain tokens and PII
+	"Http", // Only captures method/URL/response status, but URL may contain PII
+	"Undici", // Same as "Http"
+	"RequestData", // Request data to Wrangler's HTTP servers may contain PII
+];
+
 export function setupSentry() {
 	if (typeof SENTRY_DSN !== "undefined") {
 		Sentry.init({
 			release: `wrangler@${wranglerVersion}`,
 			dsn: SENTRY_DSN,
 			transport: makeSentry10Transport,
+			integrations(defaultIntegrations) {
+				return defaultIntegrations.filter(
+					({ name }) => !disabledDefaultIntegrations.includes(name)
+				);
+			},
+			beforeSend(event) {
+				delete event.server_name; // Computer name may contain PII
+				// Culture contains timezone and locale
+				if (event.contexts !== undefined) delete event.contexts.culture;
+
+				// Rewrite Wrangler install location which may contain PII
+				const fakeInstallPath =
+					process.platform === "win32" ? "C:\\Project\\" : "/project/";
+				for (const exception of event.exception?.values ?? []) {
+					for (const frame of exception.stacktrace?.frames ?? []) {
+						if (frame.filename === undefined) continue;
+						const nodeModulesIndex = frame.filename.indexOf("node_modules");
+						if (nodeModulesIndex === -1) continue;
+						frame.filename =
+							fakeInstallPath + frame.filename.substring(nodeModulesIndex);
+					}
+				}
+
+				return event;
+			},
 		});
 	}
 }

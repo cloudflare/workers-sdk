@@ -1,12 +1,13 @@
 import path from "node:path";
 import { Text } from "ink";
 import SelectInput from "ink-select-input";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncAssets } from "../sites";
 import {
@@ -24,16 +25,16 @@ import type { ProxyData } from "../api";
 import type { Route } from "../config/environment";
 import type {
 	CfModule,
-	CfWorkerInit,
 	CfScriptFormat,
 	CfWorkerContext,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
 import type {
 	CfAccount,
-	CfPreviewToken,
 	CfPreviewSession,
+	CfPreviewToken,
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -401,9 +402,11 @@ export async function startRemoteServer(props: RemoteProps) {
 			});
 			accountId = accountChoices[0].id;
 		} else {
-			throw logger.error(
+			const error = new UserError(
 				"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
 			);
+			logger.error(error.message);
+			throw error;
 		}
 	}
 
@@ -413,7 +416,9 @@ export async function startRemoteServer(props: RemoteProps) {
 	});
 
 	if (previewToken === undefined) {
-		throw logger.error("Failed to get a previewToken");
+		const error = new Error("Failed to get a previewToken");
+		logger.error(error.message);
+		throw error;
 	}
 	// start our proxy server
 	const previewServer = await startPreviewServer({
@@ -452,7 +457,9 @@ export async function startRemoteServer(props: RemoteProps) {
 		},
 	});
 	if (!previewServer) {
-		throw logger.error("Failed to start remote server");
+		const error = new Error("Failed to start remote server");
+		logger.error(error);
+		throw error;
 	}
 	return { stop: previewServer.stop };
 }
@@ -465,7 +472,9 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 	//setup the preview session
 	async function start() {
 		if (props.accountId === undefined) {
-			throw logger.error("no accountId provided");
+			const error = new Error("no accountId provided");
+			logger.error(error.message);
+			throw error;
 		}
 		const abortController = new AbortController();
 		const { workerAccount, workerContext } = getWorkerAccountAndContext({
@@ -485,7 +494,9 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		//use the session to upload the worker, and create a preview
 
 		if (session === undefined) {
-			throw logger.error("Failed to start a session");
+			const error = new Error("Failed to start a session");
+			logger.error(error.message);
+			throw error;
 		}
 		if (!props.bundle || !props.format) return;
 

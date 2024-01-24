@@ -1,5 +1,53 @@
 # miniflare
 
+## 3.20231218.3
+
+### Patch Changes
+
+- [#4768](https://github.com/cloudflare/workers-sdk/pull/4768) [`c3e410c2`](https://github.com/cloudflare/workers-sdk/commit/c3e410c2797f5c59b9ea0f63c20feef643366df2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: bump undici versions to 5.28.2
+
+## 3.20231218.2
+
+### Minor Changes
+
+- [#4686](https://github.com/cloudflare/workers-sdk/pull/4686) [`4f6999ea`](https://github.com/cloudflare/workers-sdk/commit/4f6999eacd591d0d65180f805f2abc3c8a2c06c4) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: expose `rows_read` and `rows_written` in D1 result `meta`
+
+  `rows_read`/`rows_written` contain the number of rows read from/written to the database engine when executing a query respectively. These numbers may be greater than the number of rows returned from/inserted by a query. These numbers form billing metrics when your Worker is deployed. See https://developers.cloudflare.com/d1/platform/pricing/#billing-metrics for more details.
+
+### Patch Changes
+
+- [#4719](https://github.com/cloudflare/workers-sdk/pull/4719) [`c37d94b5`](https://github.com/cloudflare/workers-sdk/commit/c37d94b51f4d5517c244f8a4178be6a266d2362e) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `miniflare` and `wrangler` can source map in the same process
+
+  Previously, if in a `wrangler dev` session you called `console.log()` and threw an unhandled error you'd see an error like `[ERR_ASSERTION]: The expression evaluated to a falsy value`. This change ensures you can do both of these things in the same session.
+
+## 3.20231218.1
+
+### Patch Changes
+
+- [#4630](https://github.com/cloudflare/workers-sdk/pull/4630) [`037de5ec`](https://github.com/cloudflare/workers-sdk/commit/037de5ec77efc8261860c6d625bc90cd1f2fdd41) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure User Worker gets the correct Host header in wrangler dev local mode
+
+  Some full-stack frameworks, such as Next.js, check that the Host header for a server
+  side action request matches the host where the application is expected to run.
+
+  In `wrangler dev` we have a Proxy Worker in between the browser and the actual User Worker.
+  This Proxy Worker is forwarding on the request from the browser, but then the actual User
+  Worker is running on a different host:port combination than that which the browser thinks
+  it should be on. This was causing the framework to think the request is malicious and blocking
+  it.
+
+  Now we update the request's Host header to that passed from the Proxy Worker in a custom `MF-Original-Url`
+  header, but only do this if the request also contains a shared secret between the Proxy Worker
+  and User Worker, which is passed via the `MF-Proxy-Shared-Secret` header. This last feature is to
+  prevent a malicious website from faking the Host header in a request directly to the User Worker.
+
+  Fixes https://github.com/cloudflare/next-on-pages/issues/588
+
+## 3.20231218.0
+
+### Minor Changes
+
+- [#4684](https://github.com/cloudflare/workers-sdk/pull/4684) [`c410ea14`](https://github.com/cloudflare/workers-sdk/commit/c410ea141f02f808ff3dddfa9ee21ccbb530acec) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `workerd` to [`1.20231218.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20231218.0)
+
 ## 3.20231030.4
 
 ### Patch Changes

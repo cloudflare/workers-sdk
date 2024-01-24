@@ -44,6 +44,8 @@ export interface D1Metrics {
 	sum?: {
 		readQueries?: number;
 		writeQueries?: number;
+		rowsRead?: number;
+		rowsWritten?: number;
 		queryBatchResponseBytes?: number;
 	};
 	quantiles?: {

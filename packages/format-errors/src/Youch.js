@@ -7,11 +7,9 @@
  *
  * For the full copyright and license information, see https://github.com/poppinss/youch/blob/develop/LICENSE.md
  */
-
 import Mustache from "mustache";
-import StackTracey from "./Stacktracey";
-
 import viewTemplate from "./error.compiled.mustache";
+import StackTracey from "./Stacktracey";
 
 export default class Youch {
 	constructor(error, request, options = {}) {

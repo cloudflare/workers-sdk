@@ -7,6 +7,7 @@ import * as TOML from "@iarna/toml";
 import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
+import dedent from "ts-dedent";
 import { FormData } from "undici";
 import {
 	printBundleSize,
@@ -37,8 +38,8 @@ import {
 	createFetchResult,
 	msw,
 	mswSuccessDeployments,
-	mswSuccessDeploymentScriptMetadata,
 	mswSuccessDeploymentScriptAPI,
+	mswSuccessDeploymentScriptMetadata,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
@@ -47,7 +48,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { KVNamespaceInfo } from "../kv/helpers";
@@ -1834,6 +1834,119 @@ addEventListener('fetch', event => {});`
 			",
 			}
 		`);
+		});
+
+		describe("should source map validation errors", () => {
+			function mockDeployWithValidationError(message: string) {
+				const handler = rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					async (req, res, ctx) => {
+						const body = createFetchResult(null, false, [
+							{ code: 10021, message },
+						]);
+						return res(ctx.json(body));
+					}
+				);
+				msw.use(handler);
+			}
+
+			it("with TypeScript source file", async () => {
+				writeWranglerToml();
+				fs.writeFileSync(
+					`index.ts`,
+					dedent`interface Env {
+						THING: string;
+					}
+					x;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+				});
+			});
+
+			it("with additional modules", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
+				});
+
+				fs.writeFileSync(
+					"dep.ts",
+					dedent`interface Env {
+					}
+					y;
+					export default "message";`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("dep.ts")],
+					outdir: process.cwd(),
+					sourcemap: true,
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					dedent`import dep from "./dep.js";
+					export default {
+						fetch() {
+							return new Response(dep);
+						}
+					}`
+				);
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: y is not defined\n  at dep.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("dep.ts:3:1") }, {}],
+				});
+			});
+
+			it("with inline source map", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+				});
+
+				fs.writeFileSync(
+					"index.ts",
+					dedent`interface Env {}
+					z;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("index.ts")],
+					outdir: process.cwd(),
+					sourcemap: "inline",
+				});
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: z is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:2:1") }, {}],
+				});
+			});
 		});
 	});
 
@@ -4046,6 +4159,40 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should fail to deploy to the workers.dev domain if email is unverified", async () => {
+			writeWranglerToml({ workers_dev: true });
+			writeWorkerSource();
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockSubDomainRequest();
+			msw.use(
+				rest.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+					async (req, res, ctx) => {
+						return res.once(
+							ctx.json(
+								createFetchResult(null, /* success */ false, [
+									{
+										code: 10034,
+										message: "workers.api.error.email_verification_required",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("deploy ./index")).rejects.toMatchObject({
+				text: "Please verify your account's email address and try again.",
+				notes: [
+					{
+						text: "Check your email for a verification link, or login to https://dash.cloudflare.com and request a new one.",
+					},
+					{},
+				],
+			});
+		});
+
 		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async () => {
 			writeWranglerToml({
 				workers_dev: true,
@@ -5430,8 +5577,8 @@ addEventListener('fetch', event => {});`
 			  - WASM_MODULE_ONE: some_wasm.wasm
 			  - WASM_MODULE_TWO: more_wasm.wasm
 			- Unsafe Metadata:
-			  - extra_data: interesting value
-			  - more_data: dubious value
+			  - extra_data: \\"interesting value\\"
+			  - more_data: \\"dubious value\\"
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -6815,6 +6962,46 @@ addEventListener('fetch', event => {});`
 
 		describe("[unsafe]", () => {
 			describe("[unsafe.bindings]", () => {
+				it("should stringify object in unsafe metadata", async () => {
+					writeWranglerToml({
+						unsafe: {
+							metadata: {
+								stringify: true,
+								something: "else",
+								undefined: undefined,
+								null: null,
+								nested: {
+									stuff: "here",
+								},
+							},
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedUnsafeMetaData: {
+							stringify: true,
+							something: "else",
+							nested: {
+								stuff: "here",
+							},
+						},
+					});
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Your worker has access to the following bindings:
+				- Unsafe Metadata:
+				  - stringify: true
+				  - something: \\"else\\"
+				  - nested: {\\"stuff\\":\\"here\\"}
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+				});
+
 				it("should warn if using unsafe bindings", async () => {
 					writeWranglerToml({
 						unsafe: {
@@ -7256,13 +7443,16 @@ addEventListener('fetch', event => {});`
 			);
 			// and the warnings because fallthrough was not explicitly set
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]} does not have a fallback, the following rules will be ignored:[0m
 
+			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}
+			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} (DEFAULT)
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.[0m
+			  Add \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to silence
+			  this warning
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		describe("inject process.env.NODE_ENV", () => {
@@ -7717,7 +7907,7 @@ export default{
 			expect(
 				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
 			).toMatch(
-				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file to enable Node.js compatibility\./
+				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file and make sure to prefix the module name with "node:" to enable Node.js compatibility\./
 			);
 		});
 
@@ -7921,7 +8111,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -7966,15 +8156,25 @@ export default{
 				)
 			);
 
+			fs.writeFileSync(
+				"add.wasm",
+				"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=",
+				"base64"
+			);
+			fs.writeFileSync("message.txt", "👋");
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
 			fs.writeFileSync(
 				"index.js",
-				`import { thing } from "./dependency";
+				`
+				import addModule from "./add.wasm";
+				import message from "./message.txt";
+				import { thing } from "./dependency";
 
         export default {
           async fetch() {
-            return new Response('response plus ' + thing);
+          	const instance = new WebAssembly.Instance(addModule);
+          	return Response.json({ add: instance.exports.add(1, 2), message, thing });
           }
         }`
 			);
@@ -7984,7 +8184,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -8002,10 +8202,12 @@ export default{
 			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
 			  - index.js - xx KiB
+			  - add.wasm - xx KiB
 			  - dependency.js - xx KiB
+			  - message.txt - xx KiB
 			  If these are unnecessary, consider removing them
 
 			",
@@ -8052,7 +8254,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -8323,6 +8525,9 @@ export default{
 
 		  Authentication error [code: 10000]
 
+
+		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+		Please ensure it has the correct permissions for this operation.
 
 		Getting User settings...
 		👋 You are logged in with an API Token, associated with the email user@example.com!

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { UrlAndMap } from "source-map-support";
+import type { UrlAndMap } from "@cspotcode/source-map-support";
 import { z } from "zod";
 import { Request, Response } from "../../../http";
 import { Log } from "../../../shared";
@@ -49,7 +49,7 @@ interface SourceFile {
 }
 
 // Try to read a file from the file-system, returning undefined if not found
-function maybeGetDiskFile(filePath: string): SourceFile | undefined {
+function maybeGetDiskFile(filePath: string): Required<SourceFile> | undefined {
 	try {
 		const contents = fs.readFileSync(filePath, "utf8");
 		return { path: filePath, contents };
@@ -274,3 +274,5 @@ export async function handlePrettyErrorRequest(
 		headers: { "Content-Type": "text/html;charset=utf-8" },
 	});
 }
+
+export { getFreshSourceMapSupport } from "./sourcemap";

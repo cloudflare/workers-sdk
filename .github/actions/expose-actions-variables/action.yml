@@ -1,0 +1,5 @@
+name: "Expose Actions Variables"
+description: "Expose ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL on GITHUB_ENV"
+runs:
+  using: "node20"
+  main: "index.mjs"

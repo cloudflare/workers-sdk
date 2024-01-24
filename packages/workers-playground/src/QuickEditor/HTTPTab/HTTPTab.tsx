@@ -1,3 +1,11 @@
+import { Button } from "@cloudflare/component-button";
+import { Icon } from "@cloudflare/component-icon";
+import { Listbox } from "@cloudflare/component-listbox";
+import { Textarea } from "@cloudflare/component-textarea";
+import { Toast } from "@cloudflare/component-toast";
+import { Div, Form, Label, Output } from "@cloudflare/elements";
+import { isDarkMode, theme } from "@cloudflare/style-const";
+import { createStyledComponent } from "@cloudflare/style-container";
 import React, {
 	useCallback,
 	useContext,
@@ -5,21 +13,13 @@ import React, {
 	useRef,
 	useState,
 } from "react";
-import { createStyledComponent } from "@cloudflare/style-container";
-import { Div, Form, Label, Output } from "@cloudflare/elements";
-import { Textarea } from "@cloudflare/component-textarea";
-import { Button } from "@cloudflare/component-button";
-import { Icon } from "@cloudflare/component-icon";
-import { Toast } from "@cloudflare/component-toast";
-import { Listbox } from "@cloudflare/component-listbox";
-import SplitPane from "../SplitPane";
-import ResponseView from "./ResponseView";
-import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
-import { ServiceContext } from "../QuickEditor";
 import { FrameError } from "../FrameErrorBoundary";
-import { fetchWorker } from "./fetchWorker";
 import { InputField } from "../InputField";
-import { isDarkMode, theme } from "@cloudflare/style-const";
+import { ServiceContext } from "../QuickEditor";
+import SplitPane from "../SplitPane";
+import { fetchWorker } from "./fetchWorker";
+import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
+import ResponseView from "./ResponseView";
 
 const HTTP_METHODS = [
 	"GET",

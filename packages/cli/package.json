@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/cli",
-	"version": "1.0.0",
+	"version": "1.1.1",
 	"description": "An SDK to build workers-sdk CLIs",
 	"private": true,
 	"keywords": [
@@ -28,11 +28,10 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@typescript-eslint/eslint-plugin": "^5.55.0",
 		"@typescript-eslint/parser": "^5.55.0",
-		"ansi-escapes": "^6.2.0",
-		"chalk": "^5.2.0",
+		"chalk": "^2.4.2",
 		"esbuild": "^0.17.12",
 		"log-update": "^5.0.1",
 		"pnpm": "^8.6.11",
-		"undici": "5.20.0"
+		"undici": "5.28.2"
 	}
 }
