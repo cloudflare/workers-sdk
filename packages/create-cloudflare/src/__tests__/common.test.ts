@@ -6,9 +6,12 @@ import { version as currentVersion } from "../../package.json";
 import {
 	isAllowedExistingFile,
 	isGitConfigured,
+	quoteShellArgs,
 	validateProjectDirectory,
 } from "../common";
 import { isUpdateAvailable } from "../helpers/cli";
+
+vi.mock("process");
 
 function promisify<T>(value: T) {
 	return new Promise<T>((res) => res(value));
@@ -157,4 +160,28 @@ describe("isUpdateAvailable", () => {
 				}
 			);
 	}
+});
+
+describe("quoteShellArgs", () => {
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	test("mac", async () => {
+		Object.defineProperty(vi.mocked(process), "platform", { value: "darwin" });
+		expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
+		expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
+		expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
+			`'foo/10 bar/20-baz/'`
+		);
+	});
+
+	test("windows", async () => {
+		Object.defineProperty(vi.mocked(process), "platform", { value: "win32" });
+		expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
+		expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
+		expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
+			`"foo/10 bar/20-baz/"`
+		);
+	});
 });
