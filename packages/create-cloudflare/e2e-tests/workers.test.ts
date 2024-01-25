@@ -35,12 +35,6 @@ describe
 				expectResponseToContain: "Try making requests to:",
 			},
 			{
-				template: "chatgptPlugin",
-				name: "chat-gpt-plugin",
-				expectResponseToContain: "SwaggerUI",
-				promptHandlers: [],
-			},
-			{
 				template: "queues",
 				// Skipped for now, since C3 does not yet support resource creation
 				// expectResponseToContain:
