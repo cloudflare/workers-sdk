@@ -69,10 +69,10 @@ export type TemplateConfig = {
 	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
 	compatibilityFlags?: string[];
 
-	/** The package.json "scripts" entry for deploying the project. Defaults to `pages:deploy` */
-	deployCommand?: string;
-	/** The package.json "scripts" entry for developing the project. Defaults to `pages:dev` */
-	devCommand?: string;
+	/** The key of the package.json "scripts" entry for deploying the project. Defaults to `pages:deploy` */
+	deployScript?: string;
+	/** The key of the package.json "scripts" entry for developing the project. Defaults to `pages:dev` */
+	devScript?: string;
 
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
@@ -200,8 +200,8 @@ export const selectFramework = async (args: Partial<C3Args>) => {
 	}
 
 	const defaultFrameworkConfig = {
-		deployCommand: "pages:deploy",
-		devCommand: "pages:dev",
+		deployScript: "pages:deploy",
+		devScript: "pages:dev",
 	};
 
 	return {

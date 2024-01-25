@@ -163,12 +163,7 @@ describe("isUpdateAvailable", () => {
 });
 
 describe("quoteShellArgs", () => {
-	afterEach(() => {
-		vi.clearAllMocks();
-	});
-
-	test("mac", async () => {
-		Object.defineProperty(vi.mocked(process), "platform", { value: "darwin" });
+	test.runIf(process.platform !== "win32")("mac", async () => {
 		expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 		expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
 		expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
@@ -176,8 +171,7 @@ describe("quoteShellArgs", () => {
 		);
 	});
 
-	test("windows", async () => {
-		Object.defineProperty(vi.mocked(process), "platform", { value: "win32" });
+	test.runIf(process.platform === "win32")("windows", async () => {
 		expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 		expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
 		expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(

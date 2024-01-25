@@ -195,7 +195,7 @@ function getStartedWorkerdProcesses(): Process[] {
 	);
 }
 
-const devCommands = [
+const devScripts = [
 	{ args: ["dev"], expectedBody: "body" },
 	{ args: ["pages", "dev", "public"], expectedBody: "<p>body</p>" },
 ];
@@ -204,7 +204,7 @@ const exitKeys = [
 	{ name: "x", key: "x" },
 ];
 
-describe.each(devCommands)("wrangler $args", ({ args, expectedBody }) => {
+describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 	it.each(exitKeys)("cleanly exits with $name", async ({ key }) => {
 		const beginProcesses = getStartedWorkerdProcesses();
 

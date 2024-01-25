@@ -177,7 +177,7 @@ export default {
 	id: "next",
 	platform: "pages",
 	displayName: "Next",
-	devCommand: "dev",
+	devScript: "dev",
 	generate,
 	configure,
 	transformPackageJson: async () => {
