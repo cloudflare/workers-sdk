@@ -1,5 +1,52 @@
 # wrangler
 
+## 3.25.0
+
+### Minor Changes
+
+- [#4815](https://github.com/cloudflare/workers-sdk/pull/4815) [`030360d6`](https://github.com/cloudflare/workers-sdk/commit/030360d6572ec9ec09f8bb9dfe6ec7ce198e394b) Thanks [@jonesphillip](https://github.com/jonesphillip)! - feature: adds support for configuring Sippy with Google Cloud Storage (GCS) provider.
+
+  Sippy (https://developers.cloudflare.com/r2/data-migration/sippy/) now supports Google Cloud Storage.
+  This change updates the `wrangler r2 sippy` commands to take a provider (AWS or GCS) and appropriate configuration arguments.
+  If you don't specify `--provider` argument then the command will enter an interactive flow for the user to set the configuration.
+  Note that this is a breaking change from the previous behaviour where you could configure AWS as the provider without explictly specifying the `--provider` argument.
+  (This breaking change is allowed in a minor release because the Sippy feature and `wrangler r2 sippy` commands are marked as beta.)
+
+### Patch Changes
+
+- [#4841](https://github.com/cloudflare/workers-sdk/pull/4841) [`10396125`](https://github.com/cloudflare/workers-sdk/commit/103961250f959a69f5c5137ad27196558ab7e549) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: replace D1's dashed time-travel endpoints with underscored ones
+
+  D1 will maintain its `d1/database/${databaseId}/time-travel/*` endpoints until GA, at which point older versions of wrangler will start throwing errors to users, asking them to upgrade their wrangler version to continue using Time Travel via CLI.
+
+* [#4656](https://github.com/cloudflare/workers-sdk/pull/4656) [`77b0bce3`](https://github.com/cloudflare/workers-sdk/commit/77b0bce3d9a4ca6c2246547d1c30757f2a97e01f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure upstream_protocol is passed to the Worker
+
+  In `wrangler dev` it is possible to set the `upstream_protocol`,
+  which is the protocol under which the User Worker believes it has been
+  requested, as recorded in the `request.url` that can be used for
+  forwarding on requests to the origin.
+
+  Previously, it was not being passed to `wrangler dev` in local mode.
+  Instead it was always set to `http`.
+
+  Note that setting `upstream_protocol` to `http` is not supported in
+  `wrangler dev` remote mode, which is the case since Wrangler v2.0.
+
+  This setting now defaults to `https` in remote mode (since that is the only option),
+  and to the same as `local_protocol` in local mode.
+
+  Fixes #4539
+
+- [#4810](https://github.com/cloudflare/workers-sdk/pull/4810) [`6eb2b9d1`](https://github.com/cloudflare/workers-sdk/commit/6eb2b9d10e154e64aff5ad5eafd35d44592275eb) Thanks [@gabivlj](https://github.com/gabivlj)! - fix: Cloudchamber command shows json error message on load account if --json specified
+
+  If the user specifies a json option, we should see a more detailed error on why `loadAccount` failed.
+
+* [#4820](https://github.com/cloudflare/workers-sdk/pull/4820) [`b01c1548`](https://github.com/cloudflare/workers-sdk/commit/b01c154889d9d10b2ccf0193f453f947479263fc) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: show up-to-date sources in DevTools when saving source files
+
+  Previously, DevTools would never refresh source contents after opening a file, even if it was updated on-disk. This could cause issues with step-through debugging as breakpoints set in source files would map to incorrect locations in bundled Worker code. This change ensures DevTools' source cache is cleared on each reload, preventing outdated sources from being displayed.
+
+* Updated dependencies [[`8166eefc`](https://github.com/cloudflare/workers-sdk/commit/8166eefc11ff3b5ce6ede41fe9d6224d945a2cde)]:
+  - miniflare@3.20231218.4
+
 ## 3.24.0
 
 ### Minor Changes
