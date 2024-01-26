@@ -17,7 +17,7 @@
 		"create-solid": "0.3.10",
 		"create-svelte": "6.0.8",
 		"create-vue": "3.9.1",
-		"gatsby": "5.13.2",
+		"gatsby": "5.13.3",
 		"nuxi": "3.10.0"
 	},
 	"frameworkCliMap": {
