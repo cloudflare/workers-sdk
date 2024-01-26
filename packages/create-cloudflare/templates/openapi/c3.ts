@@ -3,7 +3,6 @@ export default {
 	id: "openapi",
 	displayName: "API starter (OpenAPI compliant)",
 	platform: "workers",
-	languages: ["ts"],
 	copyFiles: {
 		path: "./ts",
 	},

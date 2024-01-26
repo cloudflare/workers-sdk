@@ -3,7 +3,6 @@ export default {
 	id: "hello-world",
 	displayName: '"Hello World" Worker',
 	platform: "workers",
-	languages: ["js", "ts"],
 	copyFiles: {
 		js: {
 			path: "./js",
