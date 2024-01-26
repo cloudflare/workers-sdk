@@ -115,7 +115,6 @@ export const getTemplateMap = async () => {
 		common: (await import("../templates/common/c3")).default,
 		scheduled: (await import("../templates/scheduled/c3")).default,
 		queues: (await import("../templates/queues/c3")).default,
-		chatgptPlugin: (await import("../templates/chatgptPlugin/c3")).default,
 		openapi: (await import("../templates/openapi/c3")).default,
 		// Dummy record -- actual template config resolved in `processRemoteTemplate`
 		"remote-template": {
