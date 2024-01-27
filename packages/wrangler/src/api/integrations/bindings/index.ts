@@ -6,6 +6,7 @@ import { getVarsForDev } from "../../../dev/dev-vars";
 import { buildMiniflareBindingOptions } from "../../../dev/miniflare";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
+import type { CacheStorage } from "@cloudflare/workers-types";
 import type { MiniflareOptions } from "miniflare";
 
 /**
@@ -39,6 +40,10 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	 * Object containing the various proxies
 	 */
 	bindings: Bindings;
+	/**
+	 * Caches object emulating the Workers Cache runtime API
+	 */
+	caches: CacheStorage;
 	/**
 	 * Function used to dispose of the child process providing the bindings implementation
 	 */
@@ -78,11 +83,14 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 
 	const vars = getVarsForDev(rawConfig, env);
 
+	const caches = (await mf.getCaches()) as unknown as CacheStorage;
+
 	return {
 		bindings: {
 			...vars,
 			...bindings,
 		},
+		caches,
 		dispose: () => mf.dispose(),
 	};
 }
@@ -138,7 +146,11 @@ function getMiniflarePersistOptions(
 	persist: GetBindingsProxyOptions["persist"]
 ): Pick<
 	MiniflareOptions,
-	"kvPersist" | "durableObjectsPersist" | "r2Persist" | "d1Persist"
+	| "kvPersist"
+	| "durableObjectsPersist"
+	| "r2Persist"
+	| "d1Persist"
+	| "cachePersist"
 > {
 	if (persist === false) {
 		// the user explicitly asked for no persistance
@@ -147,6 +159,7 @@ function getMiniflarePersistOptions(
 			durableObjectsPersist: false,
 			r2Persist: false,
 			d1Persist: false,
+			cachePersist: false,
 		};
 	}
 
@@ -160,5 +173,6 @@ function getMiniflarePersistOptions(
 		durableObjectsPersist: `${persistPath}/do`,
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
+		cachePersist: `${persistPath}/cache`,
 	};
 }
