@@ -40,6 +40,10 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	 */
 	bindings: Bindings;
 	/**
+	 * Caches object emulating the Workers Cache runtime API
+	 */
+	caches: CacheStorage;
+	/**
 	 * Function used to dispose of the child process providing the bindings implementation
 	 */
 	dispose: () => Promise<void>;
@@ -83,6 +87,7 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 			...vars,
 			...bindings,
 		},
+		caches: getNoopCaches(),
 		dispose: () => mf.dispose(),
 	};
 }
@@ -160,5 +165,53 @@ function getMiniflarePersistOptions(
 		durableObjectsPersist: `${persistPath}/do`,
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
+	};
+}
+
+// Note as to why we are re-implementing the Cache types here:
+//  The Request and Response types to be used with the caches come from miniflare itself, if we
+//  were to use the proper types users would need to provided to the utility objects typed with
+//  the actual miniflare types, which is actually what we don't want, so for now we just use
+// `unknown`s and we can think of better types later when we actually make the `caches` non no-op
+type CacheStorage = {
+	open(cacheName: string): Promise<Cache>;
+	readonly default: Cache;
+};
+type CacheRequest = unknown;
+type CacheResponse = unknown;
+
+type Cache = {
+	delete(request: CacheRequest, options?: CacheQueryOptions): Promise<boolean>;
+	match(
+		request: CacheRequest,
+		options?: CacheQueryOptions
+	): Promise<CacheResponse | undefined>;
+	put(request: CacheRequest, response: CacheResponse): Promise<void>;
+};
+type CacheQueryOptions = {
+	ignoreMethod?: boolean;
+};
+
+function getNoopCache(): Cache {
+	const noopCache: Cache = {
+		async delete() {
+			return false;
+		},
+		async match() {
+			return undefined;
+		},
+		async put() {},
+	};
+	return noopCache;
+}
+
+// We are not ready to expose miniflare's caches as those are problematic to use in a generic context
+// (since they only accept instances of the miniflare Request class and return only instances of the
+// miniflare Response class, making them tricky to use in generic node.js code), so we provide a no-op
+// implementation here until we sort the above issue out
+function getNoopCaches(): CacheStorage {
+	return {
+		default: getNoopCache(),
+		open: () => Promise.resolve(getNoopCache()),
 	};
 }
