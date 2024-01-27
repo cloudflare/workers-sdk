@@ -6,6 +6,7 @@ import {
 	Fetcher,
 	R2Bucket,
 } from "@cloudflare/workers-types";
+import { Response } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	getBindingsProxy as originalGetBindingsProxy,
@@ -226,6 +227,23 @@ describe("getBindingsProxy", () => {
 		} finally {
 			await dispose();
 		}
+	});
+
+	describe.only("caches", () => {
+		it("correctly obtains functioning caches", async () => {
+			const { caches, dispose } = await getBindingsProxy<Bindings>({
+				configPath: wranglerTomlFilePath,
+			});
+			try {
+				let cache = caches.default;
+				const noMatch = await cache.match("http://0.0.0.0/test");
+				expect(noMatch).toBeUndefined();
+
+				await cache.put("http://0.0.0.0/test", new Response("test"));
+			} finally {
+				await dispose();
+			}
+		});
 	});
 });
 
