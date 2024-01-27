@@ -82,6 +82,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Welcome to Remix",
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["yarn"],
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
@@ -123,7 +124,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
-			quarantine: true,
+			unsupportedOSs: ["win32"],
 		},
 		svelte: {
 			expectResponseToContain: "SvelteKit app",

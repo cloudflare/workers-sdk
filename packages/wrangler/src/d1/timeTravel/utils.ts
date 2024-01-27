@@ -22,7 +22,7 @@ export const getBookmarkIdFromTimestamp = async (
 	}
 
 	const bookmarkResult = await fetchResult<BookmarkResponse>(
-		`/accounts/${accountId}/d1/database/${databaseId}/time-travel/bookmark?${searchParams.toString()}`,
+		`/accounts/${accountId}/d1/database/${databaseId}/time_travel/bookmark?${searchParams.toString()}`,
 		{
 			headers: {
 				"Content-Type": "application/json",

@@ -27,7 +27,7 @@ const config: TemplateConfig = {
 			"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
 		},
 	}),
-	devCommand: ["dev"],
+	devScript: "dev",
 	testFlags: ["--typescript", "--no-install", "--no-git-init"],
 };
 export default config;

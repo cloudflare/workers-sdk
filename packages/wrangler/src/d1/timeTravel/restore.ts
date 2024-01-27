@@ -101,7 +101,7 @@ const handleRestore = async (
 	searchParams: URLSearchParams
 ) => {
 	return await fetchResult<RestoreBookmarkResponse>(
-		`/accounts/${accountId}/d1/database/${databaseId}/time-travel/restore?${searchParams.toString()}`,
+		`/accounts/${accountId}/d1/database/${databaseId}/time_travel/restore?${searchParams.toString()}`,
 		{
 			headers: {
 				"Content-Type": "application/json",

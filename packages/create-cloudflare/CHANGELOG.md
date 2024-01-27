@@ -1,5 +1,65 @@
 # create-cloudflare
 
+## 2.10.0
+
+### Minor Changes
+
+- [#4754](https://github.com/cloudflare/workers-sdk/pull/4754) [`06f85613`](https://github.com/cloudflare/workers-sdk/commit/06f85613228066ccb323c2818b443e9460b02c94) Thanks [@jculvey](https://github.com/jculvey)! - Adds C3 support for external templates hosted in git repositories via the `--template <source>` option.
+
+  The source may be specified as any of the following:
+
+  - `user/repo`
+  - `git@github.com:user/repo`
+  - `https://github.com/user/repo`
+  - `user/repo/some-template` (subdirectories)
+  - `user/repo#canary` (branches)
+  - `user/repo#1234abcd` (commit hash)
+  - `bitbucket:user/repo` (BitBucket)
+  - `gitlab:user/repo` (GitLab)
+
+  See the `degit` [docs](https://github.com/Rich-Harris/degit) for more details.
+
+  At a minimum, templates must contain the following:
+
+  - `package.json`
+  - `wrangler.toml`
+  - `src/` containing a worker script referenced from `wrangler.toml`
+
+  See the [templates folder](https://github.com/cloudflare/workers-sdk/tree/main/templates) of this repo for more examples.
+
+### Patch Changes
+
+- [#4828](https://github.com/cloudflare/workers-sdk/pull/4828) [`99bf5f86`](https://github.com/cloudflare/workers-sdk/commit/99bf5f8653bd026555cceffa61ee9120eb2c4645) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.13.1` to `5.13.2`
+
+* [#4836](https://github.com/cloudflare/workers-sdk/pull/4836) [`6d7d00a8`](https://github.com/cloudflare/workers-sdk/commit/6d7d00a835152fc241781fdca8eda41a00f53a40) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.1.0` to `17.1.1`
+
+- [#4842](https://github.com/cloudflare/workers-sdk/pull/4842) [`9fb39e63`](https://github.com/cloudflare/workers-sdk/commit/9fb39e63506bdd28f29cf387543978ebf85263cd) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.4.0` to `1.4.1`
+
+* [#4843](https://github.com/cloudflare/workers-sdk/pull/4843) [`b3c5566c`](https://github.com/cloudflare/workers-sdk/commit/b3c5566c0988c0cdd4e285bfe5792baa4127af94) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.13.2` to `5.13.3`
+
+- [#4834](https://github.com/cloudflare/workers-sdk/pull/4834) [`0123eef1`](https://github.com/cloudflare/workers-sdk/commit/0123eef14a071492354f46fb212d78f793e1bb14) Thanks [@jculvey](https://github.com/jculvey)! - Fixed an issue where commands were sometimes formatted with un-needed escape characters (ex. 'pages:\dev')
+
+* [#4754](https://github.com/cloudflare/workers-sdk/pull/4754) [`06f85613`](https://github.com/cloudflare/workers-sdk/commit/06f85613228066ccb323c2818b443e9460b02c94) Thanks [@jculvey](https://github.com/jculvey)! - C3: Fix a bug where the "Pre-existing Worker (from Dashboard)" option was hidden in the dialog but still selectable
+
+- [#4711](https://github.com/cloudflare/workers-sdk/pull/4711) [`fa91ff54`](https://github.com/cloudflare/workers-sdk/commit/fa91ff546ceb30207245518d4b38e6a416de9ed3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update the solidStart logic to work with their latest (beta-2) implementation
+
+* [#4771](https://github.com/cloudflare/workers-sdk/pull/4771) [`f4f38fc7`](https://github.com/cloudflare/workers-sdk/commit/f4f38fc7d58347b7e69eab013685798d90bb633a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: correctly find the latest version of create-cloudflare
+
+  When create-cloudflare starts up, it checks to see if the version being run
+  is the latest available on npm.
+
+  Previously this check used `npm info` to look up the version.
+  But was prone to failing if that command returned additional unexpected output
+  such as warnings.
+
+  Now we make a fetch request to the npm REST API directly for the latest version,
+  which does not have the problem of unexpected warnings.
+
+  Since the same approach is used to compute the latest version of workerd, the
+  function to do this has been put into a helper.
+
+  Fixes #4729
+
 ## 2.9.3
 
 ### Patch Changes

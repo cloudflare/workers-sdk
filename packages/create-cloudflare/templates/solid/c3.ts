@@ -15,18 +15,6 @@ const generate = async (ctx: C3Context) => {
 	logRaw("");
 };
 
-const configure = async (ctx: C3Context) => {
-	// Install the pages adapter
-	const pkg = "solid-start-cloudflare-pages";
-	await installPackages([pkg], {
-		dev: true,
-		startText: "Adding the Cloudflare Pages adapter",
-		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
-	});
-
-	updateStatus(`Adding the Cloudflare Pages adapter to vite config`);
-};
-
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "solid",
@@ -37,12 +25,13 @@ const config: TemplateConfig = {
 		ts: { path: "./ts" },
 	},
 	generate,
-	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist/public`,
+			"pages:preview": `${npm} run build && npx wrangler pages dev dist ${await compatDateFlag()} --compatibility-flag nodejs_compat`,
+			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
 		},
 	}),
+	devScript: "dev",
+	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;

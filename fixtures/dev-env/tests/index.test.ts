@@ -59,7 +59,6 @@ async function fakeStartUserWorker(options: {
 			compatibilityDate: "2023-08-01",
 			name: config.name,
 			script: options.script,
-			log: Object.assign(new Log(), { error() {} }), // TODO: remove when this bug is fixed https://jira.cfdata.org/browse/DEVX-983
 		},
 		options.mfOpts
 	);
