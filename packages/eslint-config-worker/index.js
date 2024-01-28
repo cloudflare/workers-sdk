@@ -8,7 +8,7 @@ module.exports = {
 	ignorePatterns: [
 		"**/node_modules/**",
 		"examples",
-		"**/templates/**",
+		"**/templates/**/*.*",
 		".eslintrc.js",
 		"**/dist/**",
 	],
@@ -49,6 +49,14 @@ module.exports = {
 				"no-empty-function": "off",
 				"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
 				"no-only-tests/no-only-tests": "error",
+				"no-unused-vars": [
+					"error",
+					{
+						argsIgnorePattern: ".*",
+						varsIgnorePattern: "^_",
+						ignoreRestSiblings: true,
+					},
+				],
 				"no-shadow": "error",
 				"require-yield": "off",
 				"@typescript-eslint/consistent-type-imports": ["error"],
