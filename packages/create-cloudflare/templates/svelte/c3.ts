@@ -72,5 +72,6 @@ const config: TemplateConfig = {
 		},
 	}),
 	devScript: "dev",
+	previewScript: "pages:preview",
 };
 export default config;
