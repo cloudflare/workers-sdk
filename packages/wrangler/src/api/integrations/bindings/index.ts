@@ -41,7 +41,7 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	 */
 	bindings: Bindings;
 	/**
-	 * Caches object emulating the Workers Cache runtime API
+	 * Caches object emulating the Workers Cache runtime API (currently no-op)
 	 */
 	caches: CacheStorage;
 	/**

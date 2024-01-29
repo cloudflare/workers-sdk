@@ -123,7 +123,6 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20230914.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
@@ -207,6 +206,9 @@
 		"xdg-app-paths": "^8.3.0",
 		"yargs": "^17.7.2",
 		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "^4.20230914.0"
 	},
 	"optionalDependencies": {
 		"fsevents": "~2.3.2"
