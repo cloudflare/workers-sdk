@@ -14,7 +14,7 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async (_ctx: C3Context) => {
+const configure = async () => {
 	await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 		silent: true,
 		startText: "Installing adapter",

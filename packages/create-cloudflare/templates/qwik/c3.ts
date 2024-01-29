@@ -12,7 +12,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, ["basic", ctx.project.name]);
 };
 
-const configure = async (_ctx: C3Context) => {
+const configure = async () => {
 	// Add the pages integration
 	const cmd = [npx, "qwik", "add", "cloudflare-pages"];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
