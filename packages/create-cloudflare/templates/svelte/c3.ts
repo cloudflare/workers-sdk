@@ -67,7 +67,7 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:preview": `${npm} run build && wrangler pages dev .svelte-kit/cloudflare`,
+			"pages:preview": `${npm} run build && wrangler pages dev ${await compatDateFlag()} .svelte-kit/cloudflare`,
 			"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
 		},
 	}),
