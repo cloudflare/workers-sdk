@@ -6,7 +6,6 @@ import { getVarsForDev } from "../../../dev/dev-vars";
 import { buildMiniflareBindingOptions } from "../../../dev/miniflare";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
-import type { CacheStorage } from "@cloudflare/workers-types";
 import type { MiniflareOptions } from "miniflare";
 
 /**
@@ -83,14 +82,12 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 
 	const vars = getVarsForDev(rawConfig, env);
 
-	const caches = (await mf.getCaches()) as unknown as CacheStorage;
-
 	return {
 		bindings: {
 			...vars,
 			...bindings,
 		},
-		caches,
+		caches: getNoopCaches(),
 		dispose: () => mf.dispose(),
 	};
 }
@@ -176,3 +173,53 @@ function getMiniflarePersistOptions(
 		cachePersist: `${persistPath}/cache`,
 	};
 }
+
+// Note as to why we are re-implementing the Cache types here:
+//  The types come from miniflare itself, if we were to use the proper types users would need
+//  to provided to the utility objects typed with the actual miniflare types, which is actually
+//  what we don't want, so for now we just use `unknown`s and we can think of better types later
+//  when we actually make the `caches` non no-op
+type CacheStorage = {
+  open(cacheName: string): Promise<Cache>;
+  readonly default: Cache;
+}
+type CacheRequest = unknown;
+type CacheResponse = unknown;
+
+type Cache = {
+  delete(request: CacheRequest, options?: CacheQueryOptions): Promise<boolean>;
+  match(
+    request: CacheRequest,
+    options?: CacheQueryOptions
+  ): Promise<CacheResponse | undefined>;
+  put(request: CacheRequest, response: CacheResponse): Promise<void>;
+}
+type CacheQueryOptions = {
+  ignoreMethod?: boolean;
+}
+
+function getNoopCache(): Cache {
+	const noopCache: Cache = {
+		async delete() {
+			return false;
+		},
+		async match() {
+			return undefined;
+		},
+		async put() {}
+	};
+	return noopCache;
+}
+
+// We are not ready to expose miniflare's caches as those are problematic to use in a generic context
+// (since they only accept instances of the miniflare Request class and return only instances of the
+// miniflare Response class, making them tricky to use in a generic node app), so we provide a no-op
+// implementation here until we sort the above issue out
+function getNoopCaches(): CacheStorage {
+	return {
+		default: getNoopCache(),
+		open: () => Promise.resolve(getNoopCache()),
+	};
+}
+
+
