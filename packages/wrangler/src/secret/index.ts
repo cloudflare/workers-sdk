@@ -451,7 +451,9 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 		.filter((binding) => {
 			// secrets that currently exist for the worker but are not provided for bulk update
 			// are inherited over with other binding types
-			return binding.type !== "secret_text" || !content[binding.name];
+			return (
+				binding.type !== "secret_text" || !content[binding.name] === undefined
+			);
 		})
 		.map((binding) => ({ type: binding.type, name: binding.name }));
 	// secrets to upload are provided as bindings in their full form
