@@ -286,28 +286,36 @@ export const printSummary = async (ctx: C3Context) => {
 	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
 	const nextSteps = [
 		dirRelativePath
-			? [`Navigate to the new directory`, `cd ${dirRelativePath}`]
+			? ["Navigate to the new directory", `cd ${dirRelativePath}`]
 			: [],
 		[
-			`Run the development server`,
+			"Run the development server",
 			quoteShellArgs([npm, "run", ctx.template.devScript ?? "start"]),
 		],
+		...(ctx.template.previewScript
+			? [
+					[
+						"Preview your application",
+						quoteShellArgs([npm, "run", ctx.template.previewScript]),
+					],
+			  ]
+			: []),
 		[
-			`Deploy your application`,
+			"Deploy your application",
 			quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"]),
 		],
 		[
-			`Read the documentation`,
+			"Read the documentation",
 			`https://developers.cloudflare.com/${ctx.template.platform}`,
 		],
-		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
+		["Stuck? Join us at", "https://discord.gg/cloudflaredev"],
 	];
 
 	if (ctx.deployment.url) {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" SUCCESS ")}`,
-			`${dim(`View your deployed application at`)}`,
+			`${dim("View your deployed application at")}`,
 			`${blue(ctx.deployment.url)}`,
 		].join(" ");
 		logRaw(msg);
@@ -315,7 +323,7 @@ export const printSummary = async (ctx: C3Context) => {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" APPLICATION CREATED ")}`,
-			`${dim(`Deploy your application with`)}`,
+			`${dim("Deploy your application with")}`,
 			`${blue(
 				quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"])
 			)}`,

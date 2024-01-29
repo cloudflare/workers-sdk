@@ -178,6 +178,7 @@ export default {
 	platform: "pages",
 	displayName: "Next",
 	devScript: "dev",
+	previewScript: "pages:preview",
 	generate,
 	configure,
 	transformPackageJson: async () => {

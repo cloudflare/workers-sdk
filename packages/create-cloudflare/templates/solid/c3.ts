@@ -32,6 +32,7 @@ const config: TemplateConfig = {
 		},
 	}),
 	devScript: "dev",
+	previewScript: "pages:preview",
 	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;

@@ -73,6 +73,8 @@ export type TemplateConfig = {
 	deployScript?: string;
 	/** The key of the package.json "scripts" entry for developing the project. Defaults to `pages:dev` */
 	devScript?: string;
+	/** The key of the package.json "scripts" entry for previewing the project. Defaults to undefined (there might not be such script) */
+	previewScript?: string;
 
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
