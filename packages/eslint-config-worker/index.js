@@ -49,13 +49,15 @@ module.exports = {
 				"no-empty-function": "off",
 				"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
 				"no-only-tests/no-only-tests": "error",
-				"no-shadow": "error",
 				"require-yield": "off",
 				"@typescript-eslint/consistent-type-imports": ["error"],
 				"@typescript-eslint/no-empty-function": "off",
 				"@typescript-eslint/no-explicit-any": "error",
 				"@typescript-eslint/no-floating-promises": "error",
 				"@typescript-eslint/no-non-null-assertion": "error",
+				"no-shadow": "off",
+				"@typescript-eslint/no-shadow": "error",
+				"no-unused-vars": "off",
 				"@typescript-eslint/no-unused-vars": [
 					"error",
 					{

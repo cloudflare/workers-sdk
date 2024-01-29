@@ -9,7 +9,6 @@ import { RoutesValidationError } from "./functions/routes-validation";
 /**
  * Error codes returned by requests to Pages APIs
  */
-/* eslint-disable-next-line no-shadow */
 export enum ApiErrorCodes {
 	UNKNOWN_ERROR = 8000000,
 	UNAUTHORIZED = 8000013,
