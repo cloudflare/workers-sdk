@@ -3,4 +3,4 @@
 "wrangler": patch
 ---
 
-Less verbose warnings from header and redirect parsing
+fix: Use appropriate logging levels when parsing headers and redirects in `wrangler pages dev`.
