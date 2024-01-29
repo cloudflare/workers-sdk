@@ -1,7 +1,7 @@
-import assert from "node:assert";
 import {
 	createDeferred,
 	DeferredPromise,
+	urlPartsEqual,
 } from "../../src/api/startDevWorker/utils";
 import type {
 	ProxyData,
@@ -95,7 +95,7 @@ export class ProxyWorker implements DurableObject {
 	}
 
 	processQueue() {
-		const { proxyData } = this; // destructuring is required to keep the type-narrowing (not undefined) in the .then callback and to ensure the same proxyData is used throughout each request
+		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
 
 		for (const [request, deferredResponse] of this.requestQueue) {
@@ -115,6 +115,8 @@ export class ProxyWorker implements DurableObject {
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
+				if (value === undefined) continue;
+
 				if (key.toLowerCase() === "cookie") {
 					const existing = request.headers.get("cookie") ?? "";
 					headers.set("cookie", `${existing};${value}`);
@@ -137,17 +139,25 @@ export class ProxyWorker implements DurableObject {
 					// errors here are network errors or from response post-processing
 					// to catch only network errors, use the 2nd param of the fetch.then()
 
-					void sendMessageToProxyController(this.env, {
-						type: "error",
-						error: {
-							name: error.name,
-							message: error.message,
-							stack: error.stack,
-							cause: error.cause,
-						},
-					});
+					// ignore errors if the downstream proxy has changed
+					if (
+						urlPartsEqual(
+							proxyData.userWorkerUrl,
+							this.proxyData?.userWorkerUrl
+						)
+					) {
+						void sendMessageToProxyController(this.env, {
+							type: "error",
+							error: {
+								name: error.name,
+								message: error.message,
+								stack: error.stack,
+								cause: error.cause,
+							},
+						});
 
-					deferredResponse.reject(error);
+						deferredResponse.reject(error);
+					}
 				});
 		}
 	}
@@ -166,25 +176,14 @@ function isRequestForLiveReloadWebsocket(req: Request): boolean {
 	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
 }
 
-async function sendMessageToProxyController(
+function sendMessageToProxyController(
 	env: Env,
-	message: ProxyWorkerOutgoingRequestBody,
-	retries = 3
+	message: ProxyWorkerOutgoingRequestBody
 ) {
-	try {
-		await env.PROXY_CONTROLLER.fetch("http://dummy", {
-			method: "POST",
-			body: JSON.stringify(message),
-		});
-	} catch (cause) {
-		if (retries > 0) {
-			return sendMessageToProxyController(env, message, retries - 1);
-		}
-
-		// no point sending an error message if we can't send this message
-
-		throw cause;
-	}
+	return env.PROXY_CONTROLLER.fetch("http://dummy", {
+		method: "POST",
+		body: JSON.stringify(message),
+	});
 }
 
 function insertLiveReloadScript(
