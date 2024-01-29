@@ -1306,9 +1306,6 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: ^0.2.0
         version: 0.2.0
-      '@cloudflare/workers-types':
-        specifier: ^4.20230914.0
-        version: 4.20230914.0
       '@esbuild-plugins/node-globals-polyfill':
         specifier: ^0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -1371,6 +1368,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20230914.0
+        version: 4.20230914.0
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -3995,6 +3995,7 @@ packages:
 
   /@cloudflare/workers-types@4.20230914.0:
     resolution: {integrity: sha512-OVeN4lFVu1O0PJGZ2d0FwpK8lelFcr33qYOgCh77ErEYmEBO4adwnIxcIsdQbFbhF0ffN6joiVcljD4zakdaeQ==}
+    dev: true
 
   /@cloudflare/workers-types@4.20231025.0:
     resolution: {integrity: sha512-TkcZkntUTOcvJ4vgmwpNfLTclpMbmbClZCe62B25/VTukmyv91joRa4eKzSjzCZUXTbFHNmVdOpmGaaJU2U3+A==}
