@@ -118,7 +118,10 @@ async function getMiniflareOptionsFromConfig(
 				script: "",
 				modules: true,
 				...bindingOptions,
-				serviceBindings,
+				serviceBindings: {
+					...serviceBindings,
+					...bindingOptions.serviceBindings,
+				},
 			},
 			externalDurableObjectWorker,
 		],
