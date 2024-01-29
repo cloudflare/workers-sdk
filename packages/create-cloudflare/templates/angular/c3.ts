@@ -18,10 +18,10 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	updateAngularJson(ctx);
 	await updateAppCode();
-	await installCFWorker(ctx);
+	await installCFWorker();
 };
 
-async function installCFWorker(_ctx: C3Context) {
+async function installCFWorker() {
 	await installPackages(
 		["@cloudflare/workers-types", "@miniflare/tre@next", "wrangler@beta"],
 		{
