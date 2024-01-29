@@ -34,8 +34,8 @@ export function pages(yargs: CommonYargsArgv) {
 			 * `wrangler pages functions` is meant for internal use only for now,
 			 * so let's hide this command from the help output
 			 */
-			.command("functions", false, (yargs) =>
-				yargs
+			.command("functions", false, (args) =>
+				args
 					.command(
 						"build [directory]",
 						"Compile a folder of Cloudflare Pages Functions into a single Worker",
@@ -49,8 +49,8 @@ export function pages(yargs: CommonYargsArgv) {
 						Functions.OptimizeRoutesHandler
 					)
 			)
-			.command("project", "⚡️ Interact with your Pages projects", (yargs) =>
-				yargs
+			.command("project", "⚡️ Interact with your Pages projects", (args) =>
+				args
 					.command(
 						"list",
 						"List your Cloudflare Pages projects",
@@ -80,8 +80,8 @@ export function pages(yargs: CommonYargsArgv) {
 			.command(
 				"deployment",
 				"🚀 Interact with the deployments of a project",
-				(yargs) =>
-					yargs
+				(args) =>
+					args
 						.command(
 							"list",
 							"List deployments in your Cloudflare Pages project",

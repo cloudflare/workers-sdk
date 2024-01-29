@@ -1,6 +1,5 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { logRaw } from "@cloudflare/cli";
+import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
