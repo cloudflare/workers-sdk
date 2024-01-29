@@ -362,14 +362,14 @@ function renderProgress(done: number, total: number) {
 			<Progress done={done} total={total} />
 		);
 		return {
-			// eslint-disable-next-line no-shadow
+			// eslint-disable-next-line @typescript-eslint/no-shadow
 			rerender(done: number, total: number) {
 				rerender(<Progress done={done} total={total} />);
 			},
 			unmount,
 		};
 	} else {
-		// eslint-disable-next-line no-shadow
+		// eslint-disable-next-line @typescript-eslint/no-shadow
 		const rerender = (done: number, total: number) => {
 			logger.log(`Uploading... (${done}/${total})`);
 		};
