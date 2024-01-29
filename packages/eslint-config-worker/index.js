@@ -49,14 +49,6 @@ module.exports = {
 				"no-empty-function": "off",
 				"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
 				"no-only-tests/no-only-tests": "error",
-				"no-unused-vars": [
-					"error",
-					{
-						argsIgnorePattern: ".*",
-						varsIgnorePattern: "^_",
-						ignoreRestSiblings: true,
-					},
-				],
 				"no-shadow": "error",
 				"require-yield": "off",
 				"@typescript-eslint/consistent-type-imports": ["error"],
@@ -64,7 +56,14 @@ module.exports = {
 				"@typescript-eslint/no-explicit-any": "error",
 				"@typescript-eslint/no-floating-promises": "error",
 				"@typescript-eslint/no-non-null-assertion": "error",
-				"@typescript-eslint/no-unused-vars": "off",
+				"@typescript-eslint/no-unused-vars": [
+					"error",
+					{
+						argsIgnorePattern: ".*",
+						varsIgnorePattern: "^_",
+						ignoreRestSiblings: true,
+					},
+				],
 				"unused-imports/no-unused-imports": "error",
 				"unused-imports/no-unused-vars": [
 					"error",

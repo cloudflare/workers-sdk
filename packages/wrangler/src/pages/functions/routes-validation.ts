@@ -7,7 +7,6 @@ import {
 import { getRoutesValidationErrorMessage } from "../errors";
 import type { RoutesJSONSpec } from "./routes-transformation";
 
-/* eslint-disable no-unused-vars */
 /* eslint-disable-next-line no-shadow */
 export enum RoutesValidationError {
 	INVALID_JSON_SPEC,
@@ -17,7 +16,6 @@ export enum RoutesValidationError {
 	RULE_TOO_LONG,
 	OVERLAPPING_RULES,
 }
-/* eslint-enable no-unused-vars */
 
 /**
  *  Check if given routes data is a valid RoutesJSONSpec
