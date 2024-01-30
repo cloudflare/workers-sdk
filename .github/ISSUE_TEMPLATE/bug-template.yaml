@@ -11,8 +11,6 @@ body:
         Thank you for taking the time to file a bug report! Please fill out this form as completely as possible.
   - type: dropdown
     id: products
-    validations:
-      required: true
     attributes:
       label: Which Cloudflare product(s) does this pertain to?
       multiple: true
@@ -30,6 +28,8 @@ body:
         - Wrangler core
         - Miniflare
         - Other
+    validations:
+      required: true
   - type: input
     attributes:
       label: What version(s) of the tool(s) are you using?
@@ -44,14 +44,29 @@ body:
       required: false
   - type: input
     attributes:
-      label: What operating system are you using?
-      placeholder: Mac, Windows, Linux (or WSL)
+      label: What operating system and version are you using?
+      placeholder: Mac Sonoma 14.2.1, Windows 11, Linux (or WSL) Debian Bookworm, etc.
     validations:
       required: true
   - type: textarea
     attributes:
       label: Describe the Bug
-      description: Include steps to reproduce, describe the behaviour you observe, and describe the behaviour you _expect_ to observe.
+      description: Please describe the bug and include steps to reproduce.
+      placeholder: |
+        ### Observed behavior
+        Please describe.
+
+        ### Expected behavior
+        Please describe.
+
+        ### Steps to reproduce
+        Please provide the following:
+        - A minimal working subset of your worker code
+        - A minimal working subset of your `wrangler.toml`
+        - Commands used to start your local dev server, including custom env and cli args
+        - Steps to be performed in the browser, curl commands, or a test we can run that reliably fails (at least a percent of the time)
+
+        A git repo we can clone and run a test suit on, or which has a README with step-by-step instructions, is even better. In this case, please use the field below to provide a link to the minimal repro.
     validations:
       required: true
   - type: input
