@@ -2,9 +2,9 @@
 "wrangler": minor
 ---
 
-expose new (no-op) `caches` field in `getBindingsProxy` result
+feat: expose new (no-op) `caches` field in `getBindingsProxy` result
 
-add a new `caches` field to the `getBindingsProxy` result, such field implements a
+Add a new `caches` field to the `getBindingsProxy` result, such field implements a
 no operation (no-op) implementation of the runtime `caches`
 
 Note: Miniflare exposes a proper `caches` mock, we will want to use that one in
