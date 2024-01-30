@@ -104,50 +104,59 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		return logger.error(`Error: can't provide both --command and --file.`);
 
 	const isInteractive = process.stdout.isTTY;
-	const response: QueryResult[] | null = await executeSql({
-		local,
-		config,
-		name: database,
-		shouldPrompt: isInteractive && !yes,
-		persistTo,
-		file,
-		command,
-		json,
-		preview,
-		batchSize,
-	});
+	try {
+		const response: QueryResult[] | null = await executeSql({
+			local,
+			config,
+			name: database,
+			shouldPrompt: isInteractive && !yes,
+			persistTo,
+			file,
+			command,
+			json,
+			preview,
+			batchSize,
+		});
 
-	// Early exit if prompt rejected
-	if (!response) return;
+		// Early exit if prompt rejected
+		if (!response) return;
 
-	if (isInteractive && !json) {
-		// Render table if single result
-		logger.log(
-			renderToString(
-				<Static items={response}>
-					{(result) => {
-						// batch results
-						if (!Array.isArray(result)) {
-							const { results, query } = result;
+		if (isInteractive && !json) {
+			// Render table if single result
+			logger.log(
+				renderToString(
+					<Static items={response}>
+						{(result) => {
+							// batch results
+							if (!Array.isArray(result)) {
+								const { results, query } = result;
 
-							if (Array.isArray(results) && results.length > 0) {
-								const shortQuery = shorten(query, 48);
-								return (
-									<>
-										{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-										<Table data={results}></Table>
-									</>
-								);
+								if (Array.isArray(results) && results.length > 0) {
+									const shortQuery = shorten(query, 48);
+									return (
+										<>
+											{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+											<Table data={results}></Table>
+										</>
+									);
+								}
 							}
-						}
-					}}
-				</Static>
-			)
-		);
-	} else {
-		// set loggerLevel back to what it was before to actually output the JSON in stdout
-		logger.loggerLevel = existingLogLevel;
-		logger.log(JSON.stringify(response, null, 2));
+						}}
+					</Static>
+				)
+			);
+		} else {
+			// set loggerLevel back to what it was before to actually output the JSON in stdout
+			logger.loggerLevel = existingLogLevel;
+			logger.log(JSON.stringify(response, null, 2));
+		}
+	} catch (e) {
+		if (json) {
+			logger.loggerLevel = existingLogLevel;
+			logger.log(JSON.stringify({ error: e }, null, 2));
+		} else {
+			throw e;
+		}
 	}
 };
 
