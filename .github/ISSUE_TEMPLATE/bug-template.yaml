@@ -52,7 +52,7 @@ body:
     attributes:
       label: Describe the Bug
       description: Please describe the bug and include steps to reproduce.
-      placeholder: |
+      value: |
         ### Observed behavior
         Please describe.
 
