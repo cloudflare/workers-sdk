@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -202,10 +202,6 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/get-bindings-proxy:
-    dependencies:
-      undici:
-        specifier: ^5.28.2
-        version: 5.28.2
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -213,6 +209,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
         version: 4.20231025.0
+      undici:
+        specifier: ^5.28.2
+        version: 5.28.2
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
