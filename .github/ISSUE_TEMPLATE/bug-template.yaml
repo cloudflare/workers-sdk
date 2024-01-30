@@ -63,8 +63,8 @@ body:
         Please provide the following:
         - A minimal working subset of your worker code
         - A minimal working subset of your `wrangler.toml`
-        - Commands used to start your local dev server, including custom env and cli args and steps to be performed in the browser
-        - Curl commands or a test we can run that reliably fails (at least a percent of the time)
+        - Commands used to start your local dev server, including custom env and cli args
+        - Steps to be performed in the browser, curl commands, or a test we can run that reliably fails (at least a percent of the time)
 
         A git repo we can clone and run a test suit on, or which has a README with step-by-step instructions, is even better. In this case, please use the field below to provide a link to the minimal repro.
     validations:
