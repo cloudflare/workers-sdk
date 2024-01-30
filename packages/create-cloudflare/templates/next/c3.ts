@@ -112,7 +112,7 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	writeFile(`${projectPath}/next.config.js`, nextConfig);
+	writeFile(`${projectPath}/next.config.mjs`, nextConfig);
 	updateStatus("Updated the next.config.js file");
 
 	writeFile(`${projectPath}/README.md`, readme);
