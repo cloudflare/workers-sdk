@@ -150,12 +150,17 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			logger.loggerLevel = existingLogLevel;
 			logger.log(JSON.stringify(response, null, 2));
 		}
-	} catch (e) {
+	} catch (error) {
 		if (json) {
 			logger.loggerLevel = existingLogLevel;
-			logger.log(JSON.stringify({ error: e }, null, 2));
+			const messageToDisplay =
+				(error as Error).name === "APIError"
+					? error
+					: { text: (error as Error).message };
+			logger.log(JSON.stringify({ error: messageToDisplay }, null, 2));
+			process.exit(1);
 		} else {
-			throw e;
+			throw error;
 		}
 	}
 };
