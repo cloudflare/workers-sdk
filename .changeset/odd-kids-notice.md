@@ -2,4 +2,6 @@
 "wrangler": patch
 ---
 
-Expose AI bindings to the `getBindingsProxy` utility function.
+feature: Expose AI bindings to `getBindingsProxy`.
+
+The `getBindingsProxy` utility function will now contain entries for any AI bindings specified in `wrangler.toml`.
