@@ -727,6 +727,29 @@ test("Miniflare: modules in sub-directories", async (t) => {
 	t.is(await res.text(), "123");
 });
 
+test("Miniflare: python modules", async (t) => {
+	const mf = new Miniflare({
+		modules: [
+			{
+				type: "PythonModule",
+				path: "index",
+				contents: "from test_module import add; from js import Response;\ndef fetch(request):\n  return Response.new(add(2,2))",
+			},
+			{
+				type: "PythonModule",
+				path: "test_module",
+				contents: `def add(a, b):\n  return a + b`,
+			},
+		],
+		compatibilityFlags: [
+			"experimental"
+		]
+	});
+	t.teardown(() => mf.dispose());
+	const res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "4");
+});
+
 test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
 	const mf = new Miniflare({
 		modules: true,

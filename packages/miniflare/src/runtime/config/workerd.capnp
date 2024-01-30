@@ -34,7 +34,12 @@
 # afraid to fall back to code for anything the config cannot express, as Workers are very fast
 # to execute!
 
-$import "/capnp/c++.capnp".namespace("workerd::server::config");
+# Any capnp files imported here must be:
+# 1. embedded into workerd-meta.capnp
+# 2. added to `tryImportBulitin` in workerd.c++ (grep for '"/workerd/workerd.capnp"').
+using Cxx = import "/capnp/c++.capnp";
+$Cxx.namespace("workerd::server::config");
+$Cxx.allowCancellation;
 
 struct Config {
   # Top-level configuration for a workerd instance.
@@ -74,6 +79,11 @@ struct Config {
   extensions @3 :List(Extension);
   # Extensions provide capabilities to all workers. Extensions are usually prepared separately
   # and are late-linked with the app using this config field.
+
+  autogates @4 :List(Text);
+  # A list of gates which are enabled.
+  # These are used to gate features/changes in workerd and in our internal repo. See the equivalent
+  # config definition in our internal repo for more details.
 }
 
 # ========================================================================================
@@ -252,6 +262,15 @@ struct Worker {
       # (a) allows for importing Node.js-compat built-ins without the node: specifier-prefix
       # (b) exposes the subset of common Node.js globals such as process, Buffer, etc that
       #     we implement in the workerd runtime.
+
+      pythonModule @8 :Text;
+      # A Python module. All bundles containing this value type are converted into a JS/WASM Worker
+      # Bundle prior to execution.
+
+      pythonRequirement @9 :Text;
+      # A Python package that is required by this bundle. The package must be supported by
+      # Pyodide (https://pyodide.org/en/stable/usage/packages-in-pyodide.html). All packages listed
+      # will be installed prior to the execution of the worker.
     }
   }
 
@@ -485,7 +504,7 @@ struct Worker {
     }
   }
 
-  globalOutbound @6 :ServiceDesignator = (name = "internet");
+  globalOutbound @6 :ServiceDesignator = "internet";
   # Where should the global "fetch" go to? The default is the service called "internet", which
   # should usually be configured to talk to the public internet.
 
@@ -579,6 +598,9 @@ struct Worker {
 
   # TODO(someday): Support distributing objects across a cluster. At present, objects are always
   #   local to one instance of the runtime.
+
+  moduleFallback @13 :Text;
+
 }
 
 struct ExternalServer {
