@@ -41,6 +41,7 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
+import { isNavigatorDefined } from "../navigator-user-agent";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -354,6 +355,10 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onBundleStart,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
 	useEffect(() => {
 		if (bundle) onReloadStart(bundle);

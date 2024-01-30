@@ -21,6 +21,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import { isNavigatorDefined } from "../navigator-user-agent";
 
 export type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -126,6 +127,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			plugin,
 			nodejsCompat,
 			legacyNodeCompat,
+			defineNavigatorUserAgent,
 		} = validatedArgs;
 
 		try {
@@ -151,6 +153,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 				nodejsCompat,
 				routesOutputPath,
 				local: false,
+				defineNavigatorUserAgent,
 			});
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
@@ -188,6 +191,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			nodejsCompat,
 			legacyNodeCompat,
 			workerScriptPath,
+			defineNavigatorUserAgent,
 		} = validatedArgs;
 
 		/**
@@ -200,6 +204,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					workerJSDirectory: workerScriptPath,
 					buildOutputDirectory,
 					nodejsCompat,
+					defineNavigatorUserAgent,
 				});
 			} else {
 				/**
@@ -216,6 +221,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					sourcemap,
 					watch,
 					nodejsCompat,
+					defineNavigatorUserAgent,
 				});
 			}
 		} else {
@@ -240,6 +246,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					nodejsCompat,
 					routesOutputPath,
 					local: false,
+					defineNavigatorUserAgent,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
@@ -278,7 +285,7 @@ type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
 	buildOutputDirectory: string;
 	legacyNodeCompat: boolean;
 	nodejsCompat: boolean;
-
+	defineNavigatorUserAgent: boolean;
 	workerScriptPath: string;
 };
 type PluginArgs = Omit<
@@ -289,6 +296,7 @@ type PluginArgs = Omit<
 	outdir: string;
 	legacyNodeCompat: boolean;
 	nodejsCompat: boolean;
+	defineNavigatorUserAgent: boolean;
 };
 
 type ValidatedArgs = WorkerBundleArgs | PluginArgs;
@@ -357,6 +365,10 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 		);
 	}
 	const nodejsCompat = !!args.compatibilityFlags?.includes("nodejs_compat");
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		args.compatibilityDate,
+		args.compatibilityFlags
+	);
 	if (legacyNodeCompat && nodejsCompat) {
 		throw new UserError(
 			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command."
@@ -404,5 +416,6 @@ We looked for the Functions directory (${basename(
 		workerScriptPath,
 		nodejsCompat,
 		legacyNodeCompat,
+		defineNavigatorUserAgent,
 	} as ValidatedArgs;
 };

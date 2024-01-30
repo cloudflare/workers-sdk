@@ -33,6 +33,7 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
+import { isNavigatorDefined } from "../navigator-user-agent";
 
 export async function startDevServer(
 	props: DevProps & {
@@ -139,6 +140,10 @@ export async function startDevServer(
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
 		projectRoot: props.projectRoot,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
 
 	if (props.local) {
@@ -290,6 +295,7 @@ async function runEsbuild({
 	local,
 	doBindings,
 	projectRoot,
+	defineNavigatorUserAgent,
 }: {
 	entry: Entry;
 	destination: string;
@@ -313,6 +319,7 @@ async function runEsbuild({
 	local: boolean;
 	doBindings: DurableObjectBindings;
 	projectRoot: string | undefined;
+	defineNavigatorUserAgent: boolean;
 }): Promise<EsbuildBundle> {
 	if (noBundle) {
 		additionalModules = dedupeModulesByName([
@@ -359,6 +366,7 @@ async function runEsbuild({
 					testScheduled,
 					doBindings,
 					projectRoot,
+					defineNavigatorUserAgent,
 			  })
 			: undefined;
 

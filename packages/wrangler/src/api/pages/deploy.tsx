@@ -23,7 +23,8 @@ import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Deployment, Project } from "@cloudflare/types";
+import type { Project, Deployment } from "@cloudflare/types";
+import { isNavigatorDefined } from "../../navigator-user-agent";
 
 interface PagesDeployOptions {
 	/**
@@ -143,6 +144,10 @@ export async function deploy({
 	const nodejsCompat =
 		deploymentConfig.compatibility_flags?.includes("nodejs_compat");
 
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		deploymentConfig.compatibility_date,
+		deploymentConfig.compatibility_flags
+	);
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -175,6 +180,7 @@ export async function deploy({
 				routesOutputPath,
 				local: false,
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 
 			builtFunctions = readFileSync(
@@ -254,6 +260,7 @@ export async function deploy({
 			workerJSDirectory: _workerPath,
 			buildOutputDirectory: directory,
 			nodejsCompat,
+			defineNavigatorUserAgent,
 		});
 	} else if (_workerJS) {
 		if (bundle) {
@@ -270,6 +277,7 @@ export async function deploy({
 				watch: false,
 				onEnd: () => {},
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 		} else {
 			await checkRawWorker(_workerPath, () => {});

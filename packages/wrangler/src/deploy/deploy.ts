@@ -54,6 +54,7 @@ import type {
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import { isNavigatorDefined } from "../navigator-user-agent";
 
 type Props = {
 	config: Config;
@@ -520,8 +521,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							targetConsumer: "deploy",
 							local: false,
 							projectRoot: props.projectRoot,
+							defineNavigatorUserAgent: isNavigatorDefined(
+								props.compatibilityDate ?? config.compatibility_date,
+								props.compatibilityFlags ?? config.compatibility_flags
+							),
 						}
 				  );
+
+		// Add modules to dependencies for size warning
+		for (const module of modules) {
+			const modulePath =
+				module.filePath === undefined
+					? module.name
+					: path.relative("", module.filePath);
+			const bytesInOutput =
+				typeof module.content === "string"
+					? Buffer.byteLength(module.content)
+					: module.content.byteLength;
+			dependencies[modulePath] = { bytesInOutput };
+		}
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
