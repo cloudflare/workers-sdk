@@ -4,7 +4,7 @@
 
 feat: Support runtime-agnostic polyfills
 
-Previously, Wrangler treated any imports of `node:*` modules as build-time errors (unless one of the two Node.JS compatibility modes was enabled). This is sometimes overly aggressive, since those imports are often not hit at runtime (for instance, it was impossible to write a library that worked across Node.JS and Workers, using Node packages only when running in Node). Here's an example of a function that would cause Wrangler to fail to build:
+Previously, Wrangler treated any imports of `node:*` modules as build-time errors (unless one of the two Node.js compatibility modes was enabled). This is sometimes overly aggressive, since those imports are often not hit at runtime (for instance, it was impossible to write a library that worked across Node.JS and Workers, using Node packages only when running in Node). Here's an example of a function that would cause Wrangler to fail to build:
 
 ```ts
 export function randomBytes(length: number) {
