@@ -94,6 +94,10 @@ describe("Pages _worker.js", () => {
 
 				[2K[1A[2K[G⎔ Reloading local server...
 
+				[2K[1A[2K[G
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mkj/filesystem-disk-unix.c++:1709: warning: PWD environment variable doesn't match current directory; pwd = /Users/pbacondarwin/dev/cloudflare/workers-sdk[0m
+
+
 				"
 			`);
 		} finally {
