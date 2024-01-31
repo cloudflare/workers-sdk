@@ -100,6 +100,45 @@ describe("Pages _worker.js", () => {
 		}
 	});
 
+	it("should not error if the _routes.json file is removed while watching", async ({
+		expect,
+	}) => {
+		const basePath = resolve(__dirname, "..");
+		const { ip, port, getOutput, clearOutput, stop } =
+			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
+				"--port=0",
+				"--inspector-port=0",
+			]);
+		try {
+			clearOutput();
+			await tryRename(
+				basePath,
+				"workerjs-test/_routes.json",
+				"workerjs-test/XXX_routes.json"
+			);
+			await setTimeout(1000);
+			// Expect no output since the deletion of the routes file should be ignored
+			expect(getOutput()).toBe("");
+			await tryRename(
+				basePath,
+				"workerjs-test/XXX_routes.json",
+				"workerjs-test/_routes.json"
+			);
+			await setTimeout(1000);
+			// Expect replacing the routes file to trigger a build, although
+			// the routes build does not provide any output feedback to compare against,
+			// so we just check that nothing else is being printed.
+			expect(getOutput()).toBe("");
+		} finally {
+			await stop();
+			await tryRename(
+				basePath,
+				"workerjs-test/XXX_routes.json",
+				"workerjs-test/_routes.json"
+			);
+		}
+	});
+
 	async function tryRename(
 		basePath: string,
 		from: string,
