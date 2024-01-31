@@ -664,27 +664,25 @@ export default function (ctx: Vitest): ProcessPool {
 					(method) => method !== "setImmediate" && method !== "clearImmediate"
 				);
 
-				// Make sure we have a deep-clone of `poolOptions` to mutate.
-				// `getSerializableConfig()` may return references to the same objects,
-				// and we don't want changes to `config.poolOptions.workers` to be
-				// visible across projects.
-				config.poolOptions = structuredClone(config.poolOptions) ?? {};
-
-				// Allow workers to be re-used by removing the isolation requirement
-				config.poolOptions.threads ??= {};
-				config.poolOptions.threads.isolate = false;
-
-				// Include resolved `main` if defined, and the names of Durable Object
-				// bindings that point to classes in the current isolate in the
-				// serialized config
-				const main = maybeGetResolvedMainPath(project);
-				const isolateDurableObjectBindings = Array.from(
-					getDurableObjectBindingNamesToSelf(project.options)
-				);
-				config.poolOptions.workers = {
-					main,
-					isolateDurableObjectBindings,
-					isolatedStorage: project.options.isolatedStorage,
+				// We don't need all pool options from the config at runtime.
+				// Additionally, users may set symbols in the config which aren't
+				// serialisable. `getSerializableConfig()` may also return references to
+				// the same objects, so override it with a new object.
+				config.poolOptions = {
+					threads: {
+						// Allow workers to be re-used by removing the isolation requirement
+						isolate: false,
+					},
+					workers: {
+						// Include resolved `main` if defined, and the names of Durable Object
+						// bindings that point to classes in the current isolate in the
+						// serialized config
+						main: maybeGetResolvedMainPath(project),
+						isolateDurableObjectBindings: Array.from(
+							getDurableObjectBindingNamesToSelf(project.options)
+						),
+						isolatedStorage: project.options.isolatedStorage,
+					},
 				};
 
 				const mf = await getProjectMiniflare(project);
