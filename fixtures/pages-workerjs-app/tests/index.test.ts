@@ -80,26 +80,16 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/XXX_worker.js"
 			);
 			await setTimeout(1000);
-			expect(getOutput()).toMatchInlineSnapshot('""');
-
-			clearOutput();
+			// Expect no output since the deletion of the worker should be ignored
+			expect(getOutput()).toBe("");
 			await tryRename(
 				basePath,
 				"workerjs-test/XXX_worker.js",
 				"workerjs-test/_worker.js"
 			);
 			await setTimeout(1000);
-			expect(getOutput()).toMatchInlineSnapshot(`
-				"[2K[1A[2K[G✨ Compiled Worker successfully
-
-				[2K[1A[2K[G⎔ Reloading local server...
-
-				[2K[1A[2K[G
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mkj/filesystem-disk-unix.c++:1709: warning: PWD environment variable doesn't match current directory; pwd = /Users/pbacondarwin/dev/cloudflare/workers-sdk[0m
-
-
-				"
-			`);
+			// Expect replacing the worker to now trigger a success build.
+			expect(getOutput()).toContain("Compiled Worker successfully");
 		} finally {
 			await stop();
 			await tryRename(
