@@ -1,8 +1,8 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface CloudflareTestEnv {}
-
 declare module "cloudflare:test" {
-	export const env: CloudflareTestEnv;
+	// eslint-disable-next-line @typescript-eslint/no-empty-interface
+	interface ProvidedEnv {}
+
+	export const env: ProvidedEnv;
 	export const fetchMock: MockAgent;
 
 	export function runInDurableObject<O extends DurableObject, R>(

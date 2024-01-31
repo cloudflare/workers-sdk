@@ -6,6 +6,7 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
+import type { ProvidedEnv } from "cloudflare:test";
 import type { Awaitable, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
@@ -22,7 +23,7 @@ const WorkersPoolOptionsSchema = z.object({
 	singleWorker: z.boolean().default(false),
 	setupEnvironment: z
 		// eslint-disable-next-line unused-imports/no-unused-vars
-		.custom<(env: CloudflareTestEnv) => Awaitable<void>>(
+		.custom<(env: ProvidedEnv) => Awaitable<void>>(
 			(v) => typeof v === "function"
 		)
 		.optional(),

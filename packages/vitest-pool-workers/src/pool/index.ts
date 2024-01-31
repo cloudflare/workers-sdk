@@ -4,6 +4,7 @@ import events from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
+import type { ProvidedEnv } from "cloudflare:test";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
@@ -452,7 +453,7 @@ async function runTests(
 	// just created.
 	await waitForStorageReset(mf);
 	if (project.options.setupEnvironment !== undefined) {
-		const env = await mf.getBindings<CloudflareTestEnv>(workerName);
+		const env = await mf.getBindings<ProvidedEnv>(workerName);
 		await project.options.setupEnvironment(env);
 	}
 	const ns = await mf.getDurableObjectNamespace(

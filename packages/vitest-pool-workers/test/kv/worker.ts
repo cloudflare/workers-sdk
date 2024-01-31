@@ -46,4 +46,4 @@ export default {
 	async fetch(request, _env, _ctx) {
 		return new Response(`body:${request.url}`);
 	},
-} satisfies ExportedHandler<CloudflareTestEnv>;
+} satisfies ExportedHandler<Env>;
