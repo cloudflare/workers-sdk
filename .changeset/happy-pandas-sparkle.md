@@ -2,7 +2,7 @@
 "wrangler": minor
 ---
 
-feat: expose new (no-op) `caches` field in `getBindingsProxy` result
+feature: expose new (no-op) `caches` field in `getBindingsProxy` result
 
 Add a new `caches` field to the `getBindingsProxy` result, such field implements a
 no operation (no-op) implementation of the runtime `caches`
