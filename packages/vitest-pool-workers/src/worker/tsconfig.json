@@ -8,6 +8,5 @@
 		}
 	},
 	"include": ["./**/*.ts"],
-	//  "include": ["./**/*.ts", "../../../miniflare/src/workers/node.d.ts"],
 	"exclude": []
 }

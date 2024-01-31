@@ -3,15 +3,21 @@
 	"version": "0.0.1",
 	"private": true,
 	"main": "dist/pool/index.mjs",
+	"types": "test/cloudflare-test.d.ts",
 	"exports": {
-		".": "./dist/pool/index.mjs",
+		".": {
+			"import": "./dist/pool/index.mjs",
+			"types": "./test/cloudflare-test.d.ts"
+		},
 		"./config": {
+			"import": "./dist/config/index.cjs",
 			"require": "./dist/config/index.cjs",
 			"types": "./dist/config/index.d.ts"
 		}
 	},
 	"files": [
-		"dist"
+		"dist",
+		"test/cloudflare-test.d.ts"
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
