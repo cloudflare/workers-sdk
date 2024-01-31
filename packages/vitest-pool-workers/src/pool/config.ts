@@ -11,6 +11,7 @@ import type { Awaitable, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
+import { getProjectPath, getRelativeProjectPath } from "./helpers";
 
 const PLUGIN_VALUES = Object.values(PLUGINS);
 
@@ -164,8 +165,9 @@ export async function parseProjectOptions(
 				", and refer to the migration guide if upgrading from `vitest-environment-miniflare`";
 		}
 
+		const relativePath = getRelativeProjectPath(project);
 		const message = [
-			`Unexpected custom \`environment\` ${quotedEnvironment} in project ${project.path}.`,
+			`Unexpected custom \`environment\` ${quotedEnvironment} in project ${relativePath}.`,
 			"The Workers pool always runs your tests inside of an environment providing Workers runtime APIs.",
 			`Please remove the \`environment\` configuration${migrationGuide}.`,
 			"Use `poolMatchGlobs`/`environmentMatchGlobs` to run a subset of your tests in a different pool/environment.",
@@ -173,8 +175,9 @@ export async function parseProjectOptions(
 		throw new TypeError(message);
 	}
 
+	const projectPath = getProjectPath(project);
 	const rootPath =
-		typeof project.path === "string" ? path.dirname(project.path) : "";
+		typeof projectPath === "string" ? path.dirname(projectPath) : "";
 	const poolOptions = project.config.poolOptions;
 	let workersPoolOptions = poolOptions?.workers ?? {};
 	try {
@@ -200,8 +203,9 @@ export async function parseProjectOptions(
 		} catch (error) {
 			throw e;
 		}
+		const relativePath = getRelativeProjectPath(project);
 		throw new TypeError(
-			`Unexpected pool options in project ${project.path}:\n${formatted}`
+			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
 }

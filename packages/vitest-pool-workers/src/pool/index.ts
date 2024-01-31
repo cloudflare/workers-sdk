@@ -18,7 +18,12 @@ import {
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
-import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
+import {
+	getProjectPath,
+	getRelativeProjectPath,
+	isFileNotFoundError,
+	WORKER_NAME_PREFIX,
+} from "./helpers";
 import {
 	ABORT_ALL_WORKER,
 	handleLoopbackRequest,
@@ -229,7 +234,7 @@ function buildProjectWorkerOptions(
 		// `export_commonjs_namespace` and `export_commonjs_default` are mutually
 		// exclusive. If we have `export_commonjs_namespace` set, we can't continue.
 		throw new Error(
-			`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
+			`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
 		);
 	}
 	if (!runnerWorker.compatibilityFlags.includes("export_commonjs_default")) {
@@ -317,13 +322,13 @@ function buildProjectWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must be non-empty`
+					`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
 			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
 
@@ -417,11 +422,11 @@ async function getProjectMiniflare(
 }
 
 function maybeGetResolvedMainPath(project: Project): string | undefined {
-	const workspacePath = project.project.path;
+	const projectPath = getProjectPath(project.project);
 	const main = project.options.main;
 	if (main === undefined) return;
-	if (typeof workspacePath === "string") {
-		return path.resolve(path.dirname(workspacePath), main);
+	if (typeof projectPath === "string") {
+		return path.resolve(path.dirname(projectPath), main);
 	} else {
 		return path.resolve(main);
 	}
@@ -538,11 +543,6 @@ async function runTests(
 	debuglog("DONE", files);
 }
 
-function getRelativeProjectPath(projectPath: string | number) {
-	if (typeof projectPath === "number") return projectPath;
-	else return path.relative("", projectPath);
-}
-
 interface PackageJson {
 	version?: string;
 	peerDependencies?: Record<string, string | undefined>;
@@ -626,13 +626,13 @@ export default function (ctx: Vitest): ProcessPool {
 						project,
 						options: await parseProjectOptions(project),
 						testFiles: new Set(),
-						relativePath: getRelativeProjectPath(project.path),
+						relativePath: getRelativeProjectPath(project),
 					};
 					allProjects.set(projectName, workersProject);
 				} else if (!parsedProjectOptions.has(project)) {
 					workersProject.project = project;
 					workersProject.options = await parseProjectOptions(project);
-					workersProject.relativePath = getRelativeProjectPath(project.path);
+					workersProject.relativePath = getRelativeProjectPath(project);
 				}
 				workersProject.testFiles.add(testFile);
 
