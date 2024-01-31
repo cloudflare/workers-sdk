@@ -46,6 +46,8 @@ export const ModuleRuleTypeSchema = z.enum([
 	"Text",
 	"Data",
 	"CompiledWasm",
+	"PythonModule",
+	"PythonRequirement"
 ]);
 export type ModuleRuleType = z.infer<typeof ModuleRuleTypeSchema>;
 
@@ -347,6 +349,12 @@ ${dim(modulesConfig)}`;
 			case "CompiledWasm":
 				this.modules.push({ name, wasm: data });
 				break;
+			case "PythonModule":
+				this.modules.push({ name, pythonModule: data.toString("utf-8") });
+				break;
+			case "PythonRequirement":
+				this.modules.push({ name, pythonRequirement: data.toString("utf-8") });
+				break;
 			default:
 				// `type` should've been validated against `ModuleRuleTypeSchema`
 				const exhaustive: never = rule.type;
@@ -405,6 +413,10 @@ export function convertModuleDefinition(
 			return { name, data: contentsToArray(contents) };
 		case "CompiledWasm":
 			return { name, wasm: contentsToArray(contents) };
+		case "PythonModule":
+			return { name, pythonModule: contentsToString(contents) };
+		case "PythonRequirement":
+			return { name, pythonRequirement: contentsToString(contents) };
 		default:
 			// `type` should've been validated against `ModuleRuleTypeSchema`
 			const exhaustive: never = def.type;
@@ -425,6 +437,8 @@ function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 	else if ("text" in m) return { path, type: "Text" };
 	else if ("data" in m) return { path, type: "Data" };
 	else if ("wasm" in m) return { path, type: "CompiledWasm" };
+	else if ("pythonModule" in m) return { path, type: "PythonModule" };
+	else if ("pythonRequirement" in m) return { path, type: "PythonRequirement" };
 
 	// This function is only used for building error messages including
 	// generated modules, and these are the types we generate.
