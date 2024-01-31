@@ -25,7 +25,8 @@ export function ensurePosixLikePath(filePath: string) {
 	return isWindows ? filePath.replaceAll("\\", "/") : filePath;
 }
 
-// Building to an ES module, but Vite will provide `__dirname`
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const distPath = ensurePosixLikePath(path.resolve(__dirname, ".."));
 const libPath = path.posix.join(distPath, "worker", "lib");
 

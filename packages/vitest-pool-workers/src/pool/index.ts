@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import events from "node:events";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import util from "node:util";
 import type { ProvidedEnv } from "cloudflare:test";
 import { createBirpc } from "birpc";
@@ -78,7 +79,8 @@ const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
 // Log for Miniflare instances, used for user code warnings/errors
 const mfLog = new Log(LogLevel.WARN);
 
-// Building to an ES module, but Vite will provide `__dirname`
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const DIST_PATH = path.resolve(__dirname, "..");
 const POOL_WORKER_PATH = path.join(DIST_PATH, "worker", "index.mjs");
 
