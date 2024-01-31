@@ -1,5 +1,40 @@
 # wrangler
 
+## 3.26.0
+
+### Minor Changes
+
+- [#4847](https://github.com/cloudflare/workers-sdk/pull/4847) [`6968e11f`](https://github.com/cloudflare/workers-sdk/commit/6968e11f3c1f4911c666501ca9654eabfe87244b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: expose new (no-op) `caches` field in `getBindingsProxy` result
+
+  Add a new `caches` field to the `getBindingsProxy` result, such field implements a
+  no operation (no-op) implementation of the runtime `caches`
+
+  Note: Miniflare exposes a proper `caches` mock, we will want to use that one in
+  the future but issues regarding it must be ironed out first, so for the
+  time being a no-op will have to do
+
+### Patch Changes
+
+- [#4860](https://github.com/cloudflare/workers-sdk/pull/4860) [`b92e5ac0`](https://github.com/cloudflare/workers-sdk/commit/b92e5ac006195d490bcf9be3b547ba0bfa33f151) Thanks [@Sibirius](https://github.com/Sibirius)! - fix: allow empty strings in secret:bulk upload
+
+  Previously, the `secret:bulk` command would fail if any of the secrets in the secret.json file were empty strings and they already existed remotely.
+
+* [#4869](https://github.com/cloudflare/workers-sdk/pull/4869) [`fd084bc0`](https://github.com/cloudflare/workers-sdk/commit/fd084bc0c890458f479e756b616ed023b7142bba) Thanks [@jculvey](https://github.com/jculvey)! - feature: Expose AI bindings to `getBindingsProxy`.
+
+  The `getBindingsProxy` utility function will now contain entries for any AI bindings specified in `wrangler.toml`.
+
+- [#4880](https://github.com/cloudflare/workers-sdk/pull/4880) [`65da40a1`](https://github.com/cloudflare/workers-sdk/commit/65da40a1229c4e5358553f2636282eb909ebc662) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not attempt login during dry-run
+
+  The "standard pricing" warning was attempting to make an API call that was causing a login attempt even when on a dry-run.
+  Now this warning is disabled during dry-runs.
+
+  Fixes #4723
+
+* [#4819](https://github.com/cloudflare/workers-sdk/pull/4819) [`6a4cb8c6`](https://github.com/cloudflare/workers-sdk/commit/6a4cb8c6456f1dba95cae2b8bbe658f7227349f8) Thanks [@magnusdahlstrand](https://github.com/magnusdahlstrand)! - fix: Use appropriate logging levels when parsing headers and redirects in `wrangler pages dev`.
+
+* Updated dependencies [[`1e424ff2`](https://github.com/cloudflare/workers-sdk/commit/1e424ff280610657e997df8290d0b39b0393c845), [`749fa3c0`](https://github.com/cloudflare/workers-sdk/commit/749fa3c05e6b9fcaa59a72f60f7936b7beaed5ad)]:
+  - miniflare@3.20240129.0
+
 ## 3.25.0
 
 ### Minor Changes

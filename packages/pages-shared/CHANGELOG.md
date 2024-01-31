@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.11.10
+
+### Patch Changes
+
+- [#4819](https://github.com/cloudflare/workers-sdk/pull/4819) [`6a4cb8c6`](https://github.com/cloudflare/workers-sdk/commit/6a4cb8c6456f1dba95cae2b8bbe658f7227349f8) Thanks [@magnusdahlstrand](https://github.com/magnusdahlstrand)! - fix: Use appropriate logging levels when parsing headers and redirects in `wrangler pages dev`.
+
+- Updated dependencies [[`1e424ff2`](https://github.com/cloudflare/workers-sdk/commit/1e424ff280610657e997df8290d0b39b0393c845), [`749fa3c0`](https://github.com/cloudflare/workers-sdk/commit/749fa3c05e6b9fcaa59a72f60f7936b7beaed5ad)]:
+  - miniflare@3.20240129.0
+
 ## 0.11.9
 
 ### Patch Changes
