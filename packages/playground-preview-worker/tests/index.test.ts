@@ -1,12 +1,5 @@
 import { fetch } from "undici";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-
-function removeUUID(str: string) {
-	return str.replace(
-		/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}/g,
-		"00000000-0000-0000-0000-000000000000"
-	);
-}
+import { beforeAll, describe, expect, it } from "vitest";
 
 const REMOTE = "https://playground-testing.devprod.cloudflare.dev";
 const PREVIEW_REMOTE =

@@ -15,13 +15,21 @@ import type {
 	ParsedRedirects,
 } from "./types";
 
+const noopLogger = {
+	debug: (_message: string) => {},
+	log: (_message: string) => {},
+	info: (_message: string) => {},
+	warn: (_message: string) => {},
+	error: (_error: Error) => {},
+};
+
 export function createMetadataObject({
 	redirects,
 	headers,
 	webAnalyticsToken,
 	deploymentId,
 	failOpen,
-	logger = (_message: string) => {},
+	logger = noopLogger,
 }: {
 	redirects?: ParsedRedirects;
 	headers?: ParsedHeaders;
@@ -51,15 +59,17 @@ function constructRedirects({
 	const num_valid = redirects.rules.length;
 	const num_invalid = redirects.invalid.length;
 
-	logger(
+	logger.log(
 		`Parsed ${num_valid} valid redirect rule${num_valid === 1 ? "" : "s"}.`
 	);
 
 	if (num_invalid > 0) {
-		logger(`Found invalid redirect lines:`);
+		logger.warn(`Found invalid redirect lines:`);
 		for (const { line, lineNumber, message } of redirects.invalid) {
-			if (line) logger(`  - ${lineNumber ? `#${lineNumber}: ` : ""}${line}`);
-			logger(`    ${message}`);
+			if (line) {
+				logger.warn(`  - ${lineNumber ? `#${lineNumber}: ` : ""}${line}`);
+			}
+			logger.warn(`    ${message}`);
 		}
 	}
 
@@ -81,8 +91,8 @@ function constructRedirects({
 				};
 				continue;
 			} else {
-				logger(
-					`Info: the redirect rule ${rule.from} → ${rule.status} ${rule.to} could be made more performant by bringing it above any lines with splats or placeholders.`
+				logger.info(
+					`The redirect rule ${rule.from} → ${rule.status} ${rule.to} could be made more performant by bringing it above any lines with splats or placeholders.`
 				);
 			}
 		}
@@ -112,13 +122,17 @@ function constructHeaders({
 	const num_valid = headers.rules.length;
 	const num_invalid = headers.invalid.length;
 
-	logger(`Parsed ${num_valid} valid header rule${num_valid === 1 ? "" : "s"}.`);
+	logger.log(
+		`Parsed ${num_valid} valid header rule${num_valid === 1 ? "" : "s"}.`
+	);
 
 	if (num_invalid > 0) {
-		logger(`Found invalid header lines:`);
+		logger.warn(`Found invalid header lines:`);
 		for (const { line, lineNumber, message } of headers.invalid) {
-			if (line) logger(`  - ${lineNumber ? `#${lineNumber}: ` : ""} ${line}`);
-			logger(`    ${message}`);
+			if (line) {
+				logger.warn(`  - ${lineNumber ? `#${lineNumber}: ` : ""} ${line}`);
+			}
+			logger.warn(`    ${message}`);
 		}
 	}
 

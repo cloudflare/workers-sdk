@@ -6,6 +6,7 @@ import {
 	Fetcher,
 	R2Bucket,
 } from "@cloudflare/workers-types";
+import { Request, Response } from "undici";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
 	getBindingsProxy as originalGetBindingsProxy,
@@ -227,6 +228,25 @@ describe("getBindingsProxy", () => {
 			await dispose();
 		}
 	});
+
+	describe("caches", () => {
+		(["default", "named"] as const).forEach((cacheType) =>
+			it(`correctly obtains a no-op ${cacheType} cache`, async () => {
+				const { caches, dispose } = await getBindingsProxy<Bindings>({
+					configPath: wranglerTomlFilePath,
+				});
+				try {
+					const cache =
+						cacheType === "default"
+							? caches.default
+							: await caches.open("my-cache");
+					testNoOpCache(cache);
+				} finally {
+					await dispose();
+				}
+			})
+		);
+	});
 });
 
 /**
@@ -262,4 +282,18 @@ async function testDoBinding(
 	const doResp = await doStub.fetch("http://0.0.0.0");
 	const doRespText = await doResp.text();
 	expect(doRespText).toBe(expectedResponse);
+}
+
+async function testNoOpCache(
+	cache: Awaited<ReturnType<typeof getBindingsProxy>>["caches"]["default"]
+) {
+	let match = await cache.match("http://0.0.0.0/test");
+	expect(match).toBeUndefined();
+
+	const req = new Request("http://0.0.0.0/test");
+	await cache.put(req, new Response("test"));
+	const resp = await cache.match(req);
+	expect(resp).toBeUndefined();
+	const deleted = await cache.delete(req);
+	expect(deleted).toBe(false);
 }

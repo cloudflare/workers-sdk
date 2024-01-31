@@ -736,6 +736,7 @@ describe("wrangler secret", () => {
 				JSON.stringify({
 					"secret-name-2": "secret_text",
 					"secret-name-3": "secret_text",
+					"secret-name-4": "",
 				})
 			);
 
@@ -761,6 +762,7 @@ describe("wrangler secret", () => {
 										},
 										{ type: "secret_text", name: "secret-name-1" },
 										{ type: "secret_text", name: "secret-name-2" },
+										{ type: "secret_text", name: "secret-name-4" },
 									],
 								})
 							)
@@ -795,6 +797,7 @@ describe("wrangler secret", () => {
 									name: "secret-name-3",
 									text: "secret_text",
 								},
+								{ type: "secret_text", name: "secret-name-4", text: "" },
 							],
 						});
 						expect(parsedSettings).not.toHaveProperty(["bindings", 0, "text"]);
@@ -811,9 +814,10 @@ describe("wrangler secret", () => {
 					"🌀 Creating the secrets for the Worker \\"script-name\\"
 					✨ Successfully created secret for key: secret-name-2
 					✨ Successfully created secret for key: secret-name-3
+					✨ Successfully created secret for key: secret-name-4
 
 					Finished processing secrets JSON file:
-					✨ 2 secrets successfully uploaded"
+					✨ 3 secrets successfully uploaded"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});

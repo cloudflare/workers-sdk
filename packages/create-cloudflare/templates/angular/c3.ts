@@ -1,4 +1,3 @@
-import { cp } from "node:fs/promises";
 import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -19,10 +18,10 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	updateAngularJson(ctx);
 	await updateAppCode();
-	await installCFWorker(ctx);
+	await installCFWorker();
 };
 
-async function installCFWorker(ctx: C3Context) {
+async function installCFWorker() {
 	await installPackages(
 		["@cloudflare/workers-types", "@miniflare/tre@next", "wrangler@beta"],
 		{

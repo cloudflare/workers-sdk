@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
-		"publish": "wrangler deploy",
+		"deploy": "wrangler deploy",
 		"build": "wrangler build",
 		"start": "wrangler dev"
 	},

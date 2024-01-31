@@ -67,9 +67,11 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+			"pages:preview": `${npm} run build && wrangler pages dev ${await compatDateFlag()} .svelte-kit/cloudflare`,
 			"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
 		},
 	}),
+	devScript: "dev",
+	previewScript: "pages:preview",
 };
 export default config;

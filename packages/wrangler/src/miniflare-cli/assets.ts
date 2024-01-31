@@ -7,6 +7,7 @@ import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { hashFile } from "../pages/hash";
+import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
 	ParsedHeaders,
@@ -14,12 +15,6 @@ import type {
 } from "@cloudflare/pages-shared/metadata-generator/types";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";
-
-interface Logger {
-	log: (message: string) => void;
-	warn: (message: string) => void;
-	error: (error: Error) => void;
-}
 
 export interface Options {
 	log: Logger;
@@ -109,7 +104,7 @@ async function generateAssetsFetch(
 	let metadata = createMetadataObject({
 		redirects,
 		headers,
-		logger: log.warn.bind(log),
+		logger: log,
 	});
 
 	watch([headersFile, redirectsFile], { persistent: true }).on(
@@ -133,7 +128,7 @@ async function generateAssetsFetch(
 			metadata = createMetadataObject({
 				redirects,
 				headers,
-				logger: log.warn,
+				logger: log,
 			});
 		}
 	);

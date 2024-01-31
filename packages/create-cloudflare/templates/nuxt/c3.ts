@@ -27,7 +27,7 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async (ctx: C3Context) => {
+const configure = async () => {
 	const configFileName = "nuxt.config.ts";
 	const configFilePath = resolve(configFileName);
 	const s = spinner();

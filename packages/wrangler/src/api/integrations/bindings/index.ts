@@ -4,6 +4,7 @@ import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getVarsForDev } from "../../../dev/dev-vars";
 import { buildMiniflareBindingOptions } from "../../../dev/miniflare";
+import { CacheStorage } from "./caches";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
 import type { MiniflareOptions } from "miniflare";
@@ -39,6 +40,10 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	 * Object containing the various proxies
 	 */
 	bindings: Bindings;
+	/**
+	 * Caches object emulating the Workers Cache runtime API
+	 */
+	caches: CacheStorage;
 	/**
 	 * Function used to dispose of the child process providing the bindings implementation
 	 */
@@ -83,6 +88,7 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 			...vars,
 			...bindings,
 		},
+		caches: new CacheStorage(),
 		dispose: () => mf.dispose(),
 	};
 }
@@ -118,7 +124,10 @@ async function getMiniflareOptionsFromConfig(
 				script: "",
 				modules: true,
 				...bindingOptions,
-				serviceBindings,
+				serviceBindings: {
+					...serviceBindings,
+					...bindingOptions.serviceBindings,
+				},
 			},
 			externalDurableObjectWorker,
 		],

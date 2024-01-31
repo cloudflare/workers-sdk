@@ -21,7 +21,7 @@ import type { RawSourceMap } from "source-map";
  * directly in the terminal.
  */
 const mapConsoleAPIMessageTypeToConsoleMethod: {
-	[key in Protocol.Runtime.ConsoleAPICalledEvent["type"]]: Exclude<
+	[_key in Protocol.Runtime.ConsoleAPICalledEvent["type"]]: Exclude<
 		keyof Console,
 		"Console"
 	>;
