@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
@@ -6,6 +7,7 @@ import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/pars
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
+import { Agent } from "undici";
 import { hashFile } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
@@ -15,6 +17,7 @@ import type {
 } from "@cloudflare/pages-shared/metadata-generator/types";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";
+import type { Dispatcher } from "undici";
 
 export interface Options {
 	log: Logger;
@@ -38,7 +41,9 @@ export default async function generateASSETSBinding(options: Options) {
 					proxyRequest.headers.delete("Sec-WebSocket-Accept");
 					proxyRequest.headers.delete("Sec-WebSocket-Key");
 				}
-				return await fetch(proxyRequest);
+				return await fetch(proxyRequest, {
+					dispatcher: new ProxyDispatcher(miniflareRequest.headers.get("Host")),
+				});
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
@@ -61,6 +66,43 @@ export default async function generateASSETSBinding(options: Options) {
 			}
 		}
 	};
+}
+
+/**
+ * An Undici custom Dispatcher that is used for the fetch requests
+ * of the Pages dev server proxy.
+ *
+ * Notably, this dispatcher will reinstate the Host header that is
+ * removed by the `fetch` machinery. This is removed as a security
+ * precaution, which is not relevant for this Proxy.
+ */
+class ProxyDispatcher extends Agent {
+	constructor(private host: string | null) {
+		super();
+	}
+
+	dispatch(
+		options: Agent.DispatchOptions,
+		handler: Dispatcher.DispatchHandlers
+	): boolean {
+		if (this.host) {
+			const headers = options.headers;
+			assert(headers, "Expected all proxied requests to contain headers.");
+			if (Array.isArray(headers)) {
+				assert(
+					headers.every(
+						(h) => h !== "Host",
+						"Expected Host header to have been deleted."
+					)
+				);
+				headers.push("Host", this.host);
+			} else if (headers) {
+				assert(!headers["Host"], "Expected Host header to have been deleted.");
+				headers["Host"] = this.host;
+			}
+		}
+		return super.dispatch(options, handler);
+	}
 }
 
 async function generateAssetsFetch(
