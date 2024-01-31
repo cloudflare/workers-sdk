@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
+import { rename } from "node:fs/promises";
 import path, { resolve } from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
@@ -60,4 +62,62 @@ describe("Pages _worker.js", () => {
 			await stop();
 		}
 	});
+
+	it("should not error if the worker.js file is removed while watching", async ({
+		expect,
+	}) => {
+		const basePath = resolve(__dirname, "..");
+		const { ip, port, getOutput, clearOutput, stop } =
+			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
+				"--port=0",
+				"--inspector-port=0",
+			]);
+		try {
+			clearOutput();
+			await tryRename(
+				basePath,
+				"workerjs-test/_worker.js",
+				"workerjs-test/XXX_worker.js"
+			);
+			await setTimeout(1000);
+			expect(getOutput()).toMatchInlineSnapshot('""');
+
+			clearOutput();
+			await tryRename(
+				basePath,
+				"workerjs-test/XXX_worker.js",
+				"workerjs-test/_worker.js"
+			);
+			await setTimeout(1000);
+			expect(getOutput()).toMatchInlineSnapshot(`
+				"[2K[1A[2K[G✨ Compiled Worker successfully
+
+				[2K[1A[2K[G⎔ Reloading local server...
+
+				"
+			`);
+		} finally {
+			await stop();
+			await tryRename(
+				basePath,
+				"workerjs-test/XXX_worker.js",
+				"workerjs-test/_worker.js"
+			);
+		}
+	});
+
+	async function tryRename(
+		basePath: string,
+		from: string,
+		to: string
+	): Promise<void> {
+		try {
+			await rename(resolve(basePath, from), resolve(basePath, to));
+		} catch (e) {
+			// Do nothing if the file was not found
+			if ((e as any).code !== "ENOENT") {
+				throw e;
+			}
+		}
+	}
 });
