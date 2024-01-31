@@ -1,8 +1,6 @@
 {
 	"version": 1,
 	"description": "",
-	"include": [
-		"/*"
-	],
+	"include": ["/*"],
 	"exclude": []
 }
