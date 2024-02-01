@@ -959,7 +959,7 @@ export function getBindings(
 
 			// If there is a non-empty connection string specified in the environment,
 			// use that as our local connection stirng configuration.
-			if (connectionStringFromEnv) {
+			if (connectionStringFromEnv !== undefined && connectionStringFromEnv !== '') {
 				logger.log(`Found a non-empty HYPERDRIVE_LOCAL_CONNECTION_STRING variable. Hyperdrive will connect to this database during local development.`)
 				hyperdrive.localConnectionString = connectionStringFromEnv
 			}
