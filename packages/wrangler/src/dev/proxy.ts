@@ -154,7 +154,7 @@ export async function startPreviewServer({
 			accessTokenRef,
 		});
 
-		await waitForPortToBeAvailable(port, {
+		await waitForPortToBeAvailable(port, ip, {
 			retryPeriod: 200,
 			timeout: 2000,
 			abortSignal: abortController.signal,
@@ -295,7 +295,7 @@ export function usePreviewServer({
 			return;
 		}
 
-		waitForPortToBeAvailable(port, {
+		waitForPortToBeAvailable(port, ip, {
 			retryPeriod: 200,
 			timeout: 2000,
 			abortSignal: abortController.signal,
@@ -636,9 +636,13 @@ function createStreamHandler(
  */
 export async function waitForPortToBeAvailable(
 	port: number,
+	host: string,
 	options: { retryPeriod: number; timeout: number; abortSignal: AbortSignal }
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
+		if (host === "*") {
+			host = "0.0.0.0";
+		}
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		options.abortSignal.addEventListener("abort", () => {
 			const abortError = new Error("waitForPortToBeAvailable() aborted");
@@ -686,7 +690,7 @@ export async function waitForPortToBeAvailable(
 					doReject(err);
 				}
 			});
-			server.listen(port, () =>
+			server.listen(port, host, () =>
 				terminator
 					.terminate()
 					.then(doResolve, () =>

@@ -626,12 +626,16 @@ export async function startApiDev(args: StartDevOptions) {
 	};
 }
 /**
+ * Get an available TCP port number.
+ *
  * Avoiding calling `getPort()` multiple times by memoizing the first result.
  */
-function memoizeGetPort(defaultPort?: number) {
+function memoizeGetPort(defaultPort: number, host: string) {
 	let portValue: number;
 	return async () => {
-		return portValue || (portValue = await getPort({ port: defaultPort }));
+		// Check a specific host to avoid probing all local addresses.
+		portValue = portValue ?? (await getPort({ port: defaultPort, host: host }));
+		return portValue;
 	};
 }
 /**
@@ -705,14 +709,16 @@ async function validateDevServerSettings(
 	);
 
 	const { zoneId, host, routes } = await getZoneIdHostAndRoutes(args, config);
-	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
-	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
+	const initialIp = args.ip || config.dev.ip;
+	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
+	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
+	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "localhost");
 
 	// Our inspector proxy server will be binding to the result of
 	// `getInspectorPort`. If we attempted to bind workerd to the same inspector
 	// port, we'd get a port already in use error. Therefore, generate a new port
 	// for our runtime to bind its inspector service to.
-	const getRuntimeInspectorPort = memoizeGetPort();
+	const getRuntimeInspectorPort = memoizeGetPort(0, "localhost");
 
 	if (config.services && config.services.length > 0) {
 		logger.warn(
