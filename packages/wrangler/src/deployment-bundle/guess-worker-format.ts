@@ -20,6 +20,17 @@ export default async function guessWorkerFormat(
 	hint: CfScriptFormat | undefined,
 	tsconfig?: string | undefined
 ): Promise<CfScriptFormat> {
+	const parsedEntryPath = path.parse(entryFile);
+	if (parsedEntryPath.ext == ".py") {
+		logger.warn(
+			`The entrypoint ${path.relative(
+				process.cwd(),
+				entryFile
+			)} defines a Python worker, support for Python workers is currently experimental.`
+		);
+		return "python";
+	}
+
 	const result = await esbuild.build({
 		...COMMON_ESBUILD_OPTIONS,
 		entryPoints: [entryFile],

@@ -41,7 +41,6 @@ import type {
 import type { ValidatorFn } from "./validation-helpers";
 
 const ENGLISH = new Intl.ListFormat("en");
-
 /**
  * Validate the given `rawConfig` object that was loaded from `configPath`.
  *
