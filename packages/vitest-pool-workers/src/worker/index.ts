@@ -132,7 +132,7 @@ export class RunnerObject implements DurableObject {
 		try {
 			const module = await import(wd.filePath);
 
-			// HACK: Internally, the Vitest worker calls `startViteNode()`, which
+			// HACK: Internally, Vitest's worker thread calls `startViteNode()`, which
 			// constructs a singleton `VitestExecutor`. `VitestExecutor` is a subclass
 			// of `ViteNodeRunner`, which is how the worker communicates with the
 			// Vite server. We'd like access to this singleton so we can transform and

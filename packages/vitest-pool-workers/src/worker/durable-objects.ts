@@ -78,6 +78,7 @@ function assertSameIsolate(stub: DurableObjectStub) {
 	);
 }
 
+// See public facing `cloudflare:test` types for docs
 export async function runInDurableObject<O extends DurableObject, R>(
 	stub: DurableObjectStub,
 	callback: (instance: O, state: DurableObjectState) => R | Promise<R>
@@ -120,6 +121,7 @@ async function runAlarm(instance: DurableObject, state: DurableObjectState) {
 	await instance.alarm?.();
 	return true;
 }
+// See public facing `cloudflare:test` types for docs
 export function runDurableObjectAlarm(
 	stub: DurableObjectStub
 ): Promise<boolean /* ran */> {
@@ -163,8 +165,11 @@ class DurableObjectWrapper implements DurableObject {
 		}
 		this.instanceConstructor ??= constructor as DurableObjectConstructor;
 		if (this.instanceConstructor !== constructor) {
-			// Unlikely to hit this case if aborting all Durable Objects at the
-			// start/end of each test
+			// This would be if the module was invalidated
+			// (i.e. source file changed), then the Durable Object was `fetch()`ed
+			// again. We reset all Durable Object instances between each test, so it's
+			// unlikely multiple constructors would be used by the same instance,
+			// unless the user did something funky with Durable Objects outside tests.
 			await this.state.blockConcurrencyWhile<never>(() => {
 				// Throw inside `blockConcurrencyWhile()` to abort this object
 				throw new Error(

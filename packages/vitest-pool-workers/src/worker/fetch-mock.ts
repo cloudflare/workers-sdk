@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { MockAgent, setDispatcher, isMockActive } from "cloudflare:mock-agent";
 import type { Dispatcher } from "undici";
 
+// See public facing `cloudflare:test` types for docs
 export const fetchMock = new MockAgent({ connections: 1 });
 const requests = new WeakMap<Dispatcher.DispatchOptions, Request>();
 const responses = new WeakMap<Dispatcher.DispatchOptions, Response>();
@@ -25,7 +26,12 @@ setDispatcher((opts, handler) => {
 		});
 });
 
-// Monkeypatch `fetch()` to intercept requests if the fetch mock is enabled
+// Monkeypatch `fetch()` to intercept requests if the fetch mock is enabled.
+//The way we've implemented this, `fetchMock` only mocks requests in the current
+// worker. We kind of have to do it this way, as `fetchMock` supports functions
+// as reply callbacks, and we can't serialise arbitrary functions across worker
+// boundaries. For mocking requests in other workers, Miniflare's `fetchMock`
+// option can be used in the `vitest.config.ts`.
 globalThis.fetch = async (input, init) => {
 	const isActive = isMockActive(fetchMock);
 	if (!isActive) return originalFetch.call(globalThis, input, init);

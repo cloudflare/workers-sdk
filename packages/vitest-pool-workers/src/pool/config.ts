@@ -19,9 +19,36 @@ const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
 export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
 const WorkersPoolOptionsSchema = z.object({
+	/**
+	 * Entrypoint to worker run in the same isolate/context as tests. Only
+	 * required if `kCurrentWorker` `serviceBindings` defined, or Durable Objects
+	 * without explicit `scriptName` used. Note this goes through Vite transforms
+	 * and can be TypeScript. Note also `import module from "<main>"` inside tests
+	 * gives exactly the same `module` instance as is used internally for
+	 * self-service and Durable Object bindings.
+	 */
 	main: z.ostring(),
+	/**
+	 * Enables per-test isolated storage. If enabled, any writes to storage
+	 * performed in a test will be undone at the end of the test. The test storage
+	 * environment is copied from the containing suite, meaning `beforeAll()`
+	 * hooks can be used to seed data. If this is disabled, all tests will share
+	 * the same storage.
+	 */
 	isolatedStorage: z.boolean().default(false),
+	/**
+	 * Runs all tests in this project serially in the same worker, using the same
+	 * module cache. This can significantly speed up tests if you've got lots of
+	 * small test files.
+	 */
 	singleWorker: z.boolean().default(false),
+	/**
+	 * Called at the start of each test run with the same `env` object as
+	 * `import { env } from "cloudflare:test"` inside tests. This function will
+	 * always be called with nothing stored in any of the bindings. This function
+	 * may be called multiple times per test run if `singleWorker` is `false`
+	 * and `isolatedStorage` is `true`.
+	 */
 	setupEnvironment: z
 		// eslint-disable-next-line unused-imports/no-unused-vars
 		.custom<(env: ProvidedEnv) => Awaitable<void>>(

@@ -1,5 +1,6 @@
 import assert from "node:assert";
 
+// See public facing `cloudflare:test` types for docs
 export let env: Record<string, unknown>;
 export let internalEnv: Env;
 export function setEnv(newEnv: Env) {

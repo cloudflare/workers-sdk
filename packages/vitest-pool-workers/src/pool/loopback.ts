@@ -59,6 +59,65 @@ async function emptyDir(dirPath: string) {
 	}
 }
 
+/**
+ * ## Stacked/Isolated Storage System
+ *
+ * One of the features of `@cloudflare/vitest-pool-workers` is isolated per-test
+ * storage. If enabled, writes performed in a test are undone at the end of that
+ * test. Writes performed in `beforeAll()` hooks are not undone. As an example,
+ * this is the behaviour we're describing:
+ *
+ * ```js
+ * async function get() { return (await env.TEST_NAMESPACE.get("key")) ?? ""; }
+ * async function append(str) { await env.TEST_NAMESPACE.put("key", get() + str); }
+ *
+ * beforeAll(() => append("a"));
+ * beforeEach(() => append("b"));
+ *
+ * test("test 1", async () => {
+ *   await append("c");
+ *   expect(await get()).toBe("abc");
+ * });
+ * test("test 2", async () => {
+ *   await append("d");
+ *   expect(await get()).toBe("abd"); // append("c") undone
+ * });
+ *
+ * describe("nested", () => {
+ *   beforeAll(() => append("e"));
+ *   beforeEach(() => append("f"));
+ *
+ *   test("test 3", async () => {
+ *     await append("g");
+ *     expect(await get()).toBe("aebfg"); // all `beforeAll()`s first
+ *   });
+ *   test("test 4", async () => {
+ *     await append("h");
+ *     expect(await get()).toBe("aebfh");
+ *   });
+ * });
+ * ```
+ *
+ * Each `Miniflare` instance in the pool has its own directory for persistent
+ * state. If we wanted to update this mid-state, we'd need to restart the
+ * corresponding `workerd` instance, as the persistence path is encoded in a
+ * `diskDirectory` service.
+ *
+ * Instead, we implement this with an on-disk "stack" containing "backups" of
+ * the `.sqlite` files belonging to Miniflare's Durable Objects. Whenever Vitest
+ * starts a test attempt or enters a describe block, we "push" (copy) the
+ * current `.sqlite` files into the stack. Whenever Vitest finishes a test
+ * attempt or leaves a describe block, we "pop" (copy) the `.sqlite` files from
+ * the top of the stack to the persistence path.
+ *
+ * Notably, we don't copy the blobs referenced by the `.sqlite` databases.
+ * Instead, we enable Miniflare's "sticky" blobs feature which prevents blobs
+ * being garbage collected when they're no longer referenced. This means that if
+ * a user deletes or overwrites a value, the old value's blob will still be
+ * stored, meaning when we "pop" the stack, the blob references will be valid.
+ * At the end of a test run, we will empty the persistence directories, cleaning
+ * up all blobs.
+ */
 interface StackedStorageState {
 	// Only one stack operation per instance may be in-progress at a given time
 	mutex: Mutex;
@@ -91,6 +150,9 @@ function getState(mf: Miniflare) {
 }
 
 const ABORT_ALL_WORKER_NAME = `${WORKER_NAME_PREFIX}:helper`;
+// The `abortAllDurableObjects()` API is only accessible from a worker, so we
+// add this extra worker to all `Miniflare` instances constructed by the pool,
+// so we can this function from Node.
 export const ABORT_ALL_WORKER: WorkerOptions = {
 	name: ABORT_ALL_WORKER_NAME,
 	compatibilityFlags: ["unsafe_module"],

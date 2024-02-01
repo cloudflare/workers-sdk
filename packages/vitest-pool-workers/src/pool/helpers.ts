@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { WorkspaceProject } from "vitest/node";
 
+// User worker names must not start with this
 export const WORKER_NAME_PREFIX = "vitest-pool-workers-";
 
 export function isFileNotFoundError(e: unknown): boolean {

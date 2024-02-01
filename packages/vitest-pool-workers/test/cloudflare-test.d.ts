@@ -2,32 +2,93 @@ declare module "cloudflare:test" {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
 	interface ProvidedEnv {}
 
+	/**
+	 * 2nd argument passed to modules-format exported handlers. Contains bindings
+	 * configured in top-level `miniflare` pool options. To configure the type
+	 * of this value, use an ambient module type:
+	 *
+	 * ```ts
+	 * declare module "cloudflare:test" {
+	 *   interface ProvidedEnv {
+	 *     NAMESPACE: KVNamespace;
+	 *   }
+	 * }
+	 * ```
+	 */
 	export const env: ProvidedEnv;
+	/**
+	 * Declarative interface for mocking outbound `fetch()` requests. Deactivated
+	 * by default and reset before running each test file. Only mocks `fetch()`
+	 * requests for the current test runner worker. Auxiliary workers should mock
+	 * `fetch()`es with the Miniflare `fetchMock`/`outboundService` options.
+	 */
 	export const fetchMock: MockAgent;
 
+	/**
+	 * Runs `callback` inside the Durable Object pointed-to by `stub`'s context.
+	 * Conceptually, this temporarily replaces your Durable Object's `fetch()`
+	 * handler with `callback`, then sends a request to it, returning the result.
+	 * This can be used to call/spy-on Durable Object instance methods or seed/get
+	 * persisted data.
+	 */
 	export function runInDurableObject<O extends DurableObject, R>(
 		stub: DurableObjectStub,
 		callback: (instance: O, state: DurableObjectState) => R | Promise<R>
 	): Promise<R>;
+	/**
+	 * Immediately runs and removes the Durable Object pointed-to by `stub`'s
+	 * alarm if one is scheduled. Returns `true` if an alarm ran, and `false`
+	 * otherwise.
+	 */
 	export function runDurableObjectAlarm(
 		stub: DurableObjectStub
 	): Promise<boolean /* ran */>;
 
+	/**
+	 * Creates an instance of `ExecutionContext` for use as the 3rd argument to
+	 * modules-format exported handlers.
+	 */
 	export function createExecutionContext(): ExecutionContext;
+	/**
+	 * Waits for all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only
+	 * accepts instances of `ExecutionContext` returned by
+	 * `createExecutionContext()`.
+	 */
 	export function getWaitUntil<T extends unknown[]>(
 		ctx: ExecutionContext
 	): Promise<T>;
+	/**
+	 * Creates an instance of `ScheduledController` for use as the 1st argument to
+	 * modules-format `scheduled()` exported handlers.
+	 */
 	export function createScheduledController(
 		options?: FetcherScheduledOptions
 	): ScheduledController;
+	/**
+	 * Gets the "no retry" state of the `ScheduledController`, and waits for all
+	 * `ExecutionContext#waitUntil()ed` `Promise`s to settle. Only accepts
+	 * instances of `ScheduledController` returned by
+	 * `createScheduledController()`, and instances of `ExecutionContext` returned
+	 * by `createExecutionContext()`.
+	 */
 	export function getScheduledResult(
 		ctrl: ScheduledController,
 		ctx: ExecutionContext
 	): Promise<FetcherScheduledResult>;
+	/**
+	 * Creates an instance of `MessageBatch` for use as the 1st argument to
+	 * modules-format `queue()` exported handlers.
+	 */
 	export function createMessageBatch(
 		queueName: string,
 		messages: ServiceBindingQueueMessage[]
 	): MessageBatch;
+	/**
+	 * Gets the ack/retry state of messages in the `MessageBatch`, and waits for
+	 * all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only accepts
+	 * instances of `MessageBatch` returned by `createMessageBatch()`, and
+	 * instances of `ExecutionContext` returned by `createExecutionContext()`.
+	 */
 	export function getQueueResult(
 		batch: MessageBatch,
 		ctx: ExecutionContext

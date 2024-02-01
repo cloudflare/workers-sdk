@@ -3,6 +3,8 @@
 // first constructor argument. If this is missing, throw `Illegal invocation`.
 const kConstructFlag = Symbol("kConstructFlag");
 
+// See public facing `cloudflare:test` types for docs.
+
 // =============================================================================
 // `ExecutionContext`
 // =============================================================================

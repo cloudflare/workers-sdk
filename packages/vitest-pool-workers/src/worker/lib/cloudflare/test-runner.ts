@@ -145,8 +145,6 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		// (i.e. the runner object and the proxy server).
 		// On push, ensures objects are started with newly copied `.sqlite` files.
 		// On pop, ensures SQLite WAL checkpoint, allowing us to just copy `.sqlite` files.
-		// TODO(now): even if isolated storage disabled, still want to reset these
-		//  at the start of test files?
 		await workerdUnsafe.abortAllDurableObjects();
 
 		// Send request to pool loopback service to update `.sqlite` files
@@ -248,7 +246,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 
 		// If we haven't popped storage for the test yet (i.e. the try threw,
-		// `onAfterTryTask()` wasn't called, and we didn't enable retires so
+		// `onAfterTryTask()` wasn't called, and we didn't enable retries so
 		// `onBeforeTryTask()` wasn't called again), pop it
 		await this.ensurePoppedActiveTryStorage(test);
 		tryStates.delete(test);

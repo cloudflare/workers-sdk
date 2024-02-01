@@ -135,7 +135,6 @@ interface Project {
 }
 const allProjects = new Map<string /* projectName */, Project>();
 
-// User worker names must not start with this
 function getRunnerName(project: WorkspaceProject, testFile?: string) {
 	const name = `${WORKER_NAME_PREFIX}runner-${project.getName()}`;
 	if (testFile === undefined) return name;
@@ -161,8 +160,10 @@ function isDurableObjectDesignatorToSelf(
 	);
 }
 
-// Returns the bound names for bindings to Durable Objects with classes defined
-// in this worker.
+/**
+ * Returns the bound names for bindings to Durable Objects with classes defined
+ * in this worker.
+ */
 function getDurableObjectBindingNamesToSelf(
 	options: WorkersProjectOptions
 ): Set<string> {
@@ -180,9 +181,11 @@ const USER_OBJECT_MODULE_PATH = path.join(
 	path.dirname(POOL_WORKER_PATH),
 	USER_OBJECT_MODULE_NAME
 );
-// Prefix all Durable Object class names, so they don't clash with other
-// identifiers in `src/worker/index.ts`. Returns a `Set` containing original
-// names of Durable Object classes defined in this worker.
+/**
+ * Prefix all Durable Object class names, so they don't clash with other
+ * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
+ * names of Durable Object classes defined in this worker.
+ */
 function fixupDurableObjectBindingsToSelf(
 	worker: SourcelessWorkerOptions
 ): Set<string> {
@@ -239,6 +242,7 @@ function buildProjectWorkerOptions(
 			`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
 		);
 	}
+	// TODO: maybe fail if these aren't set
 	if (!runnerWorker.compatibilityFlags.includes("export_commonjs_default")) {
 		runnerWorker.compatibilityFlags.push("export_commonjs_default");
 	}
@@ -350,6 +354,11 @@ const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
 	handleRuntimeStdio,
 	unsafeStickyBlobs: true,
 };
+/**
+ * Builds options for the Miniflare instance running tests for the given Vitest
+ * project. The first `runnerWorker` returned may be duplicated in the instance
+ * if `singleWorker` is disabled so tests can execute in-parallel and isolation.
+ */
 function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 	const [runnerWorker, ...auxiliaryWorkers] =
 		buildProjectWorkerOptions(project);
@@ -655,7 +664,10 @@ export default function (ctx: Vitest): ProcessPool {
 
 				const config = workspaceProject.getSerializableConfig();
 
-				// Use our custom test runner
+				// Use our custom test runner. We don't currently support custom
+				// runners, since we need our own for isolated storage/fetch mock resets
+				// to work properly. There aren't many use cases where a user would need
+				// to control this.
 				config.runner = "cloudflare:test-runner";
 
 				// Make sure `setImmediate` and `clearImmediate` are never faked as they

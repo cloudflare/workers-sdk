@@ -75,7 +75,7 @@ export function mustGetResolvedMainPath(
 	const options = getSerializedOptions();
 	if (options.main === undefined) {
 		throw new Error(
-			`Using ${forBindingType} bindings to the current worker requires \`poolOptions.miniflare.main\` to be set to your worker's entrypoint`
+			`Using ${forBindingType} bindings to the current worker requires \`poolOptions.workers.main\` to be set to your worker's entrypoint`
 		);
 	}
 	return options.main;

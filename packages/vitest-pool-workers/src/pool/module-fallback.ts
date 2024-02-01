@@ -102,6 +102,13 @@ function isWithinTypeModuleContext(filePath: string): boolean {
 }
 
 await cjsModuleLexer.init();
+/**
+ * Gets "named" exports from a CommonJS module. Normally, CommonJS modules can
+ * only be default-imported, but Node performs additional static analysis to
+ * allow named-imports too (https://nodejs.org/api/esm.html#interoperability-with-commonjs).
+ * This function returns the named-exports we should add to our ESM-CJS shim,
+ * using the same package as Node.
+ */
 function getCjsNamedExports(
 	filePath: string,
 	contents: string,
@@ -179,27 +186,28 @@ function maybeGetTargetFilePath(target: string): string | undefined {
 	if (target.endsWith(disableCjsEsmShimSuffix)) return target;
 }
 
+/**
+ * `target` is the path to the "file" `workerd` is trying to load,
+ * `referrer` is the path to the file that imported/required the `target`,
+ * `referrerDir` is the dirname of `referrer`
+ *
+ * For example, if the `referrer` is "/a/b/c/index.mjs":
+ *
+ * | Import Statement            | `target`           | Return             |
+ * |-----------------------------|--------------------|--------------------|
+ * | import "./dep.mjs"          | /a/b/c/dep.mjs     | dep.mjs            |
+ * | import "../dep.mjs"         | /a/b/dep.mjs       | ../dep.mjs         |
+ * | import "pkg"                | /a/b/c/pkg         | pkg                |
+ * | import "@org/pkg"           | /a/b/c/@org/pkg    | @org/pkg           |
+ * | import "node:assert"        | node:assert        | node:assert        |
+ * | import "cloudflare:sockets" | cloudflare:sockets | cloudflare:sockets |
+ * | import "workerd:rtti"       | workerd:rtti       | workerd:rtti       |
+ * | import "random:pkg"         | /a/b/c/random:pkg  | random:pkg         |
+ *
+ * Note that we return `dep.mjs` for `import "./dep.mjs"`. This would fail
+ * ES module resolution, so must be handled by `maybeGetTargetFilePath()`.
+ */
 function getApproximateSpecifier(target: string, referrerDir: string): string {
-	// `target` is the path to the "file" `workerd` is trying to load,
-	// `referrer` is the path to the file that imported/required the `target`,
-	// `referrerDir` is the dirname of `referrer`
-	//
-	// For example, if the `referrer` is "/a/b/c/index.mjs":
-	//
-	// | Import Statement            | `target`           | Return             |
-	// |-----------------------------|--------------------|--------------------|
-	// | import "./dep.mjs"          | /a/b/c/dep.mjs     | dep.mjs            |
-	// | import "../dep.mjs"         | /a/b/dep.mjs       | ../dep.mjs         |
-	// | import "pkg"                | /a/b/c/pkg         | pkg                |
-	// | import "@org/pkg"           | /a/b/c/@org/pkg    | @org/pkg           |
-	// | import "node:assert"        | node:assert        | node:assert        |
-	// | import "cloudflare:sockets" | cloudflare:sockets | cloudflare:sockets |
-	// | import "workerd:rtti"       | workerd:rtti       | workerd:rtti       |
-	// | import "random:pkg"         | /a/b/c/random:pkg  | random:pkg         |
-	//
-	// Note that we return `dep.mjs` for `import "./dep.mjs"`. This would fail
-	// ES module resolution, so must be handled by `maybeGetTargetFilePath()`
-	// before calling this function.
 	if (/^(node|cloudflare|workerd):/.test(target)) return target;
 	return path.posix.relative(referrerDir, target);
 }
@@ -275,6 +283,10 @@ function mustResolve(
 }
 
 function buildRedirectResponse(filePath: string) {
+	// `workerd` expects an absolute POSIX-style path (starting with a slash) for
+	// redirects. `filePath` is a platform absolute path with forward slashes.
+	// On Windows, this won't start with a `/`, so we add one to produce paths
+	// like `/C:/a/b/c`.
 	if (isWindows && filePath[0] !== "/") filePath = `/${filePath}`;
 	return new Response(null, { status: 301, headers: { Location: filePath } });
 }
