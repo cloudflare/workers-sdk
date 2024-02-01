@@ -2,11 +2,11 @@
 	<head>
 		<script>
 			/**
-	     * How to start:
+			 * How to start:
 			 *
-		   * 1. Create a Stream Live Input at https://dash.cloudflare.com/?to=/:account/stream/inputs/
-		   * 2. In the "Connection Information" tab, note the WHIP and WHEP URLs and fill them in below
-		   * 3. Save the file and reload the page
+			 * 1. Create a Stream Live Input at https://dash.cloudflare.com/?to=/:account/stream/inputs/
+			 * 2. In the "Connection Information" tab, note the WHIP and WHEP URLs and fill them in below
+			 * 3. Save the file and reload the page
 			 */
 
 			// WHIP Publish URL
@@ -33,6 +33,7 @@
 		<script type="module">
 			// This element will show your local webcam view
 			import WHIPClient from "./WHIPClient.js";
+
 			const videoElement = document.getElementById("input-video");
 			self.whipClient = new WHIPClient(publishURL, videoElement);
 		</script>
@@ -44,6 +45,7 @@
 		<script type="module">
 			// This element will show the playback from Stream
 			import WHEPClient from "./WHEPClient.js";
+
 			const videoElement = document.getElementById("remote-video");
 			self.whepClient = new WHEPClient(playbackURL, videoElement);
 		</script>
