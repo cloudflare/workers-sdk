@@ -11,11 +11,11 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
+import { getHyperdriveLocalConnectionStringFromEnv } from "./hyperdrive/utils";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
-import { getHyperdriveLocalConnectionStringFromEnv } from "./hyperdrive/utils";
 import { collectKeyValues } from "./utils/collectKeyValues";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
@@ -956,7 +956,8 @@ export function getBindings(
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
-			const connectionStringFromEnv = getHyperdriveLocalConnectionStringFromEnv()
+			const connectionStringFromEnv =
+				getHyperdriveLocalConnectionStringFromEnv();
 			if (!connectionStringFromEnv || !hyperdrive.localConnectionString) {
 				throw new UserError(
 					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'HYPERDRIVE_LOCAL_CONNECTION_STRING' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
@@ -965,9 +966,14 @@ export function getBindings(
 
 			// If there is a non-empty connection string specified in the environment,
 			// use that as our local connection stirng configuration.
-			if (connectionStringFromEnv) {
-				logger.log(`Found a non-empty HYPERDRIVE_LOCAL_CONNECTION_STRING variable. Hyperdrive will connect to this database during local development.`)
-				hyperdrive.localConnectionString = connectionStringFromEnv
+			if (
+				connectionStringFromEnv !== undefined &&
+				connectionStringFromEnv !== ""
+			) {
+				logger.log(
+					`Found a non-empty HYPERDRIVE_LOCAL_CONNECTION_STRING variable. Hyperdrive will connect to this database during local development.`
+				);
+				hyperdrive.localConnectionString = connectionStringFromEnv;
 			}
 
 			return hyperdrive;

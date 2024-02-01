@@ -1,8 +1,9 @@
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 
-export const getHyperdriveLocalConnectionStringFromEnv = getEnvironmentVariableFactory({
-	variableName: "HYPERDRIVE_LOCAL_CONNECTION_STRING"
-})
+export const getHyperdriveLocalConnectionStringFromEnv =
+	getEnvironmentVariableFactory({
+		variableName: "HYPERDRIVE_LOCAL_CONNECTION_STRING",
+	});
 
 export const getHyperdriveWarningFromEnv = getEnvironmentVariableFactory({
 	variableName: "NO_HYPERDRIVE_WARNING",

@@ -430,6 +430,9 @@ describe("hyperdrive dev tests", () => {
 	beforeEach(async () => {
 		worker = await makeWorker();
 		server = nodeNet.createServer().listen();
+	});
+
+	it("matches expected configuration parameters", async () => {
 		let port = 5432;
 		if (server.address() && typeof server.address() !== "string") {
 			port = (server.address() as nodeNet.AddressInfo).port;
@@ -463,9 +466,6 @@ describe("hyperdrive dev tests", () => {
 					}
 					`,
 		}));
-	});
-
-	it("matches expected configuration parameters", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => {
@@ -485,6 +485,39 @@ describe("hyperdrive dev tests", () => {
 	});
 
 	it("connects to a socket", async () => {
+		let port = 5432;
+		if (server.address() && typeof server.address() !== "string") {
+			port = (server.address() as nodeNet.AddressInfo).port;
+		}
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+					localConnectionString = "postgresql://user:pass@127.0.0.1:${port}/some_db"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
 		const socketMsgPromise = new Promise((resolve, _) => {
 			server.on("connection", (sock) => {
 				sock.on("data", (data) => {
@@ -508,9 +541,72 @@ describe("hyperdrive dev tests", () => {
 		await socketMsgPromise;
 	});
 
+	it("uses HYPERDRIVE_LOCAL_CONNECTION_STRING for the localConnectionString variable in the binding", async () => {
+		let port = 5432;
+		if (server.address() && typeof server.address() !== "string") {
+			port = (server.address() as nodeNet.AddressInfo).port;
+		}
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
+		const socketMsgPromise = new Promise((resolve, _) => {
+			server.on("connection", (sock) => {
+				sock.on("data", (data) => {
+					expect(new TextDecoder().decode(data)).toBe("test string");
+					server.close();
+					resolve({});
+				});
+			});
+		});
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		process.env.HYPERDRIVE_LOCAL_CONNECTION_STRING = `postgresql://user:pass@127.0.0.1:${port}/some_db`;
+		await worker.runDevSession("", async (session) => {
+			await retry(
+				(s) => {
+					return s.status !== 200;
+				},
+				async () => {
+					const resp = await fetch(`http://127.0.0.1:${session.port}/connect`);
+					return { text: await resp.text(), status: resp.status };
+				}
+			);
+		});
+		await socketMsgPromise;
+	});
+
 	afterEach(() => {
 		if (server.listening) {
 			server.close();
+		}
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		if (process.env.HYPERDRIVE_LOCAL_CONNECTION_STRING !== undefined) {
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			delete process.env.HYPERDRIVE_LOCAL_CONNECTION_STRING;
 		}
 	});
 });
