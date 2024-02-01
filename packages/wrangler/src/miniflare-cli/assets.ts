@@ -92,7 +92,7 @@ class ProxyDispatcher extends Dispatcher {
 		handler: Dispatcher.DispatchHandlers
 	): boolean {
 		if (this.host !== null) {
-			this.reinstateHostHeader(options.headers, this.host);
+			ProxyDispatcher.reinstateHostHeader(options.headers, this.host);
 		}
 		return this.dispatcher.dispatch(options, handler);
 	}
@@ -109,7 +109,7 @@ class ProxyDispatcher extends Dispatcher {
 	 * Ensure that the request contains a Host header, which would have been deleted
 	 * by the `fetch()` function before calling `dispatcher.dispatch()`.
 	 */
-	private reinstateHostHeader(
+	private static reinstateHostHeader(
 		headers: string[] | IncomingHttpHeaders | null | undefined,
 		host: string
 	) {
@@ -118,7 +118,7 @@ class ProxyDispatcher extends Dispatcher {
 			assert(
 				headers.every(
 					// Note that `headers` is a flat array of key-value pairs so we only check the even items.
-					(h, index) => index % 2 === 0 && h.toLowerCase() !== "host",
+					(h, index) => index % 2 === 1 || h.toLowerCase() !== "host",
 					"Expected Host header to have been deleted."
 				)
 			);
