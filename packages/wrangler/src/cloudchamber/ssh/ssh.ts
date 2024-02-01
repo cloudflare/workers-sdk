@@ -281,7 +281,7 @@ export async function handleListSSHKeysCommand(
 	for (const sshKey of sshKeys) {
 		newline();
 		updateStatus(
-			`${sshKey.name}\nID: ${dim(sshKey.id)}\nKey: ${dim(
+			`${brandColor(sshKey.name)}\n  ID ${dim(sshKey.id)}\n  Key ${dim(
 				(sshKey.public_key ?? "").trim()
 			)}`,
 			false
