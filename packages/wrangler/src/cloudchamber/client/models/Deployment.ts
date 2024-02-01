@@ -15,6 +15,7 @@ import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { NodeGroup } from "./NodeGroup";
 import type { Placement } from "./Placement";
 import type { Ref } from "./Ref";
+import type { Runtime } from "./Runtime";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -55,4 +56,5 @@ export type Deployment = {
 	 * The GPU memory of this deployment. If deployment is not node_group 'gpu', this will be null
 	 */
 	gpu_memory?: MemorySizeWithUnit;
+	runtime: Runtime;
 };

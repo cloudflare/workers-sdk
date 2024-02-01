@@ -2,10 +2,12 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { DNSConfiguration } from "./DNSConfiguration";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { NetworkParameters } from "./NetworkParameters";
+import type { Runtime } from "./Runtime";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -42,7 +44,9 @@ export type CreateDeploymentV2RequestBody = {
 	labels?: Array<Label>;
 	network?: NetworkParameters;
 	/**
-	 * Specify the GPU memory to be used for the deployment. (Mandatory for GPU deployments)
+	 * Specify the GPU memory to be used for the deployment. (Mandatory for gVisor deployments)
 	 */
 	gpu_memory?: MemorySizeWithUnit;
+	dns?: DNSConfiguration;
+	runtime?: Runtime;
 };

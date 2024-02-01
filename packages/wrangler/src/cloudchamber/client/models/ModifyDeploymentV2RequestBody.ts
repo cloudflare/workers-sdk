@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { DNSConfiguration } from "./DNSConfiguration";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
@@ -40,7 +41,8 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	labels?: Array<Label>;
 	/**
-	 * Specify the GPU memory to be used for the deployment. (Mandatory for GPU deployments)
+	 * Specify the GPU memory to be used for the deployment. (Mandatory for gVisor deployments)
 	 */
 	gpu_memory?: MemorySizeWithUnit;
+	dns?: DNSConfiguration;
 };
