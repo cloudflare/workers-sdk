@@ -7,7 +7,7 @@ import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/pars
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
-import { Agent } from "undici";
+import { Dispatcher, getGlobalDispatcher } from "undici";
 import { hashFile } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
@@ -17,7 +17,7 @@ import type {
 } from "@cloudflare/pages-shared/metadata-generator/types";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";
-import type { Dispatcher } from "undici";
+import type { IncomingHttpHeaders } from "undici/types/header";
 
 export interface Options {
 	log: Logger;
@@ -72,36 +72,64 @@ export default async function generateASSETSBinding(options: Options) {
  * An Undici custom Dispatcher that is used for the fetch requests
  * of the Pages dev server proxy.
  *
- * Notably, this dispatcher will reinstate the Host header that is
- * removed by the `fetch` machinery. This is removed as a security
- * precaution, which is not relevant for this Proxy.
+ * Notably, the ProxyDispatcher reinstates the Host header that was removed by the
+ * Undici `fetch` function call. Undici removes the Host header as a security precaution,
+ * but this is not relevant for an internal Proxy.
+ *
+ * The ProxyDispatcher will delegate through to the current global `Dispatcher`,
+ * ensuring that the request is routed correctly in case a developer has changed the
+ * global Dispatcher by a call to `setGlobalDispatcher()`.
  */
-class ProxyDispatcher extends Agent {
+class ProxyDispatcher extends Dispatcher {
+	private dispatcher: Dispatcher = getGlobalDispatcher();
+
 	constructor(private host: string | null) {
 		super();
 	}
 
 	dispatch(
-		options: Agent.DispatchOptions,
+		options: Dispatcher.DispatchOptions,
 		handler: Dispatcher.DispatchHandlers
 	): boolean {
-		if (this.host) {
-			const headers = options.headers;
-			assert(headers, "Expected all proxied requests to contain headers.");
-			if (Array.isArray(headers)) {
-				assert(
-					headers.every(
-						(h) => h !== "Host",
-						"Expected Host header to have been deleted."
-					)
-				);
-				headers.push("Host", this.host);
-			} else if (headers) {
-				assert(!headers["Host"], "Expected Host header to have been deleted.");
-				headers["Host"] = this.host;
-			}
+		if (this.host !== null) {
+			this.reinstateHostHeader(options.headers, this.host);
 		}
-		return super.dispatch(options, handler);
+		return this.dispatcher.dispatch(options, handler);
+	}
+
+	close() {
+		return this.dispatcher.close();
+	}
+
+	destroy() {
+		return this.dispatcher.destroy();
+	}
+
+	/**
+	 * Ensure that the request contains a Host header, which would have been deleted
+	 * by the `fetch()` function before calling `dispatcher.dispatch()`.
+	 */
+	private reinstateHostHeader(
+		headers: string[] | IncomingHttpHeaders | null | undefined,
+		host: string
+	) {
+		assert(headers, "Expected all proxy requests to contain headers.");
+		if (Array.isArray(headers)) {
+			assert(
+				headers.every(
+					// Note that `headers` is a flat array of key-value pairs so we only check the even items.
+					(h, index) => index % 2 === 0 && h.toLowerCase() !== "host",
+					"Expected Host header to have been deleted."
+				)
+			);
+			headers.push("Host", host);
+		} else {
+			assert(
+				Object.keys(headers).every((h) => h.toLowerCase() !== "host"),
+				"Expected Host header to have been deleted."
+			);
+			headers["Host"] = host;
+		}
 	}
 }
 
