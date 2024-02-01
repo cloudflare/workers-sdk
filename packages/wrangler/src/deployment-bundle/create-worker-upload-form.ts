@@ -25,6 +25,8 @@ export function toMimeType(type: CfModuleType): string {
 			return "application/octet-stream";
 		case "text":
 			return "text/plain";
+		case "python":
+			return "text/x-python";
 		default:
 			throw new TypeError("Unsupported module: " + type);
 	}

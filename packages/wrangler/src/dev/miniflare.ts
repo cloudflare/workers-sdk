@@ -27,6 +27,7 @@ import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
+	ModuleDefinition,
 	Request,
 	Response,
 	SourceOptions,
@@ -35,6 +36,7 @@ import type {
 import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
+import { readFile } from "node:fs/promises";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -583,21 +585,36 @@ async function buildMiniflareOptions(
 		};
 	}
 
-	const options: MiniflareOptions = {
-		host: config.initialIp,
-		port: config.initialPort,
-		inspectorPort: config.inspect ? config.inspectorPort : undefined,
-		liveReload: config.liveReload,
-		upstream,
-		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+	if (config.format == "python") {
+		const parsedPath = path.parse(config.bundle.path);
+		const options: MiniflareOptions = {
+			host: config.initialIp,
+			port: config.initialPort,
+			inspectorPort: config.inspect ? config.inspectorPort : undefined,
+			liveReload: config.liveReload,
+			upstream,
+			unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 
-		log,
-		verbose: logger.loggerLevel === "debug",
-		handleRuntimeStdio,
+			log,
+			verbose: logger.loggerLevel === "debug",
+			handleRuntimeStdio,
 
-		...httpsOptions,
-		...persistOptions,
-		workers: [
+			...httpsOptions,
+			...persistOptions,
+
+			compatibilityFlags: config.compatibilityFlags,
+			modules: [
+				{
+					type: "PythonModule",
+					path: parsedPath.name,
+					contents: await readFile(config.bundle.path)
+				}
+			]
+		};
+
+		return { options, internalObjects };
+	} else {
+		const workers: WorkerOptions[] = [
 			{
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
@@ -607,10 +624,28 @@ async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 			},
-			externalDurableObjectWorker,
-		],
-	};
-	return { options, internalObjects };
+			externalDurableObjectWorker
+		];
+		const options: MiniflareOptions = {
+			host: config.initialIp,
+			port: config.initialPort,
+			inspectorPort: config.inspect ? config.inspectorPort : undefined,
+			liveReload: config.liveReload,
+			upstream,
+			unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+
+			log,
+			verbose: logger.loggerLevel === "debug",
+			handleRuntimeStdio,
+
+			...httpsOptions,
+			...persistOptions,
+
+			workers
+		};
+
+		return { options, internalObjects };
+	}
 }
 
 export interface ReloadedEventOptions {

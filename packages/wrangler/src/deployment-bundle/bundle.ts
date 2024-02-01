@@ -24,6 +24,7 @@ import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
 import type { CfModule } from "./worker";
+import { readFile } from "node:fs/promises";
 
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
@@ -47,7 +48,7 @@ export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
-	bundleType: "esm" | "commonjs";
+	bundleType: "esm" | "commonjs" | "python";
 	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;
@@ -132,6 +133,7 @@ export async function bundleWorker(
 	const tmpDir = getWranglerTmpDir(projectRoot, "bundle");
 
 	const entryFile = entry.file;
+	const isPython = path.parse(entryFile).ext == ".py";
 
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
@@ -248,7 +250,7 @@ export async function bundleWorker(
 	}
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
-		if (!middleware.supports.includes(entry.format)) {
+		if (!middleware.supports.includes(entry.format) && !isPython) {
 			throw new UserError(
 				`Your Worker is written using the "${entry.format}" format, which isn't supported by the "${middleware.name}" middleware. To use "${middleware.name}" middleware, convert your Worker to the "${middleware.supports[0]}" format`
 			);
@@ -349,78 +351,100 @@ export async function bundleWorker(
 		logLevel: "silent",
 	};
 
-	let result: esbuild.BuildResult<typeof buildOptions>;
-	let stop: BundleResult["stop"];
-	try {
-		if (watch) {
-			const ctx = await esbuild.context(buildOptions);
-			await ctx.watch();
-			result = await initialBuildResultPromise;
-			if (result.errors.length > 0) {
-				throw new UserError("Failed to build");
+	if (isPython) {
+		// TODO(later): perform Python build step to discover modules and include them here.
+		const parsed = path.parse(entryFile);
+		const modules: CfModule[] = [
+			{
+				content: await readFile(entryFile),
+				filePath: entryFile,
+				name: parsed.base + parsed.ext,
+				type: "python"
 			}
+		];
+		let stop: BundleResult["stop"];
+		return {
+			modules,
+			dependencies: {},
+			resolvedEntryPointPath: entryFile,
+			bundleType: "python",
+			stop,
+			sourceMapMetadata: {
+				tmpDir: tmpDir.path,
+				entryDirectory: entry.directory,
+			},
+		};
+	} else {
+		let result: esbuild.BuildResult<typeof buildOptions>;
+		let stop: BundleResult["stop"];
+		try {
+			if (watch) {
+				const ctx = await esbuild.context(buildOptions);
+				await ctx.watch();
+				result = await initialBuildResultPromise;
+				if (result.errors.length > 0) {
+					throw new UserError("Failed to build");
+				}
 
-			stop = async function () {
-				tmpDir.remove();
-				await ctx.dispose();
-			};
-		} else {
-			result = await esbuild.build(buildOptions);
-			// Even when we're not watching, we still want some way of cleaning up the
-			// temporary directory when we don't need it anymore
-			stop = async function () {
-				tmpDir.remove();
-			};
+				stop = async function () {
+					tmpDir.remove();
+					await ctx.dispose();
+				};
+			} else {
+				result = await esbuild.build(buildOptions);
+				// Even when we're not watching, we still want some way of cleaning up the
+				// temporary directory when we don't need it anymore
+				stop = async function () {
+					tmpDir.remove();
+				};
+			}
+		} catch (e) {
+			if (!legacyNodeCompat && isBuildFailure(e))
+				rewriteNodeCompatBuildFailure(e.errors, forPages);
+			throw e;
 		}
-	} catch (e) {
-		if (!legacyNodeCompat && isBuildFailure(e))
-			rewriteNodeCompatBuildFailure(e.errors, forPages);
-		throw e;
-	}
 
-	const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
-	const notExportedDOs = doBindings
-		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
-		.map((x) => x.class_name);
-	if (notExportedDOs.length) {
-		const relativePath = path.relative(process.cwd(), entryFile);
-		throw new UserError(
-			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
-				", "
-			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+		const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
+		const notExportedDOs = doBindings
+			.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
+			.map((x) => x.class_name);
+		if (notExportedDOs.length) {
+			const relativePath = path.relative(process.cwd(), entryFile);
+			throw new UserError(
+				`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
+					", "
+				)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+			);
+		}
+		const bundleType = entryPoint.exports.length > 0 ? "esm" : "commonjs";
+		const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
+			_path.includes(".map")
+		)[0];
+
+		const resolvedEntryPointPath = path.resolve(
+			entry.directory,
+			entryPoint.relativePath
 		);
+
+		// A collision between additionalModules and moduleCollector.modules is incredibly unlikely because moduleCollector hashes the modules it collects.
+		// However, if it happens, let's trust the explicitly provided additionalModules over the ones we discovered.
+		const modules = dedupeModulesByName([
+			...moduleCollector.modules,
+			...additionalModules,
+		]);
+
+		await writeAdditionalModules(modules, path.dirname(resolvedEntryPointPath));
+		return {
+			modules,
+			dependencies: entryPoint.dependencies,
+			resolvedEntryPointPath,
+			bundleType,
+			stop,
+			sourceMapPath,
+			sourceMapMetadata: {
+				tmpDir: tmpDir.path,
+				entryDirectory: entry.directory,
+			},
+		};
 	}
-
-	const bundleType = entryPoint.exports.length > 0 ? "esm" : "commonjs";
-
-	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
-		_path.includes(".map")
-	)[0];
-
-	const resolvedEntryPointPath = path.resolve(
-		entry.directory,
-		entryPoint.relativePath
-	);
-
-	// A collision between additionalModules and moduleCollector.modules is incredibly unlikely because moduleCollector hashes the modules it collects.
-	// However, if it happens, let's trust the explicitly provided additionalModules over the ones we discovered.
-	const modules = dedupeModulesByName([
-		...moduleCollector.modules,
-		...additionalModules,
-	]);
-
-	await writeAdditionalModules(modules, path.dirname(resolvedEntryPointPath));
-
-	return {
-		modules,
-		dependencies: entryPoint.dependencies,
-		resolvedEntryPointPath,
-		bundleType,
-		stop,
-		sourceMapPath,
-		sourceMapMetadata: {
-			tmpDir: tmpDir.path,
-			entryDirectory: entry.directory,
-		},
-	};
 }

@@ -601,7 +601,6 @@ let maybeInstanceRegistry:
 export function _initialiseInstanceRegistry() {
 	return (maybeInstanceRegistry = new Map());
 }
-
 export class Miniflare {
 	#previousSharedOpts?: PluginSharedOptions;
 	#sharedOpts: PluginSharedOptions;

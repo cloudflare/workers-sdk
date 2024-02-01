@@ -4,7 +4,7 @@ import type { Json } from "miniflare";
 /**
  * The type of Worker
  */
-export type CfScriptFormat = "modules" | "service-worker";
+export type CfScriptFormat = "modules" | "service-worker" | "python";
 
 /**
  * A module type.
@@ -14,7 +14,8 @@ export type CfModuleType =
 	| "commonjs"
 	| "compiled-wasm"
 	| "text"
-	| "buffer";
+	| "buffer"
+	| "python";
 
 /**
  * An imported module.
