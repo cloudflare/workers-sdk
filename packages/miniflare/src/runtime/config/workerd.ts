@@ -19,6 +19,7 @@ export interface Config {
 	sockets?: Socket[];
 	v8Flags?: string[];
 	extensions?: Extension[];
+	autogates?: string[];
 }
 
 export type Socket = {
@@ -76,6 +77,8 @@ export type Worker_Module = {
 	| { wasm?: Uint8Array }
 	| { json?: string }
 	| { nodeJsCompatModule?: string }
+	| { pythonModule?: string }
+	| { pythonRequirement?: string }
 );
 
 export type Worker_Binding = {

@@ -1,5 +1,31 @@
 # miniflare
 
+## 3.20240129.0
+
+### Minor Changes
+
+- [#4873](https://github.com/cloudflare/workers-sdk/pull/4873) [`1e424ff2`](https://github.com/cloudflare/workers-sdk/commit/1e424ff280610657e997df8290d0b39b0393c845) Thanks [@dom96](https://github.com/dom96)! - feature: implemented basic Python support
+
+  Here is an example showing how to construct a MiniFlare instance with a Python module:
+
+  ```js
+  const mf = new Miniflare({
+  	modules: [
+  		{
+  			type: "PythonModule",
+  			path: "index",
+  			contents:
+  				"from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
+  		},
+  	],
+  	compatibilityFlags: ["experimental"],
+  });
+  ```
+
+### Patch Changes
+
+- [#4874](https://github.com/cloudflare/workers-sdk/pull/4874) [`749fa3c0`](https://github.com/cloudflare/workers-sdk/commit/749fa3c05e6b9fcaa59a72f60f7936b7beaed5ad) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `workerd` to [`1.20240129.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240129.0)
+
 ## 3.20231218.4
 
 ### Patch Changes

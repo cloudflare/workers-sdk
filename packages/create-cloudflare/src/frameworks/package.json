@@ -7,11 +7,11 @@
 	],
 	"dependencies": {
 		"create-astro": "4.7.2",
-		"@angular/create": "17.1.1",
+		"@angular/create": "17.1.2",
 		"create-docusaurus": "3.1.1",
 		"create-hono": "0.3.2",
 		"create-next-app": "14.1.0",
-		"create-qwik": "1.4.2",
+		"create-qwik": "1.4.3",
 		"create-react-app": "5.0.1",
 		"create-remix": "2.5.1",
 		"create-solid": "0.4.10",
