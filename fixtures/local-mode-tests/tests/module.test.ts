@@ -42,18 +42,18 @@ describe("module worker", () => {
 
 		const text = await resp.text();
 		expect(text).toMatchInlineSnapshot(`
-		"{
-		  \\"VAR1\\": \\"value1\\",
-		  \\"VAR2\\": 123,
-		  \\"VAR3\\": {
-		    \\"abc\\": \\"def\\"
-		  },
-		  \\"VAR4\\": \\"https://google.com\\",
-		  \\"text\\": \\"Here be some text\\",
-		  \\"data\\": \\"Here be some data\\",
-		  \\"NODE_ENV\\": \\"local-testing\\"
-		}"
-	`);
+			"{
+			  "VAR1": "value1",
+			  "VAR2": 123,
+			  "VAR3": {
+			    "abc": "def"
+			  },
+			  "VAR4": "https://google.com",
+			  "text": "Here be some text",
+			  "data": "Here be some data",
+			  "NODE_ENV": "local-testing"
+			}"
+		`);
 	});
 	describe("header parsing", () => {
 		it.concurrent("should return Hi by default", async () => {
