@@ -114,22 +114,15 @@ class ProxyDispatcher extends Dispatcher {
 		host: string
 	) {
 		assert(headers, "Expected all proxy requests to contain headers.");
-		if (Array.isArray(headers)) {
-			assert(
-				headers.every(
-					// Note that `headers` is a flat array of key-value pairs so we only check the even items.
-					(h, index) => index % 2 === 1 || h.toLowerCase() !== "host",
-					"Expected Host header to have been deleted."
-				)
-			);
-			headers.push("Host", host);
-		} else {
-			assert(
-				Object.keys(headers).every((h) => h.toLowerCase() !== "host"),
-				"Expected Host header to have been deleted."
-			);
-			headers["Host"] = host;
-		}
+		assert(
+			!Array.isArray(headers),
+			"Expected proxy request headers to be a hash object"
+		);
+		assert(
+			Object.keys(headers).every((h) => h.toLowerCase() !== "host"),
+			"Expected Host header to have been deleted."
+		);
+		headers["Host"] = host;
 	}
 }
 

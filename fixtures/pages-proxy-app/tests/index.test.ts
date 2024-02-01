@@ -14,6 +14,7 @@ describe("pages-proxy-app", async () => {
 			stdio: "ignore",
 		});
 
+		debugger;
 		({ ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			undefined,
@@ -27,6 +28,7 @@ describe("pages-proxy-app", async () => {
 	});
 
 	it("receives the correct Host header", async ({ expect }) => {
+		debugger;
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain(`Host:${ip}:${port}`);
