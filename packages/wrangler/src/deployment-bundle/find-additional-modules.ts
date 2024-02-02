@@ -65,13 +65,17 @@ export async function findAdditionalModules(
 			for (const requirement of pythonRequirements.split("\n")) {
 				modules.push({
 					type: "python-requirement",
-					name: path.resolve(entry.moduleRoot, requirement),
+					name: requirement,
 					content: "",
 					filePath: undefined,
 				});
 			}
 			// We don't care if a requirements.txt isn't found
-		} catch (e) {}
+		} catch (e) {
+			logger.debug(
+				"Python entrypoint detected, but no requirements.txt file found."
+			);
+		}
 	}
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
