@@ -615,6 +615,8 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
+	#cfObject?: Record<string, any> = {};
+
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
@@ -962,6 +964,7 @@ export class Miniflare {
 		const sharedOpts = this.#sharedOpts;
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
+		this.#cfObject = sharedOpts.core.cf;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
@@ -1322,6 +1325,13 @@ export class Miniflare {
 	}
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
+	}
+
+	async getCf(): Promise<Record<string, any>> {
+		this.#checkDisposed();
+		await this.ready;
+
+		return JSON.parse(JSON.stringify(this.#cfObject));
 	}
 
 	async getInspectorURL(): Promise<URL> {
