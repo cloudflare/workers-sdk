@@ -63,12 +63,15 @@ export async function findAdditionalModules(
 
 			// This is incredibly naive. However, it supports common syntax for requirements.txt
 			for (const requirement of pythonRequirements.split("\n")) {
-				modules.push({
-					type: "python-requirement",
-					name: requirement,
-					content: "",
-					filePath: undefined,
-				});
+				const packageName = requirement.match(/^[^\d\W]\w*/);
+				if (typeof packageName?.[0] === "string") {
+					modules.push({
+						type: "python-requirement",
+						name: packageName?.[0],
+						content: "",
+						filePath: undefined,
+					});
+				}
 			}
 			// We don't care if a requirements.txt isn't found
 		} catch (e) {
@@ -80,15 +83,16 @@ export async function findAdditionalModules(
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
 		logger.table(
-			modules
-				.filter((m) => m.type !== "python-requirement")
-				.map(({ name, type, content }) => {
-					return {
-						Name: name,
-						Type: type ?? "",
-						Size: `${(content.length / 1024).toFixed(2)} KiB`,
-					};
-				})
+			modules.map(({ name, type, content }) => {
+				return {
+					Name: name,
+					Type: type ?? "",
+					Size:
+						type === "python-requirement"
+							? ""
+							: `${(content.length / 1024).toFixed(2)} KiB`,
+				};
+			})
 		);
 	}
 
