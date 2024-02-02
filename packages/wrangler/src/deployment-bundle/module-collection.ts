@@ -33,6 +33,7 @@ export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
 		Data: "buffer",
 		Text: "text",
 		PythonModule: "python",
+		PythonRequirement: "python-requirement",
 	};
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);

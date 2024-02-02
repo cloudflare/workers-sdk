@@ -8790,11 +8790,16 @@ export default{
 			});
 
 			await runWrangler("deploy");
-			expect(std.out).toMatchInlineSnapshot(`
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
 			"┌──────────────────────────────────────┬────────┬──────────┐
 			│ Name                                 │ Type   │ Size     │
 			├──────────────────────────────────────┼────────┼──────────┤
-			│ .wrangler/tmp/deploy-f2fZqy/index.py │ python │ xx KiB │
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
 			└──────────────────────────────────────┴────────┴──────────┘
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -8816,11 +8821,16 @@ export default{
 			});
 
 			await runWrangler("deploy index.py");
-			expect(std.out).toMatchInlineSnapshot(`
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
 			"┌──────────────────────────────────────┬────────┬──────────┐
 			│ Name                                 │ Type   │ Size     │
 			├──────────────────────────────────────┼────────┼──────────┤
-			│ .wrangler/tmp/deploy-czUSwL/index.py │ python │ xx KiB │
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
 			└──────────────────────────────────────┴────────┴──────────┘
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)

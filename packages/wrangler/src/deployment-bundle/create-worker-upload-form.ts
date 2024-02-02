@@ -27,6 +27,8 @@ export function toMimeType(type: CfModuleType): string {
 			return "text/plain";
 		case "python":
 			return "text/x-python";
+		case "python-requirement":
+			return "text/x-python-requirement";
 		default:
 			throw new TypeError("Unsupported module: " + type);
 	}

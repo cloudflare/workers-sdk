@@ -15,7 +15,8 @@ export type CfModuleType =
 	| "compiled-wasm"
 	| "text"
 	| "buffer"
-	| "python";
+	| "python"
+	| "python-requirement";
 
 /**
  * An imported module.

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
@@ -29,7 +28,6 @@ import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	ModuleDefinition,
 	Request,
 	Response,
 	SourceOptions,
@@ -178,11 +176,11 @@ function buildLog(): Log {
 
 // TODO(soon): workerd requires python modules to be named without a file extension
 // We should remove this restriction
-function stripPySuffix(path: string, type?: CfModuleType) {
-	if (type === "python" && path.endsWith(".py")) {
-		return path.slice(0, -3);
+function stripPySuffix(modulePath: string, type?: CfModuleType) {
+	if (type === "python" && modulePath.endsWith(".py")) {
+		return modulePath.slice(0, -3);
 	}
-	return path;
+	return modulePath;
 }
 
 async function buildSourceOptions(

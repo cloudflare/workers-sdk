@@ -749,7 +749,8 @@ export type ConfigModuleRuleType =
 	| "CompiledWasm"
 	| "Text"
 	| "Data"
-	| "PythonModule";
+	| "PythonModule"
+	| "PythonRequirement";
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
