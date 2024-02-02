@@ -85,7 +85,7 @@ describe("c3 integration", () => {
 		const { stdout, stderr } = await runInWorker`$$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
-			🤖 Using default value in non-interactive context: yes
+			🤖 Using fallback value in non-interactive context: yes
 			Successfully deleted smoke-test-worker"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
