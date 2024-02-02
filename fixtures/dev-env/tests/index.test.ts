@@ -230,7 +230,7 @@ describe("startDevWorker: ProxyController", () => {
 		fireAndForgetFakeUserWorkerChanges({
 			mfOpts: run.mfOpts,
 			config: run.config,
-			script: run.mfOpts.script.replace("1", "2"),
+			script: run.mfOpts.script.replace("body:1", "body:2"),
 		});
 
 		res = await run.worker.fetch("http://dummy");
@@ -295,7 +295,7 @@ describe("startDevWorker: ProxyController", () => {
 		fireAndForgetFakeUserWorkerChanges({
 			mfOpts: run.mfOpts,
 			config: run.config,
-			script: run.mfOpts.script.replace("1", "2"),
+			script: run.mfOpts.script.replace("body:1", "body:2"),
 		});
 		await executionContextClearedPromise;
 	});
@@ -598,5 +598,54 @@ describe("startDevWorker: ProxyController", () => {
 		await expect(res.text()).resolves.toBe(
 			"URL: https://mybank.co.uk/test/path/2"
 		);
+	});
+
+	test("inflight requests are retried during UserWorker reloads", async () => {
+		// to simulate inflight requests failing during UserWorker reloads,
+		// we will use a UserWorker with a longish `await setTimeout(...)`
+		// so that we can guarantee the race condition is hit
+		// when workerd is eventually terminated
+
+		const run = await fakeStartUserWorker({
+			script: `
+				export default {
+					async fetch(request) {
+            const url = new URL(request.url);
+
+            if (url.pathname === '/long') {
+              await new Promise(r => setTimeout(r, 30_000));
+            }
+						return new Response("UserWorker:1");
+					}
+				}
+			`,
+		});
+
+		res = await run.worker.fetch("http://dummy/short"); // implicitly waits for UserWorker:1 to be ready
+		await expect(res.text()).resolves.toBe("UserWorker:1");
+
+		const inflightDuringReloads = run.worker.fetch("http://dummy/long");
+
+		// this will cause workerd for UserWorker:1 to terminate (eventually, but soon)
+		fireAndForgetFakeUserWorkerChanges({
+			mfOpts: run.mfOpts,
+			config: run.config,
+			script: run.mfOpts.script.replace("UserWorker:1", "UserWorker:2"), // change response so it can be identified
+		});
+
+		res = await run.worker.fetch("http://dummy/short"); // implicitly waits for UserWorker:2 to be ready
+		await expect(res.text()).resolves.toBe("UserWorker:2");
+
+		// this will cause workerd for UserWorker:2 to terminate (eventually, but soon)
+		fireAndForgetFakeUserWorkerChanges({
+			mfOpts: run.mfOpts,
+			config: run.config,
+			script: run.mfOpts.script
+				.replace("UserWorker:1", "UserWorker:3") // change response so it can be identified
+				.replace("30_000", "0"), // remove the long wait as we won't reload this UserWorker
+		});
+
+		res = await inflightDuringReloads;
+		await expect(res.text()).resolves.toBe("UserWorker:3");
 	});
 });
