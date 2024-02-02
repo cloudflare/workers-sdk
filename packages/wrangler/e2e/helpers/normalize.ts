@@ -6,6 +6,7 @@ export function normalizeOutput(
 ): string {
 	const functions = [
 		removeVersionHeader,
+		removeStandardPricingWarning,
 		npmStripTimings,
 		removeWorkersDev,
 		removeUUID,
@@ -152,5 +153,15 @@ export function squashLocalNetworkBindings(stdout: string): string {
 	return stdout.replace(
 		/(\[mf:inf\] Ready on http:\/\/.+:\d{4,5})(\n\[mf:inf\] - http:\/\/.+:\d{4,5})+/,
 		"[mf:inf] Ready on http://<LOCAL_IP>:<PORT>\n[mf:inf] - http://<LOCAL_IP>:<PORT>"
+	);
+}
+
+/**
+ * This may or may not be displayed depending on whether the test account has accepted standard pricing.
+ */
+function removeStandardPricingWarning(stdout: string): string {
+	return stdout.replace(
+		"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.",
+		""
 	);
 }

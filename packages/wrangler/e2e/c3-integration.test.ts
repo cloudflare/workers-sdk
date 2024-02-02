@@ -63,8 +63,7 @@ describe("c3 integration", () => {
 	it("deploy the worker", async () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.
-			Total Upload: xx KiB / gzip: xx KiB
+			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
 			  https://smoke-test-worker.SUBDOMAIN.workers.dev
