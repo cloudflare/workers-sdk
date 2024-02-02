@@ -489,14 +489,14 @@ describe("writes debug logs to hidden file", () => {
 			async (session) => {
 				await waitForPortToBeBound(session.port);
 
-				await waitUntilOutputContains(session, "🐛 Writing debug logs to");
+				await waitUntilOutputContains(session, "Writing logs to");
 
 				await setTimeout(1000); // wait a bit to ensure the file is written to disk
 			}
 		);
 
 		const filepath = finalA.stdout.match(
-			/🐛 Writing debug logs to "(.+\.log)"/
+			/🪵 {2}Writing logs to "(.+\.log)"/
 		)?.[1];
 		assert(filepath);
 
@@ -511,7 +511,7 @@ describe("writes debug logs to hidden file", () => {
 		});
 
 		const filepath = finalA.stdout.match(
-			/🐛 Writing debug logs to "(.+\.log)"/
+			/🪵 {2}Writing logs to "(.+\.log)"/
 		)?.[1];
 
 		expect(filepath).toBeUndefined();

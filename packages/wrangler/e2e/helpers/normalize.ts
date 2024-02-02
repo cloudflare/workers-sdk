@@ -140,10 +140,12 @@ export function normalizeTempDirs(stdout: string): string {
  * Debug log files are created with a timestamp, so we replace the debug log filepath timestamp with <TIMESTAMP>
  */
 export function normalizeDebugLogFilepath(stdout: string): string {
-	return stdout.replace(
-		/(🐛 Writing debug logs to ".+wrangler-debug)-.+\.log/,
-		"$1-<TIMESTAMP>.log"
-	);
+	return stdout
+		.replace(/🪵 {2}Writing logs to ".+\.log"/, '🪵  Writing logs to "<LOG>"')
+		.replace(
+			/🪵 {2}Logs were written to ".+\.log"/,
+			'🪵  Logs were written to "<LOG>"'
+		);
 }
 
 /**
