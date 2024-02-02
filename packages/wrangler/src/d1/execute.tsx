@@ -9,7 +9,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
@@ -157,8 +157,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 				(error as Error).name === "APIError"
 					? error
 					: { text: (error as Error).message };
-			logger.log(JSON.stringify({ error: messageToDisplay }, null, 2));
-			process.exit(1);
+			throw new FatalError(
+				JSON.stringify({ error: messageToDisplay }, null, 2)
+			);
 		} else {
 			throw error;
 		}
