@@ -13,15 +13,22 @@ const jsonError = async (request, env, _ctx, middlewareCtx) => {
   } catch (e) {
     console.error(e);
     const error = reduceError(e);
-    return fetch('https://format-errors.devprod.cloudflare.dev', {
-      method: 'POST',
-      body: JSON.stringify({
-        error,
-        url: request.url,
-        method: request.method,
-        headers: Object.fromEntries(request.headers.entries())
-      })
-    });
+    try {
+      const errorRes = await fetch(
+        'https://format-errors.devprod.cloudflare.dev',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            error,
+            url: request.url,
+            method: request.method,
+            headers: Object.fromEntries(request.headers.entries()),
+          }),
+        }
+      );
+      if (errorRes.ok) return errorRes;
+    } catch {}
+    return new Response(error.stack ?? error.message);
   }
 };
 
