@@ -41,17 +41,3 @@ export function urlFromParts(
 
 	return url;
 }
-
-export function urlPartsEqual(
-	partsA: Partial<URL> | undefined,
-	partsB: Partial<URL> | undefined,
-	baseA = "http://localhost",
-	baseB = baseA
-): boolean {
-	if (partsA === undefined || partsB === undefined) return partsA === partsB;
-
-	const urlA = urlFromParts(partsA, baseA);
-	const urlB = urlFromParts(partsB, baseB);
-
-	return urlA.href === urlB.href;
-}
