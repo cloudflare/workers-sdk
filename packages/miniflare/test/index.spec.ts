@@ -1740,7 +1740,6 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 
 test("Miniflare: getCf() returns a standard cf object", async (t) => {
 	const mf = new Miniflare({ script: "", modules: true });
-	await mf.ready;
 	const cf = await mf.getCf();
 	t.deepEqual(cf, JSON.parse(JSON.stringify(fallbackCf)));
 });
@@ -1749,7 +1748,6 @@ test("Miniflare: getCf() returns a user provided cf object", async (t) => {
 	const mf = new Miniflare({ script: "", modules: true, cf: {
 		myFakeField: 'test'
 	} });
-	await mf.ready;
 	const cf = await mf.getCf();
 	t.deepEqual(cf, { myFakeField: 'test' });
 });

@@ -13,16 +13,11 @@ Basic example:
 ```ts
 import { Miniflare } from "miniflare";
 
-const mf = new Miniflare({
-	script: "",
-	modules: true,
-});
+const mf = new Miniflare({ ... });
 
 const cf = await mf.getCf();
 
 console.log(`country = ${cf.country} ; colo = ${cf.colo}`); // logs 'country = GB ; colo = LHR'
-
-await mf.dispose();
 ```
 
 Example with a custom `cf` option:

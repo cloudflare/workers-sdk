@@ -771,8 +771,6 @@ defined at the top-level.
   function will invalidate any values returned by the `Miniflare#get*()`
   methods, preventing them from being used.
 
-- `getCf: Promise<Record<string, any>>`
+- `getCf(): Promise<Record<string, any>>`
 
-  Returns the same object returned from incoming `Request`'s `cf` property.
-
-  This object depends on the core options property of the same name.
+  Returns the same object returned from incoming `Request`'s `cf` property. This object depends on the `cf` property from `SharedOptions`.
