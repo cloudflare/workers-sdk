@@ -155,8 +155,16 @@ export default {
 				},
 			},
 		});
+
+		// Validate payload outside of Sentry/metrics reporting
+		let payload: Payload;
 		try {
-			const payload = PayloadSchema.parse(await request.json());
+			payload = PayloadSchema.parse(await request.json());
+		} catch {
+			return new Response("Invalid payload", { status: 400 });
+		}
+
+		try {
 			return handlePrettyErrorRequest(payload);
 		} catch (e) {
 			sentry.captureException(e);
