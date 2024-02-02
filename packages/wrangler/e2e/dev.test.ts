@@ -584,7 +584,7 @@ describe("hyperdrive dev tests", () => {
 			});
 		});
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.HYPERDRIVE_LOCAL_CONNECTION_STRING = `postgresql://user:pass@127.0.0.1:${port}/some_db`;
+		process.env.WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE = `postgresql://user:pass@127.0.0.1:${port}/some_db`;
 		await worker.runDevSession("", async (session) => {
 			await retry(
 				(s) => {
@@ -603,10 +603,13 @@ describe("hyperdrive dev tests", () => {
 		if (server.listening) {
 			server.close();
 		}
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		if (process.env.HYPERDRIVE_LOCAL_CONNECTION_STRING !== undefined) {
+		if (
 			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			delete process.env.HYPERDRIVE_LOCAL_CONNECTION_STRING;
+			process.env.WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE !==
+			undefined
+		) {
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			delete process.env.WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE;
 		}
 	});
 });
