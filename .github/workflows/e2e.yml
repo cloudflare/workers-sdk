@@ -74,8 +74,6 @@ jobs:
         run: echo "dir=$(ls $HOME/wrangler-*.tgz)" >> $GITHUB_OUTPUT;
 
       - name: Run tests
-        id: e2e-1
-        continue-on-error: true
         run: pnpm run --filter wrangler test:e2e
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
