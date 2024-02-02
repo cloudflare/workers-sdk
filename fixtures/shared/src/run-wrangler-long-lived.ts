@@ -62,6 +62,7 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 		chunks.push(chunk);
 	});
 	const getOutput = () => Buffer.concat(chunks).toString();
+	const clearOutput = () => (chunks.length = 0);
 
 	const timeoutHandle = setTimeout(() => {
 		if (settledReadyPromise) return;
@@ -90,5 +91,5 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	}
 
 	const { ip, port } = await ready;
-	return { ip, port, stop, getOutput };
+	return { ip, port, stop, getOutput, clearOutput };
 }
