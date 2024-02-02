@@ -733,7 +733,8 @@ test("Miniflare: python modules", async (t) => {
 			{
 				type: "PythonModule",
 				path: "index",
-				contents: "from test_module import add; from js import Response;\ndef fetch(request):\n  return Response.new(add(2,2))",
+				contents:
+					"from test_module import add; from js import Response;\ndef fetch(request):\n  return Response.new(add(2,2))",
 			},
 			{
 				type: "PythonModule",
@@ -741,9 +742,7 @@ test("Miniflare: python modules", async (t) => {
 				contents: `def add(a, b):\n  return a + b`,
 			},
 		],
-		compatibilityFlags: [
-			"experimental"
-		]
+		compatibilityFlags: ["experimental"],
 	});
 	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1749,10 +1748,14 @@ test("Miniflare: getCf() returns a standard cf object", async (t) => {
 });
 
 test("Miniflare: getCf() returns a user provided cf object", async (t) => {
-	const mf = new Miniflare({ script: "", modules: true, cf: {
-		myFakeField: 'test'
-	} });
+	const mf = new Miniflare({
+		script: "",
+		modules: true,
+		cf: {
+			myFakeField: "test",
+		},
+	});
 	const cf = await mf.getCf();
-	t.deepEqual(cf, { myFakeField: 'test' });
+	t.deepEqual(cf, { myFakeField: "test" });
 	await mf.dispose();
 });
