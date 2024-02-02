@@ -98,21 +98,21 @@ export class PreviewError extends HttpError {
 class TokenUpdateFailed extends HttpError {
 	name = "TokenUpdateFailed";
 	constructor() {
-		super("Provide token", 400, false);
+		super("Provide valid token", 400, false);
 	}
 }
 
 class RawHttpFailed extends HttpError {
 	name = "RawHttpFailed";
 	constructor() {
-		super("Provide token", 400, false);
+		super("Provide valid token", 400, false);
 	}
 }
 
 class PreviewRequestFailed extends HttpError {
 	name = "PreviewRequestFailed";
 	constructor(private tokenId: string | undefined, reportable: boolean) {
-		super("Token not found", 400, reportable);
+		super("Valid token not found", 400, reportable);
 	}
 	get data(): { tokenId: string | undefined } {
 		return { tokenId: this.tokenId };
@@ -122,7 +122,7 @@ class PreviewRequestFailed extends HttpError {
 class UploadFailed extends HttpError {
 	name = "UploadFailed";
 	constructor() {
-		super("Token not provided", 401, false);
+		super("Valid token not provided", 401, false);
 	}
 }
 
@@ -144,8 +144,13 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 	if (!token) {
 		throw new RawHttpFailed();
 	}
-
-	const userObject = env.UserSession.get(env.UserSession.idFromString(token));
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = env.UserSession.idFromString(token);
+	} catch {
+		throw new RawHttpFailed();
+	}
+	const userObject = env.UserSession.get(userObjectId);
 
 	// Delete these consumed headers so as not to bloat the request.
 	// Some tokens can be quite large and may cause nginx to reject the
@@ -250,14 +255,16 @@ app.get(`${rootDomain}/`, async (c) => {
 
 app.post(`${rootDomain}/api/worker`, async (c) => {
 	let userId = getCookie(c, "user");
-
 	if (!userId) {
 		throw new UploadFailed();
 	}
-
-	const userObject = c.env.UserSession.get(
-		c.env.UserSession.idFromString(userId)
-	);
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(userId);
+	} catch {
+		throw new UploadFailed();
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
 
 	return userObject.fetch("https://example.com", {
 		body: c.req.body,
@@ -269,14 +276,16 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 app.get(`${rootDomain}/api/inspector`, async (c) => {
 	const url = new URL(c.req.url);
 	let userId = url.searchParams.get("user");
-
 	if (!userId) {
 		throw new PreviewRequestFailed("", false);
 	}
-
-	const userObject = c.env.UserSession.get(
-		c.env.UserSession.idFromString(userId)
-	);
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(userId);
+	} catch {
+		throw new PreviewRequestFailed(userId, false);
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
 
 	return userObject.fetch(c.req.raw);
 });
@@ -308,6 +317,13 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	if (!token) {
 		throw new TokenUpdateFailed();
 	}
+	// Validate `token` is an actual Durable Object ID
+	try {
+		c.env.UserSession.idFromString(token);
+	} catch {
+		throw new TokenUpdateFailed();
+	}
+
 	setCookie(c, "token", token, {
 		secure: true,
 		sameSite: "None",
@@ -337,14 +353,16 @@ app.all(`${previewDomain}/*`, async (c) => {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
 	const token = getCookie(c, "token");
-
 	if (!token) {
 		throw new PreviewRequestFailed(token, false);
 	}
-
-	const userObject = c.env.UserSession.get(
-		c.env.UserSession.idFromString(token)
-	);
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(token);
+	} catch {
+		throw new PreviewRequestFailed(token, false);
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
 
 	const original = await userObject.fetch(
 		url,
