@@ -39,6 +39,7 @@ import {
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
+import { fallbackCf } from "../src/cf";
 import {
 	FIXTURES_PATH,
 	TestLog,
@@ -1735,4 +1736,20 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
 		}
 	);
+});
+
+test("Miniflare: getCf() returns a standard cf object", async (t) => {
+	const mf = new Miniflare({ script: "", modules: true });
+	await mf.ready;
+	const cf = await mf.getCf();
+	t.deepEqual(cf, JSON.parse(JSON.stringify(fallbackCf)));
+});
+
+test("Miniflare: getCf() returns a user provided cf object", async (t) => {
+	const mf = new Miniflare({ script: "", modules: true, cf: {
+		myFakeField: 'test'
+	} });
+	await mf.ready;
+	const cf = await mf.getCf();
+	t.deepEqual(cf, { myFakeField: 'test' });
 });
