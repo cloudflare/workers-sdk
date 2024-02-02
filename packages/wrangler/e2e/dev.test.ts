@@ -4,14 +4,22 @@ import { existsSync } from "node:fs";
 import * as nodeNet from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
-import getPort from "get-port";
 import shellac from "shellac";
-import { fetch } from "undici";
+import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { dedent, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
+
+// Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
+setGlobalDispatcher(
+	new Agent({
+		connectTimeout: 10_000,
+		headersTimeout: 10_000,
+		bodyTimeout: 10_000,
+	})
+);
 
 type MaybePromise<T = void> = T | Promise<T>;
 
@@ -31,11 +39,7 @@ const waitUntilOutputContains = async (
 		(stdout) => !stdout.includes(substring),
 		async () => {
 			await setTimeout(intervalMs);
-			return (
-				normalizeOutput(session.stdout) +
-				"\n\n\n" +
-				normalizeOutput(session.stderr)
-			);
+			return session.stdout + "\n\n\n" + session.stderr;
 		}
 	);
 };
@@ -44,6 +48,20 @@ interface SessionData {
 	port: number;
 	stdout: string;
 	stderr: string;
+}
+
+function getPort() {
+	return new Promise<number>((resolve, reject) => {
+		const server = nodeNet.createServer((socket) => socket.destroy());
+		server.listen(0, () => {
+			const address = server.address();
+			assert(typeof address === "object" && address !== null);
+			server.close((err) => {
+				if (err) reject(err);
+				else resolve(address.port);
+			});
+		});
+	});
 }
 
 async function runDevSession(
@@ -65,7 +83,11 @@ async function runDevSession(
 
 		// Must use the `in` statement in the shellac script rather than `.in()` modifier on the `shellac` object
 		// otherwise the working directory does not get picked up.
+		let promiseResolve: (() => void) | undefined;
+		const promise = new Promise<void>((resolve) => (promiseResolve = resolve));
 		const bg = await shellac.env(process.env).bg`
+		await ${() => promise}
+		
 		in ${workerPath} {
 			exits {
         $ ${WRANGLER} dev ${flags}
@@ -82,12 +104,18 @@ async function runDevSession(
 		};
 		bg.process.stdout.on("data", (chunk) => (sessionData.stdout += chunk));
 		bg.process.stderr.on("data", (chunk) => (sessionData.stderr += chunk));
+		// Only start `wrangler dev` once we've registered output listeners so we don't miss messages
+		promiseResolve?.();
 
 		await session(sessionData);
 
 		return bg.promise;
 	} finally {
-		if (pid) process.kill(pid);
+		try {
+			if (pid) process.kill(pid);
+		} catch {
+			// Ignore errors if we failed to kill the process (i.e. ESRCH if it's already terminated)
+		}
 	}
 }
 
