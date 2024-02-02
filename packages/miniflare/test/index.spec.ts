@@ -1745,6 +1745,7 @@ test("Miniflare: getCf() returns a standard cf object", async (t) => {
 		city: "Austin",
 		regionCode: "TX",
 	});
+	await mf.dispose();
 });
 
 test("Miniflare: getCf() returns a user provided cf object", async (t) => {
@@ -1753,4 +1754,5 @@ test("Miniflare: getCf() returns a user provided cf object", async (t) => {
 	} });
 	const cf = await mf.getCf();
 	t.deepEqual(cf, { myFakeField: 'test' });
+	await mf.dispose();
 });
