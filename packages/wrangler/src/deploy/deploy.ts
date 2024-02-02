@@ -620,7 +620,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main: {
-				name: entryPointName,
+				name: stripPySuffix(entryPointName, bundleType),
 				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
