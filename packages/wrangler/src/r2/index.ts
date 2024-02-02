@@ -138,6 +138,9 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								key,
 								jurisdiction
 							);
+							if (input === null) {
+								throw new UserError("The specified key does not exist.");
+							}
 							await stream.promises.pipeline(input, output);
 						}
 						if (!pipe) logger.log("Download complete.");
