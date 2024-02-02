@@ -4,7 +4,7 @@ import { getEntry } from "./deployment-bundle/entry";
 import { UserError } from "./errors";
 import { logger } from "./logger";
 import type { Config } from "./config";
-import { CfScriptFormat } from "./deployment-bundle/worker";
+import type { CfScriptFormat } from "./deployment-bundle/worker";
 
 // Currently includes bindings & rules for declaring modules
 

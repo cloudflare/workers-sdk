@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
@@ -16,6 +17,7 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfModuleType,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -36,7 +38,6 @@ import type {
 import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
-import { readFile } from "node:fs/promises";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -175,29 +176,46 @@ function buildLog(): Log {
 	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
+// TODO(soon): workerd requires python modules to be named without a file extension
+// We should remove this restriction
+function stripPySuffix(path: string, type?: CfModuleType) {
+	if (type === "python" && path.endsWith(".py")) {
+		return path.slice(0, -3);
+	}
+	return path;
+}
+
 async function buildSourceOptions(
 	config: ConfigBundle
 ): Promise<SourceOptions> {
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
 		const modulesRoot = path.dirname(scriptPath);
-		const { entrypointSource, modules } = withSourceURLs(
-			scriptPath,
-			config.bundle.modules
-		);
+		const { entrypointSource, modules } =
+			config.bundle.type === "python"
+				? {
+						entrypointSource: readFileSync(scriptPath, "utf8"),
+						modules: config.bundle.modules,
+				  }
+				: withSourceURLs(scriptPath, config.bundle.modules);
+
 		return {
 			modulesRoot,
+
 			modules: [
 				// Entrypoint
 				{
-					type: "ESModule",
-					path: scriptPath,
+					type: ModuleTypeToRuleType[config.bundle.type],
+					path: stripPySuffix(scriptPath, config.bundle.type),
 					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
 					type: ModuleTypeToRuleType[module.type ?? "esm"],
-					path: path.resolve(modulesRoot, module.name),
+					path: stripPySuffix(
+						path.resolve(modulesRoot, module.name),
+						module.type
+					),
 					contents: module.content,
 				})),
 			],
@@ -585,36 +603,21 @@ async function buildMiniflareOptions(
 		};
 	}
 
-	if (config.format == "python") {
-		const parsedPath = path.parse(config.bundle.path);
-		const options: MiniflareOptions = {
-			host: config.initialIp,
-			port: config.initialPort,
-			inspectorPort: config.inspect ? config.inspectorPort : undefined,
-			liveReload: config.liveReload,
-			upstream,
-			unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+	const options: MiniflareOptions = {
+		host: config.initialIp,
+		port: config.initialPort,
+		inspectorPort: config.inspect ? config.inspectorPort : undefined,
+		liveReload: config.liveReload,
+		upstream,
+		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 
-			log,
-			verbose: logger.loggerLevel === "debug",
-			handleRuntimeStdio,
+		log,
+		verbose: logger.loggerLevel === "debug",
+		handleRuntimeStdio,
 
-			...httpsOptions,
-			...persistOptions,
-
-			compatibilityFlags: config.compatibilityFlags,
-			modules: [
-				{
-					type: "PythonModule",
-					path: parsedPath.name,
-					contents: await readFile(config.bundle.path)
-				}
-			]
-		};
-
-		return { options, internalObjects };
-	} else {
-		const workers: WorkerOptions[] = [
+		...httpsOptions,
+		...persistOptions,
+		workers: [
 			{
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
@@ -624,28 +627,10 @@ async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 			},
-			externalDurableObjectWorker
-		];
-		const options: MiniflareOptions = {
-			host: config.initialIp,
-			port: config.initialPort,
-			inspectorPort: config.inspect ? config.inspectorPort : undefined,
-			liveReload: config.liveReload,
-			upstream,
-			unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
-
-			log,
-			verbose: logger.loggerLevel === "debug",
-			handleRuntimeStdio,
-
-			...httpsOptions,
-			...persistOptions,
-
-			workers
-		};
-
-		return { options, internalObjects };
-	}
+			externalDurableObjectWorker,
+		],
+	};
+	return { options, internalObjects };
 }
 
 export interface ReloadedEventOptions {

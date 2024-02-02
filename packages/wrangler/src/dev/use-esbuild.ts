@@ -213,7 +213,8 @@ export function useEsbuild({
 				id: 0,
 				entry,
 				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-				type: bundleResult?.bundleType ?? getBundleType(entry.format),
+				type:
+					bundleResult?.bundleType ?? getBundleType(entry.format, entry.file),
 				modules: bundleResult ? bundleResult.modules : newAdditionalModules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,

@@ -32,6 +32,7 @@ export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
 		CompiledWasm: "compiled-wasm",
 		Data: "buffer",
 		Text: "text",
+		PythonModule: "python",
 	};
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);

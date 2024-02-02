@@ -28,7 +28,7 @@ export default async function guessWorkerFormat(
 				entryFile
 			)} defines a Python worker, support for Python workers is currently experimental.`
 		);
-		return "python";
+		return "modules";
 	}
 
 	const result = await esbuild.build({

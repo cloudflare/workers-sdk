@@ -38,7 +38,7 @@ export async function runCustomBuild(
 		assertEntryPointExists(
 			expectedEntryAbsolute,
 			expectedEntryRelative,
-			`The entry-point file at "${expectedEntryAbsolute}" was not found.`
+			`The entry-point file at "${expectedEntryRelative}" was not found.`
 		);
 	}
 }

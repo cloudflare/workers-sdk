@@ -748,7 +748,8 @@ export type ConfigModuleRuleType =
 	| "CommonJS"
 	| "CompiledWasm"
 	| "Text"
-	| "Data";
+	| "Data"
+	| "PythonModule";
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */

@@ -46,7 +46,11 @@ import type {
 	ZoneNameRoute,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
+import type {
+	CfModuleType,
+	CfPlacement,
+	CfWorkerInit,
+} from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -1151,6 +1155,15 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 	});
 }
 
+// TODO(soon): workerd requires python modules to be named without a file extension
+// We should remove this restriction
+function stripPySuffix(modulePath: string, type?: CfModuleType) {
+	if (type === "python" && modulePath.endsWith(".py")) {
+		return modulePath.slice(0, -3);
+	}
+	return modulePath;
+}
+
 async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
@@ -1161,10 +1174,14 @@ async function noBundleWorker(
 		await writeAdditionalModules(modules, outDir);
 	}
 
+	const bundleType = getBundleType(entry.format, entry.file);
 	return {
-		modules,
+		modules: modules.map((m) => ({
+			...m,
+			name: stripPySuffix(m.name, m.type),
+		})),
 		dependencies: {} as { [path: string]: { bytesInOutput: number } },
 		resolvedEntryPointPath: entry.file,
-		bundleType: getBundleType(entry.format),
+		bundleType,
 	};
 }

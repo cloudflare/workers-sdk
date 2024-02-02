@@ -293,7 +293,7 @@ describe("basic dev python tests", () => {
 		}));
 	});
 
-	it.only("can run and modify python worker during dev session (local)", async () => {
+	it("can run and modify python worker during dev session (local)", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,

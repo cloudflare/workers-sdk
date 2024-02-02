@@ -1,0 +1,4 @@
+name = "python-worker"
+main = "src/index.py"
+compatibility_flags = ["experimental"]
+compatibility_date = "2024-01-29"
