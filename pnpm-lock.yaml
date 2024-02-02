@@ -393,6 +393,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/pages-proxy-app:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      miniflare:
+        specifier: workspace:*
+        version: link:../../packages/miniflare
+      undici:
+        specifier: ^5.28.2
+        version: 5.28.2
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/pages-simple-assets:
     devDependencies:
       '@cloudflare/workers-tsconfig':
