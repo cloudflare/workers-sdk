@@ -37,6 +37,7 @@ import type {
 	CfPreviewToken,
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
+import { FetchError } from "../cfetch";
 
 interface RemoteProps {
 	name: string | undefined;
@@ -336,29 +337,20 @@ export function useWorker(
 		start().catch((err) => {
 			// we want to log the error, but not end the process
 			// since it could recover after the developer fixes whatever's wrong
-			if ((err as { code: string }).code !== "ABORT_ERR") {
-				// instead of logging the raw API error to the user,
-				// give them friendly instructions
-				// for error 10063 (workers.dev subdomain required)
-				if (err.code === 10063) {
-					const errorMessage =
-						"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-					const solutionMessage =
-						"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-					const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-					logger.error(
-						`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
-					);
-				} else if (err.code === 10049) {
-					logger.log("Preview token expired, fetching a new one");
-					// code 10049 happens when the preview token expires
-					// since we want a new preview token when this happens,
-					// lets increment the counter, and trigger a rerun of
-					// the useEffect above
-					setRestartCounter((prevCount) => prevCount + 1);
-				} else {
-					logger.error("Error on remote worker:", err);
-				}
+			// instead of logging the raw API error to the user,
+			// give them friendly instructions
+
+			// code 10049 happens when the preview token expires
+			if(err.code === 10049) {
+				logger.log("Preview token expired, fetching a new one");
+
+				// since we want a new preview token when this happens,
+				// lets increment the counter, and trigger a rerun of
+				// the useEffect above
+				setRestartCounter((prevCount) => prevCount + 1);
+			}
+			else if(!handleUserFriendlyError(err, props.accountId)) {
+				logger.error("Error on remote worker:", err);
 			}
 		});
 
@@ -525,24 +517,18 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		return workerPreviewToken;
 	}
 	return start().catch((err) => {
-		if ((err as { code?: string })?.code !== "ABORT_ERR") {
-			// instead of logging the raw API error to the user,
-			// give them friendly instructions
-			// for error 10063 (workers.dev subdomain required)
-			if (err?.code === 10063) {
-				const errorMessage =
-					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-				const solutionMessage =
-					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-			} else if (err?.code === 10049) {
-				// code 10049 happens when the preview token expires
-				logger.log("Preview token expired, restart server to fetch a new one");
-			} else {
-				helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
-				logger.error("Error on remote worker:", err);
-			}
+		// we want to log the error, but not end the process
+		// since it could recover after the developer fixes whatever's wrong
+		// instead of logging the raw API error to the user,
+		// give them friendly instructions
+
+		// code 10049 happens when the preview token expires
+		if(err.code === 10049) {
+			logger.log("Preview token expired, restart server to fetch a new one");
+		}
+		else if(!handleUserFriendlyError(err, props.accountId)) {
+			helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
+			logger.error("Error on remote worker:", err);
 		}
 	});
 }
@@ -683,4 +669,54 @@ function ChooseAccount(props: {
 			/>
 		</>
 	);
+}
+
+/**
+ * A switch for handling thrown error mappings to user friendly
+ * messages, does not perform any logic other than logging errors.
+ * @returns if the error was handled or not
+ */
+function handleUserFriendlyError(error: FetchError, accountId?: string) {
+	// simulate aborts as handled errors by this function, but don't
+	// log anything
+	if ((error.code as unknown as string) === "ABORT_ERR") {
+		return true;
+	}
+
+	switch(error.code) {
+		// code 10021 happens when the provided preview database
+		// id does not actually exist
+		case 10021: {
+			const errorMessage =
+			"Error: You must use a real database in the preview_database_id configuration.";
+			const solutionMessage =
+				"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
+			const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
+
+			logger.error(
+				`${errorMessage}\n${solutionMessage}\n${documentationLink}`
+			);
+
+			return true;
+		}
+
+		// for error 10063 (workers.dev subdomain required)
+		case 10063: {
+			const errorMessage =
+				"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
+			const solutionMessage =
+				"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
+			const onboardingLink = (accountId)?(`https://dash.cloudflare.com/${accountId}/workers/onboarding`):("https://dash.cloudflare.com/?to=/:account/workers/onboarding");
+
+			logger.error(
+				`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
+			);
+
+			return true;
+		}
+
+		default: {
+			return false;
+		}
+	}
 }
