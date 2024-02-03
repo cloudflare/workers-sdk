@@ -37,7 +37,7 @@ import type {
 	CfPreviewToken,
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
-import { FetchError } from "../cfetch";
+import type { FetchError } from "../cfetch";
 
 interface RemoteProps {
 	name: string | undefined;
