@@ -37,7 +37,7 @@ import type {
 	CfPreviewToken,
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { FetchError } from "../cfetch";
+import type { ParseError } from "../parse";
 
 interface RemoteProps {
 	name: string | undefined;
@@ -676,19 +676,19 @@ function ChooseAccount(props: {
  * messages, does not perform any logic other than logging errors.
  * @returns if the error was handled or not
  */
-function handleUserFriendlyError(error: FetchError, accountId?: string) {
+function handleUserFriendlyError(error: ParseError, accountId?: string) {
 	// simulate aborts as handled errors by this function, but don't
 	// log anything
-	if ((error.code as unknown as string) === "ABORT_ERR") {
+	if ((error as unknown as { code: string }).code === "ABORT_ERR") {
 		return true;
 	}
 
-	switch(error.code) {
+	switch((error as unknown as { code: number }).code) {
 		// code 10021 is a validation error
 		case 10021: {
 			// if it is the following message, give a more user friendly
 			// error, otherwise do not handle this error in this function
-			if(error.message === "binding DB of type d1 must have a valid `id` specified") {
+			if(error.notes[0].text === "binding DB of type d1 must have a valid `id` specified [code: 10021]") {
 				const errorMessage =
 				"Error: You must use a real database in the preview_database_id configuration.";
 				const solutionMessage =
