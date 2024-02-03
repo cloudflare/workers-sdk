@@ -33,8 +33,6 @@ type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	shouldTestDevScript?: boolean;
 };
 
-let frameworkMap: FrameworkMap;
-
 // These are ordered based on speed and reliability for ease of debugging
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
@@ -159,6 +157,8 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 };
 
 describe.concurrent(`E2E: Web frameworks`, () => {
+	let frameworkMap: FrameworkMap;
+
 	beforeAll(async (ctx) => {
 		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
@@ -194,16 +194,37 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				const projectPath = getPath(framework);
 				const projectName = getName(framework);
 				const frameworkConfig = frameworkMap[framework as FrameworkName];
+
+				const { argv, overrides, promptHandlers, expectResponseToContain } =
+					frameworkTests[framework];
+
 				try {
-					await verifyDeployment(
-						framework,
-						projectName,
-						projectPath,
+					const deploymentUrl = await runC3WithDeploy(framework, projectPath, {
 						ctx,
-						testCommitMessage
-					);
+						overrides,
+						promptHandlers,
+						argv: [...(argv ?? [])],
+					});
+
+					// Relevant project files should have been created
+					expect(projectPath).toExist();
+					const pkgJsonPath = join(projectPath, "package.json");
+					expect(pkgJsonPath).toExist();
+
+					// Wrangler should be installed
+					const wranglerPath = join(projectPath, "node_modules/wrangler");
+					expect(wranglerPath).toExist();
+
+					if (testCommitMessage) {
+						await testDeploymentCommitMessage(projectName, framework);
+					}
+
+					// Make a request to the deployed project and verify it was successful
+					await verifyDeployment(deploymentUrl, expectResponseToContain);
+
+					// If configured, run the dev script and verify bindings work
 					if (shouldTestDevScript) {
-						await testDevScript(framework, projectPath, ctx);
+						await verifyDevScript(framework, projectPath, ctx);
 					}
 				} finally {
 					clean(framework);
@@ -215,8 +236,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 				}
 			},
-			// { retry: 1, timeout: timeout || TEST_TIMEOUT }
-			{ retry: 0, timeout: timeout || TEST_TIMEOUT }
+			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 
@@ -225,54 +245,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	// });
 });
 
-// TODO: Refactor to a function that returns the deployment URL so expectation can be
-// done in the actual test
-const verifyDeployment = async (
-	framework: string,
-	projectName: string,
-	projectPath: string,
-	ctx: TestContext,
-	testCommitMessage: boolean
-) => {
-	const { argv, overrides, promptHandlers, expectResponseToContain } =
-		frameworkTests[framework];
-
-	const { output } = await runCli(framework, projectPath, {
-		ctx,
-		overrides,
-		promptHandlers,
-		argv: [...(argv ?? [])],
-	});
-
-	// Verify deployment
-	const deployedUrlRe =
-		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
-
-	const match = output.match(deployedUrlRe);
-	if (!match || !match[1]) {
-		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
-		return;
-	}
-
-	const projectUrl = match[1];
-
-	await retry({ times: 5 }, async () => {
-		await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
-		const res = await fetch(projectUrl);
-		const body = await res.text();
-		if (!body.includes(expectResponseToContain)) {
-			throw new Error(
-				`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
-			);
-		}
-	});
-
-	if (testCommitMessage) {
-		await testDeploymentCommitMessage(projectName, framework);
-	}
-};
-
-const runCli = async (
+const runC3WithDeploy = async (
 	framework: string,
 	projectPath: string,
 	{ ctx, argv = [], promptHandlers = [] }: RunnerConfig
@@ -297,28 +270,40 @@ const runCli = async (
 		outputPrefix: `[${framework}]`,
 	});
 
-	// Relevant project files should have been created
-	expect(projectPath).toExist();
-	const pkgJsonPath = join(projectPath, "package.json");
-	expect(pkgJsonPath).toExist();
+	const deployedUrlRe =
+		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
 
-	// Wrangler should be installed
-	const wranglerPath = join(projectPath, "node_modules/wrangler");
-	expect(wranglerPath).toExist();
+	const match = output.match(deployedUrlRe);
+	if (!match || !match[1]) {
+		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
+		return "";
+	}
 
-	// TODO: Before the refactor introduced in https://github.com/cloudflare/workers-sdk/pull/4754
-	//       we used to test the packageJson scripts transformations here, try to re-implement such
-	//       checks (might be harder given the switch to a transform function compared to the old
-	//       object based substitution)
-
-	return { output };
+	return match[1];
 };
 
-const testDevScript = async (
+const verifyDeployment = async (
+	deploymentUrl: string,
+	expectedToken: string
+) => {
+	await retry({ times: 5 }, async () => {
+		await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
+		const res = await fetch(deploymentUrl);
+		const body = await res.text();
+		if (!body.includes(expectedToken)) {
+			throw new Error(
+				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedToken}"`
+			);
+		}
+	});
+};
+
+const verifyDevScript = async (
 	framework: string,
 	projectPath: string,
 	ctx: TestContext
 ) => {
+	const frameworkMap = await getFrameworkMap();
 	const template = frameworkMap[framework as FrameworkName];
 
 	// Copy over any test fixture files

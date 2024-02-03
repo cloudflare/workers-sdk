@@ -1,11 +1,5 @@
 import {
-	ProcessEnvOptions,
-	SpawnOptions,
-	SpawnOptionsWithoutStdio,
-} from "child_process";
-import {
 	createWriteStream,
-	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	realpathSync,
@@ -23,6 +17,7 @@ import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
 import { quoteShellArgs } from "../src/common";
+import type { SpawnOptionsWithoutStdio } from "child_process";
 import type { Suite, TestContext } from "vitest";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -175,7 +170,7 @@ export const spawnWithLogging = (
 
 	const logStream = createTestLogStream(ctx);
 
-	logStream.write(`Running command: ${[cmd, ...argv]}\n\n`);
+	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
 
 	proc.stdout.on("data", (data) => {
 		const lines: string[] = data.toString().split("\n");
