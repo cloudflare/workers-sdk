@@ -1,5 +1,11 @@
 import {
+	ProcessEnvOptions,
+	SpawnOptions,
+	SpawnOptionsWithoutStdio,
+} from "child_process";
+import {
 	createWriteStream,
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	realpathSync,
@@ -47,6 +53,24 @@ export type RunnerConfig = {
 	ctx: TestContext;
 };
 
+const testEnv = {
+	...process.env,
+	// The following env vars are set to ensure that package managers
+	// do not use the same global cache and accidentally hit race conditions.
+	YARN_CACHE_FOLDER: "./.yarn/cache",
+	YARN_ENABLE_GLOBAL_CACHE: "false",
+	PNPM_HOME: "./.pnpm",
+	npm_config_cache: "./.npm/cache",
+};
+
+const createTestLogStream = (ctx: TestContext) => {
+	// The .ansi extension allows for editor extensions that format ansi terminal codes
+	const fileName = `${normalizeTestName(ctx)}.ansi`;
+	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
+		flags: "a",
+	});
+};
+
 export const runC3 = async ({
 	argv = [],
 	promptHandlers = [],
@@ -54,19 +78,7 @@ export const runC3 = async ({
 }: RunnerConfig) => {
 	const cmd = "node";
 	const args = ["./dist/cli.js", ...argv];
-	const proc = spawn(cmd, args, {
-		env: {
-			...process.env,
-			// The following env vars are set to ensure that package managers
-			// do not use the same global cache and accidentally hit race conditions.
-			YARN_CACHE_FOLDER: "./.yarn/cache",
-			YARN_ENABLE_GLOBAL_CACHE: "false",
-			PNPM_HOME: "./.pnpm",
-			npm_config_cache: "./.npm/cache",
-		},
-	});
-
-	promptHandlers = [...promptHandlers];
+	const proc = spawn(cmd, args, { env: testEnv });
 
 	const { name: pm } = detectPackageManager();
 
@@ -75,11 +87,7 @@ export const runC3 = async ({
 
 	promptHandlers = promptHandlers && [...promptHandlers];
 
-	// The .ansi extension allows for editor extensions that format ansi terminal codes
-	const logFilename = `${normalizeTestName(ctx)}.ansi`;
-	const logStream = createWriteStream(
-		join(getLogPath(ctx.task.suite), logFilename)
-	);
+	const logStream = createTestLogStream(ctx);
 
 	logStream.write(
 		`Running C3 with command: \`${quoteShellArgs([
@@ -149,6 +157,46 @@ export const runC3 = async ({
 		output: stdout.join("\n").trim(),
 		errors: stderr.join("\n").trim(),
 	};
+};
+
+export const spawnWithLogging = (
+	cmd: string,
+	argv: string[] = [],
+	opts: SpawnOptionsWithoutStdio,
+	ctx: TestContext
+) => {
+	const proc = spawn(cmd, argv, {
+		...opts,
+		env: {
+			...testEnv,
+			...opts.env,
+		},
+	});
+
+	const logStream = createTestLogStream(ctx);
+
+	logStream.write(`Running command: ${[cmd, ...argv]}\n\n`);
+
+	proc.stdout.on("data", (data) => {
+		const lines: string[] = data.toString().split("\n");
+
+		lines.forEach(async (line) => {
+			const stripped = stripAnsi(line).trim();
+			if (stripped.length > 0) {
+				logStream.write(`${stripped}\n`);
+			}
+		});
+	});
+
+	proc.stderr.on("data", (data) => {
+		logStream.write(data);
+	});
+
+	proc.on("close", () => {
+		logStream.close();
+	});
+
+	return proc;
 };
 
 export const recreateLogFolder = (suite: Suite) => {
