@@ -29,6 +29,7 @@ import type {
 	CfWorkerContext,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ParseError } from "../parse";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
 import type {
@@ -37,7 +38,6 @@ import type {
 	CfPreviewToken,
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { ParseError } from "../parse";
 
 interface RemoteProps {
 	name: string | undefined;
@@ -341,15 +341,14 @@ export function useWorker(
 			// give them friendly instructions
 			if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
 				// code 10049 happens when the preview token expires
-				if(err.code === 10049) {
+				if (err.code === 10049) {
 					logger.log("Preview token expired, fetching a new one");
 
 					// since we want a new preview token when this happens,
 					// lets increment the counter, and trigger a rerun of
 					// the useEffect above
 					setRestartCounter((prevCount) => prevCount + 1);
-				}
-				else if(!handleUserFriendlyError(err, props.accountId)) {
+				} else if (!handleUserFriendlyError(err, props.accountId)) {
 					logger.error("Error on remote worker:", err);
 				}
 			}
@@ -524,10 +523,9 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		// give them friendly instructions
 		if ((err as unknown as { code: string })?.code !== "ABORT_ERR") {
 			// code 10049 happens when the preview token expires
-			if(err.code === 10049) {
+			if (err.code === 10049) {
 				logger.log("Preview token expired, restart server to fetch a new one");
-			}
-			else if(!handleUserFriendlyError(err, props.accountId)) {
+			} else if (!handleUserFriendlyError(err, props.accountId)) {
 				helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
 				logger.error("Error on remote worker:", err);
 			}
@@ -679,14 +677,17 @@ function ChooseAccount(props: {
  * @returns if the error was handled or not
  */
 function handleUserFriendlyError(error: ParseError, accountId?: string) {
-	switch((error as unknown as { code: number }).code) {
+	switch ((error as unknown as { code: number }).code) {
 		// code 10021 is a validation error
 		case 10021: {
 			// if it is the following message, give a more user friendly
 			// error, otherwise do not handle this error in this function
-			if(error.notes[0].text === "binding DB of type d1 must have a valid `id` specified [code: 10021]") {
+			if (
+				error.notes[0].text ===
+				"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+			) {
 				const errorMessage =
-				"Error: You must use a real database in the preview_database_id configuration.";
+					"Error: You must use a real database in the preview_database_id configuration.";
 				const solutionMessage =
 					"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
 				const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
@@ -707,11 +708,11 @@ function handleUserFriendlyError(error: ParseError, accountId?: string) {
 				"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
 			const solutionMessage =
 				"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-			const onboardingLink = (accountId)?(`https://dash.cloudflare.com/${accountId}/workers/onboarding`):("https://dash.cloudflare.com/?to=/:account/workers/onboarding");
+			const onboardingLink = accountId
+				? `https://dash.cloudflare.com/${accountId}/workers/onboarding`
+				: "https://dash.cloudflare.com/?to=/:account/workers/onboarding";
 
-			logger.error(
-				`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
-			);
+			logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
 
 			return true;
 		}
