@@ -684,20 +684,25 @@ function handleUserFriendlyError(error: FetchError, accountId?: string) {
 	}
 
 	switch(error.code) {
-		// code 10021 happens when the provided preview database
-		// id does not actually exist
+		// code 10021 is a validation error
 		case 10021: {
-			const errorMessage =
-			"Error: You must use a real database in the preview_database_id configuration.";
-			const solutionMessage =
-				"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
-			const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
+			// if it is the following message, give a more user friendly
+			// error, otherwise do not handle this error in this function
+			if(error.message === "binding DB of type d1 must have a valid `id` specified") {
+				const errorMessage =
+				"Error: You must use a real database in the preview_database_id configuration.";
+				const solutionMessage =
+					"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
+				const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
 
-			logger.error(
-				`${errorMessage}\n${solutionMessage}\n${documentationLink}`
-			);
+				logger.error(
+					`${errorMessage}\n${solutionMessage}\n${documentationLink}`
+				);
 
-			return true;
+				return true;
+			}
+
+			return false;
 		}
 
 		// for error 10063 (workers.dev subdomain required)
