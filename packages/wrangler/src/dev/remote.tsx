@@ -339,18 +339,19 @@ export function useWorker(
 			// since it could recover after the developer fixes whatever's wrong
 			// instead of logging the raw API error to the user,
 			// give them friendly instructions
+			if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
+				// code 10049 happens when the preview token expires
+				if(err.code === 10049) {
+					logger.log("Preview token expired, fetching a new one");
 
-			// code 10049 happens when the preview token expires
-			if(err.code === 10049) {
-				logger.log("Preview token expired, fetching a new one");
-
-				// since we want a new preview token when this happens,
-				// lets increment the counter, and trigger a rerun of
-				// the useEffect above
-				setRestartCounter((prevCount) => prevCount + 1);
-			}
-			else if(!handleUserFriendlyError(err, props.accountId)) {
-				logger.error("Error on remote worker:", err);
+					// since we want a new preview token when this happens,
+					// lets increment the counter, and trigger a rerun of
+					// the useEffect above
+					setRestartCounter((prevCount) => prevCount + 1);
+				}
+				else if(!handleUserFriendlyError(err, props.accountId)) {
+					logger.error("Error on remote worker:", err);
+				}
 			}
 		});
 
@@ -521,14 +522,15 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		// since it could recover after the developer fixes whatever's wrong
 		// instead of logging the raw API error to the user,
 		// give them friendly instructions
-
-		// code 10049 happens when the preview token expires
-		if(err.code === 10049) {
-			logger.log("Preview token expired, restart server to fetch a new one");
-		}
-		else if(!handleUserFriendlyError(err, props.accountId)) {
-			helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
-			logger.error("Error on remote worker:", err);
+		if ((err as unknown as { code: string })?.code !== "ABORT_ERR") {
+			// code 10049 happens when the preview token expires
+			if(err.code === 10049) {
+				logger.log("Preview token expired, restart server to fetch a new one");
+			}
+			else if(!handleUserFriendlyError(err, props.accountId)) {
+				helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
+				logger.error("Error on remote worker:", err);
+			}
 		}
 	});
 }
@@ -677,12 +679,6 @@ function ChooseAccount(props: {
  * @returns if the error was handled or not
  */
 function handleUserFriendlyError(error: ParseError, accountId?: string) {
-	// simulate aborts as handled errors by this function, but don't
-	// log anything
-	if ((error as unknown as { code: string }).code === "ABORT_ERR") {
-		return true;
-	}
-
 	switch((error as unknown as { code: number }).code) {
 		// code 10021 is a validation error
 		case 10021: {
