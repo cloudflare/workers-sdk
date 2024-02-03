@@ -139,34 +139,12 @@ export class ProxyWorker implements DurableObject {
 					// errors here are network errors or from response post-processing
 					// to catch only network errors, use the 2nd param of the fetch.then()
 
+					// we have crossed an async boundary, so proxyData may have changed
 					const newUserWorkerUrl =
 						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
-					const downstreamUserWorkerChanged =
-						userWorkerUrl.href !== newUserWorkerUrl?.href;
-					const canRequestBeRetried =
-						request.method === "GET" || request.method === "HEAD"; // subset of idempotent requests which have no body
 
-					// if the downstream proxy has changed, requeue request and ignore errors
-					if (downstreamUserWorkerChanged) {
-						if (canRequestBeRetried) {
-							this.requestQueue.set(request, deferredResponse);
-						} else {
-							// if request cannot be retried, respond with 503 Service Unavailable
-							// important to note, this is not an (unexpected) error -- it is an acceptable flow of local development
-							// it would be incorrect to retry non-idempotent requests
-							// and would require cloning all body streams to avoid stream reuse (which is inefficient but not out of the question in the future)
-							// this is a good enough UX for now since it solves the most common GET use-case
-							deferredResponse.resolve(
-								new Response(
-									"Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
-									{
-										status: 503,
-										headers: { "Retry-After": "0" },
-									}
-								)
-							);
-						}
-					} else {
+					// only report errors if the downstream proxy has NOT changed
+					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
@@ -178,6 +156,28 @@ export class ProxyWorker implements DurableObject {
 						});
 
 						deferredResponse.reject(error);
+					}
+
+					// if the request can be retried (subset of idempotent requests which have no body), requeue it
+					else if (request.method === "GET" || request.method === "HEAD") {
+						this.requestQueue.set(request, deferredResponse);
+					}
+
+					// if the request cannot be retried, respond with 503 Service Unavailable
+					// important to note, this is not an (unexpected) error -- it is an acceptable flow of local development
+					// it would be incorrect to retry non-idempotent requests
+					// and would require cloning all body streams to avoid stream reuse (which is inefficient but not out of the question in the future)
+					// this is a good enough UX for now since it solves the most common GET use-case
+					else {
+						deferredResponse.resolve(
+							new Response(
+								"Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
+								{
+									status: 503,
+									headers: { "Retry-After": "0" },
+								}
+							)
+						);
 					}
 				});
 		}
