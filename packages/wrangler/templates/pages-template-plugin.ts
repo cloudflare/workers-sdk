@@ -1,4 +1,5 @@
 import { match } from "path-to-regexp";
+import type { MatchResult } from "path-to-regexp";
 
 //note: this explicitly does not include the * character, as pages requires this
 const escapeRegex = /[.+?^${}()|[\]\\]/g;
@@ -65,55 +66,35 @@ type RouteHandler = {
 // inject `routes` via ESBuild
 declare const routes: RouteHandler[];
 
-function* executeRequest(request: Request, relativePathname: string) {
-	// First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
-	for (const route of [...routes].reverse()) {
-		if (route.method && route.method !== request.method) {
-			continue;
-		}
+type HandlersWrapper = {
+	handlers: PagesFunction<unknown, string, Record<string, unknown>>[];
+	matchResult: MatchResult<object>;
+	mountMatchResult: MatchResult<object>;
+};
 
-		// replaces with "\\$&", this prepends a backslash to the matched string, e.g. "[" becomes "\["
-		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
-			end: false,
-		});
-		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
-			end: false,
-		});
-		const matchResult = routeMatcher(relativePathname);
-		const mountMatchResult = mountMatcher(relativePathname);
-		if (matchResult && mountMatchResult) {
-			for (const handler of route.middlewares.flat()) {
-				yield {
-					handler,
-					params: matchResult.params as Params,
-					path: mountMatchResult.path,
-				};
-			}
+function* executeRequest(
+	middlewares: HandlersWrapper[],
+	module: HandlersWrapper | undefined
+) {
+	for (const middleware of middlewares) {
+		const { handlers, matchResult, mountMatchResult } = middleware!;
+		for (const handler of handlers) {
+			yield {
+				handler,
+				params: matchResult.params as Params,
+				path: mountMatchResult.path,
+			};
 		}
 	}
 
-	// Then look for the first exact route match and execute its "modules"
-	for (const route of routes) {
-		if (route.method && route.method !== request.method) {
-			continue;
-		}
-
-		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
-			end: true,
-		});
-		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
-			end: false,
-		});
-		const matchResult = routeMatcher(relativePathname);
-		const mountMatchResult = mountMatcher(relativePathname);
-		if (matchResult && mountMatchResult && route.modules.length) {
-			for (const handler of route.modules.flat()) {
-				yield {
-					handler,
-					params: matchResult.params as Params,
-					path: matchResult.path,
-				};
-			}
+	if (module) {
+		const { handlers, matchResult } = module;
+		for (const handler of handlers) {
+			yield {
+				handler,
+				params: matchResult.params as Params,
+				path: matchResult.path,
+			};
 			break;
 		}
 	}
@@ -131,7 +112,27 @@ export default function (pluginArgs: unknown) {
 			url.pathname.replace(workerContext.functionPath, "") || ""
 		}`.replace(/^\/\//, "/");
 
-		const handlerIterator = executeRequest(request, relativePathname);
+		const middlewares = collectHandlersWrappers(
+			request,
+			relativePathname,
+			"middlewares"
+		);
+
+		const numOfMiddlewareHandlers = middlewares
+			.map(({ handlers }) => handlers.length ?? 0)
+			.reduce((a, b) => a + b, 0);
+
+		const modules = collectHandlersWrappers(
+			request,
+			relativePathname,
+			"modules"
+		);
+		const module = modules[0];
+
+		const numberOfHandlers = numOfMiddlewareHandlers + (module ? 1 : 0);
+
+		const handlerIterator = executeRequest(middlewares, modules[0]);
+
 		const pluginNext = async (input?: RequestInfo, init?: RequestInit) => {
 			if (input !== undefined) {
 				let url = input;
@@ -146,7 +147,17 @@ export default function (pluginArgs: unknown) {
 			if (result.done === false) {
 				const { handler, params, path } = result.value;
 				const context = {
-					request: new Request(request.clone()),
+					request: new Request(
+						// Note: We should never clone the request because this might cause requests to remain unused, waste
+						//       memory and generate runtime workerd errors/warnings, the potential cloning of the request
+						//       should be the user's responsibility.
+						//       We cannot however remove the `clone()` call here because when there are multiple handlers,
+						//       currently more than one of them can read the request body (without them ever cloning the request),
+						//       so in order not to have to introduce a breaking change we are calling `clone()` only when more than
+						//       one handler is present, otherwise it is safe to just use the original request object.
+						//       In the next major release we should remove the `clone()` call entirely.
+						numberOfHandlers > 1 ? request.clone() : request
+					),
 					functionPath: workerContext.functionPath + path,
 					next: pluginNext,
 					params,
@@ -188,3 +199,37 @@ const cloneResponse = (response: Response) =>
 		[101, 204, 205, 304].includes(response.status) ? null : response.body,
 		response
 	);
+
+function collectHandlersWrappers(
+	request: Request,
+	relativePathname: string,
+	kind: "middlewares" | "modules"
+): HandlersWrapper[] {
+	// If we're collecting middlewares, those need to be applied in the reverse order
+	const targetRoutes = kind === "middlewares" ? [...routes].reverse() : routes;
+
+	return targetRoutes
+		.map((route) => {
+			if (route.method && route.method !== request.method) {
+				return null;
+			}
+
+			// replaces with "\\$&", this prepends a backslash to the matched string, e.g. "[" becomes "\["
+			const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+				end: kind === "middlewares" ? false : true,
+			});
+			const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+				end: false,
+			});
+			const matchResult = routeMatcher(relativePathname);
+			const mountMatchResult = mountMatcher(relativePathname);
+			if (matchResult && mountMatchResult) {
+				return {
+					handlers: route[kind],
+					matchResult,
+					mountMatchResult,
+				};
+			}
+		})
+		.filter(Boolean) as HandlersWrapper[];
+}
