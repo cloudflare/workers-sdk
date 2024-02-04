@@ -342,6 +342,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/pages-functions-request-clone:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20221111.1
+        version: 4.20231025.0
+      pages-plugin-example:
+        specifier: workspace:*
+        version: link:../pages-plugin-example
+      undici:
+        specifier: ^5.28.2
+        version: 5.28.2
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/pages-functions-wasm-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
