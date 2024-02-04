@@ -36,7 +36,10 @@ export class ProxyWorker implements DurableObject {
 	constructor(readonly state: DurableObjectState, readonly env: Env) {}
 
 	proxyData?: ProxyData;
-	requestQueue = new Map<Request, DeferredPromise<Response>>();
+	requestQueue: Array<{
+		request: Request;
+		deferredResponse: DeferredPromise<Response>;
+	}> = [];
 
 	fetch(request: Request) {
 		if (isRequestForLiveReloadWebsocket(request)) {
@@ -52,12 +55,12 @@ export class ProxyWorker implements DurableObject {
 		}
 
 		// regular requests to be proxied
-		const deferred = createDeferred<Response>();
+		const deferredResponse = createDeferred<Response>();
 
-		this.requestQueue.set(request, deferred);
+		this.requestQueue.push({ request, deferredResponse });
 		this.processQueue();
 
-		return deferred.promise;
+		return deferredResponse.promise;
 	}
 
 	handleLiveReloadWebSocket(request: Request) {
@@ -98,9 +101,7 @@ export class ProxyWorker implements DurableObject {
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
 
-		for (const [request, deferredResponse] of this.requestQueue) {
-			this.requestQueue.delete(request);
-
+		for (const { request, deferredResponse } of this.requestQueue.splice(0)) {
 			const userWorkerUrl = new URL(request.url);
 			const headers = new Headers(request.headers);
 
@@ -160,7 +161,7 @@ export class ProxyWorker implements DurableObject {
 
 					// if the request can be retried (subset of idempotent requests which have no body), requeue it
 					else if (request.method === "GET" || request.method === "HEAD") {
-						this.requestQueue.set(request, deferredResponse);
+						this.requestQueue.unshift({ request, deferredResponse });
 					}
 
 					// if the request cannot be retried, respond with 503 Service Unavailable
