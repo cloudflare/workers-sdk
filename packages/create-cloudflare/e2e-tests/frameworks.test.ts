@@ -4,23 +4,25 @@ import { retry } from "helpers/command";
 import { sleep } from "helpers/common";
 import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
 import {
+	createTestLogStream,
 	isQuarantineMode,
 	keys,
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
-	spawnWithLoggingAwaitable,
 	testDeploymentCommitMessage,
 	testProjectDir,
+	waitForExit,
 } from "./helpers";
 import type { FrameworkMap, FrameworkName } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
-import type { Suite, TestContext } from "vitest";
+import type { WriteStream } from "fs";
+import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
@@ -167,10 +169,15 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 
 describe.concurrent(`E2E: Web frameworks`, () => {
 	let frameworkMap: FrameworkMap;
+	let logStream: WriteStream;
 
 	beforeAll(async (ctx) => {
 		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
+	});
+
+	beforeEach(async (ctx) => {
+		logStream = createTestLogStream(ctx);
 	});
 
 	Object.keys(frameworkTests).forEach((framework) => {
@@ -199,7 +206,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		shouldRun &&= !unsupportedOSs?.includes(process.platform);
 		test.runIf(shouldRun)(
 			framework,
-			async (ctx) => {
+			async () => {
 				const { getPath, getName, clean } = testProjectDir("pages");
 				const projectPath = getPath(framework);
 				const projectName = getName(framework);
@@ -209,12 +216,16 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework];
 
 				try {
-					const deploymentUrl = await runC3WithDeploy(framework, projectPath, {
-						ctx,
-						overrides,
-						promptHandlers,
-						argv: [...(argv ?? [])],
-					});
+					const deploymentUrl = await runC3WithDeploy(
+						framework,
+						projectPath,
+						logStream,
+						{
+							argv: [...(argv ?? [])],
+							overrides,
+							promptHandlers,
+						}
+					);
 
 					// Relevant project files should have been created
 					expect(projectPath).toExist();
@@ -241,8 +252,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 							force: true,
 						});
 
-						await verifyDevScript(framework, projectPath, ctx);
-						await verifyBuildScript(framework, projectPath, ctx);
+						await verifyDevScript(framework, projectPath, logStream);
+						await verifyBuildScript(framework, projectPath, logStream);
 					}
 				} finally {
 					clean(framework);
@@ -262,7 +273,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 const runC3WithDeploy = async (
 	framework: string,
 	projectPath: string,
-	{ ctx, argv = [], promptHandlers = [] }: RunnerConfig
+	logStream: WriteStream,
+	{ argv = [], promptHandlers = [] }: RunnerConfig
 ) => {
 	const args = [
 		projectPath,
@@ -277,12 +289,7 @@ const runC3WithDeploy = async (
 
 	args.push(...argv);
 
-	const { output } = await runC3({
-		ctx,
-		argv: args,
-		promptHandlers,
-		outputPrefix: `[${framework}]`,
-	});
+	const { output } = await runC3(args, promptHandlers, logStream);
 
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
@@ -315,7 +322,7 @@ const verifyDeployment = async (
 const verifyDevScript = async (
 	framework: string,
 	projectPath: string,
-	ctx: TestContext
+	logStream: WriteStream
 ) => {
 	const frameworkMap = await getFrameworkMap();
 	const template = frameworkMap[framework as FrameworkName];
@@ -325,15 +332,14 @@ const verifyDevScript = async (
 
 	const { name: pm } = detectPackageManager();
 	const proc = spawnWithLogging(
-		pm,
-		["run", template.devScript as string, "--port", `${TEST_PORT}`],
+		[pm, "run", template.devScript as string, "--port", `${TEST_PORT}`],
 		{
 			cwd: projectPath,
 			env: {
 				NODE_ENV: "development",
 			},
 		},
-		ctx
+		logStream
 	);
 
 	// Wait a few seconds for dev server to spin up
@@ -358,7 +364,7 @@ const verifyDevScript = async (
 const verifyBuildScript = async (
 	framework: string,
 	projectPath: string,
-	ctx: TestContext
+	logStream: WriteStream
 ) => {
 	const { build } = frameworkTests[framework];
 
@@ -372,25 +378,24 @@ const verifyBuildScript = async (
 
 	// Run the build script
 	const { name: pm, npx } = detectPackageManager();
-	await spawnWithLoggingAwaitable(
-		pm,
-		["run", script],
+	const buildProc = spawnWithLogging(
+		[pm, "run", script],
 		{
 			cwd: projectPath,
 		},
-		ctx
+		logStream
 	);
+	await waitForExit(buildProc);
 
 	// Run wrangler dev on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
 
 	const devProc = spawnWithLogging(
-		npx,
-		["wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
+		[npx, "wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
 		{
 			cwd: projectPath,
 		},
-		ctx
+		logStream
 	);
 
 	// Wait a few seconds for dev server to spin up

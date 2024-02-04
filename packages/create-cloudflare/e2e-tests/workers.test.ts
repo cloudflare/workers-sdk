@@ -2,17 +2,19 @@ import { join } from "path";
 import { retry } from "helpers/command";
 import { readToml } from "helpers/files";
 import { fetch } from "undici";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {
+	createTestLogStream,
 	isQuarantineMode,
 	recreateLogFolder,
 	runC3,
 	testProjectDir,
 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
-import type { Suite, TestContext } from "vitest";
+import type { WriteStream } from "fs";
+import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 
@@ -51,25 +53,26 @@ describe
 			},
 		];
 
+		let logStream: WriteStream;
+
 		beforeAll((ctx) => {
 			recreateLogFolder(ctx as Suite);
+		});
+
+		beforeEach(async (ctx) => {
+			logStream = createTestLogStream(ctx);
 		});
 
 		const runCli = async (
 			template: string,
 			projectPath: string,
-			{ ctx, argv = [], promptHandlers = [] }: RunnerConfig
+			{ argv = [], promptHandlers = [] }: RunnerConfig
 		) => {
 			const args = [projectPath, "--type", template, "--no-open", "--no-git"];
 
 			args.push(...argv);
 
-			const { output } = await runC3({
-				ctx,
-				argv: args,
-				promptHandlers,
-				outputPrefix: `[${template}]`,
-			});
+			const { output } = await runC3(args, promptHandlers, logStream);
 
 			// Relevant project files should have been created
 			expect(projectPath).toExist();
@@ -95,14 +98,12 @@ describe
 
 		const runCliWithDeploy = async (
 			template: WorkerTestConfig,
-			projectPath: string,
-			ctx: TestContext
+			projectPath: string
 		) => {
 			const { argv, overrides, promptHandlers, expectResponseToContain } =
 				template;
 
 			const { output } = await runCli(template.template, projectPath, {
-				ctx,
 				overrides,
 				promptHandlers,
 				argv: [
@@ -170,12 +171,12 @@ describe
 				const name = template.name ?? template.template;
 				test(
 					name,
-					async (ctx) => {
+					async () => {
 						const { getPath, getName, clean } = testProjectDir("workers");
 						const projectPath = getPath(name);
 						const projectName = getName(name);
 						try {
-							await runCliWithDeploy(template, projectPath, ctx);
+							await runCliWithDeploy(template, projectPath);
 						} finally {
 							clean(name);
 							await deleteWorker(projectName);

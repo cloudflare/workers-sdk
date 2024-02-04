@@ -12,12 +12,14 @@ import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/command";
 import { sleep } from "helpers/common";
-import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
-import { quoteShellArgs } from "../src/common";
-import type { SpawnOptionsWithoutStdio } from "child_process";
+import type {
+	ChildProcessWithoutNullStreams,
+	SpawnOptionsWithoutStdio,
+} from "child_process";
+import type { WriteStream } from "fs";
 import type { Suite, TestContext } from "vitest";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -32,6 +34,16 @@ export const keys = {
 	left: "\x1b\x5b\x44",
 };
 
+const testEnv = {
+	...process.env,
+	// The following env vars are set to ensure that package managers
+	// do not use the same global cache and accidentally hit race conditions.
+	YARN_CACHE_FOLDER: "./.yarn/cache",
+	YARN_ENABLE_GLOBAL_CACHE: "false",
+	PNPM_HOME: "./.pnpm",
+	npm_config_cache: "./.npm/cache",
+};
+
 export type PromptHandler = {
 	matcher: RegExp;
 	input: string[];
@@ -43,123 +55,64 @@ export type RunnerConfig = {
 	};
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
-	outputPrefix?: string;
 	quarantine?: boolean;
-	ctx: TestContext;
 };
 
-const testEnv = {
-	...process.env,
-	// The following env vars are set to ensure that package managers
-	// do not use the same global cache and accidentally hit race conditions.
-	YARN_CACHE_FOLDER: "./.yarn/cache",
-	YARN_ENABLE_GLOBAL_CACHE: "false",
-	PNPM_HOME: "./.pnpm",
-	npm_config_cache: "./.npm/cache",
-};
+export const runC3 = async (
+	argv: string[] = [],
+	promptHandlers: PromptHandler[] = [],
+	logStream: WriteStream
+) => {
+	const cmd = ["node", "./dist/cli.js", ...argv];
+	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
 
-const createTestLogStream = (ctx: TestContext) => {
-	// The .ansi extension allows for editor extensions that format ansi terminal codes
-	const fileName = `${normalizeTestName(ctx)}.ansi`;
-	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
-		flags: "a",
-	});
-};
-
-export const runC3 = async ({
-	argv = [],
-	promptHandlers = [],
-	ctx,
-}: RunnerConfig) => {
-	const cmd = "node";
-	const args = ["./dist/cli.js", ...argv];
-	const proc = spawn(cmd, args, { env: testEnv });
-
-	const { name: pm } = detectPackageManager();
-
-	const stdout: string[] = [];
-	const stderr: string[] = [];
-
+	// Clone the prompt handlers so we can consume them destructively
 	promptHandlers = promptHandlers && [...promptHandlers];
 
-	const logStream = createTestLogStream(ctx);
+	const onData = (data: string) => {
+		const lines: string[] = data.toString().split("\n");
+		const currentDialog = promptHandlers[0];
 
-	logStream.write(
-		`Running C3 with command: \`${quoteShellArgs([
-			cmd,
-			...args,
-		])}\` (using ${pm})\n\n`
-	);
+		lines.forEach(async (line) => {
+			if (currentDialog && currentDialog.matcher.test(line)) {
+				// Add a small sleep to avoid input race
+				await sleep(1000);
 
-	await new Promise((resolve, rejects) => {
-		proc.stdout.on("data", (data) => {
-			const lines: string[] = data.toString().split("\n");
-			const currentDialog = promptHandlers[0];
+				currentDialog.input.forEach((keystroke) => {
+					proc.stdin.write(keystroke);
+				});
 
-			lines.forEach(async (line) => {
-				stdout.push(line);
+				// Consume the handler once we've used it
+				promptHandlers.shift();
 
-				const stripped = stripAnsi(line).trim();
-				if (stripped.length > 0) {
-					logStream.write(`${stripped}\n`);
+				// If we've consumed the last prompt handler, close the input stream
+				// Otherwise, the process wont exit properly
+				if (promptHandlers[0] === undefined) {
+					proc.stdin.end();
 				}
-
-				if (currentDialog && currentDialog.matcher.test(line)) {
-					// Add a small sleep to avoid input race
-					await sleep(1000);
-
-					currentDialog.input.forEach((keystroke) => {
-						proc.stdin.write(keystroke);
-					});
-
-					// Consume the handler once we've used it
-					promptHandlers.shift();
-
-					// If we've consumed the last prompt handler, close the input stream
-					// Otherwise, the process wont exit properly
-					if (promptHandlers[0] === undefined) {
-						proc.stdin.end();
-					}
-				}
-			});
-		});
-
-		proc.stderr.on("data", (data) => {
-			logStream.write(data);
-			stderr.push(data);
-		});
-
-		proc.on("close", (code) => {
-			logStream.close();
-
-			if (code === 0) {
-				resolve(null);
-			} else {
-				rejects(code);
 			}
 		});
-
-		proc.on("error", (exitCode) => {
-			rejects({
-				exitCode,
-				output: stdout.join("\n").trim(),
-				errors: stderr.join("\n").trim(),
-			});
-		});
-	});
-
-	return {
-		output: stdout.join("\n").trim(),
-		errors: stderr.join("\n").trim(),
 	};
+
+	return waitForExit(proc, onData);
 };
 
+/**
+ * Spawn a child process and attach a handler that will log any output from
+ * `stdout` or errors from `stderror` to a dedicated log file.
+ *
+ * @param args The command and arguments as an array
+ * @param opts Additional options to be passed to the `spawn` call
+ * @param logStream A write stream to the log file for the test
+ * @returns the child process that was created
+ */
 export const spawnWithLogging = (
-	cmd: string,
-	argv: string[] = [],
+	args: string[],
 	opts: SpawnOptionsWithoutStdio,
-	ctx: TestContext
+	logStream: WriteStream
 ) => {
+	const [cmd, ...argv] = args;
+
 	const proc = spawn(cmd, argv, {
 		...opts,
 		env: {
@@ -167,8 +120,6 @@ export const spawnWithLogging = (
 			...opts.env,
 		},
 	});
-
-	const logStream = createTestLogStream(ctx);
 
 	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
 
@@ -194,24 +145,26 @@ export const spawnWithLogging = (
 	return proc;
 };
 
-export const spawnWithLoggingAwaitable = async (
-	cmd: string,
-	argv: string[] = [],
-	opts: SpawnOptionsWithoutStdio,
-	ctx: TestContext
+/**
+ * An async function that waits on a spawned process to run to completion, collecting
+ * any output or errors from `stdout` and `stderr`, respectively.
+ *
+ * @param proc The child process to wait for
+ * @param onData An optional handler to be called on `stdout.on('data')`
+ */
+export const waitForExit = async (
+	proc: ChildProcessWithoutNullStreams,
+	onData?: (chunk: string) => void
 ) => {
-	const proc = spawnWithLogging(cmd, argv, opts, ctx);
-
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
-			const lines: string[] = data.toString().split("\n");
-
-			lines.forEach(async (line) => {
-				stdout.push(line);
-			});
+			stdout.push(data);
+			if (onData) {
+				onData(data);
+			}
 		});
 
 		proc.stderr.on("data", (data) => {
@@ -239,6 +192,14 @@ export const spawnWithLoggingAwaitable = async (
 		output: stdout.join("\n").trim(),
 		errors: stderr.join("\n").trim(),
 	};
+};
+
+export const createTestLogStream = (ctx: TestContext) => {
+	// The .ansi extension allows for editor extensions that format ansi terminal codes
+	const fileName = `${normalizeTestName(ctx)}.ansi`;
+	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
+		flags: "a",
+	});
 };
 
 export const recreateLogFolder = (suite: Suite) => {
