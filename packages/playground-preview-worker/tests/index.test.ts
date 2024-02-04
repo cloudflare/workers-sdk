@@ -5,6 +5,47 @@ const REMOTE = "https://playground-testing.devprod.cloudflare.dev";
 const PREVIEW_REMOTE =
 	"https://random-data.playground-testing.devprod.cloudflare.dev";
 
+const TEST_WORKER_CONTENT_TYPE =
+	"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf";
+const TEST_WORKER = `------WebKitFormBoundaryqJEYLXuUiiZQHgvf
+Content-Disposition: form-data; name="index.js"; filename="index.js"
+Content-Type: application/javascript+module
+
+export default {
+	fetch(request) {
+		const url = new URL(request.url)
+		if(url.pathname === "/exchange") {
+			return Response.json({
+				token: "TEST_TOKEN",
+				prewarm: "TEST_PREWARM"
+			})
+		}
+		if(url.pathname === "/redirect") {
+			return Response.redirect("https://example.com", 302)
+		}
+		if(url.pathname === "/method") {
+			return new Response(request.method)
+		}
+		if(url.pathname === "/status") {
+			return new Response(407)
+		}
+		if(url.pathname === "/header") {
+			return new Response(request.headers.get("X-Custom-Header"))
+		}
+		return Response.json({
+			url: request.url,
+			headers: [...request.headers.entries()]
+		})
+	}
+}
+
+------WebKitFormBoundaryqJEYLXuUiiZQHgvf
+Content-Disposition: form-data; name="metadata"; filename="blob"
+Content-Type: application/json
+
+{"compatibility_date":"2023-05-04","main_module":"index.js"}
+------WebKitFormBoundaryqJEYLXuUiiZQHgvf--`;
+
 async function fetchUserToken() {
 	return fetch(REMOTE).then(
 		(r) => r.headers.getSetCookie()[0].split(";")[0].split("=")[1]
@@ -19,16 +60,15 @@ describe("Preview Worker", () => {
 			method: "POST",
 			headers: {
 				cookie: `user=${defaultUserToken}`,
-				"Content-Type":
-					"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf",
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
 			},
-			body: '------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="index.js"; filename="index.js"\nContent-Type: application/javascript+module\n\nexport default {\n	fetch(request) {\n		const url = new URL(request.url)\n		if(url.pathname === "/exchange") {\n			return Response.json({\n				token: "TEST_TOKEN",\n				prewarm: "TEST_PREWARM"\n			})\n		}\n		if(url.pathname === "/redirect") {\n			return Response.redirect("https://example.com", 302)\n		}\n		if(url.pathname === "/method") {\n			return new Response(request.method)\n		}\n		if(url.pathname === "/status") {\n			return new Response(407)\n		}\n		if(url.pathname === "/header") {\n			return new Response(request.headers.get("X-Custom-Header"))\n		}\n		return Response.json({\n			url: request.url,\n			headers: [...request.headers.entries()]\n		})\n	}\n}\n\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="metadata"; filename="blob"\nContent-Type: application/json\n\n{"compatibility_date":"2023-05-04","main_module":"index.js"}\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf--',
+			body: TEST_WORKER,
 		}).then((response) => response.json());
 	});
 
 	it("should be redirected with cookie", async () => {
 		const resp = await fetch(
-			`${PREVIEW_REMOTE}/.update-preview-token?token=TEST_TOKEN&suffix=${encodeURIComponent(
+			`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
 				"/hello?world"
 			)}`,
 			{
@@ -45,7 +85,47 @@ describe("Preview Worker", () => {
 			'"/hello?world"'
 		);
 		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			'"token=TEST_TOKEN; Domain=random-data.playground-testing.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"`
+		);
+	});
+	it("shouldn't be redirected with no token", async () => {
+		const resp = await fetch(
+			`${PREVIEW_REMOTE}/.update-preview-token?suffix=${encodeURIComponent(
+				"/hello?world"
+			)}`,
+			{
+				method: "GET",
+				redirect: "manual",
+				// These are forbidden headers, but undici currently allows setting them
+				headers: {
+					"Sec-Fetch-Dest": "iframe",
+					Referer: "https://workers.cloudflare.com/",
+				},
+			}
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"TokenUpdateFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+		);
+	});
+	it("shouldn't be redirected with invalid token", async () => {
+		const resp = await fetch(
+			`${PREVIEW_REMOTE}/.update-preview-token?token=TEST_TOKEN&suffix=${encodeURIComponent(
+				"/hello?world"
+			)}`,
+			{
+				method: "GET",
+				redirect: "manual",
+				// These are forbidden headers, but undici currently allows setting them
+				headers: {
+					"Sec-Fetch-Dest": "iframe",
+					Referer: "https://workers.cloudflare.com/",
+				},
+			}
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"TokenUpdateFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
 		);
 	});
 
@@ -110,6 +190,66 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toMatchInlineSnapshot('"407"');
 	});
+	it("should reject no token", async () => {
+		const resp = await fetch(PREVIEW_REMOTE);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject invalid token", async () => {
+		const resp = await fetch(PREVIEW_REMOTE, {
+			headers: {
+				cookie: `token=TEST_TOKEN`,
+			},
+		});
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{\\"tokenId\\":\\"TEST_TOKEN\\"}}"'
+		);
+	});
+
+	it("should return raw HTTP response", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
+			headers: {
+				"X-CF-Token": defaultUserToken,
+				"CF-Raw-HTTP": "true",
+				"X-Custom-Header": "custom",
+			},
+			redirect: "manual",
+		});
+		expect(resp.headers.get("cf-ew-raw-content-length")).toMatchInlineSnapshot(
+			'"6"'
+		);
+		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
+	});
+	it("should reject no token for raw HTTP response", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
+			headers: {
+				"CF-Raw-HTTP": "true",
+				"X-Custom-Header": "custom",
+			},
+			redirect: "manual",
+		});
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"RawHttpFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject invalid token for raw HTTP response", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
+			headers: {
+				"X-CF-Token": "TEST_TOKEN",
+				"CF-Raw-HTTP": "true",
+				"X-Custom-Header": "custom",
+			},
+			redirect: "manual",
+		});
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"RawHttpFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+		);
+	});
 });
 
 describe("Upload Worker", () => {
@@ -122,10 +262,9 @@ describe("Upload Worker", () => {
 			method: "POST",
 			headers: {
 				cookie: `user=${defaultUserToken}`,
-				"Content-Type":
-					"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf",
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
 			},
-			body: '------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="index.js"; filename="index.js"\nContent-Type: application/javascript+module\n\nexport default {\n	fetch(request) {\n		const url = new URL(request.url)\n		if(url.pathname === "/exchange") {\n			return Response.json({\n				token: "TEST_TOKEN",\n				prewarm: "TEST_PREWARM"\n			})\n		}\n		if(url.pathname === "/redirect") {\n			return Response.redirect("https://example.com", 302)\n		}\n		if(url.pathname === "/method") {\n			return new Response(request.method)\n		}\n		if(url.pathname === "/status") {\n			return new Response(407)\n		}\n		if(url.pathname === "/header") {\n			return new Response(request.headers.get("X-Custom-Header"))\n		}\n		return Response.json({\n			url: request.url,\n			headers: [...request.headers.entries()]\n		})\n	}\n}\n\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="metadata"; filename="blob"\nContent-Type: application/json\n\n{"compatibility_date":"2023-05-04","main_module":"index.js"}\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf--',
+			body: TEST_WORKER,
 		});
 		expect(w.status).toMatchInlineSnapshot("200");
 	});
@@ -134,10 +273,9 @@ describe("Upload Worker", () => {
 			method: "POST",
 			headers: {
 				cookie: `user=${defaultUserToken}`,
-				"Content-Type":
-					"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf",
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
 			},
-			body: '------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="index.js"; filename="index.js"\nContent-Type: application/javascript+module\n\nexport default {\n	fetch(request {\n		const url = new URL(request.url)\n		if(url.pathname === "/exchange") {\n			return Response.json({\n				token: "TEST_TOKEN",\n				prewarm: "TEST_PREWARM"\n			})\n		}\n		if(url.pathname === "/redirect") {\n			return Response.redirect("https://example.com", 302)\n		}\n		if(url.pathname === "/method") {\n			return new Response(request.method)\n		}\n		if(url.pathname === "/status") {\n			return new Response(407)\n		}\n		if(url.pathname === "/header") {\n			return new Response(request.headers.get("X-Custom-Header"))\n		}\n		return Response.json({\n			url: request.url,\n			headers: [...request.headers.entries()]\n		})\n	}\n}\n\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="metadata"; filename="blob"\nContent-Type: application/json\n\n{"compatibility_date":"2023-05-04","main_module":"index.js"}\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf--',
+			body: TEST_WORKER.replace("fetch(request)", "fetch(request"),
 		}).then((response) => response.json());
 		expect(w).toMatchInlineSnapshot(`
 			{
@@ -152,6 +290,33 @@ describe("Upload Worker", () => {
 			",
 			}
 		`);
+	});
+	it("should reject no token", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: TEST_WORKER,
+		});
+		expect(w.status).toBe(401);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"UploadFailed\\",\\"message\\":\\"Valid token not provided\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject invalid token", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=TEST_TOKEN`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: TEST_WORKER,
+		});
+		expect(w.status).toBe(401);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"UploadFailed\\",\\"message\\":\\"Valid token not provided\\",\\"data\\":{}}"'
+		);
 	});
 });
 
@@ -168,7 +333,6 @@ describe("Raw HTTP preview", () => {
 
 		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
 	});
-
 	it("should allow arbitrary methods in cross-origin requests", async () => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "OPTIONS",

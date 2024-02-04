@@ -16,10 +16,14 @@ export const wranglerEntryPath = path.resolve(
  */
 export async function runWranglerPagesDev(
 	cwd: string,
-	publicPath: string,
+	publicPath: string | undefined,
 	options: string[]
 ) {
-	return runLongLivedWrangler(["pages", "dev", publicPath, ...options], cwd);
+	if (publicPath) {
+		return runLongLivedWrangler(["pages", "dev", publicPath, ...options], cwd);
+	} else {
+		return runLongLivedWrangler(["pages", "dev", ...options], cwd);
+	}
 }
 
 /**
@@ -62,6 +66,7 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 		chunks.push(chunk);
 	});
 	const getOutput = () => Buffer.concat(chunks).toString();
+	const clearOutput = () => (chunks.length = 0);
 
 	const timeoutHandle = setTimeout(() => {
 		if (settledReadyPromise) return;
@@ -90,5 +95,5 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	}
 
 	const { ip, port } = await ready;
-	return { ip, port, stop, getOutput };
+	return { ip, port, stop, getOutput, clearOutput };
 }

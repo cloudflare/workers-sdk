@@ -78,7 +78,7 @@ export const runC3 = async ({
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const logFilename = `${normalizeTestName(ctx)}.ansi`;
 	const logStream = createWriteStream(
-		join(getLogPath(ctx.meta.suite), logFilename)
+		join(getLogPath(ctx.task.suite), logFilename)
 	);
 
 	logStream.write(
@@ -172,13 +172,13 @@ const getLogPath = (suite: Suite) => {
 };
 
 const normalizeTestName = (ctx: TestContext) => {
-	const baseName = ctx.meta.name
+	const baseName = ctx.task.name
 		.toLowerCase()
 		.replace(/\s+/g, "_") // replace any whitespace with `_`
 		.replace(/\W/g, ""); // strip special characters
 
 	// Ensure that each retry gets its own log file
-	const retryCount = ctx.meta.result?.retryCount ?? 0;
+	const retryCount = ctx.task.result?.retryCount ?? 0;
 	const suffix = retryCount > 0 ? `_${retryCount}` : "";
 	return baseName + suffix;
 };
