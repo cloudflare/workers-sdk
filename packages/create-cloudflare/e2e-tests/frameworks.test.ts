@@ -14,6 +14,7 @@ import {
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
+	spawnWithLoggingAwaitable,
 	testDeploymentCommitMessage,
 	testProjectDir,
 } from "./helpers";
@@ -30,7 +31,11 @@ type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	timeout?: number;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
-	shouldTestDevScript?: boolean;
+	testBindings?: boolean;
+	build?: {
+		outputDir: string;
+		script: string;
+	};
 };
 
 // These are ordered based on speed and reliability for ease of debugging
@@ -79,7 +84,11 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		unsupportedPms: ["yarn"],
-		shouldTestDevScript: true,
+		testBindings: true,
+		build: {
+			outputDir: "./dist",
+			script: "build",
+		},
 	},
 	remix: {
 		expectResponseToContain: "Welcome to Remix",
@@ -171,7 +180,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage,
 			unsupportedPms,
 			unsupportedOSs,
-			shouldTestDevScript,
+			testBindings,
 		} = frameworkTests[framework];
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
@@ -185,6 +194,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		// Skip if the package manager is unsupported
 		shouldRun &&= !unsupportedPms?.includes(process.env.TEST_PM ?? "");
+
 		// Skip if the OS is unsupported
 		shouldRun &&= !unsupportedOSs?.includes(process.platform);
 		test.runIf(shouldRun)(
@@ -223,8 +233,16 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await verifyDeployment(deploymentUrl, expectResponseToContain);
 
 					// If configured, run the dev script and verify bindings work
-					if (shouldTestDevScript) {
+					if (testBindings) {
+						// Copy over any test fixture files
+						const fixturePath = join(__dirname, "fixtures", framework);
+						await cp(fixturePath, projectPath, {
+							recursive: true,
+							force: true,
+						});
+
 						await verifyDevScript(framework, projectPath, ctx);
+						await verifyBuildScript(framework, projectPath, ctx);
 					}
 				} finally {
 					clean(framework);
@@ -239,10 +257,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
-
-	// test.skip("Hono (wrangler defaults)", async (ctx) => {
-	// 	await runCli("hono", { ctx, argv: ["--wrangler-defaults"] });
-	// });
 });
 
 const runC3WithDeploy = async (
@@ -306,10 +320,6 @@ const verifyDevScript = async (
 	const frameworkMap = await getFrameworkMap();
 	const template = frameworkMap[framework as FrameworkName];
 
-	// Copy over any test fixture files
-	const fixturePath = join(__dirname, "fixtures", framework);
-	await cp(fixturePath, projectPath, { recursive: true, force: true });
-
 	// Run the devserver on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
 
@@ -327,14 +337,13 @@ const verifyDevScript = async (
 	);
 
 	// Wait a few seconds for dev server to spin up
-	await sleep(14000);
+	await sleep(4000);
 
 	// By convention and for simplicity of testing, each test fixture will
 	// make a page or a simple api route on `/test` that will print a bound
 	// environment variable set to the value "C3_TEST"
 	const res = await fetch(`http://localhost:${TEST_PORT}/test`);
 	const body = await res.text();
-	expect(body).toContain("C3_TEST");
 
 	// Kill the process gracefully so ports can be cleaned up
 	proc.kill("SIGINT");
@@ -342,4 +351,64 @@ const verifyDevScript = async (
 	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 	// end up camped and cause future runs to fail
 	await sleep(1000);
+
+	expect(body).toContain("C3_TEST");
+};
+
+const verifyBuildScript = async (
+	framework: string,
+	projectPath: string,
+	ctx: TestContext
+) => {
+	const { build } = frameworkTests[framework];
+
+	if (!build) {
+		throw Error(
+			"`build` must be specified in test config when verifying bindings"
+		);
+	}
+
+	const { outputDir, script } = build;
+
+	// Run the build script
+	const { name: pm, npx } = detectPackageManager();
+	await spawnWithLoggingAwaitable(
+		pm,
+		["run", script],
+		{
+			cwd: projectPath,
+		},
+		ctx
+	);
+
+	// Run wrangler dev on a random port to avoid colliding with other tests
+	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
+
+	const devProc = spawnWithLogging(
+		npx,
+		["wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
+		{
+			cwd: projectPath,
+		},
+		ctx
+	);
+
+	// Wait a few seconds for dev server to spin up
+	await sleep(4000);
+
+	// By convention and for simplicity of testing, each test fixture will
+	// make a page or a simple api route on `/test` that will print a bound
+	// environment variable set to the value "C3_TEST"
+	const res = await fetch(`http://localhost:${TEST_PORT}/test`);
+	const body = await res.text();
+
+	// Kill the process gracefully so ports can be cleaned up
+	devProc.kill("SIGINT");
+
+	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
+	// end up camped and cause future runs to fail
+	await sleep(1000);
+
+	// Verify expectation after killing the process so that it exits cleanly in case of failure
+	expect(body).toContain("C3_TEST");
 };

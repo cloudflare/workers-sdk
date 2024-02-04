@@ -194,6 +194,53 @@ export const spawnWithLogging = (
 	return proc;
 };
 
+export const spawnWithLoggingAwaitable = async (
+	cmd: string,
+	argv: string[] = [],
+	opts: SpawnOptionsWithoutStdio,
+	ctx: TestContext
+) => {
+	const proc = spawnWithLogging(cmd, argv, opts, ctx);
+
+	const stdout: string[] = [];
+	const stderr: string[] = [];
+
+	await new Promise((resolve, rejects) => {
+		proc.stdout.on("data", (data) => {
+			const lines: string[] = data.toString().split("\n");
+
+			lines.forEach(async (line) => {
+				stdout.push(line);
+			});
+		});
+
+		proc.stderr.on("data", (data) => {
+			stderr.push(data);
+		});
+
+		proc.on("close", (code) => {
+			if (code === 0) {
+				resolve(null);
+			} else {
+				rejects(code);
+			}
+		});
+
+		proc.on("error", (exitCode) => {
+			rejects({
+				exitCode,
+				output: stdout.join("\n").trim(),
+				errors: stderr.join("\n").trim(),
+			});
+		});
+	});
+
+	return {
+		output: stdout.join("\n").trim(),
+		errors: stderr.join("\n").trim(),
+	};
+};
+
 export const recreateLogFolder = (suite: Suite) => {
 	// Clean the old folder if exists (useful for dev)
 	rmSync(getLogPath(suite), {
