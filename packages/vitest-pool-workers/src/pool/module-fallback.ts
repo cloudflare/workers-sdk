@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import module from "node:module";
-import path from "node:path";
+import platformPath from "node:path";
+import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
@@ -26,9 +27,9 @@ export function ensurePosixLikePath(filePath: string) {
 }
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const distPath = ensurePosixLikePath(path.resolve(__dirname, ".."));
-const libPath = path.posix.join(distPath, "worker", "lib");
+const __dirname = platformPath.dirname(__filename);
+const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
+const libPath = posixPath.join(distPath, "worker", "lib");
 
 // File path suffix to disable CJS to ESM-with-named-exports shimming
 const disableCjsEsmShimSuffix = ".mf_vitest_no_cjs_esm_shim";
@@ -67,13 +68,13 @@ function isFile(filePath: string): boolean {
 
 const dirPathTypeModuleCache = new Map<string, boolean>();
 function isWithinTypeModuleContext(filePath: string): boolean {
-	const dirPath = path.posix.dirname(filePath);
+	const dirPath = posixPath.dirname(filePath);
 	if (dirPath === filePath) return false;
 	let cache = dirPathTypeModuleCache.get(dirPath);
 	if (cache !== undefined) return cache;
 
 	try {
-		const pkgPath = path.posix.join(dirPath, "package.json");
+		const pkgPath = posixPath.join(dirPath, "package.json");
 		const pkgJson = fs.readFileSync(pkgPath, "utf8");
 		const pkg = JSON.parse(pkgJson);
 		cache = pkg.type === "module";
@@ -194,13 +195,13 @@ function maybeGetTargetFilePath(target: string): string | undefined {
  */
 function getApproximateSpecifier(target: string, referrerDir: string): string {
 	if (/^(node|cloudflare|workerd):/.test(target)) return target;
-	return path.posix.relative(referrerDir, target);
+	return posixPath.relative(referrerDir, target);
 }
 
 const requires = new Map<string, NodeRequire>();
 function requireResolve(specifier: string, referrer: string): string {
-	const referrerDir = path.posix.dirname(referrer);
-	const normalisedReferrer = path.posix.join(referrerDir, "_");
+	const referrerDir = posixPath.dirname(referrer);
+	const normalisedReferrer = posixPath.join(referrerDir, "_");
 	let require = requires.get(normalisedReferrer);
 	if (require === undefined) {
 		require = module.createRequire(normalisedReferrer);
@@ -221,7 +222,7 @@ function mustResolve(
 	specifier: string,
 	referrer: string
 ): string /* filePath */ {
-	const referrerDir = path.posix.dirname(referrer);
+	const referrerDir = posixPath.dirname(referrer);
 
 	let filePath = maybeGetTargetFilePath(target);
 	if (filePath !== undefined) return filePath;
@@ -238,7 +239,7 @@ function mustResolve(
 		return `/${specifier}`;
 	}
 
-	const specifierLibPath = path.posix.join(
+	const specifierLibPath = posixPath.join(
 		libPath,
 		specifier.replaceAll(":", "/")
 	);
@@ -279,7 +280,7 @@ function buildRedirectResponse(filePath: string) {
 type ModuleContents = Omit<Worker_Module, "name">;
 function buildModuleResponse(target: string, contents: ModuleContents) {
 	let name = target;
-	if (!isWindows) name = path.posix.relative("/", target);
+	if (!isWindows) name = posixPath.relative("/", target);
 	assert(name[0] !== "/");
 	return new Response(JSON.stringify({ name, ...contents }));
 }
@@ -338,7 +339,7 @@ function mustLoad(
 	// NodeJsCompatModules can `require` ES modules, using the default export.
 	const insertCjsEsmShim = method === "import" || specifier.startsWith("node:");
 	if (insertCjsEsmShim && !disableCjsEsmShim) {
-		const fileName = path.posix.basename(filePath);
+		const fileName = posixPath.basename(filePath);
 		const disableShimSpecifier = `./${fileName}${disableCjsEsmShimSuffix}`;
 		const quotedDisableShimSpecifier = JSON.stringify(disableShimSpecifier);
 		let esModule = `import mod from ${quotedDisableShimSpecifier}; export default mod;`;
@@ -363,7 +364,7 @@ export function handleModuleFallbackRequest(request: Request): Response {
 	let referrer = url.searchParams.get("referrer");
 	assert(target !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
-	const referrerDir = path.posix.dirname(referrer);
+	const referrerDir = posixPath.dirname(referrer);
 	const specifier = getApproximateSpecifier(target, referrerDir);
 
 	if (isWindows) {
