@@ -1972,6 +1972,8 @@ test.serial(
 				}
 			}`,
 		});
+		res = await mf.dispatchFetch("http://localhost");
+		t.is(await res.text(), "value");
 
 		// Check only resolves root path once for single worker options (with relative
 		// root path)
@@ -1982,5 +1984,7 @@ test.serial(
 			script:
 				'addEventListener("fetch", (event) => event.respondWith(new Response(TEXT)));',
 		});
+		res = await mf.dispatchFetch("http://localhost");
+		t.is(await res.text(), "one text");
 	}
 );
