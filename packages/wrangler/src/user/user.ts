@@ -942,6 +942,16 @@ export async function loginOrRefreshIfRequired(
 export async function login(
 	props: LoginProps = { browser: true }
 ): Promise<boolean> {
+	const authFromEnv = getAuthFromEnv();
+	if (authFromEnv) {
+		// Auth from env overrides any login details, so no point in allowing the user to login.
+		logger.error(
+			"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the " +
+				"environment to log in via OAuth."
+		);
+		return false;
+	}
+
 	logger.log("Attempting to login via OAuth...");
 	const urlToOpen = await getAuthURL(props?.scopes);
 	let server: http.Server;
@@ -1073,6 +1083,16 @@ async function refreshToken(): Promise<boolean> {
 }
 
 export async function logout(): Promise<void> {
+	const authFromEnv = getAuthFromEnv();
+	if (authFromEnv) {
+		// Auth from env overrides any login details, so we cannot log out.
+		logger.log(
+			"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the " +
+				"environment to log out."
+		);
+		return;
+	}
+
 	if (!LocalState.accessToken) {
 		if (!LocalState.refreshToken) {
 			logger.log("Not logged in, exiting...");

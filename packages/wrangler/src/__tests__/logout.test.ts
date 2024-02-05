@@ -12,7 +12,9 @@ describe("logout", () => {
 
 	it("should exit with a message stating the user is not logged in", async () => {
 		await runWrangler("logout");
-		expect(std.out).toMatchInlineSnapshot(`"Not logged in, exiting..."`);
+		expect(std.out).toMatchInlineSnapshot(
+			`"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."`
+		);
 	});
 
 	it("should logout user that has been properly logged in", async () => {
@@ -39,7 +41,9 @@ describe("logout", () => {
 
 		await runWrangler("logout");
 
-		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
+		expect(std.out).toMatchInlineSnapshot(
+			`"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."`
+		);
 		expect(fs.existsSync(config)).toBeFalsy();
 		expect(counter).toBe(1);
 	});
