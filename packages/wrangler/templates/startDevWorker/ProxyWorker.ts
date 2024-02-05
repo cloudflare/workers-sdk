@@ -37,6 +37,7 @@ export class ProxyWorker implements DurableObject {
 
 	proxyData?: ProxyData;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
+	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
 	fetch(request: Request) {
 		if (isRequestForLiveReloadWebsocket(request)) {
@@ -94,11 +95,22 @@ export class ProxyWorker implements DurableObject {
 		return new Response(null, { status: 204 });
 	}
 
+	/**
+	 * Process requests that are being retried first, then process newer requests.
+	 * Requests that are being retried are, by definition, older than requests which haven't been processed yet.
+	 * We don't need to be more accurate than this re ordering, since the requests are being fired off synchronously.
+	 */
+	*getOrderedQueue() {
+		yield* this.requestRetryQueue;
+		yield* this.requestQueue;
+	}
+
 	processQueue() {
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
 
-		for (const [request, deferredResponse] of this.requestQueue) {
+		for (const [request, deferredResponse] of this.getOrderedQueue()) {
+			this.requestRetryQueue.delete(request);
 			this.requestQueue.delete(request);
 
 			const userWorkerUrl = new URL(request.url);
@@ -125,8 +137,7 @@ export class ProxyWorker implements DurableObject {
 				}
 			}
 
-			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly
-			// if we decide to await, we should include a timeout (~100ms) in case the user worker has long-running/parellel requests
+			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
 				.then((res) => {
 					if (isHtmlResponse(res)) {
@@ -160,7 +171,7 @@ export class ProxyWorker implements DurableObject {
 
 					// if the request can be retried (subset of idempotent requests which have no body), requeue it
 					else if (request.method === "GET" || request.method === "HEAD") {
-						this.requestQueue.set(request, deferredResponse);
+						this.requestRetryQueue.set(request, deferredResponse);
 					}
 
 					// if the request cannot be retried, respond with 503 Service Unavailable
