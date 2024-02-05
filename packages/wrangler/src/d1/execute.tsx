@@ -151,12 +151,10 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			logger.log(JSON.stringify(response, null, 2));
 		}
 	} catch (error) {
-		if (json) {
+		if (json && error instanceof Error) {
 			logger.loggerLevel = existingLogLevel;
 			const messageToDisplay =
-				(error as Error).name === "APIError"
-					? error
-					: { text: (error as Error).message };
+				error.name === "APIError" ? error : { text: error.message };
 			throw new JsonFriendlyFatalError(
 				JSON.stringify({ error: messageToDisplay }, null, 2)
 			);
