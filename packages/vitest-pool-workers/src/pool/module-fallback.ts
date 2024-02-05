@@ -52,9 +52,8 @@ const bundleDependencies = ["chai"];
 
 function fileURLToPosixPath(url: string | URL) {
 	if (typeof url === "string") url = new URL(url);
-	// TODO(soon): check this actually works for Windows
 	// Some URLs contain hashes, e.g. if relying on an import map
-	return fileURLToPath(url).replaceAll("\\", "/") + url.hash;
+	return ensurePosixLikePath(fileURLToPath(url)) + url.hash;
 }
 
 function isFile(filePath: string): boolean {
