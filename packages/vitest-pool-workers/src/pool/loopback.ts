@@ -149,7 +149,7 @@ function getState(mf: Miniflare) {
 	return state;
 }
 
-const ABORT_ALL_WORKER_NAME = `${WORKER_NAME_PREFIX}:helper`;
+const ABORT_ALL_WORKER_NAME = `${WORKER_NAME_PREFIX}abort-all`;
 // The `abortAllDurableObjects()` API is only accessible from a worker, so we
 // add this extra worker to all `Miniflare` instances constructed by the pool,
 // so we can this function from Node.
