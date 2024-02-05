@@ -174,7 +174,7 @@ function validateOptions(
 	// Initialise return values
 	const pluginSharedOpts = {} as PluginSharedOptions;
 	const pluginWorkerOpts = Array.from(Array(workerOpts.length)).map(
-		() => ({}) as PluginWorkerOptions
+		() => ({} as PluginWorkerOptions)
 	);
 
 	// If we haven't defined multiple workers, shared options and worker options
@@ -1215,7 +1215,7 @@ export class Miniflare {
 		const autogates = [
 			// Enables Python support in workerd.
 			// TODO(later): remove this once this gate is removed from workerd.
-			"workerd-autogate-builtin-wasm-modules"
+			"workerd-autogate-builtin-wasm-modules",
 		];
 
 		return { services: servicesArray, sockets, extensions, autogates };

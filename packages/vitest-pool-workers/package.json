@@ -41,7 +41,7 @@
 		"birpc": "0.2.14",
 		"cjs-module-lexer": "^1.2.3",
 		"devalue": "^4.3.0",
-		"esbuild": "^0.19.7",
+		"esbuild": "0.17.19",
 		"import-meta-resolve": "^4.0.0",
 		"miniflare": "workspace:*",
 		"zod": "^3.20.6"
