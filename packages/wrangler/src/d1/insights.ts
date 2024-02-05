@@ -20,6 +20,21 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
+		.option("sort-by", {
+			choices: ["duration", "reads", "writes"] as const,
+			describe: "Choose the field you want to sort insights by",
+			default: "duration",
+		})
+		.option("sort-direction", {
+			choices: ["ASC", "DESC"] as const,
+			describe: "Choose a sort direction",
+			default: "DESC",
+		})
+		.option("count", {
+			describe: "fetch insights about the first X queries",
+			type: "number",
+			default: 5,
+		})
 		.option("json", {
 			describe: "return output as clean JSON",
 			type: "boolean",
@@ -28,9 +43,22 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 		.epilogue(d1BetaWarning);
 }
 
+const cliOptionToGraphQLOption = {
+	duration: "queryDurationMs",
+	reads: "rowsRead",
+	writes: "rowsWritten",
+};
+
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, json }): Promise<void> => {
+	async ({
+		name,
+		config,
+		json,
+		count,
+		sortBy,
+		sortDirection,
+	}): Promise<void> => {
 		const accountId = await requireAuth(config);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -45,7 +73,8 @@ export const Handler = withConfig<HandlerOptions>(
 		if (result.version === "beta") {
 			const today = new Date();
 			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
-
+			const parsedSortBy =
+				cliOptionToGraphQLOption[sortBy as "duration" | "reads" | "writes"];
 			const graphqlQueriesResult =
 				await fetchGraphqlResult<D1QueriesGraphQLResponse>({
 					method: "POST",
@@ -53,7 +82,7 @@ export const Handler = withConfig<HandlerOptions>(
 						query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
-										d1QueriesAdaptiveGroups(limit: 5, filter: $filter, orderBy: [avg_queryDurationMs_DESC]) {
+										d1QueriesAdaptiveGroups(limit: ${count}, filter: $filter, orderBy: [avg_${parsedSortBy}_${sortDirection}]) {
 											avg {
 												queryDurationMs
 												rowsRead
