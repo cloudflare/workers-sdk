@@ -25,10 +25,15 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			describe: "Fetch data from the last X number of days",
 			default: 1,
 		})
+		.option("sort-type", {
+			choices: ["sum", "avg"] as const,
+			describe: "Choose the operation you want to sort insights by",
+			default: "sum",
+		})
 		.option("sort-by", {
-			choices: ["duration", "reads", "writes"] as const,
+			choices: ["time", "reads", "writes"] as const,
 			describe: "Choose the field you want to sort insights by",
-			default: "duration",
+			default: "time",
 		})
 		.option("sort-direction", {
 			choices: ["ASC", "DESC"] as const,
@@ -49,7 +54,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 }
 
 const cliOptionToGraphQLOption = {
-	duration: "queryDurationMs",
+	time: "queryDurationMs",
 	reads: "rowsRead",
 	writes: "rowsWritten",
 };
@@ -62,6 +67,7 @@ export const Handler = withConfig<HandlerOptions>(
 		json,
 		count,
 		last,
+		sortType,
 		sortBy,
 		sortDirection,
 	}): Promise<void> => {
@@ -82,7 +88,7 @@ export const Handler = withConfig<HandlerOptions>(
 				new Date(endDate).setDate(endDate.getDate() - last)
 			);
 			const parsedSortBy =
-				cliOptionToGraphQLOption[sortBy as "duration" | "reads" | "writes"];
+				cliOptionToGraphQLOption[sortBy as "time" | "reads" | "writes"];
 			const graphqlQueriesResult =
 				await fetchGraphqlResult<D1QueriesGraphQLResponse>({
 					method: "POST",
@@ -90,12 +96,18 @@ export const Handler = withConfig<HandlerOptions>(
 						query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
-										d1QueriesAdaptiveGroups(limit: ${count}, filter: $filter, orderBy: [avg_${parsedSortBy}_${sortDirection}]) {
+										d1QueriesAdaptiveGroups(limit: ${count}, filter: $filter, orderBy: [${sortType}_${parsedSortBy}_${sortDirection}]) {
+											sum {
+												queryDurationMs
+												rowsRead
+												rowsWritten
+											}
 											avg {
 												queryDurationMs
 												rowsRead
 												rowsWritten
 											}
+											count
 											dimensions {
 													query
 											}
@@ -128,9 +140,12 @@ export const Handler = withConfig<HandlerOptions>(
 						if (!row.dimensions.query) return;
 						output.push({
 							query: row.dimensions.query,
-							rowsRead: row?.avg?.rowsRead ?? 0,
-							rowsWritten: row?.avg?.rowsWritten ?? 0,
-							duration: row?.avg?.queryDurationMs ?? 0,
+							totalRowsRead: row?.sum?.rowsRead ?? 0,
+							avgRowsRead: row?.avg?.rowsRead ?? 0,
+							totalRowsWritten: row?.sum?.rowsWritten ?? 0,
+							avgRowsWritten: row?.avg?.rowsWritten ?? 0,
+							durationMs: row?.sum?.queryDurationMs ?? 0,
+							numberOfTimesRun: row?.count ?? 0,
 						});
 					}
 				);
