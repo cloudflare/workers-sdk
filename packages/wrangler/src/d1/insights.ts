@@ -20,6 +20,11 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
+		.option("last", {
+			choices: [1, 7, 31] as const,
+			describe: "Fetch data from the last X number of days",
+			default: 1,
+		})
 		.option("sort-by", {
 			choices: ["duration", "reads", "writes"] as const,
 			describe: "Choose the field you want to sort insights by",
@@ -56,6 +61,7 @@ export const Handler = withConfig<HandlerOptions>(
 		config,
 		json,
 		count,
+		last,
 		sortBy,
 		sortDirection,
 	}): Promise<void> => {
@@ -71,8 +77,10 @@ export const Handler = withConfig<HandlerOptions>(
 		const output: Record<string, string | number>[] = [];
 
 		if (result.version === "beta") {
-			const today = new Date();
-			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
+			const endDate = new Date();
+			const startDate = new Date(
+				new Date(endDate).setDate(endDate.getDate() - last)
+			);
 			const parsedSortBy =
 				cliOptionToGraphQLOption[sortBy as "duration" | "reads" | "writes"];
 			const graphqlQueriesResult =
@@ -101,8 +109,8 @@ export const Handler = withConfig<HandlerOptions>(
 							filter: {
 								AND: [
 									{
-										datetimeHour_geq: yesterday.toISOString(),
-										datetimeHour_leq: today.toISOString(),
+										datetimeHour_geq: startDate.toISOString(),
+										datetimeHour_leq: endDate.toISOString(),
 										databaseId: db.uuid,
 									},
 								],
