@@ -719,6 +719,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				) {
 					err.preventReport();
 
+					if (
+						err.notes[0].text ===
+						"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+					) {
+						throw new UserError(
+							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development"
+						);
+					}
+
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.
