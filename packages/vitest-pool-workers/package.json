@@ -25,13 +25,16 @@
 		"check:lint": "eslint .",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p test/tsconfig.json",
 		"test": "vitest --config vitest.workers.config.ts --reporter=basic",
-		"test:ci": "vitest run --config vitest.workers.config.ts --reporter=basic"
+		"test:ci": "vitest run --config vitest.workers.config.ts --reporter=basic",
+		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20231121.0",
 		"@types/node": "20.8.3",
+		"capnp-ts": "^0.7.0",
+		"capnpc-ts": "^0.7.0",
 		"undici": "^5.28.1"
 	},
 	"dependencies": {

@@ -2,8 +2,8 @@ import assert from "node:assert";
 import fs from "node:fs";
 import module from "node:module";
 import path from "node:path";
-import util from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
 import { moduleResolve } from "import-meta-resolve";
@@ -38,26 +38,11 @@ function trimSuffix(suffix: string, value: string) {
 }
 
 // Node.js built-in modules provided by `workerd`
-const workerdBuiltinModules = [
-	"node:_stream_duplex",
-	"node:_stream_passthrough",
-	"node:_stream_readable",
-	"node:_stream_readable",
-	"node:_stream_transform",
-	"node:_stream_writable",
-	"node:assert",
-	"node:async_hooks",
-	"node:buffer",
-	"node:crypto",
-	"node:diagnostics_channel",
-	"node:events",
-	"node:path",
-	// "node:process", // Doesn't support all that we need
-	"node:stream",
-	"node:string_decoder",
-	"node:util",
-	"workerd:unsafe",
-];
+const workerdBuiltinModules = VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES.filter(
+	// `workerd`'s implementation of "node:process" doesn't support everything we
+	// need, so use our polyfill instead
+	(specifier) => specifier !== "node:process"
+);
 const conditions = new Set(["workerd", "worker", "browser", "import"]);
 
 // `chai` contains circular `require()`s which aren't supported by `workerd`

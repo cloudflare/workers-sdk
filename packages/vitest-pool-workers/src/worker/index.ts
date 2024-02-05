@@ -3,10 +3,10 @@ import { Buffer } from "node:buffer";
 import events from "node:events";
 import * as vm from "node:vm";
 import {
-	setEnv,
 	importModule,
 	maybeHandleImportRequest,
 	mustGetResolvedMainPath,
+	setEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
 // Using relative path here to ensure `esbuild` bundles it
@@ -213,15 +213,12 @@ function createHandlerWrapper<K extends keyof ExportedHandler<Env>>(
 		}
 	};
 }
-const handler: Required<ExportedHandler<Env>> = {
-	fetch: createHandlerWrapper("fetch"),
-	tail: createHandlerWrapper("tail"),
-	trace: createHandlerWrapper("trace"),
-	scheduled: createHandlerWrapper("scheduled"),
-	test: createHandlerWrapper("test"),
-	email: createHandlerWrapper("email"),
-	queue: createHandlerWrapper("queue"),
-};
+const handler = Object.fromEntries(
+	VITEST_POOL_WORKERS_DEFINE_EXPORTED_HANDLERS.map((key) => [
+		key,
+		createHandlerWrapper(key),
+	])
+) as Required<ExportedHandler<Env>>;
 export default handler;
 
 // Re-export user Durable Object wrappers
