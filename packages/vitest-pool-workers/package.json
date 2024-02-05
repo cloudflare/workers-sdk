@@ -35,7 +35,7 @@
 		"@types/node": "20.8.3",
 		"capnp-ts": "^0.7.0",
 		"capnpc-ts": "^0.7.0",
-		"undici": "^5.28.1"
+		"undici": "5.28.3"
 	},
 	"dependencies": {
 		"birpc": "0.2.14",
