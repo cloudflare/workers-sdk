@@ -151,6 +151,9 @@ export class ProxyWorker implements DurableObject {
 					// to catch only network errors, use the 2nd param of the fetch.then()
 
 					// we have crossed an async boundary, so proxyData may have changed
+					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
+					// and that this error is stale since it was for a request to the old UserWorker
+					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
 					const newUserWorkerUrl =
 						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
 
@@ -172,6 +175,12 @@ export class ProxyWorker implements DurableObject {
 					// if the request can be retried (subset of idempotent requests which have no body), requeue it
 					else if (request.method === "GET" || request.method === "HEAD") {
 						this.requestRetryQueue.set(request, deferredResponse);
+						// we would only end up here if the downstream UserWorker is chang*ing*
+						// i.e. we are in a `pause`d state and expecting a `play` message soon
+						// this request will be processed (retried) when the `play` message arrives
+						// for that reason, we do not need to call `this.processQueue` here
+						// (but, also, it can't hurt to call it since it bails when
+						// in a `pause`d state i.e. `this.proxyData` is undefined)
 					}
 
 					// if the request cannot be retried, respond with 503 Service Unavailable
