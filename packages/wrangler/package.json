@@ -63,7 +63,7 @@
 		"test": "pnpm run assert-git-version && jest",
 		"test:ci": "pnpm run test --coverage",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
-		"test:e2e": "vitest --test-timeout 240000 --single-thread --dir ./e2e --retry 2 run",
+		"test:e2e": "vitest --test-timeout 60000 --single-thread --dir ./e2e --retry 2 run",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
@@ -107,7 +107,7 @@
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.17.19",
-		"miniflare": "workspace:*",
+		"miniflare": "file:/Users/penalosa/dev/wrangler2/packages/wrangler/../miniflare/miniflare-3.20240129.0.tgz",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"resolve": "^1.22.8",
