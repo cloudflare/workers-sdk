@@ -35,7 +35,7 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
-import { UserError } from "./errors";
+import { JsonFriendlyFatalError, UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
@@ -787,6 +787,8 @@ export async function main(argv: string[]): Promise<void> {
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
+		} else if (e instanceof JsonFriendlyFatalError) {
+			logger.log(e.message);
 		} else if (
 			e instanceof Error &&
 			e.message.includes("Raw mode is not supported on")
