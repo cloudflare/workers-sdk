@@ -5,15 +5,15 @@ export function existsSync(_path: string) {
 }
 
 export function readdirSync(_path: string) {
-	assert.fail("readdirSync() is not yet implemented in worker");
+	assert.fail("readdirSync() is not yet implemented in Workers");
 }
 
 export function readFileSync(_path: string) {
-	assert.fail("readFileSync() is not yet implemented in worker");
+	assert.fail("readFileSync() is not yet implemented in Workers");
 }
 
 export function statSync(_path: string) {
-	assert.fail("statSync() is not yet implemented in worker");
+	assert.fail("statSync() is not yet implemented in Workers");
 }
 
 export const promises = {};

@@ -8,13 +8,13 @@ class Process extends EventEmitter {
 		Object.defineProperty(this.hrtime, "bigint", {
 			// https://nodejs.org/api/process.html#processhrtimebigint
 			value() {
-				throw new Error("hrtime.bigint() is not yet implemented in worker");
+				throw new Error("hrtime.bigint() is not yet implemented in Workers");
 			},
 		});
 		Object.defineProperty(this.memoryUsage, "rss", {
 			// https://nodejs.org/api/process.html#processmemoryusagerss
 			value() {
-				throw new Error("memoryUsage.rss() is not yet implemented in worker");
+				throw new Error("memoryUsage.rss() is not yet implemented in Workers");
 			},
 		});
 	}
@@ -52,7 +52,7 @@ class Process extends EventEmitter {
 
 	// https://nodejs.org/api/process.html#processcpuusagepreviousvalue
 	cpuUsage(_previousValue?: unknown) {
-		throw new Error("cpuUsage() is not yet implemented in worker");
+		throw new Error("cpuUsage() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processcwd
@@ -68,7 +68,7 @@ class Process extends EventEmitter {
 
 	// https://nodejs.org/api/process.html#processdlopenmodule-filename-flags
 	dlopen(_module: unknown, _filename: string, _flags?: unknown) {
-		throw new Error("dlopen() is not yet implemented in worker");
+		throw new Error("dlopen() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processemitwarningwarning-options
@@ -102,55 +102,55 @@ class Process extends EventEmitter {
 	// https://nodejs.org/api/process.html#processgetactiveresourcesinfo
 	getActiveResourcesInfo() {
 		throw new Error(
-			"getActiveResourcesInfo() is not yet implemented in worker"
+			"getActiveResourcesInfo() is not yet implemented in Workers"
 		);
 	}
 
 	// https://nodejs.org/api/process.html#processgetegid
 	getegid() {
-		throw new Error("getegid() is not yet implemented in worker");
+		throw new Error("getegid() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processgeteuid
 	geteuid() {
-		throw new Error("geteuid() is not yet implemented in worker");
+		throw new Error("geteuid() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processgetgid
 	getgid() {
-		throw new Error("getgid() is not yet implemented in worker");
+		throw new Error("getgid() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processgetgroups
 	getgroups() {
-		throw new Error("getgroups() is not yet implemented in worker");
+		throw new Error("getgroups() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processgetuid
 	getuid() {
-		throw new Error("getuid() is not yet implemented in worker");
+		throw new Error("getuid() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processhasuncaughtexceptioncapturecallback
 	hasUncaughtExceptionCaptureCallback() {
 		throw new Error(
-			"hasUncaughtExceptionCaptureCallback() is not yet implemented in worker"
+			"hasUncaughtExceptionCaptureCallback() is not yet implemented in Workers"
 		);
 	}
 
 	// https://nodejs.org/api/process.html#processhrtimetime
 	hrtime(_time?: number[]) {
-		throw new Error("hrtime() is not yet implemented in worker");
+		throw new Error("hrtime() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processinitgroupsuser-extragroup
 	initgroups(_user: string | number, _extraGroup: string | number) {
-		throw new Error("initgroups() is not yet implemented in worker");
+		throw new Error("initgroups() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processkillpid-signal
 	kill(_pid: number, _signal?: string | number) {
-		throw new Error("kill() is not yet implemented in worker");
+		throw new Error("kill() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processmainmodule
@@ -158,7 +158,7 @@ class Process extends EventEmitter {
 
 	// https://nodejs.org/api/process.html#processmemoryusage
 	memoryUsage() {
-		throw new Error("memoryUsage() is not yet implemented in worker");
+		throw new Error("memoryUsage() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processnexttickcallback-args
@@ -184,12 +184,12 @@ class Process extends EventEmitter {
 
 	// https://nodejs.org/api/process.html#processreport
 	get report() {
-		throw new Error("report is not yet implemented in worker");
+		throw new Error("report is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processresourceusage
 	resourceUsage() {
-		throw new Error("resourceUsage() is not yet implemented in worker");
+		throw new Error("resourceUsage() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processsendmessage-sendhandle-options-callback
@@ -222,14 +222,14 @@ class Process extends EventEmitter {
 
 	// https://nodejs.org/api/process.html#processsetsourcemapsenabledval
 	setSourceMapsEnabled(_val: boolean) {
-		throw new Error("setSourceMapEnabled() is not yet implemented in worker");
+		throw new Error("setSourceMapEnabled() is not yet implemented in Workers");
 	}
 
 	// https://nodejs.org/api/process.html#processsetuncaughtexceptioncapturecallbackfn
 	// eslint-disable-next-line @typescript-eslint/ban-types
 	setUncaughtExceptionCaptureCallback(_fn: Function) {
 		throw new Error(
-			"setUncaughtExceptionCaptureCallback() is not yet implemented in worker"
+			"setUncaughtExceptionCaptureCallback() is not yet implemented in Workers"
 		);
 	}
 
@@ -254,7 +254,7 @@ class Process extends EventEmitter {
 	// https://nodejs.org/api/process.html#processumask
 	umask(_mask?: string | number) {
 		throw new Error(
-			"setUncaughtExceptionCaptureCallback() is not yet implemented in worker"
+			"setUncaughtExceptionCaptureCallback() is not yet implemented in Workers"
 		);
 	}
 
