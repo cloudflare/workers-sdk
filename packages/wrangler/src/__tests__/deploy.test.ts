@@ -8531,6 +8531,7 @@ export default{
 
 		Getting User settings...
 		👋 You are logged in with an API Token, associated with the email user@example.com!
+		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
 		┌───────────────┬────────────┐
 		│ Account Name  │ Account ID │
 		├───────────────┼────────────┤
