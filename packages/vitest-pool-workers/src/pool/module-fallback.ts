@@ -65,25 +65,40 @@ function isFile(filePath: string): boolean {
 	}
 }
 
+function getParentPaths(filePath: string): string[] {
+	const parentPaths: string[] = [];
+	// eslint-disable-next-line no-constant-condition
+	while (true) {
+		const parentPath = posixPath.dirname(filePath);
+		if (parentPath === filePath) return parentPaths;
+		parentPaths.push(parentPath);
+		filePath = parentPath;
+	}
+}
+
 const dirPathTypeModuleCache = new Map<string, boolean>();
 function isWithinTypeModuleContext(filePath: string): boolean {
-	const dirPath = posixPath.dirname(filePath);
-	if (dirPath === filePath) return false;
-	let cache = dirPathTypeModuleCache.get(dirPath);
-	if (cache !== undefined) return cache;
+	const parentPaths = getParentPaths(filePath);
 
-	try {
-		const pkgPath = posixPath.join(dirPath, "package.json");
-		const pkgJson = fs.readFileSync(pkgPath, "utf8");
-		const pkg = JSON.parse(pkgJson);
-		cache = pkg.type === "module";
-	} catch (e: unknown) {
-		if (!isFileNotFoundError(e)) throw e;
-		cache = isWithinTypeModuleContext(dirPath);
+	for (const parentPath of parentPaths) {
+		const cache = dirPathTypeModuleCache.get(parentPath);
+		if (cache !== undefined) return cache;
 	}
 
-	dirPathTypeModuleCache.set(dirPath, cache);
-	return cache;
+	for (const parentPath of parentPaths) {
+		try {
+			const pkgPath = posixPath.join(parentPath, "package.json");
+			const pkgJson = fs.readFileSync(pkgPath, "utf8");
+			const pkg = JSON.parse(pkgJson);
+			const cache = pkg.type === "module";
+			dirPathTypeModuleCache.set(parentPath, cache);
+			return cache;
+		} catch (e: unknown) {
+			if (!isFileNotFoundError(e)) throw e;
+		}
+	}
+
+	return false;
 }
 
 await cjsModuleLexer.init();
