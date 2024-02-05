@@ -406,7 +406,7 @@ parameter in module format Workers.
             await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
           }
         }
-    
+
         // env has the type { STORE: Fetcher, NAMESPACE?: string }
         export default function (env) {
           return new MiniKV(env);
@@ -770,3 +770,7 @@ defined at the top-level.
   `Miniflare#dispatchFetch()` cannot be called. Additionally, calling this
   function will invalidate any values returned by the `Miniflare#get*()`
   methods, preventing them from being used.
+
+- `getCf(): Promise<Record<string, any>>`
+
+  Returns the same object returned from incoming `Request`'s `cf` property. This object depends on the `cf` property from `SharedOptions`.
