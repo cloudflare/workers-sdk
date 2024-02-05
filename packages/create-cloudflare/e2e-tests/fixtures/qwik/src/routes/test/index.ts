@@ -6,5 +6,5 @@ export const onGet: RequestHandler = async ({ platform, json }) => {
 		return;
 	}
 
-	json(200, { value: platform.env["TEST"] || "wtf undefined?", version: 1 });
+	json(200, { value: platform.env["TEST"], version: 1 });
 };
