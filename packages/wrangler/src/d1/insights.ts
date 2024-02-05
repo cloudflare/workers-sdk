@@ -22,9 +22,9 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			demandOption: true,
 		})
 		.option("timePeriod", {
-			choices: [1, 7, 31] as const,
-			describe: "Fetch data from the last X number of days",
-			default: 1,
+			choices: ["1d", "7d", "31d"] as const,
+			describe: "Fetch data from now to the provided time period",
+			default: "1d",
 		})
 		.option("sort-type", {
 			choices: ["sum", "avg"] as const,
@@ -84,9 +84,10 @@ export const Handler = withConfig<HandlerOptions>(
 		const output: Record<string, string | number>[] = [];
 
 		if (result.version === "beta") {
+			const convertedTimePeriod = Number(timePeriod.replace("d", ""));
 			const endDate = new Date();
 			const startDate = new Date(
-				new Date(endDate).setDate(endDate.getDate() - timePeriod)
+				new Date(endDate).setDate(endDate.getDate() - convertedTimePeriod)
 			);
 			const parsedSortBy =
 				cliOptionToGraphQLOption[sortBy as "time" | "reads" | "writes"];
