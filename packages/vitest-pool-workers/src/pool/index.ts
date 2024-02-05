@@ -47,21 +47,6 @@ import type {
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
-function groupBy<K, VFrom, VTo>(
-	iterable: Iterable<VFrom>,
-	keyFn: (value: VFrom) => K,
-	valueFn: (value: VFrom) => VTo
-): Map<K, VTo[]> {
-	const result = new Map<K, VTo[]>();
-	for (const value of iterable) {
-		const key = keyFn(value);
-		let group = result.get(key);
-		if (group === undefined) result.set(key, (group = []));
-		group.push(valueFn(value));
-	}
-	return result;
-}
-
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
 }
@@ -653,11 +638,12 @@ export default function (ctx: Vitest): ProcessPool {
 
 			// 2. Run just the required tests
 			const resultPromises: Promise<void>[] = [];
-			const filesByProject = groupBy(
-				specs,
-				([project]) => project,
-				([, file]) => file
-			);
+			const filesByProject = new Map<WorkspaceProject, string[]>();
+			for (const [project, file] of specs) {
+				let group = filesByProject.get(project);
+				if (group === undefined) filesByProject.set(project, (group = []));
+				group.push(file);
+			}
 			for (const [workspaceProject, files] of filesByProject) {
 				const project = allProjects.get(workspaceProject.getName());
 				assert(project !== undefined); // Defined earlier in this function
