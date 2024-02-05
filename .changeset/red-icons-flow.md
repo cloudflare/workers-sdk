@@ -11,11 +11,11 @@ This command defaults to fetching the top 5 queries that took the longest to run
 You can also fetch the top 5 queries that consumed the most rows read over the last week, for example:
 
 ```bash
-npx wrangler d1 insights northwind --sortBy reads --last 7
+npx wrangler d1 insights northwind --sortBy reads --timePeriod 7
 ```
 
 Or the top 5 queries that consumed the most rows written over the last month, for example:
 
 ```bash
-npx wrangler d1 insights northwind --sortBy writes --last 31
+npx wrangler d1 insights northwind --sortBy writes --timePeriod 31
 ```

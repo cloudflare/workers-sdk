@@ -21,7 +21,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
-		.option("last", {
+		.option("timePeriod", {
 			choices: [1, 7, 31] as const,
 			describe: "Fetch data from the last X number of days",
 			default: 1,
@@ -67,7 +67,7 @@ export const Handler = withConfig<HandlerOptions>(
 		config,
 		json,
 		count,
-		last,
+		timePeriod,
 		sortType,
 		sortBy,
 		sortDirection,
@@ -86,7 +86,7 @@ export const Handler = withConfig<HandlerOptions>(
 		if (result.version === "beta") {
 			const endDate = new Date();
 			const startDate = new Date(
-				new Date(endDate).setDate(endDate.getDate() - last)
+				new Date(endDate).setDate(endDate.getDate() - timePeriod)
 			);
 			const parsedSortBy =
 				cliOptionToGraphQLOption[sortBy as "time" | "reads" | "writes"];
