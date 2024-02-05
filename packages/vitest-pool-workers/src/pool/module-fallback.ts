@@ -393,10 +393,8 @@ export function handleModuleFallbackRequest(request: Request): Response {
 
 	try {
 		const filePath = mustResolve(method, target, specifier, referrer);
-		if (filePath !== undefined) {
-			if (bundleDependencies.includes(specifier)) bundleDependency(filePath);
-			return mustLoad(logBase, method, target, specifier, filePath);
-		}
+		if (bundleDependencies.includes(specifier)) bundleDependency(filePath);
+		return mustLoad(logBase, method, target, specifier, filePath);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
 	}
