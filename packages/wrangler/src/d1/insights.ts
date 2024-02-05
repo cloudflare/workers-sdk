@@ -1,3 +1,4 @@
+import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
@@ -140,11 +141,12 @@ export const Handler = withConfig<HandlerOptions>(
 						if (!row.dimensions.query) return;
 						output.push({
 							query: row.dimensions.query,
-							totalRowsRead: row?.sum?.rowsRead ?? 0,
 							avgRowsRead: row?.avg?.rowsRead ?? 0,
-							totalRowsWritten: row?.sum?.rowsWritten ?? 0,
+							totalRowsRead: row?.sum?.rowsRead ?? 0,
 							avgRowsWritten: row?.avg?.rowsWritten ?? 0,
-							durationMs: row?.sum?.queryDurationMs ?? 0,
+							totalRowsWritten: row?.sum?.rowsWritten ?? 0,
+							avgDurationMs: row?.avg?.queryDurationMs ?? 0,
+							totalDurationMs: row?.sum?.queryDurationMs ?? 0,
 							numberOfTimesRun: row?.count ?? 0,
 						});
 					}
@@ -155,7 +157,10 @@ export const Handler = withConfig<HandlerOptions>(
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
-			// TODO: maybe figure out a nicer way to output this, but honestly it looks fine?
+			await printWranglerBanner();
+			logger.log(
+				"-------------------\n🚧 `wrangler d1 insights` is an experimental command.\n🚧 flags for this command, their descriptions, and output may change between wrangler versions.\n-------------------\n"
+			);
 			logger.log(JSON.stringify(output, null, 2));
 		}
 	}
