@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { Request, Response } from "../../http";
+import type { Miniflare } from "../../index";
 import {
 	ExternalServer,
 	HttpOptions_Style,
 	TlsOptions_Version,
 } from "../../runtime";
-import { zAwaitable } from "../../shared";
+import type { Awaitable } from "../../workers";
 
 // Zod validators for types in runtime/config/workerd.ts.
 // All options should be optional except where specifically stated.
@@ -74,10 +75,9 @@ const DiskDirectorySchema = z.object({
 	writable: z.oboolean(),
 });
 
-export const ServiceFetchSchema = z
-	.function()
-	.args(z.instanceof(Request))
-	.returns(zAwaitable(z.instanceof(Response)));
+export const ServiceFetchSchema = z.custom<
+	(request: Request, mf: Miniflare) => Awaitable<Response>
+>((v) => typeof v === "function");
 
 export const ServiceDesignatorSchema = z.union([
 	z.string(),

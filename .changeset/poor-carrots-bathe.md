@@ -2,9 +2,9 @@
 "miniflare": minor
 ---
 
-feat: bind `this` to current `Miniflare` instance in custom service binding handlers
+feat: pass `Miniflare` instance as argument to custom service binding handlers
 
-Previously, `this` was unbound in function-valued `serviceBindings`. This change binds it to the current `Miniflare` instance, for easy access to the correct bindings when re-using service functions across instances.
+This change adds a new `Miniflare`-typed parameter to function-valued service binding handlers. This provides easy access to the correct bindings when re-using service functions across instances.
 
 <!--prettier-ignore-start-->
 
@@ -14,9 +14,9 @@ import { Miniflare, Response } from "miniflare";
 
 const mf = new Miniflare({
   // ...
-  serviceBindings: { 
-    SERVICE(request) {
-      assert(this === mf);
+  serviceBindings: {
+    SERVICE(request, instance) {
+      assert(instance === mf);
       return new Response();
     },
   },

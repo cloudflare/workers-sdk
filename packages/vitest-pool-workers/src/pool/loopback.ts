@@ -257,8 +257,8 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 }
 
 async function handleStorageRequest(
-	mf: Miniflare,
-	request: Request
+	request: Request,
+	mf: Miniflare
 ): Promise<Response> {
 	const state = getState(mf);
 
@@ -294,11 +294,11 @@ async function handleStorageRequest(
 }
 
 export function handleLoopbackRequest(
-	this: Miniflare,
-	request: Request
+	request: Request,
+	mf: Miniflare
 ): Awaitable<Response> {
 	const url = new URL(request.url);
 	if (url.pathname === "/snapshot") return handleSnapshotRequest(request, url);
-	if (url.pathname === "/storage") return handleStorageRequest(this, request);
+	if (url.pathname === "/storage") return handleStorageRequest(request, mf);
 	return new Response(null, { status: 404 });
 }
