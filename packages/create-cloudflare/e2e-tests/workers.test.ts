@@ -24,35 +24,36 @@ type WorkerTestConfig = Omit<RunnerConfig, "ctx"> & {
 	name?: string;
 	template: string;
 };
+
+const workerTemplates: WorkerTestConfig[] = [
+	{
+		expectResponseToContain: "Hello World!",
+		template: "hello-world",
+	},
+	{
+		template: "common",
+		expectResponseToContain: "Try making requests to:",
+	},
+	{
+		template: "queues",
+		// Skipped for now, since C3 does not yet support resource creation
+		// expectResponseToContain:
+	},
+	{
+		template: "scheduled",
+		// Skipped for now, since it's not possible to test scheduled events on deployed Workers
+		// expectResponseToContain:
+	},
+	{
+		template: "openapi",
+		expectResponseToContain: "SwaggerUI",
+		promptHandlers: [],
+	},
+];
+
 describe
 	.skipIf(frameworkToTest || isQuarantineMode() || process.platform === "win32")
 	.concurrent(`E2E: Workers templates`, () => {
-		const workerTemplates: WorkerTestConfig[] = [
-			{
-				expectResponseToContain: "Hello World!",
-				template: "hello-world",
-			},
-			{
-				template: "common",
-				expectResponseToContain: "Try making requests to:",
-			},
-			{
-				template: "queues",
-				// Skipped for now, since C3 does not yet support resource creation
-				// expectResponseToContain:
-			},
-			{
-				template: "scheduled",
-				// Skipped for now, since it's not possible to test scheduled events on deployed Workers
-				// expectResponseToContain:
-			},
-			{
-				template: "openapi",
-				expectResponseToContain: "SwaggerUI",
-				promptHandlers: [],
-			},
-		];
-
 		let logStream: WriteStream;
 
 		beforeAll((ctx) => {
@@ -62,82 +63,6 @@ describe
 		beforeEach(async (ctx) => {
 			logStream = createTestLogStream(ctx);
 		});
-
-		const runCli = async (
-			template: string,
-			projectPath: string,
-			{ argv = [], promptHandlers = [] }: RunnerConfig
-		) => {
-			const args = [projectPath, "--type", template, "--no-open", "--no-git"];
-
-			args.push(...argv);
-
-			const { output } = await runC3(args, promptHandlers, logStream);
-
-			// Relevant project files should have been created
-			expect(projectPath).toExist();
-
-			const gitignorePath = join(projectPath, ".gitignore");
-			expect(gitignorePath).toExist();
-
-			const pkgJsonPath = join(projectPath, "package.json");
-			expect(pkgJsonPath).toExist();
-
-			const wranglerPath = join(projectPath, "node_modules/wrangler");
-			expect(wranglerPath).toExist();
-
-			const tomlPath = join(projectPath, "wrangler.toml");
-			expect(tomlPath).toExist();
-
-			const config = readToml(tomlPath) as { main: string };
-
-			expect(join(projectPath, config.main)).toExist();
-
-			return { output };
-		};
-
-		const runCliWithDeploy = async (
-			template: WorkerTestConfig,
-			projectPath: string
-		) => {
-			const { argv, overrides, promptHandlers, expectResponseToContain } =
-				template;
-
-			const { output } = await runCli(template.template, projectPath, {
-				overrides,
-				promptHandlers,
-				argv: [
-					// Skip deployment if the test config has no response expectation
-					expectResponseToContain ? "--deploy" : "--no-deploy",
-					...(argv ?? []),
-				],
-			});
-
-			if (expectResponseToContain) {
-				// Verify deployment
-				const deployedUrlRe =
-					/deployment is ready at: (https:\/\/.+\.(workers)\.dev)/;
-
-				const match = output.match(deployedUrlRe);
-				if (!match || !match[1]) {
-					expect(false, "Couldn't find deployment url in C3 output").toBe(true);
-					return;
-				}
-
-				const projectUrl = match[1];
-
-				await retry({ times: 5 }, async () => {
-					await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
-					const res = await fetch(projectUrl);
-					const body = await res.text();
-					if (!body.includes(expectResponseToContain)) {
-						throw new Error(
-							`(${template}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
-						);
-					}
-				});
-			}
-		};
 
 		workerTemplates
 			.flatMap<WorkerTestConfig>((template) =>
@@ -176,7 +101,36 @@ describe
 						const projectPath = getPath(name);
 						const projectName = getName(name);
 						try {
-							await runCliWithDeploy(template, projectPath);
+							const deployedUrl = await runCli(
+								template,
+								projectPath,
+								logStream
+							);
+
+							// Relevant project files should have been created
+							expect(projectPath).toExist();
+
+							const gitignorePath = join(projectPath, ".gitignore");
+							expect(gitignorePath).toExist();
+
+							const pkgJsonPath = join(projectPath, "package.json");
+							expect(pkgJsonPath).toExist();
+
+							const wranglerPath = join(projectPath, "node_modules/wrangler");
+							expect(wranglerPath).toExist();
+
+							const tomlPath = join(projectPath, "wrangler.toml");
+							expect(tomlPath).toExist();
+
+							const config = readToml(tomlPath) as { main: string };
+							expect(join(projectPath, config.main)).toExist();
+
+							if (deployedUrl) {
+								await verifyDeployment(
+									deployedUrl,
+									template.expectResponseToContain as string
+								);
+							}
 						} finally {
 							clean(name);
 							await deleteWorker(projectName);
@@ -186,3 +140,57 @@ describe
 				);
 			});
 	});
+
+const runCli = async (
+	template: WorkerTestConfig,
+	projectPath: string,
+	logStream: WriteStream
+) => {
+	const { argv, promptHandlers, expectResponseToContain } = template;
+
+	const deploy = Boolean(expectResponseToContain);
+
+	const args = [
+		projectPath,
+		"--type",
+		template.template,
+		"--no-open",
+		"--no-git",
+		deploy ? "--deploy" : "--no-deploy",
+		...(argv ?? []),
+	];
+
+	const { output } = await runC3(args, promptHandlers, logStream);
+
+	if (!deploy) {
+		return null;
+	}
+
+	// Verify deployment
+	const deployedUrlRe =
+		/deployment is ready at: (https:\/\/.+\.(workers)\.dev)/;
+
+	const match = output.match(deployedUrlRe);
+	if (!match || !match[1]) {
+		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
+		return;
+	}
+
+	return match[1];
+};
+
+const verifyDeployment = async (
+	deploymentUrl: string,
+	expectedString: string
+) => {
+	await retry({ times: 5 }, async () => {
+		await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
+		const res = await fetch(deploymentUrl);
+		const body = await res.text();
+		if (!body.includes(expectedString)) {
+			throw new Error(
+				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedString}"`
+			);
+		}
+	});
+};

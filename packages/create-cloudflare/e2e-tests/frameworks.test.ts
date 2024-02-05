@@ -216,7 +216,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework];
 
 				try {
-					const deploymentUrl = await runC3WithDeploy(
+					const deploymentUrl = await runCli(
 						framework,
 						projectPath,
 						logStream,
@@ -270,7 +270,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	});
 });
 
-const runC3WithDeploy = async (
+const runCli = async (
 	framework: string,
 	projectPath: string,
 	logStream: WriteStream,
