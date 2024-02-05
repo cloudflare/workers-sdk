@@ -39,10 +39,8 @@ export class ProxyWorker implements DurableObject {
 	requestQueue: Array<{
 		request: Request;
 		deferredResponse: DeferredPromise<Response>;
-		order: number;
 	}> = [];
 
-	#counter = 0;
 	fetch(request: Request) {
 		if (isRequestForLiveReloadWebsocket(request)) {
 			// requests for live-reload websocket
@@ -59,11 +57,7 @@ export class ProxyWorker implements DurableObject {
 		// regular requests to be proxied
 		const deferredResponse = createDeferred<Response>();
 
-		this.requestQueue.push({
-			request,
-			deferredResponse,
-			order: this.#counter++,
-		});
+		this.requestQueue.push({ request, deferredResponse });
 		this.processQueue();
 
 		return deferredResponse.promise;
@@ -107,13 +101,7 @@ export class ProxyWorker implements DurableObject {
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
 
-		const queue = this.requestQueue.splice(0);
-
-		// we can't guarantee some requests won't get retried in a later batch
-		// but we can at least order the current batch
-		queue.sort((a, b) => a.order - b.order);
-
-		for (const { request, deferredResponse, order } of queue) {
+		for (const { request, deferredResponse } of this.requestQueue.splice(0)) {
 			const userWorkerUrl = new URL(request.url);
 			const headers = new Headers(request.headers);
 
@@ -173,7 +161,7 @@ export class ProxyWorker implements DurableObject {
 
 					// if the request can be retried (subset of idempotent requests which have no body), requeue it
 					else if (request.method === "GET" || request.method === "HEAD") {
-						this.requestQueue.unshift({ request, deferredResponse, order });
+						this.requestQueue.unshift({ request, deferredResponse });
 					}
 
 					// if the request cannot be retried, respond with 503 Service Unavailable
