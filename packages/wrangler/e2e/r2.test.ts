@@ -29,7 +29,7 @@ describe("r2", () => {
 	});
 
 	it("create bucket", async () => {
-		const { stdout } = await run`$ ${WRANGLER} r2 bucket create ${bucketName}`;
+		const { stdout } = await run`$$ ${WRANGLER} r2 bucket create ${bucketName}`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Creating bucket wrangler-smoke-test-bucket.
 			Created bucket wrangler-smoke-test-bucket."
@@ -41,7 +41,7 @@ describe("r2", () => {
 			"test-r2.txt": fileContents,
 		});
 		const { stdout, stderr } = await run`
-			$ ${WRANGLER} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
+			$$ ${WRANGLER} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
 		`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Creating object \\"testr2\\" in bucket \\"wrangler-smoke-test-bucket\\".
@@ -52,7 +52,7 @@ describe("r2", () => {
 
 	it("download object", async () => {
 		const { stdout, stderr } = await run`
-			$ ${WRANGLER} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt
+			$$ ${WRANGLER} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt
 		`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Downloading \\"testr2\\" from \\"wrangler-smoke-test-bucket\\".
@@ -64,7 +64,7 @@ describe("r2", () => {
 	});
 	it("delete object", async () => {
 		const { stdout, stderr } =
-			await run`$ ${WRANGLER} r2 object delete ${`${bucketName}/testr2`}`;
+			await run`$$ ${WRANGLER} r2 object delete ${`${bucketName}/testr2`}`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Deleting object \\"testr2\\" from bucket \\"wrangler-smoke-test-bucket\\".
 			Delete complete."
@@ -75,7 +75,7 @@ describe("r2", () => {
 	it("check object deleted", async () => {
 		const { stdout, stderr } = await run`
     	exits(1) {
-				$ ${WRANGLER} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt
+				$$ ${WRANGLER} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt
 			}
     `;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
@@ -90,7 +90,7 @@ describe("r2", () => {
 
 	it("delete bucket", async () => {
 		const { stdout, stderr } =
-			await run`$ ${WRANGLER} r2 bucket delete ${bucketName}`;
+			await run`$$ ${WRANGLER} r2 bucket delete ${bucketName}`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Deleting bucket wrangler-smoke-test-bucket.
 			Deleted bucket wrangler-smoke-test-bucket."
@@ -104,7 +104,7 @@ describe("r2", () => {
 		});
 		const { stdout, stderr } = await run`
 			exits(1) {
-				$ ${WRANGLER} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
+				$$ ${WRANGLER} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
 			}
 		`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
