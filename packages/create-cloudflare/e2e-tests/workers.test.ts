@@ -18,36 +18,41 @@ import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 
-type WorkerTestConfig = Omit<RunnerConfig, "ctx"> & {
-	expectResponseToContain?: string;
-	timeout?: number;
+type WorkerTestConfig = RunnerConfig & {
 	name?: string;
 	template: string;
 };
 
 const workerTemplates: WorkerTestConfig[] = [
 	{
-		expectResponseToContain: "Hello World!",
 		template: "hello-world",
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Hello World!",
+		},
 	},
 	{
 		template: "common",
-		expectResponseToContain: "Try making requests to:",
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Try making requests to:",
+		},
 	},
 	{
 		template: "queues",
 		// Skipped for now, since C3 does not yet support resource creation
-		// expectResponseToContain:
 	},
 	{
 		template: "scheduled",
 		// Skipped for now, since it's not possible to test scheduled events on deployed Workers
-		// expectResponseToContain:
 	},
 	{
 		template: "openapi",
-		expectResponseToContain: "SwaggerUI",
 		promptHandlers: [],
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "SwaggerUI",
+		},
 	},
 ];
 
@@ -125,11 +130,9 @@ describe
 							const config = readToml(tomlPath) as { main: string };
 							expect(join(projectPath, config.main)).toExist();
 
-							if (deployedUrl) {
-								await verifyDeployment(
-									deployedUrl,
-									template.expectResponseToContain as string
-								);
+							const { verifyDeploy } = template;
+							if (verifyDeploy && deployedUrl) {
+								await verifyDeployment(deployedUrl, verifyDeploy.expectedToken);
 							}
 						} finally {
 							clean(name);
@@ -146,9 +149,7 @@ const runCli = async (
 	projectPath: string,
 	logStream: WriteStream
 ) => {
-	const { argv, promptHandlers, expectResponseToContain } = template;
-
-	const deploy = Boolean(expectResponseToContain);
+	const { argv, promptHandlers, verifyDeploy } = template;
 
 	const args = [
 		projectPath,
@@ -156,13 +157,13 @@ const runCli = async (
 		template.template,
 		"--no-open",
 		"--no-git",
-		deploy ? "--deploy" : "--no-deploy",
+		verifyDeploy ? "--deploy" : "--no-deploy",
 		...(argv ?? []),
 	];
 
 	const { output } = await runC3(args, promptHandlers, logStream);
 
-	if (!deploy) {
+	if (!verifyDeploy) {
 		return null;
 	}
 

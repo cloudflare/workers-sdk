@@ -50,12 +50,14 @@ export type PromptHandler = {
 };
 
 export type RunnerConfig = {
-	overrides?: {
-		packageScripts?: Record<string, string>;
-	};
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
 	quarantine?: boolean;
+	timeout?: number;
+	verifyDeploy?: {
+		route: string;
+		expectedToken: string;
+	};
 };
 
 export const runC3 = async (

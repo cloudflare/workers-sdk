@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
 import { retry } from "helpers/command";
@@ -27,40 +28,51 @@ import type { Suite } from "vitest";
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
 
-type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
-	expectResponseToContain: string;
+type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
-	timeout?: number;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
-	testBindings?: boolean;
-	build?: {
+	verifyDev?: {
+		route: string;
+		expectedToken: string;
+	};
+	verifyBuild?: {
 		outputDir: string;
 		script: string;
+		route: string;
+		expectedToken: string;
 	};
 };
 
 // These are ordered based on speed and reliability for ease of debugging
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
-		expectResponseToContain: "Hello, Astronaut!",
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Hello, Astronaut!",
+		},
 	},
 	docusaurus: {
-		expectResponseToContain: "Dinosaurs are cool",
 		unsupportedPms: ["bun"],
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		timeout: LONG_TIMEOUT,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Dinosaurs are cool",
+		},
 	},
 	angular: {
-		expectResponseToContain: "Congratulations! Your app is running.",
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Congratulations! Your app is running.",
+		},
 	},
 	gatsby: {
-		expectResponseToContain: "Gatsby!",
 		unsupportedPms: ["bun", "pnpm"],
 		promptHandlers: [
 			{
@@ -70,13 +82,19 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		],
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Gatsby!",
+		},
 	},
 	hono: {
-		expectResponseToContain: "Hello Hono!",
 		testCommitMessage: false,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Hello Hono!",
+		},
 	},
 	qwik: {
-		expectResponseToContain: "Welcome to Qwik",
 		promptHandlers: [
 			{
 				matcher: /Yes looks good, finish update/,
@@ -86,20 +104,31 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		unsupportedPms: ["yarn"],
-		testBindings: true,
-		build: {
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Welcome to Qwik",
+		},
+		verifyDev: {
+			route: "/test",
+			expectedToken: "C3_TEST",
+		},
+		verifyBuild: {
 			outputDir: "./dist",
 			script: "build",
+			route: "/test",
+			expectedToken: "C3_TEST",
 		},
 	},
 	remix: {
-		expectResponseToContain: "Welcome to Remix",
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedPms: ["yarn"],
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Welcome to Remix",
+		},
 	},
 	next: {
-		expectResponseToContain: "Create Next App",
 		promptHandlers: [
 			{
 				matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
@@ -108,20 +137,29 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		],
 		testCommitMessage: true,
 		quarantine: true,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Create Next App",
+		},
 	},
 	nuxt: {
-		expectResponseToContain: "Welcome to Nuxt!",
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Welcome to Nuxt!",
+		},
 	},
 	react: {
-		expectResponseToContain: "React App",
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		timeout: LONG_TIMEOUT,
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "React App",
+		},
 	},
 	solid: {
-		expectResponseToContain: "Hello world",
 		promptHandlers: [
 			{
 				matcher: /Which template do you want to use/,
@@ -139,9 +177,12 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedOSs: ["win32"],
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Hello world",
+		},
 	},
 	svelte: {
-		expectResponseToContain: "SvelteKit app",
 		promptHandlers: [
 			{
 				matcher: /Which Svelte app template/,
@@ -159,11 +200,18 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		unsupportedPms: ["npm"],
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "SvelteKit app",
+		},
 	},
 	vue: {
-		expectResponseToContain: "Vite App",
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
+		verifyDeploy: {
+			route: "/",
+			expectedToken: "Vite App",
+		},
 	},
 };
 
@@ -187,7 +235,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage,
 			unsupportedPms,
 			unsupportedOSs,
-			testBindings,
 		} = frameworkTests[framework];
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
@@ -212,8 +259,16 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				const projectName = getName(framework);
 				const frameworkConfig = frameworkMap[framework as FrameworkName];
 
-				const { argv, overrides, promptHandlers, expectResponseToContain } =
+				const { argv, promptHandlers, verifyDeploy } =
 					frameworkTests[framework];
+
+				if (!verifyDeploy) {
+					expect(
+						true,
+						"A `deploy` configuration must be defined for all framework tests"
+					).toBe(false);
+					return;
+				}
 
 				try {
 					const deploymentUrl = await runCli(
@@ -222,7 +277,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						logStream,
 						{
 							argv: [...(argv ?? [])],
-							overrides,
 							promptHandlers,
 						}
 					);
@@ -241,20 +295,22 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 
 					// Make a request to the deployed project and verify it was successful
-					await verifyDeployment(deploymentUrl, expectResponseToContain);
+					await verifyDeployment(
+						`${deploymentUrl}${verifyDeploy.route}`,
+						verifyDeploy.expectedToken
+					);
 
-					// If configured, run the dev script and verify bindings work
-					if (testBindings) {
-						// Copy over any test fixture files
-						const fixturePath = join(__dirname, "fixtures", framework);
+					// Copy over any test fixture files
+					const fixturePath = join(__dirname, "fixtures", framework);
+					if (existsSync(fixturePath)) {
 						await cp(fixturePath, projectPath, {
 							recursive: true,
 							force: true,
 						});
-
-						await verifyDevScript(framework, projectPath, logStream);
-						await verifyBuildScript(framework, projectPath, logStream);
 					}
+
+					await verifyDevScript(framework, projectPath, logStream);
+					await verifyBuildScript(framework, projectPath, logStream);
 				} finally {
 					clean(framework);
 					// Cleanup the project in case we need to retry it
@@ -324,6 +380,11 @@ const verifyDevScript = async (
 	projectPath: string,
 	logStream: WriteStream
 ) => {
+	const { verifyDev } = frameworkTests[framework];
+	if (!verifyDev) {
+		return;
+	}
+
 	const frameworkMap = await getFrameworkMap();
 	const template = frameworkMap[framework as FrameworkName];
 
@@ -345,10 +406,8 @@ const verifyDevScript = async (
 	// Wait a few seconds for dev server to spin up
 	await sleep(4000);
 
-	// By convention and for simplicity of testing, each test fixture will
-	// make a page or a simple api route on `/test` that will print a bound
-	// environment variable set to the value "C3_TEST"
-	const res = await fetch(`http://localhost:${TEST_PORT}/test`);
+	// Make a request to the specified test route
+	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
 	const body = await res.text();
 
 	// Kill the process gracefully so ports can be cleaned up
@@ -358,7 +417,7 @@ const verifyDevScript = async (
 	// end up camped and cause future runs to fail
 	await sleep(1000);
 
-	expect(body).toContain("C3_TEST");
+	expect(body).toContain(verifyDev.expectedToken);
 };
 
 const verifyBuildScript = async (
@@ -366,15 +425,13 @@ const verifyBuildScript = async (
 	projectPath: string,
 	logStream: WriteStream
 ) => {
-	const { build } = frameworkTests[framework];
+	const { verifyBuild } = frameworkTests[framework];
 
-	if (!build) {
-		throw Error(
-			"`build` must be specified in test config when verifying bindings"
-		);
+	if (!verifyBuild) {
+		return;
 	}
 
-	const { outputDir, script } = build;
+	const { outputDir, script, route, expectedToken } = verifyBuild;
 
 	// Run the build script
 	const { name: pm, npx } = detectPackageManager();
@@ -401,10 +458,8 @@ const verifyBuildScript = async (
 	// Wait a few seconds for dev server to spin up
 	await sleep(4000);
 
-	// By convention and for simplicity of testing, each test fixture will
-	// make a page or a simple api route on `/test` that will print a bound
-	// environment variable set to the value "C3_TEST"
-	const res = await fetch(`http://localhost:${TEST_PORT}/test`);
+	// Make a request to the specified test route
+	const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
 	const body = await res.text();
 
 	// Kill the process gracefully so ports can be cleaned up
@@ -415,5 +470,5 @@ const verifyBuildScript = async (
 	await sleep(1000);
 
 	// Verify expectation after killing the process so that it exits cleanly in case of failure
-	expect(body).toContain("C3_TEST");
+	expect(body).toContain(expectedToken);
 };
