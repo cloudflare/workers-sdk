@@ -5,6 +5,7 @@ import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getVarsForDev } from "../../../dev/dev-vars";
 import { buildMiniflareBindingOptions } from "../../../dev/miniflare";
 import { CacheStorage } from "./caches";
+import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
 import type { MiniflareOptions } from "miniflare";
@@ -40,6 +41,10 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	 * Object containing the various proxies
 	 */
 	bindings: Bindings;
+	/**
+	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
+	 */
+	ctx: ExecutionContext;
 	/**
 	 * Caches object emulating the Workers Cache runtime API
 	 */
@@ -88,6 +93,7 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 			...vars,
 			...bindings,
 		},
+		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
 		dispose: () => mf.dispose(),
 	};
