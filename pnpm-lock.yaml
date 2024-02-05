@@ -865,7 +865,7 @@ importers:
         version: 8.2.0
       capnp-ts:
         specifier: ^0.7.0
-        version: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)(supports-color@9.2.2)
+        version: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)
       exit-hook:
         specifier: ^2.2.1
         version: 2.2.1
@@ -1322,8 +1322,8 @@ importers:
         specifier: 0.17.19
         version: 0.17.19
       miniflare:
-        specifier: file:/Users/penalosa/dev/wrangler2/packages/wrangler/../miniflare/miniflare-3.20240129.0.tgz
-        version: file:packages/miniflare/miniflare-3.20240129.0.tgz(supports-color@9.2.2)
+        specifier: workspace:*
+        version: link:../miniflare
       nanoid:
         specifier: ^3.3.3
         version: 3.3.6
@@ -9031,7 +9031,7 @@ packages:
       - supports-color
     dev: true
 
-  /capnp-ts@0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)(supports-color@9.2.2):
+  /capnp-ts@0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii):
     resolution: {integrity: sha512-XKxXAC3HVPv7r674zP0VC3RTXz+/JKhfyw94ljvF80yynK6VkTnqE3jMuN8b3dUVmmc43TjyxjW4KTsmB3c86g==}
     dependencies:
       debug: 4.3.4(supports-color@9.2.2)
@@ -19884,32 +19884,6 @@ packages:
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
     dev: true
-
-  file:packages/miniflare/miniflare-3.20240129.0.tgz(supports-color@9.2.2):
-    resolution: {integrity: sha512-ZTuddTWQM/MWlXQFuFRDfxuGFHNNErCcHcp1ZnFSiWxAp3d4wcdo+rNWflQOCddD6HKwFebrdcIi74slMWywhA==, tarball: file:packages/miniflare/miniflare-3.20240129.0.tgz}
-    id: file:packages/miniflare/miniflare-3.20240129.0.tgz
-    name: miniflare
-    version: 3.20240129.0
-    engines: {node: '>=16.13'}
-    hasBin: true
-    dependencies:
-      '@cspotcode/source-map-support': 0.8.1
-      acorn: 8.10.0
-      acorn-walk: 8.2.0
-      capnp-ts: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)(supports-color@9.2.2)
-      exit-hook: 2.2.1
-      glob-to-regexp: 0.4.1
-      stoppable: 1.1.0
-      undici: 5.28.2
-      workerd: 1.20240129.0
-      ws: 8.14.2
-      youch: 3.2.3
-      zod: 3.22.3
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-    dev: false
 
   file:vendor/yoga-layout-2.0.0-beta.1.tgz:
     resolution: {integrity: sha512-cHunx1nKVIoOxUw9pJE/3mu5NCUMRmWRgzrrSPfjXXAMMzkxQGDbzP/r6Iv4tdWR20p08kgKBG7n/dmbf6FG1w==, tarball: file:vendor/yoga-layout-2.0.0-beta.1.tgz}

@@ -107,7 +107,7 @@
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.17.19",
-		"miniflare": "file:/Users/penalosa/dev/wrangler2/packages/wrangler/../miniflare/miniflare-3.20240129.0.tgz",
+		"miniflare": "workspace:*",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"resolve": "^1.22.8",
