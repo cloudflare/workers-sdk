@@ -613,6 +613,7 @@ function assertCompatibleVitestVersion(ctx: Vitest) {
 }
 
 export default function (ctx: Vitest): ProcessPool {
+	// This function is called when config changes and may be called on re-runs
 	assertCompatibleVitestVersion(ctx);
 
 	return {
@@ -767,6 +768,7 @@ export default function (ctx: Vitest): ProcessPool {
 			// thingModule.importers.add(testModule);
 		},
 		async close() {
+			// `close()` will be called when shutting down Vitest or updating config
 			log.debug("Shutting down runtimes...");
 			const promises: Promise<unknown>[] = [];
 			for (const project of allProjects.values()) {
@@ -774,6 +776,7 @@ export default function (ctx: Vitest): ProcessPool {
 					promises.push(forEachMiniflare(project.mf, (mf) => mf.dispose()));
 				}
 			}
+			allProjects.clear();
 			await Promise.all(promises);
 		},
 	};
