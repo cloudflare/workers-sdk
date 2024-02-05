@@ -44,6 +44,11 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	cf: Record<string, any>;
+	/**
+	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
+	 */
 	ctx: ExecutionContext;
 	/**
 	 * Caches object emulating the Workers Cache runtime API
@@ -93,6 +98,7 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 			...vars,
 			...bindings,
 		},
+		cf: Object.freeze(await mf.getCf()),
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
 		dispose: () => mf.dispose(),
