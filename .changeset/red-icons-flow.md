@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-experimental-feat: add an `insights` command to `wrangler d1`
+feat: add an experimental `insights` command to `wrangler d1`
 
 This PR adds a `wrangler d1 insights <DB_NAME>` command, to let D1 users figure out which of their queries to D1 need to be optimised.
 
