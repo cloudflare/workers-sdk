@@ -1,5 +1,111 @@
 # wrangler
 
+## 3.27.0
+
+### Minor Changes
+
+- [#4877](https://github.com/cloudflare/workers-sdk/pull/4877) [`3e7cd6e4`](https://github.com/cloudflare/workers-sdk/commit/3e7cd6e40816c5c6ab28163508a6ba9729c6de73) Thanks [@magnusdahlstrand](https://github.com/magnusdahlstrand)! - fix: Do not show unnecessary errors during watch rebuilds
+
+  When Pages is used in conjunction with a full stack framework, the framework
+  build will temporarily remove files that are being watched by Pages, such as
+  `_worker.js` and `_routes.json`.
+  Previously we would display errors for these changes, which adds confusing and excessive messages to the Pages dev output. Now builds are skipped if a watched `_worker.js` or `_routes.json` is removed.
+
+* [#4901](https://github.com/cloudflare/workers-sdk/pull/4901) [`2469e9fa`](https://github.com/cloudflare/workers-sdk/commit/2469e9faeaaa86d70bc7e3714c515274b38a67de) Thanks [@penalosa](https://github.com/penalosa)! - feature: implemented Python support in Wrangler
+
+  Python Workers are now supported by `wrangler deploy` and `wrangler dev`.
+
+- [#4922](https://github.com/cloudflare/workers-sdk/pull/4922) [`4c7031a6`](https://github.com/cloudflare/workers-sdk/commit/4c7031a6b2ed33e38147d95922d6b15b0ad851ec) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: add a `ctx` field to the `getBindingsProxy` result
+
+  Add a new `ctx` filed to the `getBindingsProxy` result that people can use to mock the production
+  `ExecutionContext` object.
+
+  Example:
+
+  ```ts
+  const { ctx } = await getBindingsProxy();
+  ctx.waitUntil(myPromise);
+  ```
+
+### Patch Changes
+
+- [#4914](https://github.com/cloudflare/workers-sdk/pull/4914) [`e61dba50`](https://github.com/cloudflare/workers-sdk/commit/e61dba503598b38d9daabe63ab71f75def1e7856) Thanks [@nora-soderlund](https://github.com/nora-soderlund)! - fix: ensure d1 validation errors render user friendly messages
+
+* [#4907](https://github.com/cloudflare/workers-sdk/pull/4907) [`583e4451`](https://github.com/cloudflare/workers-sdk/commit/583e4451c99d916bde52e766b8a19765584303d1) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: mark R2 object and bucket not found errors as unreportable
+
+  Previously, running `wrangler r2 objects {get,put}` with an object or bucket that didn't exist would ask if you wanted to report that error to Cloudflare. There's nothing we can do to fix this, so this change prevents the prompt in this case.
+
+- [#4872](https://github.com/cloudflare/workers-sdk/pull/4872) [`5ef56067`](https://github.com/cloudflare/workers-sdk/commit/5ef56067ccf8e20b34fe87455da8b798702181f1) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: intercept and stringify errors thrown by d1 execute in --json mode
+
+  Prior to this PR, if a query threw an error when run in `wrangler d1 execute ... --json`, wrangler would swallow the error.
+
+  This PR returns the error as JSON. For example, the invalid query `SELECT asdf;` now returns the following in JSON mode:
+
+  ```json
+  {
+  	"error": {
+  		"text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
+  		"notes": [
+  			{
+  				"text": "no such column: asdf at offset 7 [code: 7500]"
+  			}
+  		],
+  		"kind": "error",
+  		"name": "APIError",
+  		"code": 7500
+  	}
+  }
+  ```
+
+* [#4888](https://github.com/cloudflare/workers-sdk/pull/4888) [`3679bc18`](https://github.com/cloudflare/workers-sdk/commit/3679bc18b2cb849fd4023ac653c06e0a7ec2195f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that the Pages dev proxy server does not change the Host header
+
+  Previously, when configuring `wrangler pages dev` to use a proxy to a 3rd party dev server,
+  the proxy would replace the Host header, resulting in problems at the dev server if it was
+  checking for cross-site scripting attacks.
+
+  Now the proxy server passes through the Host header unaltered making it invisible to the
+  3rd party dev server.
+
+  Fixes #4799
+
+- [#4909](https://github.com/cloudflare/workers-sdk/pull/4909) [`34b6ea1e`](https://github.com/cloudflare/workers-sdk/commit/34b6ea1ea59884daca0c0d09265feacc10a4a685) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: add an experimental `insights` command to `wrangler d1`
+
+  This PR adds a `wrangler d1 insights <DB_NAME>` command, to let D1 users figure out which of their queries to D1 need to be optimised.
+
+  This command defaults to fetching the top 5 queries that took the longest to run in total over the last 24 hours.
+
+  You can also fetch the top 5 queries that consumed the most rows read over the last week, for example:
+
+  ```bash
+  npx wrangler d1 insights northwind --sortBy reads --timePeriod 7d
+  ```
+
+  Or the top 5 queries that consumed the most rows written over the last month, for example:
+
+  ```bash
+  npx wrangler d1 insights northwind --sortBy writes --timePeriod 31d
+  ```
+
+  Or the top 5 most frequently run queries in the last 24 hours, for example:
+
+  ```bash
+  npx wrangler d1 insights northwind --sortBy count
+  ```
+
+* [#4830](https://github.com/cloudflare/workers-sdk/pull/4830) [`48f90859`](https://github.com/cloudflare/workers-sdk/commit/48f9085981f0a4923d3ccc32596520107c4e4df8) Thanks [@Lekensteyn](https://github.com/Lekensteyn)! - fix: listen on loopback for wrangler dev port check and login
+
+  Avoid listening on the wildcard address by default to reduce the attacker's
+  surface and avoid firewall prompts on macOS.
+
+  Relates to #4430.
+
+- [#4907](https://github.com/cloudflare/workers-sdk/pull/4907) [`583e4451`](https://github.com/cloudflare/workers-sdk/commit/583e4451c99d916bde52e766b8a19765584303d1) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `wrangler dev --log-level` flag applied to all logs
+
+  Previously, `wrangler dev` may have ignored the `--log-level` flag for some startup logs. This change ensures the `--log-level` flag is applied immediately.
+
+- Updated dependencies [[`148feff6`](https://github.com/cloudflare/workers-sdk/commit/148feff60c9bf3886c0e0fd1ea98049955c27659)]:
+  - miniflare@3.20240129.1
+
 ## 3.26.0
 
 ### Minor Changes
