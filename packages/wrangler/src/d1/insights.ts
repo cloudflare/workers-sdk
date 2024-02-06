@@ -32,7 +32,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			default: "sum",
 		})
 		.option("sort-by", {
-			choices: ["time", "reads", "writes"] as const,
+			choices: ["time", "reads", "writes", "count"] as const,
 			describe: "Choose the field you want to sort insights by",
 			default: "time",
 		})
@@ -58,6 +58,7 @@ const cliOptionToGraphQLOption = {
 	time: "queryDurationMs",
 	reads: "rowsRead",
 	writes: "rowsWritten",
+	count: "count",
 };
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
@@ -90,7 +91,13 @@ export const Handler = withConfig<HandlerOptions>(
 				new Date(endDate).setDate(endDate.getDate() - convertedTimePeriod)
 			);
 			const parsedSortBy =
-				cliOptionToGraphQLOption[sortBy as "time" | "reads" | "writes"];
+				cliOptionToGraphQLOption[
+					sortBy as "time" | "reads" | "writes" | "count"
+				];
+			const orderByClause =
+				parsedSortBy === "count"
+					? `${parsedSortBy}_${sortDirection}`
+					: `${sortType}_${parsedSortBy}_${sortDirection}`;
 			const graphqlQueriesResult =
 				await fetchGraphqlResult<D1QueriesGraphQLResponse>({
 					method: "POST",
@@ -98,7 +105,7 @@ export const Handler = withConfig<HandlerOptions>(
 						query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
 								viewer {
 									accounts(filter: {accountTag: $accountTag}) {
-										d1QueriesAdaptiveGroups(limit: ${count}, filter: $filter, orderBy: [${sortType}_${parsedSortBy}_${sortDirection}]) {
+										d1QueriesAdaptiveGroups(limit: ${count}, filter: $filter, orderBy: [${orderByClause}]) {
 											sum {
 												queryDurationMs
 												rowsRead
