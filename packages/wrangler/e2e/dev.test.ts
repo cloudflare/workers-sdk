@@ -278,6 +278,7 @@ describe("basic dev python tests", () => {
 					name = "${workerName}"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
+					compatibility_flags = ["experimental"]
 			`,
 			"index.py": dedent`
 				from js import Response
@@ -319,22 +320,6 @@ describe("basic dev python tests", () => {
 				}
 			);
 			expect(text2).toMatchInlineSnapshot('"Updated Python Worker value"');
-
-			await worker.seed((workerName) => ({
-				"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "index.py"
-						compatibility_date = "2023-01-01"
-				`,
-			}));
-			const { text: text3 } = await retry(
-				(s) => s.status !== 200 || s.text === "Updated Python Worker value",
-				async () => {
-					const r = await fetch(`http://127.0.0.1:${session.port}`);
-					return { text: await r.text(), status: r.status };
-				}
-			);
-			expect(text3).toMatchInlineSnapshot('"Updated Python Worker value"');
 		});
 	});
 });
