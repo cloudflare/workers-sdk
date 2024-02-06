@@ -72,3 +72,35 @@ export interface D1MetricsGraphQLResponse {
 		};
 	};
 }
+
+export interface D1Queries {
+	avg?: {
+		queryDurationMs?: number;
+		rowsRead?: number;
+		rowsWritten?: number;
+	};
+	sum?: {
+		queryDurationMs?: number;
+		rowsRead?: number;
+		rowsWritten?: number;
+	};
+	count?: number;
+	dimensions: {
+		query?: string;
+		databaseId?: string;
+		date?: string;
+		datetime?: string;
+		datetimeMinute?: string;
+		datetimeFiveMinutes?: string;
+		datetimeFifteenMinutes?: string;
+		datetimeHour?: string;
+	};
+}
+
+export interface D1QueriesGraphQLResponse {
+	data: {
+		viewer: {
+			accounts: { d1QueriesAdaptiveGroups?: D1Queries[] }[];
+		};
+	};
+}
