@@ -41,13 +41,13 @@ type FrameworkTestConfig = RunnerConfig & {
 	unsupportedOSs?: string[];
 	verifyDev?: {
 		route: string;
-		expectedToken: string;
+		expectedText: string;
 	};
 	verifyBuild?: {
 		outputDir: string;
 		script: string;
 		route: string;
-		expectedToken: string;
+		expectedText: string;
 	};
 };
 
@@ -58,7 +58,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Hello, Astronaut!",
+			expectedText: "Hello, Astronaut!",
 		},
 	},
 	docusaurus: {
@@ -68,7 +68,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Dinosaurs are cool",
+			expectedText: "Dinosaurs are cool",
 		},
 	},
 	angular: {
@@ -76,7 +76,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Congratulations! Your app is running.",
+			expectedText: "Congratulations! Your app is running.",
 		},
 	},
 	gatsby: {
@@ -91,14 +91,14 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Gatsby!",
+			expectedText: "Gatsby!",
 		},
 	},
 	hono: {
 		testCommitMessage: false,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Hello Hono!",
+			expectedText: "Hello Hono!",
 		},
 	},
 	qwik: {
@@ -113,17 +113,17 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		unsupportedPms: ["yarn"],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Welcome to Qwik",
+			expectedText: "Welcome to Qwik",
 		},
 		verifyDev: {
 			route: "/test",
-			expectedToken: "C3_TEST",
+			expectedText: "C3_TEST",
 		},
 		verifyBuild: {
 			outputDir: "./dist",
 			script: "build",
 			route: "/test",
-			expectedToken: "C3_TEST",
+			expectedText: "C3_TEST",
 		},
 	},
 	remix: {
@@ -132,7 +132,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		unsupportedPms: ["yarn"],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Welcome to Remix",
+			expectedText: "Welcome to Remix",
 		},
 	},
 	next: {
@@ -146,7 +146,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		quarantine: true,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Create Next App",
+			expectedText: "Create Next App",
 		},
 	},
 	nuxt: {
@@ -154,7 +154,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Welcome to Nuxt!",
+			expectedText: "Welcome to Nuxt!",
 		},
 	},
 	react: {
@@ -163,7 +163,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "React App",
+			expectedText: "React App",
 		},
 	},
 	solid: {
@@ -186,7 +186,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Hello world",
+			expectedText: "Hello world",
 		},
 	},
 	svelte: {
@@ -209,7 +209,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		unsupportedPms: ["npm"],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "SvelteKit app",
+			expectedText: "SvelteKit app",
 		},
 	},
 	vue: {
@@ -217,7 +217,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Vite App",
+			expectedText: "Vite App",
 		},
 	},
 };
@@ -308,7 +308,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					// Make a request to the deployed project and verify it was successful
 					await verifyDeployment(
 						`${deploymentUrl}${verifyDeploy.route}`,
-						verifyDeploy.expectedToken
+						verifyDeploy.expectedText
 					);
 
 					// Copy over any test fixture files
@@ -372,15 +372,15 @@ const runCli = async (
 
 const verifyDeployment = async (
 	deploymentUrl: string,
-	expectedToken: string
+	expectedText: string
 ) => {
 	await retry({ times: 5 }, async () => {
-		await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
+		await sleep(1000);
 		const res = await fetch(deploymentUrl);
 		const body = await res.text();
-		if (!body.includes(expectedToken)) {
+		if (!body.includes(expectedText)) {
 			throw new Error(
-				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedToken}"`
+				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`
 			);
 		}
 	});
@@ -435,7 +435,7 @@ const verifyDevScript = async (
 	// end up camped and cause future runs to fail
 	await sleep(1000);
 
-	expect(body).toContain(verifyDev.expectedToken);
+	expect(body).toContain(verifyDev.expectedText);
 };
 
 const verifyBuildScript = async (
@@ -449,7 +449,7 @@ const verifyBuildScript = async (
 		return;
 	}
 
-	const { outputDir, script, route, expectedToken } = verifyBuild;
+	const { outputDir, script, route, expectedText } = verifyBuild;
 
 	// Run the build script
 	const { name: pm, npx } = detectPackageManager();
@@ -488,5 +488,5 @@ const verifyBuildScript = async (
 	await sleep(1000);
 
 	// Verify expectation after killing the process so that it exits cleanly in case of failure
-	expect(body).toContain(expectedToken);
+	expect(body).toContain(expectedText);
 };

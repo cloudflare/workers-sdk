@@ -1,5 +1,6 @@
 import { join } from "path";
 import { retry } from "helpers/command";
+import { sleep } from "helpers/common";
 import { readToml } from "helpers/files";
 import { fetch } from "undici";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -28,14 +29,14 @@ const workerTemplates: WorkerTestConfig[] = [
 		template: "hello-world",
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Hello World!",
+			expectedText: "Hello World!",
 		},
 	},
 	{
 		template: "common",
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "Try making requests to:",
+			expectedText: "Try making requests to:",
 		},
 	},
 	{
@@ -51,7 +52,7 @@ const workerTemplates: WorkerTestConfig[] = [
 		promptHandlers: [],
 		verifyDeploy: {
 			route: "/",
-			expectedToken: "SwaggerUI",
+			expectedText: "SwaggerUI",
 		},
 	},
 ];
@@ -132,7 +133,7 @@ describe
 
 							const { verifyDeploy } = template;
 							if (verifyDeploy && deployedUrl) {
-								await verifyDeployment(deployedUrl, verifyDeploy.expectedToken);
+								await verifyDeployment(deployedUrl, verifyDeploy.expectedText);
 							}
 						} finally {
 							clean(name);
@@ -185,7 +186,7 @@ const verifyDeployment = async (
 	expectedString: string
 ) => {
 	await retry({ times: 5 }, async () => {
-		await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
+		await sleep(1000);
 		const res = await fetch(deploymentUrl);
 		const body = await res.text();
 		if (!body.includes(expectedString)) {

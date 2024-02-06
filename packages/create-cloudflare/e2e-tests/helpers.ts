@@ -56,7 +56,7 @@ export type RunnerConfig = {
 	timeout?: number;
 	verifyDeploy?: {
 		route: string;
-		expectedToken: string;
+		expectedText: string;
 	};
 };
 
