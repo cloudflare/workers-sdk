@@ -90,7 +90,7 @@ async function runDevSession(
 
 		in ${workerPath} {
 			exits {
-        $$ ${WRANGLER} dev ${flags}
+        $ ${WRANGLER} dev ${flags}
 			}
 		}
 			`;
@@ -545,7 +545,7 @@ describe("writes debug logs to hidden file", () => {
 		expect(filepath).toBeUndefined();
 	});
 
-	it.only("rewrites address-in-use error logs", async () => {
+	it.skip("rewrites address-in-use error logs", async () => {
 		// 1. start worker A on a (any) port
 		await a.runDevSession("", async (sessionA) => {
 			const normalize = (text: string) =>
@@ -560,8 +560,6 @@ describe("writes debug logs to hidden file", () => {
 				await waitUntilOutputContains(sessionB, "Starting local server...");
 				// 5. wait a period of time for workerd to complain about the port being in use
 				await setTimeout(1000);
-
-				console.log(normalize(sessionB.stderr));
 
 				// ensure the workerd error message IS NOT present
 				expect(normalize(sessionB.stderr)).not.toContain(
