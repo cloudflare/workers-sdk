@@ -77,6 +77,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		await initMigrationsTable({
 			migrationsTableName,
 			local,
+			remote,
 			config,
 			name: database,
 			persistTo,
@@ -88,6 +89,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 				migrationsTableName,
 				migrationsPath,
 				local,
+				remote,
 				config,
 				name: database,
 				persistTo,

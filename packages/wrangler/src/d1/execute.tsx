@@ -215,7 +215,7 @@ export async function executeSql({
 	if (preview && local)
 		throw new UserError(`Error: can't use --preview with --local`);
 	if (remote && local)
-		throw new UserError(`Error: can't use --preview with --local`);
+		throw new UserError(`Error: can't use --remote with --local`);
 	if (persistTo && !local)
 		throw new UserError(`Error: can't use --persist-to without --local`);
 	if (persistTo && remote)
