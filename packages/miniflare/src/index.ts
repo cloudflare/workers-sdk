@@ -1528,9 +1528,13 @@ export class Miniflare {
 		const workerOpts = this.#workerOpts[workerIndex];
 		workerName = workerOpts.core.name ?? "";
 
+		console.log({workerName,workerOpts })
+
 		// Get a `Fetcher` to that worker (NOTE: the `ProxyServer` Durable Object
 		// shares its `env` with Miniflare's entry worker, so has access to routes)
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
+		console.log({bindingName})
+
 		const fetcher = proxyClient.env[bindingName];
 		if (fetcher === undefined) {
 			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist
