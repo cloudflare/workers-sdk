@@ -309,5 +309,11 @@ export function parseWithReadableStreams<RS>(
 		},
 		...revivers,
 	};
-	return parse(stringified.value, streamRevivers);
+	try{
+
+
+	return parse(stringified.value, streamRevivers);}catch(e){
+		console.log(stringified.value)
+		console.log(e)
+	}
 }
