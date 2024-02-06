@@ -24,22 +24,22 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 		.option("timePeriod", {
 			choices: ["1d", "7d", "31d"] as const,
 			describe: "Fetch data from now to the provided time period",
-			default: "1d",
+			default: "1d" as const,
 		})
 		.option("sort-type", {
 			choices: ["sum", "avg"] as const,
 			describe: "Choose the operation you want to sort insights by",
-			default: "sum",
+			default: "sum" as const,
 		})
 		.option("sort-by", {
 			choices: ["time", "reads", "writes", "count"] as const,
 			describe: "Choose the field you want to sort insights by",
-			default: "time",
+			default: "time" as const,
 		})
 		.option("sort-direction", {
 			choices: ["ASC", "DESC"] as const,
 			describe: "Choose a sort direction",
-			default: "DESC",
+			default: "DESC" as const,
 		})
 		.option("count", {
 			describe: "fetch insights about the first X queries",
@@ -90,10 +90,7 @@ export const Handler = withConfig<HandlerOptions>(
 			const startDate = new Date(
 				new Date(endDate).setDate(endDate.getDate() - convertedTimePeriod)
 			);
-			const parsedSortBy =
-				cliOptionToGraphQLOption[
-					sortBy as "time" | "reads" | "writes" | "count"
-				];
+			const parsedSortBy = cliOptionToGraphQLOption[sortBy];
 			const orderByClause =
 				parsedSortBy === "count"
 					? `${parsedSortBy}_${sortDirection}`
@@ -143,23 +140,21 @@ export const Handler = withConfig<HandlerOptions>(
 					},
 				});
 
-			if (graphqlQueriesResult) {
-				graphqlQueriesResult.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
-					(row) => {
-						if (!row.dimensions.query) return;
-						output.push({
-							query: row.dimensions.query,
-							avgRowsRead: row?.avg?.rowsRead ?? 0,
-							totalRowsRead: row?.sum?.rowsRead ?? 0,
-							avgRowsWritten: row?.avg?.rowsWritten ?? 0,
-							totalRowsWritten: row?.sum?.rowsWritten ?? 0,
-							avgDurationMs: row?.avg?.queryDurationMs ?? 0,
-							totalDurationMs: row?.sum?.queryDurationMs ?? 0,
-							numberOfTimesRun: row?.count ?? 0,
-						});
-					}
-				);
-			}
+			graphqlQueriesResult?.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
+				(row) => {
+					if (!row.dimensions.query) return;
+					output.push({
+						query: row.dimensions.query,
+						avgRowsRead: row?.avg?.rowsRead ?? 0,
+						totalRowsRead: row?.sum?.rowsRead ?? 0,
+						avgRowsWritten: row?.avg?.rowsWritten ?? 0,
+						totalRowsWritten: row?.sum?.rowsWritten ?? 0,
+						avgDurationMs: row?.avg?.queryDurationMs ?? 0,
+						totalDurationMs: row?.sum?.queryDurationMs ?? 0,
+						numberOfTimesRun: row?.count ?? 0,
+					});
+				}
+			);
 		}
 
 		if (json) {
@@ -167,7 +162,7 @@ export const Handler = withConfig<HandlerOptions>(
 		} else {
 			await printWranglerBanner();
 			logger.log(
-				"-------------------\n🚧 `wrangler d1 insights` is an experimental command.\n🚧 flags for this command, their descriptions, and output may change between wrangler versions.\n-------------------\n"
+				"-------------------\n🚧 `wrangler d1 insights` is an experimental command.\n🚧 Flags for this command, their descriptions, and output may change between wrangler versions.\n-------------------\n"
 			);
 			logger.log(JSON.stringify(output, null, 2));
 		}
