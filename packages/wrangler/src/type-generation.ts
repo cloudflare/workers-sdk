@@ -4,6 +4,7 @@ import { getEntry } from "./deployment-bundle/entry";
 import { UserError } from "./errors";
 import { logger } from "./logger";
 import type { Config } from "./config";
+import type { CfScriptFormat } from "./deployment-bundle/worker";
 
 // Currently includes bindings & rules for declaring modules
 
@@ -11,7 +12,11 @@ export async function generateTypes(
 	configToDTS: Partial<Config>,
 	config: Config
 ) {
-	const entry = await getEntry({}, config, "types");
+	let entrypointFormat: CfScriptFormat = "modules";
+	try {
+		const entry = await getEntry({}, config, "types");
+		entrypointFormat = entry.format;
+	} catch {}
 	const envTypeStructure: string[] = [];
 
 	if (configToDTS.kv_namespaces) {
@@ -136,7 +141,7 @@ export async function generateTypes(
 	writeDTSFile({
 		envTypeStructure,
 		modulesTypeStructure,
-		formatType: entry.format,
+		formatType: entrypointFormat,
 	});
 }
 
