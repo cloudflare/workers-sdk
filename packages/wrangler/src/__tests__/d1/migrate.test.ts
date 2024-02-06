@@ -47,7 +47,7 @@ describe("migrate", () => {
 			});
 			// If we get to the point where we are checking for migrations then we have not been asked to log in.
 			await expect(
-				runWrangler("d1 migrations apply --local DATABASE")
+				runWrangler("d1 migrations apply DATABASE")
 			).rejects.toThrowError(
 				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
 			);
@@ -117,7 +117,9 @@ Ok to create /tmp/my-migrations-go-here?`,
 Your database may not be available to serve requests during the migration, continue?`,
 				result: true,
 			});
-			await expect(runWrangler("d1 migrations apply db")).rejects.toThrowError(
+			await expect(
+				runWrangler("d1 migrations apply db --remote")
+			).rejects.toThrowError(
 				`More than one account available but unable to select one in non-interactive mode.`
 			);
 		});
@@ -195,7 +197,9 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 			//if we get to this point, wrangler knows the account_id
-			await expect(runWrangler("d1 migrations apply db")).rejects.toThrowError(
+			await expect(
+				runWrangler("d1 migrations apply db --remote")
+			).rejects.toThrowError(
 				`request to https://api.cloudflare.com/client/v4/accounts/nx01/d1/database/xxxx/backup failed`
 			);
 		});

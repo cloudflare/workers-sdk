@@ -18,7 +18,7 @@ describe("execute", () => {
 		});
 
 		await expect(
-			runWrangler("d1 execute db --command 'select 1;'")
+			runWrangler("d1 execute db --command 'select 1;' --remote")
 		).rejects.toThrowError(
 			`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`
 		);
@@ -50,6 +50,19 @@ describe("execute", () => {
 		).rejects.toThrowError(`Error: can't use --preview with --local`);
 	});
 
+	it("should reject the use of --remote with --local", async () => {
+		setIsTTY(false);
+		writeWranglerToml({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await expect(
+			runWrangler(`d1 execute db --command "select;" --local --remote`)
+		).rejects.toThrowError(`Error: can't use --remote with --local`);
+	});
+
 	it("should reject the use of --preview with --local with --json", async () => {
 		setIsTTY(false);
 		writeWranglerToml({
@@ -75,5 +88,19 @@ describe("execute", () => {
 		await expect(
 			runWrangler("d1 migrations apply --local db --preview")
 		).rejects.toThrowError(`Error: can't use --preview with --local`);
+	});
+
+	it("should reject --remote when using --persist-to", async () => {
+		setIsTTY(false);
+		writeWranglerToml({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		await runWrangler("d1 migrations create db test");
+
+		await expect(
+			runWrangler("d1 migrations apply db --remote --persist-to asdf")
+		).rejects.toThrowError(`persist-to -> local`);
 	});
 });
