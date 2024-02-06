@@ -5,7 +5,14 @@ import { retry } from "helpers/command";
 import { sleep } from "helpers/common";
 import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
-import { beforeAll, beforeEach, describe, expect, test } from "vitest";
+import {
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+} from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
@@ -228,6 +235,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		logStream = createTestLogStream(ctx);
 	});
 
+	afterEach(async () => {
+		logStream.close();
+	});
+
 	Object.keys(frameworkTests).forEach((framework) => {
 		const {
 			quarantine,
@@ -393,7 +404,14 @@ const verifyDevScript = async (
 
 	const { name: pm } = detectPackageManager();
 	const proc = spawnWithLogging(
-		[pm, "run", template.devScript as string, "--port", `${TEST_PORT}`],
+		[
+			pm,
+			"run",
+			template.devScript as string,
+			pm === "npm" ? "--" : "",
+			"--port",
+			`${TEST_PORT}`,
+		],
 		{
 			cwd: projectPath,
 			env: {

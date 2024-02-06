@@ -140,10 +140,6 @@ export const spawnWithLogging = (
 		logStream.write(data);
 	});
 
-	proc.on("close", () => {
-		logStream.close();
-	});
-
 	return proc;
 };
 
@@ -258,7 +254,7 @@ export const testProjectDir = (suite: string) => {
 		} catch (e) {
 			if (typeof e === "object" && e !== null && "code" in e) {
 				const code = e.code;
-				if (code === "EBUSY" || code === "ENOENT") {
+				if (code === "EBUSY" || code === "ENOENT" || code === "ENOTEMPTY") {
 					return;
 				}
 			}
