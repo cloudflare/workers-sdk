@@ -8786,7 +8786,7 @@ export default{
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "index.py",
+				expectedMainModule: "index",
 			});
 
 			await runWrangler("deploy");
@@ -8817,7 +8817,7 @@ export default{
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "index.py",
+				expectedMainModule: "index",
 			});
 
 			await runWrangler("deploy index.py");
