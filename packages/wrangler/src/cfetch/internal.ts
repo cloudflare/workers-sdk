@@ -196,7 +196,7 @@ type ResponseWithBody = Response & { body: NonNullable<Response["body"]> };
 export async function fetchR2Objects(
 	resource: string,
 	bodyInit: RequestInit = {}
-): Promise<ResponseWithBody> {
+): Promise<ResponseWithBody | null> {
 	await requireLoggedIn();
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
@@ -210,6 +210,8 @@ export async function fetchR2Objects(
 
 	if (response.ok && response.body) {
 		return response as ResponseWithBody;
+	} else if (response.status === 404) {
+		return null;
 	} else {
 		throw new Error(
 			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`

@@ -40,7 +40,7 @@ import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import { kvBulk, kvKey, kvNamespace } from "./kv";
-import { logBuildFailure, logger } from "./logger";
+import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
@@ -70,6 +70,7 @@ import { versionsUploadHandler, versionsUploadOptions } from "./versions";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
+import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type { Arguments, CommandModule } from "yargs";
 
@@ -223,6 +224,11 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 		})
 		.check((args) => {
+			// Update logger level, before we do any logging
+			if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
+				logger.loggerLevel = args.logLevel as LoggerLevel;
+			}
+
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
 			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {

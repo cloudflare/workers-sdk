@@ -97,7 +97,7 @@ export async function getR2Object(
 	bucketName: string,
 	objectName: string,
 	jurisdiction?: string
-): Promise<ReadableStream> {
+): Promise<ReadableStream | null> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
@@ -110,7 +110,7 @@ export async function getR2Object(
 		}
 	);
 
-	return response.body;
+	return response === null ? null : response.body;
 }
 
 /**
@@ -142,7 +142,7 @@ export async function putR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchR2Objects(
+	const result = await fetchR2Objects(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			body: object,
@@ -151,6 +151,9 @@ export async function putR2Object(
 			duplex: "half",
 		}
 	);
+	if (result === null) {
+		throw new UserError("The specified bucket does not exist.");
+	}
 }
 /**
  * Delete an Object
