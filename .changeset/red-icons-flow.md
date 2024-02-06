@@ -19,3 +19,9 @@ Or the top 5 queries that consumed the most rows written over the last month, fo
 ```bash
 npx wrangler d1 insights northwind --sortBy writes --timePeriod 31d
 ```
+
+Or the top 5 most frequently run queries in the last 24 hours, for example:
+
+```bash
+npx wrangler d1 insights northwind --sortBy count
+```
