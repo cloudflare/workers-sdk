@@ -84,7 +84,7 @@ export const Handler = withConfig<HandlerOptions>(
 
 		const output: Record<string, string | number>[] = [];
 
-		if (result.version === "beta") {
+		if (result.version !== "alpha") {
 			const convertedTimePeriod = Number(timePeriod.replace("d", ""));
 			const endDate = new Date();
 			const startDate = new Date(

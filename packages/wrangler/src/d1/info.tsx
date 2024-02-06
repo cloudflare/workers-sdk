@@ -49,7 +49,7 @@ export const Handler = withConfig<HandlerOptions>(
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
 		}
-		if (result.version === "beta") {
+		if (result.version !== "alpha") {
 			const today = new Date();
 			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
 
