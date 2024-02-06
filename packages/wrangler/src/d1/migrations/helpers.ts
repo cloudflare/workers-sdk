@@ -43,6 +43,7 @@ export async function getUnappliedMigrations({
 	migrationsTableName,
 	migrationsPath,
 	local,
+	remote,
 	config,
 	name,
 	persistTo,
@@ -51,6 +52,7 @@ export async function getUnappliedMigrations({
 	migrationsTableName: string;
 	migrationsPath: string;
 	local: boolean | undefined;
+	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	persistTo: string | undefined;
@@ -60,6 +62,7 @@ export async function getUnappliedMigrations({
 		await listAppliedMigrations(
 			migrationsTableName,
 			local,
+			remote,
 			config,
 			name,
 			persistTo,
@@ -84,6 +87,7 @@ export async function getUnappliedMigrations({
 const listAppliedMigrations = async (
 	migrationsTableName: string,
 	local: boolean | undefined,
+	remote: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
 	persistTo: string | undefined,
@@ -91,6 +95,7 @@ const listAppliedMigrations = async (
 ): Promise<Migration[]> => {
 	const response: QueryResult[] | null = await executeSql({
 		local,
+		remote,
 		config,
 		name,
 		shouldPrompt: isInteractive() && !CI.isCI(),
@@ -141,6 +146,7 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 export const initMigrationsTable = async ({
 	migrationsTableName,
 	local,
+	remote,
 	config,
 	name,
 	persistTo,
@@ -148,6 +154,7 @@ export const initMigrationsTable = async ({
 }: {
 	migrationsTableName: string;
 	local: boolean | undefined;
+	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	persistTo: string | undefined;
@@ -155,6 +162,7 @@ export const initMigrationsTable = async ({
 }) => {
 	return executeSql({
 		local,
+		remote,
 		config,
 		name,
 		shouldPrompt: isInteractive() && !CI.isCI(),
