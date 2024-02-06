@@ -332,6 +332,8 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			{ value: stringifiedResult, unbufferedStream },
 			this.revivers
 		);
+
+		console.log("parseWithReadableStreams", result)
 		// We get an empty stack trace if we thread the caller through here,
 		// specifying `this.#parseAsyncResponse` is good enough though, we just
 		// get an extra `processTicksAndRejections` entry
