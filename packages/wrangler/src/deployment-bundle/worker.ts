@@ -14,7 +14,9 @@ export type CfModuleType =
 	| "commonjs"
 	| "compiled-wasm"
 	| "text"
-	| "buffer";
+	| "buffer"
+	| "python"
+	| "python-requirement";
 
 /**
  * An imported module.

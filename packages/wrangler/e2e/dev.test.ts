@@ -268,6 +268,62 @@ describe("basic dev tests", () => {
 	});
 });
 
+describe("basic dev python tests", () => {
+	let worker: DevWorker;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["experimental"]
+			`,
+			"index.py": dedent`
+				from js import Response
+				def fetch(request):
+					return Response.new('py hello world')`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
+	});
+
+	it("can run and modify python worker during dev session (local)", async () => {
+		await worker.runDevSession("", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"py hello world"');
+
+			await worker.seed({
+				"index.py": dedent`
+					from js import Response
+					def fetch(request):
+						return Response.new('Updated Python Worker value')`,
+			});
+
+			const { text: text2 } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world",
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text2).toMatchInlineSnapshot('"Updated Python Worker value"');
+		});
+	});
+});
+
 describe("dev registry", () => {
 	let a: DevWorker;
 	let b: DevWorker;

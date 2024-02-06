@@ -4,6 +4,7 @@ import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import type { Rule } from "../config/environment";
@@ -49,6 +50,36 @@ export async function findAdditionalModules(
 			name: m.name,
 		}));
 
+	// Try to find a requirements.txt file
+	const isPythonEntrypoint =
+		getBundleType(entry.format, entry.file) === "python";
+
+	if (isPythonEntrypoint) {
+		try {
+			const pythonRequirements = await readFile(
+				path.resolve(entry.directory, "requirements.txt"),
+				"utf-8"
+			);
+
+			// This is incredibly naive. However, it supports common syntax for requirements.txt
+			for (const requirement of pythonRequirements.split("\n")) {
+				const packageName = requirement.match(/^[^\d\W]\w*/);
+				if (typeof packageName?.[0] === "string") {
+					modules.push({
+						type: "python-requirement",
+						name: packageName?.[0],
+						content: "",
+						filePath: undefined,
+					});
+				}
+			}
+			// We don't care if a requirements.txt isn't found
+		} catch (e) {
+			logger.debug(
+				"Python entrypoint detected, but no requirements.txt file found."
+			);
+		}
+	}
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
 		logger.table(
@@ -56,7 +87,10 @@ export async function findAdditionalModules(
 				return {
 					Name: name,
 					Type: type ?? "",
-					Size: `${(content.length / 1024).toFixed(2)} KiB`,
+					Size:
+						type === "python-requirement"
+							? ""
+							: `${(content.length / 1024).toFixed(2)} KiB`,
 				};
 			})
 		);

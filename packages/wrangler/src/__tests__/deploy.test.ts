@@ -8775,6 +8775,72 @@ export default{
 		});
 	});
 
+	describe("python", () => {
+		it("should upload python module defined in wrangler.toml", async () => {
+			writeWranglerToml({
+				main: "index.py",
+			});
+			await fs.promises.writeFile(
+				"index.py",
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index",
+			});
+
+			await runWrangler("deploy");
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬────────┬──────────┐
+			│ Name                                 │ Type   │ Size     │
+			├──────────────────────────────────────┼────────┼──────────┤
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+			└──────────────────────────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+
+		it("should upload python module specified in CLI args", async () => {
+			writeWranglerToml();
+			await fs.promises.writeFile(
+				"index.py",
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index",
+			});
+
+			await runWrangler("deploy index.py");
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬────────┬──────────┐
+			│ Name                                 │ Type   │ Size     │
+			├──────────────────────────────────────┼────────┼──────────┤
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+			└──────────────────────────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("hyperdrive", () => {
 		it("should upload hyperdrive bindings", async () => {
 			writeWranglerToml({
