@@ -49,6 +49,13 @@ export function Options(yargs: CommonYargsArgv) {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
 			type: "boolean",
+			deprecated: true,
+		})
+		.option("remote", {
+			describe:
+				"Execute commands/files against a remote DB for use with wrangler dev",
+			type: "boolean",
+			default: false,
 		})
 		.option("file", {
 			describe: "A .sql file to ingest",
@@ -85,6 +92,7 @@ type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const {
 		local,
+		remote,
 		database,
 		yes,
 		persistTo,
@@ -109,6 +117,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	try {
 		const response: QueryResult[] | null = await executeSql({
 			local,
+			remote,
 			config,
 			name: database,
 			shouldPrompt: isInteractive && !yes,
@@ -168,6 +177,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 
 export async function executeSql({
 	local,
+	remote,
 	config,
 	name,
 	shouldPrompt,
@@ -179,6 +189,7 @@ export async function executeSql({
 	batchSize,
 }: {
 	local: boolean | undefined;
+	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	shouldPrompt: boolean | undefined;
@@ -194,12 +205,21 @@ export async function executeSql({
 		// set loggerLevel to error to avoid logs appearing in JSON output
 		logger.loggerLevel = "error";
 	}
+	if (local) {
+		logger.log(
+			"You no longer need to provide --local with `wrangler d1 execute`, local will be used by default."
+		);
+	}
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
 	if (preview && local)
 		throw new UserError(`Error: can't use --preview with --local`);
+	if (remote && local)
+		throw new UserError(`Error: can't use --preview with --local`);
 	if (persistTo && !local)
 		throw new UserError(`Error: can't use --persist-to without --local`);
+	if (persistTo && remote)
+		throw new UserError(`Error: can't use --persist-to with --remote`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
 
@@ -211,21 +231,22 @@ export async function executeSql({
 			);
 		}
 	}
-	const result = local
-		? await executeLocally({
-				config,
-				name,
-				queries,
-				persistTo,
-		  })
-		: await executeRemotely({
+	const result = remote
+		? await executeRemotely({
 				config,
 				name,
 				shouldPrompt,
 				batches: batchSplit(queries, batchSize),
 				json,
 				preview,
+		  })
+		: await executeLocally({
+				config,
+				name,
+				queries,
+				persistTo,
 		  });
+
 	if (json) logger.loggerLevel = existingLogLevel;
 	return result;
 }
