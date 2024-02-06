@@ -5,8 +5,15 @@ export function MigrationOptions(yargs: CommonYargsArgv) {
 	return Database(yargs)
 		.option("local", {
 			describe:
-				"Execute commands/files against a local DB for use with wrangler dev --local",
+				"Execute commands/files against a local DB for use with wrangler dev",
 			type: "boolean",
+			deprecated: true,
+		})
+		.option("remote", {
+			describe:
+				"Execute commands/files against a remote DB for use with wrangler dev --remote",
+			type: "boolean",
+			default: false,
 		})
 		.option("preview", {
 			describe: "Execute commands/files against a preview D1 DB",
