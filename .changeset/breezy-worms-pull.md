@@ -12,4 +12,4 @@ causes the command to error with the following message:
 ```
 
 However developers could want to generate types without the entrypoint being defined (for example when using `getBindingsProxy`), so these changes
-make the entrypoint no longer mandatory for the `types` command, defaulting on assuming the use of the modules syntax if no entrypoint is specified.
+make the entrypoint optional for the `types` command, assuming modules syntax if none is specified.
