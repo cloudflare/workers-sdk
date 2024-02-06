@@ -12,11 +12,13 @@ export async function generateTypes(
 	configToDTS: Partial<Config>,
 	config: Config
 ) {
-	let entrypointFormat: CfScriptFormat = "modules";
-	try {
-		const entry = await getEntry({}, config, "types");
-		entrypointFormat = entry.format;
-	} catch {}
+	const configContainsEntryPoint =
+		config.main !== undefined || !!config.site?.["entry-point"];
+
+	const entrypointFormat: CfScriptFormat = configContainsEntryPoint
+		? (await getEntry({}, config, "types")).format
+		: "modules";
+
 	const envTypeStructure: string[] = [];
 
 	if (configToDTS.kv_namespaces) {
