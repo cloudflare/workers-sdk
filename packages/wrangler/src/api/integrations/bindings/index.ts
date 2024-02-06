@@ -93,12 +93,15 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 
 	const vars = getVarsForDev(rawConfig, env);
 
+	const cf = await mf.getCf();
+	deepFreeze(cf);
+
 	return {
 		bindings: {
 			...vars,
 			...bindings,
 		},
-		cf: Object.freeze(await mf.getCf()),
+		cf,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
 		dispose: () => mf.dispose(),
@@ -182,4 +185,15 @@ function getMiniflarePersistOptions(
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
 	};
+}
+
+function deepFreeze<T extends Record<string | number | symbol, unknown>>(
+	obj: T
+): void {
+	Object.freeze(obj);
+	Object.entries(obj).forEach(([, prop]) => {
+		if (prop !== null && typeof prop === "object" && !Object.isFrozen(prop)) {
+			deepFreeze(prop as Record<string | number | symbol, unknown>);
+		}
+	});
 }

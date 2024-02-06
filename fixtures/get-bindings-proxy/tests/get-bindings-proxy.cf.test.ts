@@ -31,6 +31,11 @@ describe("getBindingsProxy - cf", () => {
 				cf.newField = "test new field";
 			}).toThrowError("Cannot add property newField, object is not extensible");
 			expect("newField" in cf).toBe(false);
+
+			expect(cf.botManagement).toMatchObject({
+				score: 99,
+			});
+			expect(Object.isFrozen(cf.botManagement)).toBe(true);
 		} finally {
 			await dispose();
 		}
