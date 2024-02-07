@@ -367,26 +367,40 @@ const downloadRemoteTemplate = async (src: string) => {
 	}
 };
 
-export const updatePackageJson = async (ctx: C3Context) => {
-	const s = spinner();
-	s.start("Updating `package.json`");
-
+export const updatePackageName = async (ctx: C3Context) => {
 	// Update package.json with project name
 	const placeholderNames = ["<TBD>", "TBD", ""];
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
+	const pkgJson = readJSON(pkgJsonPath);
+
+	if (!placeholderNames.includes(pkgJson.name)) {
+		return;
+	}
+
+	const s = spinner();
+	s.start("Updating name in `package.json`");
+
+	pkgJson.name = ctx.project.name;
+
+	writeJSON(pkgJsonPath, pkgJson);
+	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+};
+
+export const updatePackageScripts = async (ctx: C3Context) => {
+	if (!ctx.template.transformPackageJson) {
+		return;
+	}
+
+	const s = spinner();
+	s.start("Updating `package.json` scripts");
+
+	const pkgJsonPath = resolve(ctx.project.path, "package.json");
 	let pkgJson = readJSON(pkgJsonPath);
 
-	if (placeholderNames.includes(pkgJson.name)) {
-		pkgJson.name = ctx.project.name;
-	}
-
 	// Run any transformers defined by the template
-	if (ctx.template.transformPackageJson) {
-		const transformed = await ctx.template.transformPackageJson(pkgJson);
-		pkgJson = deepmerge(pkgJson, transformed);
-	}
+	const transformed = await ctx.template.transformPackageJson(pkgJson);
+	pkgJson = deepmerge(pkgJson, transformed);
 
-	// Write the finalized package.json to disk
 	writeJSON(pkgJsonPath, pkgJson);
 	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
 };

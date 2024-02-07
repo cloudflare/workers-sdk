@@ -29,7 +29,8 @@ import { createProject } from "./pages";
 import {
 	copyTemplateFiles,
 	selectTemplate,
-	updatePackageJson,
+	updatePackageName,
+	updatePackageScripts,
 } from "./templates";
 import { installWorkersTypes, updateWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
@@ -122,7 +123,7 @@ const create = async (ctx: C3Context) => {
 	}
 
 	await copyTemplateFiles(ctx);
-	await updatePackageJson(ctx);
+	await updatePackageName(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
@@ -143,6 +144,8 @@ const configure = async (ctx: C3Context) => {
 	if (template.configure) {
 		await template.configure({ ...ctx });
 	}
+
+	await updatePackageScripts(ctx);
 
 	await offerGit(ctx);
 	await gitCommit(ctx);

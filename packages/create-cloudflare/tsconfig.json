@@ -5,6 +5,7 @@
 	"exclude": [
 		"node_modules",
 		"dist",
+		"e2e-tests/fixtures/*",
 		// exclude all template files other than the top level ones so
 		// that we can catch `c3.ts`. For example, any top level files in
 		// templates/angular/ will be included, but any directories will not
