@@ -12,7 +12,13 @@ export async function generateTypes(
 	configToDTS: Partial<Config>,
 	config: Config
 ) {
-	const entry = await getEntry({}, config, "types");
+	const configContainsEntryPoint =
+		config.main !== undefined || !!config.site?.["entry-point"];
+
+	const entrypointFormat: CfScriptFormat = configContainsEntryPoint
+		? (await getEntry({}, config, "types")).format
+		: "modules";
+
 	const envTypeStructure: string[] = [];
 
 	if (configToDTS.kv_namespaces) {
@@ -137,7 +143,7 @@ export async function generateTypes(
 	writeDTSFile({
 		envTypeStructure,
 		modulesTypeStructure,
-		formatType: entry.format,
+		formatType: entrypointFormat,
 	});
 }
 
