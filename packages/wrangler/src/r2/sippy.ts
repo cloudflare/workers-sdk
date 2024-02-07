@@ -9,7 +9,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { SippyPutConfig } from "./helpers";
+import type { SippyPutParams } from "./helpers";
 
 const NO_SUCH_OBJECT_KEY = 10007;
 const SIPPY_PROVIDER_CHOICES = ["AWS", "GCS"];
@@ -141,11 +141,7 @@ export async function EnableHandler(
 		}
 	}
 
-	let sippyConfig = {
-		bucket: args.bucket ?? "",
-		r2_key_id: args.r2KeyId ?? "",
-		r2_access_key: args.r2SecretAccessKey ?? "",
-	} as SippyPutConfig;
+	let sippyConfig: SippyPutParams;
 
 	if (args.provider == "AWS") {
 		if (!(args.keyId && args.secretAccessKey)) {
@@ -154,11 +150,18 @@ export async function EnableHandler(
 			);
 		}
 		sippyConfig = {
-			...sippyConfig,
-			provider: "AWS",
-			zone: args.region,
-			key_id: args.keyId,
-			access_key: args.secretAccessKey,
+			source: {
+				provider: "aws",
+				region: args.region,
+				bucket: args.bucket,
+				accessKeyId: args.accessKeyId,
+				secretAccessKey: args.secretAccessKey,
+			},
+			destination: {
+				provider: "r2",
+				accessKeyId: args.r2AccessKeyId,
+				secretAccessKey: args.r2SecretAccessKey,
+			},
 		};
 	} else if (args.provider == "GCS") {
 		if (args.serviceAccountKeyFile) {
@@ -177,10 +180,17 @@ export async function EnableHandler(
 		}
 		args.privateKey = args.privateKey.replace(/\\n/g, "\n");
 		sippyConfig = {
-			...sippyConfig,
-			provider: "GCS",
-			client_email: args.clientEmail,
-			private_key: args.privateKey,
+			source: {
+				provider: "gcs",
+				bucket: args.bucket,
+				clientEmail: args.clientEmail,
+				privateKey: args.privateKey,
+			},
+			destination: {
+				provider: "r2",
+				accessKeyId: args.r2AccessKeyId,
+				secretAccessKey: args.r2SecretAccessKey,
+			},
 		};
 	}
 
@@ -211,12 +221,12 @@ export async function GetHandler(
 	const accountId = await requireAuth(config);
 
 	try {
-		const sippyBucket = await getR2Sippy(
+		const sippyConfig = await getR2Sippy(
 			accountId,
 			args.name,
 			args.jurisdiction
 		);
-		logger.log(`Sippy upstream bucket: ${sippyBucket}.`);
+		logger.log("Sippy configuration:", sippyConfig);
 	} catch (e) {
 		if (e instanceof APIError && "code" in e && e.code == NO_SUCH_OBJECT_KEY) {
 			logger.log(`No Sippy configuration found for the '${args.name}' bucket.`);

@@ -326,12 +326,18 @@ describe("r2", () => {
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
 							async (request, response, context) => {
 								expect(await request.json()).toEqual({
-									access_key: "aws-secret",
-									bucket: "awsBucket",
-									key_id: "aws-key",
-									provider: "AWS",
-									r2_access_key: "some-secret",
-									r2_key_id: "some-key",
+									source: {
+										provider: "aws",
+										region: "awsRegion",
+										bucket: "awsBucket",
+										accessKeyId: "aws-key",
+										secretAccessKey: "aws-secret",
+									},
+									destination: {
+										provider: "r2",
+										accessKeyId: "some-key",
+										secretAccessKey: "some-secret",
+									},
 								});
 								return response.once(context.json(createFetchResult({})));
 							}
@@ -353,12 +359,17 @@ describe("r2", () => {
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
 							async (request, response, context) => {
 								expect(await request.json()).toEqual({
-									private_key: "gcs-private-key",
-									bucket: "gcsBucket",
-									client_email: "gcs-client-email",
-									provider: "GCS",
-									r2_access_key: "some-secret",
-									r2_key_id: "some-key",
+									source: {
+										provider: "gcs",
+										bucket: "gcsBucket",
+										clientEmail: "gcs-client-email",
+										privateKey: "gcs-private-key",
+									},
+									destination: {
+										provider: "r2",
+										accessKeyId: "some-key",
+										secretAccessKey: "some-secret",
+									},
 								});
 								return response.once(context.json(createFetchResult({})));
 							}
@@ -522,7 +533,7 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket sippy get testBucket");
 				expect(std.out).toMatchInlineSnapshot(
-					`"Sippy upstream bucket: https://storage.googleapis.com/storage/v1/b/testBucket."`
+					`"Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"`
 				);
 			});
 		});
