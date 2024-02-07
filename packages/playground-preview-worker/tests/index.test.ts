@@ -85,7 +85,7 @@ describe("Preview Worker", () => {
 			'"/hello?world"'
 		);
 		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"`
+			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None"`
 		);
 	});
 	it("shouldn't be redirected with no token", async () => {
@@ -196,6 +196,15 @@ describe("Preview Worker", () => {
 		expect(await resp.text()).toMatchInlineSnapshot(
 			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"'
 		);
+	});
+	it("should reject invalid cookie header", async () => {
+		const resp = await fetch(PREVIEW_REMOTE, {
+			headers: {
+				cookie: "token",
+			},
+		});
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot('"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"');
 	});
 	it("should reject invalid token", async () => {
 		const resp = await fetch(PREVIEW_REMOTE, {

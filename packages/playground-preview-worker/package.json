@@ -12,7 +12,7 @@
 		"test:e2e": "vitest run"
 	},
 	"dependencies": {
-		"hono": "^3.3.2",
+		"hono": "^3.12.11",
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
