@@ -98,14 +98,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			ip: {
 				type: "string",
-				// On Windows, when specifying `localhost` as the socket hostname,
-				// `workerd` will only listen on the IPv4 loopback `127.0.0.1`, not the
-				// IPv6 `::1`: https://github.com/cloudflare/workerd/issues/1408
-				// On Node 17+, `fetch()` will only try to fetch the IPv6 address.
-				// For now, on Windows, we default to listening on IPv4 only and using
-				// `127.0.0.1` when sending control requests to `workerd` (e.g. with the
-				// `ProxyController`).
-				default: process.platform === "win32" ? "127.0.0.1" : "localhost",
+				default: "localhost",
 				description: "The IP address to listen on",
 			},
 			port: {

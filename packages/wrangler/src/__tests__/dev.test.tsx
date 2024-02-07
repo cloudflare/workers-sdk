@@ -868,7 +868,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
 			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
-				process.platform === "win32" ? "127.0.0.1" : "localhost"
+				"localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1090,7 +1090,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
 			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
-				process.platform === "win32" ? "127.0.0.1" : "localhost"
+				"localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
