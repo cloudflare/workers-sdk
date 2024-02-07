@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
 import z from "zod";
+import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from "./errors";
 import { constructMiddleware } from "./inject-middleware";
 import { doUpload, setupTokens } from "./realish";
 import { handleException, setupSentry } from "./sentry";
-import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from ".";
 import type { RealishPreviewConfig, UploadResult } from "./realish";
 
 const encoder = new TextEncoder();
