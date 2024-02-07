@@ -26,6 +26,7 @@ import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { getQueue, putConsumer } from "../queues/client";
@@ -54,7 +55,6 @@ import type {
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import { isNavigatorDefined } from "../navigator-user-agent";
 
 type Props = {
 	config: Config;

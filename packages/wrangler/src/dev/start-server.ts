@@ -19,6 +19,7 @@ import {
 	stopWorkerRegistry,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
@@ -33,7 +34,6 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
-import { isNavigatorDefined } from "../navigator-user-agent";
 
 export async function startDevServer(
 	props: DevProps & {

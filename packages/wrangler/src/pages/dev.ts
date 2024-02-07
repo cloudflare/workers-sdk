@@ -9,6 +9,7 @@ import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
@@ -33,7 +34,6 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
-import { isNavigatorDefined } from "../navigator-user-agent";
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:

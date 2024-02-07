@@ -24,6 +24,7 @@ import {
 	unregisterWorker,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
@@ -41,7 +42,6 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import { isNavigatorDefined } from "../navigator-user-agent";
 
 /**
  * This hooks establishes a connection with the dev registry,

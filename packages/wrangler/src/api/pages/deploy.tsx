@@ -5,6 +5,7 @@ import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
+import { isNavigatorDefined } from "../../navigator-user-agent";
 import { buildFunctions } from "../../pages/buildFunctions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
@@ -23,8 +24,7 @@ import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Project, Deployment } from "@cloudflare/types";
-import { isNavigatorDefined } from "../../navigator-user-agent";
+import type { Deployment, Project } from "@cloudflare/types";
 
 interface PagesDeployOptions {
 	/**

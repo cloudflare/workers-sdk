@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { bundleWorker } from "../deployment-bundle/bundle";
