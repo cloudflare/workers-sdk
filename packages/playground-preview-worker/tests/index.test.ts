@@ -340,7 +340,7 @@ describe("Upload Worker", () => {
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected valid form data\\",\\"data\\":{}}"'
+			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected valid form data\\",\\"data\\":{\\"error\\":\\"TypeError: Unrecognized Content-Type header value. FormData can only parse the following MIME types: multipart/form-data, application/x-www-form-urlencoded\\"}}"'
 		);
 	});
 	it("should reject missing metadata", async () => {
@@ -348,7 +348,7 @@ describe("Upload Worker", () => {
 			method: "POST",
 			headers: {
 				cookie: `user=${defaultUserToken}`,
-				"Content-Type": "text/plain",
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
 			},
 			body: `--${TEST_WORKER_BOUNDARY}
 Content-Disposition: form-data; name="index.js"; filename="index.js"
@@ -362,7 +362,7 @@ export default {
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected valid form data\\",\\"data\\":{}}"'
+			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected metadata file to be defined\\",\\"data\\":{}}"'
 		);
 	});
 	it("should reject invalid metadata json", async () => {

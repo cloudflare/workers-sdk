@@ -115,7 +115,10 @@ export class PreviewRequestForbidden extends HttpError {
 
 export class BadUpload extends HttpError {
 	name = "BadUpload";
-	constructor(message = "Invalid upload") {
+	constructor(message = "Invalid upload", private readonly error?: string) {
 		super(message, 400, false);
+	}
+	get data() {
+		return { error: this.error };
 	}
 }

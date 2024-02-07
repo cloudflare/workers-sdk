@@ -163,7 +163,7 @@ export class UserSession {
 		try {
 			worker = await request.formData();
 		} catch (e) {
-			throw new BadUpload(`Expected valid form data`);
+			throw new BadUpload(`Expected valid form data`, String(e));
 		}
 
 		const m = worker.get("metadata");
