@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
+import z from "zod";
 import { constructMiddleware } from "./inject-middleware";
 import {
 	doUpload,
@@ -8,7 +9,7 @@ import {
 	UploadResult,
 } from "./realish";
 import { handleException, setupSentry } from "./sentry";
-import { ServiceWorkerNotSupported, WorkerTimeout } from ".";
+import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from ".";
 
 const encoder = new TextEncoder();
 
@@ -25,6 +26,15 @@ function switchRemote(url: URL, remote: string) {
 	workerUrl.port = remoteUrl.port;
 	return workerUrl;
 }
+
+const UploadedMetadata = z.object({
+	body_part: z.ostring(),
+	main_module: z.ostring(),
+	compatibility_date: z.ostring(),
+	compatibility_flags: z.array(z.string()).optional(),
+});
+
+type UploadedMetadata = z.infer<typeof UploadedMetadata>;
 
 /**
  * This Durable object coordinates operations for a specific user session. It's purpose is to
@@ -114,17 +124,9 @@ export class UserSession {
 		await this.state.storage.put("inspectorUrl", this.inspectorUrl);
 	}
 
-	async fetch(request: Request) {
+	async handleRequest(request: Request) {
 		const url = new URL(request.url);
-		// We need to construct a new Sentry instance here because throwing
-		// errors across a DO boundary will wipe stack information etc...
-		const sentry = setupSentry(
-			request,
-			undefined,
-			this.env.SENTRY_DSN,
-			this.env.SENTRY_ACCESS_CLIENT_ID,
-			this.env.SENTRY_ACCESS_CLIENT_SECRET
-		);
+
 		// This is an inspector request. Forward to the correct inspector URL
 		if (request.headers.get("Upgrade") && url.pathname === "/api/inspector") {
 			assert(this.inspectorUrl !== undefined);
@@ -158,17 +160,33 @@ export class UserSession {
 			}
 			return workerResponse;
 		}
+
 		const userSession = this.state.id.toString();
-		const worker = await request.formData();
+
+		let worker: FormData;
+		try {
+			worker = await request.formData();
+		} catch (e) {
+			throw new BadUpload(`Expected valid form data`);
+		}
 
 		const m = worker.get("metadata");
+		if (!(m instanceof File)) {
+			throw new BadUpload("Expected metadata file to be defined");
+		}
 
-		assert(m instanceof File);
+		let uploadedMetadata: UploadedMetadata;
+		try {
+			uploadedMetadata = UploadedMetadata.parse(JSON.parse(await m.text()));
+		} catch {
+			throw new BadUpload("Expected metadata file to be valid");
+		}
 
-		const uploadedMetadata = JSON.parse(await m.text());
-
-		if ("body_part" in uploadedMetadata) {
-			return new ServiceWorkerNotSupported().toResponse();
+		if (
+			uploadedMetadata.body_part !== undefined ||
+			uploadedMetadata.main_module === undefined
+		) {
+			throw new ServiceWorkerNotSupported();
 		}
 
 		const today = new Date();
@@ -206,19 +224,33 @@ export class UserSession {
 			})
 		);
 
+		await this.uploadWorker(this.workerName, worker);
+
+		assert(this.inspectorUrl !== undefined);
+
+		return Response.json({
+			// Include a hash of the inspector URL so as to ensure the client will reconnect
+			// when the inspector URL has changed (because of an updated preview session)
+			inspector: `/api/inspector?user=${userSession}&h=${await hash(
+				this.inspectorUrl
+			)}`,
+			preview: userSession,
+		});
+	}
+
+	async fetch(request: Request) {
+		// We need to construct a new Sentry instance here because throwing
+		// errors across a DO boundary will wipe stack information etc...
+		const sentry = setupSentry(
+			request,
+			undefined,
+			this.env.SENTRY_DSN,
+			this.env.SENTRY_ACCESS_CLIENT_ID,
+			this.env.SENTRY_ACCESS_CLIENT_SECRET
+		);
+
 		try {
-			await this.uploadWorker(this.workerName, worker);
-
-			assert(this.inspectorUrl !== undefined);
-
-			return Response.json({
-				// Include a hash of the inspector URL so as to ensure the client will reconnect
-				// when the inspector URL has changed (because of an updated preview session)
-				inspector: `/api/inspector?user=${userSession}&h=${await hash(
-					this.inspectorUrl
-				)}`,
-				preview: userSession,
-			});
+			return await this.handleRequest(request);
 		} catch (e) {
 			return handleException(e, sentry);
 		}

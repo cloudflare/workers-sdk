@@ -5,9 +5,9 @@ const REMOTE = "https://playground-testing.devprod.cloudflare.dev";
 const PREVIEW_REMOTE =
 	"https://random-data.playground-testing.devprod.cloudflare.dev";
 
-const TEST_WORKER_CONTENT_TYPE =
-	"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf";
-const TEST_WORKER = `------WebKitFormBoundaryqJEYLXuUiiZQHgvf
+const TEST_WORKER_BOUNDARY = "----WebKitFormBoundaryqJEYLXuUiiZQHgvf";
+const TEST_WORKER_CONTENT_TYPE = `multipart/form-data; boundary=${TEST_WORKER_BOUNDARY}`;
+const TEST_WORKER = `--${TEST_WORKER_BOUNDARY}
 Content-Disposition: form-data; name="index.js"; filename="index.js"
 Content-Type: application/javascript+module
 
@@ -39,12 +39,12 @@ export default {
 	}
 }
 
-------WebKitFormBoundaryqJEYLXuUiiZQHgvf
+--${TEST_WORKER_BOUNDARY}
 Content-Disposition: form-data; name="metadata"; filename="blob"
 Content-Type: application/json
 
 {"compatibility_date":"2023-05-04","main_module":"index.js"}
-------WebKitFormBoundaryqJEYLXuUiiZQHgvf--`;
+--${TEST_WORKER_BOUNDARY}--`;
 
 async function fetchUserToken() {
 	return fetch(REMOTE).then(
@@ -316,6 +316,104 @@ describe("Upload Worker", () => {
 		expect(w.status).toBe(401);
 		expect(await w.text()).toMatchInlineSnapshot(
 			'"{\\"error\\":\\"UploadFailed\\",\\"message\\":\\"Valid token not provided\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject invalid form data", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": "text/plain",
+			},
+			body: "not a form",
+		});
+		expect(w.status).toBe(400);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected valid form data\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject missing metadata", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": "text/plain",
+			},
+			body: `--${TEST_WORKER_BOUNDARY}
+Content-Disposition: form-data; name="index.js"; filename="index.js"
+Content-Type: application/javascript+module
+
+export default {
+	fetch(request) { return new Response("body"); }
+}
+
+--${TEST_WORKER_BOUNDARY}--`,
+		});
+		expect(w.status).toBe(400);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected valid form data\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject invalid metadata json", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: `--${TEST_WORKER_BOUNDARY}
+Content-Disposition: form-data; name="metadata"; filename="blob"
+Content-Type: application/json
+
+{"compatibility_date":"2023-05-04",
+--${TEST_WORKER_BOUNDARY}--`,
+		});
+		expect(w.status).toBe(400);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected metadata file to be valid\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject invalid metadata", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: `--${TEST_WORKER_BOUNDARY}
+Content-Disposition: form-data; name="metadata"; filename="blob"
+Content-Type: application/json
+
+{"compatibility_date":42,"main_module":"index.js"}
+--${TEST_WORKER_BOUNDARY}--`,
+		});
+		expect(w.status).toBe(400);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected metadata file to be valid\\",\\"data\\":{}}"'
+		);
+	});
+	it("should reject service worker", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: `--${TEST_WORKER_BOUNDARY}
+Content-Disposition: form-data; name="index.js"; filename="index.js"
+Content-Type: application/javascript
+
+addEventListener("fetch", (event) => event.respondWith(new Response("body")));
+--${TEST_WORKER_BOUNDARY}
+Content-Disposition: form-data; name="metadata"; filename="blob"
+Content-Type: application/json
+
+{"compatibility_date":"2023-05-04","body_part":"index.js"}
+--${TEST_WORKER_BOUNDARY}--`,
+		});
+		expect(w.status).toBe(400);
+		expect(await w.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"ServiceWorkerNotSupported\\",\\"message\\":\\"Service Workers are not supported in the Workers Playground\\",\\"data\\":{}}"'
 		);
 	});
 });

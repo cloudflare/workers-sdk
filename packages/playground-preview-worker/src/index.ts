@@ -133,6 +133,13 @@ class PreviewRequestForbidden extends HttpError {
 	}
 }
 
+export class BadUpload extends HttpError {
+	name = "BadUpload";
+	constructor(message = "Invalid upload") {
+		super(message, 400, false);
+	}
+}
+
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
  *
