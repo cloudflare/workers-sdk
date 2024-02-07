@@ -8,8 +8,8 @@ import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
-import type { MiniflareOptions } from "miniflare";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+import type { MiniflareOptions } from "miniflare";
 
 /**
  * Options for the `getBindingsProxy` utility
