@@ -344,7 +344,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						"r2 bucket sippy enable testBucket --r2-key-id=some-key --r2-secret-access-key=some-secret --provider=AWS --key-id=aws-key --secret-access-key=aws-secret --bucket=awsBucket"
+						"r2 bucket sippy enable testBucket --r2-access-key-id=some-key --r2-secret-access-key=some-secret --provider=AWS --access-key-id=aws-key --secret-access-key=aws-secret --region=awsRegion --bucket=awsBucket"
 					);
 					expect(std.out).toMatchInlineSnapshot(
 						`"✨ Successfully enabled Sippy on the 'testBucket' bucket."`
@@ -376,7 +376,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						"r2 bucket sippy enable testBucket --r2-key-id=some-key --r2-secret-access-key=some-secret --provider=GCS --client-email=gcs-client-email --private-key=gcs-private-key --bucket=gcsBucket"
+						"r2 bucket sippy enable testBucket --r2-access-key-id=some-key --r2-secret-access-key=some-secret --provider=GCS --client-email=gcs-client-email --private-key=gcs-private-key --bucket=gcsBucket"
 					);
 					expect(std.out).toMatchInlineSnapshot(
 						`"✨ Successfully enabled Sippy on the 'testBucket' bucket."`
@@ -410,12 +410,12 @@ describe("r2", () => {
 				      --provider  [choices: \\"AWS\\", \\"GCS\\"]
 				      --bucket                    The name of the upstream bucket  [string]
 				      --region                    (AWS provider only) The region of the upstream bucket  [string]
-				      --key-id                    (AWS provider only) The secret access key id for the upstream bucket  [string]
+				      --access-key-id             (AWS provider only) The secret access key id for the upstream bucket  [string]
 				      --secret-access-key         (AWS provider only) The secret access key for the upstream bucket  [string]
 				      --service-account-key-file  (GCS provider only) The path to your Google Cloud service account key JSON file  [string]
 				      --client-email              (GCS provider only) The client email for your Google Cloud service account key  [string]
 				      --private-key               (GCS provider only) The private key for your Google Cloud service account key  [string]
-				      --r2-key-id                 The secret access key id for this R2 bucket  [string]
+				      --r2-access-key-id          The secret access key id for this R2 bucket  [string]
 				      --r2-secret-access-key      The secret access key for this R2 bucket  [string]"
 			`);
 					expect(std.err).toMatchInlineSnapshot(`

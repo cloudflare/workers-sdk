@@ -38,7 +38,7 @@ export function EnableOptions(yargs: CommonYargsArgv) {
 			description: "(AWS provider only) The region of the upstream bucket",
 			string: true,
 		})
-		.option("key-id", {
+		.option("access-key-id", {
 			description:
 				"(AWS provider only) The secret access key id for the upstream bucket",
 			string: true,
@@ -63,7 +63,7 @@ export function EnableOptions(yargs: CommonYargsArgv) {
 				"(GCS provider only) The private key for your Google Cloud service account key",
 			string: true,
 		})
-		.option("r2-key-id", {
+		.option("r2-access-key-id", {
 			description: "The secret access key id for this R2 bucket",
 			string: true,
 		})
@@ -101,10 +101,10 @@ export async function EnableHandler(
 			args.region ??= await prompt(
 				"Enter the AWS region where your S3 bucket is located (example: us-west-2):"
 			);
-			args.keyId ??= await prompt(
+			args.accessKeyId ??= await prompt(
 				"Enter your AWS Access Key ID (requires read and list access):"
 			);
-			if (!args.keyId) {
+			if (!args.accessKeyId) {
 				throw new UserError("Must specify an AWS Access Key ID.");
 			}
 			args.secretAccessKey ??= await prompt(
@@ -129,10 +129,10 @@ export async function EnableHandler(
 			}
 		}
 
-		args.r2KeyId ??= await prompt(
+		args.r2AccessKeyId ??= await prompt(
 			"Enter your R2 Access Key ID (requires read and write access):"
 		);
-		if (!args.r2KeyId) {
+		if (!args.r2AccessKeyId) {
 			throw new UserError("Must specify an R2 Access Key ID.");
 		}
 		args.r2SecretAccessKey ??= await prompt("Enter your R2 Secret Access Key:");
