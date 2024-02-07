@@ -2,7 +2,7 @@
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"module": "CommonJS",
-		"types": ["node"],
+		"types": ["node", "@cloudflare/workers-types"],
 		"jsx": "react"
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
