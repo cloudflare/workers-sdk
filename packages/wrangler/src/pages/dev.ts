@@ -9,6 +9,7 @@ import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
@@ -304,6 +305,10 @@ export const Handler = async ({
 	let scriptPath = "";
 
 	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		compatibilityDate,
+		compatibilityFlags
+	);
 	let modules: CfModule[] = [];
 
 	if (usingWorkerDirectory) {
@@ -312,6 +317,7 @@ export const Handler = async ({
 				workerJSDirectory: workerScriptPath,
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 			modules = bundleResult.modules;
 			scriptPath = bundleResult.resolvedEntryPointPath;
@@ -360,6 +366,7 @@ export const Handler = async ({
 						sourcemap: true,
 						watch: false,
 						onEnd: () => scriptReadyResolve(),
+						defineNavigatorUserAgent,
 					});
 				} catch (e: unknown) {
 					logger.warn("Failed to bundle _worker.js.", e);
@@ -416,6 +423,7 @@ export const Handler = async ({
 					nodejsCompat,
 					local: true,
 					routesModule,
+					defineNavigatorUserAgent,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};

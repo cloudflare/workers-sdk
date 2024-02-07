@@ -7938,7 +7938,7 @@ export default{
 	});
 
 	describe("`nodejs_compat` compatibility flag", () => {
-		it('when absent, should error on any "external" `node:*` imports', async () => {
+		it('when absent, should warn on any "external" `node:*` imports', async () => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -7948,15 +7948,18 @@ export default{
       export default {}
       `
 			);
-			let err: esbuild.BuildFailure | undefined;
-			try {
-				await runWrangler("deploy index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
-			} catch (e) {
-				err = e as esbuild.BuildFailure;
-			}
-			expect(
-				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
-			).toMatch(/Could not resolve "node:async_hooks"/);
+			await runWrangler("deploy index.js --dry-run");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package \\"node:async_hooks\\" wasn't found on the file system but is built into node.[0m
+
+			  Your Worker may throw errors at runtime unless you enable the \\"nodejs_compat\\" compatibility flag.
+			  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
+			  from:
+			   - index.js
+
+			"
+		`);
 		});
 
 		it('when present, should support any "external" `node:*` imports', async () => {

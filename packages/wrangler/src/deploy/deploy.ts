@@ -26,6 +26,7 @@ import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { getQueue, putConsumer } from "../queues/client";
@@ -520,8 +521,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							targetConsumer: "deploy",
 							local: false,
 							projectRoot: props.projectRoot,
+							defineNavigatorUserAgent: isNavigatorDefined(
+								props.compatibilityDate ?? config.compatibility_date,
+								props.compatibilityFlags ?? config.compatibility_flags
+							),
 						}
 				  );
+
+		// Add modules to dependencies for size warning
+		for (const module of modules) {
+			const modulePath =
+				module.filePath === undefined
+					? module.name
+					: path.relative("", module.filePath);
+			const bytesInOutput =
+				typeof module.content === "string"
+					? Buffer.byteLength(module.content)
+					: module.content.byteLength;
+			dependencies[modulePath] = { bytesInOutput };
+		}
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {

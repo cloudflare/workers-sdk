@@ -86,6 +86,7 @@ export type BundleOptions = {
 	forPages?: boolean;
 	local: boolean;
 	projectRoot: string | undefined;
+	defineNavigatorUserAgent: boolean;
 };
 
 /**
@@ -124,6 +125,7 @@ export async function bundleWorker(
 		forPages,
 		local,
 		projectRoot,
+		defineNavigatorUserAgent,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -312,6 +314,9 @@ export async function bundleWorker(
 		conditions: BUILD_CONDITIONS,
 		...(process.env.NODE_ENV && {
 			define: {
+				...(defineNavigatorUserAgent
+					? { "navigator.userAgent": `"Cloudflare-Workers"` }
+					: {}),
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
@@ -328,7 +333,7 @@ export async function bundleWorker(
 			...(legacyNodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
-			...(nodejsCompat ? [nodejsCompatPlugin] : []),
+			nodejsCompatPlugin(!!nodejsCompat),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),

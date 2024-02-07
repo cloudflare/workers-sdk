@@ -19,6 +19,7 @@ import {
 	stopWorkerRegistry,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
@@ -139,6 +140,10 @@ export async function startDevServer(
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
 		projectRoot: props.projectRoot,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
 
 	if (props.local) {
@@ -290,6 +295,7 @@ async function runEsbuild({
 	local,
 	doBindings,
 	projectRoot,
+	defineNavigatorUserAgent,
 }: {
 	entry: Entry;
 	destination: string;
@@ -313,6 +319,7 @@ async function runEsbuild({
 	local: boolean;
 	doBindings: DurableObjectBindings;
 	projectRoot: string | undefined;
+	defineNavigatorUserAgent: boolean;
 }): Promise<EsbuildBundle> {
 	if (noBundle) {
 		additionalModules = dedupeModulesByName([
@@ -359,6 +366,7 @@ async function runEsbuild({
 					testScheduled,
 					doBindings,
 					projectRoot,
+					defineNavigatorUserAgent,
 			  })
 			: undefined;
 
