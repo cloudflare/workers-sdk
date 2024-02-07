@@ -97,10 +97,13 @@ export async function EnableHandler(
 			throw new UserError(`Must specify ${args.provider} bucket name.`);
 		}
 
-		if (args.provider == "AWS") {
+		if (args.provider === "AWS") {
 			args.region ??= await prompt(
 				"Enter the AWS region where your S3 bucket is located (example: us-west-2):"
 			);
+			if (!args.region) {
+				throw new UserError("Must specify an AWS Region.");
+			}
 			args.accessKeyId ??= await prompt(
 				"Enter your AWS Access Key ID (requires read and list access):"
 			);
@@ -113,7 +116,7 @@ export async function EnableHandler(
 			if (!args.secretAccessKey) {
 				throw new UserError("Must specify an AWS Secret Access Key.");
 			}
-		} else if (args.provider == "GCS") {
+		} else if (args.provider === "GCS") {
 			if (
 				!(args.clientEmail && args.privateKey) &&
 				!args.serviceAccountKeyFile
@@ -143,12 +146,18 @@ export async function EnableHandler(
 
 	let sippyConfig: SippyPutParams;
 
-	if (args.provider == "AWS") {
-		if (!(args.keyId && args.secretAccessKey)) {
-			throw new UserError(
-				`Error: must provide --key-id and --secret-access-key.`
-			);
-		}
+	if (args.provider === "AWS") {
+		if (!args.region) throw new UserError("Error: must provide --region.");
+		if (!args.bucket) throw new UserError("Error: must provide --bucket.");
+		if (!args.accessKeyId)
+			throw new UserError("Error: must provide --access-key-id.");
+		if (!args.secretAccessKey)
+			throw new UserError("Error: must provide --secret-access-key.");
+		if (!args.r2AccessKeyId)
+			throw new UserError("Error: must provide --r2-access-key-id.");
+		if (!args.r2SecretAccessKey)
+			throw new UserError("Error: must provide --r2-secret-access-key.");
+
 		sippyConfig = {
 			source: {
 				provider: "aws",
@@ -163,22 +172,33 @@ export async function EnableHandler(
 				secretAccessKey: args.r2SecretAccessKey,
 			},
 		};
-	} else if (args.provider == "GCS") {
+	} else if (args.provider === "GCS") {
 		if (args.serviceAccountKeyFile) {
 			const serviceAccount = JSON.parse(
 				readFileSync(args.serviceAccountKeyFile)
 			);
 			if ("client_email" in serviceAccount && "private_key" in serviceAccount) {
-				args.clientEmail = serviceAccount["client_email"];
-				args.privateKey = serviceAccount["private_key"];
+				args.clientEmail = serviceAccount.client_email;
+				args.privateKey = serviceAccount.private_key;
 			}
 		}
-		if (!(args.clientEmail && args.privateKey)) {
+
+		if (!args.bucket) throw new UserError("Error: must provide --bucket.");
+		if (!args.clientEmail)
 			throw new UserError(
-				`Error: must provide --service-account-key-file or --client-email and --private-key.`
+				"Error: must provide --service-account-key-file or --client-email."
 			);
-		}
+		if (!args.privateKey)
+			throw new UserError(
+				"Error: must provide --service-account-key-file or --private-key."
+			);
 		args.privateKey = args.privateKey.replace(/\\n/g, "\n");
+
+		if (!args.r2AccessKeyId)
+			throw new UserError("Error: must provide --r2-access-key-id.");
+		if (!args.r2SecretAccessKey)
+			throw new UserError("Error: must provide --r2-secret-access-key.");
+
 		sippyConfig = {
 			source: {
 				provider: "gcs",
@@ -192,6 +212,10 @@ export async function EnableHandler(
 				secretAccessKey: args.r2SecretAccessKey,
 			},
 		};
+	} else {
+		throw new UserError(
+			"Error: unrecognized provider. Possible options are AWS & GCS."
+		);
 	}
 
 	await putR2Sippy(accountId, args.name, sippyConfig, args.jurisdiction);
@@ -228,7 +252,7 @@ export async function GetHandler(
 		);
 		logger.log("Sippy configuration:", sippyConfig);
 	} catch (e) {
-		if (e instanceof APIError && "code" in e && e.code == NO_SUCH_OBJECT_KEY) {
+		if (e instanceof APIError && "code" in e && e.code === NO_SUCH_OBJECT_KEY) {
 			logger.log(`No Sippy configuration found for the '${args.name}' bucket.`);
 		} else {
 			throw e;
