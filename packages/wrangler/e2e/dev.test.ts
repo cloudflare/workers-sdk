@@ -611,7 +611,7 @@ describe("writes debug logs to hidden file", () => {
 			await waitForPortToBeBound(sessionA.port);
 
 			// 3. try to start worker B on the same port
-			await b.runDevSession(`--port ${sessionA.port}`, async (sessionB) => {
+			await b.runDevSession(``, async (sessionB) => {
 				// 4. wait until wrangler tries to start workerd
 				await waitUntilOutputContains(sessionB, "Starting local server...");
 				// 5. wait a period of time for workerd to complain about the port being in use
