@@ -505,6 +505,7 @@ async function getTestResponse({
 		metadata,
 		xServerEnvHeader: "dev",
 		logError: console.error,
+		setMetrics: () => {},
 		findAssetEntryForPath: async (...args) => {
 			spies.findAssetEntryForPath++;
 			return options.findAssetEntryForPath?.(...args) ?? null;
