@@ -4,6 +4,7 @@ import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
+import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
@@ -51,6 +52,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		preview,
 		batchSize,
 	}): Promise<void> => {
+		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
 			throw new UserError(
