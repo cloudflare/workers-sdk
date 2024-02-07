@@ -107,6 +107,16 @@ compatibility_date = "2023-01-01"
 		`
 		);
 	});
+	it("should reject invalid exchange_url", async () => {
+		const resp = await worker.fetch(
+			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
+			{ method: "POST" }
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"Error\\",\\"message\\":\\"Invalid URL\\"}"'
+		);
+	});
 	it("should allow tokens > 4096 bytes", async () => {
 		// 4096 is the size limit for cookies
 		const token = randomBytes(4096).toString("hex");
@@ -178,6 +188,28 @@ compatibility_date = "2023-01-01"
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
 			.split("=")[1];
+	});
+	it("should reject invalid prewarm url", async () => {
+		const resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
+				`http://127.0.0.1:${remote.port}`
+			)}&suffix=${encodeURIComponent("/hello?world")}`
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"Error\\",\\"message\\":\\"Invalid URL\\"}"'
+		);
+	});
+	it("should reject invalid remote url", async () => {
+		const resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
+				`http://127.0.0.1:${remote.port}/prewarm`
+			)}&remote=not_a_remote_url&suffix=${encodeURIComponent("/hello?world")}`
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"Error\\",\\"message\\":\\"Invalid URL\\"}"'
+		);
 	});
 
 	it("should convert cookie to header", async () => {
