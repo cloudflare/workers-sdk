@@ -5,8 +5,10 @@ export function isNavigatorDefined(
 	compatibility_flags: string[] = []
 ) {
 	assert(
-		compatibility_flags.includes("global_navigator") &&
-			compatibility_flags.includes("no_global_navigator"),
+		!(
+			compatibility_flags.includes("global_navigator") &&
+			compatibility_flags.includes("no_global_navigator")
+		),
 		"Can't both enable and disable a flag"
 	);
 	if (compatibility_flags.includes("global_navigator")) {
@@ -15,5 +17,5 @@ export function isNavigatorDefined(
 	if (compatibility_flags.includes("no_global_navigator")) {
 		return false;
 	}
-	return !compatibility_date || compatibility_date >= "2022-03-21";
+	return !!compatibility_date && compatibility_date >= "2022-03-21";
 }

@@ -5,6 +5,7 @@ import { writeAdditionalModules } from "../deployment-bundle/find-additional-mod
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
@@ -21,7 +22,6 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import { isNavigatorDefined } from "../navigator-user-agent";
 
 export type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 

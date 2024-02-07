@@ -1,7 +1,7 @@
+import { relative } from "path";
 import chalk from "chalk";
 import { logger } from "../../logger";
 import type { Plugin } from "esbuild";
-import { relative } from "path";
 
 // Infinite loop detection
 const seen = new Set();
@@ -17,6 +17,8 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 ) => ({
 	name: "nodejs_compat imports plugin",
 	setup(pluginBuild) {
+		seen.clear();
+		warnedPackaged.clear();
 		pluginBuild.onResolve(
 			{ filter: /node:.*/ },
 			async ({ path, kind, resolveDir, ...opts }) => {
