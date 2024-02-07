@@ -9,6 +9,7 @@ import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
 import type { MiniflareOptions } from "miniflare";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
 /**
  * Options for the `getBindingsProxy` utility
