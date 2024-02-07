@@ -537,6 +537,73 @@ describe("asset-server handler", () => {
 			`"</a.png>; rel=\\"preload\\"; as=image, </b.png>; rel=\\"preload\\"; as=image"`
 		);
 	});
+
+	test("should serve deleted assets from preservation cache", async () => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+		const { caches, cacheSpy } = createCacheStorage();
+
+		let findAssetEntryForPath = async (path: string) => {
+			if (path === "/foo.html") {
+				return "asset-key-foo.html";
+			}
+			return null;
+		};
+		const { response, spies } = await getTestResponse({
+			request: new Request("https://example.com/foo"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset: () =>
+				Promise.resolve(Object.assign(new Response("hello world!"))),
+		});
+		expect(response.status).toBe(200);
+		expect(await response.text()).toMatchInlineSnapshot('"hello world!"');
+		// waitUntil should be called for asset-preservation,
+		expect(spies.waitUntil.length).toBe(1);
+
+		await Promise.all(spies.waitUntil);
+
+		const preservationCache = cacheSpy["assetPreservationCacheV2"];
+		const preservationRes = await preservationCache.match(
+			"https://example.com/foo"
+		);
+
+		if (!preservationRes) {
+			throw new Error(
+				"Did not match preservation cache on https://example.com/foo"
+			);
+		}
+
+		expect(await preservationRes.text()).toMatchInlineSnapshot(
+			'"asset-key-foo.html"'
+		);
+
+		// Delete the asset from the manifest and ensure it's served from preservation cache
+		findAssetEntryForPath = async (path: string) => {
+			return null;
+		};
+		const { response: response2 } = await getTestResponse({
+			request: new Request("https://example.com/foo"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset: () =>
+				Promise.resolve(Object.assign(new Response("hello world!"))),
+		});
+		expect(response2.status).toBe(200);
+		expect(await response2.text()).toMatchInlineSnapshot('"hello world!"');
+
+		// Serve with a fresh cache and ensure we don't get a response
+		const { response: response3 } = await getTestResponse({
+			request: new Request("https://example.com/foo"),
+			metadata,
+			findAssetEntryForPath,
+			fetchAsset: () =>
+				Promise.resolve(Object.assign(new Response("hello world!"))),
+		});
+		expect(response3.status).toBe(404);
+	});
 });
 
 interface HandlerSpies {
