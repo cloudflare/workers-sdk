@@ -37,7 +37,10 @@ export type GetBindingsProxyOptions = {
 /**
  * Result of the `getBindingsProxy` utility
  */
-export type BindingsProxy<Bindings = Record<string, unknown>> = {
+export type BindingsProxy<
+	Bindings = Record<string, unknown>,
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+> = {
 	/**
 	 * Object containing the various proxies
 	 */
@@ -45,7 +48,7 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
 	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
-	cf: IncomingRequestCfProperties;
+	cf: CfProperties;
 	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
@@ -67,9 +70,12 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
  * @param options The various options that can tweak this function's behavior
  * @returns An Object containing the generated proxies alongside other related utilities
  */
-export async function getBindingsProxy<Bindings = Record<string, unknown>>(
+export async function getBindingsProxy<
+	Bindings = Record<string, unknown>,
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+>(
 	options: GetBindingsProxyOptions = {}
-): Promise<BindingsProxy<Bindings>> {
+): Promise<BindingsProxy<Bindings, CfProperties>> {
 	const rawConfig = readConfig(options.configPath, {
 		experimentalJsonConfig: options.experimentalJsonConfig,
 	});
@@ -101,7 +107,7 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 			...vars,
 			...bindings,
 		},
-		cf: cf as IncomingRequestCfProperties,
+		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
 		dispose: () => mf.dispose(),
