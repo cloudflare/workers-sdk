@@ -14,10 +14,9 @@ export default defineConfig({
 					bindings: { KEY: "value" },
 					// This doesn't actually do anything in tests
 					upstream: `http://localhost:${inject("port")}`,
-					// TODO(soon): allow object for hyperdrive bindings
-					// hyperdrives: {
-					// 	DATABASE: `postgres://user:pass@example.com:${inject("port")}/db`,
-					// },
+					hyperdrives: {
+						DATABASE: `postgres://user:pass@example.com:${inject("port")}/db`,
+					},
 				},
 			})),
 		},
