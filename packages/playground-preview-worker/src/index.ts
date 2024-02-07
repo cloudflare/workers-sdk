@@ -1,10 +1,17 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import prom from "promjs";
-import { Toucan } from "toucan-js";
-import { ZodIssue } from "zod";
+import {
+	HttpError,
+	PreviewRequestFailed,
+	PreviewRequestForbidden,
+	RawHttpFailed,
+	TokenUpdateFailed,
+	UploadFailed,
+} from "./errors";
 import { handleException, setupSentry } from "./sentry";
 import type { RegistryType } from "promjs";
+import type { Toucan } from "toucan-js";
 
 const app = new Hono<{
 	Bindings: Env;
@@ -20,118 +27,6 @@ const app = new Hono<{
 
 const rootDomain = ROOT;
 const previewDomain = PREVIEW;
-export class HttpError extends Error {
-	constructor(
-		message: string,
-		readonly status: number,
-		// Only report errors to sentry when they represent actionable errors
-		readonly reportable: boolean
-	) {
-		super(message);
-		Object.setPrototypeOf(this, new.target.prototype);
-	}
-	toResponse() {
-		return Response.json(
-			{
-				error: this.name,
-				message: this.message,
-				data: this.data,
-			},
-			{
-				status: this.status,
-				headers: {
-					"Access-Control-Allow-Origin": "*",
-					"Access-Control-Allow-Methods": "GET,PUT,POST",
-				},
-			}
-		);
-	}
-
-	get data(): Record<string, unknown> {
-		return {};
-	}
-}
-
-export class WorkerTimeout extends HttpError {
-	name = "WorkerTimeout";
-	constructor() {
-		super("Worker timed out", 400, false);
-	}
-
-	toResponse(): Response {
-		return new Response("Worker timed out");
-	}
-}
-
-export class ServiceWorkerNotSupported extends HttpError {
-	name = "ServiceWorkerNotSupported";
-	constructor() {
-		super(
-			"Service Workers are not supported in the Workers Playground",
-			400,
-			false
-		);
-	}
-}
-export class ZodSchemaError extends HttpError {
-	name = "ZodSchemaError";
-	constructor(private issues: ZodIssue[]) {
-		super("Something went wrong", 500, true);
-	}
-
-	get data(): { issues: string } {
-		return { issues: JSON.stringify(this.issues) };
-	}
-}
-
-export class PreviewError extends HttpError {
-	name = "PreviewError";
-	constructor(private error: string) {
-		super(error, 400, false);
-	}
-
-	get data(): { error: string } {
-		return { error: this.error };
-	}
-}
-
-class TokenUpdateFailed extends HttpError {
-	name = "TokenUpdateFailed";
-	constructor() {
-		super("Provide valid token", 400, false);
-	}
-}
-
-class RawHttpFailed extends HttpError {
-	name = "RawHttpFailed";
-	constructor() {
-		super("Provide valid token", 400, false);
-	}
-}
-
-class PreviewRequestFailed extends HttpError {
-	name = "PreviewRequestFailed";
-	constructor(private tokenId: string | undefined, reportable: boolean) {
-		super("Valid token not found", 400, reportable);
-	}
-	get data(): { tokenId: string | undefined } {
-		return { tokenId: this.tokenId };
-	}
-}
-
-class UploadFailed extends HttpError {
-	name = "UploadFailed";
-	constructor() {
-		super("Valid token not provided", 401, false);
-	}
-}
-
-class PreviewRequestForbidden extends HttpError {
-	name = "PreviewRequestForbidden";
-	constructor() {
-		super("Preview request forbidden", 403, false);
-	}
-}
 
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
@@ -254,7 +149,7 @@ app.get(`${rootDomain}/`, async (c) => {
 });
 
 app.post(`${rootDomain}/api/worker`, async (c) => {
-	let userId = getCookie(c, "user");
+	const userId = getCookie(c, "user");
 	if (!userId) {
 		throw new UploadFailed();
 	}
@@ -275,7 +170,7 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 
 app.get(`${rootDomain}/api/inspector`, async (c) => {
 	const url = new URL(c.req.url);
-	let userId = url.searchParams.get("user");
+	const userId = url.searchParams.get("user");
 	if (!userId) {
 		throw new PreviewRequestFailed("", false);
 	}
