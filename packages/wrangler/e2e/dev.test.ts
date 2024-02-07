@@ -601,7 +601,7 @@ describe("writes debug logs to hidden file", () => {
 		expect(filepath).toBeUndefined();
 	});
 
-	it.skip("rewrites address-in-use error logs", async () => {
+	it("rewrites address-in-use error logs", async () => {
 		// 1. start worker A on a (any) port
 		await a.runDevSession("", async (sessionA) => {
 			const normalize = (text: string) =>
