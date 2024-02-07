@@ -22,11 +22,13 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@miniflare/storage-memory": "^2.14.2",
 		"@cloudflare/workers-types": "^4.20230511.0",
-		"@types/service-worker-mock": "^2.0.1",
+		"@miniflare/cache": "^2.14.2",
+		"@miniflare/core": "^2.14.2",
+		"@miniflare/html-rewriter": "^2.14.2",
 		"concurrently": "^7.3.0",
-		"glob": "^8.0.3",
-		"service-worker-mock": "^2.0.5"
+		"glob": "^8.0.3"
 	},
 	"workers-sdk": {
 		"prerelease": true

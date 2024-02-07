@@ -319,7 +319,10 @@ export async function generateHandler<
 			...Object.fromEntries(extraHeaders.entries()),
 		});
 
-		if (earlyHintsCache) {
+		if (
+			earlyHintsCache &&
+			isHTMLContentType(response.headers.get("Content-Type"))
+		) {
 			const preEarlyHintsHeaders = new Headers(headers);
 
 			// "Early Hints cache entries are keyed by request URI and ignore query strings."
@@ -333,65 +336,70 @@ export async function generateHandler<
 				if (earlyHintsLinkHeader) {
 					headers.set("Link", earlyHintsLinkHeader);
 				}
-			}
+			} else {
+				const clonedResponse = response.clone();
 
-			const clonedResponse = response.clone();
+				if (waitUntil) {
+					waitUntil(
+						(async () => {
+							try {
+								const links: { href: string; rel: string; as?: string }[] = [];
 
-			if (waitUntil) {
-				waitUntil(
-					(async () => {
-						try {
-							const links: { href: string; rel: string; as?: string }[] = [];
-
-							const transformedResponse = new HTMLRewriter()
-								.on("link[rel~=preconnect],link[rel~=preload]", {
-									element(element) {
-										for (const [attributeName] of element.attributes) {
-											if (
-												!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
-													attributeName.toLowerCase()
-												)
-											) {
-												return;
+								const transformedResponse = new HTMLRewriter()
+									.on("link[rel~=preconnect],link[rel~=preload]", {
+										element(element) {
+											for (const [attributeName] of element.attributes) {
+												if (
+													!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
+														attributeName.toLowerCase()
+													)
+												) {
+													return;
+												}
 											}
-										}
 
-										const href = element.getAttribute("href") || undefined;
-										const rel = element.getAttribute("rel") || undefined;
-										const as = element.getAttribute("as") || undefined;
-										if (href && !href.startsWith("data:") && rel) {
-											links.push({ href, rel, as });
-										}
-									},
-								})
-								.transform(clonedResponse);
+											const href = element.getAttribute("href") || undefined;
+											const rel = element.getAttribute("rel") || undefined;
+											const as = element.getAttribute("as") || undefined;
+											if (href && !href.startsWith("data:") && rel) {
+												links.push({ href, rel, as });
+											}
+										},
+									})
+									.transform(clonedResponse);
 
-							// Needed to actually execute the HTMLRewriter handlers
-							await transformedResponse.text();
+								// Needed to actually execute the HTMLRewriter handlers
+								await transformedResponse.text();
 
-							links.forEach(({ href, rel, as }) => {
-								let link = `<${href}>; rel="${rel}"`;
-								if (as) {
-									link += `; as=${as}`;
+								links.forEach(({ href, rel, as }) => {
+									let link = `<${href}>; rel="${rel}"`;
+									if (as) {
+										link += `; as=${as}`;
+									}
+									preEarlyHintsHeaders.append("Link", link);
+								});
+
+								const linkHeader = preEarlyHintsHeaders.get("Link");
+								if (linkHeader) {
+									await earlyHintsCache.put(
+										earlyHintsCacheKey,
+										new Response(null, {
+											headers: {
+												Link: linkHeader,
+												"Cache-Control": "max-age=2592000", // 30 days
+											},
+										})
+									);
 								}
-								preEarlyHintsHeaders.append("Link", link);
-							});
-
-							const linkHeader = preEarlyHintsHeaders.get("Link");
-							if (linkHeader) {
-								await earlyHintsCache.put(
-									earlyHintsCacheKey,
-									new Response(null, { headers: { Link: linkHeader } })
-								);
+							} catch (err) {
+								// Nbd if we fail here in the deferred 'waitUntil' work. We're probably trying to parse a malformed page or something.
+								// Totally fine to skip over any errors.
+								// If we need to debug something, you can uncomment the following:
+								// logError(err)
 							}
-						} catch (err) {
-							// Nbd if we fail here in the deferred 'waitUntil' work. We're probably trying to parse a malformed page or something.
-							// Totally fine to skip over any errors.
-							// If we need to debug something, you can uncomment the following:
-							// logError(err)
-						}
-					})()
-				);
+						})()
+					);
+				}
 			}
 		}
 
@@ -537,7 +545,7 @@ export async function generateHandler<
 			}
 
 			if (
-				asset.contentType.startsWith("text/html") &&
+				isHTMLContentType(asset.contentType) &&
 				metadata.analytics?.version === ANALYTICS_VERSION
 			) {
 				return new HTMLRewriter()
@@ -631,4 +639,12 @@ function isPreview(url: URL): boolean {
 		return url.hostname.split(".").length > 3 ? true : false;
 	}
 	return false;
+}
+
+/**
+ * Whether or not the passed in string looks like an HTML
+ * Content-Type header
+ */
+function isHTMLContentType(contentType?: string | null) {
+	return contentType?.startsWith("text/html") || false;
 }
