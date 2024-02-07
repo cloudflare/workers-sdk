@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import prom from "promjs";
-import { Toucan } from "toucan-js";
-import { ZodIssue } from "zod";
 import { handleException, setupSentry } from "./sentry";
 import type { RegistryType } from "promjs";
+import type { Toucan } from "toucan-js";
+import type { ZodIssue } from "zod";
 
 const app = new Hono<{
 	Bindings: Env;
@@ -261,7 +261,7 @@ app.get(`${rootDomain}/`, async (c) => {
 });
 
 app.post(`${rootDomain}/api/worker`, async (c) => {
-	let userId = getCookie(c, "user");
+	const userId = getCookie(c, "user");
 	if (!userId) {
 		throw new UploadFailed();
 	}
@@ -282,7 +282,7 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 
 app.get(`${rootDomain}/api/inspector`, async (c) => {
 	const url = new URL(c.req.url);
-	let userId = url.searchParams.get("user");
+	const userId = url.searchParams.get("user");
 	if (!userId) {
 		throw new PreviewRequestFailed("", false);
 	}

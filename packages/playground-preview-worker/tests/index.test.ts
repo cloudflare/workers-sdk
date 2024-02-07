@@ -204,7 +204,9 @@ describe("Preview Worker", () => {
 			},
 		});
 		expect(resp.status).toBe(400);
-		expect(await resp.text()).toMatchInlineSnapshot('"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"');
+		expect(await resp.text()).toMatchInlineSnapshot(
+			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"'
+		);
 	});
 	it("should reject invalid token", async () => {
 		const resp = await fetch(PREVIEW_REMOTE, {

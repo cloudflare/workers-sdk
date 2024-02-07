@@ -1040,6 +1040,9 @@ importers:
         specifier: ^3.22.3
         version: 3.22.3
     devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
       '@cloudflare/workers-types':
         specifier: ^4.20230321.0
         version: 4.20230821.0

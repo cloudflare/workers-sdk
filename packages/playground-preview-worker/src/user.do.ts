@@ -2,20 +2,16 @@ import assert from "node:assert";
 import { Buffer } from "node:buffer";
 import z from "zod";
 import { constructMiddleware } from "./inject-middleware";
-import {
-	doUpload,
-	RealishPreviewConfig,
-	setupTokens,
-	UploadResult,
-} from "./realish";
+import { doUpload, setupTokens } from "./realish";
 import { handleException, setupSentry } from "./sentry";
 import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from ".";
+import type { RealishPreviewConfig, UploadResult } from "./realish";
 
 const encoder = new TextEncoder();
 
 async function hash(text: string) {
-	const hash = await crypto.subtle.digest("SHA-256", encoder.encode(text));
-	return Buffer.from(hash).toString("hex");
+	const digest = await crypto.subtle.digest("SHA-256", encoder.encode(text));
+	return Buffer.from(digest).toString("hex");
 }
 
 function switchRemote(url: URL, remote: string) {
@@ -51,7 +47,7 @@ export class UserSession {
 	inspectorUrl: string | undefined;
 	workerName!: string;
 	constructor(private state: DurableObjectState, private env: Env) {
-		this.state.blockConcurrencyWhile(async () => {
+		void this.state.blockConcurrencyWhile(async () => {
 			this.config = await this.state.storage.get<RealishPreviewConfig>(
 				"config"
 			);
@@ -212,9 +208,9 @@ export class UserSession {
 
 		metadata.main_module = entrypoint;
 
-		for (const [path, m] of additionalModules.entries()) {
-			assert(m instanceof File);
-			worker.set(path, m);
+		for (const [path, additionalModule] of additionalModules.entries()) {
+			assert(additionalModule instanceof File);
+			worker.set(path, additionalModule);
 		}
 
 		worker.set(
