@@ -5,6 +5,7 @@ import { Static, Text } from "ink";
 import Table from "ink-table";
 import { Miniflare } from "miniflare";
 import React from "react";
+import { printWranglerBanner } from "../";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -98,6 +99,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
 		logger.loggerLevel = "error";
 	}
+	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 
 	if (file && command)
