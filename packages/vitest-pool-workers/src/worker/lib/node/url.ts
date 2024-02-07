@@ -1,18 +1,17 @@
 import path from "node:path";
 
 // https://nodejs.org/api/url.html#urlfileurltopathurl
-// eslint-disable-next-line no-shadow
-export function fileURLToPath(path: string | URL): string {
+export function fileURLToPath(url: string | URL): string {
 	// https://github.com/denoland/deno_std/blob/01a401c432fd5628efd3a4fafffdc14660efe9e2/node/url.ts#L1286
 	// Thanks 🦖!
-	if (typeof path === "string") path = new URL(path);
-	else if (!(path instanceof URL)) {
-		throw new TypeError(`Expected path to be string | URL, got ${path}`);
+	if (typeof url === "string") url = new URL(url);
+	else if (!(url instanceof URL)) {
+		throw new TypeError(`Expected path to be string | URL, got ${url}`);
 	}
-	if (path.protocol !== "file:") {
+	if (url.protocol !== "file:") {
 		throw new TypeError("Expected protocol to be file:");
 	}
-	return getPathFromURLPosix(path);
+	return getPathFromURLPosix(url);
 }
 function getPathFromURLPosix(url: URL) {
 	if (url.hostname !== "") {

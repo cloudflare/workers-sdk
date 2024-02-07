@@ -161,6 +161,34 @@ function getDurableObjectBindingNamesToSelf(
 	return result;
 }
 
+interface DurableObjectDesignator {
+	className: string;
+	scriptName?: string;
+	unsafeUniqueKey?: string;
+}
+/**
+ * Returns a map of Durable Objects bindings' bound names to the designators of
+ * the objects they point to.
+ */
+function getDurableObjectDesignators(
+	options: WorkersProjectOptions
+): Map<string /* bound name */, DurableObjectDesignator> {
+	const result = new Map<string, DurableObjectDesignator>();
+	const durableObjects = options.miniflare?.durableObjects ?? {};
+	for (const [key, designator] of Object.entries(durableObjects)) {
+		if (typeof designator === "string") {
+			result.set(key, { className: USER_OBJECT_MODULE_NAME + designator });
+		} else if (typeof designator.unsafeUniqueKey !== "symbol") {
+			result.set(key, {
+				className: designator.className,
+				scriptName: designator.scriptName,
+				unsafeUniqueKey: designator.unsafeUniqueKey,
+			});
+		}
+	}
+	return result;
+}
+
 const USER_OBJECT_MODULE_NAME = "__VITEST_POOL_WORKERS_USER_OBJECT";
 const USER_OBJECT_MODULE_PATH = path.join(
 	path.dirname(POOL_WORKER_PATH),
@@ -204,6 +232,7 @@ type ProjectWorkers = [
 	...auxiliaryWorkers: WorkerOptions[]
 ];
 
+const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
@@ -212,8 +241,10 @@ function buildProjectWorkerOptions(
 ): ProjectWorkers {
 	const runnerWorker = project.options.miniflare ?? {};
 
-	// Make sure the worker has a well-known name
+	// Make sure the worker has a well-known name, and share it with the runner
 	runnerWorker.name = getRunnerName(project.project);
+	runnerWorker.bindings ??= {};
+	runnerWorker.bindings[SELF_NAME_BINDING] = runnerWorker.name;
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`
 	// compatibility flags enabled. Vitest makes heavy use of Node APIs, and many
@@ -367,6 +398,12 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		for (const testFile of project.testFiles) {
 			const testWorker = { ...runnerWorker };
 			testWorker.name = getRunnerName(project.project, testFile);
+
+			// Update binding to own name
+			assert(testWorker.bindings !== undefined);
+			testWorker.bindings = { ...testWorker.bindings };
+			testWorker.bindings[SELF_NAME_BINDING] = testWorker.name;
+
 			testWorkers.push(testWorker);
 		}
 		return {
@@ -677,9 +714,21 @@ export default function (ctx: Vitest): ProcessPool {
 						// bindings that point to classes in the current isolate in the
 						// serialized config
 						main: maybeGetResolvedMainPath(project),
+						// Include bound names of all Durable Object namespaces to the
+						// current worker. We'll check the stubs belong to these namespaces
+						// in Durable Object test helpers, since they rely on wrapping the
+						// object.
 						isolateDurableObjectBindings: Array.from(
 							getDurableObjectBindingNamesToSelf(project.options)
 						),
+						// Include designators of all Durable Object namespaces bound in the
+						// runner worker. We'll use this to list IDs in a namespace.
+						durableObjectBindingDesignators: getDurableObjectDesignators(
+							project.options
+						),
+						// Include whether isolated storage has been enabled for this
+						// project, so we know whether to call out to the loopback service
+						// to push/pop the storage stack between tests.
 						isolatedStorage: project.options.isolatedStorage,
 					},
 				};

@@ -1662,13 +1662,13 @@ export class Miniflare {
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
-	unsafeGetPersistPaths(): Set<string> {
-		const result = new Set<string>();
+	unsafeGetPersistPaths(): Map<keyof Plugins, string> {
+		const result = new Map<keyof Plugins, string>();
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const sharedOpts = this.#sharedOpts[key];
 			// @ts-expect-error `sharedOptions` will match the plugin's type here
 			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
-			if (maybePath !== undefined) result.add(maybePath);
+			if (maybePath !== undefined) result.set(key, maybePath);
 		}
 		return result;
 	}

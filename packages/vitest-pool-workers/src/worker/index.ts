@@ -110,7 +110,7 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 export class RunnerObject implements DurableObject {
 	executor: VitestExecutorType | undefined;
 
-	constructor(_state: DurableObjectState, env: Env) {
+	constructor(_state: DurableObjectState, env: Record<string, unknown> & Env) {
 		vm._setUnsafeEval(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		setEnv(env);

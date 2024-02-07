@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { env as globalEnv, getSerializedOptions } from "./env";
+import { internalEnv, getSerializedOptions } from "./env";
 import { importModule, mustGetResolvedMainPath } from "./import";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
@@ -47,7 +47,7 @@ function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 	const options = getSerializedOptions();
 	if (options.isolateDurableObjectBindings === undefined) return [];
 	sameIsolatedNamespaces = options.isolateDurableObjectBindings.map((name) => {
-		const namespace = globalEnv[name];
+		const namespace = internalEnv[name];
 		assert(
 			isDurableObjectNamespace(namespace),
 			`Expected ${name} to be a DurableObjectNamespace binding`
@@ -253,4 +253,51 @@ export function createDurableObjectWrapper(
 			super(state, env, className);
 		}
 	};
+}
+
+export async function listDurableObjectIds(
+	namespace: DurableObjectNamespace
+): Promise<DurableObjectId[]> {
+	if (!isDurableObjectNamespace(namespace)) {
+		throw new TypeError(
+			"Failed to execute 'listDurableObjectIds': parameter 1 is not of type 'DurableObjectNamespace'."
+		);
+	}
+
+	// To get an instance of `DurableObjectNamespace`, the user must've bound the
+	// namespace to the test runner worker, since `DurableObjectNamespace` has no
+	// user-accessible constructor. This means `namespace` must be in `globalEnv`.
+	// We can use this to find the bound name for this binding. We inject a
+	// mapping between bound names and unique keys for namespaces. We then use
+	// this to get a unique key and find all IDs on disk.
+	const boundName = Object.entries(internalEnv).find(
+		(entry) => namespace === entry[1]
+	)?.[0];
+	assert(boundName !== undefined, "Expected to find bound name for namespace");
+
+	const options = getSerializedOptions();
+	const designator = options.durableObjectBindingDesignators?.get(boundName);
+	assert(designator !== undefined, "Expected to find designator for namespace");
+
+	let uniqueKey = designator.unsafeUniqueKey;
+	if (uniqueKey === undefined) {
+		const scriptName =
+			designator.scriptName ?? internalEnv.__VITEST_POOL_WORKERS_SELF_NAME;
+		const className = designator.className;
+		uniqueKey = `${scriptName}-${className}`;
+	}
+
+	const url = `http://placeholder/durable-objects?unique_key=${encodeURIComponent(
+		uniqueKey
+	)}`;
+	const res = await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
+		url
+	);
+	assert.strictEqual(res.status, 200);
+	const ids = await res.json();
+	assert(Array.isArray(ids));
+	return ids.map((id) => {
+		assert(typeof id === "string");
+		return namespace.idFromString(id);
+	});
 }

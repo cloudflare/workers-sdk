@@ -29,7 +29,8 @@ declare module "cloudflare:test" {
 	 * Conceptually, this temporarily replaces your Durable Object's `fetch()`
 	 * handler with `callback`, then sends a request to it, returning the result.
 	 * This can be used to call/spy-on Durable Object instance methods or seed/get
-	 * persisted data.
+	 * persisted data. Note this can only be used with `stub`s pointing to Durable
+	 * Objects defined in the `main` worker.
 	 */
 	export function runInDurableObject<O extends DurableObject, R>(
 		stub: DurableObjectStub,
@@ -38,11 +39,20 @@ declare module "cloudflare:test" {
 	/**
 	 * Immediately runs and removes the Durable Object pointed-to by `stub`'s
 	 * alarm if one is scheduled. Returns `true` if an alarm ran, and `false`
-	 * otherwise.
+	 * otherwise. Note this can only be used with `stub`s pointing to Durable
+	 * Objects defined in the `main` worker.
 	 */
 	export function runDurableObjectAlarm(
 		stub: DurableObjectStub
 	): Promise<boolean /* ran */>;
+	/**
+	 * Gets the IDs of all objects that have been created in the `namespace`.
+	 * Respects `isolatedStorage` if enabled, i.e. objects created in a different
+	 * test won't be returned.
+	 */
+	export function listDurableObjectIds(
+		namespace: DurableObjectNamespace
+	): Promise<DurableObjectId[]>;
 
 	/**
 	 * Creates an instance of `ExecutionContext` for use as the 3rd argument to

@@ -7,15 +7,26 @@ interface UnsafeEval {
 }
 
 interface Env {
+	__VITEST_POOL_WORKERS_SELF_NAME: string;
 	__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
 	__VITEST_POOL_WORKERS_RUNNER_OBJECT: DurableObjectNamespace;
 	__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
+}
+
+interface DurableObjectDesignator {
+	className: string;
+	scriptName?: string;
+	unsafeUniqueKey?: string;
 }
 
 interface SerializedOptions {
 	// Defined in `src/pool/index.ts`
 	main?: string;
 	isolateDurableObjectBindings?: string[];
+	durableObjectBindingDesignators?: Map<
+		string /* bound name */,
+		DurableObjectDesignator
+	>;
 	isolatedStorage?: boolean;
 }
 

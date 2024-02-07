@@ -128,6 +128,8 @@ interface StackedStorageState {
 	// `*Persist` settings in `setOptions()` calls, so persistence paths for a given
 	// `Miniflare` instance will always be the same.
 	persistPaths: string[]; // (unique)
+	// We need this one specifically for listing Durable Object IDs.
+	durableObjectPersistPath: string;
 	// `Promise` that will resolve when the background persistence directory
 	// cleanup completes. We do this in the background at the end of tests as
 	// opposed to before tests start, so re-runs start quickly, and results are
@@ -139,10 +141,17 @@ const stackStates = new WeakMap<Miniflare, StackedStorageState>();
 function getState(mf: Miniflare) {
 	let state = stackStates.get(mf);
 	if (state === undefined) {
+		const persistPaths = mf.unsafeGetPersistPaths();
+		const durableObjectPersistPath = persistPaths.get("do");
+		assert(
+			durableObjectPersistPath !== undefined,
+			"Expected Durable Object persist path"
+		);
 		state = {
 			mutex: new Mutex(),
 			depth: 0,
-			persistPaths: Array.from(mf.unsafeGetPersistPaths()),
+			persistPaths: Array.from(new Set(persistPaths.values())),
+			durableObjectPersistPath,
 		};
 		stackStates.set(mf, state);
 	}
@@ -293,6 +302,31 @@ async function handleStorageRequest(
 	return new Response(null, { status: 405 });
 }
 
+export async function handleDurableObjectsRequest(
+	request: Request,
+	mf: Miniflare,
+	url: URL
+): Promise<Response> {
+	if (request.method !== "GET") return new Response(null, { status: 405 });
+	const { durableObjectPersistPath } = getState(mf);
+	const uniqueKey = url.searchParams.get("unique_key");
+	if (uniqueKey === null) return new Response(null, { status: 400 });
+	const namespacePath = path.join(durableObjectPersistPath, uniqueKey);
+
+	const ids: string[] = [];
+	try {
+		const names = await fs.readdir(namespacePath);
+		for (const name of names) {
+			if (name.endsWith(".sqlite")) {
+				ids.push(name.substring(0, name.length - 7 /* ".sqlite".length */));
+			}
+		}
+	} catch (e) {
+		if (!isFileNotFoundError(e)) throw e;
+	}
+	return Response.json(ids);
+}
+
 export function handleLoopbackRequest(
 	request: Request,
 	mf: Miniflare
@@ -300,5 +334,8 @@ export function handleLoopbackRequest(
 	const url = new URL(request.url);
 	if (url.pathname === "/snapshot") return handleSnapshotRequest(request, url);
 	if (url.pathname === "/storage") return handleStorageRequest(request, mf);
+	if (url.pathname === "/durable-objects") {
+		return handleDurableObjectsRequest(request, mf, url);
+	}
 	return new Response(null, { status: 404 });
 }

@@ -3,6 +3,7 @@ import {
 	fetchMock,
 	runInDurableObject,
 	runDurableObjectAlarm,
+	listDurableObjectIds,
 	createExecutionContext,
 	getWaitUntil,
 } from "cloudflare:test";
@@ -43,8 +44,15 @@ describe("kv", () => {
 		expect(await response.json()).toMatchObject({ value: 1 });
 		response = await stub.fetch("http://x/abc");
 		expect(await response.json()).toMatchObject({ value: 2 });
+
+		const ids = await listDurableObjectIds(env.COUNTER);
+		expect(ids.length).toBe(1);
+		expect(ids[0].equals(id)).toBe(true);
 	});
 	it("stores in Durable Object instances", async () => {
+		const ids = await listDurableObjectIds(env.COUNTER);
+		expect(ids.length).toBe(0); // Isolation!
+
 		const id = env.COUNTER.idFromName("a");
 		const stub = env.COUNTER.get(id);
 
@@ -87,8 +95,12 @@ describe("kv", () => {
 		const stub = env.OTHER.get(id);
 		const response = await stub.fetch("http://x");
 		expect(await response.text()).toBe("other Durable Object body");
-		// Can only use Durable Object helpers for same-isolate objects
+		// Can only use Durable Object runner helpers for same-isolate objects
 		await expect(runInDurableObject(stub, () => {})).rejects.toThrow();
+
+		const ids = await listDurableObjectIds(env.OTHER);
+		expect(ids.length).toBe(1);
+		expect(ids[0].equals(id)).toBe(true);
 	});
 
 	it("fetches", async () => {

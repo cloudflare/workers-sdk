@@ -3,6 +3,7 @@ export {
 	fetchMock,
 	runInDurableObject,
 	runDurableObjectAlarm,
+	listDurableObjectIds,
 	createExecutionContext,
 	getWaitUntil,
 	createScheduledController,
