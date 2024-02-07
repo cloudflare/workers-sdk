@@ -16,29 +16,52 @@ const configObject = ExtractorConfig.loadFile(configObjectFullPath);
 // include the dependencies we want to bundle
 configObject.bundledPackages = BUNDLED_DEPENDENCIES;
 
-const extractorConfig = ExtractorConfig.prepare({
-	configObject,
-	configObjectFullPath,
-	packageJsonFullPath,
-	packageJson,
-});
+const pkgRoot = path.resolve(__dirname, "..");
 
-// Invoke API Extractor
-const extractorResult = Extractor.invoke(extractorConfig, {
-	// Equivalent to the "--local" command-line parameter
-	localBuild: true,
+// `api-extractor` doesn't know to load `index.ts` instead of `index.d.ts` when
+// resolving imported types, so copy `index.ts` to `index.d.ts`, bundle types,
+// then restore the original contents. We need the original `index.d.ts` for
+// typing the `packages/miniflare/src/workers` directory.
+const workersTypesExperimental = path.join(
+	pkgRoot,
+	"node_modules",
+	"@cloudflare",
+	"workers-types",
+	"experimental"
+);
+const indexTsPath = path.join(workersTypesExperimental, "index.ts");
+const indexDtsPath = path.join(workersTypesExperimental, "index.d.ts");
+const originalDtsContent = fs.readFileSync(indexDtsPath);
 
-	// Equivalent to the "--verbose" command-line parameter
-	showVerboseMessages: true,
-});
+fs.copyFileSync(indexTsPath, indexDtsPath);
 
-if (extractorResult.succeeded) {
-	console.log(`API Extractor completed successfully`);
-	process.exitCode = 0;
-} else {
-	console.error(
-		`API Extractor completed with ${extractorResult.errorCount} errors` +
-			` and ${extractorResult.warningCount} warnings`
-	);
-	process.exitCode = 1;
+try {
+	const extractorConfig = ExtractorConfig.prepare({
+		configObject,
+		configObjectFullPath,
+		packageJsonFullPath,
+		packageJson,
+	});
+
+	// Invoke API Extractor
+	const extractorResult = Extractor.invoke(extractorConfig, {
+		// Equivalent to the "--local" command-line parameter
+		localBuild: true,
+
+		// Equivalent to the "--verbose" command-line parameter
+		showVerboseMessages: true,
+	});
+
+	if (extractorResult.succeeded) {
+		console.log(`API Extractor completed successfully`);
+		process.exitCode = 0;
+	} else {
+		console.error(
+			`API Extractor completed with ${extractorResult.errorCount} errors` +
+				` and ${extractorResult.warningCount} warnings`
+		);
+		process.exitCode = 1;
+	}
+} finally {
+	fs.writeFileSync(indexDtsPath, originalDtsContent);
 }

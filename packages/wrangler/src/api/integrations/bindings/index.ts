@@ -8,6 +8,7 @@ import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions } from "miniflare";
 
 /**
@@ -36,11 +37,18 @@ export type GetBindingsProxyOptions = {
 /**
  * Result of the `getBindingsProxy` utility
  */
-export type BindingsProxy<Bindings = Record<string, unknown>> = {
+export type BindingsProxy<
+	Bindings = Record<string, unknown>,
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+> = {
 	/**
 	 * Object containing the various proxies
 	 */
 	bindings: Bindings;
+	/**
+	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
+	 */
+	cf: CfProperties;
 	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
@@ -62,9 +70,12 @@ export type BindingsProxy<Bindings = Record<string, unknown>> = {
  * @param options The various options that can tweak this function's behavior
  * @returns An Object containing the generated proxies alongside other related utilities
  */
-export async function getBindingsProxy<Bindings = Record<string, unknown>>(
+export async function getBindingsProxy<
+	Bindings = Record<string, unknown>,
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+>(
 	options: GetBindingsProxyOptions = {}
-): Promise<BindingsProxy<Bindings>> {
+): Promise<BindingsProxy<Bindings, CfProperties>> {
 	const rawConfig = readConfig(options.configPath, {
 		experimentalJsonConfig: options.experimentalJsonConfig,
 	});
@@ -88,11 +99,15 @@ export async function getBindingsProxy<Bindings = Record<string, unknown>>(
 
 	const vars = getVarsForDev(rawConfig, env);
 
+	const cf = await mf.getCf();
+	deepFreeze(cf);
+
 	return {
 		bindings: {
 			...vars,
 			...bindings,
 		},
+		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
 		dispose: () => mf.dispose(),
@@ -176,4 +191,15 @@ function getMiniflarePersistOptions(
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
 	};
+}
+
+function deepFreeze<T extends Record<string | number | symbol, unknown>>(
+	obj: T
+): void {
+	Object.freeze(obj);
+	Object.entries(obj).forEach(([, prop]) => {
+		if (prop !== null && typeof prop === "object" && !Object.isFrozen(prop)) {
+			deepFreeze(prop as Record<string | number | symbol, unknown>);
+		}
+	});
 }
