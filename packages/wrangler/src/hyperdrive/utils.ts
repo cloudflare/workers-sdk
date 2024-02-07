@@ -1,12 +1,5 @@
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 
-export const getHyperdriveLocalConnectionStringFromEnv = (
-	bindingName: string
-) =>
-	getEnvironmentVariableFactory({
-		variableName: `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${bindingName}`,
-	})();
-
 export const getHyperdriveWarningFromEnv = getEnvironmentVariableFactory({
 	variableName: "NO_HYPERDRIVE_WARNING",
 });

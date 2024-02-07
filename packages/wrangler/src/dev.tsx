@@ -11,7 +11,6 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
-import { getHyperdriveLocalConnectionStringFromEnv } from "./hyperdrive/utils";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
@@ -956,12 +955,13 @@ export function getBindings(
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
-			const connectionStringFromEnv = getHyperdriveLocalConnectionStringFromEnv(
-				hyperdrive.binding
-			);
+			const connectionStringFromEnv =
+				process.env[
+					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
+				];
 			if (!connectionStringFromEnv || !hyperdrive.localConnectionString) {
 				throw new UserError(
-					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_{binding_name}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
+					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 				);
 			}
 
