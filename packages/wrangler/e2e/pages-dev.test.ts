@@ -40,7 +40,7 @@ describe("pages dev tests", () => {
 
 	beforeEach(async () => {
 		const root = await makeRoot();
-		workerName = `tmp-wrangler-e2e-${crypto.randomBytes(4).toString("hex")}`;
+		workerName = `tmp-e2e-wrangler-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
 		await seed(workerPath, {
 			"package.json": dedent`

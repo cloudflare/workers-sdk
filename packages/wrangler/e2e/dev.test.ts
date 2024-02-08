@@ -132,7 +132,7 @@ type DevWorker = {
 };
 async function makeWorker(): Promise<DevWorker> {
 	const root = await makeRoot();
-	const workerName = `tmp-wrangler-e2e-${crypto
+	const workerName = `tmp-e2e-wrangler-${crypto
 		.randomBytes(4)
 		.toString("hex")}`;
 	const workerPath = path.join(root, workerName);
