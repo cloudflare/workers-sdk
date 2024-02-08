@@ -43,13 +43,11 @@
 		"@cloudflare/workers-types": "^4.20231218.0",
 		"@types/mime": "^3.0.4",
 		"@types/node": "^18.11.12",
-		"ava": "^6.0.1"
+		"ava": "^6.0.1",
+		"service-worker-mock": "^2.0.5"
 	},
 	"engines": {
 		"node": ">=16.13"
-	},
-	"volta": {
-		"extends": "../../package.json"
 	},
 	"publishConfig": {
 		"access": "public"

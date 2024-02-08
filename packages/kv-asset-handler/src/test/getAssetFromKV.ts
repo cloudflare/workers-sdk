@@ -1,5 +1,4 @@
 import test from "ava";
-import { getAssetFromKV, mapRequestToAsset } from "../index";
 import {
 	getEvent,
 	mockGlobalScope,
@@ -11,6 +10,8 @@ import {
 import { KVError } from "../types";
 
 mockGlobalScope();
+
+const { getAssetFromKV, mapRequestToAsset } = require("../index");
 
 test("getAssetFromKV return correct val from KV and default caching", async (t) => {
 	mockRequestScope();
