@@ -12,7 +12,7 @@ import { WRANGLER } from "./helpers/wrangler-command";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(
-		/https:\/\/smoke-test-worker-.+?\.(.+?\.workers\.dev)/
+		/https:\/\/tmp-wrangler-e2e-.+?\.(.+?\.workers\.dev)/
 	)?.[1] as string;
 }
 
@@ -28,12 +28,12 @@ describe("c3 integration", () => {
 	beforeAll(async () => {
 		const root = await makeRoot();
 		runInRoot = shellac.in(root).env(process.env);
-		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
+		workerName = `tmp-wrangler-e2e-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
 		runInWorker = shellac.in(workerPath).env(process.env);
 		normalize = (str) =>
 			normalizeOutput(str, {
-				[workerName]: "smoke-test-worker",
+				[workerName]: "tmp-wrangler-e2e",
 				[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 			});
 
@@ -64,9 +64,9 @@ describe("c3 integration", () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded smoke-test-worker (TIMINGS)
-			Published smoke-test-worker (TIMINGS)
-			  https://smoke-test-worker.SUBDOMAIN.workers.dev
+			Uploaded tmp-wrangler-e2e (TIMINGS)
+			Published tmp-wrangler-e2e (TIMINGS)
+			  https://tmp-wrangler-e2e.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
@@ -84,9 +84,9 @@ describe("c3 integration", () => {
 	it("delete the worker", async () => {
 		const { stdout, stderr } = await runInWorker`$$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
+			"? Are you sure you want to delete tmp-wrangler-e2e? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes
-			Successfully deleted smoke-test-worker"
+			Successfully deleted tmp-wrangler-e2e"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		const { status } = await retry(
