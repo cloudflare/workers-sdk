@@ -17,6 +17,9 @@
 # C3 ownership
 /packages/create-cloudflare/ @cloudflare/c3
 
+# kv-asset-handler ownership
+/packages/kv-asset-handler/ @cloudflare/developer-advocacy @kristianfreeman @rickyrobinett @lauragift21 @LoganGrasby @craigsdennis
+
 # Owners intentionally left blank on these shared directories
 # to avoid noisy review requests
 /.changeset/
