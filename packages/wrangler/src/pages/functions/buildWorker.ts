@@ -31,6 +31,7 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
+	defineNavigatorUserAgent: boolean;
 };
 
 export function buildWorkerFromFunctions({
@@ -47,6 +48,7 @@ export function buildWorkerFromFunctions({
 	nodejsCompat,
 	functionsDirectory,
 	local,
+	defineNavigatorUserAgent,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
@@ -158,6 +160,7 @@ export function buildWorkerFromFunctions({
 		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }
 
@@ -178,6 +181,7 @@ export type RawOptions = {
 	nodejsCompat?: boolean;
 	local: boolean;
 	additionalModules?: CfModule[];
+	defineNavigatorUserAgent: boolean;
 };
 
 /**
@@ -203,6 +207,7 @@ export function buildRawWorker({
 	nodejsCompat,
 	local,
 	additionalModules = [],
+	defineNavigatorUserAgent,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
@@ -252,6 +257,7 @@ export function buildRawWorker({
 		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }
 
@@ -259,10 +265,12 @@ export async function traverseAndBuildWorkerJSDirectory({
 	workerJSDirectory,
 	buildOutputDirectory,
 	nodejsCompat,
+	defineNavigatorUserAgent,
 }: {
 	workerJSDirectory: string;
 	buildOutputDirectory: string;
 	nodejsCompat?: boolean;
+	defineNavigatorUserAgent: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
@@ -297,6 +305,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		onEnd: () => {},
 		nodejsCompat,
 		additionalModules,
+		defineNavigatorUserAgent,
 	});
 
 	return {

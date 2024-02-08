@@ -74,6 +74,19 @@ class PreviewRequestFailed extends HttpError {
 	}
 }
 
+class InvalidURL extends HttpError {
+	constructor(private readonly url: string) {
+		super("Invalid URL", 400, false);
+	}
+	get data() {
+		return { url: this.url };
+	}
+}
+
+function assertValidURL(maybeUrl: string) {
+	if (!URL.canParse(maybeUrl)) throw new InvalidURL(maybeUrl);
+}
+
 function switchRemote(url: URL, remote: string) {
 	const workerUrl = new URL(url);
 	const remoteUrl = new URL(remote);
@@ -252,6 +265,9 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 		throw new TokenUpdateFailed();
 	}
 
+	assertValidURL(prewarmUrl);
+	assertValidURL(remote);
+
 	ctx.waitUntil(
 		fetch(prewarmUrl, {
 			method: "POST",
@@ -296,6 +312,7 @@ async function handleTokenExchange(url: URL) {
 	if (!exchangeUrl) {
 		throw new NoExchangeUrl();
 	}
+	assertValidURL(exchangeUrl);
 	const exchangeRes = await fetch(exchangeUrl);
 	if (exchangeRes.status !== 200) {
 		const exchange = new URL(exchangeUrl);

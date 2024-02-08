@@ -24,6 +24,7 @@ import {
 	unregisterWorker,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
@@ -354,6 +355,10 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onBundleStart,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
 	useEffect(() => {
 		if (bundle) onReloadStart(bundle);

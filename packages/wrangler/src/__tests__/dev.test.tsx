@@ -879,12 +879,12 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.2.3.4",
+					ip: "::1",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("1.2.3.4");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("::1");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -894,12 +894,14 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.2.3.4",
+					ip: "::1",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --ip=5.6.7.8");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("5.6.7.8");
+			await runWrangler("dev --ip=127.0.0.1");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+				"127.0.0.1"
+			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);

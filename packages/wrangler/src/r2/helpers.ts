@@ -97,7 +97,7 @@ export async function getR2Object(
 	bucketName: string,
 	objectName: string,
 	jurisdiction?: string
-): Promise<ReadableStream> {
+): Promise<ReadableStream | null> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
@@ -110,7 +110,7 @@ export async function getR2Object(
 		}
 	);
 
-	return response.body;
+	return response === null ? null : response.body;
 }
 
 /**
@@ -142,7 +142,7 @@ export async function putR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchR2Objects(
+	const result = await fetchR2Objects(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			body: object,
@@ -151,6 +151,9 @@ export async function putR2Object(
 			duplex: "half",
 		}
 	);
+	if (result === null) {
+		throw new UserError("The specified bucket does not exist.");
+	}
 }
 /**
  * Delete an Object
@@ -224,6 +227,18 @@ export async function usingLocalBucket<T>(
 	}
 }
 
+type SippyConfig = {
+	source:
+		| { provider: "aws"; region: string; bucket: string }
+		| { provider: "gcs"; bucket: string };
+	destination: {
+		provider: "r2";
+		account: string;
+		bucket: string;
+		accessKeyId: string;
+	};
+};
+
 /**
  * Retreive the sippy upstream bucket for the bucket with the given name
  */
@@ -231,7 +246,7 @@ export async function getR2Sippy(
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
-): Promise<string> {
+): Promise<SippyConfig> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
@@ -260,26 +275,27 @@ export async function deleteR2Sippy(
 	);
 }
 
-export type R2Credentials = {
-	bucket: string;
-	r2_key_id: string;
-	r2_access_key: string;
+export type SippyPutParams = {
+	source:
+		| {
+				provider: "aws";
+				region: string;
+				bucket: string;
+				accessKeyId: string;
+				secretAccessKey: string;
+		  }
+		| {
+				provider: "gcs";
+				bucket: string;
+				clientEmail: string;
+				privateKey: string;
+		  };
+	destination: {
+		provider: "r2";
+		accessKeyId: string;
+		secretAccessKey: string;
+	};
 };
-
-export type SippyPutConfig = R2Credentials &
-	(
-		| {
-				provider: "AWS";
-				zone: string | undefined;
-				key_id: string;
-				access_key: string;
-		  }
-		| {
-				provider: "GCS";
-				client_email: string;
-				private_key: string;
-		  }
-	);
 
 /**
  * Enable sippy on the bucket with the given name
@@ -287,15 +303,17 @@ export type SippyPutConfig = R2Credentials &
 export async function putR2Sippy(
 	accountId: string,
 	bucketName: string,
-	config: SippyPutConfig,
+	params: SippyPutParams,
 	jurisdiction?: string
 ): Promise<void> {
-	const headers: HeadersInit = {};
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
-		{ method: "PUT", body: JSON.stringify(config), headers }
+		{ method: "PUT", body: JSON.stringify(params), headers }
 	);
 }

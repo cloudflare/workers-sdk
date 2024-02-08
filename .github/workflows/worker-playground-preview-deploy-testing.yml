@@ -1,50 +1,58 @@
-name: Playground Worker tests
+name: Deploy Playground Preview Worker (testing)
 
+# On a push to `main`, on Cloudflare, where there are changes to the files in this worker's package,
+# or an update to a PR, on Cloudflare, labelled as `playground-worker`,
+# deploy to testing and then run the end-to-end tests against this deployment.
 on:
   push:
     branches:
       - main
-      - changeset-release/main
+    paths:
+      - "packages/playground-preview-worker/**"
+
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
-  repository_dispatch:
 
 jobs:
   e2e-test:
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'playground-worker' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
-    name: "Playground Worker Test"
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || contains(github.event.*.labels.*.name, 'playground-worker'))
+    name: "Deploy Playground Preview Worker (testing)"
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repo
+      - name: Checkout repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v2
+
+      - name: Use pnpm 8.8.0
+        uses: pnpm/action-setup@v2
         with:
           version: 8.8.0
-      - name: Use Node.js 18
+
+      - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 16.18
           cache: "pnpm"
 
-      - name: Install workerd Dependencies
+      - name: Install workerd dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
           sudo apt-get install -y libc++1
 
-      - name: Install NPM Dependencies
+      - name: Install NPM dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run builds
+      - name: Build tools and libraries
         run: pnpm run build
         env:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Build & Publish Testing Playground Worker
+      - name: Build & deploy Worker
         run: pnpm run deploy:testing
         env:
           NODE_ENV: "production"
@@ -52,7 +60,7 @@ jobs:
         working-directory: packages/playground-preview-worker
 
       - name: Run tests & collect coverage
-        run: pnpm run test:ci
+        run: pnpm run test:e2e
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

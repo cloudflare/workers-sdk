@@ -1,5 +1,58 @@
 # create-cloudflare
 
+## 2.11.2
+
+### Patch Changes
+
+- [#4935](https://github.com/cloudflare/workers-sdk/pull/4935) [`0699506d`](https://github.com/cloudflare/workers-sdk/commit/0699506d9cab929779d19ec2af9b53ccb70c0e7b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.3` to `1.4.4`
+
+* [#4927](https://github.com/cloudflare/workers-sdk/pull/4927) [`49696ab3`](https://github.com/cloudflare/workers-sdk/commit/49696ab391d09243b54a0c32cf220fcc272871ec) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add `getBindingsProxy` support to `qwik` template
+
+  The `qwik` template now uses `getBindingsProxy` for handling requests for bound resources
+  in dev. This allows projects to use `vite` for dev instead of `wrangler pages dev` on built output.
+
+## 2.11.1
+
+### Patch Changes
+
+- [#4881](https://github.com/cloudflare/workers-sdk/pull/4881) [`37141ba5`](https://github.com/cloudflare/workers-sdk/commit/37141ba5fe3df960fb744ba5c665c4d606a51f57) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.4.2` to `1.4.3`
+
+* [#4892](https://github.com/cloudflare/workers-sdk/pull/4892) [`598b2c49`](https://github.com/cloudflare/workers-sdk/commit/598b2c49d78421fe793f2a7fda467f3fa68d6e8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.1` to `17.1.2`
+
+- [#4903](https://github.com/cloudflare/workers-sdk/pull/4903) [`582396a7`](https://github.com/cloudflare/workers-sdk/commit/582396a78bbeb9efd3c42dd22bb4cad6cc5fbaa7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.5.1` to `2.6.0`
+
+## 2.11.0
+
+### Minor Changes
+
+- [#4850](https://github.com/cloudflare/workers-sdk/pull/4850) [`eb76082b`](https://github.com/cloudflare/workers-sdk/commit/eb76082bfc96c588cc26a2eed7c49407bb797dd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: introduce a new optional `previewScript` to the C3 summary
+
+  such script is to be used to locally preview the application (using wrangler)
+
+### Patch Changes
+
+- [#4855](https://github.com/cloudflare/workers-sdk/pull/4855) [`c58c253b`](https://github.com/cloudflare/workers-sdk/commit/c58c253bf5abf347c8c5a05e12561cc9d8544b95) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-docusaurus` from `3.1.0` to `3.1.1`
+
+* [#4856](https://github.com/cloudflare/workers-sdk/pull/4856) [`f6a707d3`](https://github.com/cloudflare/workers-sdk/commit/f6a707d37522794dc828ddd7895c038c05ab094f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-astro` from `4.7.1` to `4.7.2`
+
+- [#4857](https://github.com/cloudflare/workers-sdk/pull/4857) [`9adfeae5`](https://github.com/cloudflare/workers-sdk/commit/9adfeae5763e00075cea80cb34585598fdc28c19) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.1` to `1.4.2`
+
+* [#4858](https://github.com/cloudflare/workers-sdk/pull/4858) [`f2ca5e2e`](https://github.com/cloudflare/workers-sdk/commit/f2ca5e2e6df50f7e3977ef3a9e408bd7e11f60be) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-solid` from `0.3.10` to `0.4.10`
+
+- [#4870](https://github.com/cloudflare/workers-sdk/pull/4870) [`7a341949`](https://github.com/cloudflare/workers-sdk/commit/7a341949216fa6bfdb892f0c4d1f797415741856) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-vue` from `3.9.1` to `3.9.2`
+
+* [#4863](https://github.com/cloudflare/workers-sdk/pull/4863) [`ed40cf84`](https://github.com/cloudflare/workers-sdk/commit/ed40cf849ae8f164574137ea34bb86ed88a6e168) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: handle new Next.js `next.config.mjs` default files
+
+  Since `create-next-app` `v14.1.0` the default generated config file is `next.config.mjs`
+  (instead of `next.config.js`), so such new default files need to be handled accordingly
+
+- [#4850](https://github.com/cloudflare/workers-sdk/pull/4850) [`eb76082b`](https://github.com/cloudflare/workers-sdk/commit/eb76082bfc96c588cc26a2eed7c49407bb797dd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update the svelteKit c3 scripts
+
+  replace the incorrect `pages:dev` with a new `pages:preview` script
+  (and use the standard `dev` script as the `devScript`)
+
+* [#4863](https://github.com/cloudflare/workers-sdk/pull/4863) [`ed40cf84`](https://github.com/cloudflare/workers-sdk/commit/ed40cf849ae8f164574137ea34bb86ed88a6e168) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: Bumped `create-next-app` from `14.0.4` to `14.1.0`
+
 ## 2.10.0
 
 ### Minor Changes

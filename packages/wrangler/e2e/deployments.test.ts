@@ -56,8 +56,7 @@ describe("deployments", () => {
 	it("deploy worker", async () => {
 		const { stdout } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.
-			Total Upload: xx KiB / gzip: xx KiB
+			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
 			  https://smoke-test-worker.SUBDOMAIN.workers.dev
@@ -101,8 +100,7 @@ describe("deployments", () => {
 		});
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.
-			Total Upload: xx KiB / gzip: xx KiB
+			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
 			  https://smoke-test-worker.SUBDOMAIN.workers.dev
@@ -178,7 +176,7 @@ describe("deployments", () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
-			🤖 Using default value in non-interactive context: yes
+			🤖 Using fallback value in non-interactive context: yes
 			Successfully deleted smoke-test-worker"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');

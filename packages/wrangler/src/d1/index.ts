@@ -3,6 +3,7 @@ import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
 import * as Info from "./info";
+import * as Insights from "./insights";
 import * as List from "./list";
 import * as Migrations from "./migrations";
 import * as TimeTravel from "./timeTravel";
@@ -18,6 +19,12 @@ export function d1(yargs: CommonYargsArgv) {
 				"Get information about a D1 database, including the current database size and state.",
 				Info.Options,
 				Info.Handler
+			)
+			.command(
+				"insights <name>",
+				"Experimental command. Get information about the queries run on a D1 database.",
+				Insights.Options,
+				Insights.Handler
 			)
 			.command(
 				"create <name>",

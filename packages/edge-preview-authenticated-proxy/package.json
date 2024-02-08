@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
-		"publish": "wrangler deploy",
+		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json",

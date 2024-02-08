@@ -38,6 +38,7 @@ export async function buildFunctions({
 		getPagesTmpDir(),
 		`./functionsRoutes-${Math.random()}.mjs`
 	),
+	defineNavigatorUserAgent,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -61,6 +62,7 @@ export async function buildFunctions({
 	// Allow `routesModule` to be fixed, so we don't create a new file in the
 	// temporary directory each time
 	routesModule?: string;
+	defineNavigatorUserAgent: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -117,6 +119,7 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
+			defineNavigatorUserAgent,
 		});
 	} else {
 		bundle = await buildWorkerFromFunctions({
@@ -133,6 +136,7 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			legacyNodeCompat,
 			nodejsCompat,
+			defineNavigatorUserAgent,
 		});
 	}
 

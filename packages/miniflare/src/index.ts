@@ -615,6 +615,8 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
+	#cfObject?: Record<string, any> = {};
+
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
@@ -962,6 +964,7 @@ export class Miniflare {
 		const sharedOpts = this.#sharedOpts;
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
+		this.#cfObject = sharedOpts.core.cf;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
@@ -1169,7 +1172,13 @@ export class Miniflare {
 			);
 		}
 
-		return { services: servicesArray, sockets, extensions };
+		const autogates = [
+			// Enables Python support in workerd.
+			// TODO(later): remove this once this gate is removed from workerd.
+			"workerd-autogate-builtin-wasm-modules"
+		];
+
+		return { services: servicesArray, sockets, extensions, autogates };
 	}
 
 	async #assembleAndUpdateConfig() {
@@ -1316,6 +1325,13 @@ export class Miniflare {
 	}
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
+	}
+
+	async getCf(): Promise<Record<string, any>> {
+		this.#checkDisposed();
+		await this.ready;
+
+		return JSON.parse(JSON.stringify(this.#cfObject));
 	}
 
 	async getInspectorURL(): Promise<URL> {
@@ -1525,6 +1541,7 @@ export class Miniflare {
 		// Get a `Fetcher` to that worker (NOTE: the `ProxyServer` Durable Object
 		// shares its `env` with Miniflare's entry worker, so has access to routes)
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
+
 		const fetcher = proxyClient.env[bindingName];
 		if (fetcher === undefined) {
 			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist

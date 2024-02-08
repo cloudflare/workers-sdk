@@ -235,4 +235,24 @@ describe("generateTypes()", () => {
 		"
 	`);
 	});
+
+	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: bindingsConfigMock.vars,
+			} as unknown as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types");
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			SOMETHING: \\"asdasdfasdf\\";
+			ANOTHER: \\"thing\\";
+			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+		}
+		"
+	`);
+	});
 });

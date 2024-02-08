@@ -13,7 +13,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
-    timeout-minutes: 30
+    timeout-minutes: 15
     if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )))
     name: "E2E Test"
     strategy:
@@ -73,9 +73,20 @@ jobs:
         id: "find-wrangler"
         run: echo "dir=$(ls $HOME/wrangler-*.tgz)" >> $GITHUB_OUTPUT;
 
-      - name: Run tests
-        id: e2e-1
-        continue-on-error: true
+      - name: Run tests (unix)
+        if: matrix.os == 'macos-13' || matrix.os == 'ubuntu-22.04'
+        run: |
+          pnpm add ${{ steps.find-wrangler.outputs.dir}} --global
+          pnpm run --filter wrangler test:e2e
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER: wrangler
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+
+      - name: Run tests (windows)
+        if: matrix.os == 'windows-2022'
         run: pnpm run --filter wrangler test:e2e
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}

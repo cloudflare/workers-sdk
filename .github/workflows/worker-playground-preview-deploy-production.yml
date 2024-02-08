@@ -1,49 +1,52 @@
-name: Playground Preview Worker
+name: Deploy Playground Preview Worker (production)
 
+# On a push to `deploy-worker/playground-preview-worker`, on Cloudflare,
+# deploy to production.
 on:
   push:
     branches:
-      - main
-    paths:
-      - "packages/playground-preview-worker/**"
+      - deploy-worker/playground-preview-worker
 
 jobs:
-  publish_worker:
+  deploy_worker:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Publish Worker
+    name: Deploy Playground Preview Worker (production)
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v2
+
+      - name: Use pnpm 8.8.0
+        uses: pnpm/action-setup@v2
         with:
           version: 8.8.0
+
       - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
           node-version: 16.18
           cache: "pnpm"
 
-      - name: Install workerd Dependencies
+      - name: Install workerd dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
           sudo apt-get install -y libc++1
 
-      - name: Install NPM Dependencies
+      - name: Install NPM dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build wrangler
+      - name: Build tools and libraries
         run: pnpm run build
         env:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Build & Publish Worker
+      - name: Build & deploy Worker
         run: pnpm run deploy
         env:
           NODE_ENV: "production"

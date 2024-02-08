@@ -4,6 +4,7 @@ import { getEntry } from "./deployment-bundle/entry";
 import { UserError } from "./errors";
 import { logger } from "./logger";
 import type { Config } from "./config";
+import type { CfScriptFormat } from "./deployment-bundle/worker";
 
 // Currently includes bindings & rules for declaring modules
 
@@ -11,7 +12,13 @@ export async function generateTypes(
 	configToDTS: Partial<Config>,
 	config: Config
 ) {
-	const entry = await getEntry({}, config, "types");
+	const configContainsEntryPoint =
+		config.main !== undefined || !!config.site?.["entry-point"];
+
+	const entrypointFormat: CfScriptFormat = configContainsEntryPoint
+		? (await getEntry({}, config, "types")).format
+		: "modules";
+
 	const envTypeStructure: string[] = [];
 
 	if (configToDTS.kv_namespaces) {
@@ -136,7 +143,7 @@ export async function generateTypes(
 	writeDTSFile({
 		envTypeStructure,
 		modulesTypeStructure,
-		formatType: entry.format,
+		formatType: entrypointFormat,
 	});
 }
 
@@ -147,7 +154,7 @@ function writeDTSFile({
 }: {
 	envTypeStructure: string[];
 	modulesTypeStructure: string[];
-	formatType: "modules" | "service-worker";
+	formatType: CfScriptFormat;
 }) {
 	const wranglerOverrideDTSPath = findUpSync("worker-configuration.d.ts");
 	try {

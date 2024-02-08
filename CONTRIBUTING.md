@@ -319,38 +319,3 @@ We use the following guidelines to determine the kind of change for a PR:
 ## Releases
 
 We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
-
-## Miniflare Development
-
-Wrangler builds upon, and provides a new entry point for, [Miniflare](https://github.com/cloudflare/miniflare), a local Cloudflare Workers simulator. To develop on both Wrangler and Miniflare together, you need to link the two projects, but as of NodeJS `v18.3.0` and NPM `v8.15.0`, relative NPM installs between two workspaces don't work, so you need things to be manual:
-
-Assume you have the two directories checked out right beside each other:
-
-```
-❯ ll src
-drwxr-xr-x     - user 30 Jun 14:12 src
-drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
-drwxr-xr-x     - user 27 Jul 17:51 └── workers-sdk
-```
-
-> Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output
-
-Inside `packages/wrangler/package.json`, replace:
-
-```
-"@miniflare/d1": "^2.x.x",
-"@miniflare/core": "^2.x.x",
-"@miniflare/durable-objects": "^2.x.x",
-"miniflare": "^2.x.x",
-```
-
-with
-
-```
-"miniflare": "file:../../../miniflare/packages/miniflare",
-"@miniflare/d1": "file:../../../miniflare/packages/d1",
-"@miniflare/core": "file:../../../miniflare/packages/core",
-"@miniflare/durable-objects": "file:../../../miniflare/packages/durable-objects",
-```
-
-Then run `npm install` in the root of this monorepo.

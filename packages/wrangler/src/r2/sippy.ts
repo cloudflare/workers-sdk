@@ -9,7 +9,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { SippyPutConfig } from "./helpers";
+import type { SippyPutParams } from "./helpers";
 
 const NO_SUCH_OBJECT_KEY = 10007;
 const SIPPY_PROVIDER_CHOICES = ["AWS", "GCS"];
@@ -38,7 +38,7 @@ export function EnableOptions(yargs: CommonYargsArgv) {
 			description: "(AWS provider only) The region of the upstream bucket",
 			string: true,
 		})
-		.option("key-id", {
+		.option("access-key-id", {
 			description:
 				"(AWS provider only) The secret access key id for the upstream bucket",
 			string: true,
@@ -63,7 +63,7 @@ export function EnableOptions(yargs: CommonYargsArgv) {
 				"(GCS provider only) The private key for your Google Cloud service account key",
 			string: true,
 		})
-		.option("r2-key-id", {
+		.option("r2-access-key-id", {
 			description: "The secret access key id for this R2 bucket",
 			string: true,
 		})
@@ -97,14 +97,17 @@ export async function EnableHandler(
 			throw new UserError(`Must specify ${args.provider} bucket name.`);
 		}
 
-		if (args.provider == "AWS") {
+		if (args.provider === "AWS") {
 			args.region ??= await prompt(
 				"Enter the AWS region where your S3 bucket is located (example: us-west-2):"
 			);
-			args.keyId ??= await prompt(
+			if (!args.region) {
+				throw new UserError("Must specify an AWS Region.");
+			}
+			args.accessKeyId ??= await prompt(
 				"Enter your AWS Access Key ID (requires read and list access):"
 			);
-			if (!args.keyId) {
+			if (!args.accessKeyId) {
 				throw new UserError("Must specify an AWS Access Key ID.");
 			}
 			args.secretAccessKey ??= await prompt(
@@ -113,7 +116,7 @@ export async function EnableHandler(
 			if (!args.secretAccessKey) {
 				throw new UserError("Must specify an AWS Secret Access Key.");
 			}
-		} else if (args.provider == "GCS") {
+		} else if (args.provider === "GCS") {
 			if (
 				!(args.clientEmail && args.privateKey) &&
 				!args.serviceAccountKeyFile
@@ -129,10 +132,10 @@ export async function EnableHandler(
 			}
 		}
 
-		args.r2KeyId ??= await prompt(
+		args.r2AccessKeyId ??= await prompt(
 			"Enter your R2 Access Key ID (requires read and write access):"
 		);
-		if (!args.r2KeyId) {
+		if (!args.r2AccessKeyId) {
 			throw new UserError("Must specify an R2 Access Key ID.");
 		}
 		args.r2SecretAccessKey ??= await prompt("Enter your R2 Secret Access Key:");
@@ -141,47 +144,78 @@ export async function EnableHandler(
 		}
 	}
 
-	let sippyConfig = {
-		bucket: args.bucket ?? "",
-		r2_key_id: args.r2KeyId ?? "",
-		r2_access_key: args.r2SecretAccessKey ?? "",
-	} as SippyPutConfig;
+	let sippyConfig: SippyPutParams;
 
-	if (args.provider == "AWS") {
-		if (!(args.keyId && args.secretAccessKey)) {
-			throw new UserError(
-				`Error: must provide --key-id and --secret-access-key.`
-			);
-		}
+	if (args.provider === "AWS") {
+		if (!args.region) throw new UserError("Error: must provide --region.");
+		if (!args.bucket) throw new UserError("Error: must provide --bucket.");
+		if (!args.accessKeyId)
+			throw new UserError("Error: must provide --access-key-id.");
+		if (!args.secretAccessKey)
+			throw new UserError("Error: must provide --secret-access-key.");
+		if (!args.r2AccessKeyId)
+			throw new UserError("Error: must provide --r2-access-key-id.");
+		if (!args.r2SecretAccessKey)
+			throw new UserError("Error: must provide --r2-secret-access-key.");
+
 		sippyConfig = {
-			...sippyConfig,
-			provider: "AWS",
-			zone: args.region,
-			key_id: args.keyId,
-			access_key: args.secretAccessKey,
+			source: {
+				provider: "aws",
+				region: args.region,
+				bucket: args.bucket,
+				accessKeyId: args.accessKeyId,
+				secretAccessKey: args.secretAccessKey,
+			},
+			destination: {
+				provider: "r2",
+				accessKeyId: args.r2AccessKeyId,
+				secretAccessKey: args.r2SecretAccessKey,
+			},
 		};
-	} else if (args.provider == "GCS") {
+	} else if (args.provider === "GCS") {
 		if (args.serviceAccountKeyFile) {
 			const serviceAccount = JSON.parse(
 				readFileSync(args.serviceAccountKeyFile)
 			);
 			if ("client_email" in serviceAccount && "private_key" in serviceAccount) {
-				args.clientEmail = serviceAccount["client_email"];
-				args.privateKey = serviceAccount["private_key"];
+				args.clientEmail = serviceAccount.client_email;
+				args.privateKey = serviceAccount.private_key;
 			}
 		}
-		if (!(args.clientEmail && args.privateKey)) {
+
+		if (!args.bucket) throw new UserError("Error: must provide --bucket.");
+		if (!args.clientEmail)
 			throw new UserError(
-				`Error: must provide --service-account-key-file or --client-email and --private-key.`
+				"Error: must provide --service-account-key-file or --client-email."
 			);
-		}
+		if (!args.privateKey)
+			throw new UserError(
+				"Error: must provide --service-account-key-file or --private-key."
+			);
 		args.privateKey = args.privateKey.replace(/\\n/g, "\n");
+
+		if (!args.r2AccessKeyId)
+			throw new UserError("Error: must provide --r2-access-key-id.");
+		if (!args.r2SecretAccessKey)
+			throw new UserError("Error: must provide --r2-secret-access-key.");
+
 		sippyConfig = {
-			...sippyConfig,
-			provider: "GCS",
-			client_email: args.clientEmail,
-			private_key: args.privateKey,
+			source: {
+				provider: "gcs",
+				bucket: args.bucket,
+				clientEmail: args.clientEmail,
+				privateKey: args.privateKey,
+			},
+			destination: {
+				provider: "r2",
+				accessKeyId: args.r2AccessKeyId,
+				secretAccessKey: args.r2SecretAccessKey,
+			},
 		};
+	} else {
+		throw new UserError(
+			"Error: unrecognized provider. Possible options are AWS & GCS."
+		);
 	}
 
 	await putR2Sippy(accountId, args.name, sippyConfig, args.jurisdiction);
@@ -211,14 +245,14 @@ export async function GetHandler(
 	const accountId = await requireAuth(config);
 
 	try {
-		const sippyBucket = await getR2Sippy(
+		const sippyConfig = await getR2Sippy(
 			accountId,
 			args.name,
 			args.jurisdiction
 		);
-		logger.log(`Sippy upstream bucket: ${sippyBucket}.`);
+		logger.log("Sippy configuration:", sippyConfig);
 	} catch (e) {
-		if (e instanceof APIError && "code" in e && e.code == NO_SUCH_OBJECT_KEY) {
+		if (e instanceof APIError && "code" in e && e.code === NO_SUCH_OBJECT_KEY) {
 			logger.log(`No Sippy configuration found for the '${args.name}' bucket.`);
 		} else {
 			throw e;
