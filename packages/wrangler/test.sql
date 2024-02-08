@@ -1,1 +1,0 @@
-CREATE TRIGGER test_after_insert_trigger  AFTER INSERT ON test BEGIN SELECT CASE WHEN NOT EXISTS( SELECT 1 FROM pragma_table_list(new."table") ) THEN RAISE (ABORT , 'Exception, table does not exist') END ; END ;
