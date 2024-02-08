@@ -34,12 +34,12 @@
 
   - **Allow configurable downgrade of ETag validator strength - [awwong1], [pull/315]**
 
-  This allows users to override the default strong ETag validator behaviour to use weak ETag validators. This change allows the developer to use weak ETags and preserve 304 responses (e.g. on *.workers.dev domains).
+  This allows users to override the default strong ETag validator behaviour to use weak ETag validators. This change allows the developer to use weak ETags and preserve 304 responses (e.g. on \*.workers.dev domains).
 
 - ### Fixes
 
   - **Fix length property call on ArrayBuffer instance - [philipatkinson], [pull/295**]
-  
+
   Previously when edge cached was enabled, the `content-length` of the response was not being set correctly. This was due to the `length` property of the `ArrayBuffer` instance being called instead of the `byteLength` property. This PR fixes this issue.
 
 - ### Maintenance
@@ -51,11 +51,10 @@
   - **chore: use tabs for indentation - [Cherry], [pull/355]**
 
     This PR changes the indentation of the project to use tabs instead of spaces, falling more in line with other Cloudflare JavaScript projects like wrangler.
-  
+
   - **chore: bump dependencies - [Cherry], [pull/356]**
 
     This bumps many dependencies of the project to their latest versions.
-
 
 ## 0.2.0
 
@@ -133,15 +132,15 @@
     This PR improves performance of the `getAssetFromKV` function by only parsing the asset manifest once on startup, instead of on each request. This can have a significant improvement in response times for larger sites. An example of the performance improvement with an asset manifest of over 50k files:
 
     > Before change:
-    100 iterations: Done. Mean kv response time is 16.61
-    1000 iterations: Done. Mean kv response time is 17.798
+    > 100 iterations: Done. Mean kv response time is 16.61
+    > 1000 iterations: Done. Mean kv response time is 17.798
     > After change:
-    100 iterations: Done. Mean kv response time is 6.62
-    1000 iterations: Done. Mean kv response time is 7.296
+    > 100 iterations: Done. Mean kv response time is 6.62
+    > 1000 iterations: Done. Mean kv response time is 7.296
 
     Initial work and credit to [groenlid] in [pull/143].
 
-    [Cherry]: https://github.com/Cherry
+    [cherry]: https://github.com/Cherry
     [groenlid]: https://github.com/groenlid
     [pull/185]: https://github.com/cloudflare/kv-asset-handler/pull/185
     [pull/143]: https://github.com/cloudflare/kv-asset-handler/pull/143
@@ -165,7 +164,7 @@
     This PR tweaks the GitHub Actions Workflow to test PRs properly, both in terms of linting and the repository tests. It runs `prettier` to maintain code quality and style, and all unit tests on every PR to ensure no regressions occur.
 
     [pull/183]: https://github.com/cloudflare/kv-asset-handler/pull/185
-    [Cherry]: https://github.com/Cherry
+    [cherry]: https://github.com/Cherry
 
   - **Add test for `mapRequestToAsset` asset override - [Cherry], [pull/186]**
 
@@ -173,7 +172,7 @@
 
     [pull/159]: https://github.com/cloudflare/kv-asset-handler/pull/159
     [pull/186]: https://github.com/cloudflare/kv-asset-handler/pull/186
-    [Cherry]: https://github.com/Cherry
+    [cherry]: https://github.com/Cherry
 
   - **Dependabot updates**
 
@@ -206,7 +205,7 @@
     This PR adds support for customizing the `defaultDocument` option in `getAssetFromKV`. In situations where a project does not use `index.html` as the default document for a path, this can now be customized to values like `index.shtm`:
 
     ```js
-    return getAssetFromKV(event, { 
+    return getAssetFromKV(event, {
       defaultDocument: "index.shtm"
     })
     ```
@@ -222,7 +221,7 @@
 
     **Note that this is a breaking change**, as previously, the mapRequestToAsset function was ignored if you set it, and an exact match was found in the `ASSET_MANIFEST`. That being said, this behavior was a bug, and unexpected behavior, as documented in [issue/158].
 
-    [Cherry]: https://github.com/Cherry
+    [cherry]: https://github.com/Cherry
     [issue/158]: https://github.com/cloudflare/kv-asset-handler/pull/158
     [pull/159]: https://github.com/cloudflare/kv-asset-handler/pull/159
 
@@ -279,7 +278,7 @@
 
     New project maintainer Cherry did a ton of maintenance in this release, improving workflows, code quality, and more. Check out the full list in [the PR][pull/179].
 
-    [Cherry]: https://github.com/Cherry
+    [cherry]: https://github.com/Cherry
     [pull/179]: https://github.com/cloudflare/kv-asset-handler/pull/179
 
 - ### Documentation
@@ -304,10 +303,10 @@
 
   - **kv-asset-handler can translate 206 responses to 200 - [harrishancock], [pull/166]**
 
-   Fixes [wrangler#1746](https://github.com/cloudflare/wrangler/issues/1746)
+  Fixes [wrangler#1746](https://github.com/cloudflare/wrangler/issues/1746)
 
-   [harrishancock](https://github.com/harrishancock)
-   [pull/166](https://github.com/cloudflare/kv-asset-handler/pull/166)
+  [harrishancock](https://github.com/harrishancock)
+  [pull/166](https://github.com/cloudflare/kv-asset-handler/pull/166)
 
 ## 0.0.12
 
@@ -328,11 +327,11 @@
 
 - ### Fixes
 
-  - **Fix text/* charset - [EatonZ], [pull/130]**
+  - **Fix text/\* charset - [EatonZ], [pull/130]**
 
     Adds a missing `-` to the `utf-8` charset value in response mime types.
 
-    [EatonZ]: https://github.com/EatonZ
+    [eatonz]: https://github.com/EatonZ
     [pull/130]: https://github.com/cloudflare/kv-asset-handler/pull/130
 
   - **Cache handling for HEAD requests - [klittlepage], [pull/141]**
@@ -385,7 +384,7 @@
 
     Fixes an issue where non-ASCII paths were not URI-decoded before being looked up, causing non-ASCII paths to 404.
 
-    [SukkaW]: https://github.com/SukkaW
+    [sukkaw]: https://github.com/SukkaW
     [pull/105]: https://github.com/cloudflare/kv-asset-handler/pull/105
     [issue/99]: https://github.com/cloudflare/kv-asset-handler/issues/99
 
@@ -415,7 +414,7 @@
 
   - **Add Code of Conduct - [EverlastingBugstopper], [pull/101]**
 
-    [EverlastingBugstopper]: https://github.com/EverlastingBugstopper
+    [everlastingbugstopper]: https://github.com/EverlastingBugstopper
     [pull/101]: https://github.com/cloudflare/kv-asset-handler/pull/101
 
 ## 0.0.10

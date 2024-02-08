@@ -8,6 +8,12 @@
 		"module": "commonjs",
 		"moduleResolution": "node"
 	},
-	"include": ["./src/*.ts", "./src/**/*.ts", "./test/**/*.ts", "./test/*.ts", "./src/types.d.ts"],
+	"include": [
+		"./src/*.ts",
+		"./src/**/*.ts",
+		"./test/**/*.ts",
+		"./test/*.ts",
+		"./src/types.d.ts"
+	],
 	"exclude": ["node_modules/", "dist/"]
 }
