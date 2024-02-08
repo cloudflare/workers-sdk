@@ -1,5 +1,17 @@
 name: Deploy all Pages sites
 
+# On a push to `main` or a PR that has one of the `preview:...`` labels,
+# deploy the matching Pages project to Cloudflare.
+#
+# PR Label                   | Pages Project
+# ---------------------------------------------------------
+# preview:wrangler-devtools  | packages/wrangler-devtools
+# preview:quick-edit         | packages/quick-edit
+# preview:workers-playground | packages/workers-playground
+#
+# Note: these actions are not for running tests against these packages,
+# only for deploying.
+
 on:
   push:
     branches:
