@@ -153,7 +153,7 @@ function isDollarQuoteIdentifier(str: string) {
  * Returns true if the `str` ends with a compound statement `BEGIN` marker.
  */
 function isCompoundStatementStart(str: string) {
-	return /\sBEGIN\s$/.test(str);
+	return /\sBEGIN|CASE\s$/.test(str);
 }
 
 /**
