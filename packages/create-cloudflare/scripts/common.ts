@@ -18,6 +18,8 @@ export type Worker = {
 	created_on: string;
 };
 
+const tmpPrefixes = ["tmp-stratus-e2e-", "tmp-wrangler-e2e-", "tmp-c3-e2e-"];
+
 const apiFetch = async (
 	path: string,
 	init = { method: "GET" },
@@ -78,7 +80,7 @@ export const listC3Projects = async () => {
 
 	return projects.filter(
 		(p) =>
-			p.name.startsWith("c3-e2e-") &&
+			tmpPrefixes.some((prefix) => p.name.startsWith(prefix)) &&
 			// Projects are more than an hour old
 			Date.now() - new Date(p.created_on).valueOf() > 1000 * 60 * 60
 	);
@@ -99,7 +101,7 @@ export const listC3Workers = async () => {
 		const res: Worker[] = await apiFetch(`/workers/scripts`, { method: "GET" });
 		return res.filter(
 			(p) =>
-				p.id.startsWith("c3-e2e-") &&
+				tmpPrefixes.some((prefix) => p.id.startsWith(prefix)) &&
 				// Workers are more than an hour old
 				Date.now() - new Date(p.created_on).valueOf() > 1000 * 60 * 60
 		);
