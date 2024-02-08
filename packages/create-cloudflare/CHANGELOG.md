@@ -1,5 +1,16 @@
 # create-cloudflare
 
+## 2.11.2
+
+### Patch Changes
+
+- [#4935](https://github.com/cloudflare/workers-sdk/pull/4935) [`0699506d`](https://github.com/cloudflare/workers-sdk/commit/0699506d9cab929779d19ec2af9b53ccb70c0e7b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.3` to `1.4.4`
+
+* [#4927](https://github.com/cloudflare/workers-sdk/pull/4927) [`49696ab3`](https://github.com/cloudflare/workers-sdk/commit/49696ab391d09243b54a0c32cf220fcc272871ec) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add `getBindingsProxy` support to `qwik` template
+
+  The `qwik` template now uses `getBindingsProxy` for handling requests for bound resources
+  in dev. This allows projects to use `vite` for dev instead of `wrangler pages dev` on built output.
+
 ## 2.11.1
 
 ### Patch Changes
