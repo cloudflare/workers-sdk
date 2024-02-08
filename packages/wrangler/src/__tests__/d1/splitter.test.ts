@@ -241,7 +241,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should handle compound statements", () => {
+	it("should handle compound statements for BEGINs", () => {
 		expect(
 			splitSqlQuery(`
     CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
@@ -272,6 +272,33 @@ describe("splitSqlQuery()", () => {
 		                json_extract(new.properties, '$.name'),
 		                json_extract(new.properties, '$.preferredUsername'));
 		    END",
+		]
+	`);
+	});
+
+	it("should handle compound statements for CASEs", () => {
+		expect(
+			splitSqlQuery(`
+				CREATE TRIGGER test_after_insert_trigger AFTER
+				INSERT ON test BEGIN
+				SELECT CASE
+						WHEN NOT EXISTS
+									(SELECT 1
+										FROM pragma_table_list(new."table")) THEN RAISE (
+																																		ABORT,
+																																		'Exception, table does not exist')
+				END ; END ;`)
+		).toMatchInlineSnapshot(`
+		Array [
+		  "CREATE TRIGGER test_after_insert_trigger AFTER
+						INSERT ON test BEGIN
+						SELECT CASE
+								WHEN NOT EXISTS
+											(SELECT 1
+												FROM pragma_table_list(new.\\"table\\")) THEN RAISE (
+																																				ABORT,
+																																				'Exception, table does not exist')
+						END ; END",
 		]
 	`);
 	});
