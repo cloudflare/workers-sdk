@@ -7,15 +7,14 @@
 	"scripts": {
 		"prepack": "npm run build",
 		"build": "tsc -d",
-		"format": "prettier --write \"**/*.{js,ts,json,md}\"",
 		"pretest": "npm run build",
-		"lint:code": "prettier --check \"**/*.{js,ts,json,md}\"",
-		"lint:markdown": "markdownlint \"**/*.md\" --ignore node_modules",
-		"test": "ava dist/test/*.js --verbose"
+		"test": "ava dist/test/*.js --verbose",
+		"test:ci": "npm run build && ava dist/test/*.js --verbose"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/cloudflare/kv-asset-handler.git"
+		"url": "git+https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/kv-asset-handler"
 	},
 	"keywords": [
 		"kv",
@@ -28,16 +27,14 @@
 		"src",
 		"dist",
 		"!src/test",
-		"!dist/test",
-		"LICENSE_APACHE",
-		"LICENSE_MIT"
+		"!dist/test"
 	],
 	"author": "wrangler@cloudflare.com",
 	"license": "MIT OR Apache-2.0",
 	"bugs": {
-		"url": "https://github.com/cloudflare/kv-asset-handler/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
-	"homepage": "https://github.com/cloudflare/kv-asset-handler#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"dependencies": {
 		"mime": "^3.0.0"
 	},
@@ -46,9 +43,15 @@
 		"@cloudflare/workers-types": "^4.20231218.0",
 		"@types/mime": "^3.0.4",
 		"@types/node": "^18.11.12",
-		"ava": "^6.0.1",
-		"prettier": "^3.2.2",
-		"service-worker-mock": "^2.0.5",
-		"typescript": "^5.3.3"
+		"ava": "^6.0.1"
+	},
+	"engines": {
+		"node": ">=16.13"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }

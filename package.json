@@ -19,7 +19,7 @@
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test",
-		"test:ci": "vitest run && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare",
+		"test:ci": "vitest run && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare --filter=kv-asset-handler",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
