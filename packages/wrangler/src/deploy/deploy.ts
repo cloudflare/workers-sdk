@@ -638,7 +638,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main: {
-				name: stripPySuffix(entryPointName, bundleType),
+				name: entryPointName,
 				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
@@ -1173,15 +1173,6 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 	});
 }
 
-// TODO(soon): workerd requires python modules to be named without a file extension
-// We should remove this restriction
-function stripPySuffix(modulePath: string, type?: CfModuleType) {
-	if (type === "python" && modulePath.endsWith(".py")) {
-		return modulePath.slice(0, -3);
-	}
-	return modulePath;
-}
-
 async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
@@ -1194,10 +1185,7 @@ async function noBundleWorker(
 
 	const bundleType = getBundleType(entry.format, entry.file);
 	return {
-		modules: modules.map((m) => ({
-			...m,
-			name: stripPySuffix(m.name, m.type),
-		})),
+		modules,
 		dependencies: {} as { [path: string]: { bytesInOutput: number } },
 		resolvedEntryPointPath: entry.file,
 		bundleType,
