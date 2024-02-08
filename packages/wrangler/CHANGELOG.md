@@ -1,5 +1,101 @@
 # wrangler
 
+## 3.28.0
+
+### Minor Changes
+
+- [#4499](https://github.com/cloudflare/workers-sdk/pull/4499) [`cf9c029b`](https://github.com/cloudflare/workers-sdk/commit/cf9c029b30e1db3a1c3f9dc4208b9c34021a8ac0) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support runtime-agnostic polyfills
+
+  Previously, Wrangler treated any imports of `node:*` modules as build-time errors (unless one of the two Node.js compatibility modes was enabled). This is sometimes overly aggressive, since those imports are often not hit at runtime (for instance, it was impossible to write a library that worked across Node.JS and Workers, using Node packages only when running in Node). Here's an example of a function that would cause Wrangler to fail to build:
+
+  ```ts
+  export function randomBytes(length: number) {
+  	if (navigator.userAgent !== "Cloudflare-Workers") {
+  		return new Uint8Array(require("node:crypto").randomBytes(length));
+  	} else {
+  		return crypto.getRandomValues(new Uint8Array(length));
+  	}
+  }
+  ```
+
+  This function _should_ work in both Workers and Node, since it gates Node-specific functionality behind a user agent check, and falls back to the built-in Workers crypto API. Instead, Wrangler detected the `node:crypto` import and failed with the following error:
+
+  ```
+  ✘ [ERROR] Could not resolve "node:crypto"
+
+      src/randomBytes.ts:5:36:
+        5 │ ... return new Uint8Array(require('node:crypto').randomBytes(length));
+          ╵                                   ~~~~~~~~~~~~~
+
+    The package "node:crypto" wasn't found on the file system but is built into node.
+    Add "node_compat = true" to your wrangler.toml file to enable Node.js compatibility.
+  ```
+
+  This change turns that Wrangler build failure into a warning, which users can choose to ignore if they know the import of `node:*` APIs is safe (because it will never trigger at runtime, for instance):
+
+  ```
+  ▲ [WARNING] The package "node:crypto" wasn't found on the file system but is built into node.
+
+    Your Worker may throw errors at runtime unless you enable the "nodejs_compat"
+    compatibility flag. Refer to
+    https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.
+    Imported from:
+     - src/randomBytes.ts
+  ```
+
+  However, in a lot of cases, it's possible to know at _build_ time whether the import is safe. This change also injects `navigator.userAgent` into `esbuild`'s bundle settings as a predefined constant, which means that `esbuild` can tree-shake away imports of `node:*` APIs that are guaranteed not to be hit at runtime, supressing the warning entirely.
+
+* [#4926](https://github.com/cloudflare/workers-sdk/pull/4926) [`a14bd1d9`](https://github.com/cloudflare/workers-sdk/commit/a14bd1d97c5180b1fd48c2a0907424cf81d67bdb) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: add a `cf` field to the `getBindingsProxy` result
+
+  Add a new `cf` field to the `getBindingsProxy` result that people can use to mock the production
+  `cf` (`IncomingRequestCfProperties`) object.
+
+  Example:
+
+  ```ts
+  const { cf } = await getBindingsProxy();
+
+  console.log(`country = ${cf.country}; colo = ${cf.colo}`);
+  ```
+
+### Patch Changes
+
+- [#4931](https://github.com/cloudflare/workers-sdk/pull/4931) [`321c7ed7`](https://github.com/cloudflare/workers-sdk/commit/321c7ed7355f64a22b0d26b2f097ba2e06e4b5e8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make the entrypoint optional for the `types` command
+
+  Currently running `wrangler types` against a `wrangler.toml` file without a defined entrypoint (`main` value)
+  causes the command to error with the following message:
+
+  ```
+  ✘ [ERROR] Missing entry-point: The entry-point should be specified via the command line (e.g. `wrangler types path/to/script`) or the `main` config field.
+  ```
+
+  However developers could want to generate types without the entrypoint being defined (for example when using `getBindingsProxy`), so these changes
+  make the entrypoint optional for the `types` command, assuming modules syntax if none is specified.
+
+* [#4867](https://github.com/cloudflare/workers-sdk/pull/4867) [`d637bd59`](https://github.com/cloudflare/workers-sdk/commit/d637bd59a8ea6612d59ed4b73e115287615e617d) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: inflight requests to UserWorker which failed across reloads are now retried
+
+  Previously, when running `wrangler dev`, requests inflight during a UserWorker reload (due to config or source file changes) would fail.
+
+  Now, if those inflight requests are GET or HEAD requests, they will be reproxied against the new UserWorker. This adds to the guarantee that requests made during local development reach the latest worker.
+
+- [#4928](https://github.com/cloudflare/workers-sdk/pull/4928) [`4a735c46`](https://github.com/cloudflare/workers-sdk/commit/4a735c46fdf5752f141e0e646624f44ad6301ced) Thanks [@sdnts](https://github.com/sdnts)! - fix: Update API calls for Sippy's endpoints
+
+* [#4938](https://github.com/cloudflare/workers-sdk/pull/4938) [`75bd08ae`](https://github.com/cloudflare/workers-sdk/commit/75bd08aed0b82268fb5cf0f42cdd85d4d6d235ef) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: print wrangler banner at the start of every d1 command
+
+  This PR adds a wrangler banner to the start of every D1 command (except when invoked in JSON-mode)
+
+  For example:
+
+  ```
+   ⛅️ wrangler 3.27.0
+  -------------------
+  ...
+  ```
+
+- [#4953](https://github.com/cloudflare/workers-sdk/pull/4953) [`d96bc7dd`](https://github.com/cloudflare/workers-sdk/commit/d96bc7dd803739f1815601d707d9b6e6062436da) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: allow `port` option to be specified with `unstable_dev()`
+
+  Previously, specifying a non-zero `port` when using `unstable_dev()` would try to start two servers on that `port`. This change ensures we only start the user-facing server on the specified `port`, allow `unstable_dev()` to startup correctly.
+
 ## 3.27.0
 
 ### Minor Changes
