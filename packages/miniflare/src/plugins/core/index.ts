@@ -721,8 +721,9 @@ function getWorkerScript(
 	workerIndex: number,
 	additionalModuleNames: string[]
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
-	const modulesRoot =
-		("modulesRoot" in options ? options.modulesRoot : undefined) ?? "";
+	const modulesRoot = path.resolve(
+		("modulesRoot" in options ? options.modulesRoot : undefined) ?? ""
+	);
 	if (Array.isArray(options.modules)) {
 		// If `modules` is a manually defined modules array, use that
 		return {
