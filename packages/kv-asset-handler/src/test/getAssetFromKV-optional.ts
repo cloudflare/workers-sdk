@@ -1,5 +1,4 @@
 import test from "ava";
-import { getAssetFromKV, mapRequestToAsset } from "../index";
 import {
 	getEvent,
 	mockGlobalScope,
@@ -10,6 +9,8 @@ import {
 } from "../mocks";
 
 mockGlobalScope();
+
+const { getAssetFromKV, mapRequestToAsset } = require("../index");
 
 // manually reset manifest global, to test optional behaviour
 Object.assign(global, { __STATIC_CONTENT_MANIFEST: undefined });
