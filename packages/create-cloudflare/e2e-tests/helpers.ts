@@ -19,7 +19,7 @@ import { version } from "../package.json";
 import { quoteShellArgs } from "../src/common";
 import type { Suite, TestContext } from "vitest";
 
-export const C3_E2E_PREFIX = "c3-e2e-";
+export const C3_E2E_PREFIX = "tmp-c3-e2e-";
 
 export const keys = {
 	enter: "\x0d",
