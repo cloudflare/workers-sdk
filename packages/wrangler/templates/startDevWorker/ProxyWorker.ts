@@ -297,7 +297,7 @@ function insertLiveReloadScript(
 }
 
 /**
- * Rewrite references to URLs in request headers.
+ * Rewrite references to URLs in request/response headers.
  *
  * This function is used to map the URLs in headers like Origin and Access-Control-Allow-Origin
  * so that this proxy is transparent to the Client Browser and User Worker.
