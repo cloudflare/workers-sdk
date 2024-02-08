@@ -124,4 +124,19 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:http://foo.com`);
 	});
+
+	it("rewrites response headers containing the emulated host", async ({
+		expect,
+	}) => {
+		// This /redirect request will add a Location header that points to prod.example.com/foo
+		// But we should rewrite this back to that of the proxy.
+		const response = await fetch(`http://${ip}:${port}/redirect`, {
+			redirect: "manual",
+		});
+		expect(response.status).toBe(302);
+		expect(await response.text()).toEqual("");
+		expect(response.headers.get("Location")).toEqual(
+			`http://${ip}:${port}/foo`
+		);
+	});
 });

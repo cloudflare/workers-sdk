@@ -143,7 +143,8 @@ export class ProxyWorker implements DurableObject {
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
 				.then((res) => {
-					rewriteUrlRelatedHeaders(headers, innerUrl, outerUrl);
+					res = new Response(res.body, res);
+					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
 
 					if (isHtmlResponse(res)) {
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
