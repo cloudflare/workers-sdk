@@ -11,7 +11,7 @@ import { WRANGLER } from "./helpers/wrangler-command";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(
-		/https:\/\/smoke-test-worker-.+?\.(.+?\.workers\.dev)/
+		/https:\/\/tmp-e2e-wrangler-.+?\.(.+?\.workers\.dev)/
 	)?.[1] as string;
 }
 
@@ -30,7 +30,7 @@ describe("deployments", () => {
 
 	beforeAll(async () => {
 		root = await makeRoot();
-		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
+		workerName = `tmp-e2e-wrangler-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
 		runInRoot = shellac.in(root).env(process.env);
 		runInWorker = shellac.in(workerPath).env(process.env);
@@ -39,7 +39,7 @@ describe("deployments", () => {
 		);
 		normalize = (str) =>
 			normalizeOutput(str, {
-				[workerName]: "smoke-test-worker",
+				[workerName]: "tmp-e2e-wrangler",
 				[email]: "person@example.com",
 				[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 			});
@@ -57,9 +57,9 @@ describe("deployments", () => {
 		const { stdout } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded smoke-test-worker (TIMINGS)
-			Published smoke-test-worker (TIMINGS)
-			  https://smoke-test-worker.SUBDOMAIN.workers.dev
+			Uploaded tmp-e2e-wrangler (TIMINGS)
+			Published tmp-e2e-wrangler (TIMINGS)
+			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		workersDev = matchWorkersDev(stdout);
@@ -101,9 +101,9 @@ describe("deployments", () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded smoke-test-worker (TIMINGS)
-			Published smoke-test-worker (TIMINGS)
-			  https://smoke-test-worker.SUBDOMAIN.workers.dev
+			Uploaded tmp-e2e-wrangler (TIMINGS)
+			Published tmp-e2e-wrangler (TIMINGS)
+			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
@@ -175,9 +175,9 @@ describe("deployments", () => {
 	it("delete worker", async () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
+			"? Are you sure you want to delete tmp-e2e-wrangler? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes
-			Successfully deleted smoke-test-worker"
+			Successfully deleted tmp-e2e-wrangler"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		const status = await retry(

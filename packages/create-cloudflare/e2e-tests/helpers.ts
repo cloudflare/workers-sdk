@@ -22,7 +22,7 @@ import type {
 import type { WriteStream } from "fs";
 import type { Suite, TestContext } from "vitest";
 
-export const C3_E2E_PREFIX = "c3-e2e-";
+export const C3_E2E_PREFIX = "tmp-e2e-c3";
 
 export const keys = {
 	enter: "\x0d",
