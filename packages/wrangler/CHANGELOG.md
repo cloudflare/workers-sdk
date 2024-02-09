@@ -1,5 +1,15 @@
 # wrangler
 
+## 3.28.1
+
+### Patch Changes
+
+- [#4962](https://github.com/cloudflare/workers-sdk/pull/4962) [`d6585178`](https://github.com/cloudflare/workers-sdk/commit/d658517883e03ddf07672aba9e4075911f309c05) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `wrangler dev` can reload without crashing when importing `node:*` modules
+
+  The previous Wrangler release introduced a regression that caused reloads to fail when importing `node:*` modules. This change fixes that, and ensures these modules can always be resolved.
+
+* [#4951](https://github.com/cloudflare/workers-sdk/pull/4951) [`ffafe8ad`](https://github.com/cloudflare/workers-sdk/commit/ffafe8ad9bf5549d6c2d92091f88bcd5373fc824) Thanks [@nora-soderlund](https://github.com/nora-soderlund)! - fix: D1 batch splitting to handle CASE as compound statement starts
+
 ## 3.28.0
 
 ### Minor Changes
