@@ -162,6 +162,7 @@ describe("basic dev tests", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
 
 					[vars]
 					KEY = "value"
@@ -195,9 +196,12 @@ describe("basic dev tests", () => {
 
 			await worker.seed({
 				"src/index.ts": dedent`
+						import { Buffer } from "node:buffer";
 						export default {
 							fetch(request, env) {
-								return new Response("Updated Worker! " + env.KEY)
+								const base64Message = Buffer.from("Updated Worker!").toString("base64");
+								const message = Buffer.from(base64Message, "base64").toString();
+								return new Response(message + " " + env.KEY)
 							}
 						}`,
 			});
@@ -216,6 +220,7 @@ describe("basic dev tests", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
+						compatibility_flags = ["nodejs_compat"]
 
 						[vars]
 						KEY = "updated"

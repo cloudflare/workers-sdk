@@ -3,12 +3,6 @@ import chalk from "chalk";
 import { logger } from "../../logger";
 import type { Plugin } from "esbuild";
 
-// Infinite loop detection
-const seen = new Set();
-
-// Prevent multiple warnings per package
-const warnedPackaged = new Map();
-
 /**
  * An esbuild plugin that will mark any `node:...` imports as external.
  */
@@ -17,8 +11,16 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 ) => ({
 	name: "nodejs_compat imports plugin",
 	setup(pluginBuild) {
-		seen.clear();
-		warnedPackaged.clear();
+		// Infinite loop detection
+		const seen = new Set();
+
+		// Prevent multiple warnings per package
+		const warnedPackaged = new Map();
+
+		pluginBuild.onStart(() => {
+			seen.clear();
+			warnedPackaged.clear();
+		});
 		pluginBuild.onResolve(
 			{ filter: /node:.*/ },
 			async ({ path, kind, resolveDir, ...opts }) => {
