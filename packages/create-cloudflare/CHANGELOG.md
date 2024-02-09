@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.11.3
+
+### Patch Changes
+
+- [#4963](https://github.com/cloudflare/workers-sdk/pull/4963) [`b3110c30`](https://github.com/cloudflare/workers-sdk/commit/b3110c304c4355dd153c90aafb82c0113c0544c0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.2` to `17.1.3`
+
 ## 2.11.2
 
 ### Patch Changes
