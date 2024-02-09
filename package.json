@@ -37,7 +37,7 @@
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
 		"typescript": "^4.8.4",
-		"vite": "^4.0.4",
+		"vite": "^4.5.2",
 		"vitest": "^0.34.6"
 	},
 	"devDependencies": {
