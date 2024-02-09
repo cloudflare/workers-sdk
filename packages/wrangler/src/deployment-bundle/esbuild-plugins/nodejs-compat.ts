@@ -12,10 +12,10 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 	name: "nodejs_compat imports plugin",
 	setup(pluginBuild) {
 		// Infinite loop detection
-		const seen = new Set();
+		const seen = new Set<string>();
 
 		// Prevent multiple warnings per package
-		const warnedPackaged = new Map();
+		const warnedPackaged = new Map<string, string[]>();
 
 		pluginBuild.onStart(() => {
 			seen.clear();
@@ -41,14 +41,12 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 					// esbuild couldn't resolve the package
 					// We should warn the user, but not fail the build
 
-					if (!warnedPackaged.has(path)) {
-						warnedPackaged.set(path, [opts.importer]);
-					} else {
-						warnedPackaged.set(path, [
-							...warnedPackaged.get(path),
-							opts.importer,
-						]);
+					let pathWarnedPackaged = warnedPackaged.get(path);
+					if (pathWarnedPackaged === undefined) {
+						warnedPackaged.set(path, (pathWarnedPackaged = []));
 					}
+					pathWarnedPackaged.push(opts.importer);
+
 					return { external: true };
 				}
 				// This is a normal package—don't treat it specially
