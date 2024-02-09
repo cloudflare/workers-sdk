@@ -45,7 +45,7 @@ const apiFetch = async (
 	return json.result;
 };
 
-export const listC3Projects = async () => {
+export const listTmpE2EProjects = async () => {
 	const pageSize = 10;
 	let page = 1;
 
@@ -94,7 +94,7 @@ export const deleteProject = async (project: string) => {
 	}
 };
 
-export const listC3Workers = async () => {
+export const listTmpE2EWorkers = async () => {
 	try {
 		const res: Worker[] = await apiFetch(`/workers/scripts`, { method: "GET" });
 		return res.filter(
