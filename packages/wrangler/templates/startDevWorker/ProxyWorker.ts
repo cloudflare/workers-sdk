@@ -113,10 +113,11 @@ export class ProxyWorker implements DurableObject {
 			this.requestRetryQueue.delete(request);
 			this.requestQueue.delete(request);
 
-			const userWorkerUrl = new URL(request.url);
+			const outerUrl = new URL(request.url);
 			const headers = new Headers(request.headers);
 
 			// override url parts for proxying
+			const userWorkerUrl = new URL(request.url);
 			Object.assign(userWorkerUrl, proxyData.userWorkerUrl);
 
 			// set request.url in the UserWorker
@@ -124,6 +125,8 @@ export class ProxyWorker implements DurableObject {
 			Object.assign(innerUrl, proxyData.userWorkerInnerUrlOverrides);
 			headers.set("MF-Original-URL", innerUrl.href);
 			headers.set("MF-Disable-Pretty-Error", "true"); // disables the UserWorker miniflare instance from rendering the pretty error -- instead the ProxyWorker miniflare instance will intercept the json error response and render the pretty error page
+
+			rewriteUrlRelatedHeaders(headers, outerUrl, innerUrl);
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
@@ -140,6 +143,9 @@ export class ProxyWorker implements DurableObject {
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
 				.then((res) => {
+					res = new Response(res.body, res);
+					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
+
 					if (isHtmlResponse(res)) {
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
 					}
@@ -289,4 +295,21 @@ function insertLiveReloadScript(
 	});
 
 	return htmlRewriter.transform(response);
+}
+
+/**
+ * Rewrite references to URLs in request/response headers.
+ *
+ * This function is used to map the URLs in headers like Origin and Access-Control-Allow-Origin
+ * so that this proxy is transparent to the Client Browser and User Worker.
+ */
+function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
+	headers.forEach((value, key) => {
+		if (typeof value === "string" && value.includes(from.host)) {
+			headers.set(
+				key,
+				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
+			);
+		}
+	});
 }

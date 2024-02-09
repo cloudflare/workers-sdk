@@ -15,9 +15,10 @@ export default {
 	async fetch(request) {
 		console.log("request log");
 
-		const { pathname } = new URL(request.url);
+		const { pathname, origin } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");
+		if (pathname === "/redirect") return Response.redirect(`${origin}/foo`);
 		if (request.headers.get("X-Test-URL") !== null) {
 			return new Response(request.url);
 		}
