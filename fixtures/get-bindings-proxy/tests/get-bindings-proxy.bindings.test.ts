@@ -6,7 +6,7 @@ import {
 	Fetcher,
 	R2Bucket,
 } from "@cloudflare/workers-types";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	getBindingsProxy as originalGetBindingsProxy,
 	unstable_dev,
@@ -44,13 +44,18 @@ function getBindingsProxy<T>(
 describe("getBindingsProxy - bindings", () => {
 	let devWorkers: UnstableDevWorker[];
 
-	beforeAll(async () => {
-		devWorkers = await startWorkers();
-	});
+	// Note: we're skipping the service workers and durable object tests
+	//       so there's no need to start separate workers right now, the
+	//       following beforeAll and afterAll should be un-commented when
+	//       we reenable the tests
 
-	afterAll(async () => {
-		await Promise.allSettled(devWorkers.map((i) => i.stop()));
-	});
+	// beforeAll(async () => {
+	// 	devWorkers = await startWorkers();
+	// });
+
+	// afterAll(async () => {
+	// 	await Promise.allSettled(devWorkers.map((i) => i.stop()));
+	// });
 
 	describe("var bindings", () => {
 		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
