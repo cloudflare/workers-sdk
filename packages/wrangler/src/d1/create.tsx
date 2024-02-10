@@ -1,5 +1,6 @@
 import { Box, Text } from "ink";
 import React from "react";
+import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { UserError } from "../errors";
@@ -32,6 +33,7 @@ export function Options(yargs: CommonYargsArgv) {
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
 	async ({ name, config, location }): Promise<void> => {
+		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 
 		if (location) {

@@ -1,6 +1,7 @@
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
 import React from "react";
+import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
@@ -49,7 +50,7 @@ export const Handler = withConfig<HandlerOptions>(
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
 		}
-		if (result.version === "beta") {
+		if (result.version !== "alpha") {
 			const today = new Date();
 			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
 
@@ -118,7 +119,6 @@ export const Handler = withConfig<HandlerOptions>(
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
 			// Snip off the "uuid" property from the response and use those as the header
-
 			const entries = Object.entries(output).filter(([k, _v]) => k !== "uuid");
 			const data = entries.map(([k, v]) => {
 				let value;
@@ -140,6 +140,7 @@ export const Handler = withConfig<HandlerOptions>(
 				};
 			});
 
+			await printWranglerBanner();
 			logger.log(renderToString(<Table data={data} />));
 		}
 	}

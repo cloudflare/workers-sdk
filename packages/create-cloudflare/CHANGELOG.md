@@ -1,5 +1,32 @@
 # create-cloudflare
 
+## 2.11.3
+
+### Patch Changes
+
+- [#4963](https://github.com/cloudflare/workers-sdk/pull/4963) [`b3110c30`](https://github.com/cloudflare/workers-sdk/commit/b3110c304c4355dd153c90aafb82c0113c0544c0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.2` to `17.1.3`
+
+## 2.11.2
+
+### Patch Changes
+
+- [#4935](https://github.com/cloudflare/workers-sdk/pull/4935) [`0699506d`](https://github.com/cloudflare/workers-sdk/commit/0699506d9cab929779d19ec2af9b53ccb70c0e7b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.3` to `1.4.4`
+
+* [#4927](https://github.com/cloudflare/workers-sdk/pull/4927) [`49696ab3`](https://github.com/cloudflare/workers-sdk/commit/49696ab391d09243b54a0c32cf220fcc272871ec) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add `getBindingsProxy` support to `qwik` template
+
+  The `qwik` template now uses `getBindingsProxy` for handling requests for bound resources
+  in dev. This allows projects to use `vite` for dev instead of `wrangler pages dev` on built output.
+
+## 2.11.1
+
+### Patch Changes
+
+- [#4881](https://github.com/cloudflare/workers-sdk/pull/4881) [`37141ba5`](https://github.com/cloudflare/workers-sdk/commit/37141ba5fe3df960fb744ba5c665c4d606a51f57) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.4.2` to `1.4.3`
+
+* [#4892](https://github.com/cloudflare/workers-sdk/pull/4892) [`598b2c49`](https://github.com/cloudflare/workers-sdk/commit/598b2c49d78421fe793f2a7fda467f3fa68d6e8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.1` to `17.1.2`
+
+- [#4903](https://github.com/cloudflare/workers-sdk/pull/4903) [`582396a7`](https://github.com/cloudflare/workers-sdk/commit/582396a78bbeb9efd3c42dd22bb4cad6cc5fbaa7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.5.1` to `2.6.0`
+
 ## 2.11.0
 
 ### Minor Changes

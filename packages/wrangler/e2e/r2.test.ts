@@ -83,8 +83,8 @@ describe("r2", () => {
 			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(normalize(stderr)).toMatchInlineSnapshot(`
-			"X [ERROR] Failed to fetch /accounts/CLOUDFLARE_ACCOUNT_ID/r2/buckets/wrangler-smoke-test-bucket/objects/testr2 - 404: Not Found);
-			"
+			"X [ERROR] The specified key does not exist.
+			🪵  Logs were written to \\"<LOG>\\""
 		`);
 	});
 
@@ -112,8 +112,8 @@ describe("r2", () => {
 			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(normalize(stderr)).toMatchInlineSnapshot(`
-			"X [ERROR] Failed to fetch /accounts/CLOUDFLARE_ACCOUNT_ID/r2/buckets/wrangler-smoke-test-bucket/objects/testr2 - 404: Not Found);
-			"
+			"X [ERROR] The specified bucket does not exist.
+			🪵  Logs were written to \\"<LOG>\\""
 		`);
 	});
 });

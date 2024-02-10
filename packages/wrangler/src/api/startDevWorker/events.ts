@@ -145,7 +145,7 @@ export type ProxyData = {
 	userWorkerUrl: UrlOriginParts;
 	userWorkerInspectorUrl: UrlOriginAndPathnameParts;
 	userWorkerInnerUrlOverrides: Partial<UrlOriginParts>;
-	headers: Record<string, string | undefined>;
+	headers: Record<string, string>;
 	liveReload?: boolean;
 	proxyLogsToController?: boolean;
 	internalDurableObjects?: CfDurableObject[];

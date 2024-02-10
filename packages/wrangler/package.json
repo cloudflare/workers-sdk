@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.26.0",
+	"version": "3.28.1",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -101,7 +101,7 @@
 		}
 	},
 	"dependencies": {
-		"@cloudflare/kv-asset-handler": "^0.2.0",
+		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
@@ -210,6 +210,14 @@
 	},
 	"optionalDependencies": {
 		"fsevents": "~2.3.2"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "^4.20230914.0"
+	},
+	"peerDependenciesMeta": {
+		"@cloudflare/workers-types": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=16.17.0"

@@ -1,3 +1,4 @@
+import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { confirm } from "../dialogs";
@@ -24,6 +25,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
 	async ({ name, skipConfirmation, config }): Promise<void> => {
+		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 
 		const db: Database = await getDatabaseByNameOrBinding(

@@ -23,6 +23,7 @@ export function buildPluginFromFunctions({
 	legacyNodeCompat,
 	functionsDirectory,
 	local,
+	defineNavigatorUserAgent,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
@@ -107,5 +108,6 @@ export function buildPluginFromFunctions({
 		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }

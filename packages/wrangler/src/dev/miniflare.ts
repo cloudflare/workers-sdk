@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
@@ -16,6 +16,7 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfModuleType,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -173,29 +174,46 @@ function buildLog(): Log {
 	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
+// TODO(soon): workerd requires python modules to be named without a file extension
+// We should remove this restriction
+function stripPySuffix(modulePath: string, type?: CfModuleType) {
+	if (type === "python" && modulePath.endsWith(".py")) {
+		return modulePath.slice(0, -3);
+	}
+	return modulePath;
+}
+
 async function buildSourceOptions(
 	config: ConfigBundle
 ): Promise<SourceOptions> {
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
 		const modulesRoot = path.dirname(scriptPath);
-		const { entrypointSource, modules } = withSourceURLs(
-			scriptPath,
-			config.bundle.modules
-		);
+		const { entrypointSource, modules } =
+			config.bundle.type === "python"
+				? {
+						entrypointSource: readFileSync(scriptPath, "utf8"),
+						modules: config.bundle.modules,
+				  }
+				: withSourceURLs(scriptPath, config.bundle.modules);
+
 		return {
 			modulesRoot,
+
 			modules: [
 				// Entrypoint
 				{
-					type: "ESModule",
-					path: scriptPath,
+					type: ModuleTypeToRuleType[config.bundle.type],
+					path: stripPySuffix(scriptPath, config.bundle.type),
 					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
 					type: ModuleTypeToRuleType[module.type ?? "esm"],
-					path: path.resolve(modulesRoot, module.name),
+					path: stripPySuffix(
+						path.resolve(modulesRoot, module.name),
+						module.type
+					),
 					contents: module.content,
 				})),
 			],

@@ -1,7 +1,7 @@
-import assert from "node:assert";
 import {
 	createDeferred,
 	DeferredPromise,
+	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 import type {
 	ProxyData,
@@ -37,6 +37,7 @@ export class ProxyWorker implements DurableObject {
 
 	proxyData?: ProxyData;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
+	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
 	fetch(request: Request) {
 		if (isRequestForLiveReloadWebsocket(request)) {
@@ -94,17 +95,29 @@ export class ProxyWorker implements DurableObject {
 		return new Response(null, { status: 204 });
 	}
 
+	/**
+	 * Process requests that are being retried first, then process newer requests.
+	 * Requests that are being retried are, by definition, older than requests which haven't been processed yet.
+	 * We don't need to be more accurate than this re ordering, since the requests are being fired off synchronously.
+	 */
+	*getOrderedQueue() {
+		yield* this.requestRetryQueue;
+		yield* this.requestQueue;
+	}
+
 	processQueue() {
-		const { proxyData } = this; // destructuring is required to keep the type-narrowing (not undefined) in the .then callback and to ensure the same proxyData is used throughout each request
+		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
 
-		for (const [request, deferredResponse] of this.requestQueue) {
+		for (const [request, deferredResponse] of this.getOrderedQueue()) {
+			this.requestRetryQueue.delete(request);
 			this.requestQueue.delete(request);
 
-			const userWorkerUrl = new URL(request.url);
+			const outerUrl = new URL(request.url);
 			const headers = new Headers(request.headers);
 
 			// override url parts for proxying
+			const userWorkerUrl = new URL(request.url);
 			Object.assign(userWorkerUrl, proxyData.userWorkerUrl);
 
 			// set request.url in the UserWorker
@@ -113,8 +126,12 @@ export class ProxyWorker implements DurableObject {
 			headers.set("MF-Original-URL", innerUrl.href);
 			headers.set("MF-Disable-Pretty-Error", "true"); // disables the UserWorker miniflare instance from rendering the pretty error -- instead the ProxyWorker miniflare instance will intercept the json error response and render the pretty error page
 
+			rewriteUrlRelatedHeaders(headers, outerUrl, innerUrl);
+
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
+				if (value === undefined) continue;
+
 				if (key.toLowerCase() === "cookie") {
 					const existing = request.headers.get("cookie") ?? "";
 					headers.set("cookie", `${existing};${value}`);
@@ -123,10 +140,12 @@ export class ProxyWorker implements DurableObject {
 				}
 			}
 
-			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly
-			// if we decide to await, we should include a timeout (~100ms) in case the user worker has long-running/parellel requests
+			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly + synchronously
 			void fetch(userWorkerUrl, new Request(request, { headers }))
 				.then((res) => {
+					res = new Response(res.body, res);
+					rewriteUrlRelatedHeaders(res.headers, innerUrl, outerUrl);
+
 					if (isHtmlResponse(res)) {
 						res = insertLiveReloadScript(request, res, this.env, proxyData);
 					}
@@ -137,17 +156,55 @@ export class ProxyWorker implements DurableObject {
 					// errors here are network errors or from response post-processing
 					// to catch only network errors, use the 2nd param of the fetch.then()
 
-					void sendMessageToProxyController(this.env, {
-						type: "error",
-						error: {
-							name: error.name,
-							message: error.message,
-							stack: error.stack,
-							cause: error.cause,
-						},
-					});
+					// we have crossed an async boundary, so proxyData may have changed
+					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
+					// and that this error is stale since it was for a request to the old UserWorker
+					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
+					const newUserWorkerUrl =
+						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
 
-					deferredResponse.reject(error);
+					// only report errors if the downstream proxy has NOT changed
+					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
+						void sendMessageToProxyController(this.env, {
+							type: "error",
+							error: {
+								name: error.name,
+								message: error.message,
+								stack: error.stack,
+								cause: error.cause,
+							},
+						});
+
+						deferredResponse.reject(error);
+					}
+
+					// if the request can be retried (subset of idempotent requests which have no body), requeue it
+					else if (request.method === "GET" || request.method === "HEAD") {
+						this.requestRetryQueue.set(request, deferredResponse);
+						// we would only end up here if the downstream UserWorker is chang*ing*
+						// i.e. we are in a `pause`d state and expecting a `play` message soon
+						// this request will be processed (retried) when the `play` message arrives
+						// for that reason, we do not need to call `this.processQueue` here
+						// (but, also, it can't hurt to call it since it bails when
+						// in a `pause`d state i.e. `this.proxyData` is undefined)
+					}
+
+					// if the request cannot be retried, respond with 503 Service Unavailable
+					// important to note, this is not an (unexpected) error -- it is an acceptable flow of local development
+					// it would be incorrect to retry non-idempotent requests
+					// and would require cloning all body streams to avoid stream reuse (which is inefficient but not out of the question in the future)
+					// this is a good enough UX for now since it solves the most common GET use-case
+					else {
+						deferredResponse.resolve(
+							new Response(
+								"Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
+								{
+									status: 503,
+									headers: { "Retry-After": "0" },
+								}
+							)
+						);
+					}
 				});
 		}
 	}
@@ -166,25 +223,14 @@ function isRequestForLiveReloadWebsocket(req: Request): boolean {
 	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
 }
 
-async function sendMessageToProxyController(
+function sendMessageToProxyController(
 	env: Env,
-	message: ProxyWorkerOutgoingRequestBody,
-	retries = 3
+	message: ProxyWorkerOutgoingRequestBody
 ) {
-	try {
-		await env.PROXY_CONTROLLER.fetch("http://dummy", {
-			method: "POST",
-			body: JSON.stringify(message),
-		});
-	} catch (cause) {
-		if (retries > 0) {
-			return sendMessageToProxyController(env, message, retries - 1);
-		}
-
-		// no point sending an error message if we can't send this message
-
-		throw cause;
-	}
+	return env.PROXY_CONTROLLER.fetch("http://dummy", {
+		method: "POST",
+		body: JSON.stringify(message),
+	});
 }
 
 function insertLiveReloadScript(
@@ -249,4 +295,21 @@ function insertLiveReloadScript(
 	});
 
 	return htmlRewriter.transform(response);
+}
+
+/**
+ * Rewrite references to URLs in request/response headers.
+ *
+ * This function is used to map the URLs in headers like Origin and Access-Control-Allow-Origin
+ * so that this proxy is transparent to the Client Browser and User Worker.
+ */
+function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
+	headers.forEach((value, key) => {
+		if (typeof value === "string" && value.includes(from.host)) {
+			headers.set(
+				key,
+				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
+			);
+		}
+	});
 }

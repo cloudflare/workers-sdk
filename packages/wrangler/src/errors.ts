@@ -24,3 +24,17 @@ export class FatalError extends UserError {
 		super(message);
 	}
 }
+
+/**
+ * JsonFriendlyFatalError is used to output JSON when wrangler crashes, useful for --json mode.
+ *
+ * To use, pass stringify'd json into the constructor like so:
+ * ```js
+ * throw new JsonFriendlyFatalError(JSON.stringify({ error: messageToDisplay });
+ * ```
+ */
+export class JsonFriendlyFatalError extends FatalError {
+	constructor(message?: string, readonly code?: number) {
+		super(message);
+	}
+}

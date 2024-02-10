@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
 import React from "react";
+import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
@@ -27,6 +28,7 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, database, message }): Promise<void> => {
+		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new UserError(
