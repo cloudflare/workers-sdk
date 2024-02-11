@@ -81,6 +81,9 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "nuxt",
 	platform: "pages",
+	copyFiles: {
+		path: "./templates",
+	},
 	displayName: "Nuxt",
 	devScript: "dev",
 	deployScript: "deploy",

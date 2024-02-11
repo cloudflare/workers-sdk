@@ -11,6 +11,11 @@ import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
+export const wranglerTomlExists = (ctx: C3Context) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return existsSync(wranglerTomlPath);
+};
+
 export const readWranglerToml = (ctx: C3Context) => {
 	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
 	return readFile(wranglerTomlPath);
@@ -26,7 +31,7 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
  * to the selected project name and adding the latest compatibility date.
  */
 export const updateWranglerToml = async (ctx: C3Context) => {
-	if (ctx.template.platform !== "workers") {
+	if (!wranglerTomlExists(ctx)) {
 		return;
 	}
 
