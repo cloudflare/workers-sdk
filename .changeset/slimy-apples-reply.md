@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
 feature: Add `getBindingsProxy` support to `nuxt` template via `nitro-cloudflare-dev` module.
