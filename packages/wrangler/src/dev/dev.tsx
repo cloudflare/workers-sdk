@@ -272,6 +272,8 @@ function DevSession(props: DevSessionProps) {
 					hostname: props.initialIp,
 					port: props.initialPort,
 					secure: props.localProtocol === "https",
+					httpsKeyPath: props.httpsKeyPath,
+					httpsCertPath: props.httpsCertPath,
 				},
 				inspector: {
 					port: props.inspectorPort,

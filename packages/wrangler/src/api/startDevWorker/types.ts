@@ -81,7 +81,13 @@ export interface StartDevWorkerOptions {
 		liveReload?: boolean;
 
 		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
-		server?: { hostname?: string; port?: number; secure?: boolean }; // hostname: --ip, port: --port, secure: --local-protocol
+		server?: {
+			hostname?: string;
+			port?: number;
+			secure?: boolean;
+			httpsKeyPath?: string;
+			httpsCertPath?: string;
+		}; // hostname: --ip, port: --port, secure: --local-protocol
 		/** Controls what request.url looks like inside the worker. */
 		urlOverrides?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
 		/** A hook for outbound fetch calls from within the worker. */

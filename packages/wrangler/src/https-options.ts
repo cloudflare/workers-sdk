@@ -17,8 +17,8 @@ const ONE_DAY_IN_MS = 86400000;
  * The certificates are self-signed and generated locally, and cached in the `CERT_ROOT` directory.
  */
 export function getHttpsOptions(
-	customHttpsKeyPath: string | undefined,
-	customHttpsCertPath: string | undefined
+	customHttpsKeyPath?: string,
+	customHttpsCertPath?: string
 ) {
 	const certDirectory = path.join(getGlobalWranglerConfigPath(), "local-cert");
 
