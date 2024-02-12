@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getAccessibleHosts } from "miniflare";
+import { UserError } from "./errors";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
@@ -20,29 +21,42 @@ export function getHttpsOptions(
 	customHttpsKeyPath?: string,
 	customHttpsCertPath?: string
 ) {
-	const certDirectory = path.join(getGlobalWranglerConfigPath(), "local-cert");
+	if (customHttpsKeyPath !== undefined || customHttpsCertPath !== undefined) {
+		if (customHttpsKeyPath === undefined || customHttpsCertPath === undefined) {
+			throw new UserError(
+				"Must specify both certificate path and key path to use a Custom Certificate."
+			);
+		}
+		if (!fs.existsSync(customHttpsKeyPath)) {
+			throw new UserError(
+				"Missing Custom Certificate Key at " + customHttpsKeyPath
+			);
+		}
+		if (!fs.existsSync(customHttpsCertPath)) {
+			throw new UserError(
+				"Missing Custom Certificate File at " + customHttpsCertPath
+			);
+		}
+		if (hasCertificateExpired(customHttpsKeyPath, customHttpsCertPath)) {
+			throw new UserError("Custom Certificate is invalid");
+		}
+		logger.log("Using custom certificate at ", customHttpsKeyPath);
 
-	let keyPath: string;
-	let certPath: string;
-	let isCustomCert = false;
-
-	if (customHttpsKeyPath !== undefined && customHttpsCertPath !== undefined) {
-		isCustomCert = true;
-		keyPath = customHttpsKeyPath;
-		certPath = customHttpsCertPath;
-	} else {
-		keyPath = path.join(certDirectory, "key.pem");
-		certPath = path.join(certDirectory, "cert.pem");
+		return {
+			key: fs.readFileSync(customHttpsKeyPath, "utf8"),
+			cert: fs.readFileSync(customHttpsCertPath, "utf8"),
+		};
 	}
 
+	const certDirectory = path.join(getGlobalWranglerConfigPath(), "local-cert");
+	const keyPath = path.join(certDirectory, "key.pem");
+	const certPath = path.join(certDirectory, "cert.pem");
 	const regenerate =
 		!fs.existsSync(keyPath) ||
 		!fs.existsSync(certPath) ||
 		hasCertificateExpired(keyPath, certPath);
 
-	if (regenerate && isCustomCert) {
-		throw new Error("Custom Certificate is invalid");
-	} else if (regenerate) {
+	if (regenerate) {
 		logger.log("Generating new self-signed certificate...");
 		const { key, cert } = generateCertificate();
 		try {
@@ -61,10 +75,6 @@ export function getHttpsOptions(
 		}
 		return { key, cert };
 	} else {
-		if (isCustomCert) {
-			logger.log("Using custom certificate at ", customHttpsKeyPath);
-		}
-
 		return {
 			key: fs.readFileSync(keyPath, "utf8"),
 			cert: fs.readFileSync(certPath, "utf8"),
