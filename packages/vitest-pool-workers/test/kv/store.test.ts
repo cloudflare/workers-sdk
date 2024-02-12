@@ -1,5 +1,6 @@
 import {
 	env,
+	SELF,
 	fetchMock,
 	runInDurableObject,
 	runDurableObjectAlarm,
@@ -124,7 +125,7 @@ describe("kv", () => {
 	});
 
 	it("sends request to self", async () => {
-		const res = await env.SELF.fetch("http://localhost");
+		const res = await SELF.fetch("http://localhost");
 		expect(await res.text()).toMatchInlineSnapshot(`"body:http://localhost"`);
 	});
 

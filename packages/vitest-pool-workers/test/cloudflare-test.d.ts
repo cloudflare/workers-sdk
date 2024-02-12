@@ -12,10 +12,21 @@ declare module "cloudflare:test" {
 	 *   interface ProvidedEnv {
 	 *     NAMESPACE: KVNamespace;
 	 *   }
+	 *
+	 *   // ...or if you have an existing `Env` type...
+	 *   interface ProvidedEnv extends Env {}
 	 * }
 	 * ```
 	 */
 	export const env: ProvidedEnv;
+
+	/**
+	 * Service binding to the default export defined in the `main` worker. Note
+	 * this `main` worker runs in the same isolate/context as tests, so any global
+	 * mocks will apply to it too.
+	 */
+	export const SELF: Fetcher;
+
 	/**
 	 * Declarative interface for mocking outbound `fetch()` requests. Deactivated
 	 * by default and reset before running each test file. Only mocks `fetch()`

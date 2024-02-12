@@ -1,5 +1,6 @@
 export {
 	env,
+	SELF,
 	fetchMock,
 	runInDurableObject,
 	runDurableObjectAlarm,

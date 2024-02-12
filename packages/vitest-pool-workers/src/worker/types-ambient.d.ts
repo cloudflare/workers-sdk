@@ -8,6 +8,7 @@ interface UnsafeEval {
 
 interface Env {
 	__VITEST_POOL_WORKERS_SELF_NAME: string;
+	__VITEST_POOL_WORKERS_SELF_SERVICE: Fetcher;
 	__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
 	__VITEST_POOL_WORKERS_RUNNER_OBJECT: DurableObjectNamespace;
 	__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;

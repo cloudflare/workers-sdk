@@ -2,7 +2,6 @@ interface Env {
 	TEST_NAMESPACE: KVNamespace;
 	COUNTER: DurableObjectNamespace;
 	OTHER: DurableObjectNamespace;
-	SELF: Fetcher;
 }
 
 declare module "cloudflare:test" {

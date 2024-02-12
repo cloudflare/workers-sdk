@@ -14,6 +14,7 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 	WebSocket,
+	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
@@ -232,6 +233,7 @@ type ProjectWorkers = [
 ];
 
 const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";
+const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
@@ -273,8 +275,9 @@ function buildProjectWorkerOptions(
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
 	runnerWorker.unsafeUseModuleFallbackService = true;
 
-	// Make sure we define our loopback service binding for helpers
+	// Make sure we define our self/loopback service bindings for helpers
 	runnerWorker.serviceBindings ??= {};
+	runnerWorker.serviceBindings[SELF_SERVICE_BINDING] = kCurrentWorker;
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
 		handleLoopbackRequest;
 

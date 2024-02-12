@@ -31,5 +31,3 @@ export function defineWorkersPoolOptions(
 ) {
 	return options;
 }
-
-export { kCurrentWorker } from "miniflare";
