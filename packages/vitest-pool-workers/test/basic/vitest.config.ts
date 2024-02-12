@@ -10,7 +10,8 @@ export default defineConfig({
 			workers: defineWorkersPoolOptions(({ inject }) => ({
 				singleWorker: true,
 				miniflare: {
-					compatibilityFlags: ["global_navigator"],
+					compatibilityDate: "2024-01-01",
+					compatibilityFlags: ["nodejs_compat"],
 					bindings: { KEY: "value" },
 					// This doesn't actually do anything in tests
 					upstream: `http://localhost:${inject("port")}`,

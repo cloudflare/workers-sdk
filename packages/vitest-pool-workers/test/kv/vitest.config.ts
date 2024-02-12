@@ -14,8 +14,9 @@ export default defineConfig({
 				main: "./worker.ts",
 				isolatedStorage: true,
 				miniflare: {
+					compatibilityDate: "2024-01-01",
+					compatibilityFlags: ["nodejs_compat"],
 					kvNamespaces: ["TEST_NAMESPACE"],
-					compatibilityFlags: ["global_navigator"],
 					durableObjects: {
 						COUNTER: "Counter",
 						OTHER: {

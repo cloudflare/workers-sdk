@@ -221,6 +221,8 @@ const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
+const numericCompare = new Intl.Collator("en", { numeric: true }).compare;
+
 function buildProjectWorkerOptions(
 	project: Omit<Project, "testFiles">
 ): ProjectWorkers {
@@ -240,17 +242,34 @@ function buildProjectWorkerOptions(
 		// `export_commonjs_namespace` and `export_commonjs_default` are mutually
 		// exclusive. If we have `export_commonjs_namespace` set, we can't continue.
 		throw new Error(
-			`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
+			`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace".\n` +
+				"This flag is incompatible with `@cloudflare/vitest-pool-workers`."
 		);
 	}
-	// TODO: maybe fail if these aren't set
-	if (!runnerWorker.compatibilityFlags.includes("export_commonjs_default")) {
-		runnerWorker.compatibilityFlags.push("export_commonjs_default");
+	const commonjsDefaultByFlag = runnerWorker.compatibilityFlags.includes(
+		"export_commonjs_default"
+	);
+	// "2022-10-31" is the default-on date for `export_commonjs_default`:
+	// https://developers.cloudflare.com/workers/configuration/compatibility-dates/#commonjs-modules-do-not-export-a-module-namespace
+	const commonjsDefaultByDate =
+		runnerWorker.compatibilityDate !== undefined &&
+		numericCompare(runnerWorker.compatibilityDate, "2022-10-31") >= 0;
+	if (!(commonjsDefaultByDate || commonjsDefaultByFlag)) {
+		throw new Error(
+			`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityDate\` must be >= "2022-10-31", or \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must contain "export_commonjs_default".\n` +
+				"This flag is required to use `@cloudflare/vitest-pool-workers`."
+		);
 	}
+
 	if (!runnerWorker.compatibilityFlags.includes("nodejs_compat")) {
-		runnerWorker.compatibilityFlags.push("nodejs_compat");
+		throw new Error(
+			`In project ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must contain "nodejs_compat".\n` +
+				"This flag is required to use `@cloudflare/vitest-pool-workers`."
+		);
 	}
-	// Required for `workerd:unsafe` module
+
+	// Required for `workerd:unsafe` module. We don't require this flag to be set
+	// as it's experimental, so couldn't be deployed by users.
 	if (!runnerWorker.compatibilityFlags.includes("unsafe_module")) {
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
