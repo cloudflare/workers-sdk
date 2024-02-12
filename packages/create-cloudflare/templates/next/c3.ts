@@ -140,7 +140,7 @@ export default {
 			const dir = isApp ? "app" : "pages";
 			return `${dir}/${isTypescript ? "ts" : "js"}`;
 		},
-		async destinationDir(ctx) {
+		destinationDir(ctx) {
 			const srcPath = probePaths([`${ctx.project.path}/src`]);
 			return srcPath ? "./src" : "./";
 		},

@@ -89,7 +89,7 @@ export type TemplateConfig = {
 };
 
 type CopyFiles = (StaticFileMap | VariantInfo) & {
-	destinationDir?: string | ((ctx: C3Context) => Promise<string>);
+	destinationDir?: string | ((ctx: C3Context) => string);
 };
 
 // A template can have a number of variants, usually js/ts
@@ -443,9 +443,9 @@ export const isVariantInfo = (
 	return "path" in (copyFiles as VariantInfo);
 };
 
-export const getCopyFilesDestinationDir = async (
+export const getCopyFilesDestinationDir = (
 	ctx: C3Context
-): Promise<undefined | string> => {
+): undefined | string => {
 	const { copyFiles } = ctx.template;
 
 	if (!copyFiles?.destinationDir) {
