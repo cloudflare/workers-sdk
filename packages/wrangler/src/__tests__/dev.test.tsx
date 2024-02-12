@@ -1249,6 +1249,8 @@ describe("wrangler dev", () => {
 			      --routes, --route                            Routes to upload  [array]
 			      --host                                       Host to forward requests to, defaults to the zone of project  [string]
 			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+			      --https-key-path                             Path to a custom certificate key  [string]
+			      --https-cert-path                            Path to a custom certificate  [string]
 			      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
 			      --assets                                     Static assets to be served  [string]
 			      --site                                       Root folder of static assets for Workers Sites  [string]
