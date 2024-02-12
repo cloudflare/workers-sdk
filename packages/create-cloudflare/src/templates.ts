@@ -55,7 +55,7 @@ export type TemplateConfig = {
 	 * by providing a `selectVariant` method.
 	 *
 	 */
-	copyFiles?: StaticFileMap | VariantInfo;
+	copyFiles?: CopyFiles;
 
 	/** A function invoked as the first step of project creation.
 	 * Used to invoke framework creation cli in the internal web framework templates.
@@ -86,6 +86,10 @@ export type TemplateConfig = {
 
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
+};
+
+type CopyFiles = (StaticFileMap | VariantInfo) & {
+	destinationDir?: string | ((ctx: C3Context) => Promise<string>);
 };
 
 // A template can have a number of variants, usually js/ts
@@ -248,7 +252,8 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		srcdir = join(getTemplatePath(ctx), variantPath);
 	}
 
-	const destdir = ctx.project.path;
+	const copyDestDir = await getCopyFilesDestinationDir(ctx);
+	const destdir = join(ctx.project.path, ...(copyDestDir ? [copyDestDir] : []));
 
 	const s = spinner();
 	s.start(`Copying template files`);
@@ -433,7 +438,23 @@ export const getTemplatePath = (ctx: C3Context) => {
 };
 
 export const isVariantInfo = (
-	copyFiles: StaticFileMap | VariantInfo
+	copyFiles: CopyFiles
 ): copyFiles is VariantInfo => {
 	return "path" in (copyFiles as VariantInfo);
+};
+
+export const getCopyFilesDestinationDir = async (
+	ctx: C3Context
+): Promise<undefined | string> => {
+	const { copyFiles } = ctx.template;
+
+	if (!copyFiles?.destinationDir) {
+		return undefined;
+	}
+
+	if (typeof copyFiles.destinationDir === "string") {
+		return copyFiles.destinationDir;
+	}
+
+	return copyFiles.destinationDir(ctx);
 };
