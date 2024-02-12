@@ -37,23 +37,33 @@ function isDurableObjectStub(v: unknown): v is DurableObjectStub {
 }
 
 // Whilst `sameIsolatedNamespaces` depends on `getSerializedOptions()`,
-// `isolateDurableObjectBindings` is derived from the user Durable Object
+// `durableObjectBindingDesignators` is derived from the user Durable Object
 // config. If this were to change, the Miniflare options would change too
 // restarting this worker. This means we only need to compute this once, as it
 // will automatically invalidate when needed.
 let sameIsolatedNamespaces: DurableObjectNamespace[] | undefined;
 function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 	if (sameIsolatedNamespaces !== undefined) return sameIsolatedNamespaces;
+	sameIsolatedNamespaces = [];
+
 	const options = getSerializedOptions();
-	if (options.isolateDurableObjectBindings === undefined) return [];
-	sameIsolatedNamespaces = options.isolateDurableObjectBindings.map((name) => {
-		const namespace = internalEnv[name];
+	if (options.durableObjectBindingDesignators === undefined) {
+		return sameIsolatedNamespaces;
+	}
+
+	for (const [key, designator] of options.durableObjectBindingDesignators) {
+		// We're assuming the user isn't able to guess the current worker name, so
+		// if a `scriptName` is set, the designator is for another worker.
+		if (designator.scriptName !== undefined) continue;
+
+		const namespace = internalEnv[key];
 		assert(
 			isDurableObjectNamespace(namespace),
-			`Expected ${name} to be a DurableObjectNamespace binding`
+			`Expected ${key} to be a DurableObjectNamespace binding`
 		);
-		return namespace as DurableObjectNamespace;
-	});
+		sameIsolatedNamespaces.push(namespace);
+	}
+
 	return sameIsolatedNamespaces;
 }
 

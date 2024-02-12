@@ -23,7 +23,6 @@ interface DurableObjectDesignator {
 interface SerializedOptions {
 	// Defined in `src/pool/index.ts`
 	main?: string;
-	isolateDurableObjectBindings?: string[];
 	durableObjectBindingDesignators?: Map<
 		string /* bound name */,
 		DurableObjectDesignator

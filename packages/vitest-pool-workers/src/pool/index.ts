@@ -145,22 +145,6 @@ function isDurableObjectDesignatorToSelf(
 	);
 }
 
-/**
- * Returns the bound names for bindings to Durable Objects with classes defined
- * in this worker.
- */
-function getDurableObjectBindingNamesToSelf(
-	options: WorkersProjectOptions
-): Set<string> {
-	const result = new Set<string>();
-	const durableObjects = options.miniflare?.durableObjects ?? {};
-	for (const [key, designator] of Object.entries(durableObjects)) {
-		if (key === RUNNER_OBJECT_BINDING) continue;
-		if (isDurableObjectDesignatorToSelf(designator)) result.add(key);
-	}
-	return result;
-}
-
 interface DurableObjectDesignator {
 	className: string;
 	scriptName?: string;
@@ -712,15 +696,11 @@ export default function (ctx: Vitest): ProcessPool {
 						// bindings that point to classes in the current isolate in the
 						// serialized config
 						main: maybeGetResolvedMainPath(project),
-						// Include bound names of all Durable Object namespaces to the
-						// current worker. We'll check the stubs belong to these namespaces
-						// in Durable Object test helpers, since they rely on wrapping the
-						// object.
-						isolateDurableObjectBindings: Array.from(
-							getDurableObjectBindingNamesToSelf(project.options)
-						),
 						// Include designators of all Durable Object namespaces bound in the
-						// runner worker. We'll use this to list IDs in a namespace.
+						// runner worker. We'll use this to list IDs in a namespace. We'll
+						// also use this to check Durable Object test runner helpers are
+						// only used with classes defined in the current worker, as these
+						// helpers rely on wrapping the object.
 						durableObjectBindingDesignators: getDurableObjectDesignators(
 							project.options
 						),
