@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-feature: Add an empty `wrangler.json` file to qwik and nuxt templates.
+feature: Add an empty `wrangler.toml` file to qwik and nuxt templates.

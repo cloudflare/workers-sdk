@@ -431,8 +431,8 @@ const verifyDevScript = async (
 		logStream
 	);
 
-	// Wait a few seconds for dev server to spin up
-	await sleep(9000);
+	// Wait an eternity for the dev server to spin up
+	await sleep(10000);
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
