@@ -549,3 +549,15 @@ export async function deleteEventNotificationConfig(
 		{ method: "DELETE", headers }
 	);
 }
+
+
+/**
+ * R2 bucket binding names must be valid JS identifiers.
+ */
+export function isValidR2BucketBinding(
+	binding: string | undefined
+): binding is string {
+	return (
+		typeof binding === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding)
+	);
+}
