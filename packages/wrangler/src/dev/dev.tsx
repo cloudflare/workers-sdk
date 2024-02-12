@@ -290,6 +290,8 @@ function DevSession(props: DevSessionProps) {
 			props.initialIp,
 			props.initialPort,
 			props.localProtocol,
+			props.httpsKeyPath,
+			props.httpsCertPath,
 			props.localUpstream,
 			props.inspectorPort,
 			props.liveReload,
