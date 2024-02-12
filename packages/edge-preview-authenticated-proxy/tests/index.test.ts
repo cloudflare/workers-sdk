@@ -114,7 +114,7 @@ compatibility_date = "2023-01-01"
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"Error\\",\\"message\\":\\"Invalid URL\\"}"'
+			`"{"error":"Error","message":"Invalid URL"}"`
 		);
 	});
 	it("should allow tokens > 4096 bytes", async () => {
@@ -197,7 +197,7 @@ compatibility_date = "2023-01-01"
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"Error\\",\\"message\\":\\"Invalid URL\\"}"'
+			`"{"error":"Error","message":"Invalid URL"}"`
 		);
 	});
 	it("should reject invalid remote url", async () => {
@@ -208,7 +208,7 @@ compatibility_date = "2023-01-01"
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"Error\\",\\"message\\":\\"Invalid URL\\"}"'
+			`"{"error":"Error","message":"Invalid URL"}"`
 		);
 	});
 

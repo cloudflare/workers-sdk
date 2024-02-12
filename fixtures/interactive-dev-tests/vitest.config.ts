@@ -6,7 +6,7 @@ export default mergeConfig(
 	defineProject({
 		test: {
 			// `node-pty` doesn't work inside worker threads
-			threads: false,
+			pool: "forks",
 		},
 	})
 );
