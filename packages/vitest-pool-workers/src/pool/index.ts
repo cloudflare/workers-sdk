@@ -5,7 +5,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
-import type { ProvidedEnv } from "cloudflare:test";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
@@ -490,10 +489,6 @@ async function runTests(
 	// results. We don't need to reset storage on the first run as instances were
 	// just created.
 	await waitForStorageReset(mf);
-	if (project.options.setupEnvironment !== undefined) {
-		const env = await mf.getBindings<ProvidedEnv>(workerName);
-		await project.options.setupEnvironment(env);
-	}
 	const ns = await mf.getDurableObjectNamespace(
 		RUNNER_OBJECT_BINDING,
 		workerName

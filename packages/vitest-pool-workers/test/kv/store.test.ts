@@ -34,6 +34,9 @@ describe("kv", () => {
 	});
 
 	it("uses seeded data", async () => {
+		const seed = await env.SEED_NURSERY.fetch("http://placeholder/seed.txt");
+		expect(seed.status).toBe(200);
+		await env.TEST_NAMESPACE.put("seeded", (await seed.text()).trim());
 		expect(await env.TEST_NAMESPACE.get("seeded")).toBe("🌱");
 	});
 

@@ -7,5 +7,7 @@ interface Env {
 
 declare module "cloudflare:test" {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
-	interface ProvidedEnv extends Env {}
+	interface ProvidedEnv extends Env {
+		SEED_NURSERY: Fetcher;
+	}
 }

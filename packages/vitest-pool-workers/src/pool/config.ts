@@ -6,8 +6,7 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
-import type { ProvidedEnv } from "cloudflare:test";
-import type { Awaitable, WorkerOptions } from "miniflare";
+import type { WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
@@ -42,19 +41,6 @@ const WorkersPoolOptionsSchema = z.object({
 	 * small test files.
 	 */
 	singleWorker: z.boolean().default(false),
-	/**
-	 * Called at the start of each test run with the same `env` object as
-	 * `import { env } from "cloudflare:test"` inside tests. This function will
-	 * always be called with nothing stored in any of the bindings. This function
-	 * may be called multiple times per test run if `singleWorker` is `false`
-	 * and `isolatedStorage` is `true`.
-	 */
-	setupEnvironment: z
-		// eslint-disable-next-line unused-imports/no-unused-vars
-		.custom<(env: ProvidedEnv) => Awaitable<void>>(
-			(v) => typeof v === "function"
-		)
-		.optional(),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),
