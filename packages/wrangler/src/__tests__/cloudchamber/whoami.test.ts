@@ -28,6 +28,116 @@ describe("cloudchamber create", () => {
 		msw.resetHandlers();
 	});
 
+	it("should show account information (non json)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			rest.get("*/ssh-public-keys", async (_request, response, context) => {
+				const keys = [
+					{ id: "1", name: "hello", public_key: "hello-world" },
+				] as SSHPublicKeyItem[];
+				return response.once(context.json(keys));
+			})
+		);
+		msw.use(
+			rest.get("*/me", async (_request, response, context) => {
+				return response.once(
+					context.json({
+						external_account_id: "123",
+						legacy_identity: "abc",
+						limits: {
+							account_id: "123",
+							vcpu_per_deployment: 1,
+							total_vcpu: 2,
+							memory_per_deployment: "128MB",
+							total_memory: "1GB",
+							network_modes: [],
+							node_group: NodeGroup.METAL,
+						},
+						locations: [
+							{
+								name: "My Location",
+								location: "hello",
+								region: "World",
+								limits: {
+									vcpu_per_deployment: 1,
+									total_vcpu: 2,
+									memory_per_deployment: "128MB",
+									total_memory: "1GB",
+								},
+							},
+						],
+						defaults: {
+							vcpus: 2,
+							memory: "128MB",
+						},
+					} as CompleteAccountCustomer)
+				);
+			})
+		);
+		msw.use(
+			rest.get("*/registries", async (_request, response, context) => {
+				return response.once(
+					context.json([
+						{
+							domain: "hello.com",
+							public_key: "hello-world",
+							created_at: "2024-02-01T15:41:57.542Z",
+						},
+					] as CustomerImageRegistry[])
+				);
+			})
+		);
+
+		await runWrangler("cloudchamber whoami");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+		"│
+
+		╭ Cloudchamber account
+
+		│
+
+		│
+
+		├ Default configuration
+
+		│   VCPUs 2
+		│   Memory 128MB
+
+		│
+
+		├ Account limits
+
+		│   Max VCPUs per deployment 1
+		│   Max VCPUs in account 2
+		│   Max memory per deployment 128MB
+		│   Max memory in account 1GB
+
+		│
+
+		├ Available locations
+
+		│   My Location, hello
+
+		│
+
+		├ Image Registries
+
+		│   hello.com
+
+		│
+
+		├ SSH Public Keys
+
+		│   hello
+
+		╰
+
+		"
+	`);
+	});
+
 	it("should show account information (json)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});

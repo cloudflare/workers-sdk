@@ -1,4 +1,4 @@
-import { endSection, log, startSection, updateStatus } from "@cloudflare/cli";
+import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { Config } from "../config";
 import { logger } from "../logger";

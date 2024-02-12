@@ -34,6 +34,17 @@ export const shapes = {
 	},
 };
 
+export type OutputWriter = {
+	write: (_: string) => void;
+};
+
+let { stdout, stderr }: { stdout: OutputWriter; stderr: OutputWriter } =
+	process;
+
+export function setStdout(stdoutParam: OutputWriter) {
+	stdout = stdoutParam;
+}
+
 export const status = {
 	error: bgRed(` ERROR `),
 	warning: bgYellow(` WARNING `),
@@ -51,7 +62,7 @@ export const space = (n = 1) => {
 // Primitive for printing to stdout. Use this instead of
 // console.log or printing to stdout directly
 export const logRaw = (msg: string) => {
-	process.stdout.write(`${msg}\n`);
+	stdout.write(`${msg}\n`);
 };
 
 // A simple stylized log for use within a prompt
@@ -133,9 +144,13 @@ export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
 	exit(1);
 };
 
+export const logRawError = (msg: string) => {
+	stderr.write(msg);
+};
+
 export const error = (msg?: string, extra?: string) => {
 	if (msg) {
-		process.stderr.write(
+		logRawError(
 			`${gray(shapes.corners.bl)} ${status.error} ${dim(msg)}\n${
 				extra ? space() + extra + "\n" : ""
 			}`

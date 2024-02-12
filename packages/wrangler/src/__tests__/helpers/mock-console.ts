@@ -10,7 +10,8 @@ let debugSpy: jest.SpyInstance,
 	logSpy: jest.SpyInstance,
 	infoSpy: jest.SpyInstance,
 	errorSpy: jest.SpyInstance,
-	warnSpy: jest.SpyInstance;
+	warnSpy: jest.SpyInstance,
+	processOutSpy: jest.SpyInstance;
 
 const std = {
 	get debug() {
@@ -44,6 +45,12 @@ function captureCalls(spy: jest.SpyInstance): string {
 	return spy.mock.calls
 		.map((args: unknown[]) => util.format("%s", ...args))
 		.join("\n");
+}
+
+function captureProcessWriteCalls(spy: jest.SpyInstance): string {
+	return spy.mock.calls
+		.map((args: unknown[]) => util.format("%s", ...args))
+		.join("");
 }
 
 export function mockConsoleMethods() {
