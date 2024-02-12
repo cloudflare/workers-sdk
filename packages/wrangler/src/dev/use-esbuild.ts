@@ -262,6 +262,7 @@ export function useEsbuild({
 		experimentalLocal,
 		projectRoot,
 		onBundleStart,
+		defineNavigatorUserAgent,
 	]);
 	return bundle;
 }
