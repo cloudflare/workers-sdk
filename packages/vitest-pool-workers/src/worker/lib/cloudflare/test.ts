@@ -6,7 +6,7 @@ export {
 	runDurableObjectAlarm,
 	listDurableObjectIds,
 	createExecutionContext,
-	getWaitUntil,
+	waitOnExecutionContext,
 	createScheduledController,
 	getScheduledResult,
 	createMessageBatch,

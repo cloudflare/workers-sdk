@@ -75,9 +75,7 @@ declare module "cloudflare:test" {
 	 * accepts instances of `ExecutionContext` returned by
 	 * `createExecutionContext()`.
 	 */
-	export function getWaitUntil<T extends unknown[]>(
-		ctx: ExecutionContext
-	): Promise<T>;
+	export function waitOnExecutionContext(ctx: ExecutionContext): Promise<void>;
 	/**
 	 * Creates an instance of `ScheduledController` for use as the 1st argument to
 	 * modules-format `scheduled()` exported handlers.

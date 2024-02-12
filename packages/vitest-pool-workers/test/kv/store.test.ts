@@ -6,7 +6,7 @@ import {
 	runDurableObjectAlarm,
 	listDurableObjectIds,
 	createExecutionContext,
-	getWaitUntil,
+	waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import worker, { transformResponse, Counter } from "./worker";
@@ -113,7 +113,7 @@ describe("kv", () => {
 		);
 		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, env, ctx);
-		await getWaitUntil(ctx);
+		await waitOnExecutionContext(ctx);
 		expect(await response.text()).toBe("body:http://localhost");
 	});
 

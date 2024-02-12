@@ -30,9 +30,9 @@ class ExecutionContext {
 export function createExecutionContext(): ExecutionContext {
 	return new ExecutionContext(kConstructFlag);
 }
-export async function getWaitUntil<T extends unknown[]>(
+export async function waitOnExecutionContext(
 	ctx: ExecutionContext
-): Promise<T> {
+): Promise<void> {
 	// noinspection SuspiciousTypeOfGuard
 	if (!(ctx instanceof ExecutionContext)) {
 		throw new TypeError(
@@ -41,13 +41,11 @@ export async function getWaitUntil<T extends unknown[]>(
 		);
 	}
 	const waitUntil = ctx[kWaitUntil];
-	let length = 0;
-	let result = [] as unknown as T;
-	while (length !== waitUntil.length) {
-		length = waitUntil.length;
-		result = (await Promise.all(ctx[kWaitUntil])) as T;
+	let previousLength = 0;
+	while (previousLength !== waitUntil.length) {
+		previousLength = waitUntil.length;
+		await Promise.all(ctx[kWaitUntil]);
 	}
-	return result;
 }
 
 // =============================================================================
@@ -117,7 +115,7 @@ export async function getScheduledResult(
 				"You must call 'createExecutionContext()' to get an 'ExecutionContext' instance."
 		);
 	}
-	await getWaitUntil(ctx);
+	await waitOnExecutionContext(ctx);
 	return { outcome: "ok", noRetry: !ctrl[kRetry] };
 }
 
@@ -327,7 +325,7 @@ export async function getQueueResult(
 				"You must call 'createExecutionContext()' to get an 'ExecutionContext' instance."
 		);
 	}
-	await getWaitUntil(ctx);
+	await waitOnExecutionContext(ctx);
 
 	const explicitRetries: string[] = [];
 	const explicitAcks: string[] = [];
