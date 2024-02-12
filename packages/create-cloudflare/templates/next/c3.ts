@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "fs";
+import { join } from "path";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -6,6 +6,7 @@ import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	compatDateFlag,
 	probePaths,
+	readFile,
 	readJSON,
 	usesEslint,
 	usesTypescript,
@@ -13,17 +14,7 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import {
-	apiAppDirHelloJs,
-	apiAppDirHelloTs,
-	apiPagesDirHelloJs,
-	apiPagesDirHelloTs,
-	appDirNotFoundJs,
-	appDirNotFoundTs,
-	envDts,
-	nextConfig,
-	readme,
-} from "./templates";
+import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Args, C3Context } from "types";
 
@@ -33,27 +24,6 @@ const generate = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
 
 	await runFrameworkGenerator(ctx, [projectName]);
-};
-
-const getApiTemplate = (
-	apiPath: string,
-	isTypescript: boolean
-): [string, string] => {
-	const isAppDir = /\/app\/api$/.test(apiPath);
-
-	if (isAppDir) {
-		// App directory uses route handlers that are defined in a subdirectory (`/api/hello/route.ts`).
-		const routeHandlerPath = `${apiPath}/hello`;
-		mkdirSync(routeHandlerPath, { recursive: true });
-
-		return isTypescript
-			? [`${routeHandlerPath}/route.ts`, apiAppDirHelloTs]
-			: [`${routeHandlerPath}/route.js`, apiAppDirHelloJs];
-	}
-
-	return isTypescript
-		? [`${apiPath}/hello.ts`, apiPagesDirHelloTs]
-		: [`${apiPath}/hello.js`, apiPagesDirHelloJs];
 };
 
 const configure = async (ctx: C3Context) => {
@@ -73,35 +43,10 @@ const configure = async (ctx: C3Context) => {
 		crash("Could not find the `/api` or `/app` directory");
 	}
 
-	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
-	const apiPath = path.replace(/\/app$/, "/app/api");
-
 	const usesTs = usesTypescript(ctx);
 
-	const appDirPath = probePaths([
-		`${projectPath}/src/app`,
-		`${projectPath}/app`,
-	]);
-
-	if (appDirPath) {
-		// Add a custom app not-found edge route as recommended in next-on-pages
-		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
-		const notFoundPath = `${appDirPath}/not-found.${usesTs ? "tsx" : "js"}`;
-		if (!existsSync(notFoundPath)) {
-			const notFoundContent = usesTs ? appDirNotFoundTs : appDirNotFoundJs;
-			writeFile(notFoundPath, notFoundContent);
-			updateStatus("Created a custom edge not-found route");
-		}
-	}
-
-	const [handlerPath, handlerFile] = getApiTemplate(
-		apiPath,
-		usesTypescript(ctx)
-	);
-	writeFile(handlerPath, handlerFile);
-	updateStatus("Created an example API route handler");
-
 	if (usesTs) {
+		const envDts = readFile(join(getTemplatePath(ctx), "env.d.ts"));
 		writeFile(`${projectPath}/env.d.ts`, envDts);
 		updateStatus("Created an env.d.ts file");
 	}
@@ -112,9 +57,11 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
+	const nextConfig = readFile(join(getTemplatePath(ctx), "next.config.mjs"));
 	writeFile(`${projectPath}/next.config.mjs`, nextConfig);
 	updateStatus("Updated the next.config.js file");
 
+	const readme = readFile(join(getTemplatePath(ctx), "README.md"));
 	writeFile(`${projectPath}/README.md`, readme);
 	updateStatus("Updated the README file");
 
@@ -181,6 +128,37 @@ export default {
 	previewScript: "pages:preview",
 	generate,
 	configure,
+	copyFiles: {
+		async selectVariant(ctx) {
+			const isApp = probePaths([
+				`${ctx.project.path}/src/app`,
+				`${ctx.project.path}/app`,
+			]);
+
+			const isTypescript = usesTypescript(ctx);
+
+			const dir = isApp ? "app" : "pages";
+			return `${dir}/${isTypescript ? "ts" : "js"}`;
+		},
+		async destinationDir(ctx) {
+			const srcPath = probePaths([`${ctx.project.path}/src`]);
+			return srcPath ? "./src" : "./";
+		},
+		variants: {
+			"app/ts": {
+				path: "./app/ts",
+			},
+			"app/js": {
+				path: "./app/js",
+			},
+			"pages/ts": {
+				path: "./pages/ts",
+			},
+			"pages/js": {
+				path: "./pages/js",
+			},
+		},
+	},
 	transformPackageJson: async () => {
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";
