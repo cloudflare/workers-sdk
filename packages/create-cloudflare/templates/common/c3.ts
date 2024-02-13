@@ -4,11 +4,13 @@ export default {
 	displayName: "Example router & proxy Worker",
 	platform: "workers",
 	copyFiles: {
-		js: {
-			path: "./js",
-		},
-		ts: {
-			path: "./ts",
+		variants: {
+			js: {
+				path: "./js",
+			},
+			ts: {
+				path: "./ts",
+			},
 		},
 	},
 };

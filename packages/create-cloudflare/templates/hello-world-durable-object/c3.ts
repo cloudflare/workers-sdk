@@ -4,11 +4,13 @@ export default {
 	displayName: '"Hello World" Durable Object',
 	platform: "workers",
 	copyFiles: {
-		js: {
-			path: "./js",
-		},
-		ts: {
-			path: "./ts",
+		variants: {
+			js: {
+				path: "./js",
+			},
+			ts: {
+				path: "./ts",
+			},
 		},
 	},
 };
