@@ -8,11 +8,11 @@ import {
 } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
-import { getBindingsProxy } from "./shared";
+import { getPlatformProxy } from "./shared";
 import type { KVNamespace } from "@cloudflare/workers-types";
 import type { UnstableDevWorker } from "wrangler";
 
-type Bindings = {
+type Env = {
 	MY_VAR: string;
 	MY_VAR_A: string;
 	MY_JSON_VAR: Object;
@@ -28,7 +28,7 @@ type Bindings = {
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
-describe("getBindingsProxy - bindings", () => {
+describe("getPlatformProxy - bindings", () => {
 	let devWorkers: UnstableDevWorker[];
 
 	// Note: we're skipping the service workers and durable object tests
@@ -46,11 +46,11 @@ describe("getBindingsProxy - bindings", () => {
 
 	describe("var bindings", () => {
 		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
-			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerTomlFilePath,
 			});
 			try {
-				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
+				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
 				expect(MY_VAR).toEqual("my-var-value");
 				expect(MY_JSON_VAR).toEqual({
 					test: true,
@@ -62,11 +62,11 @@ describe("getBindingsProxy - bindings", () => {
 		});
 
 		it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
-			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerTomlFilePath,
 			});
 			try {
-				const { MY_VAR_A } = bindings;
+				const { MY_VAR_A } = env;
 				expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
 				expect(MY_VAR_A).toEqual("my-dev-var-a");
 			} finally {
@@ -75,11 +75,11 @@ describe("getBindingsProxy - bindings", () => {
 		});
 
 		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
-			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerTomlFilePath,
 			});
 			try {
-				const { MY_KV } = bindings;
+				const { MY_KV } = env;
 				expect(MY_KV).not.toEqual("my-dev-kv");
 				["get", "delete", "list", "put", "getWithMetadata"].every(
 					(methodName) => expect(typeof MY_KV[methodName]).toBe("function")
@@ -90,7 +90,7 @@ describe("getBindingsProxy - bindings", () => {
 		});
 
 		it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
-			const { bindings, dispose } = await getBindingsProxy<Bindings>({
+			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: path.join(
 					__dirname,
 					"..",
@@ -100,7 +100,7 @@ describe("getBindingsProxy - bindings", () => {
 				),
 			});
 			try {
-				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = bindings;
+				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
 				expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
 				expect(MY_JSON_VAR).toEqual({
 					test: true,
@@ -114,11 +114,11 @@ describe("getBindingsProxy - bindings", () => {
 	});
 
 	it("correctly reads a json config file", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
+		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: path.join(__dirname, "..", "wrangler.json"),
 		});
 		try {
-			const { MY_VAR, MY_JSON_VAR } = bindings;
+			const { MY_VAR, MY_JSON_VAR } = env;
 			expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
 			expect(MY_JSON_VAR).toEqual({
 				test: true,
@@ -132,11 +132,11 @@ describe("getBindingsProxy - bindings", () => {
 	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
 	//       when we run all our fixtures together (possibly because of race condition issues)
 	it.skip("provides service bindings to external local workers", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
+		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
 		try {
-			const { MY_SERVICE_A, MY_SERVICE_B } = bindings;
+			const { MY_SERVICE_A, MY_SERVICE_B } = env;
 			await testServiceBinding(MY_SERVICE_A, "Hello World from hello-worker-a");
 			await testServiceBinding(MY_SERVICE_B, "Hello World from hello-worker-b");
 		} finally {
@@ -145,10 +145,10 @@ describe("getBindingsProxy - bindings", () => {
 	});
 
 	it("correctly obtains functioning KV bindings", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
+		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
-		const { MY_KV } = bindings;
+		const { MY_KV } = env;
 		let numOfKeys = (await MY_KV.list()).keys.length;
 		expect(numOfKeys).toBe(0);
 		await MY_KV.put("my-key", "my-value");
@@ -162,11 +162,11 @@ describe("getBindingsProxy - bindings", () => {
 	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
 	//       when we run all our fixtures together (possibly because of race condition issues)
 	it.skip("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
+		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
 		try {
-			const { MY_DO_A, MY_DO_B } = bindings;
+			const { MY_DO_A, MY_DO_B } = env;
 			await testDoBinding(MY_DO_A, "Hello from DurableObject A");
 			await testDoBinding(MY_DO_B, "Hello from DurableObject B");
 		} finally {
@@ -175,11 +175,11 @@ describe("getBindingsProxy - bindings", () => {
 	});
 
 	it("correctly obtains functioning R2 bindings", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
+		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
 		try {
-			const { MY_BUCKET } = bindings;
+			const { MY_BUCKET } = env;
 			let numOfObjects = (await MY_BUCKET.list()).objects.length;
 			expect(numOfObjects).toBe(0);
 			await MY_BUCKET.put("my-object", "my-value");
@@ -193,11 +193,11 @@ describe("getBindingsProxy - bindings", () => {
 	});
 
 	it("correctly obtains functioning D1 bindings", async () => {
-		const { bindings, dispose } = await getBindingsProxy<Bindings>({
+		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
 		try {
-			const { MY_D1 } = bindings;
+			const { MY_D1 } = env;
 			await MY_D1.exec(
 				`CREATE TABLE IF NOT EXISTS users ( id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL )`
 			);
