@@ -2,13 +2,15 @@
 
 This package contains the client side assets used in the Workers Playground available in the Cloudflare Dashboard at [https://workers.cloudflare.com/playground].
 
-## Developing
+## Developing locally
 
-In the root of the monorepo:
+> This is intended for internal Cloudflare developers. Currently, it's not possible to contribute to this package as an external contributor
 
-1. Run `pnpm -F workers-playground dev`
+- Ensure the rest of the team are aware you're working on the Workers Playground, as there's only one instance of the testing `playground-preview-worker`.
 
-This will run the Vite dev server, which will watch the source files and reload the browser on changes.
+- Run `pnpm run dev` in the root of this package. That will start the local Vite server for the playground frontend, with API calls hitting the testing `playground-preview-worker`.
+
+- To test changes to the playground preview worker, run `pnpm run deploy:testing` in `packages/playground-preview-worker` to deploy it to the test environment.
 
 ## Building
 
