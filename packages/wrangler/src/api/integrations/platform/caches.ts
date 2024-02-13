@@ -8,7 +8,7 @@
  *
  * We are not using miniflare's implementation because that would require the user to provide
  * miniflare-specific Request objects and they would receive back miniflare-specific Response
- * objects, this (in particular the Request part) is not really suitable for `getBindingsProxy`
+ * objects, this (in particular the Request part) is not really suitable for `getPlatformProxy`
  * as people would ideally interact with their bindings in a very production-like manner and
  * requiring them to deal with miniflare-specific classes defeats a bit the purpose of the utility.
  *

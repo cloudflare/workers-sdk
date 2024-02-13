@@ -12,9 +12,9 @@ import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/expe
 import type { MiniflareOptions } from "miniflare";
 
 /**
- * Options for the `getBindingsProxy` utility
+ * Options for the `getPlatformProxy` utility
  */
-export type GetBindingsProxyOptions = {
+export type GetPlatformProxyOptions = {
 	/**
 	 * The path to the config object to use (default `wrangler.toml`)
 	 */
@@ -35,16 +35,16 @@ export type GetBindingsProxyOptions = {
 };
 
 /**
- * Result of the `getBindingsProxy` utility
+ * Result of the `getPlatformProxy` utility
  */
-export type BindingsProxy<
-	Bindings = Record<string, unknown>,
+export type PlatformProxy<
+	Env = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 > = {
 	/**
-	 * Object containing the various proxies
+	 * Environment object containing the various Cloudflare bindings
 	 */
-	bindings: Bindings;
+	env: Env;
 	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
@@ -64,18 +64,19 @@ export type BindingsProxy<
 };
 
 /**
- * By reading from a `wrangler.toml` file this function generates proxy binding objects that can be
- * used to simulate the interaction with bindings during local development in a Node.js environment
+ * By reading from a `wrangler.toml` file this function generates proxy objects that can be
+ * used to simulate the interaction with the Cloudflare platform during local development
+ * in a Node.js environment
  *
  * @param options The various options that can tweak this function's behavior
  * @returns An Object containing the generated proxies alongside other related utilities
  */
-export async function getBindingsProxy<
-	Bindings = Record<string, unknown>,
+export async function getPlatformProxy<
+	Env = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 >(
-	options: GetBindingsProxyOptions = {}
-): Promise<BindingsProxy<Bindings, CfProperties>> {
+	options: GetPlatformProxyOptions = {}
+): Promise<PlatformProxy<Env, CfProperties>> {
 	const rawConfig = readConfig(options.configPath, {
 		experimentalJsonConfig: options.experimentalJsonConfig,
 	});
@@ -95,7 +96,7 @@ export async function getBindingsProxy<
 		...(miniflareOptions as Record<string, unknown>),
 	});
 
-	const bindings: Bindings = await mf.getBindings();
+	const bindings: Env = await mf.getBindings();
 
 	const vars = getVarsForDev(rawConfig, env);
 
@@ -103,7 +104,7 @@ export async function getBindingsProxy<
 	deepFreeze(cf);
 
 	return {
-		bindings: {
+		env: {
 			...vars,
 			...bindings,
 		},
@@ -117,7 +118,7 @@ export async function getBindingsProxy<
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
-	options: GetBindingsProxyOptions
+	options: GetPlatformProxyOptions
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
@@ -165,7 +166,7 @@ async function getMiniflareOptionsFromConfig(
  * @returns an object containing the properties to pass to miniflare
  */
 function getMiniflarePersistOptions(
-	persist: GetBindingsProxyOptions["persist"]
+	persist: GetPlatformProxyOptions["persist"]
 ): Pick<
 	MiniflareOptions,
 	"kvPersist" | "durableObjectsPersist" | "r2Persist" | "d1Persist"

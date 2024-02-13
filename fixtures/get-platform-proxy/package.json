@@ -1,7 +1,7 @@
 {
-	"name": "get-bindings-proxy-fixture",
+	"name": "get-platform-proxy-fixture",
 	"private": true,
-	"description": "A test for the getBindingsProxy (deprecated) utility",
+	"description": "A test for the getPlatformProxy utility",
 	"scripts": {
 		"test": "vitest run",
 		"test:watch": "vitest",
