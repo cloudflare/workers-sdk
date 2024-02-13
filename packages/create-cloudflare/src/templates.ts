@@ -276,6 +276,12 @@ const shouldUseTs = async (ctx: C3Context) => {
 		return true;
 	}
 
+	// If there is a generate process then we assume that a potential typescript
+	// setup must have been part of it, so we should not offer it here
+	if (ctx.template.generate) {
+		return false;
+	}
+
 	// Otherwise, prompt the user for their TS preference
 	return processArgument<boolean>(ctx.args, "ts", {
 		type: "confirm",
