@@ -85,7 +85,7 @@ describe("Preview Worker", () => {
 			'"/hello?world"'
 		);
 		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None"`
+			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 		);
 	});
 	it("shouldn't be redirected with no token", async () => {
