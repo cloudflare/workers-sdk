@@ -39,19 +39,20 @@ You can use bindings during development, when previewing locally your applicatio
 
 #### KV Example
 
-`c3` has added for you an example showing how you can use a KV binding, in order to enable the example, search for lines containing the following comment:
-```ts
-// KV Example:
-```
+`c3` has added for you an example showing how you can use a KV binding.
 
-and uncomment the commented lines below it.
+In order to enable the example:
+- Search for javascript/typescript lines containing the following comment:
+  ```ts
+  // KV Example:
+  ```
+  and uncomment the commented lines below it.
+- Do the same in the `wrangler.toml` file, where
+  the comment is:
+  ```toml
+  # KV Example:
+  ```
 
-After doing this you can run the `dev` script and visit the `/api/hello` route to see the example in action.
-
-To then enable such example also in preview mode add a `kv` in the `pages:preview` script like so:
-```diff
--    "pages:preview": "npm run pages:build && wrangler pages dev .vercel/output/static --compatibility-date=2023-12-18 --compatibility-flag=nodejs_compat",
-+    "pages:preview": "npm run pages:build && wrangler pages dev .vercel/output/static --compatibility-date=2023-12-18 --compatibility-flag=nodejs_compat --kv MY_KV",
-```
+After doing this you can run the `dev` or `preview` script and visit the `/api/hello` route to see the example in action.
 
 Finally, if you also want to see the example work in the deployed application make sure to add a `MY_KV` binding to your Pages application in its [dashboard kv bindings settings section](https://dash.cloudflare.com/?to=/:account/pages/view/:pages-project/settings/functions#kv_namespace_bindings_section). After having configured it make sure to re-deploy your application.
