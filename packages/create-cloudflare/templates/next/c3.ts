@@ -45,7 +45,10 @@ const configure = async (ctx: C3Context) => {
 	const usesTs = usesTypescript(ctx);
 
 	if (usesTs) {
-		copyFile(join(getTemplatePath(ctx), "env.d.ts"), `${projectPath}/env.d.ts`);
+		copyFile(
+			join(getTemplatePath(ctx), "env.d.ts"),
+			join(projectPath, "env.d.ts")
+		);
 		updateStatus("Created an env.d.ts file");
 	}
 
@@ -57,11 +60,14 @@ const configure = async (ctx: C3Context) => {
 
 	copyFile(
 		join(getTemplatePath(ctx), "next.config.mjs"),
-		`${projectPath}/next.config.mjs`
+		join(projectPath, "next.config.mjs")
 	);
 	updateStatus("Updated the next.config.mjs file");
 
-	copyFile(join(getTemplatePath(ctx), "README.md"), `${projectPath}/README.md`);
+	copyFile(
+		join(getTemplatePath(ctx), "README.md"),
+		join(projectPath, "README.md")
+	);
 	updateStatus("Updated the README file");
 
 	await addDevDependencies(installEslintPlugin);
