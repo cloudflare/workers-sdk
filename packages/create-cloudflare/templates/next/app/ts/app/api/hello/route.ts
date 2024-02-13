@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server'
+import { getRequestContext } from '@cloudflare/next-on-pages'
 
 export const runtime = 'edge'
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
   // )
   //
   // KV Example:
-  // const myKv = process.env.MY_KV
+  // const myKv = getRequestContext().env.MY_KV
   // await myKv.put('suffix', ' from a KV store!')
   // const suffix = await myKv.get('suffix')
   // responseText += suffix
