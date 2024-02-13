@@ -5,12 +5,11 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	compatDateFlag,
+	copyFile,
 	probePaths,
-	readFile,
 	readJSON,
 	usesEslint,
 	usesTypescript,
-	writeFile,
 	writeJSON,
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
@@ -46,8 +45,7 @@ const configure = async (ctx: C3Context) => {
 	const usesTs = usesTypescript(ctx);
 
 	if (usesTs) {
-		const envDts = readFile(join(getTemplatePath(ctx), "env.d.ts"));
-		writeFile(`${projectPath}/env.d.ts`, envDts);
+		copyFile(join(getTemplatePath(ctx), "env.d.ts"), `${projectPath}/env.d.ts`);
 		updateStatus("Created an env.d.ts file");
 	}
 
@@ -57,12 +55,13 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	const nextConfig = readFile(join(getTemplatePath(ctx), "next.config.mjs"));
-	writeFile(`${projectPath}/next.config.mjs`, nextConfig);
-	updateStatus("Updated the next.config.js file");
+	copyFile(
+		join(getTemplatePath(ctx), "next.config.mjs"),
+		`${projectPath}/next.config.mjs`
+	);
+	updateStatus("Updated the next.config.mjs file");
 
-	const readme = readFile(join(getTemplatePath(ctx), "README.md"));
-	writeFile(`${projectPath}/README.md`, readme);
+	copyFile(join(getTemplatePath(ctx), "README.md"), `${projectPath}/README.md`);
 	updateStatus("Updated the README file");
 
 	await addDevDependencies(installEslintPlugin);

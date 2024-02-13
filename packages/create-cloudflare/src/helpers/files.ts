@@ -5,6 +5,14 @@ import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "./command";
 import type { C3Context } from "types";
 
+export const copyFile = (path: string, dest: string) => {
+	try {
+		fs.copyFileSync(path, dest);
+	} catch (error) {
+		crash(error as string);
+	}
+};
+
 export const writeFile = (path: string, content: string) => {
 	try {
 		fs.writeFileSync(path, content);
