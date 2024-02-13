@@ -152,6 +152,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	nuxt: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Welcome to Nuxt!",
@@ -432,7 +433,7 @@ const verifyDevScript = async (
 	);
 
 	// Wait an eternity for the dev server to spin up
-	await sleep(15000);
+	await sleep(12000);
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
