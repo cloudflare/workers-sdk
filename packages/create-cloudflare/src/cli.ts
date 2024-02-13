@@ -138,12 +138,12 @@ const configure = async (ctx: C3Context) => {
 	await installWrangler();
 	await installWorkersTypes(ctx);
 
-	await updateWranglerToml(ctx);
-
 	const { template } = ctx;
 	if (template.configure) {
 		await template.configure({ ...ctx });
 	}
+
+	await updateWranglerToml(ctx);
 
 	await updatePackageScripts(ctx);
 

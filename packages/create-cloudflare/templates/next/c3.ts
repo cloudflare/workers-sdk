@@ -65,6 +65,12 @@ const configure = async (ctx: C3Context) => {
 	updateStatus("Updated the next.config.mjs file");
 
 	copyFile(
+		join(getTemplatePath(ctx), "wrangler.toml"),
+		join(projectPath, "wrangler.toml")
+	);
+	updateStatus("Created wrangler.toml file");
+
+	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
 		join(projectPath, "README.md")
 	);
