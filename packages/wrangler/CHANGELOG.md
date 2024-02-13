@@ -1,5 +1,34 @@
 # wrangler
 
+## 3.28.2
+
+### Patch Changes
+
+- [#4950](https://github.com/cloudflare/workers-sdk/pull/4950) [`05360e43`](https://github.com/cloudflare/workers-sdk/commit/05360e432bff922def960e86690232c762fad284) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure we do not rewrite external Origin headers in wrangler dev
+
+  In https://github.com/cloudflare/workers-sdk/pull/4812 we tried to fix the Origin headers to match the Host header but were overzealous and rewrote Origin headers for external origins (outside of the proxy server's origin).
+
+  This is now fixed, and moreover we rewrite any headers that refer to the proxy server on the request with the configured host and vice versa on the response.
+
+  This should ensure that CORS is not broken in browsers when a different host is being simulated based on routes in the Wrangler configuration.
+
+* [#4997](https://github.com/cloudflare/workers-sdk/pull/4997) [`bfeefe27`](https://github.com/cloudflare/workers-sdk/commit/bfeefe275390491a7bb71f01550b3cb368d13320) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: add missing `defineNavigatorUserAgent` dependency to useEsbuild hook
+
+- [#4966](https://github.com/cloudflare/workers-sdk/pull/4966) [`36692326`](https://github.com/cloudflare/workers-sdk/commit/366923264fe2643acee0761c849ad0dc3922ad6c) Thanks [@penalosa](https://github.com/penalosa)! - fix: Report Custom Build failures as `UserError`s
+
+* [#5002](https://github.com/cloudflare/workers-sdk/pull/5002) [`315a651b`](https://github.com/cloudflare/workers-sdk/commit/315a651b5742a614fd950c29b5dac5fdd2d1f270) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: rename `getBindingsProxy` to `getPlatformProxy`
+
+  initially `getBindingsProxy` was supposed to only provide proxies for bindings,
+  the utility has however grown, including now `cf`, `ctx` and `caches`, to
+  clarify the increased scope the utility is getting renamed to `getPlatformProxy`
+  and its `bindings` field is getting renamed `env`
+
+  _note_: `getBindingProxy` with its signature is still kept available, making this
+  a non breaking change
+
+* Updated dependencies [[`05360e43`](https://github.com/cloudflare/workers-sdk/commit/05360e432bff922def960e86690232c762fad284)]:
+  - miniflare@3.20240129.2
+
 ## 3.28.1
 
 ### Patch Changes
