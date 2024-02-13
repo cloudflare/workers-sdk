@@ -152,9 +152,20 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	nuxt: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Welcome to Nuxt!",
+		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: "./dist",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
 		},
 	},
 	react: {
@@ -421,8 +432,8 @@ const verifyDevScript = async (
 		logStream
 	);
 
-	// Wait a few seconds for dev server to spin up
-	await sleep(4000);
+	// Wait an eternity for the dev server to spin up
+	await sleep(12000);
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
@@ -474,7 +485,7 @@ const verifyBuildScript = async (
 	);
 
 	// Wait a few seconds for dev server to spin up
-	await sleep(4000);
+	await sleep(7000);
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${route}`);

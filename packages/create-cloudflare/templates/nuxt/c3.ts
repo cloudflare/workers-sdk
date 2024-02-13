@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, writeFile } from "helpers/files";
+import { transformFile } from "helpers/codemod";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
+import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -28,31 +28,71 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async () => {
-	const configFileName = "nuxt.config.ts";
-	const configFilePath = resolve(configFileName);
+	await installPackages(["nitro-cloudflare-dev"], {
+		dev: true,
+		startText: "Installing nitro module `nitro-cloudflare-dev`",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
+	updateNuxtConfig();
+};
+
+const updateNuxtConfig = () => {
 	const s = spinner();
-	s.start(`Updating \`${configFileName}\``);
-	// Add the cloudflare preset into the configuration file.
-	const originalConfigFile = readFileSync(configFilePath, "utf8");
-	const updatedConfigFile = originalConfigFile.replace(
-		"defineNuxtConfig({",
-		"defineNuxtConfig({\n  nitro: {\n    preset: 'cloudflare-pages'\n  },"
+
+	const configFile = "nuxt.config.ts";
+	s.start(`Updating \`${configFile}\``);
+
+	const b = recast.types.builders;
+
+	const presetDef = b.objectProperty(
+		b.identifier("nitro"),
+		b.objectExpression([
+			b.objectProperty(
+				b.identifier("preset"),
+				b.stringLiteral("cloudflare-pages")
+			),
+		])
 	);
-	writeFile(configFilePath, updatedConfigFile);
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFileName}\``)}`);
+
+	const moduleDef = b.objectProperty(
+		b.identifier("modules"),
+		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
+	);
+
+	transformFile(configFile, {
+		visitCallExpression: function (n) {
+			const callee = n.node.callee as recast.types.namedTypes.Identifier;
+			if (callee.name === "defineNuxtConfig") {
+				const obj = n.node
+					.arguments[0] as recast.types.namedTypes.ObjectExpression;
+
+				obj.properties.push(presetDef);
+				obj.properties.push(moduleDef);
+			}
+
+			return this.traverse(n);
+		},
+	});
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "nuxt",
 	platform: "pages",
+	copyFiles: {
+		path: "./templates",
+	},
 	displayName: "Nuxt",
+	devScript: "dev",
+	deployScript: "deploy",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+			deploy: `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && wrangler pages dev ./dist`,
 		},
 	}),
 };

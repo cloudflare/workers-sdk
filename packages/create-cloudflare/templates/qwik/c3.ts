@@ -79,6 +79,9 @@ const config: TemplateConfig = {
 	id: "qwik",
 	displayName: "Qwik",
 	platform: "pages",
+	copyFiles: {
+		path: "./templates",
+	},
 	devScript: "dev",
 	deployScript: "deploy",
 	generate,
