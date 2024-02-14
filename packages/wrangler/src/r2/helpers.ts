@@ -552,12 +552,12 @@ export async function deleteEventNotificationConfig(
 
 
 /**
- * R2 bucket binding names must be valid JS identifiers.
+ * R2 bucket names must only contain alphanumeric and - characters.
  */
-export function isValidR2BucketBinding(
-	binding: string | undefined
-): binding is string {
+export function isValidR2BucketName(
+	name: string | undefined
+): name is string {
 	return (
-		typeof binding === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding)
+		typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(binding)
 	);
 }
