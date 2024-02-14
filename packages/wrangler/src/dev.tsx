@@ -955,11 +955,28 @@ export function getBindings(
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
-			if (!hyperdrive.localConnectionString) {
+			const connectionStringFromEnv =
+				process.env[
+					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
+				];
+			if (!connectionStringFromEnv || !hyperdrive.localConnectionString) {
 				throw new UserError(
-					`In development, you should use a local postgres connection string to emulate hyperdrive functionality. Please setup postgres locally and set the value of "${hyperdrive.binding}"'s "localConnectionString" to the postgres connection string in your wrangler.toml`
+					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 				);
 			}
+
+			// If there is a non-empty connection string specified in the environment,
+			// use that as our local connection stirng configuration.
+			if (
+				connectionStringFromEnv !== undefined &&
+				connectionStringFromEnv !== ""
+			) {
+				logger.log(
+					`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
+				);
+				hyperdrive.localConnectionString = connectionStringFromEnv;
+			}
+
 			return hyperdrive;
 		}),
 	};
