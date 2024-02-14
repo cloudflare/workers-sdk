@@ -35,7 +35,7 @@ import {
 	ensurePosixLikePath,
 	handleModuleFallbackRequest,
 } from "./module-fallback";
-import type { WorkersProjectOptions, SourcelessWorkerOptions } from "./config";
+import type { WorkersPoolOptions, SourcelessWorkerOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { MessagePort } from "node:worker_threads";
 import type { Readable } from "node:stream";
@@ -112,7 +112,7 @@ function forEachMiniflare(
 
 interface Project {
 	project: WorkspaceProject;
-	options: WorkersProjectOptions;
+	options: WorkersPoolOptions;
 	testFiles: Set<string>;
 	relativePath: string | number;
 	mf?: SingleOrPerTestFileMiniflare;
@@ -155,7 +155,7 @@ interface DurableObjectDesignator {
  * the objects they point to.
  */
 function getDurableObjectDesignators(
-	options: WorkersProjectOptions
+	options: WorkersPoolOptions
 ): Map<string /* bound name */, DurableObjectDesignator> {
 	const result = new Map<string, DurableObjectDesignator>();
 	const durableObjects = options.miniflare?.durableObjects ?? {};

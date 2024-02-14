@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { MessageChannel, receiveMessageOnPort } from "node:worker_threads";
-import type { WorkersProjectOptions } from "../pool/config";
+import type { WorkersPoolOptions } from "../pool/config";
 import type { Awaitable, inject } from "vitest";
 
 // Vitest will call `structuredClone()` to verify data is serialisable.
@@ -26,8 +26,8 @@ export interface WorkerPoolOptionsContext {
 
 export function defineWorkersPoolOptions(
 	options:
-		| WorkersProjectOptions
-		| ((ctx: WorkerPoolOptionsContext) => Awaitable<WorkersProjectOptions>)
+		| WorkersPoolOptions
+		| ((ctx: WorkerPoolOptionsContext) => Awaitable<WorkersPoolOptions>)
 ) {
 	return options;
 }

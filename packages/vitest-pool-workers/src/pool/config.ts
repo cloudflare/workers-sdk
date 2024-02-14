@@ -52,7 +52,7 @@ export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot" | "modulesRule"
 >;
-export type WorkersProjectOptions = z.input<typeof WorkersPoolOptionsSchema> & {
+export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
 		workers?: WorkerOptions[];
 	};
@@ -114,7 +114,7 @@ function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
 	opts: PathParseParams
-): WorkersProjectOptions {
+): WorkersPoolOptions {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(value, opts);
 	options.miniflare ??= {};
@@ -158,12 +158,12 @@ function parseCustomPoolOptions(
 
 	if (errorRef.value !== undefined) throw errorRef.value;
 
-	return options as WorkersProjectOptions;
+	return options as WorkersPoolOptions;
 }
 
 export async function parseProjectOptions(
 	project: WorkspaceProject
-): Promise<WorkersProjectOptions> {
+): Promise<WorkersPoolOptions> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
 	// hit this case.
