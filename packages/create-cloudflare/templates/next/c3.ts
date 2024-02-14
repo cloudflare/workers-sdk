@@ -26,6 +26,12 @@ const generate = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
 
 	await runFrameworkGenerator(ctx, [projectName]);
+
+	copyFile(
+		join(getTemplatePath(ctx), "wrangler.toml"),
+		join(ctx.project.path, "wrangler.toml")
+	);
+	updateStatus("Created wrangler.toml file");
 };
 
 const updateNextConfig = () => {
@@ -87,12 +93,6 @@ const configure = async (ctx: C3Context) => {
 	}
 
 	updateNextConfig();
-
-	copyFile(
-		join(getTemplatePath(ctx), "wrangler.toml"),
-		join(projectPath, "wrangler.toml")
-	);
-	updateStatus("Created wrangler.toml file");
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
