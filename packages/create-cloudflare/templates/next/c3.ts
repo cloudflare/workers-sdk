@@ -160,7 +160,8 @@ export default {
 	platform: "pages",
 	displayName: "Next",
 	devScript: "dev",
-	previewScript: "pages:preview",
+	previewScript: "preview",
+	deployScript: "deploy",
 	generate,
 	configure,
 	copyFiles: {
@@ -207,8 +208,8 @@ export default {
 		return {
 			scripts: {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-				"pages:preview": `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
-				"pages:deploy": `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+				preview: `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static`,
+				deploy: `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
 			},
 		};
 	},
