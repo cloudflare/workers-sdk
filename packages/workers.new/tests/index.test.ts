@@ -30,6 +30,18 @@ describe("worker", () => {
 		);
 	});
 
+	it("python workers", async () => {
+		const resp = await worker.fetch(`https://workers.new/python`, {
+			redirect: "manual",
+		});
+
+		const location = resp.headers.get("Location");
+
+		expect(location).toMatchInlineSnapshot(
+			'"https://workers.cloudflare.com/playground/python"'
+		);
+	});
+
 	it("templates list", async () => {
 		const resp = await worker.fetch(`https://workers.new/templates`, {
 			redirect: "manual",

@@ -200,11 +200,24 @@ export class UserSession {
 			compatibility_flags: uploadedMetadata?.compatibility_flags ?? [
 				"nodejs_compat",
 			],
+			// TODO(soon): Add a CPU time limiter once standard pricing is out
+			usage_model: "unbound",
 		};
 
-		const { entrypoint, additionalModules } = constructMiddleware(
-			uploadedMetadata.main_module
-		);
+		let entrypoint = uploadedMetadata.main_module;
+		let additionalModules = new FormData();
+
+		const entrypointModule = worker.get(uploadedMetadata.main_module);
+
+		// Only apply middleware if the entrypoint is an ES6 module
+		if (
+			entrypointModule instanceof File &&
+			entrypointModule.type === "application/javascript+module"
+		) {
+			({ entrypoint, additionalModules } = constructMiddleware(
+				uploadedMetadata.main_module
+			));
+		}
 
 		metadata.main_module = entrypoint;
 
