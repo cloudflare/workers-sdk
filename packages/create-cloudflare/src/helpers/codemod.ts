@@ -73,6 +73,6 @@ export const transformFile = (
 
 	if (ast) {
 		recast.visit(ast, methods);
-		writeFile(filePath, recast.print(ast).code);
+		writeFile(filePath, recast.prettyPrint(ast).code);
 	}
 };
