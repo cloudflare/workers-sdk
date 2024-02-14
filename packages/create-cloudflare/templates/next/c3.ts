@@ -5,7 +5,6 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
-	compatDateFlag,
 	copyFile,
 	probePaths,
 	readFile,
