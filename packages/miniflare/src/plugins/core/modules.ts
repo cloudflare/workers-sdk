@@ -174,8 +174,6 @@ export class ModuleLocator {
 	}
 
 	visitEntrypoint(code: string, modulePath: string) {
-		modulePath = path.resolve(this.modulesRoot, modulePath);
-
 		// If we've already visited this path, return
 		if (this.#visitedPaths.has(modulePath)) return;
 		this.#visitedPaths.add(modulePath);

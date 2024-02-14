@@ -32,6 +32,18 @@ export async function useTmp(t: ExecutionContext): Promise<string> {
 	return filePath;
 }
 
+// Must be called from a `.serial()` test
+export function useCwd(t: ExecutionContext, cwd: string) {
+	const originalCwd = process.cwd();
+	const originalPWD = process.env.PWD;
+	process.chdir(cwd);
+	process.env.PWD = cwd;
+	t.teardown(() => {
+		process.chdir(originalCwd);
+		process.env.PWD = originalPWD;
+	});
+}
+
 type ValidReadableStreamBYOBRequest = Omit<
 	ReadableStreamBYOBRequest,
 	"view"
