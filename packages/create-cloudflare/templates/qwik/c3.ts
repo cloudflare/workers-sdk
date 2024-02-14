@@ -40,9 +40,9 @@ const addBindingsProxy = (ctx: C3Context) => {
 let env = {};
 
 if(process.env.NODE_ENV === 'development') {
-  const { getBindingsProxy } = await import('wrangler');
-  const { bindings } = await getBindingsProxy();
-  env = bindings;
+  const { getPlatformProxy } = await import('wrangler');
+  const platformProxy = await getPlatformProxy();
+  env = platformProxy.env;
 }
 `;
 
