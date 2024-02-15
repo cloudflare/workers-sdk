@@ -18,7 +18,7 @@
 		"create-svelte": "6.0.8",
 		"create-vue": "3.9.2",
 		"gatsby": "5.13.3",
-		"nuxi": "3.10.0"
+		"nuxi": "3.10.1"
 	},
 	"frameworkCliMap": {
 		"angular": "@angular/create",
