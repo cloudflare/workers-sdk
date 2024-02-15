@@ -125,12 +125,18 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 					typesEntrypoint,
 			  ];
 
+		// If we detect any tabs, use tabs, otherwise use spaces.
+		// We need to pass an explicit value here in order to preserve formatting properly.
+		const useSpaces = !tsconfig.match(/\t/g);
+
 		// Calculate required edits and apply them to file
 		const edits = jsonc.modify(
 			tsconfig,
 			["compilerOptions", "types"],
 			newTypes,
-			{}
+			{
+				formattingOptions: { insertSpaces: useSpaces },
+			}
 		);
 		const updated = jsonc.applyEdits(tsconfig, edits);
 		writeFile(tsconfigPath, updated);
