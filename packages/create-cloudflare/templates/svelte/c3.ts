@@ -98,8 +98,10 @@ const config: TemplateConfig = {
 	displayName: "Svelte",
 	platform: "pages",
 	copyFiles: {
-		js: { path: "./js" },
-		ts: { path: "./ts" },
+		variants: {
+			js: { path: "./js" },
+			ts: { path: "./ts" },
+		},
 	},
 	generate,
 	configure,

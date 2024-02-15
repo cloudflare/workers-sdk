@@ -13,7 +13,7 @@ if (dev) {
 }
 
 export const handle = async ({ event, resolve }) => {
-	if (dev && platform) {
+	if (platform) {
 		event.platform = {
 			...event.platform,
 			...platform
