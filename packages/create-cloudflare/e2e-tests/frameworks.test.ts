@@ -222,6 +222,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "SvelteKit app",
 		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: ".svelte-kit/cloudflare",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
 	},
 	vue: {
 		testCommitMessage: true,
@@ -343,7 +353,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 				}
 			},
-			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
+			// { retry: 1, timeout: timeout || TEST_TIMEOUT }
+			{ retry: 0, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 });
