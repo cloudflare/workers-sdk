@@ -19,6 +19,17 @@ async function standardPricingWarning(
 	accountId: string | undefined,
 	config: Config
 ) {
+	if (Date.now() >= Date.UTC(2024, 2, 1, 14)) {
+		if (config.usage_model !== undefined) {
+			logger.warn(
+				"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			);
+		}
+
+		// TODO: After March 1st 2024 remove the code below
+		return;
+	}
+
 	try {
 		const { standard, reason } = await fetchResult<{
 			standard: boolean;
