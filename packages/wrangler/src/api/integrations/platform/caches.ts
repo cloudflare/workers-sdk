@@ -51,8 +51,14 @@ export class CacheStorage {
 	}
 }
 
-type CacheRequest = unknown;
-type CacheResponse = unknown;
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   In order to make the API convenient to use in and Node.js programs we try not to
+   restrict the types that's why we're using `any`s as the request/response types
+   (making this API flexible and compatible with the cache types in `@cloudflare/workers-types`)
+*/
+type CacheRequest = any;
+type CacheResponse = any;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * No-op implementation of Cache
