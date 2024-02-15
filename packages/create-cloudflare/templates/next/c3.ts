@@ -2,14 +2,16 @@ import { join } from "path";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
-	compatDateFlag,
 	copyFile,
 	probePaths,
+	readFile,
 	readJSON,
 	usesEslint,
 	usesTypescript,
+	writeFile,
 	writeJSON,
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
@@ -23,6 +25,37 @@ const generate = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
 
 	await runFrameworkGenerator(ctx, [projectName]);
+
+	copyFile(
+		join(getTemplatePath(ctx), "wrangler.toml"),
+		join(ctx.project.path, "wrangler.toml")
+	);
+	updateStatus("Created wrangler.toml file");
+};
+
+const updateNextConfig = () => {
+	const s = spinner();
+
+	const configFile = "next.config.mjs";
+	s.start(`Updating \`${configFile}\``);
+
+	const configContent = readFile(configFile);
+
+	const updatedConfigFile =
+		`import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
+
+		// Here we use the @cloudflare/next-on-pages next-dev module to allow us to use bindings during local development
+		// (when running the application with \`next dev\`), for more information see:
+		// https://github.com/cloudflare/next-on-pages/blob/5712c57ea7/internal-packages/next-dev/README.md
+		if (process.env.NODE_ENV === 'development') {
+		  await setupDevPlatform();
+		}
+
+		`.replace(/\n\t*/g, "\n") + configContent;
+
+	writeFile(configFile, updatedConfigFile);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
 const configure = async (ctx: C3Context) => {
@@ -58,11 +91,7 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	copyFile(
-		join(getTemplatePath(ctx), "next.config.mjs"),
-		join(projectPath, "next.config.mjs")
-	);
-	updateStatus("Updated the next.config.mjs file");
+	updateNextConfig();
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
@@ -130,7 +159,8 @@ export default {
 	platform: "pages",
 	displayName: "Next",
 	devScript: "dev",
-	previewScript: "pages:preview",
+	previewScript: "preview",
+	deployScript: "deploy",
 	generate,
 	configure,
 	copyFiles: {
@@ -177,8 +207,8 @@ export default {
 		return {
 			scripts: {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-				"pages:preview": `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
-				"pages:deploy": `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+				preview: `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static`,
+				deploy: `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
 			},
 		};
 	},

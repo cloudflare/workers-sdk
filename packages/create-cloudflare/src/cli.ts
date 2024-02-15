@@ -138,6 +138,8 @@ const configure = async (ctx: C3Context) => {
 	await installWrangler();
 	await installWorkersTypes(ctx);
 
+	// Note: updateWranglerToml _must_ be called before the configure phase since
+	//       pre-existing workers assume its presence in their configure phase
 	await updateWranglerToml(ctx);
 
 	const { template } = ctx;
