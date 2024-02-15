@@ -24,6 +24,24 @@
  * No-op implementation of CacheStorage
  */
 export class CacheStorage {
+	constructor() {
+		const unsupportedMethods = ["has", "delete", "keys", "match"];
+		unsupportedMethods.forEach((method) => {
+			Object.defineProperty(this, method, {
+				enumerable: false,
+				value: () => {
+					throw new Error(
+						`Failed to execute '${method}' on 'CacheStorage': the method is not implemented.`
+					);
+				},
+			});
+		});
+		Object.defineProperty(this, "default", {
+			enumerable: true,
+			value: this.default,
+		});
+	}
+
 	async open(cacheName: string): Promise<Cache> {
 		return new Cache();
 	}
