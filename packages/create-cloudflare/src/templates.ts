@@ -13,11 +13,6 @@ import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context, PackageJson } from "types";
 
-export type PackageTransformer = (
-	pkgJson: PackageJson,
-	ctx: C3Context
-) => Promise<Record<string, string | object>>;
-
 export type TemplateConfig = {
 	/**
 	 * The version of this configuration schema to use. This will be used

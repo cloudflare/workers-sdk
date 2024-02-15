@@ -2,7 +2,7 @@ import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { transformFile } from "helpers/codemod";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, usesTypescript } from "helpers/files";
+import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
@@ -107,7 +107,7 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async (original: PackageJson, ctx: C3Context) => {
 		let scripts: Record<string, string> = {
-			preview: `${npm} run build && wrangler pages dev ${await compatDateFlag()} .svelte-kit/cloudflare`,
+			preview: `${npm} run build && wrangler pages dev .svelte-kit/cloudflare`,
 			deploy: `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
 		};
 
