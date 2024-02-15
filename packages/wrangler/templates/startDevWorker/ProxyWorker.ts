@@ -305,10 +305,12 @@ function insertLiveReloadScript(
  */
 function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 	headers.forEach((value, key) => {
-		if (typeof value === "string" && value.includes(from.host)) {
+		if (typeof value === "string" && value.includes(from.hostname)) {
 			headers.set(
 				key,
-				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
+				value
+					.replaceAll(from.origin, to.origin)
+					.replaceAll(from.hostname, to.hostname)
 			);
 		}
 	});
