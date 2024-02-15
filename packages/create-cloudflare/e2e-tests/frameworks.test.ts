@@ -353,8 +353,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 				}
 			},
-			// { retry: 1, timeout: timeout || TEST_TIMEOUT }
-			{ retry: 0, timeout: timeout || TEST_TIMEOUT }
+			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 });
@@ -479,6 +478,9 @@ const verifyBuildScript = async (
 		[pm, "run", script],
 		{
 			cwd: projectPath,
+			env: {
+				NODE_ENV: "production",
+			},
 		},
 		logStream
 	);
