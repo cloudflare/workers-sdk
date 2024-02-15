@@ -112,8 +112,7 @@ const config: TemplateConfig = {
 		if (usesTypescript(ctx)) {
 			scripts = {
 				...scripts,
-				build: `${npm} run build-cf-types && ${original.scripts?.build}`,
-				"build-cf-types": "wrangler types",
+				"build-cf-types": "wrangler types && mv worker-configuration.d.ts src/",
 			};
 		}
 
