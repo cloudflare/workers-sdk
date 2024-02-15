@@ -83,7 +83,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	xServerEnvHeader?: string;
 	xDeploymentIdHeader?: boolean;
 	logError: (err: Error) => void;
-	setMetrics: (metrics: HandlerMetrics) => void;
+	setMetrics?: (metrics: HandlerMetrics) => void;
 	findAssetEntryForPath: FindAssetEntryForPath<AssetEntry>;
 	getAssetKey(assetEntry: AssetEntry, content: ContentNegotiation): string;
 	negotiateContent(
@@ -341,12 +341,12 @@ export async function generateHandler<
 				const earlyHintsLinkHeader = earlyHintsResponse.headers.get("Link");
 				if (earlyHintsLinkHeader) {
 					headers.set("Link", earlyHintsLinkHeader);
-					setMetrics({ earlyHintsResult: "used-hit" });
+					if (setMetrics) setMetrics({ earlyHintsResult: "used-hit" });
 				} else {
-					setMetrics({ earlyHintsResult: "notused-hit" });
+					if (setMetrics) setMetrics({ earlyHintsResult: "notused-hit" });
 				}
 			} else {
-				setMetrics({ earlyHintsResult: "notused-miss" });
+				if (setMetrics) setMetrics({ earlyHintsResult: "notused-miss" });
 			}
 
 			const clonedResponse = response.clone();
