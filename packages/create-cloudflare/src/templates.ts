@@ -72,7 +72,11 @@ export type TemplateConfig = {
 	 */
 	configure?: (ctx: C3Context) => Promise<void>;
 
-	/** A transformer that is run on the project's `package.json` during the creation step */
+	/**
+	 * A transformer that is run on the project's `package.json` during the creation step.
+	 *
+	 * The object returned from this function will be deep merged with the original.
+	 * */
 	transformPackageJson?: (
 		pkgJson: PackageJson,
 		ctx: C3Context
