@@ -198,6 +198,13 @@ export function DevImplementation(props: DevProps): JSX.Element {
 let ip: string;
 let port: number;
 
+// When starting on `port: 0`, we won't know the port to use until `workerd` has started. If the user tries to open the
+// browser before we know this, they'll open `localhost:0` which is incorrect.
+let portUsablePromiseResolve: () => void;
+const portUsablePromise = new Promise<void>(
+	(resolve) => (portUsablePromiseResolve = resolve)
+);
+
 function InteractiveDevSession(props: DevProps) {
 	const toggles = useHotkeys({
 		initial: {
@@ -217,6 +224,7 @@ function InteractiveDevSession(props: DevProps) {
 	useTunnel(toggles.tunnel);
 
 	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
+		portUsablePromiseResolve();
 		ip = newIp;
 		port = newPort;
 		props.onReady?.(newIp, newPort, proxyData);
@@ -650,6 +658,7 @@ function useHotkeys(props: {
 					break;
 				// open browser
 				case "b": {
+					if (port === 0) await portUsablePromise;
 					if (ip === "0.0.0.0" || ip === "*") {
 						await openInBrowser(`${localProtocol}://127.0.0.1:${port}`);
 						return;
