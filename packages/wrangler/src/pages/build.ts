@@ -98,13 +98,13 @@ export function Options(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			},
-			// bindings: {
-			// 	type: "string",
-			// 	describe:
-			// 		"Bindings used in Functions (used to register beta product shims)",
-			// 	deprecated: true,
-			// 	hidden: true,
-			// },
+			bindings: {
+				type: "string",
+				describe:
+					"Bindings used in Functions (used to register beta product shims)",
+				deprecated: true,
+				hidden: true,
+			},
 		});
 }
 
@@ -327,12 +327,12 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 			);
 		}
 
-		// if (args.bindings) {
-		// 	throw new FatalError(
-		// 		"The `--bindings` flag cannot be used when creating a Pages Plugin with `--plugin`.",
-		// 		1
-		// 	);
-		// }
+		if (args.bindings) {
+			throw new FatalError(
+				"The `--bindings` flag cannot be used when creating a Pages Plugin with `--plugin`.",
+				1
+			);
+		}
 
 		if (args.buildOutputDirectory) {
 			throw new FatalError(
