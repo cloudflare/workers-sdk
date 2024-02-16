@@ -27,6 +27,7 @@
 	],
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
+		"dev:codemod": "node -r esbuild-register scripts/codemod.ts",
 		"check:lint": "eslint .",
 		"check:type": "tsc",
 		"lint": "eslint",
