@@ -200,10 +200,14 @@ let port: number;
 
 // When starting on `port: 0`, we won't know the port to use until `workerd` has started. If the user tries to open the
 // browser before we know this, they'll open `localhost:0` which is incorrect.
+let portUsable = false;
 let portUsablePromiseResolve: () => void;
 const portUsablePromise = new Promise<void>(
 	(resolve) => (portUsablePromiseResolve = resolve)
 );
+// If the user has pressed `b`, but the port isn't ready yet, prevent any further presses of `b` opening a browser,
+// until the port is ready.
+let blockBrowserOpen = false;
 
 function InteractiveDevSession(props: DevProps) {
 	const toggles = useHotkeys({
@@ -224,6 +228,7 @@ function InteractiveDevSession(props: DevProps) {
 	useTunnel(toggles.tunnel);
 
 	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
+		portUsable = true;
 		portUsablePromiseResolve();
 		ip = newIp;
 		port = newPort;
@@ -658,7 +663,13 @@ function useHotkeys(props: {
 					break;
 				// open browser
 				case "b": {
-					if (port === 0) await portUsablePromise;
+					if (port === 0) {
+						if (!portUsable) logger.info("Waiting for port...");
+						if (blockBrowserOpen) return;
+						blockBrowserOpen = true;
+						await portUsablePromise;
+						blockBrowserOpen = false;
+					}
 					if (ip === "0.0.0.0" || ip === "*") {
 						await openInBrowser(`${localProtocol}://127.0.0.1:${port}`);
 						return;
