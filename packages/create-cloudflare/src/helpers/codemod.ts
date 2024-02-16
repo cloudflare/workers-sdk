@@ -1,9 +1,11 @@
 import { existsSync, lstatSync, readdirSync } from "fs";
-import path, { basename, extname, join } from "path";
+import path, { extname, join } from "path";
 import { crash } from "@cloudflare/cli";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
+import { C3Context } from "types";
+import { getTemplatePath } from "../templates";
 import { readFile, writeFile } from "./files";
 import type { Program } from "esprima";
 
@@ -78,13 +80,15 @@ export const transformFile = (
 	}
 };
 
-export const loadSnippets = (snippetsPath: string) => {
+export const loadSnippets = (parentFolder: string) => {
+	const snippetsPath = join(parentFolder, "snippets");
+
 	if (!existsSync(snippetsPath)) {
-		return null;
+		return {};
 	}
 
 	if (!lstatSync(snippetsPath).isDirectory) {
-		return null;
+		return {};
 	}
 
 	const files = readdirSync(snippetsPath);
@@ -104,4 +108,8 @@ export const loadSnippets = (snippetsPath: string) => {
 				};
 			}, {}) as Record<string, recast.types.ASTNode[]>
 	);
+};
+
+export const loadTemplateSnippets = (ctx: C3Context) => {
+	return loadSnippets(getTemplatePath(ctx));
 };
