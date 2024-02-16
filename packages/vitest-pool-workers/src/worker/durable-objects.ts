@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { internalEnv, getSerializedOptions } from "./env";
+import { getSerializedOptions, internalEnv } from "./env";
 import { importModule, mustGetResolvedMainPath } from "./import";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";

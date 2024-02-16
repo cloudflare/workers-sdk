@@ -8,14 +8,14 @@ import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
+	kCurrentWorker,
+	kUnsafeEphemeralUniqueKey,
 	Log,
 	LogLevel,
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 	WebSocket,
-	kCurrentWorker,
-	kUnsafeEphemeralUniqueKey,
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
@@ -35,10 +35,10 @@ import {
 	ensurePosixLikePath,
 	handleModuleFallbackRequest,
 } from "./module-fallback";
-import type { WorkersPoolOptions, SourcelessWorkerOptions } from "./config";
+import type { SourcelessWorkerOptions, WorkersPoolOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
-import type { MessagePort } from "node:worker_threads";
 import type { Readable } from "node:stream";
+import type { MessagePort } from "node:worker_threads";
 import type {
 	ResolvedConfig,
 	RunnerRPC,

@@ -6,11 +6,11 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
+import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
-import { getProjectPath, getRelativeProjectPath } from "./helpers";
 
 const PLUGIN_VALUES = Object.values(PLUGINS);
 

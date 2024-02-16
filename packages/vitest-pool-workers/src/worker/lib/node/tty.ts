@@ -1,3 +1,3 @@
 export function isatty() {
-  return false;
+	return false;
 }

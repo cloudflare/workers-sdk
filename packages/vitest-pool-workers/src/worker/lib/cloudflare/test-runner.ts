@@ -2,9 +2,9 @@ import assert from "node:assert";
 import { NodeSnapshotEnvironment } from "@vitest/snapshot/environment";
 import { resetMockAgent } from "cloudflare:mock-agent";
 import {
-	internalEnv,
 	fetchMock,
 	getSerializedOptions,
+	internalEnv,
 } from "cloudflare:test-internal";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";

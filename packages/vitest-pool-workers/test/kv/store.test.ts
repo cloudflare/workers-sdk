@@ -1,15 +1,15 @@
 import {
-	env,
-	SELF,
-	fetchMock,
-	runInDurableObject,
-	runDurableObjectAlarm,
-	listDurableObjectIds,
 	createExecutionContext,
+	env,
+	fetchMock,
+	listDurableObjectIds,
+	runDurableObjectAlarm,
+	runInDurableObject,
+	SELF,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import worker, { transformResponse, Counter } from "./worker";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import worker, { Counter, transformResponse } from "./worker";
 
 beforeAll(() => {
 	fetchMock.activate();
@@ -112,6 +112,9 @@ describe("kv", () => {
 			"http://localhost"
 		);
 		const ctx = createExecutionContext();
+		// @ts-expect-error `fetch()` is defined, but optional on `ExportedHandler`.
+		//  The solution is to use `satisfies ExportedHandler` here instead, but
+		//  we're stuck on an old TypeScript version until we bump to Prettier 3.
 		const response = await worker.fetch(request, env, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(await response.text()).toBe("body:http://localhost");

@@ -42,8 +42,11 @@ export function transformResponse(response: Response): Response {
 		.transform(response);
 }
 
-export default {
+// TODO(soon): once we upgrade to TypeScript 5/Prettier 3, replace this with
+//  `satisfies ExportedHandler<Env>` so we don't need non-null assertions on
+//  the `fetch()` method
+export default <ExportedHandler<Env>>{
 	async fetch(request, _env, _ctx) {
 		return new Response(`body:${request.url}`);
 	},
-} satisfies ExportedHandler<Env>;
+};

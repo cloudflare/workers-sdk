@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { MockAgent, setDispatcher, isMockActive } from "cloudflare:mock-agent";
+import { isMockActive, MockAgent, setDispatcher } from "cloudflare:mock-agent";
 import type { Dispatcher } from "undici";
 
 // See public facing `cloudflare:test` types for docs

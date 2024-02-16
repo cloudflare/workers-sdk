@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { describe, beforeAll, beforeEach, expect, test } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 async function get() {
 	return await env.TEST_NAMESPACE.get("thing");

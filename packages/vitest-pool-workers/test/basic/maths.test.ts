@@ -1,4 +1,4 @@
-import { describe, it, expect, inject } from "vitest";
+import { describe, expect, inject, it } from "vitest";
 
 describe("maths", () => {
 	it("adds", () => {

@@ -1,5 +1,5 @@
 // import { fetch as undiciFetch } from "undici";
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 afterEach(() => {
 	vi.restoreAllMocks();
