@@ -56,7 +56,7 @@ import {
 	setupSentry,
 } from "./sentry";
 import { tailHandler, tailOptions } from "./tail";
-import { generateTypes } from "./type-generation";
+import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
 import {
 	getAuthFromEnv,
@@ -593,64 +593,8 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"types [path]",
 		"📝 Generate types from bindings & module rules in config",
-		(yargs) => {
-			return yargs
-				.positional("path", {
-					describe: "The path to the declaration file to generate",
-					type: "string",
-					default: "worker-configuration.d.ts",
-					demandOption: false,
-				})
-				.option("env-interface", {
-					type: "string",
-					default: "Env",
-					describe: "The name of the generated environment interface",
-					requiresArg: true,
-				});
-		},
-		async (args) => {
-			const { envInterface, path: outputPath } = args;
-
-			const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
-
-			if (!validInterfaceRegex.test(envInterface)) {
-				throw new CommandLineArgsError(
-					`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
-				);
-			}
-
-			if (!outputPath.endsWith(".d.ts")) {
-				throw new CommandLineArgsError(
-					`The provided path value ("${outputPath}") does not point to a declaration file (please use the 'd.ts' extension)`
-				);
-			}
-
-			await printWranglerBanner();
-			const config = readConfig(undefined, args);
-
-			const configBindings: Partial<Config> = {
-				kv_namespaces: config.kv_namespaces ?? [],
-				vars: { ...config.vars },
-				wasm_modules: config.wasm_modules,
-				text_blobs: {
-					...config.text_blobs,
-				},
-				data_blobs: config.data_blobs,
-				durable_objects: config.durable_objects,
-				r2_buckets: config.r2_buckets,
-				d1_databases: config.d1_databases,
-				services: config.services,
-				analytics_engine_datasets: config.analytics_engine_datasets,
-				dispatch_namespaces: config.dispatch_namespaces,
-				logfwdr: config.logfwdr,
-				unsafe: config.unsafe,
-				rules: config.rules,
-				queues: config.queues,
-				constellation: config.constellation,
-			};
-
-			await generateTypes(configBindings, config, envInterface, outputPath);
-		}
+		typesOptions,
+		typesHandler
 	);
 
 	//deployments
