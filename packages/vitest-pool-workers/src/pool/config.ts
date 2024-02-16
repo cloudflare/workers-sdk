@@ -19,12 +19,13 @@ export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
 const WorkersPoolOptionsSchema = z.object({
 	/**
-	 * Entrypoint to worker run in the same isolate/context as tests. Only
-	 * required if `kCurrentWorker` `serviceBindings` defined, or Durable Objects
-	 * without explicit `scriptName` used. Note this goes through Vite transforms
-	 * and can be TypeScript. Note also `import module from "<main>"` inside tests
-	 * gives exactly the same `module` instance as is used internally for
-	 * self-service and Durable Object bindings.
+	 * Entrypoint to Worker run in the same isolate/context as tests. This is
+	 * required to use `import { SELF } from "cloudflare:test"`, or Durable
+	 * Objects without an explicit `scriptName`. Note this goes through Vite
+	 * transforms and can be a TypeScript file. Note also
+	 * `import module from "<path-to-main>"` inside tests gives exactly the same
+	 * `module` instance as is used internally for the `SELF` and Durable Object
+	 * bindings.
 	 */
 	main: z.ostring(),
 	/**
