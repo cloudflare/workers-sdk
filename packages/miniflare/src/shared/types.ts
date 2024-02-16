@@ -1,4 +1,6 @@
-import { z } from "zod";
+import assert from "assert";
+import path from "path";
+import { ParseParams, z } from "zod";
 
 export function zAwaitable<T extends z.ZodTypeAny>(
 	type: T
@@ -21,6 +23,28 @@ export type Json = Literal | { [key: string]: Json } | Json[];
 export const JsonSchema: z.ZodType<Json> = z.lazy(() =>
 	z.union([LiteralSchema, z.array(JsonSchema), z.record(JsonSchema)])
 );
+
+let rootPath: string | undefined;
+export function parseWithRootPath<Z extends z.ZodTypeAny>(
+	newRootPath: string,
+	schema: Z,
+	data: unknown,
+	params?: Partial<ParseParams>
+): z.infer<Z> {
+	rootPath = newRootPath;
+	try {
+		return schema.parse(data, params);
+	} finally {
+		rootPath = undefined;
+	}
+}
+export const PathSchema = z.string().transform((p) => {
+	assert(
+		rootPath !== undefined,
+		"Expected `PathSchema` to be parsed within `parseWithRootPath()`"
+	);
+	return path.resolve(rootPath, p);
+});
 
 /** @internal */
 export function _isCyclic(value: unknown, seen = new Set<unknown>()) {

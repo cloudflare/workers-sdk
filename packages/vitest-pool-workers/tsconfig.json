@@ -1,0 +1,21 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"alwaysStrict": true,
+		"forceConsistentCasingInFileNames": true,
+		"module": "esnext",
+		"lib": ["esnext"],
+		"paths": {
+			"@cloudflare/vitest-pool-workers/config": ["./src/config"]
+		}
+	},
+	"include": [
+		"./scripts/**/*.ts",
+		"./src/config/**/*.ts",
+		"./src/pool/**/*.ts",
+		"./test/*/vitest.config.ts",
+		"./test/*/env.d.ts",
+		"./vitest.workers.config.ts",
+		"./vitest.workspace.ts"
+	]
+}
