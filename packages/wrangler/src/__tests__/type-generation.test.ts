@@ -255,4 +255,94 @@ describe("generateTypes()", () => {
 		"
 	`);
 	});
+
+	describe("customization", () => {
+		describe("env", () => {
+			it("should allow the user to customize the interface name", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await runWrangler("types --env-interface CloudflareEnv");
+				expect(std.out).toMatchInlineSnapshot(`
+			"interface CloudflareEnv {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			}
+			"
+		`);
+			});
+
+			it("should error if --env-interface is specified with no argument", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await expect(runWrangler("types --env-interface")).rejects.toThrowError(
+					`Not enough arguments following: env-interface`
+				);
+			});
+
+			it("should error if an invalid interface identifier is provided to --env-interface", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				const invalidInterfaceNames = [
+					"Cloudflare Env",
+					"1",
+					"123Env",
+					"cloudflare-env",
+					"env()v",
+					"{}",
+				];
+
+				for (const interfaceName of invalidInterfaceNames) {
+					await expect(
+						runWrangler(`types --env-interface '${interfaceName}'`)
+					).rejects.toThrowError(
+						/The provided env-interface value .*? does not satisfy the validation regex/
+					);
+				}
+			});
+
+			it("should warn if --env-interface is used with a service-syntax worker", async () => {
+				fs.writeFileSync(
+					"./index.ts",
+					`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
+				}); async function handleRequest(request) {  return new Response('Hello worker!', {headers: { 'content-type': 'text/plain' },});}`
+				);
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						name: "test-name",
+						main: "./index.ts",
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await runWrangler("types --env-interface CloudflareEnv");
+
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring the provided env-interface value as it only applies to ES Module syntax workers[0m
+
+			"
+		`);
+			});
+		});
+	});
 });

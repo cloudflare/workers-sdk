@@ -10,7 +10,8 @@ import type { CfScriptFormat } from "./deployment-bundle/worker";
 
 export async function generateTypes(
 	configToDTS: Partial<Config>,
-	config: Config
+	config: Config,
+	envInterface: string
 ) {
 	const configContainsEntryPoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
@@ -18,6 +19,20 @@ export async function generateTypes(
 	const entrypointFormat: CfScriptFormat = configContainsEntryPoint
 		? (await getEntry({}, config, "types")).format
 		: "modules";
+
+	// Note: we infer whether the user has provided an envInterface by checking
+	//       if it is different from the default `Env` value, this works well
+	//       besides the fact that the user itself can actually provided `Env` as
+	//       an argument... we either need to do this or removing the yargs
+	//       default value for envInterface and do `envInterface ?? "Env"`,
+	//       for a better UX we chose to go with the yargs default value
+	const userProvidedEnvInterface = envInterface !== "Env";
+
+	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
+		logger.warn(
+			"Ignoring the provided env-interface value as it only applies to ES Module syntax workers"
+		);
+	}
 
 	const envTypeStructure: string[] = [];
 
@@ -144,6 +159,7 @@ export async function generateTypes(
 		envTypeStructure,
 		modulesTypeStructure,
 		formatType: entrypointFormat,
+		envInterface,
 	});
 }
 
@@ -151,10 +167,12 @@ function writeDTSFile({
 	envTypeStructure,
 	modulesTypeStructure,
 	formatType,
+	envInterface,
 }: {
 	envTypeStructure: string[];
 	modulesTypeStructure: string[];
 	formatType: CfScriptFormat;
+	envInterface: string;
 }) {
 	const wranglerOverrideDTSPath = findUpSync("worker-configuration.d.ts");
 	try {
@@ -176,7 +194,7 @@ function writeDTSFile({
 
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
-		combinedTypeStrings += `interface Env {\n${envTypeStructure
+		combinedTypeStrings += `interface ${envInterface} {\n${envTypeStructure
 			.map((value) => `\t${value}`)
 			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
 	} else {

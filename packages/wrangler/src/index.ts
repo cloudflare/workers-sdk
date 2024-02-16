@@ -593,8 +593,25 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"types",
 		"📝 Generate types from bindings & module rules in config",
-		() => {},
+		(yargs) => {
+			return yargs.option("env-interface", {
+				type: "string",
+				default: "Env",
+				describe: "The name of the generated environment interface",
+				requiresArg: true,
+			});
+		},
 		async (args) => {
+			const { envInterface } = args;
+
+			const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+			if (!validInterfaceRegex.test(envInterface)) {
+				throw new CommandLineArgsError(
+					`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
+				);
+			}
+
 			await printWranglerBanner();
 			const config = readConfig(undefined, args);
 
@@ -619,7 +636,7 @@ export function createCLIParser(argv: string[]) {
 				constellation: config.constellation,
 			};
 
-			await generateTypes(configBindings, config);
+			await generateTypes(configBindings, config, envInterface);
 		}
 	);
 
