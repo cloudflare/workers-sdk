@@ -76,10 +76,7 @@ describe("sentry", () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
 				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
 			);
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 

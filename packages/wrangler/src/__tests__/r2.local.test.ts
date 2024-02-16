@@ -29,7 +29,6 @@ describe("r2", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 			Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete."
 		`);
@@ -40,7 +39,6 @@ describe("r2", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 			Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
 			Upload complete.
 			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
@@ -113,7 +111,6 @@ describe("r2", () => {
 			Upload complete.
 			Downloading \\"file-one\\" from \\"bucketName-object-test\\".
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 			Downloading \\"file-two\\" from \\"bucketName-object-test\\".
 			Download complete."
 		`);
