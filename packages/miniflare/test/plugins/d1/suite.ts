@@ -254,7 +254,7 @@ test("D1PreparedStatement: run", async (t) => {
 			served_by: "miniflare.db",
 			size_after: result.meta.size_after,
 			rows_read: 2,
-			rows_written: 2,
+			rows_written: 1,
 		},
 	});
 
