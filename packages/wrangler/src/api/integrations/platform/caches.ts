@@ -24,6 +24,24 @@
  * No-op implementation of CacheStorage
  */
 export class CacheStorage {
+	constructor() {
+		const unsupportedMethods = ["has", "delete", "keys", "match"];
+		unsupportedMethods.forEach((method) => {
+			Object.defineProperty(this, method, {
+				enumerable: false,
+				value: () => {
+					throw new Error(
+						`Failed to execute '${method}' on 'CacheStorage': the method is not implemented.`
+					);
+				},
+			});
+		});
+		Object.defineProperty(this, "default", {
+			enumerable: true,
+			value: this.default,
+		});
+	}
+
 	async open(cacheName: string): Promise<Cache> {
 		return new Cache();
 	}
@@ -33,8 +51,14 @@ export class CacheStorage {
 	}
 }
 
-type CacheRequest = unknown;
-type CacheResponse = unknown;
+/* eslint-disable @typescript-eslint/no-explicit-any --
+   In order to make the API convenient to use in and Node.js programs we try not to
+   restrict the types that's why we're using `any`s as the request/response types
+   (making this API flexible and compatible with the cache types in `@cloudflare/workers-types`)
+*/
+type CacheRequest = any;
+type CacheResponse = any;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * No-op implementation of Cache
