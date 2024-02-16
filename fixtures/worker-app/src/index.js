@@ -36,12 +36,6 @@ export default {
 							secure: true,
 						}),
 					],
-					[
-						"Set-Cookie",
-						cookie.serialize("hello2", "world2", {
-							domain: `${hostname}:1`,
-						}),
-					],
 				],
 			});
 
