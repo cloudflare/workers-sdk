@@ -6,7 +6,7 @@ export async function onRequest({ request, env }) {
   if (url.pathname === "/playground") {
     return new Response(asset.body, {
       headers: {
-        "Set-Cookie": header[0].replace("playground-testing.devprod.cloudflare.dev", "localhost"),
+        "Set-Cookie": header[0].replace("playground-testing.devprod.cloudflare.dev", url.host),
         ...asset.headers
       }
     })
