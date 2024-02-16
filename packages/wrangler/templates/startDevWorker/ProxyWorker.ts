@@ -304,13 +304,22 @@ function insertLiveReloadScript(
  * so that this proxy is transparent to the Client Browser and User Worker.
  */
 function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
+	const setCookie = headers.getAll("Set-Cookie");
+	headers.delete("Set-Cookie");
+	for (const cookie of setCookie) {
+		headers.append(
+			"Set-Cookie",
+			cookie.replace(
+				new RegExp(`Domain=${from.hostname}($|;|,)`),
+				`Domain=${to.hostname}$1`
+			)
+		);
+	}
 	headers.forEach((value, key) => {
-		if (typeof value === "string" && value.includes(from.hostname)) {
+		if (typeof value === "string" && value.includes(from.host)) {
 			headers.set(
 				key,
-				value
-					.replaceAll(from.origin, to.origin)
-					.replaceAll(from.hostname, to.hostname)
+				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
 			);
 		}
 	});

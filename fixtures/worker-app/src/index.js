@@ -1,3 +1,4 @@
+import cookie from "cookie";
 import { randomBytes } from "isomorphic-random-example";
 import { now } from "./dep";
 import { logErrors } from "./log";
@@ -15,10 +16,35 @@ export default {
 	async fetch(request) {
 		console.log("request log");
 
-		const { pathname, origin } = new URL(request.url);
+		const { pathname, origin, hostname, host } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");
 		if (pathname === "/redirect") return Response.redirect(`${origin}/foo`);
+		if (pathname === "/cookie")
+			return new Response("", {
+				headers: [
+					[
+						"Set-Cookie",
+						cookie.serialize("hello", "world", {
+							domain: hostname,
+						}),
+					],
+					[
+						"Set-Cookie",
+						cookie.serialize("hello2", "world2", {
+							domain: host,
+							secure: true,
+						}),
+					],
+					[
+						"Set-Cookie",
+						cookie.serialize("hello2", "world2", {
+							domain: `${hostname}:1`,
+						}),
+					],
+				],
+			});
+
 		if (request.headers.get("X-Test-URL") !== null) {
 			return new Response(request.url);
 		}
