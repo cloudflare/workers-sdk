@@ -1,3 +1,4 @@
+import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { transformFile } from "helpers/codemod";
@@ -112,9 +113,10 @@ const config: TemplateConfig = {
 		};
 
 		if (usesTypescript(ctx)) {
+			const mv = platform() === "win32" ? "move" : "mv";
 			scripts = {
 				...scripts,
-				"build-cf-types": "wrangler types && mv worker-configuration.d.ts src/",
+				"build-cf-types": `wrangler types && ${mv} worker-configuration.d.ts src/`,
 			};
 		}
 
