@@ -593,8 +593,21 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"types",
 		"📝 Generate types from bindings & module rules in config",
-		() => {},
+		(yargs) => {
+			return yargs
+			.positional("path", {
+				describe: "The path to the declaration file to generate",
+				type: "string",
+				default: "worker-configuration.d.ts",
+				demandOption: false,
+			});
+		},
 		async (args) => {
+
+			console.log(
+				`===== The specified path is: ${args.path} =====`
+			);
+
 			await printWranglerBanner();
 			const config = readConfig(undefined, args);
 
