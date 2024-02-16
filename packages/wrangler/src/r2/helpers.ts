@@ -558,6 +558,6 @@ export function isValidR2BucketName(
 	name: string | undefined
 ): name is string {
 	return (
-		typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(binding)
+		typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
 	);
 }

@@ -452,6 +452,7 @@ describe("r2", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"The bucket name \\"abc_def\\" is invalid. Bucket names can only have alphanumeric and - characters."`
 				);
+			});
 
 			it("should error if the bucket name to delete contains spaces", async () => {
 				await expect(
