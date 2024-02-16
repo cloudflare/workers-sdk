@@ -1,5 +1,41 @@
 # wrangler
 
+## 3.28.3
+
+### Patch Changes
+
+- [#5026](https://github.com/cloudflare/workers-sdk/pull/5026) [`04584722`](https://github.com/cloudflare/workers-sdk/commit/0458472251f17e864b45a167750baa50ca641e46) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure `getPlatformProxy` produces a production-like `caches` object
+
+  make sure that the `caches` object returned to `getPlatformProxy` behaves
+  in the same manner as the one present in production (where calling unsupported
+  methods throws a helpful error message)
+
+  note: make sure that the unsupported methods are however not included in the
+  `CacheStorage` type definition
+
+* [#5030](https://github.com/cloudflare/workers-sdk/pull/5030) [`55ea0721`](https://github.com/cloudflare/workers-sdk/commit/55ea0721b2550c8c24d79ddcc116ba5b4bc75028) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: don't suggest reporting user errors to GitHub
+
+  Wrangler has two different types of errors: internal errors caused by something going wrong, and user errors caused by an invalid configuration. Previously, we would encourage users to submit bug reports for user errors, even though there's nothing we can do to fix them. This change ensures we only suggest this for internal errors.
+
+- [#4900](https://github.com/cloudflare/workers-sdk/pull/4900) [`3389f2e9`](https://github.com/cloudflare/workers-sdk/commit/3389f2e9daa27f89c2dc35c2ccd4da4ec54db683) Thanks [@OilyLime](https://github.com/OilyLime)! - feature: allow hyperdrive users to set local connection string as environment variable
+
+  Wrangler dev now supports the HYPERDRIVE_LOCAL_CONNECTION_STRING environmental variable for connecting to a local database instance when testing Hyperdrive in local development. This environmental variable takes precedence over the localConnectionString set in wrangler.toml.
+
+* [#5033](https://github.com/cloudflare/workers-sdk/pull/5033) [`b1ace91b`](https://github.com/cloudflare/workers-sdk/commit/b1ace91bbfa9c484a931639a38e3798b1b217c89) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: wait for actual port before opening browser with `--port=0`
+
+  Previously, running `wrangler dev --remote --port=0` and then immediately pressing `b` would open `localhost:0` in your default browser. This change queues up opening the browser until Wrangler knows the port the dev server was started on.
+
+- [#5026](https://github.com/cloudflare/workers-sdk/pull/5026) [`04584722`](https://github.com/cloudflare/workers-sdk/commit/0458472251f17e864b45a167750baa50ca641e46) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: relax the `getPlatformProxy`'s' cache request/response types
+
+  prior to these changes the caches obtained from `getPlatformProxy`
+  would use `unknown`s as their types, this proved too restrictive
+  and incompatible with the equivalent `@cloudflare/workers-types`
+  types, we decided to use `any`s instead to allow for more flexibility
+  whilst also making the type compatible with workers-types
+
+- Updated dependencies [[`7723ac17`](https://github.com/cloudflare/workers-sdk/commit/7723ac17906f894afe9af2152437726ac09a6290), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229)]:
+  - miniflare@3.20240129.3
+
 ## 3.28.2
 
 ### Patch Changes

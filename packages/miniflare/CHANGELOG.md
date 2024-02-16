@@ -1,5 +1,126 @@
 # miniflare
 
+## 3.20240129.3
+
+### Minor Changes
+
+- [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: pass `Miniflare` instance as argument to custom service binding handlers
+
+  This change adds a new `Miniflare`-typed parameter to function-valued service binding handlers. This provides easy access to the correct bindings when re-using service functions across instances.
+
+  <!--prettier-ignore-start-->
+
+  ```js
+  import assert from "node:assert";
+  import { Miniflare, Response } from "miniflare";
+
+  const mf = new Miniflare({
+  	serviceBindings: {
+  		SERVICE(request, instance) {
+  			assert(instance === mf);
+  			return new Response();
+  		},
+  	},
+  });
+  ```
+
+  <!--prettier-ignore-end-->
+
+* [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: allow `URL`s to be passed in `hyperdrives`
+
+  Previously, the `hyperdrives` option only accepted `string`s as connection strings. This change allows `URL` objects to be passed too.
+
+- [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: add support for custom root paths
+
+  Miniflare has lots of file-path-valued options (e.g. `scriptPath`, `kvPersist`, `textBlobBindings`). Previously, these were always resolved relative to the current working directory before being used. This change adds a new `rootPath` shared, and per-worker option for customising this behaviour. Instead of resolving relative to the current working directory, Miniflare will now resolve path-valued options relative to the closest `rootPath` option. Paths are still resolved relative to the current working directory if no `rootPath`s are defined. Worker-level `rootPath`s are themselves resolved relative to the shared `rootPath` if defined.
+
+  <!--prettier-ignore-start-->
+
+  ```js
+  import { Miniflare } from "miniflare";
+
+  const mf1 = new Miniflare({
+  	scriptPath: "index.mjs",
+  });
+
+  const mf2 = new Miniflare({
+  	rootPath: "a/b",
+  	scriptPath: "c/index.mjs",
+  });
+
+  const mf3 = new Miniflare({
+  	rootPath: "/a/b",
+  	workers: [
+  		{
+  			name: "1",
+  			rootPath: "c",
+  			scriptPath: "index.mjs",
+  		},
+  		{
+  			name: "2",
+  			scriptPath: "index.mjs",
+  		},
+  	],
+  });
+  ```
+
+  <!--prettier-ignore-end-->
+
+* [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: allow easy binding to current worker
+
+  Previously, if you wanted to create a service binding to the current Worker, you'd need to know the Worker's name. This is usually possible, but can get tricky when dealing with many Workers. This change adds a new `kCurrentWorker` symbol that can be used instead of a Worker name in `serviceBindings`. `kCurrentWorker` always points to the Worker with the binding.
+
+  <!--prettier-ignore-start-->
+
+  ```js
+  import { kCurrentWorker, Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	serviceBindings: {
+  		SELF: kCurrentWorker,
+  	},
+  	modules: true,
+  	script: `export default {
+      fetch(request, env, ctx) {
+        const { pathname } = new URL(request.url);
+        if (pathname === "/recurse") {
+          return env.SELF.fetch("http://placeholder");
+        }
+        return new Response("body");
+      }
+    }`,
+  });
+
+  const response = await mf.dispatchFetch("http://placeholder/recurse");
+  console.log(await response.text()); // body
+  ```
+
+  <!--prettier-ignore-end-->
+
+### Patch Changes
+
+- [#4954](https://github.com/cloudflare/workers-sdk/pull/4954) [`7723ac17`](https://github.com/cloudflare/workers-sdk/commit/7723ac17906f894afe9af2152437726ac09a6290) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: allow relative `scriptPath`/`modulesRoot`s to break out of current working directory
+
+  Previously, Miniflare would resolve relative `scriptPath`s against `moduleRoot` multiple times resulting in incorrect paths and module names. This would lead to `can't use ".." to break out of starting directory` `workerd` errors. This change ensures Miniflare uses `scriptPath` as is, and only resolves it relative to `modulesRoot` when computing module names. Note this bug didn't affect service workers. This allows you to reference a modules `scriptPath` outside the working directory with something like:
+
+  ```js
+  const mf = new Miniflare({
+  	modules: true,
+  	modulesRoot: "..",
+  	scriptPath: "../worker.mjs",
+  });
+  ```
+
+  Fixes #4721
+
+* [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: return non-WebSocket responses for failed WebSocket upgrading `fetch()`es
+
+  Previously, Miniflare's `fetch()` would throw an error if the `Upgrade: websocket` header was set, and a non-WebSocket response was returned from the origin. This change ensures the non-WebSocket response is returned from `fetch()` instead, with `webSocket` set to `null`. This allows the caller to handle the response as they see fit.
+
+- [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `MiniflareOptions`, `WorkerOptions`, and `SharedOptions` types are correct
+
+  Miniflare uses Zod for validating options. Previously, Miniflare inferred `*Options` from the _output_ types of its Zod schemas, rather than the _input_ types. In most cases, these were the same. However, the `hyperdrives` option has different input/output types, preventing these from being type checked correctly.
+
 ## 3.20240129.2
 
 ### Patch Changes

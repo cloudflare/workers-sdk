@@ -1,5 +1,49 @@
 # create-cloudflare
 
+## 2.12.0
+
+### Minor Changes
+
+- [#4996](https://github.com/cloudflare/workers-sdk/pull/4996) [`246512c8`](https://github.com/cloudflare/workers-sdk/commit/246512c8e34fa218b1d52d3a52cd6aa348fdf563) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add `getBindingsProxy` support to `nuxt` template via `nitro-cloudflare-dev` module.
+
+  The `nuxt` template now uses the default dev command from `create-nuxt` instead of using `wrangler pages dev` on build output in order to improve the developer workflow. `nitro-cloudflare-dev` is a nitro module that leverages `getBindingsProxy` and allows bindings to work in nitro commands.
+
+* [#5027](https://github.com/cloudflare/workers-sdk/pull/5027) [`a751489f`](https://github.com/cloudflare/workers-sdk/commit/a751489f2530bc7a7adec1167319cd145f080812) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Svelte template.
+
+  C3 will now create Svelte projects with a hook that uses `getPlatformProxy` to proxy bindings in development mode. A `wrangler.toml` file will also be added where bindings can be added to be used in conjunction with `getPlatformProxy`.
+
+  Along with this change, projects will use the default vite-based dev command from `create-svelte` instead of using `wrangler pages dev` on build output.
+
+  When Typescript is used, the `app.d.ts` will be updated to add type definitions for `cf` and `ctx` to the `Platform` interface from the `@cloudflare/workers-types` package. Types for bindings on `platform.env` can be re-generated with a newly added `build-cf-types` script.
+
+### Patch Changes
+
+- [#5001](https://github.com/cloudflare/workers-sdk/pull/5001) [`efe8b444`](https://github.com/cloudflare/workers-sdk/commit/efe8b444e4220cfb23c443dc172582ee58119bc5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-hono` from `0.3.2` to `0.4.0`
+
+* [#5011](https://github.com/cloudflare/workers-sdk/pull/5011) [`89482d44`](https://github.com/cloudflare/workers-sdk/commit/89482d4475780c3cd3efbbd004c6b4f85c8daf53) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.4` to `1.4.5`
+
+- [#5019](https://github.com/cloudflare/workers-sdk/pull/5019) [`f939ed73`](https://github.com/cloudflare/workers-sdk/commit/f939ed739a89de174099f128530a29bd51b04899) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.3` to `17.2.0`
+
+* [#5020](https://github.com/cloudflare/workers-sdk/pull/5020) [`0e74c743`](https://github.com/cloudflare/workers-sdk/commit/0e74c743236d2a9055648eac9397d566ac90d83b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `nuxi` from `3.10.0` to `3.10.1`
+
+- [#5021](https://github.com/cloudflare/workers-sdk/pull/5021) [`ae1ef47c`](https://github.com/cloudflare/workers-sdk/commit/ae1ef47c8981a1059b5c8a2adaf7edeb38c1c49d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-astro` from `4.7.2` to `4.7.3`
+
+* [#5009](https://github.com/cloudflare/workers-sdk/pull/5009) [`1e263694`](https://github.com/cloudflare/workers-sdk/commit/1e2636940cc05b06475cce6d96a882f03216ff78) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update Next.js template
+
+  Update the C3 Next.js template so that it uses the latest `@cloudflare/next-on-pages` tooling (i.e. `setupDevPlatform` and `getRequestContext`)
+
+- [#4996](https://github.com/cloudflare/workers-sdk/pull/4996) [`246512c8`](https://github.com/cloudflare/workers-sdk/commit/246512c8e34fa218b1d52d3a52cd6aa348fdf563) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add an empty `wrangler.toml` file to qwik and nuxt templates.
+
+* [#4999](https://github.com/cloudflare/workers-sdk/pull/4999) [`ce6d4bc4`](https://github.com/cloudflare/workers-sdk/commit/ce6d4bc4753625d2aaf1b832bbb47fc50b24a98b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure not to wrongly ask users if they want to use typescript
+
+  currently if a CLI invoked by C3 asks the user if they want to use
+  typescript and the user opted out of it, C3 could actually again offer
+  typescript to the user afterwords, make sure that this does not happen
+
+- [#5010](https://github.com/cloudflare/workers-sdk/pull/5010) [`9f787042`](https://github.com/cloudflare/workers-sdk/commit/9f787042fc6894f5f1ebdc99e0ae10afbe6bdae6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update qwik template to use `getPlatformProxy`
+
+  update the C3 Qwik template to use the `getPlatformProxy` utility instead of the deprecated `getBindingsProxy` one
+
 ## 2.11.3
 
 ### Patch Changes
