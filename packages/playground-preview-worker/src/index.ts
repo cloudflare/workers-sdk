@@ -214,7 +214,8 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
 		!(
 			c.req.header("Referer")?.startsWith("https://workers.cloudflare.com") ||
-			c.req.header("Referer")?.startsWith("http://localhost")
+			c.req.header("Referer")?.startsWith("http://localhost") ||
+			c.req.header("Referer")?.endsWith("pages.dev")
 		)
 	) {
 		throw new PreviewRequestForbidden();

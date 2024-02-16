@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "tsc && vite build",
+		"build:testing": "tsc && vite build -m development",
 		"dev": "vite",
 		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts",
 		"check": "pnpm run generate:default-hashes check",
