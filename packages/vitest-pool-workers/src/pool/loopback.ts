@@ -119,7 +119,8 @@ async function emptyDir(dirPath: string) {
  * up all blobs.
  */
 interface StackedStorageState {
-	// Only one stack operation per instance may be in-progress at a given time
+	// Only one stack operation per Miniflare instance may be in-progress at a
+	// given time
 	mutex: Mutex;
 	// Current size of the stack
 	depth: number;
