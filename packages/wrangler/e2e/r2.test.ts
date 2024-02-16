@@ -79,8 +79,7 @@ describe("r2", () => {
 			}
     `;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Downloading "testr2" from "wrangler-smoke-test-bucket".
-			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			"Downloading "testr2" from "wrangler-smoke-test-bucket"."
 		`);
 		expect(normalize(stderr)).toMatchInlineSnapshot(`
 			"X [ERROR] The specified key does not exist.
@@ -108,8 +107,7 @@ describe("r2", () => {
 			}
 		`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Creating object "testr2" in bucket "wrangler-smoke-test-bucket".
-			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			"Creating object "testr2" in bucket "wrangler-smoke-test-bucket"."
 		`);
 		expect(normalize(stderr)).toMatchInlineSnapshot(`
 			"X [ERROR] The specified bucket does not exist.
