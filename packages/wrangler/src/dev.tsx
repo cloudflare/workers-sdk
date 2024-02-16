@@ -959,18 +959,15 @@ export function getBindings(
 				process.env[
 					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
 				];
-			if (!connectionStringFromEnv || !hyperdrive.localConnectionString) {
+			if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
 				throw new UserError(
 					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 				);
 			}
 
 			// If there is a non-empty connection string specified in the environment,
-			// use that as our local connection stirng configuration.
-			if (
-				connectionStringFromEnv !== undefined &&
-				connectionStringFromEnv !== ""
-			) {
+			// use that as our local connection string configuration.
+			if (connectionStringFromEnv) {
 				logger.log(
 					`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
 				);
