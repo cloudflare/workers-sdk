@@ -11,9 +11,9 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:lint": "node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint",
+		"check:lint": "dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
