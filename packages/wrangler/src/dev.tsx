@@ -342,6 +342,7 @@ export type StartDevOptions = DevArguments &
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
 		forceLocal?: boolean;
+		accountId?: string;
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
@@ -449,7 +450,11 @@ export async function startDev(args: StartDevOptions) {
 					localUpstream={args.localUpstream ?? host}
 					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
-					accountId={configParam.account_id || getAccountFromCache()?.id}
+					accountId={
+						args.accountId ??
+						configParam.account_id ??
+						getAccountFromCache()?.id
+					}
 					assetPaths={assetPaths}
 					assetsConfig={configParam.assets}
 					initialPort={
@@ -575,7 +580,8 @@ export async function startApiDev(args: StartDevOptions) {
 			localUpstream: args.localUpstream ?? host,
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,
-			accountId: configParam.account_id ?? getAccountFromCache()?.id,
+			accountId:
+				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			assetPaths: assetPaths,
 			assetsConfig: configParam.assets,
 			//port can be 0, which means to use a random port
