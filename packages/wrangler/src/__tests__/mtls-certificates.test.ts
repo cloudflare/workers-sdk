@@ -511,10 +511,7 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					).rejects.toMatchInlineSnapshot(
 						`[Error: certificate not found with name "my-cert"]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-				"
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-			`);
+					expect(std.out).toMatchInlineSnapshot(`""`);
 				});
 
 				it("should not delete when many certificates are found by name", async () => {
@@ -542,10 +539,7 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					).rejects.toMatchInlineSnapshot(
 						`[Error: multiple certificates found with name "my-cert"]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-				"
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-			`);
+					expect(std.out).toMatchInlineSnapshot(`""`);
 				});
 
 				it("should not delete when confirmation fails", async () => {

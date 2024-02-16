@@ -828,10 +828,12 @@ export async function main(argv: string[]): Promise<void> {
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
-			logger.log(
-				`${fgGreenColor}%s${resetColor}`,
-				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
-			);
+			if (!(e instanceof UserError)) {
+				logger.log(
+					`${fgGreenColor}%s${resetColor}`,
+					"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
+				);
+			}
 		}
 
 		if (

@@ -45,19 +45,13 @@ describe("pages", () => {
 				`"Must specify a directory of static assets to serve or a command to run or a proxy port."`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should display for pages:functions:build", async () => {
 			await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should display for pages:functions:optimize-routes", async () => {
@@ -67,10 +61,7 @@ describe("pages", () => {
 				)
 			).rejects.toThrowError();
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 	});
 });

@@ -142,10 +142,7 @@ describe("wrangler dev", () => {
 				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field."`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.[0m
 
@@ -699,8 +696,7 @@ describe("wrangler dev", () => {
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
-
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
