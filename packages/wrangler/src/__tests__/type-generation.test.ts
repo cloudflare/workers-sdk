@@ -96,6 +96,75 @@ describe("generateTypes()", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
+	it("should show a warning when no config file is detected", async () => {
+		await runWrangler("types");
+		expect(std.warn).toMatchInlineSnapshot(`
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected, aborting[0m
+
+		"
+	`);
+	});
+
+	it("should show a warning when no custom config file is detected", async () => {
+		await runWrangler("types -c hello.toml");
+		expect(std.warn).toMatchInlineSnapshot(`
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected (at hello.toml), aborting[0m
+
+		"
+	`);
+	});
+
+	it("should respect the top level -c|--config flag", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					var: "from wrangler toml",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./my-wrangler-config-a.toml",
+			TOML.stringify({
+				vars: {
+					var: "from my-wrangler-config-a",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./my-wrangler-config-b.toml",
+			TOML.stringify({
+				vars: {
+					var: "from my-wrangler-config-b",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types");
+		await runWrangler("types --config ./my-wrangler-config-a.toml");
+		await runWrangler("types -c my-wrangler-config-b.toml");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			var: \\"from wrangler toml\\";
+		}
+
+		interface Env {
+			var: \\"from my-wrangler-config-a\\";
+		}
+
+		interface Env {
+			var: \\"from my-wrangler-config-b\\";
+		}
+		"
+	`);
+	});
+
 	it("should log the interface type generated and declare modules", async () => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(

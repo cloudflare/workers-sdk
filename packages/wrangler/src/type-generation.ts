@@ -1,6 +1,6 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
 import { findUpSync } from "find-up";
-import { readConfig } from "./config";
+import { findWranglerToml, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { UserError } from "./errors";
 import { logger } from "./logger";
@@ -49,7 +49,23 @@ export async function typesHandler(
 	}
 
 	await printWranglerBanner();
-	const config = readConfig(undefined, args);
+
+	const configPath =
+		args.config ?? findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+	if (
+		!configPath ||
+		!fs.existsSync(configPath) ||
+		fs.statSync(configPath).isDirectory()
+	) {
+		logger.warn(
+			`No config file detected${
+				args.config ? ` (at ${args.config})` : ""
+			}, aborting`
+		);
+		return;
+	}
+
+	const config = readConfig(args.config, args);
 
 	const configBindings: Partial<Config> = {
 		kv_namespaces: config.kv_namespaces ?? [],
