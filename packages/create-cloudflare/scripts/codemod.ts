@@ -1,5 +1,5 @@
 import { join } from "path";
-import { parseFile } from "helpers/codemod";
+import { loadSnippets, parseFile, parseTs } from "helpers/codemod";
 import { writeFile } from "helpers/files";
 import * as recast from "recast";
 
@@ -18,8 +18,6 @@ import * as recast from "recast";
 /**
  * This function mocks the `transformFile` API but outputs it to the console and writes it
  * to a dedicated output file for easier testing.
- * @param filePath
- * @param methods
  */
 export const testTransform = (
 	filePath: string,
@@ -35,8 +33,10 @@ export const testTransform = (
 	}
 };
 
+// Use this function to experiment with a codemod in isolation
 const testCodemod = () => {
 	// const b = recast.types.builders;
+	// const snippets = loadSnippets(join(__dirname, "snippets"));
 
 	testTransform("snippets/test.ts", {
 		visitIdentifier(n) {
@@ -46,5 +46,17 @@ const testCodemod = () => {
 		},
 	});
 };
-
 testCodemod();
+
+// This function can be used to inspect the AST of a particular snippet
+const printSnippet = () => {
+	const snippet = `
+    if(true) {
+      console.log("potato");
+    }
+  `;
+
+	const program = parseTs(snippet).program;
+	console.log(program.body[0].consequent);
+};
+// printSnippet();

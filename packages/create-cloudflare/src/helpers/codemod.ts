@@ -1,4 +1,5 @@
-import path from "path";
+import { existsSync, lstatSync, readdirSync } from "fs";
+import path, { basename, extname, join } from "path";
 import { crash } from "@cloudflare/cli";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
@@ -55,7 +56,7 @@ export const parseFile = (filePath: string) => {
 		const fileContents = readFile(path.resolve(filePath));
 
 		if (fileContents) {
-			return recast.parse(fileContents, { parser }) as Program;
+			return recast.parse(fileContents, { parser }).program as Program;
 		}
 	} catch (error) {
 		crash(`Error parsing file: ${filePath}`);
@@ -75,4 +76,32 @@ export const transformFile = (
 		recast.visit(ast, methods);
 		writeFile(filePath, recast.print(ast).code);
 	}
+};
+
+export const loadSnippets = (snippetsPath: string) => {
+	if (!existsSync(snippetsPath)) {
+		return null;
+	}
+
+	if (!lstatSync(snippetsPath).isDirectory) {
+		return null;
+	}
+
+	const files = readdirSync(snippetsPath);
+
+	return (
+		files
+			// don't try loading directories
+			.filter((fileName) => lstatSync(join(snippetsPath, fileName)).isFile)
+			// only load js or ts files
+			.filter((fileName) => [".js", ".ts"].includes(extname(fileName)))
+			.reduce((acc, snippetPath) => {
+				const [file, ext] = snippetPath.split(".");
+				const key = `${file}${ext === "js" ? "Js" : "Ts"}`;
+				return {
+					...acc,
+					[key]: parseFile(join(snippetsPath, snippetPath))?.body,
+				};
+			}, {}) as Record<string, recast.types.ASTNode[]>
+	);
 };
