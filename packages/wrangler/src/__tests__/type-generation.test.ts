@@ -344,5 +344,69 @@ describe("generateTypes()", () => {
 		`);
 			});
 		});
+
+		describe("output file", () => {
+			it("should allow the user to specify where to write the result", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await runWrangler("types cloudflare-env.d.ts");
+
+				expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+
+				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8")).toMatch(
+					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+				);
+			});
+
+			it("should error if the user points to a non-d.ts file", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				const invalidPaths = [
+					"index.ts",
+					"worker.js",
+					"file.txt",
+					"env.d",
+					"env",
+				];
+
+				for (const path of invalidPaths) {
+					await expect(runWrangler(`types ${path}`)).rejects.toThrowError(
+						/The provided path value .*? does not point to a declaration file/
+					);
+				}
+			});
+		});
+
+		it("should allow multiple customization to be applied together", async () => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					vars: bindingsConfigMock.vars,
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+
+			await runWrangler(
+				"types --env-interface MyCloudflareEnvInterface my-cloudflare-env-interface.d.ts"
+			);
+
+			expect(
+				fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8")
+			).toMatch(
+				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+			);
+		});
 	});
 });

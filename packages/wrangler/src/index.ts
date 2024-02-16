@@ -591,24 +591,37 @@ export function createCLIParser(argv: string[]) {
 
 	// type generation
 	wrangler.command(
-		"types",
+		"types [path]",
 		"📝 Generate types from bindings & module rules in config",
 		(yargs) => {
-			return yargs.option("env-interface", {
-				type: "string",
-				default: "Env",
-				describe: "The name of the generated environment interface",
-				requiresArg: true,
-			});
+			return yargs
+				.positional("path", {
+					describe: "The path to the declaration file to generate",
+					type: "string",
+					default: "worker-configuration.d.ts",
+					demandOption: false,
+				})
+				.option("env-interface", {
+					type: "string",
+					default: "Env",
+					describe: "The name of the generated environment interface",
+					requiresArg: true,
+				});
 		},
 		async (args) => {
-			const { envInterface } = args;
+			const { envInterface, path: outputPath } = args;
 
 			const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 
 			if (!validInterfaceRegex.test(envInterface)) {
 				throw new CommandLineArgsError(
 					`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
+				);
+			}
+
+			if (!outputPath.endsWith(".d.ts")) {
+				throw new CommandLineArgsError(
+					`The provided path value ("${outputPath}") does not point to a declaration file (please use the 'd.ts' extension)`
 				);
 			}
 
@@ -636,7 +649,7 @@ export function createCLIParser(argv: string[]) {
 				constellation: config.constellation,
 			};
 
-			await generateTypes(configBindings, config, envInterface);
+			await generateTypes(configBindings, config, envInterface, outputPath);
 		}
 	);
 
