@@ -115,6 +115,8 @@ export const spawnWithLogging = (
 ) => {
 	const [cmd, ...argv] = args;
 
+	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
+
 	const proc = spawn(cmd, argv, {
 		...opts,
 		env: {
@@ -122,8 +124,6 @@ export const spawnWithLogging = (
 			...opts.env,
 		},
 	});
-
-	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
 
 	proc.stdout.on("data", (data) => {
 		const lines: string[] = data.toString().split("\n");

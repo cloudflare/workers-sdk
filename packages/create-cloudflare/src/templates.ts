@@ -11,7 +11,7 @@ import degit from "degit";
 import { C3_DEFAULTS } from "helpers/cli";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { validateTemplateUrl } from "./validators";
-import type { C3Args, C3Context } from "types";
+import type { C3Args, C3Context, PackageJson } from "types";
 
 export type TemplateConfig = {
 	/**
@@ -67,9 +67,14 @@ export type TemplateConfig = {
 	 */
 	configure?: (ctx: C3Context) => Promise<void>;
 
-	/** A transformer that is run on the project's `package.json` during the creation step */
+	/**
+	 * A transformer that is run on the project's `package.json` during the creation step.
+	 *
+	 * The object returned from this function will be deep merged with the original.
+	 * */
 	transformPackageJson?: (
-		pkgJson: Record<string, string | object>
+		pkgJson: PackageJson,
+		ctx: C3Context
 	) => Promise<Record<string, string | object>>;
 
 	/** An array of flags that will be added to the call to the framework cli during tests.*/
@@ -428,7 +433,7 @@ export const updatePackageScripts = async (ctx: C3Context) => {
 	let pkgJson = readJSON(pkgJsonPath);
 
 	// Run any transformers defined by the template
-	const transformed = await ctx.template.transformPackageJson(pkgJson);
+	const transformed = await ctx.template.transformPackageJson(pkgJson, ctx);
 	pkgJson = deepmerge(pkgJson, transformed);
 
 	writeJSON(pkgJsonPath, pkgJson);

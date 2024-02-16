@@ -11,6 +11,8 @@ const run = async () => {
 		bundle: true,
 		outdir: "./dist",
 		platform: "node",
+		// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
+		mainFields: ["module", "main"],
 		format: "cjs",
 	};
 

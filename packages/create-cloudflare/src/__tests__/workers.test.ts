@@ -90,7 +90,7 @@ describe("addWorkersTypesToTsConfig", () => {
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{types: ["@cloudflare/workers-types"]}`
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
 		);
 	});
 
@@ -101,8 +101,10 @@ describe("addWorkersTypesToTsConfig", () => {
 	test("happy path", async () => {
 		await addWorkersTypesToTsConfig(ctx);
 
-		expect(vi.mocked(writeFile).mock.calls[0][1]).toEqual(
-			`{types: ["@cloudflare/workers-types/2023-07-01"]}`
+		expect(writeFile).toHaveBeenCalled();
+
+		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
+			`"@cloudflare/workers-types/2023-07-01"`
 		);
 	});
 
@@ -123,12 +125,13 @@ describe("addWorkersTypesToTsConfig", () => {
 
 	test("don't clobber existing entrypoints", async () => {
 		vi.mocked(readFile).mockImplementation(
-			() => `{types: ["@cloudflare/workers-types/2021-03-20"]}`
+			() =>
+				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`
 		);
 		await addWorkersTypesToTsConfig(ctx);
 
-		expect(vi.mocked(writeFile).mock.calls[0][1]).toEqual(
-			`{types: ["@cloudflare/workers-types/2021-03-20"]}`
+		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 });
