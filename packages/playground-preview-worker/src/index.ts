@@ -215,7 +215,7 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		!(
 			c.req.header("Referer")?.startsWith("https://workers.cloudflare.com") ||
 			c.req.header("Referer")?.startsWith("http://localhost") ||
-			c.req.header("Referer")?.endsWith("pages.dev")
+			c.req.header("Referer")?.includes("workers-playground.pages.dev")
 		)
 	) {
 		throw new PreviewRequestForbidden();
