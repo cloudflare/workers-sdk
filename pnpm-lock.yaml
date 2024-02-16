@@ -223,7 +223,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
-        version: 4.20231218.0
+        version: 4.20240208.0
       undici:
         specifier: ^5.28.2
         version: 5.28.2
@@ -835,7 +835,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 1.11.3(eslint@8.49.0)
+        version: 1.12.3(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.7.2)(eslint@8.49.0)
@@ -893,7 +893,7 @@ importers:
         version: 4.1.0
       '@cloudflare/workers-types':
         specifier: ^4.20231218.0
-        version: 4.20231218.0
+        version: 4.20240208.0
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -902,7 +902,7 @@ importers:
         version: 18.16.10
       ava:
         specifier: ^6.0.1
-        version: 6.0.1(@ava/typescript@4.1.0)
+        version: 6.1.1(@ava/typescript@4.1.0)
       service-worker-mock:
         specifier: ^2.0.5
         version: 2.0.5
@@ -4053,8 +4053,8 @@ packages:
     resolution: {integrity: sha512-TkcZkntUTOcvJ4vgmwpNfLTclpMbmbClZCe62B25/VTukmyv91joRa4eKzSjzCZUXTbFHNmVdOpmGaaJU2U3+A==}
     dev: true
 
-  /@cloudflare/workers-types@4.20231218.0:
-    resolution: {integrity: sha512-Vs1FKjfUjXYGbCsXzkl+ITp0Iyb6QiW6+vTERTNThC+v96T0IvPVAioH4tT20rXwoxAfxh380mAaxYtTrJUNVg==}
+  /@cloudflare/workers-types@4.20240208.0:
+    resolution: {integrity: sha512-MVGTTjZpJu4kJONvai5SdJzWIhOJbuweVZ3goI7FNyG+JdoQH41OoB+nMhLsX626vPLZVWGPIWsiSo/WZHzgQw==}
     dev: true
 
   /@cnakazawa/watch@1.0.4:
@@ -6726,8 +6726,8 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /@sindresorhus/merge-streams@1.0.0:
-    resolution: {integrity: sha512-rUV5WyJrJLoloD4NDN1V1+LDMDWOa4OTsT4yYJwQNpTU6FWxkxHpL7eu4w+DmiH8x/EAM1otkPE1+LaspIbplw==}
+  /@sindresorhus/merge-streams@2.1.0:
+    resolution: {integrity: sha512-g3/sYJWXTAf3Ce861z4/mW9jDxN7hoNHZMEyhd3Zh7GKQPiovWNttzhRW2BeGPwPxPpLDKumL6Sg056VAMjdkg==}
     engines: {node: '>=18'}
     dev: true
 
@@ -8222,14 +8222,15 @@ packages:
     resolution: {integrity: sha512-17kVyLq3ePTKOkveHxXuIJZtGYs+cSoev7BlP+Lf4916qfDhk/HBjvlYDe8egrea7LNPHKwSZJK/bzZC+Q6AwQ==}
     dev: true
 
-  /@vercel/nft@0.24.4:
-    resolution: {integrity: sha512-KjYAZty7boH5fi5udp6p+lNu6nawgs++pHW+3koErMgbRkkHuToGX/FwjN5clV1FcaM3udfd4zW/sUapkMgpZw==}
+  /@vercel/nft@0.26.3:
+    resolution: {integrity: sha512-h1z/NN9ppS4YOKwSgBoopJlhm7tS2Qb/9Ld1HXjDpvvTE7mY0xVD8nllXs+RihD9uTGJISOIMzp18Eg0EApaMA==}
     engines: {node: '>=16'}
     hasBin: true
     dependencies:
       '@mapbox/node-pre-gyp': 1.0.11
       '@rollup/pluginutils': 4.2.1
       acorn: 8.11.3
+      acorn-import-attributes: 1.9.2(acorn@8.11.3)
       async-sema: 3.1.1
       bindings: 1.5.0
       estree-walker: 2.0.2
@@ -8384,20 +8385,20 @@ packages:
       negotiator: 0.6.3
     dev: true
 
+  /acorn-import-attributes@1.9.2(acorn@8.11.3):
+    resolution: {integrity: sha512-O+nfJwNolEA771IYJaiLWK1UAwjNsQmZbTRqqwBYxCgVQTmpFEMvBw6LOIQV0Me339L5UMVYFyRohGnGlQDdIQ==}
+    peerDependencies:
+      acorn: ^8
+    dependencies:
+      acorn: 8.11.3
+    dev: true
+
   /acorn-jsx@5.3.2(acorn@8.10.0):
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
       acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
     dependencies:
       acorn: 8.10.0
-
-  /acorn-jsx@5.3.2(acorn@8.11.3):
-    resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
-    peerDependencies:
-      acorn: ^6.0.0 || ^7.0.0 || ^8.0.0
-    dependencies:
-      acorn: 8.11.3
-    dev: true
 
   /acorn-walk@8.2.0:
     resolution: {integrity: sha512-k+iyHEuPgSw6SbuDpGQM+06HQUa04DZ3o+F6CSzXMvvI5KMvnaEqXe+YVe555R9nn6GPt404fos4wcgpw12SDA==}
@@ -8416,6 +8417,7 @@ packages:
     resolution: {integrity: sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+    dev: true
 
   /agent-base@6.0.2(supports-color@9.2.2):
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
@@ -8536,7 +8538,7 @@ packages:
     resolution: {integrity: sha512-bEL/yUb/fNNiNTuUz979Z0Yg5L+LzLxGJz8x79lYmR54fmTIb6ob/hNQgkQnIUDWIFjZVQwl9Xs356I6BAMHfw==}
     engines: {node: '>= 6'}
     dependencies:
-      glob: 7.2.3
+      glob: 7.2.0
       graceful-fs: 4.2.9
       lazystream: 1.0.1
       lodash.defaults: 4.2.0
@@ -8870,8 +8872,8 @@ packages:
       - supports-color
     dev: true
 
-  /ava@6.0.1(@ava/typescript@4.1.0):
-    resolution: {integrity: sha512-9zR0wOwlcJdOWwHOKnpi0GrPRLTlxDFapGalP4rGD0oQRKxDVoucBBWvxVQ/2cPv10Hx1PkDXLJH5iUzhPn0/g==}
+  /ava@6.1.1(@ava/typescript@4.1.0):
+    resolution: {integrity: sha512-A+DG0Ag0e5zvt262Ze0pG5QH7EBmhn+DB9uK7WkUtJVAtGjZFeKTpUOKx339DMGn53+FB24pCJC5klX2WU4VOw==}
     engines: {node: ^18.18 || ^20.8 || ^21}
     hasBin: true
     peerDependencies:
@@ -8881,7 +8883,7 @@ packages:
         optional: true
     dependencies:
       '@ava/typescript': 4.1.0
-      '@vercel/nft': 0.24.4
+      '@vercel/nft': 0.26.3
       acorn: 8.11.3
       acorn-walk: 8.3.2
       ansi-styles: 6.2.1
@@ -8901,7 +8903,7 @@ packages:
       debug: 4.3.4(supports-color@9.2.2)
       emittery: 1.0.1
       figures: 6.0.1
-      globby: 14.0.0
+      globby: 14.0.1
       ignore-by-default: 2.1.0
       indent-string: 5.0.0
       is-plain-object: 5.0.0
@@ -8909,11 +8911,11 @@ packages:
       matcher: 5.0.0
       memoize: 10.0.0
       ms: 2.1.3
-      p-map: 6.0.0
+      p-map: 7.0.1
       package-config: 5.0.0
       picomatch: 3.0.1
       plur: 5.1.0
-      pretty-ms: 8.0.0
+      pretty-ms: 9.0.0
       resolve-cwd: 3.0.0
       stack-utils: 2.0.6
       strip-ansi: 7.1.0
@@ -10692,7 +10694,7 @@ packages:
     hasBin: true
     dependencies:
       commander: 4.1.1
-      glob: 7.2.3
+      glob: 7.2.0
     dev: true
 
   /dotenv-cli@7.3.0:
@@ -11232,13 +11234,13 @@ packages:
       eslint: 8.49.0
     dev: true
 
-  /eslint-config-turbo@1.11.3(eslint@8.49.0):
-    resolution: {integrity: sha512-v7CHpAHodBKlj+r+R3B2DJlZbCjpZLnK7gO/vCRk/Lc+tlD/f04wM6rmHlerevOlchtmwARilRLBnmzNLffTyQ==}
+  /eslint-config-turbo@1.12.3(eslint@8.49.0):
+    resolution: {integrity: sha512-Q46MEOiNJpJWC3Et5/YEuIYYhbOieS04yZwQOinO2hpZw3folEXV+hbwVo8M+ap/q8gtpjIWiRMZ1A4QxmhEqQ==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 1.11.3(eslint@8.49.0)
+      eslint-plugin-turbo: 1.12.3(eslint@8.49.0)
     dev: false
 
   /eslint-import-resolver-node@0.3.7:
@@ -11665,8 +11667,8 @@ packages:
       - typescript
     dev: true
 
-  /eslint-plugin-turbo@1.11.3(eslint@8.49.0):
-    resolution: {integrity: sha512-R5ftTTWQzEYaKzF5g6m/MInCU8pIN+2TLL+S50AYBr1enwUovdZmnZ1HDwFMaxIjJ8x5ah+jvAzql5IJE9VWaA==}
+  /eslint-plugin-turbo@1.12.3(eslint@8.49.0):
+    resolution: {integrity: sha512-7hEyxa+oP898EFNoxVenHlH8jtBwV1hbbIkdQWgqDcB0EmVNGVEZkYRo5Hm6BuMAjR433B+NISBJdj0bQo4/Lg==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
@@ -12879,11 +12881,11 @@ packages:
       slash: 4.0.0
     dev: true
 
-  /globby@14.0.0:
-    resolution: {integrity: sha512-/1WM/LNHRAOH9lZta77uGbq0dAEQM+XjNesWwhlERDVenqothRbnzTrL3/LrIoEPPjeUHC3vrS6TwoyxeHs7MQ==}
+  /globby@14.0.1:
+    resolution: {integrity: sha512-jOMLD2Z7MAhyG8aJpNOpmziMOP4rPLcc95oQPKXBazW82z+CEgPFBQvEpRUa1KeIMUJo4Wsm+q6uzO/Q/4BksQ==}
     engines: {node: '>=18'}
     dependencies:
-      '@sindresorhus/merge-streams': 1.0.0
+      '@sindresorhus/merge-streams': 2.1.0
       fast-glob: 3.3.2
       ignore: 5.2.4
       path-type: 5.0.0
@@ -14108,7 +14110,7 @@ packages:
       pretty-format: 29.7.0
       pure-rand: 6.0.3
       slash: 3.0.0
-      stack-utils: 2.0.6
+      stack-utils: 2.0.5
     transitivePeerDependencies:
       - babel-plugin-macros
       - supports-color
@@ -14160,7 +14162,7 @@ packages:
       '@types/node': 18.16.10
       babel-jest: 29.7.0(@babel/core@7.22.20)(supports-color@9.2.2)
       chalk: 4.1.2
-      ci-info: 3.9.0
+      ci-info: 3.3.0
       deepmerge: 4.2.2
       glob: 7.2.0
       graceful-fs: 4.2.9
@@ -14200,7 +14202,7 @@ packages:
       '@types/node': 20.1.7
       babel-jest: 29.7.0(@babel/core@7.22.20)(supports-color@9.2.2)
       chalk: 4.1.2
-      ci-info: 3.9.0
+      ci-info: 3.3.0
       deepmerge: 4.2.2
       glob: 7.2.0
       graceful-fs: 4.2.9
@@ -14348,7 +14350,7 @@ packages:
       micromatch: 4.0.5
       pretty-format: 29.7.0
       slash: 3.0.0
-      stack-utils: 2.0.6
+      stack-utils: 2.0.5
     dev: true
 
   /jest-mock@29.7.0:
@@ -14521,7 +14523,7 @@ packages:
       '@jest/types': 29.6.3
       '@types/node': 18.16.10
       chalk: 4.1.2
-      ci-info: 3.9.0
+      ci-info: 3.3.0
       graceful-fs: 4.2.9
       picomatch: 2.3.1
     dev: true
@@ -15437,8 +15439,8 @@ packages:
   /micromark-extension-mdxjs@1.0.0:
     resolution: {integrity: sha512-TZZRZgeHvtgm+IhtgC2+uDMR7h8eTKF0QUX9YsgoL9+bADBpBY6SiLvWqnBlLbCEevITmTqmEuY3FoxMKVs1rQ==}
     dependencies:
-      acorn: 8.11.3
-      acorn-jsx: 5.3.2(acorn@8.11.3)
+      acorn: 8.10.0
+      acorn-jsx: 5.3.2(acorn@8.10.0)
       micromark-extension-mdx-expression: 1.0.3
       micromark-extension-mdx-jsx: 1.0.3
       micromark-extension-mdx-md: 1.0.0
@@ -15870,7 +15872,7 @@ packages:
   /mlly@1.4.2:
     resolution: {integrity: sha512-i/Ykufi2t1EZ6NaPLdfnZk2AX8cs0d+mTzVKuPfqPKPatxLApaBoxJQ9x1/uckXtrS/U5oisPMDkNs0yQTaBRg==}
     dependencies:
-      acorn: 8.11.3
+      acorn: 8.10.0
       pathe: 1.1.1
       pkg-types: 1.0.3
       ufo: 1.3.0
@@ -16536,9 +16538,9 @@ packages:
       aggregate-error: 4.0.1
     dev: true
 
-  /p-map@6.0.0:
-    resolution: {integrity: sha512-T8BatKGY+k5rU+Q/GTYgrEf2r4xRMevAN5mtXc2aPc4rS1j3s+vWTaO2Wag94neXuCAUAs8cxBL9EeB5EA6diw==}
-    engines: {node: '>=16'}
+  /p-map@7.0.1:
+    resolution: {integrity: sha512-2wnaR0XL/FDOj+TgpDuRb2KTjLnu3Fma6b1ZUwGY7LcqenMcvP/YFpjpbPKY6WVGsbuJZRuoUz8iPrt8ORnAFw==}
+    engines: {node: '>=18'}
     dev: true
 
   /p-queue@7.2.0:
@@ -16689,6 +16691,11 @@ packages:
   /parse-ms@3.0.0:
     resolution: {integrity: sha512-Tpb8Z7r7XbbtBTrM9UhpkzzaMrqA2VXMT3YChzYltwV3P3pM6t8wl7TvpMnSTosz1aQAdVib7kdoys7vYOPerw==}
     engines: {node: '>=12'}
+    dev: true
+
+  /parse-ms@4.0.0:
+    resolution: {integrity: sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw==}
+    engines: {node: '>=18'}
     dev: true
 
   /parserlib@1.1.1:
@@ -17118,6 +17125,13 @@ packages:
     engines: {node: '>=14.16'}
     dependencies:
       parse-ms: 3.0.0
+    dev: true
+
+  /pretty-ms@9.0.0:
+    resolution: {integrity: sha512-E9e9HJ9R9NasGOgPaPE8VMeiPKAyWR5jcFpNnwIejslIhWqdqOrb2wShBsncMPUb+BcCd2OPYfh7p2W6oemTng==}
+    engines: {node: '>=18'}
+    dependencies:
+      parse-ms: 4.0.0
     dev: true
 
   /printable-characters@1.0.42:
@@ -18881,7 +18895,7 @@ packages:
   /strip-literal@1.3.0:
     resolution: {integrity: sha512-PugKzOsyXpArk0yWmUwqOZecSO0GH0bPoctLcqNDH9J04pVW3lflYE0ujElBGTloevcxF5MofAOZ7C5l2b+wLg==}
     dependencies:
-      acorn: 8.11.3
+      acorn: 8.10.0
     dev: false
 
   /stripe@9.16.0:
@@ -20133,8 +20147,8 @@ packages:
     deprecated: The library contains critical security issues and should not be used for production! The maintenance of the project has been discontinued. Consider migrating your code to isolated-vm.
     hasBin: true
     dependencies:
-      acorn: 8.11.3
-      acorn-walk: 8.3.2
+      acorn: 8.10.0
+      acorn-walk: 8.2.0
     dev: true
 
   /w3c-hr-time@1.0.2:
