@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
+import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -320,6 +321,68 @@ describe("generateTypes()", () => {
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+		}
+		"
+	`);
+	});
+
+	it("should include secrets from .dev.vars", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler toml",
+					myTomlVarB: "B from wrangler toml",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		const localVarsEnvContent = dedent`
+		# Preceding comment
+		SECRET_A="A from .dev.vars"
+		MULTI_LINE_SECRET="A: line 1
+		line 2"
+		UNQUOTED_SECRET= unquoted value
+		`;
+		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
+
+		await runWrangler("types");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			myTomlVarA: \\"A from wrangler toml\\";
+			myTomlVarB: \\"B from wrangler toml\\";
+			SECRET_A: string;
+			MULTI_LINE_SECRET: string;
+			UNQUOTED_SECRET: string;
+		}
+		"
+	`);
+	});
+
+	it("should override vars with secrets", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					MY_VARIABLE: "my variable",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		const localVarsEnvContent = dedent`
+		# Preceding comment
+		MY_VARIABLE = "my secret"
+		`;
+		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
+
+		await runWrangler("types");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			MY_VARIABLE: string;
 		}
 		"
 	`);

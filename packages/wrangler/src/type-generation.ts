@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { findUpSync } from "find-up";
 import { findWranglerToml, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
+import { getVarsForDev } from "./dev/dev-vars";
 import { UserError } from "./errors";
 import { logger } from "./logger";
 import { printWranglerBanner } from "./update-check";
@@ -88,11 +89,24 @@ export async function typesHandler(
 		constellation: config.constellation,
 	};
 
-	await generateTypes(configBindings, config, envInterface, outputPath);
+	const secrets = getVarsForDev(
+		{ configPath, vars: {} },
+		args.env,
+		true
+	) as Record<string, string>;
+
+	await generateTypes(
+		{ ...configBindings, secrets },
+		config,
+		envInterface,
+		outputPath
+	);
 }
 
+type Secrets = Record<string, string>;
+
 async function generateTypes(
-	configToDTS: Partial<Config>,
+	configToDTS: Partial<Config> & { secrets: Secrets },
 	config: Config,
 	envInterface: string,
 	outputPath: string
@@ -127,8 +141,11 @@ async function generateTypes(
 	}
 
 	if (configToDTS.vars) {
-		for (const varName in configToDTS.vars) {
-			const varValue = configToDTS.vars[varName];
+		// Note: vars get overridden by secrets, so should their types
+		const vars = Object.entries(configToDTS.vars).filter(
+			([key]) => !(key in configToDTS.secrets)
+		);
+		for (const [varName, varValue] of vars) {
 			if (
 				typeof varValue === "string" ||
 				typeof varValue === "number" ||
@@ -140,6 +157,10 @@ async function generateTypes(
 				envTypeStructure.push(`${varName}: ${JSON.stringify(varValue)};`);
 			}
 		}
+	}
+
+	for (const secretName in configToDTS.secrets) {
+		envTypeStructure.push(`${secretName}: string;`);
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
