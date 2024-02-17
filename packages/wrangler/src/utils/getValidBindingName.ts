@@ -3,8 +3,16 @@
  * Removes any non-alphanumeric and non-underscore characters and prepends an underscore if it starts with a number.
  */
 export function getValidBindingName(name: string) {
-	let bindingName = name.replace(/[\s-]/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+	// replace whitespaces and dashes with underscores
+	let bindingName = name.replace(/[\s-]/g, "_");
 
+	// remove all non-alphanumeric and non-underscore characters
+	bindingName = bindingName.replace(/[^a-zA-Z0-9_]/g, "");
+
+	// replace consecutive underscores with single underscore
+	bindingName = bindingName.replace(/_+/g, "_");
+
+	// prepend an underscore if it starts with a number
 	if (/^[0-9]/.test(bindingName)) {
 		bindingName = "_" + bindingName;
 	}

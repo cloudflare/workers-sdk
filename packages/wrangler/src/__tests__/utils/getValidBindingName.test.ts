@@ -5,6 +5,10 @@ describe("getValidBindingName", () => {
 		expect(getValidBindingName("MY-NAME")).toBe("MY_NAME");
 	});
 
+	it("should replace consecutive underscores with single underscore", () => {
+		expect(getValidBindingName("MY-_ NAME")).toBe("MY_NAME");
+	});
+
 	it("should prepend an underscore if it starts with a number", () => {
 		expect(getValidBindingName("123")).toBe("_123");
 	});
