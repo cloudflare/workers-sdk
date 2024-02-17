@@ -13,6 +13,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import {
 	createKVNamespace,
 	deleteKVBulkKeyValue,
@@ -31,7 +32,6 @@ import {
 import type { EventNames } from "../metrics";
 import type { CommonYargsArgv } from "../yargs-types";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
-import { getValidBindingName } from "../utils/getValidBindingName";
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
@@ -82,7 +82,9 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 					`Add the following to your configuration file in your kv_namespaces array${envString}:`
 				);
 				logger.log(
-					`{ binding = "${getValidBindingName(args.namespace)}", ${previewString}id = "${namespaceId}" }`
+					`{ binding = "${getValidBindingName(
+						args.namespace
+					)}", ${previewString}id = "${namespaceId}" }`
 				);
 
 				// TODO: automatically write this block to the wrangler.toml config file??
