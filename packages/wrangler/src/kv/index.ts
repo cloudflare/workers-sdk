@@ -21,7 +21,6 @@ import {
 	getKVKeyValue,
 	getKVNamespaceId,
 	isKVKeyValue,
-	isValidKVNamespaceBinding,
 	listKVNamespaceKeys,
 	listKVNamespaces,
 	putKVBulkKeyValue,
@@ -32,6 +31,7 @@ import {
 import type { EventNames } from "../metrics";
 import type { CommonYargsArgv } from "../yargs-types";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
+import { getValidBindingName } from "../utils/getValidBindingName";
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
@@ -52,12 +52,6 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 			},
 			async (args) => {
 				await printWranglerBanner();
-
-				if (!isValidKVNamespaceBinding(args.namespace)) {
-					throw new CommandLineArgsError(
-						`The namespace binding name "${args.namespace}" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.`
-					);
-				}
 
 				const config = readConfig(args.config, args);
 				if (!config.name) {
@@ -88,7 +82,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 					`Add the following to your configuration file in your kv_namespaces array${envString}:`
 				);
 				logger.log(
-					`{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
+					`{ binding = "${getValidBindingName(args.namespace)}", ${previewString}id = "${namespaceId}" }`
 				);
 
 				// TODO: automatically write this block to the wrangler.toml config file??
