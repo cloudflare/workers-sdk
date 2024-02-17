@@ -83,7 +83,8 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 				);
 				logger.log(
 					`{ binding = "${getValidBindingName(
-						args.namespace
+						args.namespace,
+						"KV"
 					)}", ${previewString}id = "${namespaceId}" }`
 				);
 

@@ -2,7 +2,7 @@
  * Strips a name to a valid binding name which must be a valid JS identifiers.
  * Removes any non-alphanumeric and non-underscore characters and prepends an underscore if it starts with a number.
  */
-export function getValidBindingName(name: string) {
+export function getValidBindingName(name: string, fallback: string) {
 	// replace whitespaces and dashes with underscores
 	let bindingName = name.replace(/[\s-]/g, "_");
 
@@ -15,6 +15,11 @@ export function getValidBindingName(name: string) {
 	// prepend an underscore if it starts with a number
 	if (/^[0-9]/.test(bindingName)) {
 		bindingName = "_" + bindingName;
+	}
+
+	// fallback if output is empty or only underscores
+	if (!bindingName.length || /^_+$/.test(bindingName)) {
+		return fallback;
 	}
 
 	return bindingName;
