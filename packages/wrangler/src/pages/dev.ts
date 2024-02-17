@@ -180,6 +180,16 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			},
+			"https-key-path": {
+				describe: "Path to a custom certificate key",
+				type: "string",
+				requiresArg: true,
+			},
+			"https-cert-path": {
+				describe: "Path to a custom certificate",
+				type: "string",
+				requiresArg: true,
+			},
 			"persist-to": {
 				describe:
 					"Specify directory to use for local persistence (defaults to .wrangler/state)",
@@ -230,6 +240,8 @@ export const Handler = async ({
 	service: requestedServices = [],
 	liveReload,
 	localProtocol,
+	httpsKeyPath,
+	httpsCertPath,
 	persistTo,
 	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
@@ -635,6 +647,8 @@ export const Handler = async ({
 		port,
 		inspectorPort,
 		localProtocol,
+		httpsKeyPath,
+		httpsCertPath,
 		compatibilityDate,
 		compatibilityFlags,
 		nodeCompat: legacyNodeCompat,

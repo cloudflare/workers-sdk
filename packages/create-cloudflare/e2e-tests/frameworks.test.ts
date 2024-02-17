@@ -222,6 +222,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "SvelteKit app",
 		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: ".svelte-kit/cloudflare",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
 	},
 	vue: {
 		testCommitMessage: true,
@@ -468,6 +478,9 @@ const verifyBuildScript = async (
 		[pm, "run", script],
 		{
 			cwd: projectPath,
+			env: {
+				NODE_ENV: "production",
+			},
 		},
 		logStream
 	);

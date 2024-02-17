@@ -20,8 +20,10 @@ const config: TemplateConfig = {
 	displayName: "Solid",
 	platform: "pages",
 	copyFiles: {
-		js: { path: "./js" },
-		ts: { path: "./ts" },
+		variants: {
+			js: { path: "./js" },
+			ts: { path: "./ts" },
+		},
 	},
 	generate,
 	transformPackageJson: async () => ({

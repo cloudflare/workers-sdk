@@ -9,6 +9,7 @@ import {
 	Miniflare,
 	MiniflareOptions,
 	RequestInit,
+	kUnsafeEphemeralUniqueKey,
 } from "miniflare";
 import { useTmp } from "../../test-shared";
 
@@ -380,4 +381,35 @@ test("prevent Durable Object eviction", async (t) => {
 	await setTimeout(10_000);
 	res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), original);
+});
+
+test("colo-local actors", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export class TestObject {
+			constructor(state) { this.state = state; }
+			fetch() { return new Response("body:" + this.state.id); }
+		}
+		export default {
+			fetch(request, env, ctx) {
+				const stub = env.OBJECT.get("thing1");
+				return stub.fetch(request);
+			}
+		}`,
+		durableObjects: {
+			OBJECT: {
+				className: "TestObject",
+				unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "body:thing1");
+
+	const ns = await mf.getDurableObjectNamespace("OBJECT");
+	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
+	const stub = ns.get("thing2");
+	res = await stub.fetch("http://localhost");
+	t.is(await res.text(), "body:thing2");
 });

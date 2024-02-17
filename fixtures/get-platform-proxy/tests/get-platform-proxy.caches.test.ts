@@ -17,6 +17,44 @@ describe("getPlatformProxy - caches", () => {
 			}
 		})
 	);
+
+	it("should match the production runtime caches object", async () => {
+		const { caches: platformProxyCaches, dispose } = await getPlatformProxy();
+		const caches = platformProxyCaches as any;
+		try {
+			expect(Object.keys(caches)).toEqual(["default"]);
+
+			expect(() => {
+				caches.has("my-cache");
+			}).toThrowError(
+				"Failed to execute 'has' on 'CacheStorage': the method is not implemented."
+			);
+
+			expect(() => {
+				caches.delete("my-cache");
+			}).toThrowError(
+				"Failed to execute 'delete' on 'CacheStorage': the method is not implemented."
+			);
+
+			expect(() => {
+				caches.keys();
+			}).toThrowError(
+				"Failed to execute 'keys' on 'CacheStorage': the method is not implemented."
+			);
+
+			expect(() => {
+				caches.match(new URL("https://localhost"));
+			}).toThrowError(
+				"Failed to execute 'match' on 'CacheStorage': the method is not implemented."
+			);
+
+			expect(() => {
+				caches.nonExistentMethod();
+			}).toThrowError("caches.nonExistentMethod is not a function");
+		} finally {
+			await dispose();
+		}
+	});
 });
 
 async function testNoOpCache(

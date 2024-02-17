@@ -5,8 +5,10 @@ import { getUserServiceName } from "../core";
 import {
 	PersistenceSchema,
 	Plugin,
+	UnsafeUniqueKey,
 	getPersistPath,
 	kProxyNodeBinding,
+	kUnsafeEphemeralUniqueKey,
 } from "../shared";
 
 export const DurableObjectsOptionsSchema = z.object({
@@ -21,7 +23,9 @@ export const DurableObjectsOptionsSchema = z.object({
 					// up stub Durable Objects that proxy requests to Durable Objects in
 					// another `workerd` process, to ensure the IDs created by the stub
 					// object can be used by the real object too.
-					unsafeUniqueKey: z.string().optional(),
+					unsafeUniqueKey: z
+						.union([z.string(), z.literal(kUnsafeEphemeralUniqueKey)])
+						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
 				}),
@@ -40,7 +44,7 @@ export function normaliseDurableObject(
 ): {
 	className: string;
 	serviceName?: string;
-	unsafeUniqueKey?: string;
+	unsafeUniqueKey?: UnsafeUniqueKey;
 	unsafePreventEviction?: boolean;
 } {
 	const isObject = typeof designator === "object";
@@ -121,5 +125,12 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 				disk: { path: storagePath, writable: true },
 			},
 		];
+	},
+	getPersistPath({ durableObjectsPersist }, tmpPath) {
+		return getPersistPath(
+			DURABLE_OBJECTS_PLUGIN_NAME,
+			tmpPath,
+			durableObjectsPersist
+		);
 	},
 };

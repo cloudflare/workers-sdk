@@ -72,20 +72,28 @@ export async function fetch(
 			...rejectUnauthorized,
 		});
 
-		// Get response headers from upgrade
-		const headersPromise = new DeferredPromise<Headers>();
+		const responsePromise = new DeferredPromise<Response>();
 		ws.once("upgrade", (req) => {
-			headersPromise.resolve(headersFromIncomingRequest(req));
+			const headers = headersFromIncomingRequest(req);
+			// Couple web socket with pair and resolve
+			const [worker, client] = Object.values(new WebSocketPair());
+			const couplePromise = coupleWebSocket(ws, client);
+			const response = new Response(null, {
+				status: 101,
+				webSocket: worker,
+				headers,
+			});
+			responsePromise.resolve(couplePromise.then(() => response));
 		});
-
-		// Couple web socket with pair and resolve
-		const [worker, client] = Object.values(new WebSocketPair());
-		await coupleWebSocket(ws, client);
-		return new Response(null, {
-			status: 101,
-			webSocket: worker,
-			headers: await headersPromise,
+		ws.once("unexpected-response", (_, req) => {
+			const headers = headersFromIncomingRequest(req);
+			const response = new Response(req, {
+				status: req.statusCode,
+				headers,
+			});
+			responsePromise.resolve(response);
 		});
+		return responsePromise;
 	}
 
 	const response = await baseFetch(request, {

@@ -26,14 +26,26 @@ export const WORKER_BINDING_SERVICE_LOOPBACK: Worker_Binding = {
 	service: { name: SERVICE_LOOPBACK },
 };
 
-const WORKER_BINDING_ENABLE_CONTROL_ENDPOINT: Worker_Binding = {
+const WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS: Worker_Binding = {
 	name: SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS,
 	json: "true",
 };
+const WORKER_BINDING_ENABLE_STICKY_BLOBS: Worker_Binding = {
+	name: SharedBindings.MAYBE_JSON_ENABLE_STICKY_BLOBS,
+	json: "true",
+};
 let enableControlEndpoints = false;
-export function getControlEndpointBindings(): Worker_Binding[] {
-	if (enableControlEndpoints) return [WORKER_BINDING_ENABLE_CONTROL_ENDPOINT];
-	else return [];
+export function getMiniflareObjectBindings(
+	unsafeStickyBlobs: boolean
+): Worker_Binding[] {
+	const result: Worker_Binding[] = [];
+	if (enableControlEndpoints) {
+		result.push(WORKER_BINDING_ENABLE_CONTROL_ENDPOINTS);
+	}
+	if (unsafeStickyBlobs) {
+		result.push(WORKER_BINDING_ENABLE_STICKY_BLOBS);
+	}
+	return result;
 }
 /** @internal */
 export function _enableControlEndpoints() {
@@ -58,3 +70,14 @@ export function objectEntryWorker(
 		],
 	};
 }
+
+// Value of `unsafeUniqueKey` that forces the use of "colo local" ephemeral
+// namespaces. These namespaces only provide a `get(id: string): Fetcher` method
+// and construct objects without a `state` parameter. See the schema for details:
+// https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
+// Using `Symbol.for()` instead of `Symbol()` in case multiple copies of
+// `miniflare` are loaded (e.g. when configuring Vitest and when running pool)
+export const kUnsafeEphemeralUniqueKey = Symbol.for(
+	"miniflare.kUnsafeEphemeralUniqueKey"
+);
+export type UnsafeUniqueKey = string | typeof kUnsafeEphemeralUniqueKey;

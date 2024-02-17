@@ -152,23 +152,21 @@ export function HTTPTab() {
 					Send
 				</Button>
 			</Form>
-			<SplitPane
-				split="horizontal"
-				defaultSize="30%"
-				paneStyle={{
-					display: "flex",
-				}}
-				style={{
-					position: "relative",
-					minHeight: "initial",
-				}}
-				minSize={50}
-				maxSize={-50}
-			>
-				<Div overflow="auto" display="flex" flexDirection="column" width="100%">
+			<Div display="flex" flexDirection="column" height="calc(100% - 52px)">
+				<Div
+					overflow="auto"
+					display="flex"
+					flexDirection="column"
+					width="100%"
+					borderBottom="1px solid"
+					borderBottomColor="rgb(182, 182, 182)"
+					flexShrink={0}
+				>
 					<Div p={2} display="flex" gap={2} flexDirection="column">
 						<Div display="flex" alignItems="baseline">
-							<StyledLabel htmlFor="request_headers">Headers </StyledLabel>
+							<StyledLabel htmlFor="request_headers" alignSelf="center" mb={0}>
+								Headers{" "}
+							</StyledLabel>
 							<Button
 								onClick={() => setHeaders((headers) => [...headers, ["", ""]])}
 								ml="auto"
@@ -181,7 +179,7 @@ export function HTTPTab() {
 						{headers.length ? (
 							<RequestHeaders headers={headers} onChange={setHeaders} />
 						) : (
-							<Toast type="info">No headers specified</Toast>
+							hasBody && <Toast type="info">No headers specified</Toast>
 						)}
 					</Div>
 					{hasBody && (
@@ -219,7 +217,7 @@ export function HTTPTab() {
 						</Toast>
 					)}
 				</Output>
-			</SplitPane>
+			</Div>
 		</Div>
 	);
 }

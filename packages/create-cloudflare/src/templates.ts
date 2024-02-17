@@ -11,7 +11,7 @@ import degit from "degit";
 import { C3_DEFAULTS } from "helpers/cli";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { validateTemplateUrl } from "./validators";
-import type { C3Args, C3Context } from "types";
+import type { C3Args, C3Context, PackageJson } from "types";
 
 export type TemplateConfig = {
 	/**
@@ -36,18 +36,26 @@ export type TemplateConfig = {
 	 * }
 	 * ```
 	 *
-	 * Or an object with a file paths for `js` and `ts` versions:
+	 * Or an object containing different variants:
 	 * ```js
 	 * {
 	 *    copyFiles: {
-	 *      js: { path: "./js"},
-	 *      ts: { path: "./ts"},
+	 *      variants: {
+	 *        js: { path: "./js"},
+	 *        ts: { path: "./ts"},
+	 *      }
 	 *    }
 	 * }
 	 * ```
+	 * In such case the `js` variant will be used if the project
+	 * uses JavaScript and the `ts` variant will be used if the project
+	 * uses TypeScript.
+	 *
+	 * The above mentioned behavior is the default one and can be customized
+	 * by providing a `selectVariant` method.
 	 *
 	 */
-	copyFiles?: StaticFileMap | VariantInfo;
+	copyFiles?: CopyFiles;
 
 	/** A function invoked as the first step of project creation.
 	 * Used to invoke framework creation cli in the internal web framework templates.
@@ -59,9 +67,14 @@ export type TemplateConfig = {
 	 */
 	configure?: (ctx: C3Context) => Promise<void>;
 
-	/** A transformer that is run on the project's `package.json` during the creation step */
+	/**
+	 * A transformer that is run on the project's `package.json` during the creation step.
+	 *
+	 * The object returned from this function will be deep merged with the original.
+	 * */
 	transformPackageJson?: (
-		pkgJson: Record<string, string | object>
+		pkgJson: PackageJson,
+		ctx: C3Context
 	) => Promise<Record<string, string | object>>;
 
 	/** An array of flags that will be added to the call to the framework cli during tests.*/
@@ -80,12 +93,24 @@ export type TemplateConfig = {
 	path?: string;
 };
 
+type CopyFiles = (StaticFileMap | VariantInfo) & {
+	destinationDir?: string | ((ctx: C3Context) => string);
+};
+
 // A template can have a number of variants, usually js/ts
 type VariantInfo = {
 	path: string;
 };
 
-type StaticFileMap = Record<string, VariantInfo>;
+type StaticFileMap = {
+	selectVariant?: (ctx: C3Context) => Promise<string>;
+	variants: Record<string, VariantInfo>;
+};
+
+const defaultSelectVariant = async (ctx: C3Context) => {
+	const typescript = await shouldUseTs(ctx);
+	return typescript ? "ts" : "js";
+};
 
 export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
 export type FrameworkName = keyof FrameworkMap;
@@ -219,19 +244,21 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	const { copyFiles } = ctx.template;
 
 	let srcdir;
-	if (copyFiles.path) {
+	if (isVariantInfo(copyFiles)) {
 		// If there's only one variant, just use that.
-		srcdir = join(getTemplatePath(ctx), (copyFiles as VariantInfo).path);
+		srcdir = join(getTemplatePath(ctx), copyFiles.path);
 	} else {
 		// Otherwise, have the user select the one they want
-		const typescript = await shouldUseTs(ctx);
-		const languageTarget = typescript ? "ts" : "js";
+		const selectVariant = copyFiles.selectVariant ?? defaultSelectVariant;
 
-		const variantPath = (copyFiles as StaticFileMap)[languageTarget].path;
+		const variant = await selectVariant(ctx);
+
+		const variantPath = copyFiles.variants[variant].path;
 		srcdir = join(getTemplatePath(ctx), variantPath);
 	}
 
-	const destdir = ctx.project.path;
+	const copyDestDir = await getCopyFilesDestinationDir(ctx);
+	const destdir = join(ctx.project.path, ...(copyDestDir ? [copyDestDir] : []));
 
 	const s = spinner();
 	s.start(`Copying template files`);
@@ -252,6 +279,12 @@ const shouldUseTs = async (ctx: C3Context) => {
 	// If we can infer from the directory that it uses typescript, use that
 	if (usesTypescript(ctx)) {
 		return true;
+	}
+
+	// If there is a generate process then we assume that a potential typescript
+	// setup must have been part of it, so we should not offer it here
+	if (ctx.template.generate) {
+		return false;
 	}
 
 	// Otherwise, prompt the user for their TS preference
@@ -284,10 +317,14 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 };
 
 const validateTemplate = (path: string, config: TemplateConfig) => {
-	if (typeof config.copyFiles?.path == "string") {
+	if (!config.copyFiles) {
+		return;
+	}
+
+	if (isVariantInfo(config.copyFiles)) {
 		validateTemplateSrcDirectory(resolve(path, config.copyFiles.path), config);
 	} else {
-		for (const variant of Object.values(config.copyFiles as StaticFileMap)) {
+		for (const variant of Object.values(config.copyFiles.variants)) {
 			validateTemplateSrcDirectory(resolve(path, variant.path), config);
 		}
 	}
@@ -322,21 +359,19 @@ const inferTemplateConfig = (path: string): TemplateConfig => {
 	};
 };
 
-const inferCopyFilesDefinition = (path: string) => {
-	const copyFiles: StaticFileMap | VariantInfo = {};
+const inferCopyFilesDefinition = (path: string): CopyFiles => {
+	const variants: StaticFileMap["variants"] = {};
 	if (existsSync(join(path, "js"))) {
-		copyFiles["js"] = { path: "./js" };
+		variants["js"] = { path: "./js" };
 	}
 	if (existsSync(join(path, "ts"))) {
-		copyFiles["ts"] = { path: "./ts" };
-	}
-	if (Object.keys(copyFiles).length !== 0) {
-		return copyFiles;
+		variants["ts"] = { path: "./ts" };
 	}
 
-	return {
-		path: ".",
-	};
+	const copyFiles =
+		Object.keys(variants).length !== 0 ? { variants } : { path: "." };
+
+	return copyFiles;
 };
 
 /**
@@ -398,7 +433,7 @@ export const updatePackageScripts = async (ctx: C3Context) => {
 	let pkgJson = readJSON(pkgJsonPath);
 
 	// Run any transformers defined by the template
-	const transformed = await ctx.template.transformPackageJson(pkgJson);
+	const transformed = await ctx.template.transformPackageJson(pkgJson, ctx);
 	pkgJson = deepmerge(pkgJson, transformed);
 
 	writeJSON(pkgJsonPath, pkgJson);
@@ -411,4 +446,26 @@ export const getTemplatePath = (ctx: C3Context) => {
 	}
 
 	return resolve(__dirname, "..", "templates", ctx.template.id);
+};
+
+export const isVariantInfo = (
+	copyFiles: CopyFiles
+): copyFiles is VariantInfo => {
+	return "path" in (copyFiles as VariantInfo);
+};
+
+export const getCopyFilesDestinationDir = (
+	ctx: C3Context
+): undefined | string => {
+	const { copyFiles } = ctx.template;
+
+	if (!copyFiles?.destinationDir) {
+		return undefined;
+	}
+
+	if (typeof copyFiles.destinationDir === "string") {
+		return copyFiles.destinationDir;
+	}
+
+	return copyFiles.destinationDir(ctx);
 };

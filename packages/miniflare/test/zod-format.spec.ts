@@ -1,18 +1,18 @@
 import assert from "assert";
 import test from "ava";
-import { _forceColour, _formatZodError } from "miniflare";
+import { _forceColour, formatZodError } from "miniflare";
 import { z } from "zod";
 
 const formatZodErrorMacro = test.macro({
 	title(providedTitle) {
-		return `_formatZodError: formats ${providedTitle}`;
+		return `formatZodError: formats ${providedTitle}`;
 	},
 	exec(t, schema: z.ZodTypeAny, input: unknown, colour?: boolean) {
 		const result = schema.safeParse(input);
 		assert(!result.success);
 		// Disable colours by default for easier-to-read snapshots
 		_forceColour(colour ?? false);
-		const formatted = _formatZodError(result.error, input);
+		const formatted = formatZodError(result.error, input);
 		t.snapshot(formatted);
 	},
 });

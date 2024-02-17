@@ -204,7 +204,10 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 
 	if (
 		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
-		!c.req.header("Referer")?.startsWith("https://workers.cloudflare.com")
+		!(
+			c.req.header("Referer")?.startsWith("https://workers.cloudflare.com") ||
+			c.req.header("Referer")?.startsWith("http://localhost")
+		)
 	) {
 		throw new PreviewRequestForbidden();
 	}
@@ -224,6 +227,7 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 		sameSite: "None",
 		httpOnly: true,
 		domain: url.hostname,
+		partitioned: true,
 	});
 
 	return c.redirect(url.searchParams.get("suffix") ?? "/", 307);

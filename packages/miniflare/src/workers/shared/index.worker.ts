@@ -1,4 +1,4 @@
-export { readPrefix, BlobStore } from "./blob.worker";
+export { BlobStore, readPrefix } from "./blob.worker";
 export type {
 	BlobId,
 	MultipartOptions,

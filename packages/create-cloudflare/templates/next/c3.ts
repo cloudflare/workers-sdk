@@ -1,11 +1,13 @@
-import { existsSync, mkdirSync } from "fs";
+import { join } from "path";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
-	compatDateFlag,
+	copyFile,
 	probePaths,
+	readFile,
 	readJSON,
 	usesEslint,
 	usesTypescript,
@@ -13,17 +15,7 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import {
-	apiAppDirHelloJs,
-	apiAppDirHelloTs,
-	apiPagesDirHelloJs,
-	apiPagesDirHelloTs,
-	appDirNotFoundJs,
-	appDirNotFoundTs,
-	envDts,
-	nextConfig,
-	readme,
-} from "./templates";
+import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Args, C3Context } from "types";
 
@@ -33,27 +25,37 @@ const generate = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
 
 	await runFrameworkGenerator(ctx, [projectName]);
+
+	copyFile(
+		join(getTemplatePath(ctx), "wrangler.toml"),
+		join(ctx.project.path, "wrangler.toml")
+	);
+	updateStatus("Created wrangler.toml file");
 };
 
-const getApiTemplate = (
-	apiPath: string,
-	isTypescript: boolean
-): [string, string] => {
-	const isAppDir = /\/app\/api$/.test(apiPath);
+const updateNextConfig = () => {
+	const s = spinner();
 
-	if (isAppDir) {
-		// App directory uses route handlers that are defined in a subdirectory (`/api/hello/route.ts`).
-		const routeHandlerPath = `${apiPath}/hello`;
-		mkdirSync(routeHandlerPath, { recursive: true });
+	const configFile = "next.config.mjs";
+	s.start(`Updating \`${configFile}\``);
 
-		return isTypescript
-			? [`${routeHandlerPath}/route.ts`, apiAppDirHelloTs]
-			: [`${routeHandlerPath}/route.js`, apiAppDirHelloJs];
-	}
+	const configContent = readFile(configFile);
 
-	return isTypescript
-		? [`${apiPath}/hello.ts`, apiPagesDirHelloTs]
-		: [`${apiPath}/hello.js`, apiPagesDirHelloJs];
+	const updatedConfigFile =
+		`import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
+
+		// Here we use the @cloudflare/next-on-pages next-dev module to allow us to use bindings during local development
+		// (when running the application with \`next dev\`), for more information see:
+		// https://github.com/cloudflare/next-on-pages/blob/5712c57ea7/internal-packages/next-dev/README.md
+		if (process.env.NODE_ENV === 'development') {
+		  await setupDevPlatform();
+		}
+
+		`.replace(/\n\t*/g, "\n") + configContent;
+
+	writeFile(configFile, updatedConfigFile);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
 const configure = async (ctx: C3Context) => {
@@ -73,36 +75,13 @@ const configure = async (ctx: C3Context) => {
 		crash("Could not find the `/api` or `/app` directory");
 	}
 
-	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
-	const apiPath = path.replace(/\/app$/, "/app/api");
-
 	const usesTs = usesTypescript(ctx);
 
-	const appDirPath = probePaths([
-		`${projectPath}/src/app`,
-		`${projectPath}/app`,
-	]);
-
-	if (appDirPath) {
-		// Add a custom app not-found edge route as recommended in next-on-pages
-		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
-		const notFoundPath = `${appDirPath}/not-found.${usesTs ? "tsx" : "js"}`;
-		if (!existsSync(notFoundPath)) {
-			const notFoundContent = usesTs ? appDirNotFoundTs : appDirNotFoundJs;
-			writeFile(notFoundPath, notFoundContent);
-			updateStatus("Created a custom edge not-found route");
-		}
-	}
-
-	const [handlerPath, handlerFile] = getApiTemplate(
-		apiPath,
-		usesTypescript(ctx)
-	);
-	writeFile(handlerPath, handlerFile);
-	updateStatus("Created an example API route handler");
-
 	if (usesTs) {
-		writeFile(`${projectPath}/env.d.ts`, envDts);
+		copyFile(
+			join(getTemplatePath(ctx), "env.d.ts"),
+			join(projectPath, "env.d.ts")
+		);
 		updateStatus("Created an env.d.ts file");
 	}
 
@@ -112,10 +91,12 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	writeFile(`${projectPath}/next.config.mjs`, nextConfig);
-	updateStatus("Updated the next.config.js file");
+	updateNextConfig();
 
-	writeFile(`${projectPath}/README.md`, readme);
+	copyFile(
+		join(getTemplatePath(ctx), "README.md"),
+		join(projectPath, "README.md")
+	);
 	updateStatus("Updated the README file");
 
 	await addDevDependencies(installEslintPlugin);
@@ -178,9 +159,41 @@ export default {
 	platform: "pages",
 	displayName: "Next",
 	devScript: "dev",
-	previewScript: "pages:preview",
+	previewScript: "preview",
+	deployScript: "deploy",
 	generate,
 	configure,
+	copyFiles: {
+		async selectVariant(ctx) {
+			const isApp = probePaths([
+				`${ctx.project.path}/src/app`,
+				`${ctx.project.path}/app`,
+			]);
+
+			const isTypescript = usesTypescript(ctx);
+
+			const dir = isApp ? "app" : "pages";
+			return `${dir}/${isTypescript ? "ts" : "js"}`;
+		},
+		destinationDir(ctx) {
+			const srcPath = probePaths([`${ctx.project.path}/src`]);
+			return srcPath ? "./src" : "./";
+		},
+		variants: {
+			"app/ts": {
+				path: "./app/ts",
+			},
+			"app/js": {
+				path: "./app/js",
+			},
+			"pages/ts": {
+				path: "./pages/ts",
+			},
+			"pages/js": {
+				path: "./pages/js",
+			},
+		},
+	},
 	transformPackageJson: async () => {
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";
@@ -194,8 +207,8 @@ export default {
 		return {
 			scripts: {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-				"pages:preview": `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
-				"pages:deploy": `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+				preview: `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static`,
+				deploy: `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
 			},
 		};
 	},

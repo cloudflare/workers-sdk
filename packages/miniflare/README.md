@@ -205,6 +205,13 @@ parameter in module format Workers.
   Unique name for this worker. Only required if multiple `workers` are
   specified.
 
+- `rootPath?: string`
+
+  Path against which all other path options for this Worker are resolved
+  relative to. This path is itself resolved relative to the `rootPath` from
+  `SharedOptions` if multiple workers are specified. Defaults to the current
+  working directory.
+
 - `script?: string`
 
   JavaScript code for this worker. If this is a service worker format Worker, it
@@ -289,7 +296,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -298,6 +305,8 @@ parameter in module format Workers.
 
   - If the designator is a `string`, requests will be dispatched to the Worker
     with that `name`.
+  - If the designator is `(await import("miniflare")).kCurrentWorker`, requests
+    will be dispatched to the Worker defining the binding.
   - If the designator is an object of the form `{ network: { ... } }`, where
     `network` is a
     [`workerd` `Network` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L555-L598),
@@ -313,7 +322,8 @@ parameter in module format Workers.
     directory.
   - If the designator is a function, requests will be dispatched to your custom
     handler. This allows you to access data and functions defined in Node.js
-    from your Worker.
+    from your Worker. Note `instance` will be the `Miniflare` instance
+    dispatching the request.
 
 <!--prettier-ignore-start-->
 
@@ -509,10 +519,11 @@ parameter in module format Workers.
 
 - `d1Databases?: Record<string, string> | string[]`
 
-  Record mapping binding name to D1 database IDs to inject as `Fetcher` bindings
-  into this Worker. Note these bindings must be wrapped with a facade to provide
-  the expected `D1Database` API. Different Workers may bind to the same database
-  ID with different binding names. If a `string[]` of binding names is
+  Record mapping binding name to D1 database IDs to inject as `D1Database`
+  bindings into this Worker. Note binding names starting with `__D1_BETA__` are
+  injected as `Fetcher` bindings instead, and must be wrapped with a facade to
+  provide the expected `D1Database` API. Different Workers may bind to the same
+  database ID with different binding names. If a `string[]` of binding names is
   specified, the binding name and database ID are assumed to be the same.
 
 #### Queues
@@ -531,15 +542,30 @@ parameter in module format Workers.
   have at most one consumer. If a `string[]` of queue names is specified,
   default consumer options will be used.
 
-#### Analytics Engine
+#### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
 
 _Not yet supported_
+
+If you need support for these locally, consider using the `wrappedBindings`
+option to mock them out.
+
+#### Browser Rendering and Workers AI
+
+_Not yet supported_
+
+If you need support for these locally, consider using the `serviceBindings`
+option to mock them out.
 
 ### `interface SharedOptions`
 
 Options shared between all Workers/"nanoservices".
 
 #### Core
+
+- `rootPath?: string`
+
+  Path against which all other path options for this instance are resolved
+  relative to. Defaults to the current working directory.
 
 - `host?: string`
 
@@ -656,7 +682,7 @@ Options shared between all Workers/"nanoservices".
 
   Where to persist data stored in D1 databases. See docs for `Persistence`.
 
-#### Analytics Engine
+#### Analytics Engine, Browser Rendering, Sending Email, Vectorize, Workers AI and Workers for Platforms
 
 _Not yet supported_
 

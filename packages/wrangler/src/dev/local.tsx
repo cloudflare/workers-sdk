@@ -39,6 +39,8 @@ export interface LocalProps {
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
 	upstreamProtocol: "http" | "https";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady:
@@ -93,6 +95,8 @@ export async function localPropsToConfigBundle(
 		crons: props.crons,
 		queueConsumers: props.queueConsumers,
 		localProtocol: props.localProtocol,
+		httpsKeyPath: props.httpsKeyPath,
+		httpsCertPath: props.httpsCertPath,
 		localUpstream: props.localUpstream,
 		upstreamProtocol: props.upstreamProtocol,
 		inspect: props.inspect,
