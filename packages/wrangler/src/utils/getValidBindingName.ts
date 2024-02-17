@@ -1,6 +1,7 @@
 /**
  * Strips a name to a valid binding name which must be a valid JS identifiers.
  * Removes any non-alphanumeric and non-underscore characters and prepends an underscore if it starts with a number.
+ * @returns A stripped binding name or a fallback if a valid binding name is not possible.
  */
 export function getValidBindingName(name: string, fallback: string) {
 	// replace whitespaces and dashes with underscores
