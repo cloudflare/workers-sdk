@@ -5,6 +5,10 @@ describe("getValidBindingName", () => {
 		expect(getValidBindingName("MY-NAME")).toBe("MY_NAME");
 	});
 
+	it("should prepend an underscore if it starts with a number", () => {
+		expect(getValidBindingName("123")).toBe("_123");
+	});
+
 	it("should replace whitespaces with underscores", () => {
 		expect(getValidBindingName("MY NAME")).toBe("MY_NAME");
 		expect(getValidBindingName("MY	NAME")).toBe("MY_NAME");
