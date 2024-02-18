@@ -33,18 +33,18 @@ describe("service worker", () => {
 
 		const text = await resp.text();
 		expect(text).toMatchInlineSnapshot(`
-    "{
-      \\"VAR1\\": \\"value1\\",
-      \\"VAR2\\": 123,
-      \\"VAR3\\": {
-        \\"abc\\": \\"def\\"
-      },
-      \\"text\\": \\"Here be some text\\",
-      \\"data\\": \\"Here be some data\\",
-      \\"TEXT\\": \\"Here be some text\\",
-      \\"DATA\\": \\"Here be some data\\",
-      \\"NODE_ENV\\": \\"local-testing\\"
-    }"
-  `);
+			"{
+			  "VAR1": "value1",
+			  "VAR2": 123,
+			  "VAR3": {
+			    "abc": "def"
+			  },
+			  "text": "Here be some text",
+			  "data": "Here be some data",
+			  "TEXT": "Here be some text",
+			  "DATA": "Here be some data",
+			  "NODE_ENV": "local-testing"
+			}"
+		`);
 	});
 });

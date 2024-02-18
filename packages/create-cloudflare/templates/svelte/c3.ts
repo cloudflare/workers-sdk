@@ -1,13 +1,13 @@
+import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { parseTs, transformFile } from "helpers/codemod";
+import { transformFile } from "helpers/codemod";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, usesTypescript } from "helpers/files";
+import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { platformInterface } from "./templates";
+import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
-import type * as recast from "recast";
-import type { C3Context } from "types";
+import type { C3Context, PackageJson } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -26,7 +26,14 @@ const configure = async (ctx: C3Context) => {
 		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
 	});
 
-	// Change the import statement in svelte.config.js
+	updateSvelteConfig();
+	updateTypeDefinitions(ctx);
+};
+
+const updateSvelteConfig = () => {
+	// All we need to do is change the import statement in svelte.config.js
+	updateStatus(`Changing adapter in ${blue("svelte.config.js")}`);
+
 	transformFile("svelte.config.js", {
 		visitImportDeclaration: function (n) {
 			// importSource is the `x` in `import y from "x"`
@@ -39,23 +46,51 @@ const configure = async (ctx: C3Context) => {
 			return false;
 		},
 	});
-	updateStatus(`Changing adapter in ${blue("svelte.config.js")}`);
+};
 
-	// If using typescript, add the platform interface to the `App` interface
-	if (usesTypescript(ctx)) {
-		transformFile("src/app.d.ts", {
-			visitTSModuleDeclaration(n) {
-				if (n.value.id.name === "App") {
-					const patchAst = parseTs(platformInterface);
-					const body = n.node.body as recast.types.namedTypes.TSModuleBlock;
-					body.body.push(patchAst.program.body[0]);
-				}
-
-				this.traverse(n);
-			},
-		});
-		updateStatus(`Updating global type definitions in ${blue("app.d.ts")}`);
+const updateTypeDefinitions = (ctx: C3Context) => {
+	if (!usesTypescript(ctx)) {
+		return;
 	}
+
+	updateStatus(`Updating global type definitions in ${blue("app.d.ts")}`);
+
+	const b = recast.types.builders;
+
+	transformFile("src/app.d.ts", {
+		visitTSModuleDeclaration(n) {
+			if (n.value.id.name === "App" && n.node.body) {
+				const moduleBlock = n.node
+					.body as recast.types.namedTypes.TSModuleBlock;
+
+				const platformInterface = b.tsInterfaceDeclaration(
+					b.identifier("Platform"),
+					b.tsInterfaceBody([
+						b.tsPropertySignature(
+							b.identifier("env"),
+							b.tsTypeAnnotation(b.tsTypeReference(b.identifier("Env")))
+						),
+						b.tsPropertySignature(
+							b.identifier("cf"),
+							b.tsTypeAnnotation(
+								b.tsTypeReference(b.identifier("CfProperties"))
+							)
+						),
+						b.tsPropertySignature(
+							b.identifier("ctx"),
+							b.tsTypeAnnotation(
+								b.tsTypeReference(b.identifier("ExecutionContext"))
+							)
+						),
+					])
+				);
+
+				moduleBlock.body.unshift(platformInterface);
+			}
+
+			this.traverse(n);
+		},
+	});
 };
 
 const config: TemplateConfig = {
@@ -63,15 +98,32 @@ const config: TemplateConfig = {
 	id: "svelte",
 	displayName: "Svelte",
 	platform: "pages",
+	copyFiles: {
+		variants: {
+			js: { path: "./js" },
+			ts: { path: "./ts" },
+		},
+	},
 	generate,
 	configure,
-	transformPackageJson: async () => ({
-		scripts: {
-			"pages:preview": `${npm} run build && wrangler pages dev ${await compatDateFlag()} .svelte-kit/cloudflare`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
-		},
-	}),
+	transformPackageJson: async (original: PackageJson, ctx: C3Context) => {
+		let scripts: Record<string, string> = {
+			preview: `${npm} run build && wrangler pages dev .svelte-kit/cloudflare`,
+			deploy: `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
+		};
+
+		if (usesTypescript(ctx)) {
+			const mv = platform() === "win32" ? "move" : "mv";
+			scripts = {
+				...scripts,
+				"build-cf-types": `wrangler types && ${mv} worker-configuration.d.ts src/`,
+			};
+		}
+
+		return { scripts };
+	},
 	devScript: "dev",
-	previewScript: "pages:preview",
+	deployScript: "deploy",
+	previewScript: "preview",
 };
 export default config;

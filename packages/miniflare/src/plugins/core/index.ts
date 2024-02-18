@@ -15,11 +15,18 @@ import {
 	Service,
 	ServiceDesignator,
 	Worker_Binding,
+	Worker_DurableObjectNamespace,
 	Worker_Module,
 	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
-import { Json, JsonSchema, Log, MiniflareCoreError } from "../../shared";
+import {
+	Json,
+	JsonSchema,
+	Log,
+	MiniflareCoreError,
+	PathSchema,
+} from "../../shared";
 import {
 	Awaitable,
 	CoreBindings,
@@ -34,6 +41,7 @@ import {
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	kProxyNodeBinding,
+	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
 } from "../shared";
 import {
@@ -53,7 +61,11 @@ import {
 	withSourceURL,
 } from "./modules";
 import { PROXY_SECRET } from "./proxy";
-import { ServiceDesignatorSchema } from "./services";
+import {
+	ServiceDesignatorSchema,
+	ServiceFetchSchema,
+	kCurrentWorker,
+} from "./services";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -92,10 +104,14 @@ const WrappedBindingSchema = z.object({
 	bindings: z.record(JsonSchema).optional(),
 });
 
+// Validate as string, but don't include in parsed output
+const UnusableStringSchema = z.string().transform(() => undefined);
+
 const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
 		name: z.string().optional(),
+		rootPath: UnusableStringSchema.optional(),
 
 		compatibilityDate: z.string().optional(),
 		compatibilityFlags: z.string().array().optional(),
@@ -103,9 +119,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
-		wasmBindings: z.record(z.string()).optional(),
-		textBlobBindings: z.record(z.string()).optional(),
-		dataBlobBindings: z.record(z.string()).optional(),
+		wasmBindings: z.record(PathSchema).optional(),
+		textBlobBindings: z.record(PathSchema).optional(),
+		dataBlobBindings: z.record(PathSchema).optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
 			.record(z.union([z.string(), WrappedBindingSchema]))
@@ -114,11 +130,13 @@ const CoreOptionsSchemaInput = z.intersection(
 		outboundService: ServiceDesignatorSchema.optional(),
 		fetchMock: z.instanceof(MockAgent).optional(),
 
+		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectHost: z.string().optional(),
 		unsafeDirectPort: z.number().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
+		unsafeUseModuleFallbackService: z.boolean().optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -136,6 +154,8 @@ export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
 });
 
 export const CoreSharedOptionsSchema = z.object({
+	rootPath: UnusableStringSchema.optional(),
+
 	host: z.string().optional(),
 	port: z.number().optional(),
 
@@ -158,10 +178,14 @@ export const CoreSharedOptionsSchema = z.object({
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
 	liveReload: z.boolean().optional(),
+
 	// This is a shared secret between a proxy server and miniflare that can be
 	// passed in a header to prove that the request came from the proxy and not
 	// some malicious attacker.
 	unsafeProxySharedSecret: z.string().optional(),
+	unsafeModuleFallbackService: ServiceFetchSchema.optional(),
+	// Keep blobs when deleting/overwriting keys, required for stacked storage
+	unsafeStickyBlobs: z.boolean().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -194,6 +218,7 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
 })`;
 
 function getCustomServiceDesignator(
+	refererName: string | undefined,
 	workerIndex: number,
 	kind: CustomServiceKind,
 	name: string,
@@ -206,6 +231,8 @@ function getCustomServiceDesignator(
 	} else if (typeof service === "object") {
 		// Builtin workerd service: network, external, disk
 		serviceName = getBuiltinServiceName(workerIndex, kind, name);
+	} else if (service === kCurrentWorker) {
+		serviceName = getUserServiceName(refererName);
 	} else {
 		// Regular user worker
 		serviceName = getUserServiceName(service);
@@ -339,6 +366,7 @@ export const CORE_PLUGIN: Plugin<
 					return {
 						name,
 						service: getCustomServiceDesignator(
+							/* referrer */ options.name,
 							workerIndex,
 							CustomServiceKind.UNKNOWN,
 							name,
@@ -428,11 +456,13 @@ export const CORE_PLUGIN: Plugin<
 	async getServices({
 		log,
 		options,
+		sharedOptions,
 		workerBindings,
 		workerIndex,
 		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
+		loopbackPort,
 	}) {
 		// Define regular user worker
 		const additionalModuleNames = additionalModules.map(({ name }) => name);
@@ -545,19 +575,28 @@ export const CORE_PLUGIN: Plugin<
 					compatibilityDate,
 					compatibilityFlags: options.compatibilityFlags,
 					bindings: workerBindings,
-					durableObjectNamespaces: classNamesEntries.map(
-						([className, { unsafeUniqueKey, unsafePreventEviction }]) => {
-							return {
-								className,
-								// This `uniqueKey` will (among other things) be used as part of the
-								// path when persisting to the file-system. `-` is invalid in
-								// JavaScript class names, but safe on filesystems (incl. Windows).
-								uniqueKey:
-									unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
-								preventEviction: unsafePreventEviction,
-							};
-						}
-					),
+					durableObjectNamespaces:
+						classNamesEntries.map<Worker_DurableObjectNamespace>(
+							([className, { unsafeUniqueKey, unsafePreventEviction }]) => {
+								if (unsafeUniqueKey === kUnsafeEphemeralUniqueKey) {
+									return {
+										className,
+										ephemeralLocal: kVoid,
+										preventEviction: unsafePreventEviction,
+									};
+								} else {
+									return {
+										className,
+										// This `uniqueKey` will (among other things) be used as part of the
+										// path when persisting to the file-system. `-` is invalid in
+										// JavaScript class names, but safe on filesystems (incl. Windows).
+										uniqueKey:
+											unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+										preventEviction: unsafePreventEviction,
+									};
+								}
+							}
+						),
 					durableObjectStorage:
 						classNamesEntries.length === 0
 							? undefined
@@ -568,12 +607,18 @@ export const CORE_PLUGIN: Plugin<
 						options.outboundService === undefined
 							? undefined
 							: getCustomServiceDesignator(
+									/* referrer */ options.name,
 									workerIndex,
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
 									options.outboundService
 							  ),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
+					moduleFallback:
+						options.unsafeUseModuleFallbackService &&
+						sharedOptions.unsafeModuleFallbackService !== undefined
+							? `localhost:${loopbackPort}`
+							: undefined,
 				},
 			});
 		}
@@ -721,8 +766,9 @@ function getWorkerScript(
 	workerIndex: number,
 	additionalModuleNames: string[]
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
-	const modulesRoot =
-		("modulesRoot" in options ? options.modulesRoot : undefined) ?? "";
+	const modulesRoot = path.resolve(
+		("modulesRoot" in options ? options.modulesRoot : undefined) ?? ""
+	);
 	if (Array.isArray(options.modules)) {
 		// If `modules` is a manually defined modules array, use that
 		return {

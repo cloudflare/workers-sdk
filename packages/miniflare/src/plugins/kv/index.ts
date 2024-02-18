@@ -6,12 +6,13 @@ import {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
+import { PathSchema } from "../../shared";
 import { SharedBindings } from "../../workers";
 import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	getControlEndpointBindings,
+	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
 	migrateDatabase,
@@ -31,7 +32,7 @@ export const KVOptionsSchema = z.object({
 	kvNamespaces: z.union([z.record(z.string()), z.string().array()]).optional(),
 
 	// Workers Sites
-	sitePath: z.string().optional(),
+	sitePath: PathSchema.optional(),
 	siteInclude: z.string().array().optional(),
 	siteExclude: z.string().array().optional(),
 });
@@ -82,7 +83,13 @@ export const KV_PLUGIN: Plugin<
 		}
 		return bindings;
 	},
-	async getServices({ options, sharedOptions, tmpPath, log }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		log,
+		unsafeStickyBlobs,
+	}) {
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(([_, id]) => ({
@@ -124,7 +131,7 @@ export const KV_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getControlEndpointBindings(),
+						...getMiniflareObjectBindings(unsafeStickyBlobs),
 					],
 				},
 			};
@@ -145,6 +152,9 @@ export const KV_PLUGIN: Plugin<
 		}
 
 		return services;
+	},
+	getPersistPath({ kvPersist }, tmpPath) {
+		return getPersistPath(KV_PLUGIN_NAME, tmpPath, kvPersist);
 	},
 };
 

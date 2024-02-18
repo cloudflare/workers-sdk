@@ -1,8 +1,9 @@
 import assert from "assert";
+import fs from "fs/promises";
 import path from "path";
 import test from "ava";
 import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
-import { utf8Encode } from "../../test-shared";
+import { useCwd, useTmp, utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(
 	__dirname,
@@ -278,6 +279,30 @@ You must manually define your modules when constructing Miniflare:
     at ${depPath}:2:8`
 	);
 });
+test.serial(
+	"Miniflare: collects modules outside of working directory",
+	async (t) => {
+		// https://github.com/cloudflare/workers-sdk/issues/4721
+		const tmp = await useTmp(t);
+		const child = path.join(tmp, "child");
+		await fs.mkdir(child);
+		await fs.writeFile(
+			path.join(tmp, "worker.mjs"),
+			'export default { fetch() { return new Response("body"); } }'
+		);
+		useCwd(t, child);
+
+		const mf = new Miniflare({
+			modules: true,
+			modulesRoot: "..",
+			scriptPath: "../worker.mjs",
+		});
+		t.teardown(() => mf.dispose());
+
+		const res = await mf.dispatchFetch("http://localhost");
+		t.is(await res.text(), "body");
+	}
+);
 test("Miniflare: suggests bundling on unknown module", async (t) => {
 	// Try with npm-package-like import
 	let mf = new Miniflare({

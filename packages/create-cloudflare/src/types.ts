@@ -38,3 +38,11 @@ export type C3Context = {
 type DeploymentInfo = {
 	url?: string;
 };
+
+export type PackageJson = Record<string, string> & {
+	name: string;
+	version: string;
+	scripts?: Record<string, string>;
+	dependencies?: Record<string, string>;
+	devDependencies?: Record<string, string>;
+};

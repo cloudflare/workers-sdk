@@ -13,7 +13,7 @@ import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	getControlEndpointBindings,
+	getMiniflareObjectBindings,
 	getPersistPath,
 } from "../shared";
 
@@ -51,7 +51,13 @@ export const CACHE_PLUGIN: Plugin<
 	getNodeBindings() {
 		return {};
 	},
-	async getServices({ sharedOptions, options, workerIndex, tmpPath }) {
+	async getServices({
+		sharedOptions,
+		options,
+		workerIndex,
+		tmpPath,
+		unsafeStickyBlobs,
+	}) {
 		const cache = options.cache ?? true;
 		const cacheWarnUsage = options.cacheWarnUsage ?? false;
 
@@ -129,7 +135,7 @@ export const CACHE_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getControlEndpointBindings(),
+						...getMiniflareObjectBindings(unsafeStickyBlobs),
 					],
 				},
 			};
@@ -140,5 +146,8 @@ export const CACHE_PLUGIN: Plugin<
 		}
 
 		return services;
+	},
+	getPersistPath({ cachePersist }, tmpPath) {
+		return getPersistPath(CACHE_PLUGIN_NAME, tmpPath, cachePersist);
 	},
 };

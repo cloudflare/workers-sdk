@@ -31,7 +31,7 @@ export function normalizeOutput(
 			stdout = stdout.replaceAll(from, to);
 		}
 	}
-	return stdout;
+	return stdout.trim();
 }
 
 function stripEmptyNewlines(stdout: string): string {
@@ -163,7 +163,7 @@ export function squashLocalNetworkBindings(stdout: string): string {
  */
 function removeStandardPricingWarning(stdout: string): string {
 	return stdout.replace(
-		"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.",
+		/🚧 New Workers Standard pricing is now available\. Please visit the dashboard to view details and opt-in to new pricing: https:\/\/dash\.cloudflare\.com\/[^/]+\/workers\/standard\/opt-in\./,
 		""
 	);
 }

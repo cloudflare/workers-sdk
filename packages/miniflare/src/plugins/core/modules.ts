@@ -10,7 +10,7 @@ import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
 import { Worker_Module } from "../../runtime";
-import { MiniflareCoreError, globsToRegExps } from "../../shared";
+import { MiniflareCoreError, PathSchema, globsToRegExps } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
 
 const SUGGEST_BUNDLE =
@@ -63,7 +63,7 @@ export type ModuleRule = z.infer<typeof ModuleRuleSchema>;
 // Manually defined module
 export const ModuleDefinitionSchema = z.object({
 	type: ModuleRuleTypeSchema,
-	path: z.string(),
+	path: PathSchema,
 	contents: z.string().or(z.instanceof(Uint8Array)).optional(),
 });
 export type ModuleDefinition = z.infer<typeof ModuleDefinitionSchema>;
@@ -75,12 +75,12 @@ export const SourceOptionsSchema = z.union([
 		modules: z.array(ModuleDefinitionSchema),
 		// `modules` "name"s will be their paths relative to this value.
 		// This ensures file paths in stack traces are correct.
-		modulesRoot: z.string().optional(),
+		modulesRoot: PathSchema.optional(),
 	}),
 	z.object({
 		script: z.string(),
 		// Optional script path for resolving modules, and stack traces file names
-		scriptPath: z.string().optional(),
+		scriptPath: PathSchema.optional(),
 		// Automatically collect modules by parsing `script` if `true`, or treat as
 		// service-worker if `false`
 		modules: z.boolean().optional(),
@@ -88,10 +88,10 @@ export const SourceOptionsSchema = z.union([
 		modulesRules: z.array(ModuleRuleSchema).optional(),
 		// `modules` "name"s will be their paths relative to this value.
 		// This ensures file paths in stack traces are correct.
-		modulesRoot: z.string().optional(),
+		modulesRoot: PathSchema.optional(),
 	}),
 	z.object({
-		scriptPath: z.string(),
+		scriptPath: PathSchema,
 		// Automatically collect modules by parsing `scriptPath` if `true`, or treat
 		// as service-worker if `false`
 		modules: z.boolean().optional(),
@@ -99,7 +99,7 @@ export const SourceOptionsSchema = z.union([
 		modulesRules: z.array(ModuleRuleSchema).optional(),
 		// `modules` "name"s will be their paths relative to this value.
 		// This ensures file paths in stack traces are correct.
-		modulesRoot: z.string().optional(),
+		modulesRoot: PathSchema.optional(),
 	}),
 ]);
 export type SourceOptions = z.infer<typeof SourceOptionsSchema>;
@@ -174,8 +174,6 @@ export class ModuleLocator {
 	}
 
 	visitEntrypoint(code: string, modulePath: string) {
-		modulePath = path.resolve(this.modulesRoot, modulePath);
-
 		// If we've already visited this path, return
 		if (this.#visitedPaths.has(modulePath)) return;
 		this.#visitedPaths.add(modulePath);
@@ -442,7 +440,10 @@ function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 
 	// This function is only used for building error messages including
 	// generated modules, and these are the types we generate.
-	assert(!("json" in m), "Unreachable: json modules aren't generated");
+	assert(
+		!("json" in m || "fallbackService" in m),
+		"Unreachable: json or fallbackService modules aren't generated"
+	);
 	const exhaustive: never = m;
 	assert.fail(
 		`Unreachable: [${Object.keys(exhaustive).join(

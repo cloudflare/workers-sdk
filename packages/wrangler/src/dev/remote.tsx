@@ -48,6 +48,8 @@ interface RemoteProps {
 	port: number;
 	ip: string;
 	localProtocol: "https" | "http";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	inspect: boolean;
 	inspectorPort: number;
 	accountId: string | undefined;
@@ -422,6 +424,8 @@ export async function startRemoteServer(props: RemoteProps) {
 			? undefined
 			: props.assetPaths?.assetDirectory,
 		localProtocol: props.localProtocol,
+		customHttpsKeyPath: props.httpsKeyPath,
+		customHttpsCertPath: props.httpsCertPath,
 		localPort: props.port,
 		ip: props.ip,
 		onReady: async (ip, port) => {

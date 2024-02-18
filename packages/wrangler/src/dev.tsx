@@ -116,6 +116,16 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			})
+			.option("https-key-path", {
+				describe: "Path to a custom certificate key",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("https-cert-path", {
+				describe: "Path to a custom certificate",
+				type: "string",
+				requiresArg: true,
+			})
 			.options("local-upstream", {
 				type: "string",
 				describe:
@@ -342,6 +352,7 @@ export type StartDevOptions = DevArguments &
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
 		forceLocal?: boolean;
+		accountId?: string;
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
@@ -446,10 +457,16 @@ export async function startDev(args: StartDevOptions) {
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
+					httpsKeyPath={args.httpsKeyPath}
+					httpsCertPath={args.httpsCertPath}
 					localUpstream={args.localUpstream ?? host}
 					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
-					accountId={configParam.account_id || getAccountFromCache()?.id}
+					accountId={
+						args.accountId ??
+						configParam.account_id ??
+						getAccountFromCache()?.id
+					}
 					assetPaths={assetPaths}
 					assetsConfig={configParam.assets}
 					initialPort={
@@ -572,10 +589,13 @@ export async function startApiDev(args: StartDevOptions) {
 			tsconfig: args.tsconfig ?? configParam.tsconfig,
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol ?? configParam.dev.local_protocol,
+			httpsKeyPath: args.httpsKeyPath,
+			httpsCertPath: args.httpsCertPath,
 			localUpstream: args.localUpstream ?? host,
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,
-			accountId: configParam.account_id ?? getAccountFromCache()?.id,
+			accountId:
+				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			assetPaths: assetPaths,
 			assetsConfig: configParam.assets,
 			//port can be 0, which means to use a random port
@@ -955,11 +975,25 @@ export function getBindings(
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
-			if (!hyperdrive.localConnectionString) {
+			const connectionStringFromEnv =
+				process.env[
+					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
+				];
+			if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
 				throw new UserError(
-					`In development, you should use a local postgres connection string to emulate hyperdrive functionality. Please setup postgres locally and set the value of "${hyperdrive.binding}"'s "localConnectionString" to the postgres connection string in your wrangler.toml`
+					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 				);
 			}
+
+			// If there is a non-empty connection string specified in the environment,
+			// use that as our local connection string configuration.
+			if (connectionStringFromEnv) {
+				logger.log(
+					`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
+				);
+				hyperdrive.localConnectionString = connectionStringFromEnv;
+			}
+
 			return hyperdrive;
 		}),
 	};

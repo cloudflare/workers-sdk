@@ -1,7 +1,7 @@
 {
 	"name": "get-bindings-proxy-fixture",
 	"private": true,
-	"description": "A test for the getBindingsProxy utility",
+	"description": "A test for the getBindingsProxy (deprecated) utility",
 	"scripts": {
 		"test": "vitest run",
 		"test:watch": "vitest",

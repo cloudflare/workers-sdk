@@ -231,11 +231,13 @@ test("fetch: requires GET for web socket upgrade", async (t) => {
 		}
 	);
 });
-test("fetch: throws catchable error on failure", async (t) => {
+test("fetch: returns regular response if no WebSocket response returned", async (t) => {
 	const server = await useServer(t, (req, res) => {
-		res.end("http response");
+		res.writeHead(404, "Not Found", { "Content-Type": "text/html" });
+		res.end("<p>Not Found</p>");
 	});
-	await t.throwsAsync(
-		fetch(server.http, { headers: { upgrade: "websocket" } })
-	);
+	const res = await fetch(server.http, { headers: { upgrade: "websocket" } });
+	t.is(res.status, 404);
+	t.is(res.headers.get("Content-Type"), "text/html");
+	t.is(await res.text(), "<p>Not Found</p>");
 });

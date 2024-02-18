@@ -85,7 +85,7 @@ describe("Preview Worker", () => {
 			'"/hello?world"'
 		);
 		expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
-			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None"`
+			`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
 		);
 	});
 	it("shouldn't be redirected with no token", async () => {
@@ -105,7 +105,7 @@ describe("Preview Worker", () => {
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"TokenUpdateFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+			`"{"error":"TokenUpdateFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
 	it("shouldn't be redirected with invalid token", async () => {
@@ -125,7 +125,7 @@ describe("Preview Worker", () => {
 		);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"TokenUpdateFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+			`"{"error":"TokenUpdateFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
 
@@ -194,7 +194,7 @@ describe("Preview Worker", () => {
 		const resp = await fetch(PREVIEW_REMOTE);
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"'
+			`"{"error":"PreviewRequestFailed","message":"Valid token not found","data":{}}"`
 		);
 	});
 	it("should reject invalid cookie header", async () => {
@@ -205,7 +205,7 @@ describe("Preview Worker", () => {
 		});
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{}}"'
+			`"{"error":"PreviewRequestFailed","message":"Valid token not found","data":{}}"`
 		);
 	});
 	it("should reject invalid token", async () => {
@@ -216,7 +216,7 @@ describe("Preview Worker", () => {
 		});
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"PreviewRequestFailed\\",\\"message\\":\\"Valid token not found\\",\\"data\\":{\\"tokenId\\":\\"TEST_TOKEN\\"}}"'
+			`"{"error":"PreviewRequestFailed","message":"Valid token not found","data":{"tokenId":"TEST_TOKEN"}}"`
 		);
 	});
 
@@ -244,7 +244,7 @@ describe("Preview Worker", () => {
 		});
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"RawHttpFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+			`"{"error":"RawHttpFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
 	it("should reject invalid token for raw HTTP response", async () => {
@@ -258,7 +258,7 @@ describe("Preview Worker", () => {
 		});
 		expect(resp.status).toBe(400);
 		expect(await resp.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"RawHttpFailed\\",\\"message\\":\\"Provide valid token\\",\\"data\\":{}}"'
+			`"{"error":"RawHttpFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
 });
@@ -312,7 +312,7 @@ describe("Upload Worker", () => {
 		});
 		expect(w.status).toBe(401);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"UploadFailed\\",\\"message\\":\\"Valid token not provided\\",\\"data\\":{}}"'
+			`"{"error":"UploadFailed","message":"Valid token not provided","data":{}}"`
 		);
 	});
 	it("should reject invalid token", async () => {
@@ -326,7 +326,7 @@ describe("Upload Worker", () => {
 		});
 		expect(w.status).toBe(401);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"UploadFailed\\",\\"message\\":\\"Valid token not provided\\",\\"data\\":{}}"'
+			`"{"error":"UploadFailed","message":"Valid token not provided","data":{}}"`
 		);
 	});
 	it("should reject invalid form data", async () => {
@@ -340,7 +340,7 @@ describe("Upload Worker", () => {
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected valid form data\\",\\"data\\":{\\"error\\":\\"TypeError: Unrecognized Content-Type header value. FormData can only parse the following MIME types: multipart/form-data, application/x-www-form-urlencoded\\"}}"'
+			`"{"error":"BadUpload","message":"Expected valid form data","data":{"error":"TypeError: Unrecognized Content-Type header value. FormData can only parse the following MIME types: multipart/form-data, application/x-www-form-urlencoded"}}"`
 		);
 	});
 	it("should reject missing metadata", async () => {
@@ -362,7 +362,7 @@ export default {
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected metadata file to be defined\\",\\"data\\":{}}"'
+			`"{"error":"BadUpload","message":"Expected metadata file to be defined","data":{}}"`
 		);
 	});
 	it("should reject invalid metadata json", async () => {
@@ -381,7 +381,7 @@ Content-Type: application/json
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected metadata file to be valid\\",\\"data\\":{}}"'
+			`"{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}"`
 		);
 	});
 	it("should reject invalid metadata", async () => {
@@ -400,7 +400,7 @@ Content-Type: application/json
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"BadUpload\\",\\"message\\":\\"Expected metadata file to be valid\\",\\"data\\":{}}"'
+			`"{"error":"BadUpload","message":"Expected metadata file to be valid","data":{}}"`
 		);
 	});
 	it("should reject service worker", async () => {
@@ -424,7 +424,7 @@ Content-Type: application/json
 		});
 		expect(w.status).toBe(400);
 		expect(await w.text()).toMatchInlineSnapshot(
-			'"{\\"error\\":\\"ServiceWorkerNotSupported\\",\\"message\\":\\"Service Workers are not supported in the Workers Playground\\",\\"data\\":{}}"'
+			`"{"error":"ServiceWorkerNotSupported","message":"Service Workers are not supported in the Workers Playground","data":{}}"`
 		);
 	});
 });

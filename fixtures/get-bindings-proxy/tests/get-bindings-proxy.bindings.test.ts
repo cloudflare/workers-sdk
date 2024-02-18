@@ -7,12 +7,10 @@ import {
 	R2Bucket,
 } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
-import {
-	getBindingsProxy as originalGetBindingsProxy,
-	unstable_dev,
-} from "wrangler";
+import { unstable_dev } from "wrangler";
+import { getBindingsProxy } from "./shared";
 import type { KVNamespace } from "@cloudflare/workers-types";
-import type { GetBindingsProxyOptions, UnstableDevWorker } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 type Bindings = {
 	MY_VAR: string;
@@ -29,17 +27,6 @@ type Bindings = {
 };
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
-
-// Here we wrap the actual original getBindingsProxy function and disable its persistance, this is to make sure
-// that we don't implement any persistance during these tests (which would add unnecessary extra complexity)
-function getBindingsProxy<T>(
-	options: Omit<GetBindingsProxyOptions, "persist">
-): ReturnType<typeof originalGetBindingsProxy<T>> {
-	return originalGetBindingsProxy({
-		...options,
-		persist: false,
-	});
-}
 
 describe("getBindingsProxy - bindings", () => {
 	let devWorkers: UnstableDevWorker[];

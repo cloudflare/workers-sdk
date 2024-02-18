@@ -20,7 +20,7 @@ import type {
 	SpawnOptionsWithoutStdio,
 } from "child_process";
 import type { WriteStream } from "fs";
-import type { Suite, TestContext } from "vitest";
+import type { Suite, TaskContext } from "vitest";
 
 export const C3_E2E_PREFIX = "tmp-e2e-c3";
 
@@ -115,6 +115,8 @@ export const spawnWithLogging = (
 ) => {
 	const [cmd, ...argv] = args;
 
+	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
+
 	const proc = spawn(cmd, argv, {
 		...opts,
 		env: {
@@ -122,8 +124,6 @@ export const spawnWithLogging = (
 			...opts.env,
 		},
 	});
-
-	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
 
 	proc.stdout.on("data", (data) => {
 		const lines: string[] = data.toString().split("\n");
@@ -192,7 +192,7 @@ export const waitForExit = async (
 	};
 };
 
-export const createTestLogStream = (ctx: TestContext) => {
+export const createTestLogStream = (ctx: TaskContext) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(ctx)}.ansi`;
 	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
@@ -220,7 +220,7 @@ const getLogPath = (suite: Suite) => {
 	return join("./.e2e-logs/", process.env.TEST_PM as string, suiteFilename);
 };
 
-const normalizeTestName = (ctx: TestContext) => {
+const normalizeTestName = (ctx: TaskContext) => {
 	const baseName = ctx.task.name
 		.toLowerCase()
 		.replace(/\s+/g, "_") // replace any whitespace with `_`

@@ -15,7 +15,7 @@ import { getUserServiceName } from "../core";
 import {
 	Plugin,
 	SERVICE_LOOPBACK,
-	getControlEndpointBindings,
+	getMiniflareObjectBindings,
 	kProxyNodeBinding,
 	namespaceEntries,
 	namespaceKeys,
@@ -56,6 +56,7 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		options,
 		workerNames,
 		queueConsumers: allQueueConsumers,
+		unsafeStickyBlobs,
 	}) {
 		const queues = namespaceEntries(options.queueProducers);
 		if (queues.length === 0) return [];
@@ -88,7 +89,7 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
-					...getControlEndpointBindings(),
+					...getMiniflareObjectBindings(unsafeStickyBlobs),
 					{
 						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 						durableObjectNamespace: {

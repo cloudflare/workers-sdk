@@ -37,6 +37,16 @@ describe("standard-pricing", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
+	// TODO: remove the fake timers and irrelevant tests after March 1st
+	beforeAll(() => {
+		jest.useFakeTimers();
+		jest.setSystemTime(new Date(2024, 0, 0));
+	});
+
+	afterAll(() => {
+		jest.useRealTimers();
+	});
+
 	it("should do nothing if endpoint not available", async () => {
 		msw.use(...mswSuccessDeploymentScriptMetadata);
 		writeWranglerToml();
@@ -164,6 +174,26 @@ describe("standard-pricing", () => {
 
 		",
 		}
+	`);
+	});
+
+	it("should warn user about new pricing if enabled and usage_model specified after deprecation date", async () => {
+		jest.setSystemTime(new Date(2024, 2, 2));
+
+		msw.use(...mswSuccessDeploymentScriptMetadata);
+		writeWranglerToml({ usage_model: "bundled" });
+		writeWorkerSource();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		mockStandardEnabled(true);
+
+		await runWrangler("deploy ./index");
+
+		expect(std.warn).toMatchInlineSnapshot(`
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`usage_model\` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model[0m
+
+		"
 	`);
 	});
 	it("should not warn user about new pricing if enabled and usage_model not specified", async () => {

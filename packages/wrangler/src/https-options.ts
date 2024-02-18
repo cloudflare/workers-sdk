@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getAccessibleHosts } from "miniflare";
+import { UserError } from "./errors";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
@@ -16,11 +17,40 @@ const ONE_DAY_IN_MS = 86400000;
  *
  * The certificates are self-signed and generated locally, and cached in the `CERT_ROOT` directory.
  */
-export function getHttpsOptions() {
+export function getHttpsOptions(
+	customHttpsKeyPath?: string,
+	customHttpsCertPath?: string
+) {
+	if (customHttpsKeyPath !== undefined || customHttpsCertPath !== undefined) {
+		if (customHttpsKeyPath === undefined || customHttpsCertPath === undefined) {
+			throw new UserError(
+				"Must specify both certificate path and key path to use a Custom Certificate."
+			);
+		}
+		if (!fs.existsSync(customHttpsKeyPath)) {
+			throw new UserError(
+				"Missing Custom Certificate Key at " + customHttpsKeyPath
+			);
+		}
+		if (!fs.existsSync(customHttpsCertPath)) {
+			throw new UserError(
+				"Missing Custom Certificate File at " + customHttpsCertPath
+			);
+		}
+		if (hasCertificateExpired(customHttpsKeyPath, customHttpsCertPath)) {
+			throw new UserError("Custom Certificate is invalid");
+		}
+		logger.log("Using custom certificate at ", customHttpsKeyPath);
+
+		return {
+			key: fs.readFileSync(customHttpsKeyPath, "utf8"),
+			cert: fs.readFileSync(customHttpsCertPath, "utf8"),
+		};
+	}
+
 	const certDirectory = path.join(getGlobalWranglerConfigPath(), "local-cert");
 	const keyPath = path.join(certDirectory, "key.pem");
 	const certPath = path.join(certDirectory, "cert.pem");
-
 	const regenerate =
 		!fs.existsSync(keyPath) ||
 		!fs.existsSync(certPath) ||

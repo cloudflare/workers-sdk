@@ -95,6 +95,7 @@ import {
 	NoOpLog,
 	OptionalZodTypeOf,
 	_isCyclic,
+	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
 import {
@@ -105,7 +106,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
-import { _formatZodError } from "./zod-format";
+import { formatZodError } from "./zod-format";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -144,6 +145,20 @@ function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 		Array.isArray(opts.workers)
 	);
 }
+export function getRootPath(opts: unknown): string {
+	// `opts` will be validated properly with Zod, this is just a quick check/
+	// extract for the `rootPath` option since it's required for parsing
+	if (
+		typeof opts === "object" &&
+		opts !== null &&
+		"rootPath" in opts &&
+		typeof opts.rootPath === "string"
+	) {
+		return opts.rootPath;
+	} else {
+		return ""; // Default to cwd
+	}
+}
 
 function validateOptions(
 	opts: unknown
@@ -159,28 +174,43 @@ function validateOptions(
 	// Initialise return values
 	const pluginSharedOpts = {} as PluginSharedOptions;
 	const pluginWorkerOpts = Array.from(Array(workerOpts.length)).map(
-		() => ({}) as PluginWorkerOptions
+		() => ({} as PluginWorkerOptions)
+	);
+
+	// If we haven't defined multiple workers, shared options and worker options
+	// are the same, but we only want to resolve the `rootPath` once. Otherwise,
+	// if specified a relative `rootPath` (e.g. "./dir"), we end up with a root
+	// path of `$PWD/dir/dir` when resolving other options.
+	const sharedRootPath = multipleWorkers ? getRootPath(sharedOpts) : "";
+	const workerRootPaths = workerOpts.map((opts) =>
+		path.resolve(sharedRootPath, getRootPath(opts))
 	);
 
 	// Validate all options
 	try {
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			// @ts-expect-error types of individual plugin options are unknown
-			pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
+			pluginSharedOpts[key] =
+				plugin.sharedOptions === undefined
+					? undefined
+					: parseWithRootPath(sharedRootPath, plugin.sharedOptions, sharedOpts);
 			for (let i = 0; i < workerOpts.length; i++) {
 				// Make sure paths are correct in validation errors
-				const path = multipleWorkers ? ["workers", i] : undefined;
+				const optionsPath = multipleWorkers ? ["workers", i] : undefined;
 				// @ts-expect-error types of individual plugin options are unknown
-				pluginWorkerOpts[i][key] = plugin.options.parse(workerOpts[i], {
-					path,
-				});
+				pluginWorkerOpts[i][key] = parseWithRootPath(
+					workerRootPaths[i],
+					plugin.options,
+					workerOpts[i],
+					{ path: optionsPath }
+				);
 			}
 		}
 	} catch (e) {
 		if (e instanceof z.ZodError) {
 			let formatted: string | undefined;
 			try {
-				formatted = _formatZodError(e, opts);
+				formatted = formatZodError(e, opts);
 			} catch (formatError) {
 				// If formatting failed for some reason, we'd like to know, so log a
 				// bunch of debugging information, including the full validation error
@@ -745,7 +775,7 @@ export class Miniflare {
 		// Should only define custom service bindings if `service` is a function
 		assert(typeof service === "function");
 		try {
-			const response = await service(request);
+			const response = await service(request, this);
 			// Validate return type as `service` is a user defined function
 			// TODO: should we validate outside this try/catch?
 			return z.instanceof(Response).parse(response);
@@ -785,10 +815,8 @@ export class Miniflare {
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
 
 		// Extract original URL passed to `fetch`
-		const url = new URL(
-			headers.get(CoreHeaders.ORIGINAL_URL) ?? req.url ?? "",
-			"http://localhost"
-		);
+		const originalUrl = headers.get(CoreHeaders.ORIGINAL_URL);
+		const url = new URL(originalUrl ?? req.url ?? "", "http://localhost");
 		headers.delete(CoreHeaders.ORIGINAL_URL);
 
 		const noBody = req.method === "GET" || req.method === "HEAD";
@@ -809,6 +837,15 @@ export class Miniflare {
 				response = await this.#handleLoopbackCustomService(
 					request,
 					customService
+				);
+			} else if (
+				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
+				request.headers.has("X-Resolve-Method") &&
+				originalUrl === null
+			) {
+				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
+					request,
+					this
 				);
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
@@ -1056,6 +1093,7 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
+			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			const pluginServicesOptionsBase: Omit<
@@ -1068,6 +1106,8 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				workerNames,
+				loopbackPort,
+				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
@@ -1175,7 +1215,7 @@ export class Miniflare {
 		const autogates = [
 			// Enables Python support in workerd.
 			// TODO(later): remove this once this gate is removed from workerd.
-			"workerd-autogate-builtin-wasm-modules"
+			"workerd-autogate-builtin-wasm-modules",
 		];
 
 		return { services: servicesArray, sockets, extensions, autogates };
@@ -1620,6 +1660,17 @@ export class Miniflare {
 		className: string
 	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
+	}
+
+	unsafeGetPersistPaths(): Map<keyof Plugins, string> {
+		const result = new Map<keyof Plugins, string>();
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			const sharedOpts = this.#sharedOpts[key];
+			// @ts-expect-error `sharedOptions` will match the plugin's type here
+			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
+			if (maybePath !== undefined) result.set(key, maybePath);
+		}
+		return result;
 	}
 
 	async dispose(): Promise<void> {
