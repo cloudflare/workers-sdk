@@ -1,5 +1,5 @@
 import { join } from "path";
-import { loadSnippets, parseFile, parseTs } from "helpers/codemod";
+import { parseFile, parseTs } from "helpers/codemod";
 import { writeFile } from "helpers/files";
 import * as recast from "recast";
 

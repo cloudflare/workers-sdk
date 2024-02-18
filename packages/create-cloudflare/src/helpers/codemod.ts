@@ -4,10 +4,10 @@ import { crash } from "@cloudflare/cli";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
-import { C3Context } from "types";
 import { getTemplatePath } from "../templates";
 import { readFile, writeFile } from "./files";
 import type { Program } from "esprima";
+import type { C3Context } from "types";
 
 /*
   CODEMOD TIPS & TRICKS
