@@ -144,11 +144,12 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect,
 	}) => {
 		const response = await fetch(`http://${ip}:${port}/cookie`);
-		expect(response.headers.getSetCookie()).toMatchInlineSnapshot(`
+
+		expect(response.headers.getSetCookie()).toStrictEqual(
 			[
-			  "hello=world; Domain=localhost",
-			  "hello2=world2; Domain=localhost; Secure",
+				`hello=world; Domain=${ip}`,
+				`hello2=world2; Domain=${ip}; Secure`,
 			]
-		`);
+		);
 	});
 });
