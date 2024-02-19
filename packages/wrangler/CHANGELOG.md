@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.28.4
+
+### Patch Changes
+
+- [#5050](https://github.com/cloudflare/workers-sdk/pull/5050) [`88be4b84`](https://github.com/cloudflare/workers-sdk/commit/88be4b847f8891041afcc4704e69a84d3abe6126) Thanks [@nora-soderlund](https://github.com/nora-soderlund)! - fix: allow kv:namespace create to accept a namespace name that contains characters not allowed in a binding name
+
+  This command tries to use the namespace name as the binding. Previously, we would unnecessarily error if this namespace name did not fit the binding name constraints. Now we accept such names and then remove invalid characters when generating the binding name.
+
 ## 3.28.3
 
 ### Patch Changes
