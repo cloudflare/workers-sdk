@@ -56,8 +56,8 @@ jobs:
 
       - name: Build and Deploy Quick Edit preview
         if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
-        # Quick Edit requires yarn, so needs fairly specific logic
-        run: cd packages/quick-edit && yarn setup && yarn custom:build && pnpm run deploy
+        # Quick Edit requires yarn and node-gyp, so needs fairly specific logic
+        run: cd packages/quick-edit && yarn global add node-gyp && yarn setup && yarn custom:build && pnpm run deploy
         env:
           NPM_PUBLISH_TOKEN: NOT_USED # yarn will error if the env var from .npmrc can't be interpolated
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
