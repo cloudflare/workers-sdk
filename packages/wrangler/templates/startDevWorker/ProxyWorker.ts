@@ -33,7 +33,7 @@ export default {
 } as ExportedHandler<Env, unknown, ProxyWorkerIncomingRequestBody>;
 
 export class ProxyWorker implements DurableObject {
-	constructor(readonly state: DurableObjectState, readonly env: Env) { }
+	constructor(readonly state: DurableObjectState, readonly env: Env) {}
 
 	proxyData?: ProxyData;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
@@ -307,10 +307,7 @@ function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 	const setCookie = headers.getAll("Set-Cookie");
 	headers.delete("Set-Cookie");
 	headers.forEach((value, key) => {
-		if (
-			typeof value === "string" &&
-			value.includes(from.host)
-		) {
+		if (typeof value === "string" && value.includes(from.host)) {
 			headers.set(
 				key,
 				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
