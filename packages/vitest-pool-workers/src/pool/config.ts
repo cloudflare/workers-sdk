@@ -2,6 +2,7 @@ import path from "node:path";
 import {
 	formatZodError,
 	getRootPath,
+	mergeWorkerOptions,
 	parseWithRootPath,
 	PLUGINS,
 } from "miniflare";
@@ -48,6 +49,7 @@ const WorkersPoolOptionsSchema = z.object({
 		})
 		.passthrough()
 		.optional(),
+	wrangler: z.object({ configPath: z.ostring() }).optional(),
 });
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
@@ -111,11 +113,11 @@ function parseWorkerOptions(
 	return result;
 }
 
-function parseCustomPoolOptions(
+async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
 	opts: PathParseParams
-): WorkersPoolOptions {
+): Promise<WorkersPoolOptions> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(value, opts);
 	options.miniflare ??= {};
@@ -158,6 +160,27 @@ function parseCustomPoolOptions(
 	}
 
 	if (errorRef.value !== undefined) throw errorRef.value;
+
+	// Try to parse Wrangler config if any
+	if (options.wrangler?.configPath !== undefined) {
+		const configPath = path.resolve(rootPath, options.wrangler.configPath);
+		// Make sure future accesses to `configPath` see a fully-resolved path
+		// (e.g. for getting accurate relative paths in error messages)
+		options.wrangler.configPath = configPath;
+
+		// Lazily import `wrangler` if and when we need it
+		const wrangler = await import("wrangler");
+		const { workerOptions, main } =
+			wrangler.unstable_getMiniflareWorkerOptions(configPath);
+
+		// If `main` wasn't explicitly configured, fall back to Wrangler config's
+		options.main ??= main;
+		// Merge generated Miniflare options from Wrangler with specified overrides
+		options.miniflare = mergeWorkerOptions(
+			workerOptions,
+			options.miniflare as SourcelessWorkerOptions
+		);
+	}
 
 	return options as WorkersPoolOptions;
 }
@@ -204,7 +227,7 @@ export async function parseProjectOptions(
 			};
 			workersPoolOptions = await workersPoolOptions({ inject });
 		}
-		return parseCustomPoolOptions(rootPath, workersPoolOptions, {
+		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
 			path: OPTIONS_PATH_ARRAY,
 		});
 	} catch (e) {

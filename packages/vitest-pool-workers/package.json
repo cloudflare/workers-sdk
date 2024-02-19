@@ -44,6 +44,7 @@
 		"esbuild": "0.17.19",
 		"import-meta-resolve": "^4.0.0",
 		"miniflare": "workspace:*",
+		"wrangler": "workspace:*",
 		"zod": "^3.20.6"
 	},
 	"peerDependencies": {
