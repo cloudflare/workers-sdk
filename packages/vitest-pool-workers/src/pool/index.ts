@@ -479,8 +479,17 @@ async function runTests(
 	files: string[],
 	invalidates: string[] = []
 ) {
+	let workerPath = path.join(ctx.distPath, "worker.js");
+	let threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
+	if (process.platform === "win32") {
+		workerPath = `/${ensurePosixLikePath(workerPath)}`;
+		threadsWorkerPath = `/${ensurePosixLikePath(threadsWorkerPath)}`;
+	}
+
 	ctx.state.clearFiles(project.project, files);
 	const data: WorkerContext = {
+		pool: "threads",
+		worker: threadsWorkerPath,
 		port: undefined as unknown as MessagePort,
 		config,
 		files,
@@ -501,11 +510,6 @@ async function runTests(
 	);
 	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
 	const stub = ns.get("singleton");
-
-	let workerPath = ctx.projectFiles.workerPath;
-	if (process.platform === "win32") {
-		workerPath = `/${ensurePosixLikePath(workerPath)}`;
-	}
 
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
@@ -602,9 +606,7 @@ function assertCompatibleVitestVersion(ctx: Vitest) {
 	// Some package managers don't enforce `peerDependencies` requirements,
 	// so add a runtime sanity check to ensure things don't break in strange ways.
 	const poolPkgJson = getPackageJson(__dirname);
-	const vitestPkgJson = getPackageJson(
-		path.dirname(ctx.projectFiles.workerPath)
-	);
+	const vitestPkgJson = getPackageJson(ctx.distPath);
 	assert(
 		poolPkgJson !== undefined,
 		"Expected to find `package.json` for `@cloudflare/vitest-pool-workers`"
