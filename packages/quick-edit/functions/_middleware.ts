@@ -5,6 +5,8 @@ export const onRequest = async ({
 }: Parameters<PagesFunction>[0]) => {
 	const url = new URL(request.url);
 
+	const isLocalDev = url.hostname === "localhost"
+
 	const values = {
 		WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
 			configurationDefaults: {
@@ -19,6 +21,7 @@ export const onRequest = async ({
 					"jsconfig.json": true,
 				},
 				"telemetry.telemetryLevel": "off",
+				"window.menuBarVisibility": "hidden"
 			},
 			productConfiguration: {
 				nameShort: "Quick Edit",
@@ -49,16 +52,16 @@ export const onRequest = async ({
 		WORKBENCH_WEB_BASE_URL: "/assets",
 	};
 
-	console.log(url.host);
 	if (url.pathname === "/") {
-		url.pathname = `${values.WORKBENCH_WEB_BASE_URL}/out/vs/code/browser/workbench/workbench`;
+		url.pathname = `${values.WORKBENCH_WEB_BASE_URL}/out/vs/code/browser/workbench/workbench${isLocalDev ? '-dev' : ''}`;
 		const response = await env.ASSETS.fetch(url);
 		let body = await response.text();
 		body = body.replaceAll(
 			/\{\{([^}]+)\}\}/g,
 			(_, key) => values[key as keyof typeof values] ?? "undefined"
 		);
-		body = body.replace("/node_modules/", "/modules/");
+		if (!isLocalDev)
+			body = body.replace("/node_modules/", "/modules/");
 
 		return new Response(body, {
 			headers: {
