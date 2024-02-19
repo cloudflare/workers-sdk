@@ -11,16 +11,15 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "dotenv -- turbo test --concurrency=1",
-		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --filter=!workers.new --concurrency=1",
-		"test:ci:quarantine": "dotenv -- turbo test:ci --filter=local-mode-tests --filter=playground-preview-worker --filter=no-bundle-import --filter=workers.new --concurrency=1",
+		"test": "dotenv -- turbo test",
+		"test:ci": "vitest run && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
@@ -28,6 +27,7 @@
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",
 		"@changesets/cli": "^2.22.0",
+		"@ianvs/prettier-plugin-sort-imports": "4.1.0",
 		"@types/node": "^20.0.0",
 		"cross-env": "^7.0.3",
 		"esbuild-register": "^3.5.0",
@@ -37,18 +37,20 @@
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
 		"typescript": "^4.8.4",
-		"vite": "^4.0.4",
-		"vitest": "^0.31.1"
+		"vite": "^5.0.12",
+		"vitest": "^1.2.2"
 	},
 	"devDependencies": {
+		"@actions/artifact": "^2.0.1",
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"@turbo/gen": "^1.10.13",
+		"@vue/compiler-sfc": "^3.3.4",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
 		"turbo": "^1.10.14"
 	},
 	"engines": {
-		"node": ">=16.13.0"
+		"node": ">=16.17.0"
 	},
 	"volta": {
 		"node": "16.13.0"
@@ -66,12 +68,21 @@
 			"@types/react-dom@18>@types/react": "^18",
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
-			"@cloudflare/elements>@types/react": "^18"
+			"@cloudflare/elements>@types/react": "^18",
+			"capnpc-ts>typescript": "4.2.4"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
 			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch",
-			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch"
+			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
+			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch"
+		},
+		"packageExtensions": {
+			"node-pty": {
+				"optionalDependencies": {
+					"node-gyp": "^10.0.1"
+				}
+			}
 		}
 	}
 }

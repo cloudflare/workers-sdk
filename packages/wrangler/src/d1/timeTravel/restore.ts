@@ -2,6 +2,7 @@ import { printWranglerBanner } from "../..";
 import { fetchResult } from "../../cfetch";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { Database } from "../options";
@@ -39,11 +40,11 @@ export function RestoreOptions(yargs: CommonYargsArgv) {
 			) {
 				return true;
 			} else if (argv.timestamp && argv.bookmark) {
-				throw new Error(
+				throw new UserError(
 					"Provide either a timestamp, or a bookmark - not both."
 				);
 			} else {
-				throw new Error("Provide either a timestamp or a bookmark");
+				throw new UserError("Provide either a timestamp or a bookmark");
 			}
 		});
 }
@@ -100,7 +101,7 @@ const handleRestore = async (
 	searchParams: URLSearchParams
 ) => {
 	return await fetchResult<RestoreBookmarkResponse>(
-		`/accounts/${accountId}/d1/database/${databaseId}/time-travel/restore?${searchParams.toString()}`,
+		`/accounts/${accountId}/d1/database/${databaseId}/time_travel/restore?${searchParams.toString()}`,
 		{
 			headers: {
 				"Content-Type": "application/json",

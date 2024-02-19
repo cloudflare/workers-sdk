@@ -1,4 +1,5 @@
 import { fetchListResult } from "./cfetch";
+import { UserError } from "./errors";
 import type { Route } from "./config/environment";
 
 /**
@@ -42,7 +43,7 @@ export function getHostFromRoute(route: Route): string | undefined {
 }
 
 /**
- * Try to compute the a zone ID and host name for one or more routes.
+ * Try to compute the a zone ID and host name for a route.
  *
  * When we're given a route, we do 2 things:
  * - We try to extract a host from it
@@ -50,12 +51,16 @@ export function getHostFromRoute(route: Route): string | undefined {
  */
 export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
 	const host = getHostFromRoute(route);
-	const id =
-		typeof route === "object" && "zone_id" in route
-			? route.zone_id
-			: host
-			? await getZoneIdFromHost(host)
-			: undefined;
+	let id: string | undefined;
+
+	if (typeof route === "object" && "zone_id" in route) {
+		id = route.zone_id;
+	} else if (typeof route === "object" && "zone_name" in route) {
+		id = await getZoneIdFromHost(route.zone_name);
+	} else if (host) {
+		id = await getZoneIdFromHost(host);
+	}
+
 	return id && host ? { id, host } : undefined;
 }
 
@@ -111,7 +116,7 @@ export async function getZoneIdFromHost(host: string): Promise<string> {
 		hostPieces.shift();
 	}
 
-	throw new Error(`Could not find zone for ${host}`);
+	throw new UserError(`Could not find zone for ${host}`);
 }
 
 /**
@@ -180,7 +185,7 @@ export function findClosestRoute(
 export async function getWorkerForZone(worker: string) {
 	const zone = await getZoneForRoute(worker);
 	if (!zone) {
-		throw new Error(
+		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`
 		);
 	}
@@ -192,11 +197,11 @@ export async function getWorkerForZone(worker: string) {
 		const closestRoute = findClosestRoute(worker, routes)?.[0];
 
 		if (!closestRoute) {
-			throw new Error(
+			throw new UserError(
 				`The route '${worker}' has no workers assigned. You can assign a worker to it from wrangler.toml or the Cloudflare dashboard`
 			);
 		} else {
-			throw new Error(
+			throw new UserError(
 				`The route '${worker}' has no workers assigned. Did you mean to tail the route '${closestRoute.pattern}'?`
 			);
 		}

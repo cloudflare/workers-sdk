@@ -1,7 +1,8 @@
 import { sayHello } from "../say-hello.js";
-import cjs from "./say-hello.js";
 import subWasm from "../simple.wasm";
+import cjs from "./say-hello.js";
 import sibWasm from "./simple.wasm";
+
 export const johnSmith =
 	sayHello("John Smith") === cjs.sayHello("John Smith")
 		? sayHello("John Smith")

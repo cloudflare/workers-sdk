@@ -1,4 +1,5 @@
 import negotiateConnectionWithClientOffer from "./negotiateConnectionWithClientOffer.js";
+
 /**
  * Example implementation of a client that uses WHEP to playback video over WebRTC
  *

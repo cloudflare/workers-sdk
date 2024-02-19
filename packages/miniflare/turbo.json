@@ -1,0 +1,12 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"pipeline": {
+		"build": {
+			"outputs": ["dist/**"],
+			"env": [
+				"CI_OS"
+			]
+		}
+	}
+}

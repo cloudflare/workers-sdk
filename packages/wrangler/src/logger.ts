@@ -3,7 +3,10 @@ import chalk from "chalk";
 import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
+import { getSanitizeLogs } from "./environment-variables/misc-variables";
+import { appendToDebugLogFile } from "./utils/log-file";
 import type { Message } from "esbuild";
+
 export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
@@ -53,6 +56,16 @@ export class Logger {
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
+	debugWithSanitization = (label: string, ...args: unknown[]) => {
+		if (getSanitizeLogs() === "false") {
+			this.doLog("debug", [label, ...args]);
+		} else {
+			this.doLog("debug", [
+				label,
+				"omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data",
+			]);
+		}
+	};
 	info = (...args: unknown[]) => this.doLog("info", args);
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);
@@ -72,8 +85,17 @@ export class Logger {
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
+		const message = this.formatMessage(messageLevel, format(...args));
+
+		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
+		const inUnitTests = typeof jest !== "undefined";
+		if (!inUnitTests) {
+			void appendToDebugLogFile(messageLevel, message);
+		}
+
+		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
+			console[messageLevel](message);
 		}
 	}
 

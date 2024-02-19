@@ -9,8 +9,10 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { VectorizeDistanceMetric } from "@cloudflare/workers-types";
-import type { VectorizePreset } from "@cloudflare/workers-types";
+import type {
+	VectorizeDistanceMetric,
+	VectorizePreset,
+} from "@cloudflare/workers-types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs

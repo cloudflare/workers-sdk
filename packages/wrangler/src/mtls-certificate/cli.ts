@@ -1,18 +1,18 @@
 import {
-	uploadMTlsCertificateFromFs,
-	listMTlsCertificates,
 	deleteMTlsCertificate,
 	getMTlsCertificate,
 	getMTlsCertificateByName,
-	type MTlsCertificateResponse,
+	listMTlsCertificates,
+	uploadMTlsCertificateFromFs,
 } from "../api/mtls-certificate";
 import { withConfig } from "../config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import type { MTlsCertificateResponse } from "../api/mtls-certificate";
 import type {
-	CommonYargsOptions,
 	CommonYargsArgv,
+	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { BuilderCallback } from "yargs";

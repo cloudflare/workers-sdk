@@ -12,7 +12,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Project, Model } from "./types";
+import type { Model, Project } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs

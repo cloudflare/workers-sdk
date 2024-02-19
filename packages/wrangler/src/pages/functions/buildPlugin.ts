@@ -3,6 +3,7 @@ import { relative, resolve } from "node:path";
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import { createModuleCollector } from "../../deployment-bundle/module-collection";
 import { getBasePath } from "../../paths";
+import { getPagesProjectRoot } from "../utils";
 import { buildNotifierPlugin } from "./buildWorker";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { Options as WorkerOptions } from "./buildWorker";
@@ -22,6 +23,7 @@ export function buildPluginFromFunctions({
 	legacyNodeCompat,
 	functionsDirectory,
 	local,
+	defineNavigatorUserAgent,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
@@ -105,5 +107,7 @@ export function buildPluginFromFunctions({
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
 		local,
+		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }

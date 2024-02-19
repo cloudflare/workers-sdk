@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
-		"publish": "wrangler deploy",
+		"deploy": "wrangler deploy",
 		"build": "wrangler build",
 		"start": "wrangler dev"
 	},
@@ -12,10 +12,11 @@
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"mustache": "^4.2.0",
+		"promjs": "^0.4.2",
 		"toucan-js": "^3.2.3",
 		"tsconfig": "*",
 		"typescript": "^5.0.2",
 		"wrangler": "workspace:*",
-		"zod": "^3.21.4"
+		"zod": "^3.22.3"
 	}
 }

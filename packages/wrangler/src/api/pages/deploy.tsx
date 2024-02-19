@@ -1,11 +1,11 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
+import { isNavigatorDefined } from "../../navigator-user-agent";
 import { buildFunctions } from "../../pages/buildFunctions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
@@ -20,10 +20,11 @@ import {
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Project, Deployment } from "@cloudflare/types";
+import type { Deployment, Project } from "@cloudflare/types";
 
 interface PagesDeployOptions {
 	/**
@@ -143,6 +144,10 @@ export async function deploy({
 	const nodejsCompat =
 		deploymentConfig.compatibility_flags?.includes("nodejs_compat");
 
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		deploymentConfig.compatibility_date,
+		deploymentConfig.compatibility_flags
+	);
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -154,7 +159,7 @@ export async function deploy({
 	const functionsDirectory =
 		customFunctionsDirectory || join(cwd(), "functions");
 	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
-		? join(tmpdir(), `_routes-${Math.random()}.json`)
+		? join(getPagesTmpDir(), `_routes-${Math.random()}.json`)
 		: undefined;
 
 	// Routing configuration displayed in the Functions tab of a deployment in Dash
@@ -162,7 +167,7 @@ export async function deploy({
 
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outputConfigPath = join(
-			tmpdir(),
+			getPagesTmpDir(),
 			`functions-filepath-routing-config-${Math.random()}.json`
 		);
 
@@ -175,6 +180,7 @@ export async function deploy({
 				routesOutputPath,
 				local: false,
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 
 			builtFunctions = readFileSync(
@@ -254,10 +260,14 @@ export async function deploy({
 			workerJSDirectory: _workerPath,
 			buildOutputDirectory: directory,
 			nodejsCompat,
+			defineNavigatorUserAgent,
 		});
 	} else if (_workerJS) {
 		if (bundle) {
-			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			const outfile = join(
+				getPagesTmpDir(),
+				`./bundledWorker-${Math.random()}.mjs`
+			);
 			workerBundle = await buildRawWorker({
 				workerScriptPath: _workerPath,
 				outfile,
@@ -267,6 +277,7 @@ export async function deploy({
 				watch: false,
 				onEnd: () => {},
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 		} else {
 			await checkRawWorker(_workerPath, () => {});

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
 import { unstable_dev } from "../api";
+import { printWranglerBanner } from "../update-check";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("child_process");
@@ -51,6 +52,45 @@ describe("unstable_dev", () => {
 		);
 		expect(worker.port).not.toBe(0);
 		await worker.stop();
+	});
+
+	describe("unstable_dev network calls", () => {
+		it("should not make a request to NPM without `updateCheck` being true", async () => {
+			const worker = await unstable_dev(
+				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
+				{
+					experimental: {
+						disableExperimentalWarning: true,
+						disableDevRegistry: true,
+					},
+				}
+			);
+			const resp = await worker.fetch();
+			expect(resp.status).toBe(200);
+
+			expect((printWranglerBanner as jest.Mock).mock.calls[0][0]).toBe(false);
+
+			await worker.stop();
+		});
+
+		it("should make a request to NPM when `updateCheck` is true", async () => {
+			const worker = await unstable_dev(
+				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
+				{
+					experimental: {
+						disableExperimentalWarning: true,
+						disableDevRegistry: true,
+					},
+					updateCheck: true,
+				}
+			);
+			const resp = await worker.fetch();
+			expect(resp.status).toBe(200);
+
+			expect((printWranglerBanner as jest.Mock).mock.calls[0][0]).toBe(true);
+
+			await worker.stop();
+		});
 	});
 });
 

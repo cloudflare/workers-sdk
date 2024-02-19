@@ -1,4 +1,5 @@
 import { fetchResult } from "../cfetch";
+import { UserError } from "../errors";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
 import type { Config } from "../config";
@@ -40,7 +41,7 @@ export const getDatabaseByNameOrBinding = async (
 	const allDBs = await listDatabases(accountId);
 	const matchingDB = allDBs.find((db) => db.name === name);
 	if (!matchingDB) {
-		throw new Error(`Couldn't find DB with name '${name}'`);
+		throw new UserError(`Couldn't find DB with name '${name}'`);
 	}
 	return matchingDB;
 };

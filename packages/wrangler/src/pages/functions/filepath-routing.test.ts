@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync } from "fs";
+import { mkdirSync, writeFileSync } from "fs";
 import { runInTempDir } from "../../__tests__/helpers/run-in-tmp";
 import { toUrlPath } from "../../paths";
 import { compareRoutes, generateConfigFromFileTree } from "./filepath-routing";

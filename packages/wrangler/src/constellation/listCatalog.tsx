@@ -1,7 +1,7 @@
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { asJson } from "./options";
+import { asJson } from "../yargs-types";
 import { constellationBetaWarning, listCatalogEntries } from "./utils";
 import type {
 	CommonYargsArgv,

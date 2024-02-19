@@ -4,6 +4,7 @@ import path from "node:path";
 import shellac from "shellac";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { makeRoot } from "./helpers/setup";
@@ -11,7 +12,7 @@ import { WRANGLER } from "./helpers/wrangler-command";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(
-		/https:\/\/smoke-test-worker-.+?\.(.+?\.workers\.dev)/
+		/https:\/\/tmp-e2e-wrangler-.+?\.(.+?\.workers\.dev)/
 	)?.[1] as string;
 }
 
@@ -27,11 +28,14 @@ describe("c3 integration", () => {
 	beforeAll(async () => {
 		const root = await makeRoot();
 		runInRoot = shellac.in(root).env(process.env);
-		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
+		workerName = `tmp-e2e-wrangler-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
 		runInWorker = shellac.in(workerPath).env(process.env);
 		normalize = (str) =>
-			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
+			normalizeOutput(str, {
+				[workerName]: "tmp-e2e-wrangler",
+				[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
+			});
 
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
 		const { stdout: version } = await shellac.in(pathToC3)`
@@ -60,9 +64,9 @@ describe("c3 integration", () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded smoke-test-worker (TIMINGS)
-			Published smoke-test-worker (TIMINGS)
-			  https://smoke-test-worker.SUBDOMAIN.workers.dev
+			Uploaded tmp-e2e-wrangler (TIMINGS)
+			Published tmp-e2e-wrangler (TIMINGS)
+			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
@@ -80,9 +84,9 @@ describe("c3 integration", () => {
 	it("delete the worker", async () => {
 		const { stdout, stderr } = await runInWorker`$$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
-			🤖 Using default value in non-interactive context: yes
-			Successfully deleted smoke-test-worker"
+			"? Are you sure you want to delete tmp-e2e-wrangler? This action cannot be undone.
+			🤖 Using fallback value in non-interactive context: yes
+			Successfully deleted tmp-e2e-wrangler"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		const { status } = await retry(

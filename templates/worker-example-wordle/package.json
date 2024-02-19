@@ -4,8 +4,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev --local",
-		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev --local"
+		"dev": "wrangler dev"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230518.0 ",

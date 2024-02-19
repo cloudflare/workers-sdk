@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { watch } from "chokidar";
 import { useApp } from "ink";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failures";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
@@ -10,8 +10,8 @@ import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
-	noopModuleCollector,
 	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
 import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
@@ -19,7 +19,7 @@ import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Metafile, BuildResult, PluginBuild } from "esbuild";
+import type { BuildResult, Metafile, PluginBuild } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;
@@ -56,6 +56,9 @@ export function useEsbuild({
 	targetConsumer,
 	testScheduled,
 	experimentalLocal,
+	projectRoot,
+	onBundleStart,
+	defineNavigatorUserAgent,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -80,6 +83,9 @@ export function useEsbuild({
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
+	projectRoot: string | undefined;
+	onBundleStart: () => void;
+	defineNavigatorUserAgent: boolean;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -129,6 +135,9 @@ export function useEsbuild({
 		const onEnd = {
 			name: "on-end",
 			setup(b: PluginBuild) {
+				b.onStart(() => {
+					onBundleStart();
+				});
 				b.onEnd(async (result: BuildResult) => {
 					const errors = result.errors;
 					const warnings = result.warnings;
@@ -182,6 +191,8 @@ export function useEsbuild({
 							testScheduled,
 							plugins: [onEnd],
 							local,
+							projectRoot,
+							defineNavigatorUserAgent,
 					  })
 					: undefined;
 
@@ -205,7 +216,8 @@ export function useEsbuild({
 				id: 0,
 				entry,
 				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-				type: bundleResult?.bundleType ?? getBundleType(entry.format),
+				type:
+					bundleResult?.bundleType ?? getBundleType(entry.format, entry.file),
 				modules: bundleResult ? bundleResult.modules : newAdditionalModules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
@@ -248,6 +260,9 @@ export function useEsbuild({
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
+		projectRoot,
+		onBundleStart,
+		defineNavigatorUserAgent,
 	]);
 	return bundle;
 }

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import module from "node:module";
 import getPort from "get-port";
 import { rest } from "msw";
 import patchConsole from "patch-console";
@@ -68,11 +69,18 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			const currentDate = new Date().toISOString().substring(0, 10);
+
+			const miniflareEntry = require.resolve("miniflare");
+			const miniflareRequire = module.createRequire(miniflareEntry);
+			const miniflareWorkerd = miniflareRequire("workerd") as {
+				compatibilityDate: string;
+			};
+			const currentDate = miniflareWorkerd.compatibilityDate;
+
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
 			          Add one to your wrangler.toml file:
 			          \`\`\`
@@ -134,10 +142,7 @@ describe("wrangler dev", () => {
 				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field."`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.[0m
 
@@ -367,22 +372,6 @@ describe("wrangler dev", () => {
 			await runWrangler("dev");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should fail for non-existing zones", async () => {
-			writeWranglerToml({
-				main: "index.js",
-				routes: [
-					{
-						pattern: "https://subdomain.does-not-exist.com/*",
-						zone_name: "exists.com",
-					},
-				],
-			});
-			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("dev --remote")).rejects.toEqual(
-				new Error("Could not find zone for subdomain.does-not-exist.com")
-			);
 		});
 
 		it("should fail for non-existing zones, when falling back from */*", async () => {
@@ -707,8 +696,7 @@ describe("wrangler dev", () => {
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
-
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
@@ -756,12 +744,12 @@ describe("wrangler dev", () => {
 	});
 
 	describe("upstream-protocol", () => {
-		it("should default upstream-protocol to `https`", async () => {
+		it("should default upstream-protocol to `https` if remote mode", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
 				"https"
 			);
@@ -770,24 +758,52 @@ describe("wrangler dev", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn if `--upstream-protocol=http` is used", async () => {
+		it("should warn if `--upstream-protocol=http` is used in remote mode", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --upstream-protocol=http");
+			await runWrangler("dev --upstream-protocol=http --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
 				"http"
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently implemented.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently supported for remote mode.[0m
 
-			          If this is required in your project, please add your use case to the following issue:
-			          [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
+			  If this is required in your project, please add your use case to the following issue:
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/583[0m.
 
-			        "
-		      `);
+			"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should default upstream-protocol to local-protocol if local mode", async () => {
+			writeWranglerToml({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev --local-protocol=https");
+			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
+				"https"
+			);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should default upstream-protocol to http if no local-protocol in local mode", async () => {
+			writeWranglerToml({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWrangler("dev");
+			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
+				"http"
+			);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
@@ -841,13 +857,15 @@ describe("wrangler dev", () => {
 	});
 
 	describe("ip", () => {
-		it("should default ip to 0.0.0.0", async () => {
+		it("should default ip to localhost", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+				process.platform === "win32" ? "127.0.0.1" : "localhost"
+			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -857,12 +875,12 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.2.3.4",
+					ip: "::1",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("1.2.3.4");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("::1");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -872,12 +890,14 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.2.3.4",
+					ip: "::1",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --ip=5.6.7.8");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("5.6.7.8");
+			await runWrangler("dev --ip=127.0.0.1");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+				"127.0.0.1"
+			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -886,6 +906,7 @@ describe("wrangler dev", () => {
 
 	describe("inspector port", () => {
 		it("should use 9229 as the default port", async () => {
+			(getPort as jest.Mock).mockImplementation((options) => options.port);
 			writeWranglerToml({
 				main: "index.js",
 			});
@@ -904,6 +925,7 @@ describe("wrangler dev", () => {
 		});
 
 		it("should read --inspector-port", async () => {
+			(getPort as jest.Mock).mockImplementation((options) => options.port);
 			writeWranglerToml({
 				main: "index.js",
 			});
@@ -1063,7 +1085,9 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+				process.platform === "win32" ? "127.0.0.1" : "localhost"
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
 			        - Durable Objects:
@@ -1225,6 +1249,8 @@ describe("wrangler dev", () => {
 			      --routes, --route                            Routes to upload  [array]
 			      --host                                       Host to forward requests to, defaults to the zone of project  [string]
 			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+			      --https-key-path                             Path to a custom certificate key  [string]
+			      --https-cert-path                            Path to a custom certificate  [string]
 			      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
 			      --assets                                     Static assets to be served  [string]
 			      --site                                       Root folder of static assets for Workers Sites  [string]
@@ -1460,12 +1486,6 @@ describe("wrangler dev", () => {
 			",
 			}
 		`);
-		});
-
-		it("should not output Errors with log-level error", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev index.js --inspect --log-level debug");
-			expect(std.debug.length > 1).toBe(true);
 		});
 	});
 

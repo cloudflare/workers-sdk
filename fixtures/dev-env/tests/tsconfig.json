@@ -1,0 +1,12 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"jsx": "react"
+	},
+	"include": [
+		"**/*.ts",
+		"../../../node-types.d.ts",
+		"../../../packages/wrangler/src/*.d.ts"
+	]
+}

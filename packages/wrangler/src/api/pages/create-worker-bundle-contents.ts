@@ -78,6 +78,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		logpush: undefined,
 		placement: undefined,
 		tail_consumers: undefined,
+		limits: undefined,
 	};
 
 	return createWorkerUploadForm(worker);

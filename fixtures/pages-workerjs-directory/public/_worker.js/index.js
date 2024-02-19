@@ -1,6 +1,6 @@
+import add from "./add.wasm";
 import staticJsMod from "./static.js";
 import staticMjsMod from "./static.mjs";
-import add from "./add.wasm";
 
 export default {
 	async fetch(request, env) {

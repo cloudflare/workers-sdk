@@ -1,11 +1,11 @@
-import Frame from "../Frame";
 import {
-	useState,
-	useRef,
-	useLayoutEffect,
-	useEffect,
 	useContext,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
 } from "react";
+import Frame from "../Frame";
 import { DragContext } from "../SplitPane";
 
 /**

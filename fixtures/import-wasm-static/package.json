@@ -1,0 +1,9 @@
+{
+	"name": "import-wasm-static",
+	"version": "0.0.1",
+	"private": true,
+	"sideEffects": false,
+	"exports": {
+		"./multiply.wasm": "./wasm/multiply.wasm"
+	}
+}

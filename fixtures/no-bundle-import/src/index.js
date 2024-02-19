@@ -1,12 +1,11 @@
-import { sayHello } from "./say-hello.js";
-import cjs from "./say-hello.cjs";
-
-import { johnSmith } from "./nested/index.js";
-import WASM from "./simple.wasm";
-import nestedWasm from "./nested/simple.wasm";
-
-import text from "./data.txt";
 import binData from "./data.bin";
+import text from "./data.txt";
+import { johnSmith } from "./nested/index.js";
+import nestedWasm from "./nested/simple.wasm";
+import cjs from "./say-hello.cjs";
+import { sayHello } from "./say-hello.js";
+import WASM from "./simple.wasm";
+
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);

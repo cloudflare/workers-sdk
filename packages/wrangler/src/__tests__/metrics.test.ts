@@ -4,7 +4,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
-import { getMetricsDispatcher, getMetricsConfig } from "../metrics";
+import { getMetricsConfig, getMetricsDispatcher } from "../metrics";
 import {
 	CURRENT_METRICS_DATE,
 	readMetricsConfig,
@@ -13,7 +13,7 @@ import {
 } from "../metrics/metrics-config";
 import { writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";

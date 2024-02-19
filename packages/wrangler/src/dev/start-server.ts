@@ -1,9 +1,8 @@
-import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
+import { DevEnv } from "../api";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -20,16 +19,19 @@ import {
 	stopWorkerRegistry,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
+import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
-import { MiniflareServer } from "./miniflare";
+import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { DevProps, DirectorySyncResult } from "./dev";
+import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -53,7 +55,7 @@ export async function startDevServer(
 	}
 
 	//implement a react-free version of useTmpDir
-	const directory = setupTempDir();
+	const directory = setupTempDir(props.projectRoot);
 	if (!directory) {
 		throw new Error("Failed to create temporary directory.");
 	}
@@ -80,6 +82,40 @@ export async function startDevServer(
 		}
 	}
 
+	const devEnv = new DevEnv();
+	const startDevWorkerOptions: StartDevWorkerOptions = {
+		name: props.name ?? "worker",
+		script: { contents: "" },
+		dev: {
+			server: {
+				hostname: props.initialIp,
+				port: props.initialPort,
+				secure: props.localProtocol === "https",
+				httpsKeyPath: props.httpsKeyPath,
+				httpsCertPath: props.httpsCertPath,
+			},
+			inspector: {
+				port: props.inspectorPort,
+			},
+			urlOverrides: {
+				secure: props.upstreamProtocol === "https",
+				hostname: props.localUpstream,
+			},
+			liveReload: props.liveReload,
+			remote: !props.local,
+		},
+	};
+
+	// temp: fake these events by calling the handler directly
+	devEnv.proxy.onConfigUpdate({
+		type: "configUpdate",
+		config: startDevWorkerOptions,
+	});
+	devEnv.proxy.onBundleStart({
+		type: "bundleStart",
+		config: startDevWorkerOptions,
+	});
+
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
@@ -105,9 +141,21 @@ export async function startDevServer(
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
+		projectRoot: props.projectRoot,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
 
 	if (props.local) {
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onReloadStart({
+			type: "reloadStart",
+			config: startDevWorkerOptions,
+			bundle,
+		});
+
 		const { stop } = await startLocalServer({
 			name: props.name,
 			bundle: bundle,
@@ -116,8 +164,8 @@ export async function startDevServer(
 			compatibilityFlags: props.compatibilityFlags,
 			bindings: props.bindings,
 			assetPaths: props.assetPaths,
-			initialPort: props.initialPort,
-			initialIp: props.initialIp,
+			initialPort: undefined, // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			initialIp: "127.0.0.1", // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules: props.rules,
 			inspectorPort: props.inspectorPort,
 			runtimeInspectorPort: props.runtimeInspectorPort,
@@ -126,9 +174,35 @@ export async function startDevServer(
 			crons: props.crons,
 			queueConsumers: props.queueConsumers,
 			localProtocol: props.localProtocol,
+			httpsKeyPath: props.httpsKeyPath,
+			httpsCertPath: props.httpsCertPath,
 			localUpstream: props.localUpstream,
-			inspect: props.inspect,
-			onReady: props.onReady,
+			upstreamProtocol: props.upstreamProtocol,
+			inspect: true,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				await maybeRegisterLocalWorker(
+					url,
+					props.name,
+					proxyData.internalDurableObjects
+				);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
 			workerDefinitions,
@@ -137,8 +211,7 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
@@ -154,6 +227,8 @@ export async function startDevServer(
 			port: props.initialPort,
 			ip: props.initialIp,
 			localProtocol: props.localProtocol,
+			httpsKeyPath: props.httpsKeyPath,
+			httpsCertPath: props.httpsCertPath,
 			inspectorPort: props.inspectorPort,
 			inspect: props.inspect,
 			compatibilityDate: props.compatibilityDate,
@@ -164,27 +239,40 @@ export async function startDevServer(
 			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
-			onReady: props.onReady,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
 		});
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
 	}
 }
 
-function setupTempDir(): string | undefined {
+function setupTempDir(projectRoot: string | undefined): string | undefined {
 	try {
-		const dir: DirectorySyncResult = tmp.dirSync({ unsafeCleanup: true });
-		// Make sure we resolve all files relative to the actual temporary
-		// directory, without symlinks, otherwise `esbuild` will generate invalid
-		// source maps.
-		return fs.realpathSync(dir.name);
+		const dir = getWranglerTmpDir(projectRoot, "dev");
+		return dir.path;
 	} catch (err) {
 		logger.error("Failed to create temporary directory to store built files.");
 	}
@@ -212,9 +300,11 @@ async function runEsbuild({
 	testScheduled,
 	local,
 	doBindings,
+	projectRoot,
+	defineNavigatorUserAgent,
 }: {
 	entry: Entry;
-	destination: string | undefined;
+	destination: string;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
@@ -234,9 +324,9 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
-}): Promise<EsbuildBundle | undefined> {
-	if (!destination) return;
-
+	projectRoot: string | undefined;
+	defineNavigatorUserAgent: boolean;
+}): Promise<EsbuildBundle> {
 	if (noBundle) {
 		additionalModules = dedupeModulesByName([
 			...((await doFindAdditionalModules(entry, rules)) ?? []),
@@ -281,6 +371,8 @@ async function runEsbuild({
 					local,
 					testScheduled,
 					doBindings,
+					projectRoot,
+					defineNavigatorUserAgent,
 			  })
 			: undefined;
 
@@ -296,8 +388,10 @@ async function runEsbuild({
 	};
 }
 
-export async function startLocalServer(props: LocalProps) {
-	if (!props.bundle || !props.format) return Promise.resolve({ stop() {} });
+export async function startLocalServer(
+	props: LocalProps
+): Promise<{ stop: () => Promise<void> }> {
+	if (!props.bundle || !props.format) return { async stop() {} };
 
 	// Log warnings for experimental dev-registry-dependent options
 	if (props.bindings.services && props.bindings.services.length > 0) {
@@ -317,20 +411,47 @@ export async function startLocalServer(props: LocalProps) {
 	logger.log(chalk.dim("⎔ Starting local server..."));
 
 	const config = await localPropsToConfigBundle(props);
-	return new Promise<{ stop: () => void }>((resolve, reject) => {
+	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(event, props.name);
-			props.onReady?.(event.url.hostname, parseInt(event.url.port));
+			const proxyData: ProxyData = {
+				userWorkerUrl: {
+					protocol: event.url.protocol,
+					hostname: event.url.hostname,
+					port: event.url.port,
+				},
+				userWorkerInspectorUrl: {
+					protocol: "ws:",
+					hostname: "127.0.0.1",
+					port: props.runtimeInspectorPort.toString(),
+					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
+				},
+				userWorkerInnerUrlOverrides: {
+					protocol: props.upstreamProtocol,
+					hostname: props.localUpstream,
+					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
+				},
+				headers: {
+					// Passing this signature from Proxy Worker allows the User Worker to trust the request.
+					"MF-Proxy-Shared-Secret": event.proxyToUserWorkerAuthenticationSecret,
+				},
+				liveReload: props.liveReload,
+				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
+				// workers written in "service-worker" format still need to proxy logs to the ProxyController
+				proxyLogsToController: props.format === "service-worker",
+				internalDurableObjects: event.internalDurableObjects,
+			};
+
+			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);
 			// Note `unstable_dev` doesn't do anything with the inspector URL yet
 			resolve({
-				stop: () => {
+				stop: async () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
+					removeMiniflareServerExitListener();
 					// Initialization errors are also thrown asynchronously by dispose().
 					// The `addEventListener("error")` above should've caught them though.
-					server.onDispose().catch(() => {});
-					removeMiniflareServerExitListener();
+					await server.onDispose();
 				},
 			});
 		});

@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join, resolve } from "node:path";
 import { fetch } from "undici";
@@ -8,13 +8,16 @@ import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js/ directory", () => {
 	it("should support non-bundling with 'dev'", async ({ expect }) => {
-		const tmpDir = join(tmpdir(), Math.random().toString(36).slice(2));
+		const tmpDir = realpathSync(
+			mkdtempSync(join(tmpdir(), "worker-directory-tests"))
+		);
 
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
 			[
 				"--port=0",
+				"--inspector-port=0",
 				`--persist-to=${tmpDir}`,
 				"--d1=D1",
 				"--d1=PUT=elsewhere",
@@ -66,8 +69,10 @@ describe("Pages _worker.js/ directory", () => {
 	});
 
 	it("should bundle", async ({ expect }) => {
-		const dir = tmpdir();
-		const file = join(dir, "_worker.bundle");
+		const tempDir = realpathSync(
+			mkdtempSync(join(tmpdir(), "worker-bundle-tests"))
+		);
+		const file = join(tempDir, "_worker.bundle");
 
 		execSync(
 			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"D1\\":{}}}"`,

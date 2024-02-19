@@ -1,5 +1,7 @@
 import { assert } from "node:console";
-import { relative, basename, resolve } from "node:path";
+import fs from "node:fs";
+import path from "node:path";
+import onExit from "signal-exit";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
 	_discriminator: Discriminator;
@@ -39,10 +41,10 @@ export function toUrlPath(filePath: string): UrlPath {
  *
  * */
 export function readableRelative(to: string) {
-	const relativePath = relative(process.cwd(), to);
+	const relativePath = path.relative(process.cwd(), to);
 	if (
 		// No directory nesting, return as-is
-		basename(relativePath) === relativePath ||
+		path.basename(relativePath) === relativePath ||
 		// Outside current directory
 		relativePath.startsWith(".")
 	) {
@@ -67,5 +69,44 @@ declare const __RELATIVE_PACKAGE_PATH__: string;
  */
 export function getBasePath(): string {
 	// eslint-disable-next-line no-restricted-globals
-	return resolve(__dirname, __RELATIVE_PACKAGE_PATH__);
+	return path.resolve(__dirname, __RELATIVE_PACKAGE_PATH__);
+}
+
+/**
+ * A short-lived directory. Automatically removed when the process exits, but
+ * can be removed earlier by calling `remove()`.
+ */
+export interface EphemeralDirectory {
+	path: string;
+	remove(): void;
+}
+
+/**
+ * Gets a temporary directory in the project's `.wrangler` folder with the
+ * specified prefix. We create temporary directories in `.wrangler` as opposed
+ * to the OS's temporary directory to avoid issues with different drive letters
+ * on Windows. For example, when `esbuild` outputs a file to a different drive
+ * than the input sources, the generated source maps are incorrect.
+ */
+export function getWranglerTmpDir(
+	projectRoot: string | undefined,
+	prefix: string
+): EphemeralDirectory {
+	projectRoot ??= process.cwd();
+	const tmpRoot = path.join(projectRoot, ".wrangler", "tmp");
+	fs.mkdirSync(tmpRoot, { recursive: true });
+
+	const tmpPrefix = path.join(tmpRoot, `${prefix}-`);
+	const tmpDir = fs.realpathSync(fs.mkdtempSync(tmpPrefix));
+
+	const removeDir = () => fs.rmSync(tmpDir, { recursive: true, force: true });
+	const removeExitListener = onExit(removeDir);
+
+	return {
+		path: tmpDir,
+		remove() {
+			removeExitListener();
+			removeDir();
+		},
+	};
 }

@@ -47,7 +47,7 @@ export const detectPackageManager = () => {
 					version,
 					npm: "pnpm",
 					npx: "pnpm",
-					dlx: "pnpm dlx",
+					dlx: ["pnpm", "dlx"],
 				};
 			}
 			return {
@@ -55,7 +55,7 @@ export const detectPackageManager = () => {
 				version,
 				npm: "pnpm",
 				npx: "pnpx",
-				dlx: "pnpx",
+				dlx: ["pnpx"],
 			};
 		case "yarn":
 			if (semver.gt(version, "2.0.0")) {
@@ -64,7 +64,7 @@ export const detectPackageManager = () => {
 					version,
 					npm: "yarn",
 					npx: "yarn",
-					dlx: "yarn dlx",
+					dlx: ["yarn", "dlx"],
 				};
 			}
 			return {
@@ -72,7 +72,7 @@ export const detectPackageManager = () => {
 				version,
 				npm: "yarn",
 				npx: "yarn",
-				dlx: "yarn",
+				dlx: ["yarn"],
 			};
 		case "bun":
 			return {
@@ -80,7 +80,7 @@ export const detectPackageManager = () => {
 				version,
 				npm: "bun",
 				npx: "bunx",
-				dlx: "bunx",
+				dlx: ["bunx"],
 			};
 
 		case "npm":
@@ -90,7 +90,7 @@ export const detectPackageManager = () => {
 				version,
 				npm: "npm",
 				npx: "npx",
-				dlx: "npx",
+				dlx: ["npx"],
 			};
 	}
 };

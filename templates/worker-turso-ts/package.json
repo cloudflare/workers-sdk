@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev --local"
+		"start": "wrangler dev"
 	},
 	"dependencies": {
 		"@libsql/client": "^0.1.1",

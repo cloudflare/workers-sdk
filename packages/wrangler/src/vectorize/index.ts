@@ -1,9 +1,9 @@
 import { vectorizeBetaWarning } from "./common";
-import { options as createOptions, handler as createHandler } from "./create";
-import { options as deleteOptions, handler as deleteHandler } from "./delete";
-import { options as getOptions, handler as getHandler } from "./get";
-import { options as insertOptions, handler as insertHandler } from "./insert";
-import { options as listOptions, handler as listHandler } from "./list";
+import { handler as createHandler, options as createOptions } from "./create";
+import { handler as deleteHandler, options as deleteOptions } from "./delete";
+import { handler as getHandler, options as getOptions } from "./get";
+import { handler as insertHandler, options as insertOptions } from "./insert";
+import { handler as listHandler, options as listOptions } from "./list";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function vectorize(yargs: CommonYargsArgv) {

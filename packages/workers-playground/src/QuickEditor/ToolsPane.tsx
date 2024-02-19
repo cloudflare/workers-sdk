@@ -1,13 +1,14 @@
+import { Icon } from "@cloudflare/component-icon";
 import { A, Div } from "@cloudflare/elements";
+import { isDarkMode, theme } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
-
-import SplitPane from "./SplitPane";
-import { TabBar, Tab, TabList, Tabs, TabPanel } from "./TabBar";
-import PreviewTab from "./PreviewTab/PreviewTab";
+import { useState } from "react";
 import DevtoolsIframe from "./DevtoolsIframe";
 import { HTTPTab } from "./HTTPTab/HTTPTab";
-import { Icon } from "@cloudflare/component-icon";
-import { isDarkMode, theme } from "@cloudflare/style-const";
+import PreviewTab from "./PreviewTab/PreviewTab";
+import SplitPane from "./SplitPane";
+import { Tab, TabBar, TabList, TabPanel, Tabs } from "./TabBar";
+
 const Main = createComponent(() => ({
 	display: "flex",
 	flexDirection: "column",
@@ -18,6 +19,11 @@ const Main = createComponent(() => ({
 }));
 
 export default function ToolsPane() {
+	const [isSafari] = useState(
+		() =>
+			/Safari\/\d+/.test(navigator.userAgent) &&
+			!/Chrome\/\d+/.test(navigator.userAgent)
+	);
 	return (
 		<SplitPane split="horizontal" defaultSize="70%" minSize={50} maxSize={-50}>
 			<Div width="100%">
@@ -25,10 +31,12 @@ export default function ToolsPane() {
 					<Tabs defaultIndex={0} forceRenderTabPanel={true}>
 						<TabBar>
 							<TabList className="worker-editor-tablist">
-								<Tab>
-									<Icon type="eye" mr={2} />
-									Preview
-								</Tab>
+								{!isSafari && (
+									<Tab>
+										<Icon type="eye" mr={2} />
+										Preview
+									</Tab>
+								)}
 								<Tab>
 									<Icon type="two-way" mr={2} />
 									HTTP
@@ -74,9 +82,11 @@ export default function ToolsPane() {
 							</Div>
 						</TabBar>
 
-						<TabPanel>
-							<PreviewTab />
-						</TabPanel>
+						{!isSafari && (
+							<TabPanel>
+								<PreviewTab />
+							</TabPanel>
+						)}
 						<TabPanel>
 							<HTTPTab />
 						</TabPanel>

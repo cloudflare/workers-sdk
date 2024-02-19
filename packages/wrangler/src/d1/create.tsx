@@ -1,7 +1,9 @@
 import { Box, Text } from "ink";
 import React from "react";
+import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
@@ -31,11 +33,12 @@ export function Options(yargs: CommonYargsArgv) {
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
 	async ({ name, config, location }): Promise<void> => {
+		await printWranglerBanner();
 		const accountId = await requireAuth(config);
 
 		if (location) {
 			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
-				throw new Error(
+				throw new UserError(
 					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
 						","
 					)}`
@@ -58,7 +61,7 @@ export const Handler = withConfig<HandlerOptions>(
 			});
 		} catch (e) {
 			if ((e as { code: number }).code === 7502) {
-				throw new Error("A database with that name already exists");
+				throw new UserError("A database with that name already exists");
 			}
 			throw e;
 		}

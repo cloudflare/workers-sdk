@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { generateHandler } from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";

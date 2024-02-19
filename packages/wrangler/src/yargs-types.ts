@@ -11,6 +11,18 @@ export interface CommonYargsOptions {
 	"experimental-json-config": boolean | undefined;
 }
 
+/**
+ * Yargs options included in every wrangler command.
+ */
+export type CommonYargsOptionsJSON = {
+	json: boolean;
+} & CommonYargsOptions;
+
+export type CommonYargsArgvJSON = Argv<CommonYargsOptionsJSON>;
+
+export type CommonYargsArgvSanitizedJSON<P = CommonYargsOptionsJSON> =
+	OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>;
+
 export type CommonYargsArgv = Argv<CommonYargsOptions>;
 
 export type YargvToInterface<T> = T extends Argv<infer P>
@@ -35,3 +47,21 @@ export type StrictYargsOptionsToInterface<
 > = T extends (yargs: CommonYargsArgv) => Argv<infer P>
 	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
 	: never;
+
+/**
+ * Given some Yargs Options function factory, extract the interface
+ * that corresponds to the yargs arguments, remove index types, and only allow camelCase
+ */
+export type StrictYargsOptionsToInterfaceJSON<
+	T extends (yargs: CommonYargsArgvJSON) => Argv
+> = T extends (yargs: CommonYargsArgvJSON) => Argv<infer P>
+	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
+	: never;
+
+export function asJson(yargs: CommonYargsArgv): CommonYargsArgvJSON {
+	return yargs.option("json", {
+		describe: "Return output as clean JSON",
+		type: "boolean",
+		default: false,
+	});
+}

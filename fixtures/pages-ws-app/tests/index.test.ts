@@ -1,7 +1,7 @@
 import { fork, spawnSync } from "child_process";
 import * as path from "path";
 import { fetch } from "miniflare";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
@@ -22,7 +22,15 @@ describe.skip("Pages Functions", () => {
 		});
 		wranglerProcess = fork(
 			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["pages", "dev", "--port=0", "--proxy=8791", "--", "pnpm run server"],
+			[
+				"pages",
+				"dev",
+				"--port=0",
+				"--inspector-port=0",
+				"--proxy=8791",
+				"--",
+				"pnpm run server",
+			],
 			{
 				cwd: path.resolve(__dirname, ".."),
 			}

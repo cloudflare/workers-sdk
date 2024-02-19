@@ -7,8 +7,8 @@ import type {
 	RequestEvent,
 	ScheduledEvent,
 	TailEvent,
-	TailInfo,
 	TailEventMessage,
+	TailInfo,
 } from "./createTail";
 import type { Outcome } from "./filters";
 import type WebSocket from "ws";

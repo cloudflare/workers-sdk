@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev --local",
+		"dev": "wrangler dev",
 		"react:build": "react-scripts build",
 		"react:eject": "react-scripts eject",
 		"react:start": "react-scripts start",

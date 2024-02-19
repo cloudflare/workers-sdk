@@ -1,24 +1,23 @@
-import http from "http";
 import net from "net";
+import { createServer } from "node:http";
 import bodyParser from "body-parser";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
 import { logger } from "./logger";
-
 import type { Config } from "./config";
-import type { Server } from "http";
 import type { HttpTerminator } from "http-terminator";
+import type { Server } from "node:http";
 
-const DEV_REGISTRY_PORT = "6284";
-const DEV_REGISTRY_HOST = `http://localhost:${DEV_REGISTRY_PORT}`;
+const DEV_REGISTRY_PORT = 6284;
+const DEV_REGISTRY_HOST = `http://127.0.0.1:${DEV_REGISTRY_PORT}`;
 
 let server: Server | null;
 let terminator: HttpTerminator;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
-type WorkerDefinition = {
+export type WorkerDefinition = {
 	port: number | undefined;
 	protocol: "http" | "https" | undefined;
 	host: string | undefined;
@@ -48,7 +47,7 @@ async function isPortAvailable() {
 				netServer.close();
 				resolve(true);
 			});
-		netServer.listen(DEV_REGISTRY_PORT);
+		netServer.listen(DEV_REGISTRY_PORT, "127.0.0.1");
 	});
 }
 
@@ -80,9 +79,9 @@ export async function startWorkerRegistry() {
 				workers = {};
 				res.json(null);
 			});
-		server = http.createServer(app);
+		server = createServer(app);
 		terminator = createHttpTerminator({ server });
-		server.listen(DEV_REGISTRY_PORT);
+		server.listen(DEV_REGISTRY_PORT, "127.0.0.1");
 
 		/**
 		 * The registry server may have already been started by another wrangler process.

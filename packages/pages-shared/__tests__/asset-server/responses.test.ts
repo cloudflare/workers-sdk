@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { stripLeadingDoubleSlashes } from "../../asset-server/responses";
 
 describe("stripLeadingDoubleSlashes", () => {
@@ -42,7 +42,7 @@ describe("stripLeadingDoubleSlashes", () => {
 			`"/foo//bar"`
 		);
 		expect(stripLeadingDoubleSlashes("/foo/\\/bar")).toMatchInlineSnapshot(
-			`"/foo/\\\\/bar"`
+			`"/foo/\\/bar"`
 		);
 		expect(stripLeadingDoubleSlashes("/%09foo")).toMatchInlineSnapshot(
 			`"/foo"`

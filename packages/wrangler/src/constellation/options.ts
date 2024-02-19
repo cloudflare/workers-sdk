@@ -7,11 +7,3 @@ export function takeName(yargs: CommonYargsArgv) {
 		demandOption: true,
 	});
 }
-
-export function asJson(yargs: CommonYargsArgv) {
-	return yargs.option("json", {
-		describe: "return output as clean JSON",
-		type: "boolean",
-		default: false,
-	});
-}

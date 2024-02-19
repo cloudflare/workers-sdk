@@ -1,5 +1,11 @@
 # @cloudflare/eslint-config-worker
 
+## 1.1.0
+
+### Minor Changes
+
+- [#4139](https://github.com/cloudflare/workers-sdk/pull/4139) [`884e4188`](https://github.com/cloudflare/workers-sdk/commit/884e41881687c34957bf22f97fb12a127707aef9) Thanks [@1000hz](https://github.com/1000hz)! - `import/order` rule has been removed.
+
 ## 1.0.0
 
 ### Major Changes

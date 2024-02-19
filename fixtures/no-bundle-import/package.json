@@ -6,8 +6,7 @@
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test": "vitest run",
-		"test:ci": "vitest run",
-		"test:watch": "npx vitest"
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"get-port": "^6.1.2",

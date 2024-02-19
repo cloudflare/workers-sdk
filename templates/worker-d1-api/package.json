@@ -1,5 +1,5 @@
 {
-	"name": "d1-example",
+	"name": "template-worker-d1-api",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
@@ -7,12 +7,11 @@
 		"start": "wrangler dev"
 	},
 	"dependencies": {
-		"hono": "^2.0.2"
+		"hono": "^3.11.8"
 	},
 	"devDependencies": {
-		"@cloudflare/d1": "^1.4.1",
-		"@cloudflare/workers-types": "^4.20230518.0 ",
+		"@cloudflare/workers-types": "^4.20231121.0",
 		"typescript": "^4.7.4",
-		"wrangler": "^3.0.0"
+		"wrangler": "^3.21.0"
 	}
 }

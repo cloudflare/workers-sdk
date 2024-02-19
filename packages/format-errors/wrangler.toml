@@ -12,3 +12,4 @@ routes = [
 
 [vars]
 SENTRY_DSN = "https://1ff9df95733c4e7d9c31dc13ab05d44a@sentry10.cfdata.org/891"
+

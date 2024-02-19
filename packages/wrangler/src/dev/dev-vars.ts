@@ -20,7 +20,7 @@ import type { Config } from "../config";
  * bindings provided in the `wrangler.toml`.
  */
 export function getVarsForDev(
-	config: Config,
+	config: Pick<Config, "configPath" | "vars">,
 	env: string | undefined
 ): Config["vars"] {
 	const configDir = path.resolve(path.dirname(config.configPath ?? "."));

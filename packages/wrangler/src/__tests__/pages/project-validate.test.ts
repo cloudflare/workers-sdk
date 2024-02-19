@@ -35,8 +35,8 @@ describe("project validate", () => {
 
 		await expect(() => runWrangler("pages project validate .")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
-		"Error: Pages only supports files up to 1.05 MB in size
-		logo.png is 1.05 MB in size"
+		"Error: Pages only supports files up to 1 MiB in size
+		logo.png is 1 MiB in size"
 	`);
 	});
 

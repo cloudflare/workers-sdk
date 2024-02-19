@@ -1,4 +1,5 @@
 import path from "node:path";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getBasePath } from "../paths";
 import guessWorkerFormat from "./guess-worker-format";
@@ -56,7 +57,7 @@ export async function getEntry(
 		} else if (args.assets || config.assets) {
 			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {
-			throw new Error(
+			throw new UserError(
 				`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
 			);
 		}
@@ -97,7 +98,7 @@ export async function getEntry(
 			"Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:";
 		const migrateUrl =
 			"https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/";
-		throw new Error(
+		throw new UserError(
 			`${errorMessage}\n${addScriptName}\n${addScriptNameExamples}\n${migrateText}\n${migrateUrl}`
 		);
 	}

@@ -4,7 +4,7 @@ let count = 0;
 async function handleSession(websocket: WebSocket) {
 	websocket.accept();
 	websocket.addEventListener('message', async event => {
-		if (event.type === 'CLICK') {
+		if (event.data === 'CLICK') {
 			count += 1;
 			websocket.send(JSON.stringify({ count, tz: new Date() }));
 		} else {

@@ -1,8 +1,8 @@
 import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
-import path, { resolve } from "path";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import path from "path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
@@ -19,10 +19,10 @@ describe("Preview Worker", () => {
 	let tmpDir: string;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
+			config: path.join(__dirname, "../wrangler.toml"),
 			experimental: {
 				disableExperimentalWarning: true,
-				// experimentalLocal: true,
 			},
 		});
 
@@ -63,9 +63,17 @@ describe("Preview Worker", () => {
 			`.trim()
 		);
 
+		await fs.writeFile(
+			path.join(tmpDir, "wrangler.toml"),
+			/*toml*/ `
+name = "remote-worker"
+compatibility_date = "2023-01-01"
+			`.trim()
+		);
+
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
+			config: path.join(tmpDir, "wrangler.toml"),
 			experimental: { disableExperimentalWarning: true },
-			port: 6756,
 		});
 	});
 
@@ -83,7 +91,7 @@ describe("Preview Worker", () => {
 	it("should obtain token from exchange_url", async () => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
-				"http://127.0.0.1:6756/exchange"
+				`http://127.0.0.1:${remote.port}/exchange`
 			)}`,
 			{
 				method: "POST",
@@ -99,6 +107,16 @@ describe("Preview Worker", () => {
 		`
 		);
 	});
+	it("should reject invalid exchange_url", async () => {
+		const resp = await worker.fetch(
+			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
+			{ method: "POST" }
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			`"{"error":"Error","message":"Invalid URL"}"`
+		);
+	});
 	it("should allow tokens > 4096 bytes", async () => {
 		// 4096 is the size limit for cookies
 		const token = randomBytes(4096).toString("hex");
@@ -108,9 +126,9 @@ describe("Preview Worker", () => {
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
 			)}&prewarm=${encodeURIComponent(
-				"http://127.0.0.1:6756/prewarm"
+				`http://127.0.0.1:${remote.port}/prewarm`
 			)}&remote=${encodeURIComponent(
-				"http://127.0.0.1:6756"
+				`http://127.0.0.1:${remote.port}`
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -124,7 +142,7 @@ describe("Preview Worker", () => {
 		expect(
 			removeUUID(resp.headers.get("set-cookie") ?? "")
 		).toMatchInlineSnapshot(
-			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
@@ -134,7 +152,7 @@ describe("Preview Worker", () => {
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}`,
 				},
 			}
 		);
@@ -142,19 +160,17 @@ describe("Preview Worker", () => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
 		const json = (await resp.json()) as any;
 
-		expect(
-			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
-		).toBe(token);
-		expect(json.url).toMatchInlineSnapshot(
-			'"http://preview.devprod.cloudflare.dev/"'
-		);
+		expect(json).toMatchObject({
+			url: `http://127.0.0.1:${remote.port}/`,
+			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
+		});
 	});
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				"http://127.0.0.1:6756/prewarm"
+				`http://127.0.0.1:${remote.port}/prewarm`
 			)}&remote=${encodeURIComponent(
-				"http://127.0.0.1:6756"
+				`http://127.0.0.1:${remote.port}`
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -167,11 +183,33 @@ describe("Preview Worker", () => {
 		expect(
 			removeUUID(resp.headers.get("set-cookie") ?? "")
 		).toMatchInlineSnapshot(
-			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
 			.split("=")[1];
+	});
+	it("should reject invalid prewarm url", async () => {
+		const resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
+				`http://127.0.0.1:${remote.port}`
+			)}&suffix=${encodeURIComponent("/hello?world")}`
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			`"{"error":"Error","message":"Invalid URL"}"`
+		);
+	});
+	it("should reject invalid remote url", async () => {
+		const resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
+				`http://127.0.0.1:${remote.port}/prewarm`
+			)}&remote=not_a_remote_url&suffix=${encodeURIComponent("/hello?world")}`
+		);
+		expect(resp.status).toBe(400);
+		expect(await resp.text()).toMatchInlineSnapshot(
+			`"{"error":"Error","message":"Invalid URL"}"`
+		);
 	});
 
 	it("should convert cookie to header", async () => {
@@ -180,18 +218,18 @@ describe("Preview Worker", () => {
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 			}
 		);
 
 		const json = (await resp.json()) as { headers: string[][]; url: string };
-		expect(Object.fromEntries([...json.headers])).toMatchObject({
-			"cf-workers-preview-token": "TEST_TOKEN",
+		expect(json).toMatchObject({
+			url: `http://127.0.0.1:${remote.port}/`,
+			headers: expect.arrayContaining([
+				["cf-workers-preview-token", "TEST_TOKEN"],
+			]),
 		});
-		expect(json.url).toMatchInlineSnapshot(
-			'"http://preview.devprod.cloudflare.dev/"'
-		);
 	});
 	it("should not follow redirects", async () => {
 		const resp = await worker.fetch(
@@ -199,7 +237,7 @@ describe("Preview Worker", () => {
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -207,7 +245,7 @@ describe("Preview Worker", () => {
 
 		expect(resp.status).toMatchInlineSnapshot("302");
 		expect(resp.headers.get("Location")).toMatchInlineSnapshot(
-			'"https://example.com/"'
+			'"https://example.com"'
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
@@ -217,7 +255,7 @@ describe("Preview Worker", () => {
 			{
 				method: "PUT",
 				headers: {
-					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -232,7 +270,7 @@ describe("Preview Worker", () => {
 				method: "PUT",
 				headers: {
 					"X-Custom-Header": "custom",
-					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -246,7 +284,7 @@ describe("Preview Worker", () => {
 			{
 				method: "PUT",
 				headers: {
-					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -260,7 +298,7 @@ describe("Raw HTTP preview", () => {
 	let worker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
 			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
 			host: "0000.rawhttp.devprod.cloudflare.dev",
 			experimental: {
@@ -286,5 +324,20 @@ describe("Raw HTTP preview", () => {
 		);
 
 		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
+	});
+
+	it("should allow arbitrary methods in cross-origin requests", async () => {
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev`,
+			{
+				method: "OPTIONS",
+				headers: {
+					"Access-Control-Request-Method": "PUT",
+					origin: "https://cloudflare.dev",
+				},
+			}
+		);
+
+		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
 	});
 });

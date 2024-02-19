@@ -3,26 +3,27 @@ import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
+import { UserError } from "../errors";
 import {
+	CommandLineArgsError,
 	demandOneOfOption,
 	printWranglerBanner,
-	CommandLineArgsError,
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import {
 	createKVNamespace,
-	deleteKVNamespace,
-	getKVNamespaceId,
-	isValidKVNamespaceBinding,
-	listKVNamespaces,
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
+	deleteKVNamespace,
 	getKVKeyValue,
+	getKVNamespaceId,
 	isKVKeyValue,
 	listKVNamespaceKeys,
+	listKVNamespaces,
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
@@ -51,12 +52,6 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 			},
 			async (args) => {
 				await printWranglerBanner();
-
-				if (!isValidKVNamespaceBinding(args.namespace)) {
-					throw new CommandLineArgsError(
-						`The namespace binding name "${args.namespace}" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.`
-					);
-				}
 
 				const config = readConfig(args.config, args);
 				if (!config.name) {
@@ -87,7 +82,10 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 					`Add the following to your configuration file in your kv_namespaces array${envString}:`
 				);
 				logger.log(
-					`{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
+					`{ binding = "${getValidBindingName(
+						args.namespace,
+						"KV"
+					)}", ${previewString}id = "${namespaceId}" }`
 				);
 
 				// TODO: automatically write this block to the wrangler.toml config file??
@@ -564,7 +562,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				const content = parseJSON(readFileSync(filename), filename);
 
 				if (!Array.isArray(content)) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of key-value objects but got type "${typeof content}".`
 					);
@@ -596,7 +594,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					);
 				}
 				if (errors.length > 0) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Each item in the array should be an object that matches:\n\n` +
 							`interface KeyValue {\n` +
@@ -699,7 +697,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				const content = parseJSON(readFileSync(filename), filename) as string[];
 
 				if (!Array.isArray(content)) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of strings but got:\n${content}`
 					);
@@ -718,7 +716,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 				}
 
 				if (errors.length > 0) {
-					throw new Error(
+					throw new UserError(
 						`Unexpected JSON input from "${filename}".\n` +
 							`Expected an array of strings.\n` +
 							errors.join("\n")

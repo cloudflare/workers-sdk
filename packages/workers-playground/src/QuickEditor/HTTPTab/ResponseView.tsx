@@ -1,6 +1,7 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Div } from "@cloudflare/elements";
 import CodeBlock from "@cloudflare/component-code-block";
+import { Div } from "@cloudflare/elements";
+import React, { useEffect, useMemo, useState } from "react";
+
 type Props = {
 	response: Response;
 	loading: boolean;

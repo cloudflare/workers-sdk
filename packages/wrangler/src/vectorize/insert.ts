@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { type Interface as RLInterface, createInterface } from "node:readline";
+import { createInterface } from "node:readline";
 import { File, FormData } from "undici";
 import { readConfig } from "../config";
 import { logger } from "../logger";
@@ -9,6 +9,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Interface as RLInterface } from "node:readline";
 
 const VECTORIZE_MAX_BATCH_SIZE = 1_000;
 const VECTORIZE_UPSERT_BATCH_SIZE = VECTORIZE_MAX_BATCH_SIZE;

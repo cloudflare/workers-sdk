@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { expect, test } from "vitest";
 import { parseHeaders } from "../..//metadata-generator/parseHeaders";
 
 test("parseHeaders should handle a single rule", () => {

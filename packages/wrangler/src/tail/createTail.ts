@@ -1,11 +1,14 @@
+import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
-import type { TailFilterMessage, Outcome } from "./filters";
+import { proxy } from "../index";
+import type { Outcome, TailFilterMessage } from "./filters";
+import type { Request } from "undici";
+
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
-import type { Request } from "undici";
 
 const TRACE_VERSION = "trace-v1";
 
@@ -100,11 +103,14 @@ export async function createPagesTail({
 			{ method: "DELETE" }
 		);
 
+	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
+
 	const tail = new WebSocket(tailRecord.url, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
+		...p,
 	});
 
 	// send filters when we open up
@@ -165,12 +171,15 @@ export async function createTail(
 		await fetchResult(deleteUrl, { method: "DELETE" });
 	}
 
+	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
+
 	// connect to the tail
 	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
 			"User-Agent": `wrangler-js/${packageVersion}`,
 		},
+		...p,
 	});
 
 	// send filters when we open up

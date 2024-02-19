@@ -1,8 +1,7 @@
 import React, { useContext } from "react";
-
-import { ServiceContext } from "./QuickEditor";
 import Frame from "./Frame";
 import FrameErrorBoundary from "./FrameErrorBoundary";
+import { ServiceContext } from "./QuickEditor";
 import { DragContext } from "./SplitPane";
 
 function getDevtoolsIframeUrl(inspectorUrl: string) {

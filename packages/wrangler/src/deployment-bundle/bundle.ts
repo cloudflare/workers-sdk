@@ -3,8 +3,8 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
-import tmp from "tmp-promise";
-import { getBasePath } from "../paths";
+import { UserError } from "../errors";
+import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,
@@ -30,6 +30,9 @@ export const COMMON_ESBUILD_OPTIONS = {
 	target: "es2022",
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
+
+// build conditions used by esbuild, and when resolving custom `import` calls
+export const BUILD_CONDITIONS = ["workerd", "worker", "browser"];
 
 /**
  * Information about Wrangler's bundling process that needs passed through
@@ -82,6 +85,8 @@ export type BundleOptions = {
 	isOutfile?: boolean;
 	forPages?: boolean;
 	local: boolean;
+	projectRoot: string | undefined;
+	defineNavigatorUserAgent: boolean;
 };
 
 /**
@@ -119,15 +124,14 @@ export async function bundleWorker(
 		isOutfile,
 		forPages,
 		local,
+		projectRoot,
+		defineNavigatorUserAgent,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
 	// need to create. This is separate from the main build
 	// directory (`destination`).
-	const unsafeTmpDir = await tmp.dir({ unsafeCleanup: true });
-	// Make sure we resolve all files relative to the actual temporary directory,
-	// without symlinks, otherwise `esbuild` will generate invalid source maps.
-	const tmpDirPath = fs.realpathSync(unsafeTmpDir.path);
+	const tmpDir = getWranglerTmpDir(projectRoot, "bundle");
 
 	const entryFile = entry.file;
 
@@ -231,12 +235,9 @@ export async function bundleWorker(
 		// we need to extract that file to an accessible place before injecting
 		// it in, hence this code here.
 
-		const checkedFetchFileToInject = path.join(tmpDirPath, "checked-fetch.js");
+		const checkedFetchFileToInject = path.join(tmpDir.path, "checked-fetch.js");
 
 		if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
-			fs.mkdirSync(tmpDirPath, {
-				recursive: true,
-			});
 			fs.writeFileSync(
 				checkedFetchFileToInject,
 				fs.readFileSync(
@@ -250,7 +251,7 @@ export async function bundleWorker(
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
 		if (!middleware.supports.includes(entry.format)) {
-			throw new Error(
+			throw new UserError(
 				`Your Worker is written using the "${entry.format}" format, which isn't supported by the "${middleware.name}" middleware. To use "${middleware.name}" middleware, convert your Worker to the "${middleware.supports[0]}" format`
 			);
 		}
@@ -261,7 +262,7 @@ export async function bundleWorker(
 	) {
 		const result = await applyMiddlewareLoaderFacade(
 			entry,
-			tmpDirPath,
+			tmpDir.path,
 			middlewareToLoad,
 			doBindings
 		);
@@ -310,9 +311,12 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: ["workerd", "worker", "browser"],
+		conditions: BUILD_CONDITIONS,
 		...(process.env.NODE_ENV && {
 			define: {
+				...(defineNavigatorUserAgent
+					? { "navigator.userAgent": `"Cloudflare-Workers"` }
+					: {}),
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
@@ -329,7 +333,7 @@ export async function bundleWorker(
 			...(legacyNodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
-			...(nodejsCompat ? [nodejsCompatPlugin] : []),
+			nodejsCompatPlugin(!!nodejsCompat),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
@@ -358,14 +362,20 @@ export async function bundleWorker(
 			await ctx.watch();
 			result = await initialBuildResultPromise;
 			if (result.errors.length > 0) {
-				throw new Error("Failed to build");
+				throw new UserError("Failed to build");
 			}
 
 			stop = async function () {
+				tmpDir.remove();
 				await ctx.dispose();
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
+			// Even when we're not watching, we still want some way of cleaning up the
+			// temporary directory when we don't need it anymore
+			stop = async function () {
+				tmpDir.remove();
+			};
 		}
 	} catch (e) {
 		if (!legacyNodeCompat && isBuildFailure(e))
@@ -374,6 +384,18 @@ export async function bundleWorker(
 	}
 
 	const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
+	const notExportedDOs = doBindings
+		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
+		.map((x) => x.class_name);
+	if (notExportedDOs.length) {
+		const relativePath = path.relative(process.cwd(), entryFile);
+		throw new UserError(
+			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
+				", "
+			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+		);
+	}
+
 	const bundleType = entryPoint.exports.length > 0 ? "esm" : "commonjs";
 
 	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
@@ -402,7 +424,7 @@ export async function bundleWorker(
 		stop,
 		sourceMapPath,
 		sourceMapMetadata: {
-			tmpDir: tmpDirPath,
+			tmpDir: tmpDir.path,
 			entryDirectory: entry.directory,
 		},
 	};

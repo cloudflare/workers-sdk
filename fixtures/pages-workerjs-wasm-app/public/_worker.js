@@ -1,5 +1,5 @@
-import multiply from "./../wasm/multiply.wasm";
 import html from "./../external-modules/meaning-of-life.html";
+import multiply from "./../wasm/multiply.wasm";
 
 export default {
 	async fetch(request, env) {

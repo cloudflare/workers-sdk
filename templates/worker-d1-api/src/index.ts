@@ -5,16 +5,17 @@ interface Comment {
 	author: string;
 	body: string;
 }
-const app = new Hono();
+
+type Bindings = {
+	DB: D1Database;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
 app.use('/api/*', cors());
 
 app.get('/api/posts/:slug/comments', async c => {
 	const { slug } = c.req.param();
-	const { results } = await c.env.DB.prepare(
-		`
-    select * from comments where post_slug = ?
-  `
-	)
+	const { results } = await c.env.DB.prepare(`SELECT * FROM comments WHERE post_slug = ?`)
 		.bind(slug)
 		.all();
 	return c.json(results);
@@ -28,9 +29,7 @@ app.post('/api/posts/:slug/comments', async c => {
 	if (!body) return c.text('Missing body value for new comment');
 
 	const { success } = await c.env.DB.prepare(
-		`
-    insert into comments (author, body, post_slug) values (?, ?, ?)
-  `
+		`INSERT into comments (author, body, post_slug) VALUES (?, ?, ?)`
 	)
 		.bind(author, body, slug)
 		.run();

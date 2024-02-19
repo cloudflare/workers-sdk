@@ -29,6 +29,14 @@ export type Route =
 	| CustomDomainRoute;
 
 /**
+ * Configuration in wrangler for Cloudchamber
+ */
+export type CloudchamberConfig = {
+	vcpu?: number;
+	memory?: string;
+};
+
+/**
  * The `EnvironmentInheritable` interface declares all the configuration fields for an environment
  * that can be inherited (and overridden) from the top-level environment.
  */
@@ -169,6 +177,14 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	usage_model: "bundled" | "unbound" | undefined;
+
+	/**
+	 * Specify limits for runtime behavior.
+	 * Only supported for the "standard" Usage Model
+	 *
+	 * @inheritable
+	 */
+	limits: UserLimits | undefined;
 
 	/**
 	 * An ordered list of rules that define which modules to import,
@@ -343,6 +359,17 @@ interface EnvironmentNonInheritable {
 	};
 
 	/**
+	 * Cloudchamber configuration
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `{}`
+	 * @nonInheritable
+	 */
+	cloudchamber: CloudchamberConfig;
+
+	/**
 	 * These specify any Workers KV Namespaces you want to
 	 * access from inside your Worker.
 	 *
@@ -515,6 +542,8 @@ interface EnvironmentNonInheritable {
 		binding: string;
 		/** The id of the database. */
 		id: string;
+		/** The local database connection string for `wrangler dev` */
+		localConnectionString?: string;
 	}[];
 
 	/**
@@ -596,7 +625,7 @@ interface EnvironmentNonInheritable {
 		 * here will always be applied to metadata last, so can add new or override existing fields.
 		 */
 		metadata?: {
-			[key: string]: string;
+			[key: string]: unknown;
 		};
 
 		/**
@@ -719,7 +748,9 @@ export type ConfigModuleRuleType =
 	| "CommonJS"
 	| "CompiledWasm"
 	| "Text"
-	| "Data";
+	| "Data"
+	| "PythonModule"
+	| "PythonRequirement";
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
@@ -735,4 +766,9 @@ export interface DispatchNamespaceOutbound {
 	environment?: string;
 	/** (Optional) List of parameter names, for sending context from your dispatch worker to the outbound handler */
 	parameters?: string[];
+}
+
+export interface UserLimits {
+	/** Maximum allowed CPU time for a worker's invocation in milliseconds */
+	cpu_ms: number;
 }

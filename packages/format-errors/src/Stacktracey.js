@@ -1,4 +1,5 @@
 "use strict";
+
 /**
  * Adapted from Stacktracey (https://github.com/xpl/stacktracey).
  *
@@ -6,6 +7,7 @@
  *
  */
 import partition from "./impl/partition";
+
 const O = Object,
 	isBrowser = true,
 	nodeRequire = null,

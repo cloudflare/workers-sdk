@@ -1,16 +1,21 @@
 import { spawn } from "node:child_process";
-import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
 import { fetch } from "undici";
+import { DevEnv } from "../api";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -19,19 +24,24 @@ import {
 	unregisterWorker,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
+import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
-import { Local } from "./local";
+import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
+import type { EsbuildBundle } from "./use-esbuild";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -134,6 +144,8 @@ export type DevProps = {
 	tsconfig: string | undefined;
 	upstreamProtocol: "https" | "http";
 	localProtocol: "https" | "http";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
@@ -157,13 +169,16 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	onReady: ((ip: string, port: number) => void) | undefined;
+	onReady:
+		| ((ip: string, port: number, proxyData: ProxyData) => void)
+		| undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
+	projectRoot: string | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -185,6 +200,17 @@ export function DevImplementation(props: DevProps): JSX.Element {
 let ip: string;
 let port: number;
 
+// When starting on `port: 0`, we won't know the port to use until `workerd` has started. If the user tries to open the
+// browser before we know this, they'll open `localhost:0` which is incorrect.
+let portUsable = false;
+let portUsablePromiseResolve: () => void;
+const portUsablePromise = new Promise<void>(
+	(resolve) => (portUsablePromiseResolve = resolve)
+);
+// If the user has pressed `b`, but the port isn't ready yet, prevent any further presses of `b` opening a browser,
+// until the port is ready.
+let blockBrowserOpen = false;
+
 function InteractiveDevSession(props: DevProps) {
 	const toggles = useHotkeys({
 		initial: {
@@ -203,14 +229,12 @@ function InteractiveDevSession(props: DevProps) {
 
 	useTunnel(toggles.tunnel);
 
-	const onReady = (newIp: string, newPort: number) => {
-		if (newIp !== props.initialIp || newPort !== props.initialPort) {
-			ip = newIp;
-			port = newPort;
-			if (props.onReady) {
-				props.onReady(newIp, newPort);
-			}
-		}
+	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
+		portUsable = true;
+		portUsablePromiseResolve();
+		ip = newIp;
+		port = newPort;
+		props.onReady?.(newIp, newPort, proxyData);
 	};
 
 	return (
@@ -246,9 +270,66 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
-	useCustomBuild(props.entry, props.build);
+	const [devEnv] = useState(() => new DevEnv());
+	useEffect(() => {
+		return () => {
+			void devEnv.teardown();
+		};
+	}, [devEnv]);
+	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
+		() => ({
+			name: props.name ?? "worker",
+			script: { contents: "" },
+			dev: {
+				server: {
+					hostname: props.initialIp,
+					port: props.initialPort,
+					secure: props.localProtocol === "https",
+					httpsKeyPath: props.httpsKeyPath,
+					httpsCertPath: props.httpsCertPath,
+				},
+				inspector: {
+					port: props.inspectorPort,
+				},
+				urlOverrides: {
+					secure: props.localProtocol === "https",
+					hostname: props.localUpstream,
+				},
+				liveReload: props.liveReload,
+			},
+		}),
+		[
+			props.name,
+			props.initialIp,
+			props.initialPort,
+			props.localProtocol,
+			props.httpsKeyPath,
+			props.httpsCertPath,
+			props.localUpstream,
+			props.inspectorPort,
+			props.liveReload,
+		]
+	);
+	const onBundleStart = useCallback(() => {
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: startDevWorkerOptions,
+		});
+	}, [devEnv, startDevWorkerOptions]);
+	const onReloadStart = useCallback(
+		(bundle: EsbuildBundle) => {
+			devEnv.proxy.onReloadStart({
+				type: "reloadStart",
+				config: startDevWorkerOptions,
+				bundle,
+			});
+		},
+		[devEnv, startDevWorkerOptions]
+	);
 
-	const directory = useTmpDir();
+	useCustomBuild(props.entry, props.build, onBundleStart);
+
+	const directory = useTmpDir(props.projectRoot);
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -256,6 +337,13 @@ function DevSession(props: DevSessionProps) {
 		props.bindings.durable_objects,
 		props.local ? "local" : "remote"
 	);
+	useEffect(() => {
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: startDevWorkerOptions,
+		});
+	}, [devEnv, startDevWorkerOptions]);
 
 	const bundle = useEsbuild({
 		entry: props.entry,
@@ -284,7 +372,16 @@ function DevSession(props: DevSessionProps) {
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
+		projectRoot: props.projectRoot,
+		onBundleStart,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
+	useEffect(() => {
+		if (bundle) onReloadStart(bundle);
+	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -302,7 +399,26 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	const announceAndOnReady: typeof props.onReady = (finalIp, finalPort) => {
+	const announceAndOnReady: typeof props.onReady = async (
+		finalIp,
+		finalPort,
+		proxyData
+	) => {
+		// at this point (in the layers of onReady callbacks), we have devEnv in scope
+		// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+		const { proxyWorker } = await devEnv.proxy.ready.promise;
+		const url = await proxyWorker.ready;
+		finalIp = url.hostname;
+		finalPort = parseInt(url.port);
+
+		if (props.local) {
+			await maybeRegisterLocalWorker(
+				url,
+				props.name,
+				proxyData.internalDurableObjects
+			);
+		}
+
 		if (process.send) {
 			process.send(
 				JSON.stringify({
@@ -313,8 +429,17 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
+		if (bundle) {
+			devEnv.proxy.onReloadComplete({
+				type: "reloadComplete",
+				config: startDevWorkerOptions,
+				bundle,
+				proxyData,
+			});
+		}
+
 		if (props.onReady) {
-			props.onReady(finalIp, finalPort);
+			props.onReady(finalIp, finalPort, proxyData);
 		}
 	};
 
@@ -329,8 +454,8 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
 			assetPaths={props.assetPaths}
-			initialPort={props.initialPort}
-			initialIp={props.initialIp}
+			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			runtimeInspectorPort={props.runtimeInspectorPort}
@@ -338,8 +463,11 @@ function DevSession(props: DevSessionProps) {
 			liveReload={props.liveReload}
 			crons={props.crons}
 			queueConsumers={props.queueConsumers}
-			localProtocol={props.localProtocol}
+			localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
 			localUpstream={props.localUpstream}
+			upstreamProtocol={props.upstreamProtocol}
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
@@ -357,6 +485,8 @@ function DevSession(props: DevSessionProps) {
 			port={props.initialPort}
 			ip={props.initialIp}
 			localProtocol={props.localProtocol}
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
 			inspectorPort={props.inspectorPort}
 			// TODO: @threepointone #1167
 			// liveReload={props.liveReload}
@@ -376,26 +506,14 @@ function DevSession(props: DevSessionProps) {
 	);
 }
 
-export interface DirectorySyncResult {
-	name: string;
-	removeCallback: () => void;
-}
-
-function useTmpDir(): string | undefined {
+function useTmpDir(projectRoot: string | undefined): string | undefined {
 	const [directory, setDirectory] = useState<string>();
 	const handleError = useErrorHandler();
 	useEffect(() => {
-		let dir: DirectorySyncResult | undefined;
+		let dir: EphemeralDirectory | undefined;
 		try {
-			// const tmpdir = path.resolve(".wrangler", "tmp");
-			// fs.mkdirSync(tmpdir, { recursive: true });
-			// dir = tmp.dirSync({ unsafeCleanup: true, tmpdir });
-			dir = tmp.dirSync({ unsafeCleanup: true }) as DirectorySyncResult;
-			// Make sure we resolve all files relative to the actual temporary
-			// directory, without symlinks, otherwise `esbuild` will generate invalid
-			// source maps.
-			const realpath = fs.realpathSync(dir.name);
-			setDirectory(realpath);
+			dir = getWranglerTmpDir(projectRoot, "dev");
+			setDirectory(dir.path);
 			return;
 		} catch (err) {
 			logger.error(
@@ -403,14 +521,16 @@ function useTmpDir(): string | undefined {
 			);
 			handleError(err);
 		}
-		return () => {
-			dir?.removeCallback();
-		};
-	}, [handleError]);
+		return () => dir?.remove();
+	}, [projectRoot, handleError]);
 	return directory;
 }
 
-function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
+function useCustomBuild(
+	expectedEntry: Entry,
+	build: Config["build"],
+	onBundleStart: () => void
+): void {
 	useEffect(() => {
 		if (!build.command) return;
 		let watcher: ReturnType<typeof watch> | undefined;
@@ -423,6 +543,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 					path.relative(expectedEntry.directory, expectedEntry.file) || ".";
 				//TODO: we should buffer requests to the proxy until this completes
 				logger.log(`The file ${filePath} changed, restarting build...`);
+				onBundleStart();
 				runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
 					logger.error("Custom build failed:", err);
 				});
@@ -432,7 +553,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry]);
+	}, [build, expectedEntry, onBundleStart]);
 }
 
 function sleep(period: number) {
@@ -552,7 +673,14 @@ function useHotkeys(props: {
 					break;
 				// open browser
 				case "b": {
-					if (ip === "0.0.0.0") {
+					if (port === 0) {
+						if (!portUsable) logger.info("Waiting for port...");
+						if (blockBrowserOpen) return;
+						blockBrowserOpen = true;
+						await portUsablePromise;
+						blockBrowserOpen = false;
+					}
+					if (ip === "0.0.0.0" || ip === "*") {
 						await openInBrowser(`${localProtocol}://127.0.0.1:${port}`);
 						return;
 					}

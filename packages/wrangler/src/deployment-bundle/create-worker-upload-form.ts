@@ -1,14 +1,15 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { FormData, File } from "undici";
+import { File, FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
-	CfWorkerInit,
-	CfModuleType,
 	CfDurableObjectMigrations,
+	CfModuleType,
 	CfPlacement,
 	CfTailConsumer,
+	CfUserLimits,
+	CfWorkerInit,
 } from "./worker.js";
 import type { Json } from "miniflare";
 
@@ -24,6 +25,10 @@ export function toMimeType(type: CfModuleType): string {
 			return "application/octet-stream";
 		case "text":
 			return "text/plain";
+		case "python":
+			return "text/x-python";
+		case "python-requirement":
+			return "text/x-python-requirement";
 		default:
 			throw new TypeError("Unsupported module: " + type);
 	}
@@ -105,6 +110,7 @@ export interface WorkerMetadata {
 	logpush?: boolean;
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
+	limits?: CfUserLimits;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 }
@@ -125,6 +131,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		logpush,
 		placement,
 		tail_consumers,
+		limits,
 	} = worker;
 
 	let { modules } = worker;
@@ -462,6 +469,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
 		...(tail_consumers && { tail_consumers }),
+		...(limits && { limits }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

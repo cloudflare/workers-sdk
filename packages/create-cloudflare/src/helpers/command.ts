@@ -1,21 +1,19 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
+import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
-import { endSection, stripAnsi } from "./cli";
-import { brandColor, dim } from "./colors";
-import { isInteractive, spinner } from "./interactive";
+import { getFrameworkCli } from "frameworks/index";
+import { quoteShellArgs } from "../common";
+import { getLatestPackageVersion } from "./latestPackageVersion";
 import { detectPackageManager } from "./packages";
-import * as shellquote from "./shell-quote";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 /**
- * Command can be either:
- *    - a string, like `git commit -m "Changes"`
- *    - a string array, like ['git', 'commit', '-m', '"Initial commit"']
- *
- * The string version is a convenience but is unsafe if your args contain spaces
+ * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
  */
-type Command = string | string[];
+type Command = string[];
 
 type RunOptions = {
 	startText?: string;
@@ -47,13 +45,9 @@ export const runCommand = async (
 	command: Command,
 	opts: RunOptions = {}
 ): Promise<string> => {
-	if (typeof command === "string") {
-		command = shellquote.parse(command);
-	}
-
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText || shellquote.quote(command),
+		startText: opts.startText || quoteShellArgs(command),
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
@@ -80,7 +74,7 @@ export const runCommand = async (
 				});
 			}
 
-			return new Promise<string>((resolve, reject) => {
+			return new Promise<string>((resolvePromise, reject) => {
 				cmd.on("close", (code) => {
 					try {
 						if (code !== 0) {
@@ -93,13 +87,13 @@ export const runCommand = async (
 						const processedOutput = transformOutput(stripAnsi(output));
 
 						// Send the captured (and processed) output back to the caller
-						resolve(processedOutput);
+						resolvePromise(processedOutput);
 					} catch (e) {
 						// Something went wrong.
 						// Perhaps the command or the transform failed.
 						// If there is a fallback use the result of calling that
 						if (opts.fallbackOutput) {
-							resolve(opts.fallbackOutput(e));
+							resolvePromise(opts.fallbackOutput(e));
 						} else {
 							reject(new Error(output, { cause: e }));
 						}
@@ -185,26 +179,34 @@ export const retry = async <T>(
 	throw error;
 };
 
-// Prints the section header & footer while running the `cmd`
-export const runFrameworkGenerator = async (
-	ctx: PagesGeneratorContext,
-	cmd: string
-) => {
-	if (ctx.framework?.args?.length) {
-		cmd = `${cmd} ${shellquote.quote(ctx.framework.args)}`;
+export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
+	const cli = getFrameworkCli(ctx, true);
+	const { npm, dlx } = detectPackageManager();
+	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
+	// So to retain the ability to lock versions we run it with `npx` and spoof
+	// the user agent so scaffolding tools treat the invocation like yarn
+	const cmd = [...(npm === "yarn" ? ["npx"] : dlx), cli, ...args];
+	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
+
+	if (ctx.args.additionalArgs?.length) {
+		cmd.push(...ctx.args.additionalArgs);
 	}
 
-	endSection(
-		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${cmd.trim()}\``
+	updateStatus(
+		`Continue with ${ctx.template.displayName} ${dim(
+			`via \`${quoteShellArgs(cmd)}\``
+		)}`
 	);
 
+	// newline
+	logRaw("");
+
 	if (process.env.VITEST) {
-		const flags = ctx.framework?.config.testFlags ?? [];
-		cmd = `${cmd} ${shellquote.quote(flags)}`;
+		const flags = ctx.template.testFlags ?? [];
+		cmd.push(...flags);
 	}
 
-	await runCommand(cmd);
+	await runCommand(cmd, { env });
 };
 
 type InstallConfig = {
@@ -238,38 +240,70 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand(`${npm} ${cmd} ${saveFlag} ${shellquote.quote(packages)}`, {
+	await runCommand([npm, cmd, saveFlag, ...packages], {
 		...config,
 		silent: true,
 	});
 };
 
-export const npmInstall = async () => {
+/**
+ * If a mismatch is detected between the package manager being used and the lockfiles on disk,
+ * reset the state by deleting the lockfile and dependencies then re-installing with the package
+ * manager used by the calling process.
+ *
+ * This is needed since some scaffolding tools don't detect and use the pm of the calling process,
+ * and instead always use `npm`. With a project in this state, installing additional dependencies
+ * with `pnpm` or `yarn` can result in install errors.
+ *
+ */
+export const rectifyPmMismatch = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 
-	await runCommand(`${npm} install`, {
+	if (!detectPmMismatch(ctx)) {
+		return;
+	}
+
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
+
+	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
+	if (existsSync(lockfilePath)) rmSync(lockfilePath);
+
+	await runCommand([npm, "install"], {
 		silent: true,
+		cwd: ctx.project.path,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
 };
 
-// Resets the package manager context for a project by clearing out existing dependencies
-// and lock files then re-installing.
-export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+const detectPmMismatch = (ctx: C3Context) => {
+	const { npm } = detectPackageManager();
+	const projectPath = ctx.project.path;
+
+	switch (npm) {
+		case "npm":
+			return false;
+		case "yarn":
+			return !existsSync(path.join(projectPath, "yarn.lock"));
+		case "pnpm":
+			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
+		case "bun":
+			return !existsSync(path.join(projectPath, "bun.lockb"));
+	}
+};
+
+export const npmInstall = async (ctx: C3Context) => {
+	// Skip this step if packages have already been installed
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	if (existsSync(nodeModulesPath)) {
+		return;
+	}
+
 	const { npm } = detectPackageManager();
 
-	// Only do this when using pnpm or yarn
-	if (npm === "npm") return;
-
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	rmSync(nodeModulesPath, { recursive: true });
-	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
-	rmSync(lockfilePath);
-
-	await runCommand(`${npm} install`, {
+	await runCommand([npm, "install"], {
 		silent: true,
-		cwd: ctx.project.path,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
@@ -297,7 +331,7 @@ export const installWrangler = async () => {
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();
 	try {
-		const output = await runCommand(`${npx} wrangler whoami`, {
+		const output = await runCommand([npx, "wrangler", "whoami"], {
 			silent: true,
 		});
 		return /You are logged in/.test(output);
@@ -319,7 +353,7 @@ export const wranglerLogin = async () => {
 
 	// We're using a custom spinner since this is a little complicated.
 	// We want to vary the done status based on the output
-	const output = await runCommand(`${npx} wrangler login`, {
+	const output = await runCommand([npx, "wrangler", "login"], {
 		silent: true,
 	});
 	const success = /Successfully logged in/.test(output);
@@ -333,7 +367,7 @@ export const wranglerLogin = async () => {
 export const listAccounts = async () => {
 	const { npx } = detectPackageManager();
 
-	const output = await runCommand(`${npx} wrangler whoami`, {
+	const output = await runCommand([npx, "wrangler", "whoami"], {
 		silent: true,
 	});
 
@@ -360,21 +394,34 @@ export const listAccounts = async () => {
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
 export async function getWorkerdCompatibilityDate() {
-	const { npm } = detectPackageManager();
-	return runCommand(`${npm} info workerd dist-tags.latest`, {
-		silent: true,
-		captureOutput: true,
+	const { compatDate: workerdCompatibilityDate } = await printAsyncStatus<{
+		compatDate: string;
+		isFallback: boolean;
+	}>({
+		useSpinner: true,
 		startText: "Retrieving current workerd compatibility date",
-		transformOutput: (result) => {
-			// The format of the workerd version is `major.yyyymmdd.patch`.
-			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
-			if (!match) {
-				throw new Error("Could not find workerd date");
-			}
-			const [, year, month, date] = match;
-			return `${year}-${month}-${date}`;
+		doneText: ({ compatDate, isFallback }) =>
+			`${brandColor("compatibility date")}${
+				isFallback ? dim(" Could not find workerd date, falling back to") : ""
+			} ${dim(compatDate)}`,
+		async promise() {
+			try {
+				const latestWorkerdVersion = await getLatestPackageVersion("workerd");
+
+				// The format of the workerd version is `major.yyyymmdd.patch`.
+				const match = latestWorkerdVersion.match(
+					/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/
+				);
+
+				if (match) {
+					const [, year, month, date] = match ?? [];
+					return { compatDate: `${year}-${month}-${date}`, isFallback: false };
+				}
+			} catch {}
+
+			return { compatDate: "2023-05-18", isFallback: true };
 		},
-		fallbackOutput: () => "2023-05-18",
-		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,
 	});
+
+	return workerdCompatibilityDate;
 }

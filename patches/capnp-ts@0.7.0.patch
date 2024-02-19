@@ -1,0 +1,81 @@
+diff --git a/src/serialization/arena/index.d.ts b/src/serialization/arena/index.d.ts
+index 86f6210387fc832609209f992a1db951cc488fcc..19d9d1c3a22a0a70ef015485d9f9726a43a8d4c5 100644
+--- a/src/serialization/arena/index.d.ts
++++ b/src/serialization/arena/index.d.ts
+@@ -1,7 +1,7 @@
+ /**
+  * @author jdiaz5513
+  */
+-export { AnyArena } from "./any-arena";
++export type { AnyArena } from "./any-arena";
+ export { Arena } from "./arena";
+ export { ArenaKind } from "./arena-kind";
+ export { MultiSegmentArena } from "./multi-segment-arena";
+diff --git a/src/serialization/arena/index.ts b/src/serialization/arena/index.ts
+index 5128c6ed5bb0ba309e4e0462a540b0dde957010e..f2407b9d5d05e33250653c239950521c4f8e5f25 100644
+--- a/src/serialization/arena/index.ts
++++ b/src/serialization/arena/index.ts
+@@ -2,7 +2,7 @@
+  * @author jdiaz5513
+  */
+ 
+-export { AnyArena } from "./any-arena";
++export type { AnyArena } from "./any-arena";
+ export { Arena } from "./arena";
+ export { ArenaKind } from "./arena-kind";
+ export { MultiSegmentArena } from "./multi-segment-arena";
+diff --git a/src/serialization/pointers/index.d.ts b/src/serialization/pointers/index.d.ts
+index dc013aa2766afaaa36a46107c27c531b02abd744..2835a013c529344833ef92f597bddbf8d19e711e 100644
+--- a/src/serialization/pointers/index.d.ts
++++ b/src/serialization/pointers/index.d.ts
+@@ -14,12 +14,14 @@ export { Int32List } from "./int32-list";
+ export { Int64List } from "./int64-list";
+ export { Interface } from "./interface";
+ export { InterfaceList } from "./interface-list";
+-export { List, ListCtor } from "./list";
++export { List } from "./list";
++export type { ListCtor } from "./list";
+ export { Orphan } from "./orphan";
+ export { PointerList } from "./pointer-list";
+ export { PointerType } from "./pointer-type";
+ export { Pointer } from "./pointer";
+-export { _StructCtor, Struct, StructCtor } from "./struct";
++export { Struct } from "./struct";
++export type { _StructCtor, StructCtor } from "./struct";
+ export { Text } from "./text";
+ export { TextList } from "./text-list";
+ export { Uint8List } from "./uint8-list";
+diff --git a/src/serialization/pointers/index.ts b/src/serialization/pointers/index.ts
+index 5a94ada76b013c4d23b2a6edfb966d93bceed6fd..4e2f49d15c3b7ee6a8f551e8867353d311c92424 100644
+--- a/src/serialization/pointers/index.ts
++++ b/src/serialization/pointers/index.ts
+@@ -15,12 +15,14 @@ export { Int32List } from "./int32-list";
+ export { Int64List } from "./int64-list";
+ export { Interface } from "./interface";
+ export { InterfaceList } from "./interface-list";
+-export { List, ListCtor } from "./list";
++export { List } from "./list";
++export type { ListCtor } from "./list";
+ export { Orphan } from "./orphan";
+ export { PointerList } from "./pointer-list";
+ export { PointerType } from "./pointer-type";
+ export { Pointer } from "./pointer";
+-export { _StructCtor, Struct, StructCtor } from "./struct";
++export { Struct } from "./struct";
++export type { _StructCtor, StructCtor } from "./struct";
+ export { Text } from "./text";
+ export { TextList } from "./text-list";
+ export { Uint8List } from "./uint8-list";
+diff --git a/src/serialization/pointers/struct.ts b/src/serialization/pointers/struct.ts
+index 30b3fc0d2b855e569e1b5d522fe7f76bde82050f..c7464310742cb5ef5bd6ef0df496a099839cb4a9 100644
+--- a/src/serialization/pointers/struct.ts
++++ b/src/serialization/pointers/struct.ts
+@@ -107,8 +107,6 @@ export class Struct extends Pointer {
+   static readonly setText = setText;
+   static readonly testWhich = testWhich;
+ 
+-  readonly _capnp!: _Struct;
+-
+   /**
+    * Create a new pointer to a struct.
+    *

@@ -1,6 +1,5 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
@@ -10,7 +9,9 @@ import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
+import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import {
@@ -25,7 +26,7 @@ import {
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, realTmpdir } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
 import type {
@@ -98,7 +99,14 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			ip: {
 				type: "string",
-				default: "0.0.0.0",
+				// On Windows, when specifying `localhost` as the socket hostname,
+				// `workerd` will only listen on the IPv4 loopback `127.0.0.1`, not the
+				// IPv6 `::1`: https://github.com/cloudflare/workerd/issues/1408
+				// On Node 17+, `fetch()` will only try to fetch the IPv6 address.
+				// For now, on Windows, we default to listening on IPv4 only and using
+				// `127.0.0.1` when sending control requests to `workerd` (e.g. with the
+				// `ProxyController`).
+				default: process.platform === "win32" ? "127.0.0.1" : "localhost",
 				description: "The IP address to listen on",
 			},
 			port: {
@@ -154,6 +162,10 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "array",
 				description: "R2 bucket to bind (--r2 R2_BINDING)",
 			},
+			ai: {
+				type: "string",
+				description: "AI to bind (--ai AI_BINDING)",
+			},
 			service: {
 				type: "array",
 				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
@@ -167,6 +179,16 @@ export function Options(yargs: CommonYargsArgv) {
 			"local-protocol": {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
+			},
+			"https-key-path": {
+				describe: "Path to a custom certificate key",
+				type: "string",
+				requiresArg: true,
+			},
+			"https-cert-path": {
+				describe: "Path to a custom certificate",
+				type: "string",
+				requiresArg: true,
 			},
 			"persist-to": {
 				describe:
@@ -214,9 +236,12 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
+	ai,
 	service: requestedServices = [],
 	liveReload,
 	localProtocol,
+	httpsKeyPath,
+	httpsCertPath,
 	persistTo,
 	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
@@ -278,7 +303,7 @@ export const Handler = async ({
 	const workerScriptPath =
 		directory !== undefined
 			? join(directory, singleWorkerScriptPath)
-			: singleWorkerScriptPath;
+			: resolve(singleWorkerScriptPath);
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
@@ -292,6 +317,10 @@ export const Handler = async ({
 	let scriptPath = "";
 
 	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		compatibilityDate,
+		compatibilityFlags
+	);
 	let modules: CfModule[] = [];
 
 	if (usingWorkerDirectory) {
@@ -300,6 +329,7 @@ export const Handler = async ({
 				workerJSDirectory: workerScriptPath,
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 			modules = bundleResult.modules;
 			scriptPath = bundleResult.resolvedEntryPointPath;
@@ -331,7 +361,10 @@ export const Handler = async ({
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
 			// change the `runBuild()` function to bundle the `_worker.js`.
-			scriptPath = join(realTmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			scriptPath = join(
+				getPagesTmpDir(),
+				`./bundledWorker-${Math.random()}.mjs`
+			);
 			runBuild = async () => {
 				try {
 					await buildRawWorker({
@@ -345,6 +378,7 @@ export const Handler = async ({
 						sourcemap: true,
 						watch: false,
 						onEnd: () => scriptReadyResolve(),
+						defineNavigatorUserAgent,
 					});
 				} catch (e: unknown) {
 					logger.warn("Failed to bundle _worker.js.", e);
@@ -356,12 +390,22 @@ export const Handler = async ({
 		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
-		}).on("all", async () => {
+		}).on("all", async (event) => {
+			if (event === "unlink") {
+				return;
+			}
 			await runBuild();
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		scriptPath = join(realTmpdir(), `./functionsWorker-${Math.random()}.mjs`);
+		scriptPath = join(
+			getPagesTmpDir(),
+			`./functionsWorker-${Math.random()}.mjs`
+		);
+		const routesModule = join(
+			getPagesTmpDir(),
+			`./functionsRoutes-${Math.random()}.mjs`
+		);
 
 		if (legacyNodeCompat) {
 			console.warn(
@@ -390,6 +434,8 @@ export const Handler = async ({
 					legacyNodeCompat,
 					nodejsCompat,
 					local: true,
+					routesModule,
+					defineNavigatorUserAgent,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};
@@ -447,9 +493,8 @@ export const Handler = async ({
 	if (scriptPath === "") {
 		// Failed to get a script with or without Functions,
 		// something really bad must have happened.
-		throw new FatalError(
-			"Failed to start wrangler pages dev due to an unknown error",
-			1
+		throw new Error(
+			"Failed to start wrangler pages dev due to an unknown error"
 		);
 	}
 
@@ -499,7 +544,7 @@ export const Handler = async ({
 				validateRoutes(JSON.parse(routesJSONContents), directory);
 
 				entrypoint = join(
-					realTmpdir(),
+					getPagesTmpDir(),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
 				await runBuild(scriptPath, entrypoint, routesJSONContents);
@@ -517,8 +562,11 @@ export const Handler = async ({
 			watch([routesJSONPath], {
 				persistent: true,
 				ignoreInitial: true,
-			}).on("all", async () => {
+			}).on("all", async (event) => {
 				try {
+					if (event === "unlink") {
+						return;
+					}
 					/**
 					 * Watch for _routes.json file changes and validate file each time.
 					 * If file is valid proceed to running the build.
@@ -599,6 +647,8 @@ export const Handler = async ({
 		port,
 		inspectorPort,
 		localProtocol,
+		httpsKeyPath,
+		httpsCertPath,
 		compatibilityDate,
 		compatibilityFlags,
 		nodeCompat: legacyNodeCompat,
@@ -658,6 +708,7 @@ export const Handler = async ({
 				return { binding, bucket_name: ref || binding.toString() };
 			})
 			.filter(Boolean) as AdditionalDevProps["r2"],
+		ai: ai ? { binding: ai.toString() } : undefined,
 		rules: usingWorkerDirectory
 			? [
 					{
@@ -670,6 +721,7 @@ export const Handler = async ({
 		persistTo,
 		inspect: undefined,
 		logLevel,
+		updateCheck: true,
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
@@ -754,8 +806,7 @@ function getPort(pid: number) {
 	let command: string, regExp: RegExp;
 
 	if (isWindows()) {
-		const drive = homedir().split(":\\")[0];
-		command = drive + ":\\windows\\system32\\netstat.exe -nao";
+		command = process.env.SYSTEMROOT + "\\system32\\netstat.exe -nao";
 		regExp = new RegExp(`TCP\\s+.*:(\\d+)\\s+.*:\\d+\\s+LISTENING\\s+${pid}`);
 	} else {
 		command = "lsof -nPi";
@@ -797,7 +848,7 @@ async function spawnProxyProcess({
 		);
 	}
 
-	logger.log(`Running ${command.join(" ")}...`);
+	logger.log(`Running ${shellquote.quote(command)}...`);
 	const proxy = spawn(
 		command[0].toString(),
 		command.slice(1).map((value) => value.toString()),

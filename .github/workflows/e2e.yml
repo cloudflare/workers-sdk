@@ -3,7 +3,6 @@ name: E2E tests
 on:
   push:
     branches:
-      - main
       - changeset-release/main
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
@@ -11,21 +10,17 @@ on:
 
 jobs:
   e2e-test:
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
+      cancel-in-progress: true
+    timeout-minutes: 15
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )))
     name: "E2E Test"
     strategy:
       fail-fast: false
       matrix:
-        os: [
-            # macos-11,
-            # macos-12,
-            macos-13,
-            windows-2019,
-            windows-2022,
-            # ubuntu-20.04,
-            ubuntu-22.04,
-          ]
-        node: ["16", "18"]
+        os: [macos-13, windows-2022, ubuntu-22.04]
+        node: ["18"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -55,8 +50,19 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
-      - name: Build Wrangler package for npm
+      - name: Pack Miniflare
+        run: pnpm pack --pack-destination $HOME
+        env:
+          NODE_ENV: "production"
+        working-directory: packages/miniflare
+
+      - name: Modify wrangler package.json miniflare dependency
+        run: pnpm add $(ls $HOME/miniflare-*.tgz)
+        working-directory: packages/wrangler
+
+      - name: Pack Wrangler
         run: pnpm pack --pack-destination $HOME
         env:
           NODE_ENV: "production"
@@ -66,24 +72,32 @@ jobs:
         shell: bash
         id: "find-wrangler"
         run: echo "dir=$(ls $HOME/wrangler-*.tgz)" >> $GITHUB_OUTPUT;
-        env:
-          NODE_ENV: "production"
 
-      - name: Run tests
-        id: e2e-1
-        continue-on-error: true
+      - name: Run tests (unix)
+        if: matrix.os == 'macos-13' || matrix.os == 'ubuntu-22.04'
+        run: |
+          pnpm add ${{ steps.find-wrangler.outputs.dir}} --global
+          pnpm run --filter wrangler test:e2e
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER: wrangler
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+
+      - name: Run tests (windows)
+        if: matrix.os == 'windows-2022'
         run: pnpm run --filter wrangler test:e2e
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
           NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
 
-      - name: Retry tests
-        if: steps.e2e-1.outcome == 'failure'
-        run: pnpm run --filter wrangler test:e2e
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
-          NODE_OPTIONS: "--max_old_space_size=8192"
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/wrangler-debug-logs/

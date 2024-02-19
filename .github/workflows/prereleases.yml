@@ -6,6 +6,10 @@ on:
       - main
 jobs:
   prerelease:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish a beta release to NPM
     runs-on: ubuntu-latest
@@ -18,10 +22,10 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8.8.0
-      - name: Use Node.js 16.14
+      - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
-          node-version: 16.14
+          node-version: 16.18
           cache: "pnpm"
 
       - name: "Create .env file"
@@ -49,6 +53,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check
@@ -62,6 +67,7 @@ jobs:
           # this is the "test/staging" key for sparrow analytics
           SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
         working-directory: packages/wrangler
 
@@ -70,6 +76,7 @@ jobs:
         working-directory: packages/wrangler
 
   publish_prerelease_registry:
+    timeout-minutes: 30
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Publish Prerelease Registry
     needs: prerelease
@@ -83,10 +90,10 @@ jobs:
       - uses: pnpm/action-setup@v2
         with:
           version: 8.8.0
-      - name: Use Node.js 16.14
+      - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
-          node-version: 16.14
+          node-version: 16.18
           cache: "pnpm"
 
       - name: Install workerd Dependencies
@@ -105,6 +112,8 @@ jobs:
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
+          CI_OS: ${{ runner.os }}
 
       - name: Build & Publish Prerelease Registry
         run: pnpm run publish

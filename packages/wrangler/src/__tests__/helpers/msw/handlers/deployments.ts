@@ -1,8 +1,8 @@
 import { rest } from "msw";
 import { createFetchResult } from "../index";
 
-const latestDeployment = {
-	id: "Galaxy-Class",
+const latestDeployment = (scriptTag: string) => ({
+	id: `Galaxy-Class-${scriptTag}`,
 	number: "1701-E",
 	annotations: {
 		"workers/triggered_by": "rollback",
@@ -16,21 +16,22 @@ const latestDeployment = {
 		modified_on: "2021-01-04T00:00:00.000000Z",
 	},
 	resources: {
-		script: "MOCK-TAG",
+		script: scriptTag,
 		bindings: [],
 	},
-};
+});
 export const mswSuccessDeployments = [
 	rest.get(
 		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-		(_, response, context) =>
-			response.once(
+		(request, response, context) => {
+			const scriptTag = String(request.params["scriptTag"]);
+			return response.once(
 				context.json(
 					createFetchResult({
-						latest: latestDeployment,
+						latest: latestDeployment(scriptTag),
 						items: [
 							{
-								id: "Constitution-Class",
+								id: `Constitution-Class-${scriptTag}`,
 								number: "1701-E",
 								annotations: {
 									"workers/triggered_by": "upload",
@@ -44,7 +45,7 @@ export const mswSuccessDeployments = [
 								},
 							},
 							{
-								id: "Intrepid-Class",
+								id: `Intrepid-Class-${scriptTag}`,
 								number: "NCC-74656",
 								annotations: {
 									"workers/triggered_by": "rollback",
@@ -60,7 +61,7 @@ export const mswSuccessDeployments = [
 								},
 							},
 							{
-								id: "3mEgaU1T-Intrepid-someThing",
+								id: `3mEgaU1T-Intrepid-someThing-${scriptTag}`,
 								number: "NCC-74656",
 								metadata: {
 									author_id: "Kathryn-Jane-Gamma-6-0-7-3",
@@ -70,23 +71,25 @@ export const mswSuccessDeployments = [
 									modified_on: "2021-02-03T00:00:00.000000Z",
 								},
 							},
-							latestDeployment,
+							latestDeployment(scriptTag),
 						],
 					})
 				)
-			)
+			);
+		}
 	),
 ];
 
 export const mswSuccessDeploymentScriptMetadata = [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName",
-		(_, res, ctx) => {
+		(req, res, ctx) => {
+			const tag = `tag:${req.params["scriptName"]}`;
 			return res.once(
 				ctx.json(
 					createFetchResult({
 						default_environment: {
-							script: { last_deployed_from: "wrangler", tag: "MOCK-TAG" },
+							script: { last_deployed_from: "wrangler", tag },
 						},
 					})
 				)
@@ -98,12 +101,13 @@ export const mswSuccessDeploymentScriptMetadata = [
 export const mswSuccessDeploymentScriptAPI = [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName",
-		(_, res, ctx) => {
+		(req, res, ctx) => {
+			const tag = `tag:${req.params["scriptName"]}`;
 			return res.once(
 				ctx.json(
 					createFetchResult({
 						default_environment: {
-							script: { last_deployed_from: "api", tag: "MOCK-TAG" },
+							script: { last_deployed_from: "api", tag },
 						},
 					})
 				)

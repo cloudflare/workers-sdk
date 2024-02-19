@@ -64,7 +64,8 @@ export type EventNames =
 	| "run pages dev"
 	| "view docs"
 	| "view deployments"
-	| "rollback deployments";
+	| "rollback deployments"
+	| "upload worker version";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

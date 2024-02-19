@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import prompts from "prompts";
+import { UserError } from "./errors";
 import { CI } from "./is-ci";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -9,7 +10,7 @@ function isNonInteractiveOrCI(): boolean {
 	return !isInteractive() || CI.isCI();
 }
 
-export class NoDefaultValueProvided extends Error {
+export class NoDefaultValueProvided extends UserError {
 	constructor() {
 		// This is user-facing, so make the message something understandable
 		// It _should_ always be caught and replaced with a more descriptive error
@@ -21,20 +22,21 @@ export class NoDefaultValueProvided extends Error {
 
 interface ConfirmOptions {
 	defaultValue?: boolean;
+	fallbackValue?: boolean;
 }
 
 export async function confirm(
 	text: string,
-	{ defaultValue = true }: ConfirmOptions = {}
+	{ defaultValue = true, fallbackValue = true }: ConfirmOptions = {}
 ): Promise<boolean> {
 	if (isNonInteractiveOrCI()) {
 		logger.log(`? ${text}`);
 		logger.log(
 			`🤖 ${chalk.dim(
-				"Using default value in non-interactive context:"
-			)} ${chalk.white.bold(defaultValue ? "yes" : "no")}`
+				"Using fallback value in non-interactive context:"
+			)} ${chalk.white.bold(fallbackValue ? "yes" : "no")}`
 		);
-		return defaultValue;
+		return fallbackValue;
 	}
 	const { value } = await prompts({
 		type: "confirm",

@@ -20,8 +20,6 @@ describe("constellation help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler constellation
 
-		🤖 Interact with Constellation models
-
 		Commands:
 		  wrangler constellation project  Manage your projects
 		  wrangler constellation model    Manage your models
@@ -50,8 +48,6 @@ describe("constellation help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"
 		wrangler constellation
-
-		🤖 Interact with Constellation models
 
 		Commands:
 		  wrangler constellation project  Manage your projects

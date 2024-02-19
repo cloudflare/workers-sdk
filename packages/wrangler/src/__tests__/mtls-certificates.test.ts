@@ -1,12 +1,12 @@
 import { writeFileSync } from "fs";
 import { rest } from "msw";
 import {
-	uploadMTlsCertificateFromFs,
-	uploadMTlsCertificate,
-	listMTlsCertificates,
 	deleteMTlsCertificate,
 	getMTlsCertificate,
 	getMTlsCertificateByName,
+	listMTlsCertificates,
+	uploadMTlsCertificate,
+	uploadMTlsCertificateFromFs,
 } from "../api";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -511,10 +511,7 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					).rejects.toMatchInlineSnapshot(
 						`[Error: certificate not found with name "my-cert"]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-				"
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-			`);
+					expect(std.out).toMatchInlineSnapshot(`""`);
 				});
 
 				it("should not delete when many certificates are found by name", async () => {
@@ -542,10 +539,7 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					).rejects.toMatchInlineSnapshot(
 						`[Error: multiple certificates found with name "my-cert"]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-				"
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-			`);
+					expect(std.out).toMatchInlineSnapshot(`""`);
 				});
 
 				it("should not delete when confirmation fails", async () => {

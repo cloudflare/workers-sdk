@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { fetchResult } from "./cfetch";
 import { confirm, prompt } from "./dialogs";
+import { UserError } from "./errors";
 import { logger } from "./logger";
 
 export async function getWorkersDevSubdomain(
@@ -30,7 +31,7 @@ export async function getWorkersDevSubdomain(
 					"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-				throw new Error(`${solutionMessage}\n${onboardingLink}`);
+				throw new UserError(`${solutionMessage}\n${onboardingLink}`);
 			}
 
 			return await registerSubdomain(accountId);
@@ -93,7 +94,7 @@ async function registerSubdomain(accountId: string): Promise<string> {
 				"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
 			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
-			throw new Error(`${solutionMessage}\n${onboardingLink}`);
+			throw new UserError(`${solutionMessage}\n${onboardingLink}`);
 		}
 
 		try {

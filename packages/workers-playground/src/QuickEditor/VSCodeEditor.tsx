@@ -1,6 +1,8 @@
-import { useContext, useEffect, useRef, useState } from "react";
 import { Loading } from "@cloudflare/component-loading";
-
+import { Div } from "@cloudflare/elements";
+import { isDarkMode } from "@cloudflare/style-const";
+import { useContext, useEffect, useRef, useState } from "react";
+import Frame from "./Frame";
 import {
 	Channel,
 	FromQuickEditMessage,
@@ -8,11 +10,8 @@ import {
 	WorkerLoadedMessage,
 	WrappedChannel,
 } from "./ipc";
-import Frame from "./Frame";
-import { Div } from "@cloudflare/elements";
-import { TypedModule } from "./useDraftWorker";
-import { isDarkMode } from "@cloudflare/style-const";
 import { DragContext } from "./SplitPane";
+import { TypedModule } from "./useDraftWorker";
 
 function stripSlashPrefix(path: string) {
 	return path[0] === "/" ? path.slice(1) : path;

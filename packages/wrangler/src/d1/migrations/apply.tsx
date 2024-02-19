@@ -4,8 +4,10 @@ import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
+import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
+import { UserError } from "../../errors";
 import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
@@ -13,9 +15,9 @@ import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
 import {
+	DEFAULT_BATCH_SIZE,
 	DEFAULT_MIGRATION_PATH,
 	DEFAULT_MIGRATION_TABLE,
-	DEFAULT_BATCH_SIZE,
 } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig, getDatabaseInfoFromId } from "../utils";
@@ -50,9 +52,10 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		preview,
 		batchSize,
 	}): Promise<void> => {
+		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
-			throw new Error(
+			throw new UserError(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}
@@ -219,7 +222,7 @@ Your database may not be available to serve requests during the migration, conti
 			);
 
 			if (errorNotes.length > 0) {
-				throw new Error(
+				throw new UserError(
 					errorNotes
 						.map((err) => {
 							return err;

@@ -1,12 +1,12 @@
 import {
-	MAX_LINE_LENGTH,
 	MAX_DYNAMIC_REDIRECT_RULES,
+	MAX_LINE_LENGTH,
 	MAX_STATIC_REDIRECT_RULES,
 	PERMITTED_STATUS_CODES,
-	SPLAT_REGEX,
 	PLACEHOLDER_REGEX,
+	SPLAT_REGEX,
 } from "./constants";
-import { validateUrl, urlHasHost } from "./validateURL";
+import { urlHasHost, validateUrl } from "./validateURL";
 import type {
 	InvalidRedirectRule,
 	ParsedRedirects,

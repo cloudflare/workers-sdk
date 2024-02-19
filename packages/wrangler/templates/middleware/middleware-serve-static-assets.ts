@@ -1,18 +1,18 @@
 /// <reference path="middleware-serve-static-assets.d.ts"/>
 
+import manifest from "__STATIC_CONTENT_MANIFEST";
 import {
 	getAssetFromKV,
-	NotFoundError,
 	MethodNotAllowedError,
+	NotFoundError,
 	serveSinglePageApp,
 } from "@cloudflare/kv-asset-handler";
-import type { Options } from "@cloudflare/kv-asset-handler";
-import { spaMode, cacheControl } from "config:middleware/serve-static-assets";
-import type * as kvAssetHandler from "@cloudflare/kv-asset-handler";
-import manifest from "__STATIC_CONTENT_MANIFEST";
-const ASSET_MANIFEST = JSON.parse(manifest);
-
+import { cacheControl, spaMode } from "config:middleware/serve-static-assets";
 import type { Middleware } from "./common";
+import type { Options } from "@cloudflare/kv-asset-handler";
+import type * as kvAssetHandler from "@cloudflare/kv-asset-handler";
+
+const ASSET_MANIFEST = JSON.parse(manifest);
 
 const staticAssets: Middleware = async (request, env, _ctx, middlewareCtx) => {
 	let options: Partial<Options> = {

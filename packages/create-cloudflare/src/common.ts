@@ -1,21 +1,21 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, relative, resolve } from "path";
 import { chdir } from "process";
-import { getFrameworkCli } from "frameworks/index";
-import { processArgument } from "helpers/args";
 import {
-	C3_DEFAULTS,
 	crash,
 	endSection,
 	log,
 	logRaw,
 	newline,
-	openInBrowser,
 	shapes,
 	startSection,
 	updateStatus,
-} from "helpers/cli";
-import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
+} from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
+import { bgGreen, blue, brandColor, dim, gray } from "@cloudflare/cli/colors";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { getFrameworkCli } from "frameworks/index";
+import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import {
 	listAccounts,
 	printAsyncStatus,
@@ -23,13 +23,12 @@ import {
 	runCommands,
 	wranglerLogin,
 } from "helpers/command";
-import { inputPrompt, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
-import * as shellquote from "./helpers/shell-quote";
-import type { C3Args, PagesGeneratorContext } from "types";
+import { readWranglerToml } from "./workers";
+import type { C3Args, C3Context } from "types";
 
 const { name, npm } = detectPackageManager();
 
@@ -40,10 +39,13 @@ export const validateProjectDirectory = (
 	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);
 	const existsAlready = existsSync(path);
-	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
 
-	if (existsAlready && !isEmpty) {
-		return `Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`;
+	if (existsAlready) {
+		for (const file of readdirSync(path)) {
+			if (!isAllowedExistingFile(file)) {
+				return `Directory \`${relativePath}\` already exists and contains files that might conflict. Please choose a new name.`;
+			}
+		}
 	}
 
 	// Ensure the name is valid per the pages schema
@@ -68,6 +70,51 @@ export const validateProjectDirectory = (
 	}
 };
 
+export const isAllowedExistingFile = (file: string) => {
+	// C3 shouldn't prevent a user from using an existing directory if it
+	// only contains benign config and/or other files from the following set
+	const allowedExistingFiles = new Set([
+		".DS_Store",
+		".git",
+		".gitattributes",
+		".gitignore",
+		".gitlab-ci.yml",
+		".hg",
+		".hgcheck",
+		".hgignore",
+		".idea",
+		".npmignore",
+		".travis.yml",
+		".vscode",
+		"Thumbs.db",
+		"docs",
+		"mkdocs.yml",
+		"npm-debug.log",
+		"yarn-debug.log",
+		"yarn-error.log",
+		"yarnrc.yml",
+		".yarn",
+		".gitkeep",
+	]);
+
+	if (allowedExistingFiles.has(file)) return true;
+
+	const allowedExistingPatters = [
+		/readme(\.md)?$/i,
+		/license(\.md)?$/i,
+		/\.iml$/,
+		/^npm-debug\.log/,
+		/^yarn-debug\.log/,
+		/^yarn-error\.log/,
+	];
+
+	for (const regex of allowedExistingPatters) {
+		if (regex.test(file)) return true;
+	}
+
+	return false;
+};
+
 export const setupProjectDirectory = (args: C3Args) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
@@ -88,53 +135,85 @@ export const setupProjectDirectory = (args: C3Args) => {
 	return { name: pathBasename, path };
 };
 
-export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
+export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	const label = `deploy via \`${npm} run ${
-		ctx.framework?.config.deployCommand ?? "deploy"
-	}\``;
+	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
+	if (!(await isDeployable(ctx))) {
+		ctx.args.deploy = false;
+		updateStatus(
+			`Bindings must be configured in ${blue(
+				"`wrangler.toml`"
+			)} before your application can be deployed`
+		);
+	}
 
-	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
+	const label = `deploy via \`${quoteShellArgs([
+		npm,
+		"run",
+		ctx.template.deployScript ?? "deploy",
+	])}\``;
+
+	const shouldDeploy = await processArgument(ctx.args, "deploy", {
 		type: "confirm",
 		question: "Do you want to deploy your application?",
 		label,
 		defaultValue: C3_DEFAULTS.deploy,
 	});
 
-	if (!ctx.args.deploy) return;
+	if (!shouldDeploy) {
+		return false;
+	}
+
+	// initialize a deployment object in context
+	ctx.deployment = {};
 
 	const loginSuccess = await wranglerLogin();
-	if (!loginSuccess) return;
+	if (!loginSuccess) return false;
 
 	await chooseAccount(ctx);
+
+	return true;
 };
 
-export const runDeploy = async (ctx: PagesGeneratorContext) => {
-	if (ctx.args.deploy === false) return;
+/**
+ * Determines if the current project is deployable.
+ *
+ * Since C3 doesn't currently support a way to automatically provision the resources needed
+ * by bindings, templates that have placeholder bindings will need some adjustment by the project author
+ * before they can be deployed.
+ */
+const isDeployable = async (ctx: C3Context) => {
+	if (ctx.template.platform === "pages") {
+		return true;
+	}
+
+	const wranglerToml = await readWranglerToml(ctx);
+	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
+		return false;
+	}
+
+	return true;
+};
+
+export const runDeploy = async (ctx: C3Context) => {
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
 	}
 
-	const baseDeployCmd = [
-		npm,
-		"run",
-		ctx.framework?.config.deployCommand ?? "deploy",
-	];
+	const baseDeployCmd = [npm, "run", ctx.template.deployScript ?? "deploy"];
 
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
 	const deployCmd = [
 		...baseDeployCmd,
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
-		...(ctx.framework?.commitMessage && !insideGitRepo
+		...(ctx.template.platform === "pages" && ctx.commitMessage && !insideGitRepo
 			? [
 					...(name === "npm" ? ["--"] : []),
-					`--commit-message="${ctx.framework.commitMessage.replaceAll(
-						'"',
-						'\\"'
-					)}"`,
+					"--commit-message",
+					prepareCommitMessage(ctx.commitMessage),
 			  ]
 			: []),
 	];
@@ -145,28 +224,28 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${shellquote.quote(baseDeployCmd)}\``
+			`via \`${quoteShellArgs(baseDeployCmd)}\``
 		)}`,
 	});
 
 	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
 	const deployedUrlMatch = result.match(deployedUrlRegex);
 	if (deployedUrlMatch) {
-		ctx.deployedUrl = deployedUrlMatch[0];
+		ctx.deployment.url = deployedUrlMatch[0];
 	} else {
 		crash("Failed to find deployment url.");
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
-	if (ctx.deployedUrl?.endsWith(".pages.dev")) {
-		const [proto, hostname] = ctx.deployedUrl.split("://");
+	if (ctx.deployment.url?.endsWith(".pages.dev")) {
+		const [proto, hostname] = ctx.deployment.url.split("://");
 		const hostnameWithoutSHA1 = hostname.split(".").slice(-3).join("."); // only keep the last 3 parts (discard the 4th, i.e. the SHA1)
 
-		ctx.deployedUrl = `${proto}://${hostnameWithoutSHA1}`;
+		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
 	}
 };
 
-export const chooseAccount = async (ctx: PagesGeneratorContext) => {
+export const chooseAccount = async (ctx: C3Context) => {
 	const s = spinner();
 	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
 	const accounts = await listAccounts();
@@ -203,48 +282,50 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 	ctx.account = { id: accountId, name: accountName };
 };
 
-export const printSummary = async (ctx: PagesGeneratorContext) => {
+export const printSummary = async (ctx: C3Context) => {
+	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
 	const nextSteps = [
+		dirRelativePath
+			? ["Navigate to the new directory", `cd ${dirRelativePath}`]
+			: [],
 		[
-			`Navigate to the new directory`,
-			`cd ${shellquote.quote([relative(ctx.originalCWD, ctx.project.path)])}`,
+			"Run the development server",
+			quoteShellArgs([npm, "run", ctx.template.devScript ?? "start"]),
+		],
+		...(ctx.template.previewScript
+			? [
+					[
+						"Preview your application",
+						quoteShellArgs([npm, "run", ctx.template.previewScript]),
+					],
+			  ]
+			: []),
+		[
+			"Deploy your application",
+			quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"]),
 		],
 		[
-			`Run the development server`,
-			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
+			"Read the documentation",
+			`https://developers.cloudflare.com/${ctx.template.platform}`,
 		],
-		[
-			`Deploy your application`,
-			`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`,
-		],
-		[
-			`Read the documentation`,
-			`https://developers.cloudflare.com/${
-				ctx.framework
-					? ctx.framework.config.type === "workers"
-						? "workers"
-						: "pages"
-					: "workers"
-			}`,
-		],
-		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
+		["Stuck? Join us at", "https://discord.gg/cloudflaredev"],
 	];
 
-	if (ctx.deployedUrl) {
+	if (ctx.deployment.url) {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" SUCCESS ")}`,
-			`${dim(`View your deployed application at`)}`,
-			`${blue(ctx.deployedUrl)}`,
+			`${dim("View your deployed application at")}`,
+			`${blue(ctx.deployment.url)}`,
 		].join(" ");
 		logRaw(msg);
 	} else {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" APPLICATION CREATED ")}`,
-			`${dim(`Deploy your application with`)}`,
+			`${dim("Deploy your application with")}`,
 			`${blue(
-				`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`
+				quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"])
 			)}`,
 		].join(" ");
 		logRaw(msg);
@@ -256,11 +337,11 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	});
 	newline();
 
-	if (ctx.deployedUrl) {
-		const success = await poll(ctx.deployedUrl);
+	if (ctx.deployment.url) {
+		const success = await poll(ctx.deployment.url);
 		if (success) {
 			if (ctx.args.open) {
-				await openInBrowser(ctx.deployedUrl);
+				await openInBrowser(ctx.deployment.url);
 			}
 		}
 	}
@@ -268,7 +349,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	process.exit(0);
 };
 
-export const offerGit = async (ctx: PagesGeneratorContext) => {
+export const offerGit = async (ctx: C3Context) => {
 	const gitInstalled = await isGitInstalled();
 	if (!gitInstalled) {
 		// haven't prompted yet, if provided as --git arg
@@ -319,11 +400,15 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const gitCommit = async (ctx: PagesGeneratorContext) => {
+export const gitCommit = async (ctx: C3Context) => {
 	// Note: createCommitMessage stores the message in ctx so that it can
 	//       be used later even if we're not in a git repository, that's why
 	//       we unconditionally run this command here
 	const commitMessage = await createCommitMessage(ctx);
+
+	// if a git repo existed before the process started then we don't want to commit
+	// we only commit if the git repo was initialized (directly or not) by c3
+	if (ctx.gitRepoAlreadyExisted) return;
 
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
@@ -331,27 +416,36 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	await runCommands({
 		silent: true,
 		cwd: ctx.project.path,
-		commands: ["git add .", ["git", "commit", "-m", commitMessage]],
+		commands: [
+			["git", "add", "."],
+			["git", "commit", "-m", commitMessage],
+		],
 		startText: "Committing new files",
 		doneText: `${brandColor("git")} ${dim(`commit`)}`,
 	});
 };
 
-const createCommitMessage = async (ctx: PagesGeneratorContext) => {
-	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
+const createCommitMessage = async (ctx: C3Context) => {
+	const isPages = ctx.template.platform === "pages";
 
-	const header = "Initialize web application via create-cloudflare CLI";
+	const header = isPages
+		? "Initialize web application via create-cloudflare CLI"
+		: "Initial commit (by create-cloudflare CLI)";
 
 	const packageManager = detectPackageManager();
 
 	const gitVersion = await getGitVersion();
 	const insideRepo = await isInsideGitRepo(ctx.project.path);
 
+	const showFramework = isPages || ctx.template.id === "hono";
+
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
-		{ key: "framework", value: ctx.framework.name },
-		{ key: "framework cli", value: getFrameworkCli(ctx) },
+		...(showFramework ? [{ key: "framework", value: ctx.template.id }] : []),
+		...(showFramework
+			? [{ key: "framework cli", value: getFrameworkCli(ctx) }]
+			: []),
 		{
 			key: "package manager",
 			value: `${packageManager.name}@${packageManager.version}`,
@@ -372,9 +466,7 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
 
 	const commitMessage = `${header}\n\n${body}\n`;
 
-	if (ctx.type !== "workers") {
-		ctx.framework.commitMessage = commitMessage;
-	}
+	ctx.commitMessage = commitMessage;
 
 	return commitMessage;
 };
@@ -384,7 +476,7 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
  */
 async function getGitVersion() {
 	try {
-		const rawGitVersion = await runCommand("git --version", {
+		const rawGitVersion = await runCommand(["git", "--version"], {
 			useSpinner: false,
 			silent: true,
 		});
@@ -405,13 +497,13 @@ export async function isGitInstalled() {
 
 export async function isGitConfigured() {
 	try {
-		const userName = await runCommand("git config user.name", {
+		const userName = await runCommand(["git", "config", "user.name"], {
 			useSpinner: false,
 			silent: true,
 		});
 		if (!userName) return false;
 
-		const email = await runCommand("git config user.email", {
+		const email = await runCommand(["git", "config", "user.email"], {
 			useSpinner: false,
 			silent: true,
 		});
@@ -429,7 +521,7 @@ export async function isGitConfigured() {
  */
 export async function isInsideGitRepo(cwd: string) {
 	try {
-		const output = await runCommand("git status", {
+		const output = await runCommand(["git", "status"], {
 			cwd,
 			useSpinner: false,
 			silent: true,
@@ -452,18 +544,18 @@ export async function initializeGit(cwd: string) {
 	try {
 		// Get the default init branch name
 		const defaultBranchName = await runCommand(
-			"git config --get init.defaultBranch",
+			["git", "config", "--get", "init.defaultBranch"],
 			{ useSpinner: false, silent: true, cwd }
 		);
 
 		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
 		await runCommand(
-			`git init --initial-branch ${defaultBranchName.trim() ?? "main"}`, // branch names can't contain spaces, so this is safe
+			["git", "init", "--initial-branch", defaultBranchName.trim() ?? "main"], // branch names can't contain spaces, so this is safe
 			{ useSpinner: false, silent: true, cwd }
 		);
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
-		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
+		await runCommand(["git", "init"], { useSpinner: false, silent: true, cwd });
 	}
 }
 
@@ -471,7 +563,7 @@ export async function getProductionBranch(cwd: string) {
 	try {
 		const productionBranch = await runCommand(
 			// "git branch --show-current", // git@^2.22
-			"git rev-parse --abbrev-ref HEAD", // git@^1.6.3
+			["git", "rev-parse", "--abbrev-ref", "HEAD"], // git@^1.6.3
 			{
 				silent: true,
 				cwd,
@@ -484,4 +576,35 @@ export async function getProductionBranch(cwd: string) {
 	} catch (err) {}
 
 	return "main";
+}
+
+/**
+ * Ensure that the commit message has newlines etc properly escaped.
+ */
+function prepareCommitMessage(commitMessage: string): string {
+	return JSON.stringify(commitMessage);
+}
+
+export function quoteShellArgs(args: string[]): string {
+	if (process.platform === "win32") {
+		// Simple Windows command prompt quoting if there are special characters.
+		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
+		return args
+			.map((arg) =>
+				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg
+			)
+			.join(" ");
+	} else {
+		return args
+			.map((s) => {
+				if (/["\s]/.test(s) && !/'/.test(s)) {
+					return "'" + s.replace(/(['\\])/g, "\\$1") + "'";
+				}
+				if (/["'\s]/.test(s)) {
+					return '"' + s.replace(/(["\\$`!])/g, "\\$1") + '"';
+				}
+				return s;
+			})
+			.join(" ");
+	}
 }

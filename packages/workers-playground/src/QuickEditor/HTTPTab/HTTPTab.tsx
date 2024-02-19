@@ -1,3 +1,11 @@
+import { Button } from "@cloudflare/component-button";
+import { Icon } from "@cloudflare/component-icon";
+import { Listbox } from "@cloudflare/component-listbox";
+import { Textarea } from "@cloudflare/component-textarea";
+import { Toast } from "@cloudflare/component-toast";
+import { Div, Form, Label, Output } from "@cloudflare/elements";
+import { isDarkMode, theme } from "@cloudflare/style-const";
+import { createStyledComponent } from "@cloudflare/style-container";
 import React, {
 	useCallback,
 	useContext,
@@ -5,21 +13,13 @@ import React, {
 	useRef,
 	useState,
 } from "react";
-import { createStyledComponent } from "@cloudflare/style-container";
-import { Div, Form, Label, Output } from "@cloudflare/elements";
-import { Textarea } from "@cloudflare/component-textarea";
-import { Button } from "@cloudflare/component-button";
-import { Icon } from "@cloudflare/component-icon";
-import { Toast } from "@cloudflare/component-toast";
-import { Listbox } from "@cloudflare/component-listbox";
-import SplitPane from "../SplitPane";
-import ResponseView from "./ResponseView";
-import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
-import { ServiceContext } from "../QuickEditor";
 import { FrameError } from "../FrameErrorBoundary";
-import { fetchWorker } from "./fetchWorker";
 import { InputField } from "../InputField";
-import { isDarkMode, theme } from "@cloudflare/style-const";
+import { ServiceContext } from "../QuickEditor";
+import SplitPane from "../SplitPane";
+import { fetchWorker } from "./fetchWorker";
+import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
+import ResponseView from "./ResponseView";
 
 const HTTP_METHODS = [
 	"GET",
@@ -152,23 +152,21 @@ export function HTTPTab() {
 					Send
 				</Button>
 			</Form>
-			<SplitPane
-				split="horizontal"
-				defaultSize="30%"
-				paneStyle={{
-					display: "flex",
-				}}
-				style={{
-					position: "relative",
-					minHeight: "initial",
-				}}
-				minSize={50}
-				maxSize={-50}
-			>
-				<Div overflow="auto" display="flex" flexDirection="column" width="100%">
+			<Div display="flex" flexDirection="column" height="calc(100% - 52px)">
+				<Div
+					overflow="auto"
+					display="flex"
+					flexDirection="column"
+					width="100%"
+					borderBottom="1px solid"
+					borderBottomColor="rgb(182, 182, 182)"
+					flexShrink={0}
+				>
 					<Div p={2} display="flex" gap={2} flexDirection="column">
 						<Div display="flex" alignItems="baseline">
-							<StyledLabel htmlFor="request_headers">Headers </StyledLabel>
+							<StyledLabel htmlFor="request_headers" alignSelf="center" mb={0}>
+								Headers{" "}
+							</StyledLabel>
 							<Button
 								onClick={() => setHeaders((headers) => [...headers, ["", ""]])}
 								ml="auto"
@@ -181,7 +179,7 @@ export function HTTPTab() {
 						{headers.length ? (
 							<RequestHeaders headers={headers} onChange={setHeaders} />
 						) : (
-							<Toast type="info">No headers specified</Toast>
+							hasBody && <Toast type="info">No headers specified</Toast>
 						)}
 					</Div>
 					{hasBody && (
@@ -219,7 +217,7 @@ export function HTTPTab() {
 						</Toast>
 					)}
 				</Output>
-			</SplitPane>
+			</Div>
 		</Div>
 	);
 }

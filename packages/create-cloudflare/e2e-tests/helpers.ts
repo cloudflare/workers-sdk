@@ -1,6 +1,5 @@
 import {
 	createWriteStream,
-	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	realpathSync,
@@ -9,16 +8,21 @@ import {
 import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { basename, join } from "path";
+import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
-import { stripAnsi } from "helpers/cli";
+import { retry } from "helpers/command";
 import { sleep } from "helpers/common";
-import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
-import type { Suite, TestContext } from "vitest";
+import type {
+	ChildProcessWithoutNullStreams,
+	SpawnOptionsWithoutStdio,
+} from "child_process";
+import type { WriteStream } from "fs";
+import type { Suite, TaskContext } from "vitest";
 
-export const C3_E2E_PREFIX = "c3-e2e-";
+export const C3_E2E_PREFIX = "tmp-e2e-c3";
 
 export const keys = {
 	enter: "\x0d",
@@ -30,91 +34,142 @@ export const keys = {
 	left: "\x1b\x5b\x44",
 };
 
+const testEnv = {
+	...process.env,
+	// The following env vars are set to ensure that package managers
+	// do not use the same global cache and accidentally hit race conditions.
+	YARN_CACHE_FOLDER: "./.yarn/cache",
+	YARN_ENABLE_GLOBAL_CACHE: "false",
+	PNPM_HOME: "./.pnpm",
+	npm_config_cache: "./.npm/cache",
+};
+
 export type PromptHandler = {
 	matcher: RegExp;
 	input: string[];
 };
 
 export type RunnerConfig = {
-	overrides?: {
-		packageScripts?: Record<string, string>;
-	};
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
-	outputPrefix?: string;
 	quarantine?: boolean;
-	ctx: TestContext;
+	timeout?: number;
+	verifyDeploy?: {
+		route: string;
+		expectedText: string;
+	};
 };
 
-export const runC3 = async ({
-	argv = [],
-	promptHandlers = [],
-	ctx,
-}: RunnerConfig) => {
-	const cmd = "node";
-	const args = ["./dist/cli.js", ...argv];
-	const proc = spawn(cmd, args);
+export const runC3 = async (
+	argv: string[] = [],
+	promptHandlers: PromptHandler[] = [],
+	logStream: WriteStream
+) => {
+	const cmd = ["node", "./dist/cli.js", ...argv];
+	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
 
-	promptHandlers = [...promptHandlers];
+	// Clone the prompt handlers so we can consume them destructively
+	promptHandlers = promptHandlers && [...promptHandlers];
 
-	const { name: pm } = detectPackageManager();
+	const onData = (data: string) => {
+		const lines: string[] = data.toString().split("\n");
+		const currentDialog = promptHandlers[0];
 
+		lines.forEach(async (line) => {
+			if (currentDialog && currentDialog.matcher.test(line)) {
+				// Add a small sleep to avoid input race
+				await sleep(1000);
+
+				currentDialog.input.forEach((keystroke) => {
+					proc.stdin.write(keystroke);
+				});
+
+				// Consume the handler once we've used it
+				promptHandlers.shift();
+
+				// If we've consumed the last prompt handler, close the input stream
+				// Otherwise, the process wont exit properly
+				if (promptHandlers[0] === undefined) {
+					proc.stdin.end();
+				}
+			}
+		});
+	};
+
+	return waitForExit(proc, onData);
+};
+
+/**
+ * Spawn a child process and attach a handler that will log any output from
+ * `stdout` or errors from `stderror` to a dedicated log file.
+ *
+ * @param args The command and arguments as an array
+ * @param opts Additional options to be passed to the `spawn` call
+ * @param logStream A write stream to the log file for the test
+ * @returns the child process that was created
+ */
+export const spawnWithLogging = (
+	args: string[],
+	opts: SpawnOptionsWithoutStdio,
+	logStream: WriteStream
+) => {
+	const [cmd, ...argv] = args;
+
+	logStream.write(`\nRunning command: ${[cmd, ...argv].join(" ")}\n\n`);
+
+	const proc = spawn(cmd, argv, {
+		...opts,
+		env: {
+			...testEnv,
+			...opts.env,
+		},
+	});
+
+	proc.stdout.on("data", (data) => {
+		const lines: string[] = data.toString().split("\n");
+
+		lines.forEach(async (line) => {
+			const stripped = stripAnsi(line).trim();
+			if (stripped.length > 0) {
+				logStream.write(`${stripped}\n`);
+			}
+		});
+	});
+
+	proc.stderr.on("data", (data) => {
+		logStream.write(data);
+	});
+
+	return proc;
+};
+
+/**
+ * An async function that waits on a spawned process to run to completion, collecting
+ * any output or errors from `stdout` and `stderr`, respectively.
+ *
+ * @param proc The child process to wait for
+ * @param onData An optional handler to be called on `stdout.on('data')`
+ */
+export const waitForExit = async (
+	proc: ChildProcessWithoutNullStreams,
+	onData?: (chunk: string) => void
+) => {
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
-	promptHandlers = promptHandlers && [...promptHandlers];
-
-	// The .ansi extension allows for editor extensions that format ansi terminal codes
-	const logFilename = `${normalizeTestName(ctx)}.ansi`;
-	const logStream = createWriteStream(
-		join(getLogPath(ctx.meta.suite), logFilename)
-	);
-
-	logStream.write(
-		`Running C3 with command: \`${cmd} ${args.join(" ")}\` (using ${pm})\n\n`
-	);
-
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
-			const lines: string[] = data.toString().split("\n");
-			const currentDialog = promptHandlers[0];
-
-			lines.forEach(async (line) => {
-				stdout.push(line);
-
-				const stripped = stripAnsi(line).trim();
-				if (stripped.length > 0) {
-					logStream.write(`${stripped}\n`);
-				}
-
-				if (currentDialog && currentDialog.matcher.test(line)) {
-					// Add a small sleep to avoid input race
-					await sleep(1000);
-
-					currentDialog.input.forEach((keystroke) => {
-						proc.stdin.write(keystroke);
-					});
-
-					// Consume the handler once we've used it
-					promptHandlers.shift();
-
-					// If we've consumed the last prompt handler, close the input stream
-					// Otherwise, the process wont exit properly
-					if (promptHandlers[0] === undefined) {
-						proc.stdin.end();
-					}
-				}
-			});
+			stdout.push(data);
+			if (onData) {
+				onData(data);
+			}
 		});
 
 		proc.stderr.on("data", (data) => {
-			logStream.write(data);
 			stderr.push(data);
 		});
 
 		proc.on("close", (code) => {
-			logStream.close();
-
 			if (code === 0) {
 				resolve(null);
 			} else {
@@ -137,6 +192,14 @@ export const runC3 = async ({
 	};
 };
 
+export const createTestLogStream = (ctx: TaskContext) => {
+	// The .ansi extension allows for editor extensions that format ansi terminal codes
+	const fileName = `${normalizeTestName(ctx)}.ansi`;
+	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
+		flags: "a",
+	});
+};
+
 export const recreateLogFolder = (suite: Suite) => {
 	// Clean the old folder if exists (useful for dev)
 	rmSync(getLogPath(suite), {
@@ -157,14 +220,14 @@ const getLogPath = (suite: Suite) => {
 	return join("./.e2e-logs/", process.env.TEST_PM as string, suiteFilename);
 };
 
-const normalizeTestName = (ctx: TestContext) => {
-	const baseName = ctx.meta.name
+const normalizeTestName = (ctx: TaskContext) => {
+	const baseName = ctx.task.name
 		.toLowerCase()
 		.replace(/\s+/g, "_") // replace any whitespace with `_`
 		.replace(/\W/g, ""); // strip special characters
 
 	// Ensure that each retry gets its own log file
-	const retryCount = ctx.meta.result?.retryCount ?? 0;
+	const retryCount = ctx.task.result?.retryCount ?? 0;
 	const suffix = retryCount > 0 ? `_${retryCount}` : "";
 	return baseName + suffix;
 };
@@ -180,12 +243,22 @@ export const testProjectDir = (suite: string) => {
 	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
 	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
 	const clean = (suffix: string) => {
-		const path = getPath(suffix);
-		if (existsSync(path)) {
+		try {
+			const path = getPath(suffix);
 			rmSync(path, {
 				recursive: true,
 				force: true,
+				maxRetries: 10,
+				retryDelay: 100,
 			});
+		} catch (e) {
+			if (typeof e === "object" && e !== null && "code" in e) {
+				const code = e.code;
+				if (code === "EBUSY" || code === "ENOENT" || code === "ENOTEMPTY") {
+					return;
+				}
+			}
+			throw e;
 		}
 	};
 
@@ -196,37 +269,45 @@ export const testDeploymentCommitMessage = async (
 	projectName: string,
 	framework: string
 ) => {
-	// Note: we cannot simply run git and check the result since the commit can be part of the
-	//       deployment even without git, so instead we fetch the deployment info from the pages api
-	const response = await fetch(
-		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
-		{
-			headers: {
-				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-			},
-		}
-	);
+	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
+		// Wait for 2 seconds between each attempt
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+		// Note: we cannot simply run git and check the result since the commit can be part of the
+		//       deployment even without git, so instead we fetch the deployment info from the pages api
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+				},
+			}
+		);
 
-	const result = (
-		(await response.json()) as {
-			result: {
-				name: string;
-				latest_deployment?: {
-					deployment_trigger: {
-						metadata?: {
-							commit_message: string;
+		const result = (
+			(await response.json()) as {
+				result: {
+					name: string;
+					latest_deployment?: {
+						deployment_trigger: {
+							metadata?: {
+								commit_message: string;
+							};
 						};
 					};
-				};
-			}[];
-		}
-	).result;
+				}[];
+			}
+		).result;
 
-	const projectLatestCommitMessage = result.find(
-		(project) => project.name === projectName
-	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+		const commitMessage = result.find((project) => project.name === projectName)
+			?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+		if (!commitMessage) {
+			throw new Error("Could not find deployment with name " + projectName);
+		}
+		return commitMessage;
+	});
+
 	expect(projectLatestCommitMessage).toMatch(
-		/^Initialize web application via create-cloudflare CLI/
+		/Initialize web application via create-cloudflare CLI/
 	);
 	expect(projectLatestCommitMessage).toContain(
 		`C3 = create-cloudflare@${version}`

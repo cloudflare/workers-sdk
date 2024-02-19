@@ -7,6 +7,7 @@ import * as TOML from "@iarna/toml";
 import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
+import dedent from "ts-dedent";
 import { FormData } from "undici";
 import {
 	printBundleSize,
@@ -31,12 +32,14 @@ import {
 	mockGetMemberships,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
+import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
 	msw,
 	mswSuccessDeployments,
-	mswSuccessDeploymentScriptMetadata,
 	mswSuccessDeploymentScriptAPI,
+	mswSuccessDeploymentScriptMetadata,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
@@ -45,14 +48,11 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { PutConsumerBody } from "../queues/client";
-import type { ResponseComposition, RestContext, RestRequest } from "msw";
+import type { RestRequest } from "msw";
 
 describe("deploy", () => {
 	mockAccountId();
@@ -707,6 +707,84 @@ describe("deploy", () => {
 			  *another-boring-website.com (zone name: some-zone.com)
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should deploy to a route with a SaaS domain", async () => {
+			writeWranglerToml({
+				workers_dev: false,
+				routes: [
+					{
+						pattern: "partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerRequest({ enabled: false });
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetWorkerRoutes("owned-zone-id-1");
+			mockPublishRoutesRequest({
+				routes: [
+					{
+						pattern: "partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			await runWrangler("deploy ./index");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  partner.com/* (zone name: owned-zone.com)
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should deploy to a route with a SaaS subdomain", async () => {
+			writeWranglerToml({
+				workers_dev: false,
+				routes: [
+					{
+						pattern: "subdomain.partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerRequest({ enabled: false });
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetWorkerRoutes("owned-zone-id-1");
+			mockPublishRoutesRequest({
+				routes: [
+					{
+						pattern: "subdomain.partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			await runWrangler("deploy ./index");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  subdomain.partner.com/* (zone name: owned-zone.com)
 			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
@@ -1531,10 +1609,7 @@ addEventListener('fetch', event => {});`
 			                - \\"site.bucket\\" is a required field."
 		            `);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -1699,10 +1774,7 @@ addEventListener('fetch', event => {});`
 				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field."`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.[0m
 
@@ -1756,6 +1828,119 @@ addEventListener('fetch', event => {});`
 			",
 			}
 		`);
+		});
+
+		describe("should source map validation errors", () => {
+			function mockDeployWithValidationError(message: string) {
+				const handler = rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					async (req, res, ctx) => {
+						const body = createFetchResult(null, false, [
+							{ code: 10021, message },
+						]);
+						return res(ctx.json(body));
+					}
+				);
+				msw.use(handler);
+			}
+
+			it("with TypeScript source file", async () => {
+				writeWranglerToml();
+				fs.writeFileSync(
+					`index.ts`,
+					dedent`interface Env {
+						THING: string;
+					}
+					x;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+				});
+			});
+
+			it("with additional modules", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
+				});
+
+				fs.writeFileSync(
+					"dep.ts",
+					dedent`interface Env {
+					}
+					y;
+					export default "message";`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("dep.ts")],
+					outdir: process.cwd(),
+					sourcemap: true,
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					dedent`import dep from "./dep.js";
+					export default {
+						fetch() {
+							return new Response(dep);
+						}
+					}`
+				);
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: y is not defined\n  at dep.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("dep.ts:3:1") }, {}],
+				});
+			});
+
+			it("with inline source map", async () => {
+				writeWranglerToml({
+					no_bundle: true,
+				});
+
+				fs.writeFileSync(
+					"index.ts",
+					dedent`interface Env {}
+					z;
+					export default {
+						fetch() {
+							return new Response("body");
+						}
+					}`
+				);
+				await esbuild.build({
+					bundle: true,
+					format: "esm",
+					entryPoints: [path.resolve("index.ts")],
+					outdir: process.cwd(),
+					sourcemap: "inline",
+				});
+
+				mockDeployWithValidationError(
+					"Uncaught ReferenceError: z is not defined\n  at index.js:2:1\n"
+				);
+				mockSubDomainRequest();
+
+				await expect(runWrangler("deploy ./index.js")).rejects.toMatchObject({
+					notes: [{ text: expect.stringContaining("index.ts:2:1") }, {}],
+				});
+			});
 		});
 	});
 
@@ -1867,8 +2052,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -1894,8 +2078,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "",
 			}
 		`);
@@ -1922,8 +2105,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "",
 			}
 		`);
@@ -1949,8 +2131,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -1983,8 +2164,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2276,10 +2456,6 @@ addEventListener('fetch', event => {});`
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Attaching additional modules:
-			- a/1.mjs (esm)
-			- a/b/2.mjs (esm)
-			- a/b/3.mjs (esm)
-			- a/b/c/4.mjs (esm)
 			Fetching list of already uploaded assets...
 			Building list of assets to upload...
 			 + file-1.2ca234f380.text (uploading new version of file-1.text)
@@ -2288,7 +2464,18 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
+			"┌─────────────┬──────┬──────────┐
+			│ Name        │ Type │ Size     │
+			├─────────────┼──────┼──────────┤
+			│ a/1.mjs     │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/2.mjs   │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/3.mjs   │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/c/4.mjs │ esm  │ xx KiB │
+			└─────────────┴──────┴──────────┘
+			↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2870,10 +3057,7 @@ addEventListener('fetch', event => {});`
 			Building list of assets to upload...
 			 + large-file.0ea0637a45.txt (uploading new version of large-file.txt)"
 		`);
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
@@ -3006,10 +3190,7 @@ addEventListener('fetch', event => {});`
 			"Fetching list of already uploaded assets...
 			Building list of assets to upload..."
 		`);
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
 
@@ -3961,6 +4142,40 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should fail to deploy to the workers.dev domain if email is unverified", async () => {
+			writeWranglerToml({ workers_dev: true });
+			writeWorkerSource();
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockSubDomainRequest();
+			msw.use(
+				rest.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+					async (req, res, ctx) => {
+						return res.once(
+							ctx.json(
+								createFetchResult(null, /* success */ false, [
+									{
+										code: 10034,
+										message: "workers.api.error.email_verification_required",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
+
+			await expect(runWrangler("deploy ./index")).rejects.toMatchObject({
+				text: "Please verify your account's email address and try again.",
+				notes: [
+					{
+						text: "Check your email for a verification link, or login to https://dash.cloudflare.com and request a new one.",
+					},
+					{},
+				],
+			});
+		});
+
 		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async () => {
 			writeWranglerToml({
 				workers_dev: true,
@@ -4437,10 +4652,9 @@ addEventListener('fetch', event => {});`
 			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
 		            `);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Running custom build: node -e \\"4+4;\\"
-
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			"Running custom build: node -e \\"4+4;\\"
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
@@ -4476,10 +4690,9 @@ addEventListener('fetch', event => {});`
 			              \`\`\`"
 		            `);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Running custom build: node -e \\"4+4;\\"
-
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			"Running custom build: node -e \\"4+4;\\"
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
@@ -5072,6 +5285,29 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("user limits", () => {
+		it("should allow specifying a cpu millisecond limit", async () => {
+			writeWranglerToml({
+				limits: { cpu_ms: 15_000 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { cpu_ms: 15_000 },
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("bindings", () => {
 		it("should allow bindings with different names", async () => {
 			writeWranglerToml({
@@ -5322,8 +5558,8 @@ addEventListener('fetch', event => {});`
 			  - WASM_MODULE_ONE: some_wasm.wasm
 			  - WASM_MODULE_TWO: more_wasm.wasm
 			- Unsafe Metadata:
-			  - extra_data: interesting value
-			  - more_data: dubious value
+			  - extra_data: \\"interesting value\\"
+			  - more_data: \\"dubious value\\"
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -5427,10 +5663,7 @@ addEventListener('fetch', event => {});`
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -5538,10 +5771,7 @@ addEventListener('fetch', event => {});`
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -5693,10 +5923,7 @@ addEventListener('fetch', event => {});`
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -5772,10 +5999,7 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code[0m
 
@@ -5915,10 +6139,7 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
 
@@ -6028,10 +6249,7 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
 
@@ -6707,6 +6925,46 @@ addEventListener('fetch', event => {});`
 
 		describe("[unsafe]", () => {
 			describe("[unsafe.bindings]", () => {
+				it("should stringify object in unsafe metadata", async () => {
+					writeWranglerToml({
+						unsafe: {
+							metadata: {
+								stringify: true,
+								something: "else",
+								undefined: undefined,
+								null: null,
+								nested: {
+									stuff: "here",
+								},
+							},
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedUnsafeMetaData: {
+							stringify: true,
+							something: "else",
+							nested: {
+								stuff: "here",
+							},
+						},
+					});
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Your worker has access to the following bindings:
+				- Unsafe Metadata:
+				  - stringify: true
+				  - something: \\"else\\"
+				  - nested: {\\"stuff\\":\\"here\\"}
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+				});
+
 				it("should warn if using unsafe bindings", async () => {
 					writeWranglerToml({
 						unsafe: {
@@ -7148,13 +7406,16 @@ addEventListener('fetch', event => {});`
 			);
 			// and the warnings because fallthrough was not explicitly set
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule at position 1 ({\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}) has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]} does not have a fallback, the following rules will be ignored:[0m
 
+			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}
+			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} (DEFAULT)
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe default module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} has the same type as a previous rule (at position 0, {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.[0m
+			  Add \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to silence
+			  this warning
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		describe("inject process.env.NODE_ENV", () => {
@@ -7544,7 +7805,15 @@ export default{
 				},
 				migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
 			});
-			writeWorkerSource();
+			fs.writeFileSync(
+				"index.js",
+				`export default {
+        	async fetch(request) {
+          	return new Response('Hello' + foo);
+        	},
+      	};
+				export class SomeClass {};`
+			);
 			process.env.CLOUDFLARE_ACCOUNT_ID = "";
 			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`
@@ -7601,7 +7870,7 @@ export default{
 			expect(
 				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
 			).toMatch(
-				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file to enable Node.js compatibility\./
+				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file and make sure to prefix the module name with "node:" to enable Node.js compatibility\./
 			);
 		});
 
@@ -7632,7 +7901,7 @@ export default{
 	});
 
 	describe("`nodejs_compat` compatibility flag", () => {
-		it('when absent, should error on any "external" `node:*` imports', async () => {
+		it('when absent, should warn on any "external" `node:*` imports', async () => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -7642,15 +7911,18 @@ export default{
       export default {}
       `
 			);
-			let err: esbuild.BuildFailure | undefined;
-			try {
-				await runWrangler("deploy index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
-			} catch (e) {
-				err = e as esbuild.BuildFailure;
-			}
-			expect(
-				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
-			).toMatch(/Could not resolve "node:async_hooks"/);
+			await runWrangler("deploy index.js --dry-run");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package \\"node:async_hooks\\" wasn't found on the file system but is built into node.[0m
+
+			  Your Worker may throw errors at runtime unless you enable the \\"nodejs_compat\\" compatibility flag.
+			  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
+			  from:
+			   - index.js
+
+			"
+		`);
 		});
 
 		it('when present, should support any "external" `node:*` imports', async () => {
@@ -7805,7 +8077,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -7850,15 +8122,25 @@ export default{
 				)
 			);
 
+			fs.writeFileSync(
+				"add.wasm",
+				"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=",
+				"base64"
+			);
+			fs.writeFileSync("message.txt", "👋");
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
 			fs.writeFileSync(
 				"index.js",
-				`import { thing } from "./dependency";
+				`
+				import addModule from "./add.wasm";
+				import message from "./message.txt";
+				import { thing } from "./dependency";
 
         export default {
           async fetch() {
-            return new Response('response plus ' + thing);
+          	const instance = new WebAssembly.Instance(addModule);
+          	return Response.json({ add: instance.exports.add(1, 2), message, thing });
           }
         }`
 			);
@@ -7868,7 +8150,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -7886,10 +8168,12 @@ export default{
 			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 4 largest dependencies included in your script:[0m
 
 			  - index.js - xx KiB
+			  - add.wasm - xx KiB
 			  - dependency.js - xx KiB
+			  - message.txt - xx KiB
 			  If these are unnecessary, consider removing them
 
 			",
@@ -7936,7 +8220,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -7988,7 +8272,7 @@ export default{
 			  "err": "",
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding this can affect cold start time. Consider using Wrangler's \`--minify\` option to reduce your bundle size.[0m
 
 			",
 			}
@@ -8207,6 +8491,9 @@ export default{
 
 		  Authentication error [code: 10000]
 
+
+		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+		Please ensure it has the correct permissions for this operation.
 
 		Getting User settings...
 		👋 You are logged in with an API Token, associated with the email user@example.com!
@@ -8454,6 +8741,72 @@ export default{
 		});
 	});
 
+	describe("python", () => {
+		it("should upload python module defined in wrangler.toml", async () => {
+			writeWranglerToml({
+				main: "index.py",
+			});
+			await fs.promises.writeFile(
+				"index.py",
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index",
+			});
+
+			await runWrangler("deploy");
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬────────┬──────────┐
+			│ Name                                 │ Type   │ Size     │
+			├──────────────────────────────────────┼────────┼──────────┤
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+			└──────────────────────────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+
+		it("should upload python module specified in CLI args", async () => {
+			writeWranglerToml();
+			await fs.promises.writeFile(
+				"index.py",
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index",
+			});
+
+			await runWrangler("deploy index.py");
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬────────┬──────────┐
+			│ Name                                 │ Type   │ Size     │
+			├──────────────────────────────────────┼────────┼──────────┤
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+			└──────────────────────────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("hyperdrive", () => {
 		it("should upload hyperdrive bindings", async () => {
 			writeWranglerToml({
@@ -8622,168 +8975,6 @@ function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
-/** Create a mock handler for the request to upload a worker script. */
-export function mockUploadWorkerRequest(
-	options: {
-		available_on_subdomain?: boolean;
-		expectedEntry?: string | RegExp;
-		expectedMainModule?: string;
-		expectedType?: "esm" | "sw";
-		expectedBindings?: unknown;
-		expectedModules?: Record<string, string>;
-		expectedCompatibilityDate?: string;
-		expectedCompatibilityFlags?: string[];
-		expectedMigrations?: CfWorkerInit["migrations"];
-		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
-		expectedUnsafeMetaData?: Record<string, string>;
-		expectedCapnpSchema?: string;
-		env?: string;
-		legacyEnv?: boolean;
-		keepVars?: boolean;
-		tag?: string;
-	} = {}
-) {
-	const {
-		available_on_subdomain = true,
-		expectedEntry,
-		expectedMainModule = "index.js",
-		expectedType = "esm",
-		expectedBindings,
-		expectedModules = {},
-		expectedCompatibilityDate,
-		expectedCompatibilityFlags,
-		env = undefined,
-		legacyEnv = false,
-		expectedMigrations,
-		expectedTailConsumers,
-		expectedUnsafeMetaData,
-		expectedCapnpSchema,
-		keepVars,
-	} = options;
-	if (env && !legacyEnv) {
-		msw.use(
-			rest.put(
-				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				handleUpload
-			)
-		);
-	} else {
-		msw.use(
-			rest.put(
-				"*/accounts/:accountId/workers/scripts/:scriptName",
-				handleUpload
-			)
-		);
-	}
-
-	async function handleUpload(
-		req: RestRequest,
-		res: ResponseComposition,
-		ctx: RestContext
-	) {
-		expect(req.params.accountId).toEqual("some-account-id");
-		expect(req.params.scriptName).toEqual(
-			legacyEnv && env ? `test-name-${env}` : "test-name"
-		);
-		if (!legacyEnv) {
-			expect(req.params.envName).toEqual(env);
-		}
-		expect(req.url.searchParams.get("include_subdomain_availability")).toEqual(
-			"true"
-		);
-		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
-
-		const formBody = await (
-			req as MockedRequest as RestRequestWithFormData
-		).formData();
-		if (expectedEntry !== undefined) {
-			expect(formBody.get("index.js")).toMatch(expectedEntry);
-		}
-		const metadata = JSON.parse(
-			formBody.get("metadata") as string
-		) as WorkerMetadata;
-		if (expectedType === "esm") {
-			expect(metadata.main_module).toEqual(expectedMainModule);
-		} else {
-			expect(metadata.body_part).toEqual("index.js");
-		}
-
-		if (keepVars) {
-			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
-		} else {
-			expect(metadata.keep_bindings).toBeFalsy();
-		}
-
-		if ("expectedBindings" in options) {
-			expect(metadata.bindings).toEqual(expectedBindings);
-		}
-		if ("expectedCompatibilityDate" in options) {
-			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
-		}
-		if ("expectedCompatibilityFlags" in options) {
-			expect(metadata.compatibility_flags).toEqual(expectedCompatibilityFlags);
-		}
-		if ("expectedMigrations" in options) {
-			expect(metadata.migrations).toEqual(expectedMigrations);
-		}
-		if ("expectedTailConsumers" in options) {
-			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
-		}
-		if ("expectedCapnpSchema" in options) {
-			expect(formBody.get(metadata.capnp_schema ?? "")).toEqual(
-				expectedCapnpSchema
-			);
-		}
-		if (expectedUnsafeMetaData !== undefined) {
-			Object.keys(expectedUnsafeMetaData).forEach((key) => {
-				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
-			});
-		}
-		for (const [name, content] of Object.entries(expectedModules)) {
-			expect(formBody.get(name)).toEqual(content);
-		}
-
-		return res(
-			ctx.json(
-				createFetchResult({
-					available_on_subdomain,
-					id: "abc12345",
-					etag: "etag98765",
-					pipeline_hash: "hash9999",
-					mutable_pipeline_id: "mutableId",
-					tag: "sample-tag",
-					deployment_id: "Galaxy-Class",
-				})
-			)
-		);
-	}
-}
-
-/** Create a mock handler for the request to get the account's subdomain. */
-export function mockSubDomainRequest(
-	subdomain = "test-sub-domain",
-	registeredWorkersDev = true
-) {
-	if (registeredWorkersDev) {
-		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult({ subdomain })));
-			})
-		);
-	} else {
-		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(null, false, [
-							{ code: 10007, message: "haven't registered workers.dev" },
-						])
-					)
-				);
-			})
-		);
-	}
-}
 //
 //
 //
@@ -8880,6 +9071,42 @@ function mockUnauthorizedPublishRoutesRequest({
 				);
 			}
 		)
+	);
+}
+
+function mockGetZones(domain: string, zones: { id: string }[] = []) {
+	msw.use(
+		rest.get("*/zones", (req, res, ctx) => {
+			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: zones,
+				})
+			);
+		})
+	);
+}
+
+function mockGetWorkerRoutes(zoneId: string) {
+	msw.use(
+		rest.get("*/zones/:zoneId/workers/routes", (req, res, ctx) => {
+			expect(req.params.zoneId).toEqual(zoneId);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [],
+				})
+			);
+		})
 	);
 }
 

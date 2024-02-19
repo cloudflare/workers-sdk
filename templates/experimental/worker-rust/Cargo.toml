@@ -11,7 +11,7 @@ wasm-opt = false
 crate-type = ["cdylib"]
 
 [dependencies]
-worker = "0.0.15"
+worker = "0.0.17"
 
 [profile.release]
 lto = true

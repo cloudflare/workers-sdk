@@ -1,3 +1,4 @@
+import { logger } from "../logger";
 import * as CreateProject from "./createProject";
 import * as DeleteProject from "./deleteProject";
 import * as DeleteProjectModel from "./deleteProjectModel";
@@ -9,6 +10,9 @@ import * as UploadModel from "./uploadModel";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function constellation(yargs: CommonYargsArgv) {
+	logger.warn(
+		"`wrangler constellation` is deprecated and will be removed in the next major version.\nPlease migrate to Workers AI, learn more here https://developers.cloudflare.com/workers-ai/."
+	);
 	return yargs
 		.command("project", "Manage your projects", (constProjYargs) => {
 			return constProjYargs

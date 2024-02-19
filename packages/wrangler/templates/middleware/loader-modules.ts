@@ -4,14 +4,13 @@
 // // through wrangler, or we can potentially let users directly add them as a sort
 // // of "plugin" system.
 
+import worker from "__ENTRY_POINT__";
 import {
-	Dispatcher,
-	Middleware,
 	__facade_invoke__,
 	__facade_register__,
+	Dispatcher,
+	Middleware,
 } from "./common";
-
-import worker from "__ENTRY_POINT__";
 
 // We need to preserve all of the exports from the worker
 export * from "__ENTRY_POINT__";

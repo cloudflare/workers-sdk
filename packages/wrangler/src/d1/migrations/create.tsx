@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "path";
 import { Box, Text } from "ink";
 import React from "react";
+import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
@@ -26,9 +28,10 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, database, message }): Promise<void> => {
+		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
-			throw new Error(
+			throw new UserError(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}

@@ -10,16 +10,15 @@
 		"dev": "remix build && run-p \"dev:*\"",
 		"start": "cross-env NODE_ENV=production pnpm run dev:wrangler",
 		"check:type": "tsc",
-		"test": "npx vitest run",
-		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest"
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@remix-run/cloudflare-pages": "^1.17.0",
 		"cross-env": "^7.0.3",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
-		"undici": "^5.23.0"
+		"undici": "^5.28.3"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

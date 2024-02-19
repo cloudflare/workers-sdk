@@ -8,7 +8,7 @@ import { buildWorkerFromFunctions } from "./functions/buildWorker";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
-import { realTmpdir, RUNNING_BUILDERS } from "./utils";
+import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
@@ -34,6 +34,11 @@ export async function buildFunctions({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
+	routesModule = join(
+		getPagesTmpDir(),
+		`./functionsRoutes-${Math.random()}.mjs`
+	),
+	defineNavigatorUserAgent,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -54,15 +59,15 @@ export async function buildFunctions({
 	local: boolean;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
+	// Allow `routesModule` to be fixed, so we don't create a new file in the
+	// temporary directory each time
+	routesModule?: string;
+	defineNavigatorUserAgent: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
 	);
 
-	const routesModule = join(
-		realTmpdir(),
-		`./functionsRoutes-${Math.random()}.mjs`
-	);
 	const baseURL = toUrlPath("/");
 
 	const config: Config = await generateConfigFromFileTree({
@@ -114,6 +119,7 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
+			defineNavigatorUserAgent,
 		});
 	} else {
 		bundle = await buildWorkerFromFunctions({
@@ -130,6 +136,7 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			legacyNodeCompat,
 			nodejsCompat,
+			defineNavigatorUserAgent,
 		});
 	}
 

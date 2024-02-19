@@ -10,13 +10,23 @@ env:
   bun-version: 1.0.3
 jobs:
   e2e:
-    name: ${{ format('E2E ({0})', matrix.pm) }}
-    if: |
-      github.event.pull_request.user.login != 'dependabot[bot]'
+    # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
+    #       in .github/workflows/c3-e2e-dependabot.yml
+    timeout-minutes: 45
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm }}
+      cancel-in-progress: true
+    name: ${{ format('E2E ({0} on {1})', matrix.pm, matrix.os) }}
+    if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm, bun]
+        pm: [npm, pnpm, bun, yarn]
+        # include a single windows test with pnpm
+        include:
+          - os: windows-latest
+            pm: pnpm
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -29,6 +39,8 @@ jobs:
 
       - name: E2E Tests
         uses: ./.github/actions/run-c3-e2e
+        env:
+          NPM_PUBLISH_TOKEN: NOT_USED
         with:
           package-manager: ${{ matrix.pm }}
           quarantine: false

@@ -1,8 +1,8 @@
 import { toUrlPath } from "../../paths";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
-	ROUTES_SPEC_VERSION,
 	ROUTES_SPEC_DESCRIPTION,
+	ROUTES_SPEC_VERSION,
 } from "../constants";
 import {
 	compareRoutes,

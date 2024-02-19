@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { execaCommand } from "execa";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { Config } from "../config";
 
@@ -16,16 +17,24 @@ export async function runCustomBuild(
 	build: Config["build"]
 ) {
 	if (build.command) {
-		// TODO: add a deprecation message here?
 		logger.log("Running custom build:", build.command);
-		await execaCommand(build.command, {
-			shell: true,
-			// we keep these two as "inherit" so that
-			// logs are still visible.
-			stdout: "inherit",
-			stderr: "inherit",
-			...(build.cwd && { cwd: build.cwd }),
-		});
+		try {
+			await execaCommand(build.command, {
+				shell: true,
+				// we keep these two as "inherit" so that
+				// logs are still visible.
+				stdout: "inherit",
+				stderr: "inherit",
+				...(build.cwd && { cwd: build.cwd }),
+			});
+		} catch (e) {
+			throw new UserError(
+				`Running custom build \`${build.command}\` failed. There are likely more logs from your build command above.`,
+				{
+					cause: e,
+				}
+			);
+		}
 
 		assertEntryPointExists(
 			expectedEntryAbsolute,
@@ -51,7 +60,7 @@ function assertEntryPointExists(
 	errorMessage: string
 ) {
 	if (!fileExists(expectedEntryAbsolute)) {
-		throw new Error(
+		throw new UserError(
 			getMissingEntryPointMessage(
 				errorMessage,
 				expectedEntryAbsolute,

@@ -1,190 +1,179 @@
-import {
-	readFile,
-	writeFile,
-	mkdtemp,
-	cp,
-	rm,
-	readdir,
-	rename,
-} from "fs/promises";
-import { tmpdir } from "os";
-import { resolve, join } from "path";
-import { chdir } from "process";
-import { processArgument } from "helpers/args";
-import {
-	endSection,
-	updateStatus,
-	startSection,
-	C3_DEFAULTS,
-} from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
-import {
-	getWorkerdCompatibilityDate,
-	npmInstall,
-	runCommand,
-} from "helpers/command";
+import { existsSync, readdirSync } from "fs";
+import { join, resolve } from "path";
+import { warn } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
+import { getWorkerdCompatibilityDate, installPackages } from "helpers/command";
+import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import {
-	chooseAccount,
-	gitCommit,
-	offerGit,
-	offerToDeploy,
-	printSummary,
-	runDeploy,
-	setupProjectDirectory,
-} from "./common";
-import type { C3Args, PagesGeneratorContext as Context } from "types";
+import * as jsonc from "jsonc-parser";
+import MagicString from "magic-string";
+import type { C3Context } from "types";
 
-const { dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
-export const runWorkersGenerator = async (args: C3Args) => {
-	const originalCWD = process.cwd();
-	const { name, path } = setupProjectDirectory(args);
-
-	const ctx: Context = {
-		project: { name, path },
-		args,
-		originalCWD,
-	};
-
-	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
-		type: "confirm",
-		question: "Do you want to use TypeScript?",
-		label: "typescript",
-		defaultValue: C3_DEFAULTS.ts,
-	});
-
-	await copyFiles(ctx);
-	await copyExistingWorkerFiles(ctx);
-	await updateFiles(ctx);
-	await offerGit(ctx);
-	endSection("Application created");
-
-	startSection("Installing dependencies", "Step 2 of 3");
-	chdir(ctx.project.path);
-	await npmInstall();
-	await gitCommit(ctx);
-	endSection("Dependencies Installed");
-
-	await offerToDeploy(ctx);
-	await runDeploy(ctx);
-
-	await printSummary(ctx);
+export const wranglerTomlExists = (ctx: C3Context) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return existsSync(wranglerTomlPath);
 };
 
-async function getTemplate(ctx: Context) {
-	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "hello-world" : ctx.args.type;
-	const path = resolve(
-		// eslint-disable-next-line no-restricted-globals
-		__dirname,
-		"..",
-		"templates",
-		template,
-		ctx.args.ts ? "ts" : "js"
-	);
+export const readWranglerToml = (ctx: C3Context) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return readFile(wranglerTomlPath);
+};
 
-	return { preexisting, template, path };
-}
+export const writeWranglerToml = (ctx: C3Context, contents: string) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return writeFile(wranglerTomlPath, contents);
+};
 
-async function copyFiles(ctx: Context) {
-	const { template, path: srcdir } = await getTemplate(ctx);
-	const destdir = ctx.project.path;
+/**
+ * Update the `wrangler.toml` file for this project by setting the name
+ * to the selected project name and adding the latest compatibility date.
+ */
+export const updateWranglerToml = async (ctx: C3Context) => {
+	if (!wranglerTomlExists(ctx)) {
+		return;
+	}
 
-	// copy template files
-	updateStatus(`Copying files from "${template}" template`);
-	await cp(srcdir, destdir, { recursive: true });
+	const wranglerToml = readWranglerToml(ctx);
+	const newToml = new MagicString(wranglerToml);
 
-	// reverse renaming from build step
-	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
-}
+	const compatDateRe = /^compatibility_date\s*=.*/m;
 
-async function copyExistingWorkerFiles(ctx: Context) {
-	const { preexisting } = await getTemplate(ctx);
-
-	if (preexisting) {
-		await chooseAccount(ctx);
-
-		if (ctx.args.existingScript === undefined) {
-			ctx.args.existingScript = await processArgument<string>(
-				ctx.args,
-				"existingScript",
-				{
-					type: "text",
-					question:
-						"Please specify the name of the existing worker in this account?",
-					label: "worker",
-					defaultValue: ctx.project.name,
-				}
+	if (wranglerToml.match(compatDateRe)) {
+		// If the compat date is already a valid one, leave it since it may be there
+		// for a specific compat reason
+		const validCompatDateRe = /^compatibility_date\s*=\s*"\d{4}-\d{2}-\d{2}"/m;
+		if (!wranglerToml.match(validCompatDateRe)) {
+			newToml.replace(
+				compatDateRe,
+				`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
 			);
 		}
-
-		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
-		// so run it (with -y) in a tempdir and copy the src files after
-		const tempdir = await mkdtemp(
-			join(tmpdir(), "c3-wrangler-init--from-dash-")
-		);
-		await runCommand(
-			`${dlx} wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
-			{
-				silent: true,
-				cwd: tempdir, // use a tempdir because we don't want all the files
-				env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
-				startText: "Downloading existing worker files",
-				doneText: `${brandColor("downloaded")} ${dim(
-					`existing "${ctx.args.existingScript}" worker files`
-				)}`,
-			}
-		);
-
-		// remove any src/* files from the template
-		for (const filename of await readdir(join(ctx.project.path, "src"))) {
-			await rm(join(ctx.project.path, "src", filename));
-		}
-
-		// copy src/* files from the downloaded worker
-		await cp(
-			join(tempdir, ctx.args.existingScript, "src"),
-			join(ctx.project.path, "src"),
-			{ recursive: true }
-		);
-
-		// copy wrangler.toml from the downloaded worker
-		await cp(
-			join(tempdir, ctx.args.existingScript, "wrangler.toml"),
-			join(ctx.project.path, "wrangler.toml")
-		);
-	}
-}
-
-async function updateFiles(ctx: Context) {
-	// build file paths
-	const paths = {
-		packagejson: resolve(ctx.project.path, "package.json"),
-		wranglertoml: resolve(ctx.project.path, "wrangler.toml"),
-	};
-
-	// read files
-	const contents = {
-		packagejson: JSON.parse(await readFile(paths.packagejson, "utf-8")),
-		wranglertoml: await readFile(paths.wranglertoml, "utf-8"),
-	};
-
-	// update files
-	if (contents.packagejson.name === "<TBD>") {
-		contents.packagejson.name = ctx.project.name;
-	}
-	contents.wranglertoml = contents.wranglertoml
-		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
-		.replace(
-			/^compatibility_date\s*=\s*"<TBD>"/m,
+	} else {
+		newToml.prepend(
 			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
 		);
+	}
 
-	// write files
-	await writeFile(
-		paths.packagejson,
-		JSON.stringify(contents.packagejson, null, 2)
+	const nameRe = /^name\s*=.*/m;
+	if (wranglerToml.match(nameRe)) {
+		newToml.replace(nameRe, `name = "${ctx.project.name}"`);
+	} else {
+		newToml.prepend(`name = "${ctx.project.name}"`);
+	}
+
+	writeWranglerToml(ctx, newToml.toString());
+};
+
+/**
+ * Installs the latest version of the `@cloudflare/workers-types` package
+ * and updates the .tsconfig file to use the latest entrypoint version.
+ */
+export async function installWorkersTypes(ctx: C3Context) {
+	if (!usesTypescript(ctx)) {
+		return;
+	}
+
+	await installPackages(["@cloudflare/workers-types"], {
+		dev: true,
+		startText: "Installing @cloudflare/workers-types",
+		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	});
+	await addWorkersTypesToTsConfig(ctx);
+}
+
+export async function addWorkersTypesToTsConfig(ctx: C3Context) {
+	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
+	if (!existsSync(tsconfigPath)) {
+		return;
+	}
+
+	const s = spinner();
+	s.start("Adding latest types to `tsconfig.json`");
+
+	const tsconfig = readFile(tsconfigPath);
+	const entrypointVersion = getLatestTypesEntrypoint(ctx);
+	if (entrypointVersion === null) {
+		s.stop(
+			`${brandColor(
+				"skipped"
+			)} couldn't find latest compatible version of @cloudflare/workers-types`
+		);
+		return;
+	}
+
+	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
+
+	try {
+		const config = jsonc.parse(tsconfig);
+		const currentTypes = config.compilerOptions?.types ?? [];
+
+		const explicitEntrypoint = (currentTypes as string[]).some((t) =>
+			t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/)
+		);
+
+		// If a type declaration with an explicit entrypoint exists, leave the types as is
+		// Otherwise, add the latest entrypoint
+		const newTypes = explicitEntrypoint
+			? [...currentTypes]
+			: [
+					...currentTypes.filter(
+						(t: string) => t !== "@cloudflare/workers-types"
+					),
+					typesEntrypoint,
+			  ];
+
+		// If we detect any tabs, use tabs, otherwise use spaces.
+		// We need to pass an explicit value here in order to preserve formatting properly.
+		const useSpaces = !tsconfig.match(/\t/g);
+
+		// Calculate required edits and apply them to file
+		const edits = jsonc.modify(
+			tsconfig,
+			["compilerOptions", "types"],
+			newTypes,
+			{
+				formattingOptions: { insertSpaces: useSpaces },
+			}
+		);
+		const updated = jsonc.applyEdits(tsconfig, edits);
+		writeFile(tsconfigPath, updated);
+	} catch (error) {
+		warn(
+			"Failed to update `tsconfig.json` with latest `@cloudflare/workers-types` entrypoint."
+		);
+	}
+
+	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
+}
+
+// The `@cloudflare/workers-types` package is versioned by compatibility dates, so we
+// must look up the latest entrypiont from the installed dependency on disk.
+// See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
+export function getLatestTypesEntrypoint(ctx: C3Context) {
+	const workersTypesPath = resolve(
+		ctx.project.path,
+		"node_modules",
+		"@cloudflare",
+		"workers-types"
 	);
-	await writeFile(paths.wranglertoml, contents.wranglertoml);
+
+	try {
+		const entrypoints = readdirSync(workersTypesPath);
+
+		const sorted = entrypoints
+			.filter((filename) => filename.match(/(\d{4})-(\d{2})-(\d{2})/))
+			.sort()
+			.reverse();
+
+		if (sorted.length === 0) {
+			return null;
+		}
+
+		return sorted[0];
+	} catch (error) {
+		return null;
+	}
 }

@@ -1,10 +1,10 @@
 import assert from "node:assert";
+import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import module from "node:module";
 import path from "node:path";
 import url from "node:url";
-import { execSync } from "node:child_process";
 
 /**
  * @param {string} from
@@ -45,6 +45,15 @@ const miniflarePackage = JSON.parse(miniflarePackageJson);
 const miniflareVersion = miniflarePackage.version;
 const workerdVersionConstraint = miniflarePackage.dependencies.workerd;
 
+// Fail if workerd isn't pinned (constraint doesn't start with a number)
+if (!/^[0-9]/.test(workerdVersionConstraint)) {
+	const quoted = JSON.stringify(workerdVersionConstraint);
+	console.error(
+		`\`miniflare\`'s \`workerd\` version constraint ${quoted} is not pinned`
+	);
+	process.exitCode = 1;
+}
+
 // 3. Load `workerd` `package.json`, getting `workerd` version
 const miniflareRequire = module.createRequire(miniflarePackageJsonPath);
 const workerdMainPath = miniflareRequire.resolve("workerd");
@@ -58,6 +67,7 @@ const workerdBinary = path.resolve(workerdPackageJsonPath, "../bin/workerd");
 
 const workerdBinaryVersion = execSync(workerdBinary + " --version")
 	.toString()
+	.trim()
 	.split(" ")[1];
 
 // 4. Write basic markdown report

@@ -1,12 +1,12 @@
-import { useContext, useEffect, useState } from "react";
-import { A, Div, Form, Span, Strong } from "@cloudflare/elements";
-import { createComponent } from "@cloudflare/style-container";
 import { Button } from "@cloudflare/component-button";
 import { Icon } from "@cloudflare/component-icon";
-import { BAR_HEIGHT } from "./constants";
-import { WorkersLogo } from "./WorkersLogo";
 import { Input } from "@cloudflare/component-input";
+import { A, Div, Form, Span, Strong } from "@cloudflare/elements";
+import { createComponent } from "@cloudflare/style-container";
+import { useContext, useEffect, useState } from "react";
+import { BAR_HEIGHT } from "./constants";
 import { ServiceContext } from "./QuickEditor";
+import { WorkersLogo } from "./WorkersLogo";
 
 const Wrapper = createComponent(({ theme }) => ({
 	display: "flex",

@@ -2,7 +2,9 @@ import path from "path";
 import { Box, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
+import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
@@ -27,13 +29,14 @@ type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, database, local, persistTo, preview }): Promise<void> => {
+		await printWranglerBanner();
 		if (!local) {
 			await requireAuth({});
 		}
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
-			throw new Error(
+			throw new UserError(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
 		}

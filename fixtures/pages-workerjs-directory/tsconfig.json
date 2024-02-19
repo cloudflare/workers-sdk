@@ -6,7 +6,8 @@
 		"lib": ["ES2020"],
 		"types": ["node"],
 		"moduleResolution": "node",
-		"noEmit": true
+		"noEmit": true,
+		"skipLibCheck": true
 	},
 	"include": ["tests", "../../node-types.d.ts"]
 }

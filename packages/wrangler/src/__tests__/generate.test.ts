@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { type PackageManager, getPackageManager } from "../package-manager";
+import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { PackageManager } from "../package-manager";
 
 describe("generate", () => {
 	runInTempDir();
@@ -43,7 +44,7 @@ describe("generate", () => {
 				`"✨ Created no-template/wrangler.toml"`
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 no-template\` instead.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare/@2 no-template\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 

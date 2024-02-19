@@ -3,14 +3,24 @@
 	"remoteCache": {
 		"signature": true
 	},
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
 	"pipeline": {
 		"wrangler#dev": {
 			"persistent": true,
 			"cache": false
 		},
+		"miniflare#dev": {
+			"persistent": true,
+			"cache": false
+		},
+		"@cloudflare/vitest-pool-workers#dev": {
+			"persistent": true,
+			"cache": false
+		},
 		"build": { "dependsOn": ["^build"] },
 		"test": {
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build"],
+			"cache": false
 		},
 		"test:watch": {
 			"cache": false
@@ -25,7 +35,9 @@
 			"dependsOn": ["^topological"]
 		},
 		"type:tests": {},
-		"test:ci": {},
+		"test:ci": {
+			"cache": false
+		},
 		"//#check:format": { "cache": true }
 	}
 }

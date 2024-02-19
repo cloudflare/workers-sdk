@@ -16,10 +16,14 @@ export const wranglerEntryPath = path.resolve(
  */
 export async function runWranglerPagesDev(
 	cwd: string,
-	publicPath: string,
+	publicPath: string | undefined,
 	options: string[]
 ) {
-	return runLongLivedWrangler(["pages", "dev", publicPath, ...options], cwd);
+	if (publicPath) {
+		return runLongLivedWrangler(["pages", "dev", publicPath, ...options], cwd);
+	} else {
+		return runLongLivedWrangler(["pages", "dev", ...options], cwd);
+	}
 }
 
 /**
@@ -55,8 +59,14 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	});
 
 	const chunks: Buffer[] = [];
-	wranglerProcess.stdout?.on("data", (chunk) => chunks.push(chunk));
-	wranglerProcess.stderr?.on("data", (chunk) => chunks.push(chunk));
+	wranglerProcess.stdout?.on("data", (chunk) => {
+		chunks.push(chunk);
+	});
+	wranglerProcess.stderr?.on("data", (chunk) => {
+		chunks.push(chunk);
+	});
+	const getOutput = () => Buffer.concat(chunks).toString();
+	const clearOutput = () => (chunks.length = 0);
 
 	const timeoutHandle = setTimeout(() => {
 		if (settledReadyPromise) return;
@@ -65,11 +75,11 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 		const message = [
 			"Timed out starting long-lived Wrangler:",
 			separator,
-			Buffer.concat(chunks).toString(),
+			getOutput(),
 			separator,
 		].join("\n");
 		rejectReadyPromise(new Error(message));
-	}, 10_000);
+	}, 20_000);
 
 	async function stop() {
 		return new Promise((resolve, reject) => {
@@ -85,5 +95,5 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	}
 
 	const { ip, port } = await ready;
-	return { ip, port, stop };
+	return { ip, port, stop, getOutput, clearOutput };
 }

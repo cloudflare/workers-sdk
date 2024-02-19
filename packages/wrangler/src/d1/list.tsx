@@ -1,5 +1,6 @@
 import Table from "ink-table";
 import React from "react";
+import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
@@ -31,6 +32,7 @@ export const Handler = withConfig<HandlerOptions>(
 		if (json) {
 			logger.log(JSON.stringify(dbs, null, 2));
 		} else {
+			await printWranglerBanner();
 			logger.log(renderToString(<Table data={dbs}></Table>));
 		}
 	}

@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
+import { UserError } from "../errors";
 import {
 	getRules,
 	getScriptName,
@@ -25,6 +26,17 @@ async function standardPricingWarning(
 	accountId: string | undefined,
 	config: Config
 ) {
+	if (Date.now() >= Date.UTC(2024, 2, 1, 14)) {
+		if (config.usage_model !== undefined) {
+			logger.warn(
+				"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			);
+		}
+
+		// TODO: After March 1st 2024 remove the code below
+		return;
+	}
+
 	try {
 		const { standard, reason } = await fetchResult<{
 			standard: boolean;
@@ -37,6 +49,11 @@ async function standardPricingWarning(
 					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
 				)
 			);
+			if (config.limits?.cpu_ms !== undefined) {
+				logger.warn(
+					"The `limits` defined in wrangler.toml can only be applied to scripts opted into Workers Standard pricing. Agree to the new pricing details to set limits for your script."
+				);
+			}
 			return;
 		}
 		if (standard && config.usage_model !== undefined) {
@@ -234,6 +251,7 @@ export async function deployHandler(
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
 	await metrics.sendMetricsEvent(
@@ -247,16 +265,18 @@ export async function deployHandler(
 	);
 
 	if (args.public) {
-		throw new Error("The --public field has been renamed to --assets");
+		throw new UserError("The --public field has been renamed to --assets");
 	}
 	if (args.experimentalPublic) {
-		throw new Error(
+		throw new UserError(
 			"The --experimental-public field has been renamed to --assets"
 		);
 	}
 
 	if ((args.assets || config.assets) && (args.site || config.site)) {
-		throw new Error("Cannot use Assets and Workers Sites in the same Worker.");
+		throw new UserError(
+			"Cannot use Assets and Workers Sites in the same Worker."
+		);
 	}
 
 	if (args.assets) {
@@ -284,7 +304,9 @@ export async function deployHandler(
 					args.siteInclude,
 					args.siteExclude
 			  );
-	await standardPricingWarning(accountId, config);
+
+	if (!args.dryRun) await standardPricingWarning(accountId, config);
+
 	await deploy({
 		config,
 		accountId,
@@ -314,5 +336,6 @@ export async function deployHandler(
 		keepVars: args.keepVars,
 		logpush: args.logpush,
 		oldAssetTtl: args.oldAssetTtl,
+		projectRoot,
 	});
 }

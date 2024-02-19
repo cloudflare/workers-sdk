@@ -1,15 +1,14 @@
-import React, { createContext, useEffect, useState } from "react";
 import { Div } from "@cloudflare/elements";
-import { useDraftWorker } from "./useDraftWorker";
-
+import { isDarkMode, observeDarkMode, theme } from "@cloudflare/style-const";
+import { createComponent } from "@cloudflare/style-container";
+import React, { createContext, useEffect, useState } from "react";
+import { BACKGROUND_GRAY } from "./constants";
+import defaultHash from "./defaultHash";
 import EditorPane from "./EditorPane";
 import SplitPane from "./SplitPane";
 import ToolsPane from "./ToolsPane";
 import { TopBar } from "./TopBar";
-import { BACKGROUND_GRAY } from "./constants";
-import { observeDarkMode, theme } from "@cloudflare/style-const";
-import { createComponent } from "@cloudflare/style-container";
-import defaultHash from "./defaultHash";
+import { useDraftWorker } from "./useDraftWorker";
 
 type DraftWorkerWithPreviewUrl = ReturnType<typeof useDraftWorker> & {
 	previewUrl: string;
@@ -36,7 +35,6 @@ function FullScreenLayout({ children }: { children: React.ReactNode }) {
 		</Div>
 	);
 }
-import { isDarkMode } from "@cloudflare/style-const";
 
 const BrandDiv = createComponent(({ theme }) => ({
 	height: theme.space[1],

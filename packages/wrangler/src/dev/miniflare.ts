@@ -1,40 +1,41 @@
 import assert from "node:assert";
-import { realpathSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import {
-	Log,
-	LogLevel,
-	NoOpLog,
-	TypedEventTarget,
-	Mutex,
-	Miniflare,
-} from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
+import { AIFetcher } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
+import { getSourceMappedString } from "../sourcemap";
+import { updateCheck } from "../update-check";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
 	CfDurableObject,
+	CfHyperdrive,
 	CfKvNamespace,
+	CfModuleType,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	SourceOptions,
-	WorkerOptions,
 	Request,
 	Response,
+	SourceOptions,
+	WorkerOptions,
 } from "miniflare";
+import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
+import type { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -86,6 +87,11 @@ export default {
 }
 `;
 
+type SpecificPort = Exclude<number, 0>;
+type RandomConsistentPort = 0; // random port, but consistent across reloads
+type RandomDifferentPort = undefined; // random port, but different across reloads
+type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
+
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
@@ -97,7 +103,7 @@ export interface ConfigBundle {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
-	initialPort: number;
+	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number;
@@ -106,44 +112,77 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
+	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
 }
 
-class WranglerLog extends Log {
+export class WranglerLog extends Log {
 	#warnedCompatibilityDateFallback = false;
 
-	info(message: string) {
+	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
 		if (message.includes(EXTERNAL_DURABLE_OBJECTS_WORKER_NAME)) return;
-		super.info(message);
+		super.log(message);
 	}
 
 	warn(message: string) {
 		// Only log warning about requesting a compatibility date after the workerd
-		// binary's version once
+		// binary's version once, and only if there's an update available.
 		if (message.startsWith("The latest compatibility date supported by")) {
 			if (this.#warnedCompatibilityDateFallback) return;
 			this.#warnedCompatibilityDateFallback = true;
+			return void updateCheck().then((maybeNewVersion) => {
+				if (maybeNewVersion === undefined) return;
+				message += [
+					"",
+					"Features enabled by your requested compatibility date may not be available.",
+					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+				].join("\n");
+				super.warn(message);
+			});
 		}
 		super.warn(message);
 	}
 }
 
-function getName(config: ConfigBundle) {
-	return config.name ?? "worker";
+export const DEFAULT_WORKER_NAME = "worker";
+function getName(config: Pick<ConfigBundle, "name">) {
+	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
 function getIdentifier(name: string) {
 	return name.replace(IDENTIFIER_UNSAFE_REGEXP, "_");
 }
 
+export function castLogLevel(level: LoggerLevel): LogLevel {
+	let key = level.toUpperCase() as Uppercase<LoggerLevel>;
+	if (key === "LOG") key = "INFO";
+
+	return LogLevel[key];
+}
+
 function buildLog(): Log {
-	let level = logger.loggerLevel.toUpperCase() as Uppercase<LoggerLevel>;
-	if (level === "LOG") level = "INFO";
-	const logLevel = LogLevel[level];
-	return logLevel === LogLevel.NONE ? new NoOpLog() : new WranglerLog(logLevel);
+	let level = castLogLevel(logger.loggerLevel);
+
+	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
+	if (level <= LogLevel.DEBUG) {
+		level = Math.min(level, LogLevel.WARN);
+	}
+
+	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
+}
+
+// TODO(soon): workerd requires python modules to be named without a file extension
+// We should remove this restriction
+function stripPySuffix(modulePath: string, type?: CfModuleType) {
+	if (type === "python" && modulePath.endsWith(".py")) {
+		return modulePath.slice(0, -3);
+	}
+	return modulePath;
 }
 
 async function buildSourceOptions(
@@ -152,23 +191,31 @@ async function buildSourceOptions(
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
 		const modulesRoot = path.dirname(scriptPath);
-		const { entrypointSource, modules } = withSourceURLs(
-			scriptPath,
-			config.bundle.modules
-		);
+		const { entrypointSource, modules } =
+			config.bundle.type === "python"
+				? {
+						entrypointSource: readFileSync(scriptPath, "utf8"),
+						modules: config.bundle.modules,
+				  }
+				: withSourceURLs(scriptPath, config.bundle.modules);
+
 		return {
 			modulesRoot,
+
 			modules: [
 				// Entrypoint
 				{
-					type: "ESModule",
-					path: scriptPath,
+					type: ModuleTypeToRuleType[config.bundle.type],
+					path: stripPySuffix(scriptPath, config.bundle.type),
 					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
 					type: ModuleTypeToRuleType[module.type ?? "esm"],
-					path: path.resolve(modulesRoot, module.name),
+					path: stripPySuffix(
+						path.resolve(modulesRoot, module.name),
+						module.type
+					),
 					contents: module.content,
 				})),
 			],
@@ -191,6 +238,9 @@ function d1DatabaseEntry(db: CfD1Database): [string, string] {
 function queueProducerEntry(queue: CfQueue): [string, string] {
 	return [queue.binding, queue.queue_name];
 }
+function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
+	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
+}
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
@@ -201,9 +251,40 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	};
 	return [consumer.queue, options] as const;
 }
+
+type WorkerOptionsBindings = Pick<
+	WorkerOptions,
+	| "bindings"
+	| "textBlobBindings"
+	| "dataBlobBindings"
+	| "wasmBindings"
+	| "kvNamespaces"
+	| "r2Buckets"
+	| "d1Databases"
+	| "queueProducers"
+	| "queueConsumers"
+	| "hyperdrives"
+	| "durableObjects"
+	| "serviceBindings"
+>;
+
+type MiniflareBindingsConfig = Pick<
+	ConfigBundle,
+	| "bindings"
+	| "workerDefinitions"
+	| "queueConsumers"
+	| "name"
+	| "serviceBindings"
+> &
+	Partial<Pick<ConfigBundle, "format" | "bundle">>;
+
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-function buildBindingOptions(config: ConfigBundle) {
+export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+	bindingOptions: WorkerOptionsBindings;
+	internalObjects: CfDurableObject[];
+	externalDurableObjectWorker: WorkerOptions;
+} {
 	const bindings = config.bindings;
 
 	// Setup blob and module bindings
@@ -211,7 +292,7 @@ function buildBindingOptions(config: ConfigBundle) {
 	const textBlobBindings = { ...bindings.text_blobs };
 	const dataBlobBindings = { ...bindings.data_blobs };
 	const wasmBindings = { ...bindings.wasm_modules };
-	if (config.format === "service-worker") {
+	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
 		const scriptPath = realpathSync(config.bundle.path);
 		const modulesRoot = path.dirname(scriptPath);
@@ -287,6 +368,10 @@ function buildBindingOptions(config: ConfigBundle) {
 				.join("\n"),
 	};
 
+	if (bindings.ai?.binding) {
+		config.serviceBindings[bindings.ai.binding] = AIFetcher;
+	}
+
 	const bindingOptions = {
 		bindings: bindings.vars,
 		textBlobBindings,
@@ -307,6 +392,9 @@ function buildBindingOptions(config: ConfigBundle) {
 		),
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
+		),
+		hyperdrives: Object.fromEntries(
+			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
 
 		durableObjects: Object.fromEntries([
@@ -371,28 +459,147 @@ function buildSitesOptions({ assetPaths }: ConfigBundle) {
 	}
 }
 
+export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+	// ASSUMPTION: each chunk is a whole message from workerd
+	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
+	// I'm going with this simple approach to avoid complicating this too early
+	// We can iterate on this heuristic in the future if it causes issues
+	const classifiers = {
+		// Is this chunk a big chonky barf from workerd that we want to hijack to cleanup/ignore?
+		isBarf(chunk: string) {
+			const containsLlvmSymbolizerWarning = chunk.includes(
+				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
+			);
+			const containsRecursiveIsolateLockWarning = chunk.includes(
+				"took recursive isolate lock"
+			);
+			// Matches stack traces from workerd
+			//  - on unix: groups of 9 hex digits separated by spaces
+			//  - on windows: groups of 12 hex digits, or a single digit 0, separated by spaces
+			const containsHexStack = /stack:( (0|[a-f\d]{4,})){3,}/.test(chunk);
+
+			return (
+				containsLlvmSymbolizerWarning ||
+				containsRecursiveIsolateLockWarning ||
+				containsHexStack
+			);
+		},
+		// Is this chunk an Address In Use error?
+		isAddressInUse(chunk: string) {
+			return chunk.includes("Address already in use; toString() = ");
+		},
+		isWarning(chunk: string) {
+			return /\.c\+\+:\d+: warning:/.test(chunk);
+		},
+	};
+
+	stdout.on("data", (chunk: Buffer | string) => {
+		chunk = chunk.toString().trim();
+
+		if (classifiers.isBarf(chunk)) {
+			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+
+			// CLEANABLE:
+			// there are no known cases to cleanup yet
+			// but, as they are identified, we will do that here
+
+			// IGNORABLE:
+			// anything else not handled above is considered ignorable
+			// so send it to the debug logs which are discarded unless
+			// the user explicitly sets a logLevel indicating they care
+			logger.debug(chunk);
+		}
+
+		// known case: warnings are not info, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
+		}
+
+		// anything not exlicitly handled above should be logged as info (via stdout)
+		else {
+			logger.info(getSourceMappedString(chunk));
+		}
+	});
+
+	stderr.on("data", (chunk: Buffer | string) => {
+		chunk = chunk.toString().trim();
+
+		if (classifiers.isBarf(chunk)) {
+			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+
+			// CLEANABLE:
+			// known case to cleanup: Address in use errors
+			if (classifiers.isAddressInUse(chunk)) {
+				const address = chunk.match(
+					/Address already in use; toString\(\) = (.+)\n/
+				)?.[1];
+
+				logger.error(
+					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
+				);
+
+				// even though we've intercepted the chunk and logged a better error to stderr
+				// fallthrough to log the original chunk to the debug log file for observability
+			}
+
+			// IGNORABLE:
+			// anything else not handled above is considered ignorable
+			// so send it to the debug logs which are discarded unless
+			// the user explicitly sets a logLevel indicating they care
+			logger.debug(chunk);
+		}
+
+		// known case: warnings are not errors, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
+		}
+
+		// anything not exlicitly handled above should be logged as an error (via stderr)
+		else {
+			logger.error(getSourceMappedString(chunk));
+		}
+	});
+}
+
 async function buildMiniflareOptions(
 	log: Log,
-	config: ConfigBundle
+	config: ConfigBundle,
+	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
 
+	if (config.bindings.ai) {
+		logger.warn(
+			"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+		);
+	}
+
+	if (config.bindings.vectorize?.length) {
+		// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
+		logger.warn(
+			"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+		);
+	}
+
 	const upstream =
 		typeof config.localUpstream === "string"
-			? `${config.localProtocol}://${config.localUpstream}`
+			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
 	const sourceOptions = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
-		buildBindingOptions(config);
+		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 
 	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
 	if (config.localProtocol === "https") {
-		const cert = await getHttpsOptions();
+		const cert = await getHttpsOptions(
+			config.httpsKeyPath,
+			config.httpsCertPath
+		);
 		httpsOptions = {
 			httpsKey: cert.key,
 			httpsCert: cert.cert,
@@ -405,9 +612,11 @@ async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
+		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 
 		log,
 		verbose: logger.loggerLevel === "debug",
+		handleRuntimeStdio,
 
 		...httpsOptions,
 		...persistOptions,
@@ -430,15 +639,19 @@ async function buildMiniflareOptions(
 export interface ReloadedEventOptions {
 	url: URL;
 	internalDurableObjects: CfDurableObject[];
+	proxyToUserWorkerAuthenticationSecret: UUID;
 }
 export class ReloadedEvent extends Event implements ReloadedEventOptions {
 	readonly url: URL;
 	readonly internalDurableObjects: CfDurableObject[];
+	readonly proxyToUserWorkerAuthenticationSecret: UUID;
 
 	constructor(type: "reloaded", options: ReloadedEventOptions) {
 		super(type);
 		this.url = options.url;
 		this.internalDurableObjects = options.internalDurableObjects;
+		this.proxyToUserWorkerAuthenticationSecret =
+			options.proxyToUserWorkerAuthenticationSecret;
 	}
 }
 
@@ -461,6 +674,10 @@ export type MiniflareServerEventMap = {
 export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 	#log = buildLog();
 	#mf?: Miniflare;
+	// This is given as a shared secret to the Proxy and User workers
+	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
+	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
+	#proxyToUserWorkerAuthenticationSecret = randomUUID();
 
 	// `buildMiniflareOptions()` is asynchronous, meaning if multiple bundle
 	// updates were submitted, the second may apply before the first. Therefore,
@@ -472,7 +689,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 		try {
 			const { options, internalObjects } = await buildMiniflareOptions(
 				this.#log,
-				config
+				config,
+				this.#proxyToUserWorkerAuthenticationSecret
 			);
 			if (opts?.signal?.aborted) return;
 			if (this.#mf === undefined) {
@@ -485,6 +703,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 			const event = new ReloadedEvent("reloaded", {
 				url,
 				internalDurableObjects: internalObjects,
+				proxyToUserWorkerAuthenticationSecret:
+					this.#proxyToUserWorkerAuthenticationSecret,
 			});
 			this.dispatchEvent(event);
 		} catch (error: unknown) {

@@ -11,7 +11,7 @@ import {
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import { realTmpdir } from "../utils";
+import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { CfModule } from "../../deployment-bundle/worker";
@@ -31,11 +31,12 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
+	defineNavigatorUserAgent: boolean;
 };
 
 export function buildWorkerFromFunctions({
 	routesModule,
-	outfile = join(realTmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	minify = false,
 	sourcemap = false,
@@ -47,6 +48,7 @@ export function buildWorkerFromFunctions({
 	nodejsCompat,
 	functionsDirectory,
 	local,
+	defineNavigatorUserAgent,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
@@ -157,6 +159,8 @@ export function buildWorkerFromFunctions({
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
 		local,
+		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }
 
@@ -177,6 +181,7 @@ export type RawOptions = {
 	nodejsCompat?: boolean;
 	local: boolean;
 	additionalModules?: CfModule[];
+	defineNavigatorUserAgent: boolean;
 };
 
 /**
@@ -188,7 +193,7 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile = join(realTmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
 	bundle = true,
@@ -202,6 +207,7 @@ export function buildRawWorker({
 	nodejsCompat,
 	local,
 	additionalModules = [],
+	defineNavigatorUserAgent,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
@@ -250,6 +256,8 @@ export function buildRawWorker({
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
 		local,
+		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }
 
@@ -257,10 +265,12 @@ export async function traverseAndBuildWorkerJSDirectory({
 	workerJSDirectory,
 	buildOutputDirectory,
 	nodejsCompat,
+	defineNavigatorUserAgent,
 }: {
 	workerJSDirectory: string;
 	buildOutputDirectory: string;
 	nodejsCompat?: boolean;
+	defineNavigatorUserAgent: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
@@ -279,7 +289,10 @@ export async function traverseAndBuildWorkerJSDirectory({
 		]
 	);
 
-	const outfile = join(realTmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+	const outfile = join(
+		getPagesTmpDir(),
+		`./bundledWorker-${Math.random()}.mjs`
+	);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
 		bundle: true,
@@ -292,6 +305,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		onEnd: () => {},
 		nodejsCompat,
 		additionalModules,
+		defineNavigatorUserAgent,
 	});
 
 	return {

@@ -1,10 +1,12 @@
 import stripAnsi from "strip-ansi";
+
 export function normalizeOutput(
 	stdout: string,
 	substitutions?: Record<string, string>
 ): string {
 	const functions = [
 		removeVersionHeader,
+		removeStandardPricingWarning,
 		npmStripTimings,
 		removeWorkersDev,
 		removeUUID,
@@ -18,6 +20,8 @@ export function normalizeOutput(
 		removeTimestamp,
 		stripDevTimings,
 		stripEmptyNewlines,
+		normalizeDebugLogFilepath,
+		squashLocalNetworkBindings,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -27,7 +31,7 @@ export function normalizeOutput(
 			stdout = stdout.replaceAll(from, to);
 		}
 	}
-	return stdout;
+	return stdout.trim();
 }
 
 function stripEmptyNewlines(stdout: string): string {
@@ -130,4 +134,36 @@ function replaceByte(stdout: string): string {
  */
 export function normalizeTempDirs(stdout: string): string {
 	return stdout.replaceAll(/\/\/.+\/wrangler-smoke-.+/g, "//tmpdir");
+}
+
+/**
+ * Debug log files are created with a timestamp, so we replace the debug log filepath timestamp with <TIMESTAMP>
+ */
+export function normalizeDebugLogFilepath(stdout: string): string {
+	return stdout
+		.replace(/🪵 {2}Writing logs to ".+\.log"/, '🪵  Writing logs to "<LOG>"')
+		.replace(
+			/🪵 {2}Logs were written to ".+\.log"/,
+			'🪵  Logs were written to "<LOG>"'
+		);
+}
+
+/**
+ * Squash the one or more local network bindings from `$ wrangler dev`
+ */
+export function squashLocalNetworkBindings(stdout: string): string {
+	return stdout.replace(
+		/(\[mf:inf\] Ready on http:\/\/.+:\d{4,5})(\n\[mf:inf\] - http:\/\/.+:\d{4,5})+/,
+		"[mf:inf] Ready on http://<LOCAL_IP>:<PORT>\n[mf:inf] - http://<LOCAL_IP>:<PORT>"
+	);
+}
+
+/**
+ * This may or may not be displayed depending on whether the test account has accepted standard pricing.
+ */
+function removeStandardPricingWarning(stdout: string): string {
+	return stdout.replace(
+		/🚧 New Workers Standard pricing is now available\. Please visit the dashboard to view details and opt-in to new pricing: https:\/\/dash\.cloudflare\.com\/[^/]+\/workers\/standard\/opt-in\./,
+		""
+	);
 }

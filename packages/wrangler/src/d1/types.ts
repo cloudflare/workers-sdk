@@ -44,6 +44,8 @@ export interface D1Metrics {
 	sum?: {
 		readQueries?: number;
 		writeQueries?: number;
+		rowsRead?: number;
+		rowsWritten?: number;
 		queryBatchResponseBytes?: number;
 	};
 	quantiles?: {
@@ -67,6 +69,38 @@ export interface D1MetricsGraphQLResponse {
 	data: {
 		viewer: {
 			accounts: { d1AnalyticsAdaptiveGroups?: D1Metrics[] }[];
+		};
+	};
+}
+
+export interface D1Queries {
+	avg?: {
+		queryDurationMs?: number;
+		rowsRead?: number;
+		rowsWritten?: number;
+	};
+	sum?: {
+		queryDurationMs?: number;
+		rowsRead?: number;
+		rowsWritten?: number;
+	};
+	count?: number;
+	dimensions: {
+		query?: string;
+		databaseId?: string;
+		date?: string;
+		datetime?: string;
+		datetimeMinute?: string;
+		datetimeFiveMinutes?: string;
+		datetimeFifteenMinutes?: string;
+		datetimeHour?: string;
+	};
+}
+
+export interface D1QueriesGraphQLResponse {
+	data: {
+		viewer: {
+			accounts: { d1QueriesAdaptiveGroups?: D1Queries[] }[];
 		};
 	};
 }

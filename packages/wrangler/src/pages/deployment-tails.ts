@@ -9,9 +9,9 @@ import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
+	createPagesTail,
 	jsonPrintLogs,
 	prettyPrintLogs,
-	createPagesTail,
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
@@ -205,7 +205,7 @@ export async function Handler({
 	}
 
 	if (!deploymentId || !projectName) {
-		throw new FatalError("An unknown error occurred.", 1);
+		throw new Error("An unknown error occurred.");
 	}
 
 	const filters = translateCLICommandToFilterMessage({

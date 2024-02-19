@@ -76,6 +76,11 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 			if (process.send) {
 				process.send(message);
 			}
+		})
+		.on("disconnect", () => {
+			if (process.disconnect) {
+				process.disconnect();
+			}
 		});
 }
 

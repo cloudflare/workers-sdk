@@ -1,11 +1,11 @@
 import {
-	MAX_LINE_LENGTH,
-	MAX_HEADER_RULES,
 	HEADER_SEPARATOR,
+	MAX_HEADER_RULES,
+	MAX_LINE_LENGTH,
 	UNSET_OPERATOR,
 } from "./constants";
 import { validateUrl } from "./validateURL";
-import type { InvalidHeadersRule, ParsedHeaders, HeadersRule } from "./types";
+import type { HeadersRule, InvalidHeadersRule, ParsedHeaders } from "./types";
 
 // Not strictly necessary to check for all protocols-like beginnings, since _technically_ that could be a legit header (e.g. name=http, value=://I'm a value).
 // But we're checking here since some people might be caught out and it'll help 99.9% of people who get it wrong.

@@ -1,13 +1,12 @@
 import { FatalError } from "../../errors";
 import {
-	MAX_FUNCTIONS_ROUTES_RULES,
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
+	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
 } from "../constants";
 import { getRoutesValidationErrorMessage } from "../errors";
 import type { RoutesJSONSpec } from "./routes-transformation";
 
-/* eslint-disable-next-line no-shadow */
 export enum RoutesValidationError {
 	INVALID_JSON_SPEC,
 	NO_INCLUDE_RULES,

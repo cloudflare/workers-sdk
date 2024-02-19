@@ -1,6 +1,0 @@
-name = "local-mode-tests"
-compatibility_date = "2022-03-27"
-
-# This custom build command will show whether the FOO
-# environment variable was read from the `.env` file.
-build.command = "node -e \"console.log(process.env.FOO)\""

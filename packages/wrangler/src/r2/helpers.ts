@@ -3,6 +3,7 @@ import { fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
+import { UserError } from "../errors";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
@@ -80,7 +81,7 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 } {
 	const match = /^([^/]+)\/(.*)/.exec(objectPath);
 	if (match === null) {
-		throw new Error(
+		throw new UserError(
 			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
 		);
 	}
@@ -96,7 +97,7 @@ export async function getR2Object(
 	bucketName: string,
 	objectName: string,
 	jurisdiction?: string
-): Promise<ReadableStream> {
+): Promise<ReadableStream | null> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
@@ -109,7 +110,7 @@ export async function getR2Object(
 		}
 	);
 
-	return response.body;
+	return response === null ? null : response.body;
 }
 
 /**
@@ -141,7 +142,7 @@ export async function putR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
-	await fetchR2Objects(
+	const result = await fetchR2Objects(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			body: object,
@@ -150,6 +151,9 @@ export async function putR2Object(
 			duplex: "half",
 		}
 	);
+	if (result === null) {
+		throw new UserError("The specified bucket does not exist.");
+	}
 }
 /**
  * Delete an Object
@@ -221,4 +225,95 @@ export async function usingLocalBucket<T>(
 	} finally {
 		await mf.dispose();
 	}
+}
+
+type SippyConfig = {
+	source:
+		| { provider: "aws"; region: string; bucket: string }
+		| { provider: "gcs"; bucket: string };
+	destination: {
+		provider: "r2";
+		account: string;
+		bucket: string;
+		accessKeyId: string;
+	};
+};
+
+/**
+ * Retreive the sippy upstream bucket for the bucket with the given name
+ */
+export async function getR2Sippy(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<SippyConfig> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
+		{ method: "GET", headers }
+	);
+}
+
+/**
+ * Disable sippy on the bucket with the given name
+ */
+export async function deleteR2Sippy(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
+		{ method: "DELETE", headers }
+	);
+}
+
+export type SippyPutParams = {
+	source:
+		| {
+				provider: "aws";
+				region: string;
+				bucket: string;
+				accessKeyId: string;
+				secretAccessKey: string;
+		  }
+		| {
+				provider: "gcs";
+				bucket: string;
+				clientEmail: string;
+				privateKey: string;
+		  };
+	destination: {
+		provider: "r2";
+		accessKeyId: string;
+		secretAccessKey: string;
+	};
+};
+
+/**
+ * Enable sippy on the bucket with the given name
+ */
+export async function putR2Sippy(
+	accountId: string,
+	bucketName: string,
+	params: SippyPutParams,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
+		{ method: "PUT", body: JSON.stringify(params), headers }
+	);
 }

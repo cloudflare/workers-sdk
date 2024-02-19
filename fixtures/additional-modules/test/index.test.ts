@@ -4,13 +4,13 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
+import { fetch } from "undici";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import {
 	runWranglerDev,
 	wranglerEntryPath,
 } from "../../shared/src/run-wrangler-long-lived";
-import { describe, beforeAll, afterAll, expect, test } from "vitest";
-import { setTimeout } from "node:timers/promises";
-import { fetch } from "undici";
 
 async function getTmpDir() {
 	return fs.mkdtemp(path.join(os.tmpdir(), "wrangler-modules-"));
@@ -52,7 +52,7 @@ describe("find_additional_modules dev", () => {
 			path.join(tmpDir, "wrangler.toml")
 		);
 
-		worker = await runWranglerDev(tmpDir, ["--port=0"]);
+		worker = await runWranglerDev(tmpDir, ["--port=0", "--inspector-port=0"]);
 	});
 	afterAll(async () => {
 		await worker.stop();
@@ -166,32 +166,34 @@ describe("find_additional_modules deploy", () => {
 		const bundledEntryPath = path.join(outDir, "index.js");
 		const bundledEntry = await fs.readFile(bundledEntryPath, "utf8");
 		expect(bundledEntry).toMatchInlineSnapshot(`
-			"// src/dep.ts
-			var dep_default = \\"bundled\\";
+			"// src/index.ts
+			import common from "./common.cjs";
+
+			// src/dep.ts
+			var dep_default = "bundled";
 
 			// src/index.ts
-			import text from \\"./text.txt\\";
-			import common from \\"./common.cjs\\";
+			import text from "./text.txt";
 			var src_default = {
 			  async fetch(request) {
 			    const url = new URL(request.url);
-			    if (url.pathname === \\"/dep\\") {
+			    if (url.pathname === "/dep") {
 			      return new Response(dep_default);
 			    }
-			    if (url.pathname === \\"/text\\") {
+			    if (url.pathname === "/text") {
 			      return new Response(text);
 			    }
-			    if (url.pathname === \\"/common\\") {
+			    if (url.pathname === "/common") {
 			      return new Response(common);
 			    }
-			    if (url.pathname === \\"/dynamic\\") {
-			      return new Response((await import(\\"./dynamic.js\\")).default);
+			    if (url.pathname === "/dynamic") {
+			      return new Response((await import("./dynamic.js")).default);
 			    }
-			    if (url.pathname.startsWith(\\"/lang/\\")) {
-			      const language = \\"./lang/\\" + url.pathname.substring(\\"/lang/\\".length) + \\".js\\";
+			    if (url.pathname.startsWith("/lang/")) {
+			      const language = "./lang/" + url.pathname.substring("/lang/".length) + ".js";
 			      return new Response((await import(language)).default.hello);
 			    }
-			    return new Response(\\"Not Found\\", { status: 404 });
+			    return new Response("Not Found", { status: 404 });
 			  }
 			};
 			export {

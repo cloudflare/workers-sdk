@@ -1,5 +1,5 @@
-import { options as addOptions, handler as addHandler } from "./add";
-import { options as removeOptions, handler as removeHandler } from "./remove";
+import { handler as addHandler, options as addOptions } from "./add";
+import { handler as removeHandler, options as removeOptions } from "./remove";
 import type { CommonYargsArgv } from "../../../../yargs-types";
 
 export function consumers(yargs: CommonYargsArgv) {

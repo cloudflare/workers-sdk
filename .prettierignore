@@ -13,6 +13,7 @@ packages/wrangler-devtools/devtools-frontend
 packages/edge-preview-authenticated-proxy/package.json
 packages/format-errors/package.json
 packages/**/dist/**
+packages/miniflare/dist-types/
 
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
@@ -20,6 +21,7 @@ fixtures/pages-functions-app/public/cdn-cgi/
 fixtures/remix-pages-app/functions/**
 fixtures/**/dist/**
 **/vendor/**
+**/.wrangler/**
 
 **/*.d.ts
 
@@ -32,3 +34,16 @@ fixtures/**/dist/**
 
 # TurboRepo CodeGen .hbs files
 **/*.hbs
+
+# Miniflare shouldn't be formatted with the root `prettier` version
+packages/miniflare
+
+# Generated Cap'n Proto files shouldn't be formatted
+*.capnp.js
+*.capnp.d.ts
+
+# In the C3 templates, in particular framework templates, we want to be able to
+# use any format that the framework authors prefer/use in their own templates,
+# so let's ignore all the c3 template files, exlcuding the c3.ts ones
+packages/create-cloudflare/templates/**/*.*
+!packages/create-cloudflare/templates/**/c3.ts

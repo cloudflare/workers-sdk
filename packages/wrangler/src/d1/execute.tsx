@@ -5,10 +5,12 @@ import { Static, Text } from "ink";
 import Table from "ink-table";
 import { Miniflare } from "miniflare";
 import React from "react";
+import { printWranglerBanner } from "../";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
+import { JsonFriendlyFatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
@@ -97,56 +99,70 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
 		logger.loggerLevel = "error";
 	}
+	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
 
 	const isInteractive = process.stdout.isTTY;
-	const response: QueryResult[] | null = await executeSql({
-		local,
-		config,
-		name: database,
-		shouldPrompt: isInteractive && !yes,
-		persistTo,
-		file,
-		command,
-		json,
-		preview,
-		batchSize,
-	});
+	try {
+		const response: QueryResult[] | null = await executeSql({
+			local,
+			config,
+			name: database,
+			shouldPrompt: isInteractive && !yes,
+			persistTo,
+			file,
+			command,
+			json,
+			preview,
+			batchSize,
+		});
 
-	// Early exit if prompt rejected
-	if (!response) return;
+		// Early exit if prompt rejected
+		if (!response) return;
 
-	if (isInteractive && !json) {
-		// Render table if single result
-		logger.log(
-			renderToString(
-				<Static items={response}>
-					{(result) => {
-						// batch results
-						if (!Array.isArray(result)) {
-							const { results, query } = result;
+		if (isInteractive && !json) {
+			// Render table if single result
+			logger.log(
+				renderToString(
+					<Static items={response}>
+						{(result) => {
+							// batch results
+							if (!Array.isArray(result)) {
+								const { results, query } = result;
 
-							if (Array.isArray(results) && results.length > 0) {
-								const shortQuery = shorten(query, 48);
-								return (
-									<>
-										{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-										<Table data={results}></Table>
-									</>
-								);
+								if (Array.isArray(results) && results.length > 0) {
+									const shortQuery = shorten(query, 48);
+									return (
+										<>
+											{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+											<Table data={results}></Table>
+										</>
+									);
+								}
 							}
-						}
-					}}
-				</Static>
-			)
-		);
-	} else {
-		// set loggerLevel back to what it was before to actually output the JSON in stdout
-		logger.loggerLevel = existingLogLevel;
-		logger.log(JSON.stringify(response, null, 2));
+						}}
+					</Static>
+				)
+			);
+		} else {
+			// set loggerLevel back to what it was before to actually output the JSON in stdout
+			logger.loggerLevel = existingLogLevel;
+			logger.log(JSON.stringify(response, null, 2));
+		}
+	} catch (error) {
+		if (json && error instanceof Error) {
+			logger.loggerLevel = existingLogLevel;
+			const messageToDisplay =
+				error.name === "APIError" ? error : { text: error.message };
+			throw new JsonFriendlyFatalError(
+				JSON.stringify({ error: messageToDisplay }, null, 2)
+			);
+		} else {
+			throw error;
+		}
 	}
 };
 
@@ -179,18 +195,18 @@ export async function executeSql({
 		logger.loggerLevel = "error";
 	}
 	const sql = file ? readFileSync(file) : command;
-	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
 	if (preview && local)
-		throw new Error(`Error: can't use --preview with --local`);
+		throw new UserError(`Error: can't use --preview with --local`);
 	if (persistTo && !local)
-		throw new Error(`Error: can't use --persist-to without --local`);
+		throw new UserError(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
 
 	if (file && sql) {
 		if (queries[0].startsWith("SQLite format 3")) {
 			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
-			throw new Error(
+			throw new UserError(
 				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
 			);
 		}
@@ -227,7 +243,7 @@ async function executeLocally({
 }) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
-		throw new Error(
+		throw new UserError(
 			`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
 		);
 	}
@@ -312,9 +328,11 @@ async function executeRemotely({
 		name
 	);
 	if (preview && !db.previewDatabaseUuid) {
-		throw logger.error(
+		const error = new UserError(
 			"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
 		);
+		logger.error(error.message);
+		throw error;
 	}
 	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
 	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);

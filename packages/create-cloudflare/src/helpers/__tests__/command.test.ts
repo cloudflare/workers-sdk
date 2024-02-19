@@ -1,7 +1,9 @@
 import { spawn } from "cross-spawn";
 import { detectPackageManager } from "helpers/packages";
-import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
+import { fetch, Response } from "undici";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
+import { createTestContext } from "../../__tests__/helpers";
 import {
 	getWorkerdCompatibilityDate,
 	installPackages,
@@ -9,12 +11,12 @@ import {
 	npmInstall,
 	runCommand,
 } from "../command";
-import * as shellquote from "../shell-quote";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;
 let spawnStdout: string | undefined = undefined;
 let spawnStderr: string | undefined = undefined;
+let fetchResult: Response | undefined = undefined;
 
 describe("Command Helpers", () => {
 	afterEach(() => {
@@ -22,6 +24,7 @@ describe("Command Helpers", () => {
 		spawnResultCode = 0;
 		spawnStdout = undefined;
 		spawnStderr = undefined;
+		fetchResult = undefined;
 	});
 
 	beforeEach(() => {
@@ -49,6 +52,20 @@ describe("Command Helpers", () => {
 
 			return { spawn: mockedSpawn };
 		});
+
+		// Mock out the undici fetch function
+		vi.mock("undici", async () => {
+			const actual = (await vi.importActual("undici")) as Record<
+				string,
+				unknown
+			>;
+			const mockedFetch = vi.fn().mockImplementation(() => {
+				return fetchResult;
+			});
+
+			return { ...actual, fetch: mockedFetch };
+		});
+
 		vi.mock("which-pm-runs");
 		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 
@@ -57,17 +74,8 @@ describe("Command Helpers", () => {
 		}));
 	});
 
-	const expectSpawnWith = (cmd: string) => {
-		const [command, ...args] = shellquote.parse(cmd);
-
-		expect(spawn).toHaveBeenCalledWith(command, args, {
-			stdio: "inherit",
-			env: process.env,
-		});
-	};
-
 	const expectSilentSpawnWith = (cmd: string) => {
-		const [command, ...args] = shellquote.parse(cmd);
+		const [command, ...args] = cmd.split(" ");
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "pipe",
@@ -76,17 +84,11 @@ describe("Command Helpers", () => {
 	};
 
 	test("runCommand", async () => {
-		await runCommand("ls -l");
-		expectSpawnWith("ls -l");
-
-		await runCommand(" ls -l ");
-		expectSpawnWith("ls -l");
-
-		await runCommand(" ls  -l ");
-		expectSpawnWith("ls -l");
-
-		await runCommand(" ls \t -l ");
-		expectSpawnWith("ls -l");
+		await runCommand(["ls", "-l"]);
+		expect(spawn).toHaveBeenCalledWith("ls", ["-l"], {
+			stdio: "inherit",
+			env: process.env,
+		});
 	});
 
 	test("installWrangler", async () => {
@@ -96,7 +98,7 @@ describe("Command Helpers", () => {
 	});
 
 	test("npmInstall", async () => {
-		await npmInstall();
+		await npmInstall(createTestContext());
 		expectSilentSpawnWith("npm install");
 	});
 
@@ -106,7 +108,7 @@ describe("Command Helpers", () => {
 			version: "8.5.1",
 		});
 
-		await npmInstall();
+		await npmInstall(createTestContext());
 		expectSilentSpawnWith("pnpm install");
 	});
 
@@ -121,7 +123,7 @@ describe("Command Helpers", () => {
 		test("npm", () => {
 			expect(pm.npm).toBe("npm");
 			expect(pm.npx).toBe("npx");
-			expect(pm.dlx).toBe("npx");
+			expect(pm.dlx).toEqual(["npx"]);
 		});
 
 		test("pnpm", () => {
@@ -132,7 +134,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("pnpm");
 			expect(pm.npx).toBe("pnpm");
-			expect(pm.dlx).toBe("pnpm dlx");
+			expect(pm.dlx).toEqual(["pnpm", "dlx"]);
 
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "pnpm",
@@ -141,7 +143,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("pnpm");
 			expect(pm.npx).toBe("pnpm");
-			expect(pm.dlx).toBe("pnpm dlx");
+			expect(pm.dlx).toEqual(["pnpm", "dlx"]);
 
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "pnpm",
@@ -150,7 +152,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("pnpm");
 			expect(pm.npx).toBe("pnpx");
-			expect(pm.dlx).toBe("pnpx");
+			expect(pm.dlx).toEqual(["pnpx"]);
 		});
 
 		test("yarn", () => {
@@ -161,7 +163,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("yarn");
 			expect(pm.npx).toBe("yarn");
-			expect(pm.dlx).toBe("yarn dlx");
+			expect(pm.dlx).toEqual(["yarn", "dlx"]);
 
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "yarn",
@@ -170,37 +172,37 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("yarn");
 			expect(pm.npx).toBe("yarn");
-			expect(pm.dlx).toBe("yarn");
+			expect(pm.dlx).toEqual(["yarn"]);
 		});
 	});
 
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("normal flow", async () => {
-			spawnStdout = "2.20250110.5";
+			fetchResult = new Response(
+				JSON.stringify({
+					"dist-tags": { latest: "2.20250110.5" },
+				})
+			);
 			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2025-01-10");
 		});
 
 		test("empty result", async () => {
-			spawnStdout = "";
+			fetchResult = new Response(
+				JSON.stringify({
+					"dist-tags": { latest: "" },
+				})
+			);
 			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2023-05-18");
 		});
 
-		test("verbose output (e.g. yarn or debug mode)", async () => {
-			spawnStdout =
-				"Debugger attached.\nyarn info v1.22.19\n2.20250110.5\n✨  Done in 0.83s.";
-			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
-			expect(date).toBe("2025-01-10");
-		});
-
 		test("command failed", async () => {
-			spawnResultCode = 1;
+			fetchResult = new Response("Unknown error");
 			const date = await getWorkerdCompatibilityDate();
-			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2023-05-18");
 		});
 	});
