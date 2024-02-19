@@ -447,7 +447,9 @@ export function buildPersistOptions(
 	}
 }
 
-function buildSitesOptions({ assetPaths }: ConfigBundle) {
+export function buildSitesOptions({
+	assetPaths,
+}: Pick<ConfigBundle, "assetPaths">) {
 	if (assetPaths !== undefined) {
 		const { baseDirectory, assetDirectory, includePatterns, excludePatterns } =
 			assetPaths;

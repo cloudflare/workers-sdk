@@ -3,13 +3,17 @@ import { readConfig } from "../../../config";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getVarsForDev } from "../../../dev/dev-vars";
-import { buildMiniflareBindingOptions } from "../../../dev/miniflare";
+import {
+	buildMiniflareBindingOptions,
+	buildSitesOptions,
+} from "../../../dev/miniflare";
+import { getAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions } from "miniflare";
+import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
 /**
  * Options for the `getPlatformProxy` utility
@@ -203,4 +207,62 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 			deepFreeze(prop as Record<string | number | symbol, unknown>);
 		}
 	});
+}
+
+export type SourcelessWorkerOptions = Omit<
+	WorkerOptions,
+	"script" | "scriptPath" | "modules" | "modulesRoot" | "modulesRule"
+>;
+
+export function unstable_getMiniflareWorkerOptions(configPath: string): {
+	workerOptions: SourcelessWorkerOptions;
+	main?: string;
+} {
+	const config = readConfig(configPath, { experimentalJsonConfig: true });
+	const env = undefined;
+	const bindings = getBindings(config, env, true, {});
+	const { bindingOptions } = buildMiniflareBindingOptions({
+		name: undefined,
+		bindings,
+		workerDefinitions: undefined,
+		queueConsumers: config.queues.consumers,
+		serviceBindings: {},
+	});
+
+	// This function is currently only exported for the Workers Vitest pool.
+	// In tests, we don't want to rely on the dev registry, as we can't guarantee
+	// which sessions will be running. Instead, we rewrite `serviceBindings` and
+	// `durableObjects` to use more traditional Miniflare config expecting the
+	// user to define workers with the required names in the `workers` array.
+	// These will run the same `workerd` processes as tests.
+	if (bindings.services !== undefined) {
+		bindingOptions.serviceBindings = Object.fromEntries(
+			bindings.services.map((binding) => {
+				return [binding.binding, binding.service];
+			})
+		);
+	}
+	if (bindings.durable_objects !== undefined) {
+		bindingOptions.durableObjects = Object.fromEntries(
+			bindings.durable_objects.bindings.map((binding) => [
+				binding.name,
+				{ className: binding.class_name, scriptName: binding.script_name },
+			])
+		);
+	}
+
+	const assetPaths = config.assets
+		? getAssetPaths(config, undefined)
+		: getSiteAssetPaths(config);
+	const sitesOptions = buildSitesOptions({ assetPaths });
+
+	const workerOptions: SourcelessWorkerOptions = {
+		compatibilityDate: config.compatibility_date,
+		compatibilityFlags: config.compatibility_flags,
+
+		...bindingOptions,
+		...sitesOptions,
+	};
+
+	return { workerOptions, main: config.main };
 }
