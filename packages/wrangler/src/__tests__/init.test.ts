@@ -79,9 +79,13 @@ describe("init", () => {
 			}
 		`);
 
-			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare@2"], {
-				stdio: "inherit",
-			});
+			expect(execa).toHaveBeenCalledWith(
+				"mockpm",
+				["create", "cloudflare@2.5.0"],
+				{
+					stdio: "inherit",
+				}
+			);
 		});
 
 		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
@@ -89,7 +93,7 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@2", "--wrangler-defaults"],
+				["create", "cloudflare@2.5.0", "--wrangler-defaults"],
 				{ stdio: "inherit" }
 			);
 		});
@@ -2954,10 +2958,8 @@ describe("init", () => {
 					"mockpm",
 					[
 						"create",
-						"cloudflare@2",
+						"cloudflare@2.5.0",
 						"existing-memory-crystal",
-						"--type",
-						"pre-existing",
 						"--existing-script",
 						"existing-memory-crystal",
 					],
