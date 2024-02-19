@@ -52,12 +52,10 @@ export async function waitOnExecutionContext(
 // `ScheduledController`
 // =============================================================================
 
-const kRetry = Symbol("kRetry");
 class ScheduledController {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/scheduled.h#L35
 	readonly scheduledTime!: number;
 	readonly cron!: string;
-	[kRetry] = true;
 
 	constructor(flag: typeof kConstructFlag, options?: FetcherScheduledOptions) {
 		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
@@ -84,7 +82,6 @@ class ScheduledController {
 		if (!(this instanceof ScheduledController)) {
 			throw new TypeError("Illegal invocation");
 		}
-		this[kRetry] = false;
 	}
 }
 export function createScheduledController(
@@ -97,32 +94,12 @@ export function createScheduledController(
 	}
 	return new ScheduledController(kConstructFlag, options);
 }
-export async function getScheduledResult(
-	ctrl: ScheduledController,
-	ctx: ExecutionContext
-): Promise<FetcherScheduledResult> {
-	// noinspection SuspiciousTypeOfGuard
-	if (!(ctrl instanceof ScheduledController)) {
-		throw new TypeError(
-			"Failed to execute 'getScheduledResult': parameter 1 is not of type 'ScheduledController'.\n" +
-				"You must call 'createScheduledController()' to get a 'ScheduledController' instance."
-		);
-	}
-	// noinspection SuspiciousTypeOfGuard
-	if (!(ctx instanceof ExecutionContext)) {
-		throw new TypeError(
-			"Failed to execute 'getScheduledResult': parameter 2 is not of type 'ExecutionContext'.\n" +
-				"You must call 'createExecutionContext()' to get an 'ExecutionContext' instance."
-		);
-	}
-	await waitOnExecutionContext(ctx);
-	return { outcome: "ok", noRetry: !ctrl[kRetry] };
-}
 
 // =============================================================================
 // `MessageBatch`
 // =============================================================================
 
+const kRetry = Symbol("kRetry");
 const kAck = Symbol("kAck");
 const kRetryAll = Symbol("kRetryAll");
 const kAckAll = Symbol("kAckAll");

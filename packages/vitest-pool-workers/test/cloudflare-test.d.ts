@@ -84,17 +84,6 @@ declare module "cloudflare:test" {
 		options?: FetcherScheduledOptions
 	): ScheduledController;
 	/**
-	 * Gets the "no retry" state of the `ScheduledController`, and waits for all
-	 * `ExecutionContext#waitUntil()ed` `Promise`s to settle. Only accepts
-	 * instances of `ScheduledController` returned by
-	 * `createScheduledController()`, and instances of `ExecutionContext` returned
-	 * by `createExecutionContext()`.
-	 */
-	export function getScheduledResult(
-		ctrl: ScheduledController,
-		ctx: ExecutionContext
-	): Promise<FetcherScheduledResult>;
-	/**
 	 * Creates an instance of `MessageBatch` for use as the 1st argument to
 	 * modules-format `queue()` exported handlers.
 	 */
