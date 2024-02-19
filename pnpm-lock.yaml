@@ -105,8 +105,8 @@ importers:
         specifier: ^4.20230724.0
         version: 4.20230821.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -120,8 +120,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -147,8 +147,8 @@ importers:
         specifier: 3.20240129.3
         version: link:../../packages/miniflare
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -162,8 +162,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -177,8 +177,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20230821.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -195,8 +195,8 @@ importers:
         specifier: ^8.2.1
         version: 8.2.1
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -210,8 +210,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20231025.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -225,8 +225,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20240208.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -241,8 +241,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -259,8 +259,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
 
   fixtures/isomorphic-random-example: {}
 
@@ -306,8 +306,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20230821.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -318,8 +318,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -333,8 +333,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20231025.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -351,8 +351,8 @@ importers:
         specifier: workspace:*
         version: link:../pages-plugin-example
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -363,8 +363,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -378,8 +378,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20230821.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -402,8 +402,8 @@ importers:
         specifier: workspace:*
         version: link:../pages-plugin-example
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -417,8 +417,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/miniflare
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -432,8 +432,8 @@ importers:
         specifier: ^4.20221111.1
         version: 4.20230821.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -444,8 +444,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -456,8 +456,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -468,8 +468,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -480,8 +480,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -492,8 +492,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -528,8 +528,8 @@ importers:
         specifier: ^17.0.2
         version: 17.0.2(react@17.0.2)
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -584,8 +584,8 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -614,8 +614,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -666,8 +666,8 @@ importers:
         specifier: ^8.6.11
         version: 8.6.11
       undici:
-        specifier: 5.28.2
-        version: 5.28.2
+        specifier: 5.28.3
+        version: 5.28.3
 
   packages/create-cloudflare:
     devDependencies:
@@ -780,8 +780,8 @@ importers:
         specifier: ^5.0.2
         version: 5.0.3
       undici:
-        specifier: 5.28.2
-        version: 5.28.2
+        specifier: 5.28.3
+        version: 5.28.3
       vite-tsconfig-paths:
         specifier: ^4.0.8
         version: 4.2.0(typescript@5.0.3)(vite@5.0.12)
@@ -931,8 +931,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       undici:
-        specifier: ^5.28.2
-        version: 5.28.2
+        specifier: ^5.28.3
+        version: 5.28.3
       workerd:
         specifier: 1.20240129.0
         version: 1.20240129.0
@@ -1105,8 +1105,8 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(patch_hash=dxprwy4mawdnq3drjhp7shhm2m)
       undici:
-        specifier: 5.28.2
-        version: 5.28.2
+        specifier: 5.28.3
+        version: 5.28.3
       wrangler:
         specifier: ^3.24.0
         version: link:../wrangler
@@ -1391,8 +1391,8 @@ importers:
         specifier: ^5.0.2
         version: 5.0.3
       undici:
-        specifier: 5.28.2
-        version: 5.28.2
+        specifier: 5.28.3
+        version: 5.28.3
       vite-plugin-rewrite-all:
         specifier: ^1.0.1
         version: 1.0.1(vite@4.3.9)
@@ -1719,8 +1719,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       undici:
-        specifier: 5.28.2
-        version: 5.28.2
+        specifier: 5.28.3
+        version: 5.28.3
       update-check:
         specifier: ^1.5.4
         version: 1.5.4
@@ -19711,18 +19711,11 @@ packages:
       has-symbols: 1.0.3
       which-boxed-primitive: 1.0.2
 
-  /undici@5.28.2:
-    resolution: {integrity: sha512-wh1pHJHnUeQV5Xa8/kyQhO7WFa8M34l026L5P/+2TYiakvGy5Rdc8jWZVyG7ieht/0WgJLEd3kcU5gKx+6GC8w==}
-    engines: {node: '>=14.0'}
-    dependencies:
-      '@fastify/busboy': 2.1.0
-
   /undici@5.28.3:
     resolution: {integrity: sha512-3ItfzbrhDlINjaP0duwnNsKpDQk3acHI3gVJ1z4fmwMK31k5G9OVIAMLSIaP6w4FaGkaAkN6zaQO9LUvZ1t7VA==}
     engines: {node: '>=14.0'}
     dependencies:
       '@fastify/busboy': 2.1.0
-    dev: true
 
   /unicode-canonical-property-names-ecmascript@2.0.0:
     resolution: {integrity: sha512-yY5PpDlfVIU5+y/BSCxAJRBIS1Zc2dDG3Ujq+sR0U+JjUevW2JhocOF+soROYDSaAezOzOKuyyixhD6mBknSmQ==}
