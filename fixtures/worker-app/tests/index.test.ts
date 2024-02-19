@@ -139,4 +139,15 @@ describe("'wrangler dev' correctly renders pages", () => {
 			`http://${ip}:${port}/foo`
 		);
 	});
+
+	it("rewrites set-cookie headers to the hostname, not host", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/cookie`);
+
+		expect(response.headers.getSetCookie()).toStrictEqual([
+			`hello=world; Domain=${ip}`,
+			`hello2=world2; Domain=${ip}; Secure`,
+		]);
+	});
 });

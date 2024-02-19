@@ -142,7 +142,7 @@ compatibility_date = "2023-01-01"
 		expect(
 			removeUUID(resp.headers.get("set-cookie") ?? "")
 		).toMatchInlineSnapshot(
-			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
@@ -152,7 +152,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}`,
 				},
 			}
 		);
@@ -183,7 +183,7 @@ compatibility_date = "2023-01-01"
 		expect(
 			removeUUID(resp.headers.get("set-cookie") ?? "")
 		).toMatchInlineSnapshot(
-			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
@@ -218,7 +218,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 			}
 		);
@@ -237,7 +237,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -255,7 +255,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "PUT",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -270,7 +270,7 @@ compatibility_date = "2023-01-01"
 				method: "PUT",
 				headers: {
 					"X-Custom-Header": "custom",
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -284,7 +284,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "PUT",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}

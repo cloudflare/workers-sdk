@@ -297,6 +297,7 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 				sameSite: "none",
 				httpOnly: true,
 				domain: url.hostname,
+				partitioned: true,
 			}),
 		},
 	});
