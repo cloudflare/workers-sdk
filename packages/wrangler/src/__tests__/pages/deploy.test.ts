@@ -2958,7 +2958,7 @@ async function onRequest() {
 		});
 
 		it("should not allow 3rd party imports when not bundling", async () => {
-			// Add in a cloudflare import to the bundle
+			// Add in a 3rd party import to the bundle
 			writeFileSync(
 				"public/_worker.js",
 				`
@@ -2987,7 +2987,7 @@ async function onRequest() {
 		});
 
 		it("should allow `cloudflare:...` imports when not bundling", async () => {
-			// Add in a cloudflare import to the bundle
+			// Add in a 3rd party import to the bundle
 			writeFileSync(
 				"public/_worker.js",
 				`
@@ -3009,7 +3009,7 @@ async function onRequest() {
 		});
 
 		it("should allow `node:...` imports when not bundling and marked with nodejs_compat", async () => {
-			// Add in a cloudflare import to the bundle
+			// Add in a node built-in import to the bundle
 			writeFileSync(
 				"public/_worker.js",
 				`
@@ -3032,7 +3032,7 @@ async function onRequest() {
 		});
 
 		it("should not allow `node:...` imports when not bundling and not marked nodejs_compat", async () => {
-			// Add in a cloudflare import to the bundle
+			// Add in a node built-in import to the bundle
 			writeFileSync(
 				"public/_worker.js",
 				`
