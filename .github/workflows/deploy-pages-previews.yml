@@ -40,7 +40,7 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         env:
-          node-version: 16.18
+          node-version: 18.18
 
       - name: Build tools and libraries
         run: pnpm run build
