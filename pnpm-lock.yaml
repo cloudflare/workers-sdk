@@ -462,18 +462,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/pages-workerjs-builtins:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
-      undici:
-        specifier: ^5.9.1
-        version: 5.23.0
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/pages-workerjs-directory:
     devDependencies:
       '@cloudflare/workers-tsconfig':
