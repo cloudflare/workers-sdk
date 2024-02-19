@@ -306,6 +306,17 @@ function insertLiveReloadScript(
 function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 	const setCookie = headers.getAll("Set-Cookie");
 	headers.delete("Set-Cookie");
+	headers.forEach((value, key) => {
+		if (
+			typeof value === "string" &&
+			value.includes(from.host)
+		) {
+			headers.set(
+				key,
+				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
+			);
+		}
+	});
 	for (const cookie of setCookie) {
 		headers.append(
 			"Set-Cookie",
@@ -315,16 +326,4 @@ function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 			)
 		);
 	}
-	headers.forEach((value, key) => {
-		if (
-			typeof value === "string" &&
-			value.includes(from.host) &&
-			key !== "set-cookie"
-		) {
-			headers.set(
-				key,
-				value.replaceAll(from.origin, to.origin).replaceAll(from.host, to.host)
-			);
-		}
-	});
 }
