@@ -1,7 +1,7 @@
-import { endSection } from "@cloudflare/cli";
+import { crash, endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { loadTemplateSnippets, parseTs, transformFile } from "helpers/codemod";
+import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { runCommand, runFrameworkGenerator } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
@@ -37,6 +37,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 	s.start("Updating `vite.config.ts`");
 
 	const snippets = loadTemplateSnippets(ctx);
+	const b = recast.types.builders;
 
 	transformFile("vite.config.ts", {
 		// Insert the env declaration after the last import (but before the rest of the body)
@@ -56,7 +57,22 @@ const addBindingsProxy = (ctx: C3Context) => {
 				return this.traverse(n);
 			}
 
-			n.node.arguments = [parseTs("{ platform }")];
+			// The config object passed to `qwikCity`
+			const configArgument = n.node
+				.arguments[0] as recast.types.namedTypes.ObjectExpression;
+
+			if (configArgument.type !== "ObjectExpression") {
+				crash("Failed to update `vite.config.ts`");
+			}
+
+			// Add the `platform` object to the object
+			configArgument.properties.push(
+				b.objectProperty.from({
+					key: b.identifier("platform"),
+					value: b.identifier("platform"),
+					shorthand: true,
+				})
+			);
 
 			return false;
 		},
