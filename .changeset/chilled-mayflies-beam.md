@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-No longer strips .py extensions from Python modules
+fix: don't strip `.py` extensions from Python modules
