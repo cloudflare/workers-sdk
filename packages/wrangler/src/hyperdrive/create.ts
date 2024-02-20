@@ -23,8 +23,18 @@ export function options(yargs: CommonYargsArgv) {
 			},
 			"caching-disabled": {
 				type: "boolean",
+				describe: "Disables the caching of SQL responses",
+				default: false,
+			},
+			"max-age": {
+				type: "number",
 				describe:
-					"Whether caching query results is disabled for this Hyperdrive config",
+					"Specifies max duration for which items should persist in the cache, cannot be set when caching is disabled",
+			},
+			swr: {
+				type: "number",
+				describe:
+					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
 			},
 		})
 		.epilogue(hyperdriveBetaWarning);
@@ -82,7 +92,11 @@ export async function handler(
 				user: url.username,
 				password: url.password,
 			},
-			caching: { disabled: args.cachingDisabled ?? false },
+			caching: {
+				disabled: args.cachingDisabled,
+				maxAge: args.maxAge,
+				staleWhileRevalidate: args.swr,
+			},
 		});
 		logger.log(
 			`✅ Created new Hyperdrive config\n`,
