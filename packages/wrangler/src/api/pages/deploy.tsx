@@ -142,7 +142,7 @@ export async function deploy({
 	const deploymentConfig =
 		project.deployment_configs[isProduction ? "production" : "preview"];
 	const nodejsCompat =
-		deploymentConfig.compatibility_flags?.includes("nodejs_compat");
+		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ?? false;
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		deploymentConfig.compatibility_date,
@@ -280,7 +280,7 @@ export async function deploy({
 				defineNavigatorUserAgent,
 			});
 		} else {
-			await checkRawWorker(_workerPath, () => {});
+			await checkRawWorker(_workerPath, nodejsCompat, () => {});
 			// TODO: Let users configure this in the future.
 			workerBundle = {
 				modules: [],

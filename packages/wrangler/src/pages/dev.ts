@@ -316,7 +316,7 @@ export const Handler = async ({
 
 	let scriptPath = "";
 
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		compatibilityDate,
 		compatibilityFlags
@@ -354,7 +354,9 @@ export const Handler = async ({
 	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
 		let runBuild = async () => {
-			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
+			await checkRawWorker(workerScriptPath, nodejsCompat, () =>
+				scriptReadyResolve()
+			);
 		};
 
 		if (enableBundling) {
