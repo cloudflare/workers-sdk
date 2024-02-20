@@ -58,21 +58,28 @@ const addBindingsProxy = (ctx: C3Context) => {
 			}
 
 			// The config object passed to `qwikCity`
-			const configArgument = n.node
-				.arguments[0] as recast.types.namedTypes.ObjectExpression;
+			const configArgument = n.node.arguments[0] as
+				| recast.types.namedTypes.ObjectExpression
+				| undefined;
+
+			const platformPropery = b.objectProperty.from({
+				key: b.identifier("platform"),
+				value: b.identifier("platform"),
+				shorthand: true,
+			});
+
+			if (!configArgument) {
+				n.node.arguments = [b.objectExpression([platformPropery])];
+
+				return false;
+			}
 
 			if (configArgument.type !== "ObjectExpression") {
 				crash("Failed to update `vite.config.ts`");
 			}
 
 			// Add the `platform` object to the object
-			configArgument.properties.push(
-				b.objectProperty.from({
-					key: b.identifier("platform"),
-					value: b.identifier("platform"),
-					shorthand: true,
-				})
-			);
+			configArgument.properties.push(platformPropery);
 
 			return false;
 		},
