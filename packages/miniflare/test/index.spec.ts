@@ -762,13 +762,13 @@ test("Miniflare: python modules", async (t) => {
 		modules: [
 			{
 				type: "PythonModule",
-				path: "index",
+				path: "index.py",
 				contents:
 					"from test_module import add; from js import Response;\ndef fetch(request):\n  return Response.new(add(2,2))",
 			},
 			{
 				type: "PythonModule",
-				path: "test_module",
+				path: "test_module.py",
 				contents: `def add(a, b):\n  return a + b`,
 			},
 		],
