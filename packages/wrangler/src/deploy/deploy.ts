@@ -47,11 +47,7 @@ import type {
 	ZoneNameRoute,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type {
-	CfModuleType,
-	CfPlacement,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
+import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";

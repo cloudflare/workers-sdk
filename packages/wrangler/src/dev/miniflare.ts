@@ -16,7 +16,6 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
-	CfModuleType,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
