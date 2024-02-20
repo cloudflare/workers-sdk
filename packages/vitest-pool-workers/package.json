@@ -44,12 +44,13 @@
 		"esbuild": "0.17.19",
 		"import-meta-resolve": "^4.0.0",
 		"miniflare": "workspace:*",
+		"wrangler": "workspace:*",
 		"zod": "^3.20.6"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "1.1.3",
-		"@vitest/snapshot": "1.1.3",
-		"vitest": "1.1.3"
+		"@vitest/runner": "1.3.0",
+		"@vitest/snapshot": "1.3.0",
+		"vitest": "1.3.0"
 	},
 	"workers-sdk": {
 		"prerelease": true

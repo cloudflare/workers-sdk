@@ -1705,4 +1705,5 @@ export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
+export * from "./merge";
 export * from "./zod-format";

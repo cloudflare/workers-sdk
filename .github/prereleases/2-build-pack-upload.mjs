@@ -5,13 +5,28 @@ import { DefaultArtifactClient } from "@actions/artifact";
 import {
 	getPackagesForPrerelease,
 	getPrereleaseArtifactName,
+	getPrereleaseArtifactUrl,
 	projectRoot,
+	setPackage,
 } from "./0-packages.mjs";
 
 const artifact = new DefaultArtifactClient();
 
 function buildAllPackages() {
 	execSync("pnpm build", { cwd: projectRoot, stdio: "inherit" });
+}
+
+/** @param {~Package[]} pkgs */
+function updateDependencyVersions(pkgs) {
+	const prereleaseNames = new Set(pkgs.map((pkg) => pkg.json.name));
+	for (const pkg of pkgs) {
+		for (const dependency of Object.keys(pkg.json.dependencies ?? {})) {
+			if (prereleaseNames.has(dependency)) {
+				pkg.json.dependencies[dependency] =
+					getPrereleaseArtifactUrl(dependency);
+			}
+		}
+	}
 }
 
 /**
@@ -38,6 +53,12 @@ async function uploadPackageTarball(pkg, tarballPath) {
 {
 	buildAllPackages();
 	const pkgs = getPackagesForPrerelease();
+
+	// Update dependency versions *after* the build, so Turborepo knows to build
+	// dependent packages first
+	updateDependencyVersions(pkgs);
+	pkgs.forEach(setPackage);
+
 	for (const pkg of pkgs) {
 		const tarballPath = packPackage(pkg);
 		await uploadPackageTarball(pkg, tarballPath);
