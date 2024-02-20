@@ -70,12 +70,20 @@ type ServeAsset<AssetEntry> = (
 	options?: { preserve: boolean }
 ) => Promise<Response>;
 
+type CacheStatus = "hit" | "miss";
+type CacheResult<A extends string> = `${A}-${CacheStatus}`;
+export type HandlerMetrics = {
+	preservationCacheResult?: CacheResult<"checked"> | "disabled";
+	earlyHintsResult?: CacheResult<"used" | "notused"> | "disabled";
+};
+
 type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	request: Request;
 	metadata: Metadata;
 	xServerEnvHeader?: string;
 	xDeploymentIdHeader?: boolean;
 	logError: (err: Error) => void;
+	setMetrics?: (metrics: HandlerMetrics) => void;
 	findAssetEntryForPath: FindAssetEntryForPath<AssetEntry>;
 	getAssetKey(assetEntry: AssetEntry, content: ContentNegotiation): string;
 	negotiateContent(
@@ -123,6 +131,7 @@ export async function generateHandler<
 	xServerEnvHeader,
 	xDeploymentIdHeader,
 	logError,
+	setMetrics,
 	findAssetEntryForPath,
 	getAssetKey,
 	negotiateContent,
@@ -332,7 +341,12 @@ export async function generateHandler<
 				const earlyHintsLinkHeader = earlyHintsResponse.headers.get("Link");
 				if (earlyHintsLinkHeader) {
 					headers.set("Link", earlyHintsLinkHeader);
+					if (setMetrics) setMetrics({ earlyHintsResult: "used-hit" });
+				} else {
+					if (setMetrics) setMetrics({ earlyHintsResult: "notused-hit" });
 				}
+			} else {
+				if (setMetrics) setMetrics({ earlyHintsResult: "notused-miss" });
 			}
 
 			const clonedResponse = response.clone();
@@ -393,6 +407,8 @@ export async function generateHandler<
 					})()
 				);
 			}
+		} else {
+			if (setMetrics) setMetrics({ earlyHintsResult: "disabled" });
 		}
 
 		// Iterate through rules and find rules that match the path
@@ -566,8 +582,13 @@ export async function generateHandler<
 			);
 			const preservedResponse = await assetPreservationCache.match(request.url);
 			if (preservedResponse) {
+				if (setMetrics) setMetrics({ preservationCacheResult: "checked-hit" });
 				return preservedResponse;
+			} else {
+				if (setMetrics) setMetrics({ preservationCacheResult: "checked-miss" });
 			}
+		} else {
+			if (setMetrics) setMetrics({ preservationCacheResult: "disabled" });
 		}
 
 		// Traverse upwards from the current path looking for a custom 404 page
