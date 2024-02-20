@@ -472,8 +472,17 @@ const verifyBuildScript = async (
 
 	const { outputDir, script, route, expectedText } = verifyBuild;
 
-	// Run the build script
 	const { name: pm, npx } = detectPackageManager();
+
+	// Run the `build-cf-types` script to generate types for bindings in fixture
+	const buildTypesProc = spawnWithLogging(
+		[pm, "run", "build-cf-types"],
+		{ cwd: projectPath },
+		logStream
+	);
+	await waitForExit(buildTypesProc);
+
+	// Run the build scripts
 	const buildProc = spawnWithLogging(
 		[pm, "run", script],
 		{
