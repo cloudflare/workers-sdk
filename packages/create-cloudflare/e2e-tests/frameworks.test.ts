@@ -60,6 +60,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Hello, Astronaut!",
 		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: "./dist",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
 	},
 	docusaurus: {
 		unsupportedPms: ["bun"],
@@ -353,7 +363,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 				}
 			},
-			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
+			{
+				retry: process.env.E2E_NO_RETRY ? 0 : 1,
+				timeout: timeout || TEST_TIMEOUT,
+			}
 		);
 	});
 });
