@@ -1,4 +1,4 @@
-import { crash, logRaw, updateStatus } from "@cloudflare/cli";
+import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { runCommand, runFrameworkGenerator } from "helpers/command";
@@ -6,7 +6,7 @@ import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
+import type { C3Context, PackageJson } from "types";
 
 const { npx } = detectPackageManager();
 
@@ -99,11 +99,11 @@ const config: TemplateConfig = {
 	deployScript: "deploy",
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (pkgJson: PackageJson, ctx: C3Context) => ({
 		scripts: {
 			deploy: `astro build && wrangler pages deploy ./dist`,
 			preview: `astro build && wrangler pages dev ./dist`,
-			"build-cf-types": `wrangler types`,
+			...(usesTypescript(ctx) && { "build-cf-types": `wrangler types` }),
 		},
 	}),
 	testFlags: [
