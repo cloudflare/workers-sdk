@@ -442,8 +442,15 @@ const verifyDevScript = async (
 		logStream
 	);
 
-	// Wait an eternity for the dev server to spin up
-	await sleep(12000);
+	// Retry requesting the test route from the devserver
+	await retry({ times: 5 }, async () => {
+		await sleep(500);
+		const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
+		const body = await res.text();
+		if (!body.match(verifyDev?.expectedText)) {
+			throw new Error("Expected text not found in response from devserver.");
+		}
+	});
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
