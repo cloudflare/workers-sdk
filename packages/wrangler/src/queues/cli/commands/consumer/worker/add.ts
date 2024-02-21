@@ -1,11 +1,8 @@
-import { readConfig } from "../../../../../config";
-import { logger } from "../../../../../logger";
-import { postConsumer } from "../../../../client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../../../yargs-types";
-import type { PostConsumerBody } from "../../../../client";
+import { readConfig } from "../../../../config";
+import { logger } from "../../../../logger";
+import type { PostConsumerBody } from "../../../client";
+import { postConsumer } from "../../../client";
+import type { CommonYargsArgv, StrictYargsOptionsToInterface } from "../../../../yargs-types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -42,15 +39,21 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"The maximum number of concurrent consumer Worker invocations. Must be a positive integer",
 			},
+			"retry-delay": {
+				type: "number",
+				describe:
+					"TBD",
+			},
+			"no-retry-delay": {
+				type: "boolean",
+				describe:
+					"TBD",
+			},
 		});
 }
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-
-	const body: PostConsumerBody = {
+function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostConsumerBody {
+	return {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
 		environment_name: args.env ?? "", // API expects empty string as default
@@ -64,6 +67,13 @@ export async function handler(
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};
+}
+
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
+	const config = readConfig(args.config, args);
+	const body = createBody(args);
 
 	logger.log(`Adding consumer to queue ${args.queueName}.`);
 	await postConsumer(config, args.queueName, body);
