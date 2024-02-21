@@ -4,8 +4,7 @@
 
 feat: add new `--env-interface` to `wrangler types`
 
-Add the possibility for users to specify the "env" interface name
-they want `wrangler types` to generate, via the new CLI flag `env-interface`
+Allow users to specify the name of the interface that they want `wrangler types` to generate for the `env` parameter, via the new CLI flag `--env-interface`
 
 Example:
 

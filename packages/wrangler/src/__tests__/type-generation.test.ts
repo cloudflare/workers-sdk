@@ -326,7 +326,7 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should include secrets from .dev.vars", async () => {
+	it("should include secret keys from .dev.vars", async () => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({

@@ -4,7 +4,7 @@
 
 feat: add new `path` positional argument to `wrangler types`
 
-Add the possibility for users to specify the d.ts file they want
+Allow users to specify the path to the typings (.d.ts) file they want
 `wrangler types` to generate
 
 Example:
