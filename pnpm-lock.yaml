@@ -604,12 +604,6 @@ importers:
 
   fixtures/type-generation:
     devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20240208.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
