@@ -66,7 +66,7 @@ export async function typesHandler(
 		return;
 	}
 
-	const config = readConfig(args.config, args);
+	const config = readConfig(configPath, args);
 
 	const configBindings: Partial<Config> = {
 		kv_namespaces: config.kv_namespaces ?? [],
