@@ -18,7 +18,7 @@ describe("version", () => {
 	// `);
 	// });
 
-	it("should output current version if !isTTY calling -v", async () => {
+	it("should output current version if !isTTY calling with `-v` flag", async () => {
 		setIsTTY(false);
 
 		await runWrangler("-v");
@@ -26,10 +26,22 @@ describe("version", () => {
 	});
 
 	// This run separately as command handling is different
-	it("should output current version if !isTTY calling --version", async () => {
+	it("should output current version if !isTTY calling with `--version` flag", async () => {
 		setIsTTY(false);
 
 		await runWrangler("--version");
 		expect(std.out).toMatch(version);
+	});
+
+	it("should output current version if !isTTY calling (deprecated) `version` command", async () => {
+		setIsTTY(false);
+
+		await runWrangler("version");
+		expect(std.out).toMatch(version);
+		expect(std.warn).toMatchInlineSnapshot(`
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler version\` is deprecated and will be removed in a future major version. Please use \`wrangler --version\` instead.[0m
+
+		"
+	`);
 	});
 });
