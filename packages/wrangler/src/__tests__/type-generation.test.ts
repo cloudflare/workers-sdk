@@ -366,7 +366,8 @@ describe("generateTypes()", () => {
 			"./wrangler.toml",
 			TOML.stringify({
 				vars: {
-					MY_VARIABLE: "my variable",
+					MY_VARIABLE_A: "my variable",
+					MY_VARIABLE_B: { variable: true }
 				},
 			} as TOML.JsonMap),
 			"utf-8"
@@ -374,7 +375,8 @@ describe("generateTypes()", () => {
 
 		const localVarsEnvContent = dedent`
 		# Preceding comment
-		MY_VARIABLE = "my secret"
+		MY_VARIABLE_A = "my secret"
+		MY_VARIABLE_B = "my secret A"
 		`;
 		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
 
@@ -382,7 +384,8 @@ describe("generateTypes()", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 		"interface Env {
-			MY_VARIABLE: string;
+			MY_VARIABLE_A: string;
+			MY_VARIABLE_B: string;
 		}
 		"
 	`);
