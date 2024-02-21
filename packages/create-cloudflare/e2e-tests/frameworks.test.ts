@@ -442,8 +442,15 @@ const verifyDevScript = async (
 		logStream
 	);
 
-	// Wait an eternity for the dev server to spin up
-	await sleep(12000);
+	// Retry requesting the test route from the devserver
+	await retry({ times: 10 }, async () => {
+		await sleep(2000);
+		const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
+		const body = await res.text();
+		if (!body.match(verifyDev?.expectedText)) {
+			throw new Error("Expected text not found in response from devserver.");
+		}
+	});
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
@@ -472,8 +479,17 @@ const verifyBuildScript = async (
 
 	const { outputDir, script, route, expectedText } = verifyBuild;
 
-	// Run the build script
 	const { name: pm, npx } = detectPackageManager();
+
+	// Run the `build-cf-types` script to generate types for bindings in fixture
+	const buildTypesProc = spawnWithLogging(
+		[pm, "run", "build-cf-types"],
+		{ cwd: projectPath },
+		logStream
+	);
+	await waitForExit(buildTypesProc);
+
+	// Run the build scripts
 	const buildProc = spawnWithLogging(
 		[pm, "run", script],
 		{

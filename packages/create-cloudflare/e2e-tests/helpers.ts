@@ -233,9 +233,9 @@ const normalizeTestName = (ctx: TaskContext) => {
 };
 
 export const testProjectDir = (suite: string) => {
-	const tmpDirPath = realpathSync(
-		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`))
-	);
+	const tmpDirPath =
+		process.env.E2E_PROJECT_PATH ??
+		realpathSync(mkdtempSync(join(tmpdir(), `c3-tests-${suite}`)));
 
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
@@ -244,6 +244,11 @@ export const testProjectDir = (suite: string) => {
 	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
 	const clean = (suffix: string) => {
 		try {
+			if (process.env.E2E_PROJECT_PATH) {
+				return;
+			}
+
+			realpathSync(mkdtempSync(join(tmpdir(), `c3-tests-${suite}`)));
 			const path = getPath(suffix);
 			rmSync(path, {
 				recursive: true,
