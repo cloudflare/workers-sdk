@@ -443,8 +443,8 @@ const verifyDevScript = async (
 	);
 
 	// Retry requesting the test route from the devserver
-	await retry({ times: 5 }, async () => {
-		await sleep(500);
+	await retry({ times: 10 }, async () => {
+		await sleep(2000);
 		const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
 		const body = await res.text();
 		if (!body.match(verifyDev?.expectedText)) {
