@@ -68,7 +68,15 @@ export async function typesHandler(
 
 	const config = readConfig(configPath, args);
 
-	const configBindings: Partial<Config> = {
+	const secrets = getVarsForDev(
+		{ configPath, vars: {} },
+		args.env,
+		true
+	) as Record<string, string>;
+
+	const configBindingsWithSecrets: Partial<Config> & {
+		secrets: Record<string, string>;
+	} = {
 		kv_namespaces: config.kv_namespaces ?? [],
 		vars: { ...config.vars },
 		wasm_modules: config.wasm_modules,
@@ -87,16 +95,11 @@ export async function typesHandler(
 		rules: config.rules,
 		queues: config.queues,
 		constellation: config.constellation,
+		secrets,
 	};
 
-	const secrets = getVarsForDev(
-		{ configPath, vars: {} },
-		args.env,
-		true
-	) as Record<string, string>;
-
 	await generateTypes(
-		{ ...configBindings, secrets },
+		configBindingsWithSecrets,
 		config,
 		envInterface,
 		outputPath
