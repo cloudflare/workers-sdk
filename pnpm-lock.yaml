@@ -602,6 +602,12 @@ importers:
         specifier: ~0.2.0
         version: 0.2.0
 
+  fixtures/type-generation:
+    devDependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/wasm-app: {}
 
   fixtures/worker-app:

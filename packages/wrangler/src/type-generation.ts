@@ -1,16 +1,118 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
 import { findUpSync } from "find-up";
+import { findWranglerToml, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
+import { getVarsForDev } from "./dev/dev-vars";
 import { UserError } from "./errors";
 import { logger } from "./logger";
+import { printWranglerBanner } from "./update-check";
+import { CommandLineArgsError } from "./index";
 import type { Config } from "./config";
 import type { CfScriptFormat } from "./deployment-bundle/worker";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "./yargs-types";
 
-// Currently includes bindings & rules for declaring modules
+export function typesOptions(yargs: CommonYargsArgv) {
+	return yargs
+		.positional("path", {
+			describe: "The path to the declaration file to generate",
+			type: "string",
+			default: "worker-configuration.d.ts",
+			demandOption: false,
+		})
+		.option("env-interface", {
+			type: "string",
+			default: "Env",
+			describe: "The name of the generated environment interface",
+			requiresArg: true,
+		});
+}
 
-export async function generateTypes(
-	configToDTS: Partial<Config>,
-	config: Config
+export async function typesHandler(
+	args: StrictYargsOptionsToInterface<typeof typesOptions>
+) {
+	const { envInterface, path: outputPath } = args;
+
+	const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+	if (!validInterfaceRegex.test(envInterface)) {
+		throw new CommandLineArgsError(
+			`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
+		);
+	}
+
+	if (!outputPath.endsWith(".d.ts")) {
+		throw new CommandLineArgsError(
+			`The provided path value ("${outputPath}") does not point to a declaration file (please use the 'd.ts' extension)`
+		);
+	}
+
+	await printWranglerBanner();
+
+	const configPath =
+		args.config ?? findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+	if (
+		!configPath ||
+		!fs.existsSync(configPath) ||
+		fs.statSync(configPath).isDirectory()
+	) {
+		logger.warn(
+			`No config file detected${
+				args.config ? ` (at ${args.config})` : ""
+			}, aborting`
+		);
+		return;
+	}
+
+	const config = readConfig(configPath, args);
+
+	const secrets = getVarsForDev(
+		{ configPath, vars: {} },
+		args.env,
+		true
+	) as Record<string, string>;
+
+	const configBindingsWithSecrets: Partial<Config> & {
+		secrets: Record<string, string>;
+	} = {
+		kv_namespaces: config.kv_namespaces ?? [],
+		vars: { ...config.vars },
+		wasm_modules: config.wasm_modules,
+		text_blobs: {
+			...config.text_blobs,
+		},
+		data_blobs: config.data_blobs,
+		durable_objects: config.durable_objects,
+		r2_buckets: config.r2_buckets,
+		d1_databases: config.d1_databases,
+		services: config.services,
+		analytics_engine_datasets: config.analytics_engine_datasets,
+		dispatch_namespaces: config.dispatch_namespaces,
+		logfwdr: config.logfwdr,
+		unsafe: config.unsafe,
+		rules: config.rules,
+		queues: config.queues,
+		constellation: config.constellation,
+		secrets,
+	};
+
+	await generateTypes(
+		configBindingsWithSecrets,
+		config,
+		envInterface,
+		outputPath
+	);
+}
+
+type Secrets = Record<string, string>;
+
+async function generateTypes(
+	configToDTS: Partial<Config> & { secrets: Secrets },
+	config: Config,
+	envInterface: string,
+	outputPath: string
 ) {
 	const configContainsEntryPoint =
 		config.main !== undefined || !!config.site?.["entry-point"];
@@ -18,6 +120,20 @@ export async function generateTypes(
 	const entrypointFormat: CfScriptFormat = configContainsEntryPoint
 		? (await getEntry({}, config, "types")).format
 		: "modules";
+
+	// Note: we infer whether the user has provided an envInterface by checking
+	//       if it is different from the default `Env` value, this works well
+	//       besides the fact that the user itself can actually provided `Env` as
+	//       an argument... we either need to do this or removing the yargs
+	//       default value for envInterface and do `envInterface ?? "Env"`,
+	//       for a better UX we chose to go with the yargs default value
+	const userProvidedEnvInterface = envInterface !== "Env";
+
+	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
+		throw new Error(
+			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
+		);
+	}
 
 	const envTypeStructure: string[] = [];
 
@@ -28,8 +144,11 @@ export async function generateTypes(
 	}
 
 	if (configToDTS.vars) {
-		for (const varName in configToDTS.vars) {
-			const varValue = configToDTS.vars[varName];
+		// Note: vars get overridden by secrets, so should their types
+		const vars = Object.entries(configToDTS.vars).filter(
+			([key]) => !(key in configToDTS.secrets)
+		);
+		for (const [varName, varValue] of vars) {
 			if (
 				typeof varValue === "string" ||
 				typeof varValue === "number" ||
@@ -41,6 +160,10 @@ export async function generateTypes(
 				envTypeStructure.push(`${varName}: ${JSON.stringify(varValue)};`);
 			}
 		}
+	}
+
+	for (const secretName in configToDTS.secrets) {
+		envTypeStructure.push(`${secretName}: string;`);
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
@@ -144,6 +267,8 @@ export async function generateTypes(
 		envTypeStructure,
 		modulesTypeStructure,
 		formatType: entrypointFormat,
+		envInterface,
+		path: outputPath,
 	});
 }
 
@@ -151,12 +276,16 @@ function writeDTSFile({
 	envTypeStructure,
 	modulesTypeStructure,
 	formatType,
+	envInterface,
+	path,
 }: {
 	envTypeStructure: string[];
 	modulesTypeStructure: string[];
 	formatType: CfScriptFormat;
+	envInterface: string;
+	path: string;
 }) {
-	const wranglerOverrideDTSPath = findUpSync("worker-configuration.d.ts");
+	const wranglerOverrideDTSPath = findUpSync(path);
 	try {
 		if (
 			wranglerOverrideDTSPath !== undefined &&
@@ -165,7 +294,7 @@ function writeDTSFile({
 				.includes("Generated by Wrangler")
 		) {
 			throw new UserError(
-				"A non-wrangler worker-configuration.d.ts already exists, please rename and try again."
+				`A non-wrangler ${path} already exists, please rename and try again.`
 			);
 		}
 	} catch (error) {
@@ -176,7 +305,7 @@ function writeDTSFile({
 
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
-		combinedTypeStrings += `interface Env {\n${envTypeStructure
+		combinedTypeStrings += `interface ${envInterface} {\n${envTypeStructure
 			.map((value) => `\t${value}`)
 			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
 	} else {
@@ -185,10 +314,17 @@ function writeDTSFile({
 			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
 	}
 
+	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
+
 	if (envTypeStructure.length || modulesTypeStructure.length) {
 		fs.writeFileSync(
-			"worker-configuration.d.ts",
-			`// Generated by Wrangler on ${new Date()}` + "\n" + combinedTypeStrings
+			path,
+			[
+				`// Generated by Wrangler on ${new Date()}`,
+				`// by running \`${wranglerCommandUsed}\``,
+				"",
+				combinedTypeStrings,
+			].join("\n")
 		);
 		logger.log(combinedTypeStrings);
 	}

@@ -25,7 +25,6 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
