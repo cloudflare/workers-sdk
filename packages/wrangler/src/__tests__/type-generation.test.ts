@@ -367,7 +367,7 @@ describe("generateTypes()", () => {
 			TOML.stringify({
 				vars: {
 					MY_VARIABLE_A: "my variable",
-					MY_VARIABLE_B: { variable: true }
+					MY_VARIABLE_B: { variable: true },
 				},
 			} as TOML.JsonMap),
 			"utf-8"
