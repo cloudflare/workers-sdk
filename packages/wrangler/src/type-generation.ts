@@ -130,8 +130,8 @@ async function generateTypes(
 	const userProvidedEnvInterface = envInterface !== "Env";
 
 	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
-		logger.warn(
-			"Ignoring the provided env-interface value as it only applies to ES Module syntax workers"
+		throw new Error(
+			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
 		);
 	}
 

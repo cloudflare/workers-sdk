@@ -470,13 +470,11 @@ describe("generateTypes()", () => {
 					"utf-8"
 				);
 
-				await runWrangler("types --env-interface CloudflareEnv");
-
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIgnoring the provided env-interface value as it only applies to ES Module syntax workers[0m
-
-			"
-		`);
+				await expect(
+					runWrangler("types --env-interface CloudflareEnv")
+				).rejects.toThrowError(
+					"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
+				);
 			});
 		});
 
