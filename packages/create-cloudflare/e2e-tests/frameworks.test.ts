@@ -34,6 +34,7 @@ import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
+const TEST_RETRIES = 1;
 
 type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
@@ -364,7 +365,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				}
 			},
 			{
-				retry: process.env.E2E_NO_RETRY ? 0 : 1,
+				retry: process.env.E2E_NO_RETRY ? 0 : TEST_RETRIES,
 				timeout: timeout || TEST_TIMEOUT,
 			}
 		);
