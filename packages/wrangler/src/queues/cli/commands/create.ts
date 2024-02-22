@@ -23,14 +23,23 @@ export function options(yargs: CommonYargsArgv) {
 			"no-delivery-delay": {
 				type: "boolean",
 				describe: "TBD",
+				boolean: true
 			}
 		});
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): CreateQueueBody {
-	return {
+	const baseBody: CreateQueueBody = {
 		queue_name: args.name
 	}
+
+	if(args.deliveryDelay != undefined || args.noDeliveryDelay != undefined) {
+		baseBody.settings = {
+			delivery_delay: args.noDeliveryDelay !== undefined ? 0 : args.deliveryDelay
+		}
+	}
+
+	return baseBody
 }
 
 export async function handler(
