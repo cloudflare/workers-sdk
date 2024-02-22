@@ -264,11 +264,13 @@ export function buildRawWorker({
 export async function traverseAndBuildWorkerJSDirectory({
 	workerJSDirectory,
 	buildOutputDirectory,
+	bundle,
 	nodejsCompat,
 	defineNavigatorUserAgent,
 }: {
 	workerJSDirectory: string;
 	buildOutputDirectory: string;
+	bundle: boolean;
 	nodejsCompat?: boolean;
 	defineNavigatorUserAgent: boolean;
 }): Promise<BundleResult> {
@@ -295,7 +297,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 	);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
-		bundle: true,
+		bundle,
 		external: additionalModules.map((m) => join(workerJSDirectory, m.name)),
 		outfile,
 		directory: buildOutputDirectory,

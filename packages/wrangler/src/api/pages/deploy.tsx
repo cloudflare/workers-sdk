@@ -259,6 +259,7 @@ export async function deploy({
 		workerBundle = await traverseAndBuildWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
 			buildOutputDirectory: directory,
+			bundle,
 			nodejsCompat,
 			defineNavigatorUserAgent,
 		});

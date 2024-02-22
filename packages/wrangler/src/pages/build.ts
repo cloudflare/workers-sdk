@@ -203,6 +203,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 				bundle = await traverseAndBuildWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
 					buildOutputDirectory,
+					bundle: true,
 					nodejsCompat,
 					defineNavigatorUserAgent,
 				});
