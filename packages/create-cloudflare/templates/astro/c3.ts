@@ -97,6 +97,7 @@ const config: TemplateConfig = {
 	},
 	devScript: "dev",
 	deployScript: "deploy",
+	previewScript: "preview",
 	generate,
 	configure,
 	transformPackageJson: async (pkgJson: PackageJson, ctx: C3Context) => ({

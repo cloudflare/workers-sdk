@@ -282,6 +282,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
 
+		const retries = process.env.E2E_RETRIES
+			? parseInt(process.env.E2E_RETRIES)
+			: TEST_RETRIES;
+
 		// If the framework in question is being run in isolation, always run it.
 		// Otherwise, only run the test if it's configured `quarantine` value matches
 		// what is set in E2E_QUARANTINE
@@ -365,7 +369,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				}
 			},
 			{
-				retry: process.env.E2E_NO_RETRY ? 0 : TEST_RETRIES,
+				retry: retries,
 				timeout: timeout || TEST_TIMEOUT,
 			}
 		);
