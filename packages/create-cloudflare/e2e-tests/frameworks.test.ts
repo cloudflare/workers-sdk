@@ -145,6 +145,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Welcome to Remix",
 		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: "./build/client",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
 	},
 	next: {
 		promptHandlers: [
