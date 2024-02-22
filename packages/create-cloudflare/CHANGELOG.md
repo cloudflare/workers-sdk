@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.12.1
+
+### Patch Changes
+
+- [#5066](https://github.com/cloudflare/workers-sdk/pull/5066) [`ef064279`](https://github.com/cloudflare/workers-sdk/commit/ef0642796dbe17b30fd7b83ccfd3efc651ce0a1a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.6.0` to `2.7.1`
+
+* [#5052](https://github.com/cloudflare/workers-sdk/pull/5052) [`f68e83e2`](https://github.com/cloudflare/workers-sdk/commit/f68e83e270fde93a8c6b0553f062b6e4ab80aa75) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add script to Qwik template for building Env type definitions.
+
+  When creating a project with the Qwik template, the `QwikCityPlatform` type will be updated to contain a definition for the `env` property. These types can be re-generated with a newly added `build-cf-types` script.
+
 ## 2.12.0
 
 ### Minor Changes

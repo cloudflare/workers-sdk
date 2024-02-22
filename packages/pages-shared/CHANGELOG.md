@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.11.14
+
+### Patch Changes
+
+- [#4945](https://github.com/cloudflare/workers-sdk/pull/4945) [`73b20fa9`](https://github.com/cloudflare/workers-sdk/commit/73b20fa98ad09541c0bb8e7076e1b60151b793a5) Thanks [@jahands](https://github.com/jahands)! - feat: Add feature metrics to asset-server
+
+- Updated dependencies [[`b03db864`](https://github.com/cloudflare/workers-sdk/commit/b03db864a36924c31b8ddd82a027c83df4f68c43)]:
+  - miniflare@3.20240208.0
+
 ## 0.11.13
 
 ### Patch Changes
