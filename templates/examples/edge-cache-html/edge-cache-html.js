@@ -195,7 +195,7 @@ async function getCachedResponse(request) {
 		accept.indexOf("text/html") >= 0
 	) {
 		// Build the versioned URL for checking the cache
-		cacheVer = await GetCurrentCacheVersion(cacheVer);
+		cacheVer = await GetCurrentCacheVersion(cacheVer, env);
 		const cacheKeyRequest = GenerateCacheRequest(request, cacheVer);
 
 		// See if there is a request match in the cache
@@ -249,7 +249,7 @@ async function getCachedResponse(request) {
 async function purgeCache(cacheVer, ctx, env) {
 	if (typeof env.EDGE_CACHE !== "undefined") {
 		// Purge the KV cache by bumping the version number
-		cacheVer = await GetCurrentCacheVersion(cacheVer);
+		cacheVer = await GetCurrentCacheVersion(cacheVer, env);
 		cacheVer++;
 		ctx.waitUntil(
 			env.EDGE_CACHE.put("html_cache_version", cacheVer.toString())
@@ -320,7 +320,7 @@ async function cacheResponse(cacheVer, request, originalResponse, ctx) {
 		accept &&
 		accept.indexOf("text/html") >= 0
 	) {
-		cacheVer = await GetCurrentCacheVersion(cacheVer);
+		cacheVer = await GetCurrentCacheVersion(cacheVer, env);
 		const cacheKeyRequest = GenerateCacheRequest(request, cacheVer);
 
 		try {
