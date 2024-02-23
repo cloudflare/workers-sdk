@@ -758,6 +758,9 @@ importers:
       dns2:
         specifier: ^2.1.0
         version: 2.1.0
+      dotenv:
+        specifier: ^16.0.0
+        version: 16.3.1
       esbuild:
         specifier: ^0.17.12
         version: 0.17.19

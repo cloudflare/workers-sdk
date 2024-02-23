@@ -34,6 +34,7 @@ import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
+const TEST_RETRIES = 1;
 
 type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
@@ -59,6 +60,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello, Astronaut!",
+		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: "./dist",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
 		},
 	},
 	docusaurus: {
@@ -271,6 +282,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
 
+		const retries = process.env.E2E_RETRIES
+			? parseInt(process.env.E2E_RETRIES)
+			: TEST_RETRIES;
+
 		// If the framework in question is being run in isolation, always run it.
 		// Otherwise, only run the test if it's configured `quarantine` value matches
 		// what is set in E2E_QUARANTINE
@@ -353,7 +368,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 				}
 			},
-			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
+			{
+				retry: retries,
+				timeout: timeout || TEST_TIMEOUT,
+			}
 		);
 	});
 });
