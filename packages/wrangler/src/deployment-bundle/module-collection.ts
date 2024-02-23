@@ -224,7 +224,7 @@ export function createModuleCollector(props: {
 								.update(fileContent)
 								.digest("hex");
 							const fileName = props.preserveFileNames
-								? filePath
+								? args.path
 								: `./${fileHash}-${path.basename(args.path)}`;
 
 							const { rule } =
@@ -340,7 +340,7 @@ export function createModuleCollector(props: {
 									.update(fileContent)
 									.digest("hex");
 								const fileName = props.preserveFileNames
-									? filePath
+									? args.path
 									: `./${fileHash}-${path.basename(args.path)}`;
 
 								// add the module to the array
