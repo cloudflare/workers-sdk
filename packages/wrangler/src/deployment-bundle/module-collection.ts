@@ -224,8 +224,8 @@ export function createModuleCollector(props: {
 								.update(fileContent)
 								.digest("hex");
 							const fileName = props.preserveFileNames
-									? filePath
-									: `./${fileHash}-${path.basename(args.path)}`;
+								? filePath
+								: `./${fileHash}-${path.basename(args.path)}`;
 
 							const { rule } =
 								rulesMatchers.find(({ regex }) => regex.test(fileName)) || {};

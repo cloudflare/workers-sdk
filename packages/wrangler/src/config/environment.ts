@@ -96,7 +96,7 @@ interface EnvironmentInheritable {
 	/**
 	 * Determines whether Wrangler will preserve bundled file names.
 	 * Defaults to false.
-	 * If left unset, files will be named using the pattern ${fileHash}-${basename}, 
+	 * If left unset, files will be named using the pattern ${fileHash}-${basename},
 	 * for example, `34de60b44167af5c5a709e62a4e20c4f18c9e3b6-favicon.ico`.
 	 */
 	preserve_file_names: boolean | undefined;
