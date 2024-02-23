@@ -481,6 +481,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// `findAdditionalModules` always defaults to `false`
 			findAdditionalModules: config.find_additional_modules ?? false,
 			rules: props.rules,
+			preserveFileNames: config.preserve_file_names ?? false,
 		});
 
 		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
