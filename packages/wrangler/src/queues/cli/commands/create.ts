@@ -19,13 +19,13 @@ export function options(yargs: CommonYargsArgv) {
 		.options({
 			"delivery-delay": {
 				type: "number",
-				describe: "TBD",
+				describe: "How long a published messages should be delayed for, in seconds. Must be a positive integer",
 			}
 		})
 		.options({
 			"no-delivery-delay": {
 				type: "boolean",
-				describe: "TBD",
+				describe: "Sets published messages have no delay",
 				boolean: true
 			}
 		});

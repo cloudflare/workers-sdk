@@ -153,7 +153,10 @@ describe("wrangler", () => {
 		});
 
 		describe("create", () => {
-			function mockCreateRequest(expectedQueueName: string, queueSettings: { delivery_delay?: number } | undefined = undefined) {
+			function mockCreateRequest(
+				expectedQueueName: string,
+				queueSettings: { delivery_delay?: number } | undefined = undefined
+			) {
 				const requests = { count: 0 };
 
 				msw.use(
@@ -162,11 +165,10 @@ describe("wrangler", () => {
 						async (request, response, context) => {
 							requests.count += 1;
 
-
 							const body = (await request.json()) as {
 								queue_name: string;
 								settings: {
-									delivery_delay: number
+									delivery_delay: number;
 								};
 							};
 							expect(body.queue_name).toEqual(expectedQueueName);
@@ -193,24 +195,24 @@ describe("wrangler", () => {
 				await runWrangler("queues create --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-"wrangler queues create <name>
+			"wrangler queues create <name>
 
-Create a Queue
+			Create a Queue
 
-Positionals:
-  name  The name of the queue  [string] [required]
+			Positionals:
+			  name  The name of the queue  [string] [required]
 
-Flags:
-  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-  -c, --config                    Path to .toml configuration file  [string]
-  -e, --env                       Environment to use for operations and .env files  [string]
-  -h, --help                      Show help  [boolean]
-  -v, --version                   Show version number  [boolean]
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-Options:
-      --delivery-delay     TBD  [number]
-      --no-delivery-delay  TBD  [boolean]"
-`);
+			Options:
+			      --delivery-delay     How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]
+			      --no-delivery-delay  Sets published messages have no delay  [boolean]"
+		`);
 			});
 
 			it("should create a queue", async () => {
@@ -263,7 +265,7 @@ Options:
 			});
 
 			it("should send send queue settings with delivery delay", async () => {
-				const requests = mockCreateRequest("testQueue", { delivery_delay: 10});
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
 				await runWrangler("queues create testQueue --delivery-delay=10");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Creating queue testQueue.
@@ -273,7 +275,7 @@ Options:
 			});
 
 			it("should send send queue settings with 0 delivery delay when noDeliveryDelay is set", async () => {
-				const requests = mockCreateRequest("testQueue", { delivery_delay: 0});
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
 				await runWrangler("queues create testQueue --no-delivery-delay");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Creating queue testQueue.
@@ -415,7 +417,9 @@ Options:
 				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
 				      --message-retries    Maximum number of retries for each message  [number]
 				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
-				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]"
+				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
+				      --retry-delay        How long a retried messages should be delayed for, in seconds. Must be a positive integer  [number]
+				      --no-retry-delay     Sets retried messages have no delay.  [boolean]"
 			`);
 				});
 

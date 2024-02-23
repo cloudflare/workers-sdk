@@ -43,13 +43,12 @@ export function options(yargs: CommonYargsArgv) {
 			},
 			"retry-delay": {
 				type: "number",
-				describe:
-					"TBD",
+				describe: "How long a retried messages should be delayed for, in seconds. Must be a positive integer",
 			},
 			"no-retry-delay": {
 				type: "boolean",
-				describe:
-					"TBD",
+				describe: "Sets retried messages have no delay.",
+				boolean: true
 			},
 		});
 }
