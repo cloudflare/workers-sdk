@@ -8,6 +8,7 @@ import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
+import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
@@ -18,6 +19,7 @@ export const PLUGINS = {
 	[QUEUES_PLUGIN_NAME]: QUEUES_PLUGIN,
 	[R2_PLUGIN_NAME]: R2_PLUGIN,
 	[HYPERDRIVE_PLUGIN_NAME]: HYPERDRIVE_PLUGIN,
+	[RATELIMIT_PLUGIN_NAME]: RATELIMIT_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -63,7 +65,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof KV_PLUGIN.options> &
 	z.input<typeof QUEUES_PLUGIN.options> &
 	z.input<typeof R2_PLUGIN.options> &
-	z.input<typeof HYPERDRIVE_PLUGIN.options>;
+	z.input<typeof HYPERDRIVE_PLUGIN.options> &
+	z.input<typeof RATELIMIT_PLUGIN.options>;
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
 	z.input<typeof D1_PLUGIN.sharedOptions> &
@@ -110,3 +113,4 @@ export * from "./kv";
 export * from "./queues";
 export * from "./r2";
 export * from "./hyperdrive";
+export * from "./ratelimit";
