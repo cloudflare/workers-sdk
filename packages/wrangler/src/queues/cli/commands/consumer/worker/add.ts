@@ -1,8 +1,10 @@
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
+import { UserError } from "../../../../errors";
 import type { PostConsumerBody } from "../../../client";
 import { postConsumer } from "../../../client";
 import type { CommonYargsArgv, StrictYargsOptionsToInterface } from "../../../../yargs-types";
+import { handleFetchError } from "../../../utils";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -53,7 +55,7 @@ export function options(yargs: CommonYargsArgv) {
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostConsumerBody {
-	return {
+	const body = {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
 		environment_name: args.env ?? "", // API expects empty string as default
@@ -66,7 +68,22 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostCo
 			max_concurrency: args.maxConcurrency,
 		},
 		dead_letter_queue: args.deadLetterQueue,
-	};
+	} as PostConsumerBody;
+
+	if(args.retryDelay !== undefined &&
+		args.noRetryDelay !== undefined) {
+		throw new UserError(`Can't specify a retry delay with when noRetryDelay is set.`);
+	}
+
+	if(args.retryDelay != undefined) {
+		body.settings.retry_delay = args.retryDelay
+	}
+
+	if(args.noRetryDelay != undefined) {
+		body.settings.retry_delay = 0
+	}
+
+	return body;
 }
 
 export async function handler(
@@ -75,7 +92,11 @@ export async function handler(
 	const config = readConfig(args.config, args);
 	const body = createBody(args);
 
-	logger.log(`Adding consumer to queue ${args.queueName}.`);
-	await postConsumer(config, args.queueName, body);
-	logger.log(`Added consumer to queue ${args.queueName}.`);
+	try {
+		logger.log(`Adding consumer to queue ${args.queueName}.`);
+		await postConsumer(config, args.queueName, body);
+		logger.log(`Added consumer to queue ${args.queueName}.`);
+	} catch(e) {
+		handleFetchError(e as {code?: number})
+	}
 }

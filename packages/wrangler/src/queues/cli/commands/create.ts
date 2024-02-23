@@ -1,10 +1,13 @@
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
-import { createQueue, CreateQueueBody, QueueSettings } from "../../client";
+import type { CreateQueueBody } from "../../client";
+import { createQueue } from "../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
+import { UserError } from "../../../errors";
+import { handleFetchError } from "../../utils";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -29,17 +32,28 @@ export function options(yargs: CommonYargsArgv) {
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): CreateQueueBody {
-	const baseBody: CreateQueueBody = {
+	const body: CreateQueueBody = {
 		queue_name: args.name
 	}
 
-	if(args.deliveryDelay != undefined || args.noDeliveryDelay != undefined) {
-		baseBody.settings = {
-			delivery_delay: args.noDeliveryDelay !== undefined ? 0 : args.deliveryDelay
+	if(args.deliveryDelay !== undefined &&
+		args.noDeliveryDelay !== undefined) {
+		throw new UserError(`Can't specify a delivery delay with when noDeliveryDelay is set.`);
+	}
+
+	if(args.deliveryDelay != undefined) {
+		body.settings = {
+			delivery_delay: args.deliveryDelay
 		}
 	}
 
-	return baseBody
+	if(args.noDeliveryDelay != undefined) {
+		body.settings = {
+			delivery_delay: 0
+		}
+	}
+
+	return body
 }
 
 export async function handler(
@@ -47,8 +61,12 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 	const body = createBody(args);
-
-	logger.log(`Creating queue ${args.name}.`);
-	await createQueue(config, body);
-	logger.log(`Created queue ${args.name}.`);
+	try {
+		logger.log(`Creating queue ${args.name}.`);
+		await createQueue(config, body);
+		logger.log(`Created queue ${args.name}.`);
+	} catch(e) {
+		handleFetchError(e as {code?: number})
+		throw e;
+	}
 }
