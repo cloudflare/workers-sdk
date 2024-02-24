@@ -305,8 +305,8 @@ function writeDTSFile({
 
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
-		combinedTypeStrings += `interface ${envInterface} {\n${envTypeStructure
-			.map((value) => `\t${value}`)
+		combinedTypeStrings += `interface ${envInterface} {${envTypeStructure
+			.map((value, i) => `${i === 0 ? "\n" : ""}\t${value}`)
 			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
 	} else {
 		combinedTypeStrings += `export {};\ndeclare global {\n${envTypeStructure
@@ -316,7 +316,10 @@ function writeDTSFile({
 
 	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
 
-	if (envTypeStructure.length || modulesTypeStructure.length) {
+	const typesHaveBeenFound =
+		envTypeStructure.length || modulesTypeStructure.length;
+
+	if (formatType === "modules" || typesHaveBeenFound) {
 		fs.writeFileSync(
 			path,
 			[

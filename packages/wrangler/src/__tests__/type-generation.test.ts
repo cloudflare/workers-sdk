@@ -234,21 +234,49 @@ describe("generateTypes()", () => {
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
-	it("should not create DTS file if there is nothing in the config to generate types from", async () => {
-		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
-		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
-				compatibility_date: "2022-01-12",
-				name: "test-name",
-				main: "./index.ts",
-			}),
-			"utf-8"
-		);
+	describe("when nothing was found", () => {
+		it("should not create DTS file for service syntax workers", async () => {
+			fs.writeFileSync(
+				"./index.ts",
+				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
+			);
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
 
-		await runWrangler("types");
-		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+			await runWrangler("types");
+			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
+			fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types");
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toMatch(
+				/interface Env \{\s*\}/
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"interface Env {
+			}
+			"
+		`);
+		});
 	});
 
 	it("should create a DTS file at the location that the command is executed from", async () => {
