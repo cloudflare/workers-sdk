@@ -6,7 +6,9 @@ import * as vm from "node:vm";
 import {
 	getResolvedMainPath,
 	importModule,
+	internalEnv,
 	maybeHandleRunRequest,
+	runInRunnerObject,
 	setEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
@@ -56,6 +58,13 @@ globalThis.clearTimeout = (...args: Parameters<typeof clearTimeout>) => {
 	return originalClearTimeout.apply(globalThis, args);
 };
 
+function isDifferentIOContextError(e: unknown) {
+	return (
+		e instanceof Error &&
+		e.message.startsWith("Cannot perform I/O on behalf of a different") // "request" or "Durable Object"
+	);
+}
+
 // Wraps a `WebSocket` with a Node `MessagePort` like interface
 class WebSocketMessagePort extends events.EventEmitter {
 	constructor(private readonly socket: WebSocket) {
@@ -75,7 +84,23 @@ class WebSocketMessagePort extends events.EventEmitter {
 		try {
 			this.socket.send(stringified);
 		} catch (error) {
-			__console.error("Error sending message to pool:", error, data);
+			// If the user tried to perform a dynamic `import()` or `console.log()`
+			// from inside a `export default { fetch() { ... } }` handler using `SELF`
+			// or from inside their own Durable Object, Vitest will try to send an
+			// RPC message from a non-`RunnerObject` I/O context. There's nothing we
+			// can really do to prevent this: we want to run these things in different
+			// I/O contexts with the behaviour this causes. We'd still like to send
+			// the RPC message though, so if we detect this, we try resend the message
+			// from the runner object.
+			if (isDifferentIOContextError(error)) {
+				void runInRunnerObject(internalEnv, () =>
+					this.socket.send(stringified)
+				).catch((e) => {
+					__console.error("Error sending to pool inside runner:", e, data);
+				});
+			} else {
+				__console.error("Error sending to pool:", error, data);
+			}
 		}
 	}
 }
