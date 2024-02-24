@@ -26,3 +26,15 @@ export function getSerializedOptions(): SerializedOptions {
 	assert(options !== undefined, "Expected serialised options");
 	return options;
 }
+
+export function getResolvedMainPath(
+	forBindingType: "service" | "Durable Object"
+): string {
+	const options = getSerializedOptions();
+	if (options.main === undefined) {
+		throw new Error(
+			`Using ${forBindingType} bindings to the current worker requires \`poolOptions.workers.main\` to be set to your worker's entrypoint`
+		);
+	}
+	return options.main;
+}

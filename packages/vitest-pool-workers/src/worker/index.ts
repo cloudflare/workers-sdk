@@ -4,9 +4,9 @@ import events from "node:events";
 import process from "node:process";
 import * as vm from "node:vm";
 import {
+	getResolvedMainPath,
 	importModule,
-	maybeHandleImportRequest,
-	mustGetResolvedMainPath,
+	maybeHandleRunRequest,
 	setEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
@@ -75,7 +75,7 @@ class WebSocketMessagePort extends events.EventEmitter {
 		try {
 			this.socket.send(stringified);
 		} catch (error) {
-			__console.error("Error sending message to pool:", error);
+			__console.error("Error sending message to pool:", error, data);
 		}
 	}
 }
@@ -181,9 +181,7 @@ export class RunnerObject implements DurableObject {
 	}
 
 	async fetch(request: Request): Promise<Response> {
-		// This will fail if this is an import request, and we haven't called
-		// `handleVitestRunRequest()` yet
-		const response = await maybeHandleImportRequest(this.executor, request);
+		const response = await maybeHandleRunRequest(request, this);
 		if (response !== undefined) return response;
 
 		return this.handleVitestRunRequest(request);
@@ -194,7 +192,7 @@ function createHandlerWrapper<K extends keyof ExportedHandler<Env>>(
 	key: K
 ): NonNullable<ExportedHandler<Env>[K]> {
 	return async (thing: unknown, env: Env, ctx: ExecutionContext) => {
-		const mainPath = mustGetResolvedMainPath("service");
+		const mainPath = getResolvedMainPath("service");
 		const mainModule = await importModule(env, mainPath);
 		const defaultExport =
 			typeof mainModule === "object" &&
