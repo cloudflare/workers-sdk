@@ -599,8 +599,8 @@ importers:
   fixtures/sites-app:
     dependencies:
       '@cloudflare/kv-asset-handler':
-        specifier: ~0.2.0
-        version: 0.2.0
+        specifier: ~0.3.0
+        version: 0.3.0
 
   fixtures/type-generation:
     devDependencies:
@@ -3966,8 +3966,8 @@ packages:
     dependencies:
       mime: 2.6.0
 
-  /@cloudflare/kv-asset-handler@0.2.0:
-    resolution: {integrity: sha512-MVbXLbTcAotOPUj0pAMhVtJ+3/kFkwJqc5qNOleOZTv6QkZZABDMS21dSrSlVswEHwrpWC03e4fWytjqKvuE2A==}
+  /@cloudflare/kv-asset-handler@0.3.0:
+    resolution: {integrity: sha512-9CB/MKf/wdvbfkUdfrj+OkEwZ5b7rws0eogJ4293h+7b6KX5toPwym+VQKmILafNB9YiehqY0DlNrDcDhdWHSQ==}
     dependencies:
       mime: 3.0.0
     dev: false
