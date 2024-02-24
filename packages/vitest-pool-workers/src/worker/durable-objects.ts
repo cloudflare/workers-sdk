@@ -1,5 +1,10 @@
 import assert from "node:assert";
-import { getResolvedMainPath, getSerializedOptions, internalEnv } from "./env";
+import {
+	getResolvedMainPath,
+	getSerializedOptions,
+	internalEnv,
+	stripInternalEnv,
+} from "./env";
 import type { RunnerObject } from "./index";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
@@ -222,7 +227,9 @@ export async function maybeHandleRunRequest(
 	}
 }
 
-type DurableObjectConstructor = {
+type DurableObjectConstructor<
+	Env extends Record<string, unknown> = Record<string, unknown>
+> = {
 	new (state: DurableObjectState, env: Env): DurableObject;
 };
 type DurableObjectParameters<K extends keyof DurableObject> = Parameters<
@@ -237,7 +244,7 @@ class DurableObjectWrapper implements DurableObject {
 
 	constructor(
 		readonly state: DurableObjectState,
-		readonly env: Env,
+		readonly env: Record<string, unknown> & Env,
 		readonly className: string
 	) {}
 
@@ -269,7 +276,8 @@ class DurableObjectWrapper implements DurableObject {
 			assert.fail("Unreachable");
 		}
 		if (this.instance === undefined) {
-			this.instance = new this.instanceConstructor(this.state, this.env);
+			const userEnv = stripInternalEnv(this.env);
+			this.instance = new this.instanceConstructor(this.state, userEnv);
 			// Wait for any `blockConcurrencyWhile()`s in the constructor to complete
 			await this.state.blockConcurrencyWhile(async () => {});
 		}
@@ -311,9 +319,9 @@ class DurableObjectWrapper implements DurableObject {
 
 export function createDurableObjectWrapper(
 	className: string
-): DurableObjectConstructor {
+): DurableObjectConstructor<Record<string, unknown> & Env> {
 	return class extends DurableObjectWrapper {
-		constructor(state: DurableObjectState, env: Env) {
+		constructor(state: DurableObjectState, env: Record<string, unknown> & Env) {
 			super(state, env, className);
 		}
 	};

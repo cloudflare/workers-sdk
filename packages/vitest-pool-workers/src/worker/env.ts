@@ -4,19 +4,26 @@ import assert from "node:assert";
 export let env: Record<string, unknown>;
 export let SELF: Fetcher;
 
+export function stripInternalEnv(
+	internalEnv: Record<string, unknown> & Env
+): Record<string, unknown> {
+	const result: Record<string, unknown> & Partial<Env> = { ...internalEnv };
+	delete result.__VITEST_POOL_WORKERS_SELF_NAME;
+	delete result.__VITEST_POOL_WORKERS_SELF_SERVICE;
+	delete result.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE;
+	delete result.__VITEST_POOL_WORKERS_RUNNER_OBJECT;
+	delete result.__VITEST_POOL_WORKERS_UNSAFE_EVAL;
+	return result;
+}
+
 export let internalEnv: Record<string, unknown> & Env;
 export function setEnv(newEnv: Record<string, unknown> & Env) {
 	// Store full env for `WorkersSnapshotEnvironment`
 	internalEnv = newEnv;
+	SELF = newEnv.__VITEST_POOL_WORKERS_SELF_SERVICE;
 
 	// Strip internal bindings from user facing `env`
-	env = { ...newEnv };
-	SELF = newEnv.__VITEST_POOL_WORKERS_SELF_SERVICE;
-	delete env.__VITEST_POOL_WORKERS_SELF_NAME;
-	delete env.__VITEST_POOL_WORKERS_SELF_SERVICE;
-	delete env.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE;
-	delete env.__VITEST_POOL_WORKERS_RUNNER_OBJECT;
-	delete env.__VITEST_POOL_WORKERS_UNSAFE_EVAL;
+	env = stripInternalEnv(newEnv);
 }
 
 export function getSerializedOptions(): SerializedOptions {
