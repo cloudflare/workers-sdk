@@ -269,7 +269,7 @@ function mustResolve(
 		try {
 			filePath = requireResolve(specifier, referrer);
 		} catch {
-			// If `specifier` look something like `chai/utils`,
+			// If `specifier` looks something like `chai/utils`,
 			// it could mean the `utils` sub-path export of the `chai` package,
 			// or `./chai/utils/index.js`. If the first failed, try the second.
 			filePath = requireResolve(`./${specifier}`, referrer);
