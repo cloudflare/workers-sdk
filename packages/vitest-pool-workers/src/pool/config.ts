@@ -61,7 +61,7 @@ export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	};
 };
 
-export type PathParseParams = Pick<ParseParams, "path">;
+type PathParseParams = Pick<ParseParams, "path">;
 
 function isZodErrorLike(value: unknown): value is ZodError {
 	return (
