@@ -139,7 +139,7 @@ async function generateTypes(
 
 	if (configToDTS.kv_namespaces) {
 		for (const kvNamespace of configToDTS.kv_namespaces) {
-			envTypeStructure.push(`${kvNamespace.binding}: KVNamespace;`);
+			envTypeStructure.push(`"${kvNamespace.binding}": KVNamespace;`);
 		}
 	}
 
@@ -154,59 +154,59 @@ async function generateTypes(
 				typeof varValue === "number" ||
 				typeof varValue === "boolean"
 			) {
-				envTypeStructure.push(`${varName}: "${varValue}";`);
+				envTypeStructure.push(`"${varName}": "${varValue}";`);
 			}
 			if (typeof varValue === "object" && varValue !== null) {
-				envTypeStructure.push(`${varName}: ${JSON.stringify(varValue)};`);
+				envTypeStructure.push(`"${varName}": ${JSON.stringify(varValue)};`);
 			}
 		}
 	}
 
 	for (const secretName in configToDTS.secrets) {
-		envTypeStructure.push(`${secretName}: string;`);
+		envTypeStructure.push(`"${secretName}": string;`);
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			envTypeStructure.push(`${durableObject.name}: DurableObjectNamespace;`);
+			envTypeStructure.push(`"${durableObject.name}": DurableObjectNamespace;`);
 		}
 	}
 
 	if (configToDTS.r2_buckets) {
 		for (const R2Bucket of configToDTS.r2_buckets) {
-			envTypeStructure.push(`${R2Bucket.binding}: R2Bucket;`);
+			envTypeStructure.push(`"${R2Bucket.binding}": R2Bucket;`);
 		}
 	}
 
 	if (configToDTS.d1_databases) {
 		for (const d1 of configToDTS.d1_databases) {
-			envTypeStructure.push(`${d1.binding}: D1Database;`);
+			envTypeStructure.push(`"${d1.binding}": D1Database;`);
 		}
 	}
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			envTypeStructure.push(`${service.binding}: Fetcher;`);
+			envTypeStructure.push(`"${service.binding}": Fetcher;`);
 		}
 	}
 
 	if (configToDTS.constellation) {
 		for (const service of configToDTS.constellation) {
-			envTypeStructure.push(`${service.binding}: Fetcher;`);
+			envTypeStructure.push(`"${service.binding}": Fetcher;`);
 		}
 	}
 
 	if (configToDTS.analytics_engine_datasets) {
 		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
 			envTypeStructure.push(
-				`${analyticsEngine.binding}: AnalyticsEngineDataset;`
+				`"${analyticsEngine.binding}": AnalyticsEngineDataset;`
 			);
 		}
 	}
 
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push(`${namespace.binding}: DispatchNamespace;`);
+			envTypeStructure.push(`"${namespace.binding}": DispatchNamespace;`);
 		}
 	}
 
@@ -216,26 +216,26 @@ async function generateTypes(
 
 	if (configToDTS.data_blobs) {
 		for (const dataBlobs in configToDTS.data_blobs) {
-			envTypeStructure.push(`${dataBlobs}: ArrayBuffer;`);
+			envTypeStructure.push(`"${dataBlobs}": ArrayBuffer;`);
 		}
 	}
 
 	if (configToDTS.text_blobs) {
 		for (const textBlobs in configToDTS.text_blobs) {
-			envTypeStructure.push(`${textBlobs}: string;`);
+			envTypeStructure.push(`"${textBlobs}": string;`);
 		}
 	}
 
 	if (configToDTS.unsafe?.bindings) {
 		for (const unsafe of configToDTS.unsafe.bindings) {
-			envTypeStructure.push(`${unsafe.name}: any;`);
+			envTypeStructure.push(`"${unsafe.name}": any;`);
 		}
 	}
 
 	if (configToDTS.queues) {
 		if (configToDTS.queues.producers) {
 			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push(`${queue.binding}: Queue;`);
+				envTypeStructure.push(`"${queue.binding}": Queue;`);
 			}
 		}
 	}

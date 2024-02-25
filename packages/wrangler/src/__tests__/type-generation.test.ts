@@ -7,7 +7,10 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
 
 const bindingsConfigMock: Partial<Config> = {
-	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
+	kv_namespaces: [
+		{ binding: "TEST_KV_NAMESPACE", id: "1234" },
+		{ binding: "TEST-KV-NAMESPACE2", id: "12345" },
+	],
 	vars: {
 		SOMETHING: "asdasdfasdf",
 		ANOTHER: "thing",
@@ -16,12 +19,17 @@ const bindingsConfigMock: Partial<Config> = {
 			activeDuty: true,
 			captian: "Picard",
 		}, // We can assume the objects will be stringified
+		"some-dash-var": "foo",
 	},
 	queues: {
 		producers: [
 			{
 				binding: "TEST_QUEUE_BINDING",
 				queue: "TEST_QUEUE",
+			},
+			{
+				binding: "TEST-QUEUE-BINDING2",
+				queue: "TEST-QUEUE2",
 			},
 		],
 		consumers: [
@@ -37,12 +45,17 @@ const bindingsConfigMock: Partial<Config> = {
 		bindings: [
 			{ name: "DURABLE_TEST1", class_name: "Durability1" },
 			{ name: "DURABLE_TEST2", class_name: "Durability2" },
+			{ name: "DURABLE-TEST3", class_name: "Durability3" },
 		],
 	},
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",
 			bucket_name: "R2BUCKET_NAME_TEST",
+		},
+		{
+			binding: "R2-BUCKET-BINDING",
+			bucket_name: "R2BUCKET-NAME-TEST",
 		},
 	],
 	d1_databases: [
@@ -51,16 +64,29 @@ const bindingsConfigMock: Partial<Config> = {
 			database_name: "D1_BINDING",
 			database_id: "1234",
 		},
+		{
+			binding: "D1-TESTING-SOMETHING",
+			database_name: "D1-BINDING",
+			database_id: "12345",
+		},
 	],
-	services: [{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" }],
+	services: [
+		{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" },
+		{ binding: "SERVICE-BINDING2", service: "SERVICE-NAME2" },
+	],
 	analytics_engine_datasets: [
 		{
 			binding: "AE_DATASET_BINDING",
 			dataset: "AE_DATASET_TEST",
 		},
+		{
+			binding: "AE-DATASET-BINDING",
+			dataset: "AE-DATASET-TEST",
+		},
 	],
 	dispatch_namespaces: [
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
+		{ binding: "NAMESPACE-BINDING2", namespace: "NAMESPACE_ID2" },
 	],
 	logfwdr: {
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
@@ -68,15 +94,24 @@ const bindingsConfigMock: Partial<Config> = {
 	data_blobs: {
 		SOME_DATA_BLOB1: "SOME_DATA_BLOB1.bin",
 		SOME_DATA_BLOB2: "SOME_DATA_BLOB2.bin",
+		"SOME-OTHER-DATA-BLOB": "SOME_OTHER_DATA_BLOB.bin",
 	},
 	text_blobs: {
 		SOME_TEXT_BLOB1: "SOME_TEXT_BLOB1.txt",
 		SOME_TEXT_BLOB2: "SOME_TEXT_BLOB2.txt",
+		"SOME-OTHER-TEXT-BLOB": "SOME_OTHER_TEXT_BLOB.txt",
 	},
-	wasm_modules: { MODULE1: "module1.wasm", MODULE2: "module2.wasm" },
+	wasm_modules: {
+		MODULE1: "module1.wasm",
+		MODULE2: "module2.wasm",
+		"MODULE-3": "module3.wasm",
+	},
 	unsafe: {
-		bindings: [{ name: "testing_unsafe", type: "plain_text" }],
-		metadata: { some_key: "some_value" },
+		bindings: [
+			{ name: "testing_unsafe", type: "plain_text" },
+			{ name: "testing_unsafe2", type: "plain_text" },
+		],
+		metadata: { some_key: "some_value", "another-key": "another-value" },
 	},
 	rules: [
 		{
@@ -183,24 +218,36 @@ describe("generateTypes()", () => {
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
 		"interface Env {
-			TEST_KV_NAMESPACE: KVNamespace;
-			SOMETHING: \\"asdasdfasdf\\";
-			ANOTHER: \\"thing\\";
-			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-			DURABLE_TEST1: DurableObjectNamespace;
-			DURABLE_TEST2: DurableObjectNamespace;
-			R2_BUCKET_BINDING: R2Bucket;
-			D1_TESTING_SOMETHING: D1Database;
-			SERVICE_BINDING: Fetcher;
-			AE_DATASET_BINDING: AnalyticsEngineDataset;
-			NAMESPACE_BINDING: DispatchNamespace;
-			LOGFWDR_SCHEMA: any;
-			SOME_DATA_BLOB1: ArrayBuffer;
-			SOME_DATA_BLOB2: ArrayBuffer;
-			SOME_TEXT_BLOB1: string;
-			SOME_TEXT_BLOB2: string;
-			testing_unsafe: any;
-			TEST_QUEUE_BINDING: Queue;
+			"TEST_KV_NAMESPACE": KVNamespace;
+			"TEST-KV-NAMESPACE2": KVNamespace;
+			"SOMETHING": \\"asdasdfasdf\\";
+			"ANOTHER": \\"thing\\";
+			"some-dash-var": \\"foo\\";
+			"OBJECT_VAR": {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			"DURABLE_TEST1": DurableObjectNamespace;
+			"DURABLE_TEST2": DurableObjectNamespace;
+			"DURABLE-TEST3": DurableObjectNamespace;
+			"R2_BUCKET_BINDING": R2Bucket;
+			"R2-BUCKET-BINDING": R2Bucket;
+			"D1_TESTING_SOMETHING": D1Database;
+			"D1-TESTING-SOMETHING": D1Database;
+			"SERVICE_BINDING": Fetcher;
+			"SERVICE-BINDING2": Fetcher;
+			"AE_DATASET_BINDING": AnalyticsEngineDataset;
+			"AE-DATASET-BINDING": AnalyticsEngineDataset;
+			"NAMESPACE_BINDING": DispatchNamespace;
+			"NAMESPACE-BINDING2": DispatchNamespace;
+			"LOGFWDR_SCHEMA": any;
+			"SOME_DATA_BLOB1": ArrayBuffer;
+			"SOME_DATA_BLOB2": ArrayBuffer;
+			"SOME-OTHER-DATA-BLOB": ArrayBuffer;
+			"SOME_TEXT_BLOB1": string;
+			"SOME_TEXT_BLOB2": string;
+			"SOME-OTHER-TEXT-BLOB": string;
+			"testing_unsafe": any;
+			"testing_unsafe2": any;
+			"TEST_QUEUE_BINDING": Queue;
+			"TEST-QUEUE-BINDING2": Queue;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
