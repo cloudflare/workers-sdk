@@ -62,6 +62,18 @@ const bindingsConfigMock: Partial<Config> = {
 	dispatch_namespaces: [
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
 	],
+	send_email: [{ name: "SEND_EMAIL_BINDING" }],
+	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
+	mtls_certificates: [
+		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
+	],
+	browser: {
+		binding: "BROWSER_BINDING",
+	},
+	ai: {
+		binding: "AI_BINDING",
+	},
 	logfwdr: {
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
 	},
@@ -201,6 +213,12 @@ describe("generateTypes()", () => {
 			SOME_TEXT_BLOB2: string;
 			testing_unsafe: any;
 			TEST_QUEUE_BINDING: Queue;
+			SEND_EMAIL_BINDING: SendEmail;
+			VECTORIZE_BINDING: VectorizeIndex;
+			HYPERDRIVE_BINDING: Hyperdrive;
+			MTLS_BINDING: Fetcher;
+			BROWSER_BINDING: Fetcher;
+			AI_BINDING: Fetcher;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
