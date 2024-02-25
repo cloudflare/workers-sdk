@@ -890,7 +890,13 @@ export default function (ctx: Vitest): ProcessPool {
 			const promises: Promise<unknown>[] = [];
 			for (const project of allProjects.values()) {
 				if (project.mf !== undefined) {
-					promises.push(forEachMiniflare(project.mf, (mf) => mf.dispose()));
+					promises.push(
+						forEachMiniflare(project.mf, async (mf) => {
+							// Finish in-progress storage resets before disposing
+							await waitForStorageReset(mf);
+							await mf.dispose();
+						})
+					);
 				}
 			}
 			allProjects.clear();
