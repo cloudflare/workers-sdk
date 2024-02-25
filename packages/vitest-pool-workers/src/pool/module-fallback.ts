@@ -1,16 +1,15 @@
 import assert from "node:assert";
 import fs from "node:fs";
-import module from "node:module";
 import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
-import { moduleResolve } from "import-meta-resolve";
 import { Response } from "miniflare";
 import { isFileNotFoundError } from "./helpers";
 import type { Request, Worker_Module } from "miniflare";
+import type { ViteDevServer } from "vite";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
@@ -30,27 +29,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = platformPath.dirname(__filename);
 const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
+const emptyLibPath = posixPath.join(libPath, "cloudflare/empty-internal.cjs");
 
 // File path suffix to disable CJS to ESM-with-named-exports shimming
-const disableCjsEsmShimSuffix = ".mf_vitest_no_cjs_esm_shim";
+const disableCjsEsmShimSuffix = "?mf_vitest_no_cjs_esm_shim";
 function trimSuffix(suffix: string, value: string) {
 	assert(value.endsWith(suffix));
 	return value.substring(0, value.length - suffix.length);
 }
 
 // Node.js built-in modules provided by `workerd`
-const workerdBuiltinModules = VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES;
-const conditions = new Set(["workerd", "worker", "browser", "import"]);
+export const workerdBuiltinModules = new Set([
+	...VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES,
+	"__STATIC_CONTENT_MANIFEST",
+]);
 
 // `chai` contains circular `require()`s which aren't supported by `workerd`
 // TODO(someday): support circular `require()` in `workerd`
 const bundleDependencies = ["chai"];
-
-function fileURLToPosixPath(url: string | URL) {
-	if (typeof url === "string") url = new URL(url);
-	// Some URLs contain hashes, e.g. if relying on an import map
-	return ensurePosixLikePath(fileURLToPath(url)) + url.hash;
-}
 
 function isFile(filePath: string): boolean {
 	try {
@@ -105,20 +101,27 @@ await cjsModuleLexer.init();
  * This function returns the named-exports we should add to our ESM-CJS shim,
  * using the same package as Node.
  */
-function getCjsNamedExports(
+async function getCjsNamedExports(
+	vite: ViteDevServer,
 	filePath: string,
 	contents: string,
 	seen = new Set()
-): Set<string> {
+): Promise<Set<string>> {
 	const { exports, reexports } = cjsModuleLexer.parse(contents);
 	const result = new Set(exports);
 	for (const reexport of reexports) {
-		const resolved = requireResolve(reexport, filePath);
+		const resolved = await viteResolve(
+			vite,
+			reexport,
+			filePath,
+			/* isRequire */ true
+		);
 		if (seen.has(resolved)) continue;
 		try {
 			const resolvedContents = fs.readFileSync(resolved, "utf8");
 			seen.add(filePath);
-			const resolvedNames = getCjsNamedExports(
+			const resolvedNames = await getCjsNamedExports(
+				vite,
 				resolved,
 				resolvedContents,
 				seen
@@ -208,30 +211,41 @@ function getApproximateSpecifier(target: string, referrerDir: string): string {
 	return posixPath.relative(referrerDir, target);
 }
 
-const requires = new Map<string, NodeRequire>();
-function requireResolve(specifier: string, referrer: string): string {
-	const referrerDir = posixPath.dirname(referrer);
-	const normalisedReferrer = posixPath.join(referrerDir, "_");
-	let require = requires.get(normalisedReferrer);
-	if (require === undefined) {
-		require = module.createRequire(normalisedReferrer);
-		requires.set(normalisedReferrer, require);
+async function viteResolve(
+	vite: ViteDevServer,
+	specifier: string,
+	referrer: string,
+	isRequire: boolean
+): Promise<string> {
+	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
+		ssr: true,
+		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
+		custom: { "node-resolve": { isRequire } },
+	});
+	if (resolved === null) throw new Error("Not found");
+	// Handle case where `package.json` `browser` field stubs out built-in with an
+	// empty module (e.g. `{ "browser": { "fs": false } }`).
+	if (resolved.id === "__vite-browser-external") return emptyLibPath;
+	if (resolved.external) {
+		// Handle case where `node:*` built-in resolved from import map
+		// (e.g. https://github.com/sindresorhus/p-limit/blob/f53bdb5f464ae112b2859e834fdebedc0745199b/package.json#L20)
+		let { id } = resolved;
+		if (workerdBuiltinModules.has(id)) return `/${id}`;
+		id = `node:${id}`;
+		if (workerdBuiltinModules.has(id)) return `/${id}`;
+		throw new Error("Not found");
 	}
-	return ensurePosixLikePath(require.resolve(specifier));
-}
-
-function importResolve(specifier: string, referrer: string): URL {
-	const referrerUrl = pathToFileURL(referrer);
-	return moduleResolve(specifier, referrerUrl, conditions);
+	return resolved.id;
 }
 
 type ResolveMethod = "import" | "require";
-function mustResolve(
+async function resolve(
+	vite: ViteDevServer,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
 	referrer: string
-): string /* filePath */ {
+): Promise<string /* filePath */> {
 	const referrerDir = posixPath.dirname(referrer);
 
 	let filePath = maybeGetTargetFilePath(target);
@@ -245,7 +259,7 @@ function mustResolve(
 	// *import*ing `node:*`/`cloudflare:*` modules, but not when *require()*ing
 	// them. For the sake of consistency (and a nice return type on this function)
 	// we return a redirect for `import`s too.
-	if (referrerDir !== "/" && workerdBuiltinModules.includes(specifier)) {
+	if (referrerDir !== "/" && workerdBuiltinModules.has(specifier)) {
 		return `/${specifier}`;
 	}
 
@@ -256,26 +270,7 @@ function mustResolve(
 	filePath = maybeGetTargetFilePath(specifierLibPath);
 	if (filePath !== undefined) return filePath;
 
-	if (method === "import") {
-		const resolvedUrl = importResolve(specifier, referrer);
-		if (resolvedUrl.protocol === "node:") {
-			// Handle case where `node:*` built-in resolved from import map
-			// (e.g. https://github.com/sindresorhus/p-limit/blob/f53bdb5f464ae112b2859e834fdebedc0745199b/package.json#L20)
-			filePath = `/${resolvedUrl.href}`;
-		} else {
-			filePath = fileURLToPosixPath(resolvedUrl);
-		}
-	} else {
-		try {
-			filePath = requireResolve(specifier, referrer);
-		} catch {
-			// If `specifier` looks something like `chai/utils`,
-			// it could mean the `utils` sub-path export of the `chai` package,
-			// or `./chai/utils/index.js`. If the first failed, try the second.
-			filePath = requireResolve(`./${specifier}`, referrer);
-		}
-	}
-	return filePath;
+	return viteResolve(vite, specifier, referrer, method === "require");
 }
 
 function buildRedirectResponse(filePath: string) {
@@ -295,13 +290,14 @@ function buildModuleResponse(target: string, contents: ModuleContents) {
 	return new Response(JSON.stringify({ name, ...contents }));
 }
 
-function mustLoad(
+async function load(
+	vite: ViteDevServer,
 	logBase: string,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
 	filePath: string
-): Response {
+): Promise<Response> {
 	if (target !== filePath) {
 		// We might `import` and `require` the same CommonJS package. In this case,
 		// we want to respond with an ES module shim for the `import`, and the
@@ -353,7 +349,7 @@ function mustLoad(
 		const disableShimSpecifier = `./${fileName}${disableCjsEsmShimSuffix}`;
 		const quotedDisableShimSpecifier = JSON.stringify(disableShimSpecifier);
 		let esModule = `import mod from ${quotedDisableShimSpecifier}; export default mod;`;
-		for (const name of getCjsNamedExports(filePath, contents)) {
+		for (const name of await getCjsNamedExports(vite, filePath, contents)) {
 			esModule += ` export const ${name} = mod.${name};`;
 		}
 		debuglog(logBase, "cjs-esm-shim:", filePath);
@@ -366,7 +362,10 @@ function mustLoad(
 	return buildModuleResponse(target, { nodeJsCompatModule: contents });
 }
 
-export function handleModuleFallbackRequest(request: Request): Response {
+export async function handleModuleFallbackRequest(
+	vite: ViteDevServer,
+	request: Request
+): Promise<Response> {
 	const method = request.headers.get("X-Resolve-Method");
 	assert(method === "import" || method === "require");
 	const url = new URL(request.url);
@@ -375,7 +374,12 @@ export function handleModuleFallbackRequest(request: Request): Response {
 	assert(target !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
 	const referrerDir = posixPath.dirname(referrer);
-	const specifier = getApproximateSpecifier(target, referrerDir);
+	let specifier = getApproximateSpecifier(target, referrerDir);
+
+	// Convert specifiers like `file:/a/index.mjs` to `/a/index.mjs`. `workerd`
+	// currently passes `import("file:///a/index.mjs")` through like this.
+	// TODO(soon): remove this code once the new modules refactor lands
+	if (specifier.startsWith("file:")) specifier = specifier.substring(5);
 
 	if (isWindows) {
 		// Convert paths like `/C:/a/index.mjs` to `C:/a/index.mjs` so they can be
@@ -388,9 +392,9 @@ export function handleModuleFallbackRequest(request: Request): Response {
 	const logBase = `${method}(${quotedTarget}) relative to ${referrer}:`;
 
 	try {
-		const filePath = mustResolve(method, target, specifier, referrer);
+		const filePath = await resolve(vite, method, target, specifier, referrer);
 		if (bundleDependencies.includes(specifier)) bundleDependency(filePath);
-		return mustLoad(logBase, method, target, specifier, filePath);
+		return await load(vite, logBase, method, target, specifier, filePath);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
 	}

@@ -35,6 +35,7 @@ import {
 import {
 	ensurePosixLikePath,
 	handleModuleFallbackRequest,
+	workerdBuiltinModules,
 } from "./module-fallback";
 import type { SourcelessWorkerOptions, WorkersPoolOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
@@ -428,16 +429,34 @@ function buildProjectWorkerOptions(
 const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
 	log: mfLog,
 	verbose: true,
-	unsafeModuleFallbackService: handleModuleFallbackRequest,
 	handleRuntimeStdio,
 	unsafeStickyBlobs: true,
 };
+
+type ModuleFallbackService = NonNullable<
+	MiniflareOptions["unsafeModuleFallbackService"]
+>;
+// Reuse the same bound module fallback service when constructing Miniflare
+// options, so deep equality checks succeed
+const moduleFallbackServices = new WeakMap<Vitest, ModuleFallbackService>();
+function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
+	let service = moduleFallbackServices.get(ctx);
+	if (service !== undefined) return service;
+	service = handleModuleFallbackRequest.bind(undefined, ctx.vitenode.server);
+	moduleFallbackServices.set(ctx, service);
+	return service;
+}
+
 /**
  * Builds options for the Miniflare instance running tests for the given Vitest
  * project. The first `runnerWorker` returned may be duplicated in the instance
  * if `singleWorker` is disabled so tests can execute in-parallel and isolation.
  */
-function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
+function buildProjectMiniflareOptions(
+	ctx: Vitest,
+	project: Project
+): MiniflareOptions {
+	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] =
 		buildProjectWorkerOptions(project);
 
@@ -451,6 +470,7 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		//  --> multiple instances each with single runner worker
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
 	} else {
@@ -470,14 +490,16 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		}
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [...testWorkers, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
 	}
 }
 async function getProjectMiniflare(
+	ctx: Vitest,
 	project: Project
 ): Promise<SingleOrPerTestFileMiniflare> {
-	const mfOptions = buildProjectMiniflareOptions(project);
+	const mfOptions = buildProjectMiniflareOptions(ctx, project);
 	const changed = !util.isDeepStrictEqual(project.previousMfOptions, mfOptions);
 	project.previousMfOptions = mfOptions;
 
@@ -585,8 +607,12 @@ async function runTests(
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
-			// Always mark `cloudflare:*`/`workerd:*` modules as external
-			if (/^(cloudflare|workerd):/.test(args[0])) {
+			// Mark built-in modules and any virtual modules (e.g. `cloudflare:test`)
+			// as external
+			if (
+				/^(cloudflare|workerd):/.test(args[0]) ||
+				workerdBuiltinModules.has(args[0])
+			) {
 				return { externalize: args[0] };
 			}
 			return localRpcFunctions.fetch(...args);
@@ -789,7 +815,7 @@ export default function (ctx: Vitest): ProcessPool {
 					},
 				};
 
-				const mf = await getProjectMiniflare(project);
+				const mf = await getProjectMiniflare(ctx, project);
 				if (options.singleWorker) {
 					// Single Worker, Isolated or Shared Storage
 					//  --> single instance with single runner worker
