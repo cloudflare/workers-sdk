@@ -278,9 +278,9 @@ async function generateTypes(
 	}
 
 	if (configToDTS.ai) {
-		// The @cloudflare/ai package types specify any,
-		// but some projects may not want `any` in their types, so we use `unknown`
-		envTypeStructure.push(`${configToDTS.ai.binding}: unknown;`);
+		// The @cloudflare/ai package types specify any, but from its usage
+		// we can infer it's a Fetcher type (await this.binding.fetch)
+		envTypeStructure.push(`${configToDTS.ai.binding}: Fetcher;`);
 	}
 
 	const modulesTypeStructure: string[] = [];
