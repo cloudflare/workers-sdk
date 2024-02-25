@@ -19,7 +19,7 @@ class ExecutionContext {
 	}
 
 	waitUntil(promise: unknown) {
-		if (!(this instanceof ExtendableEvent)) {
+		if (!(this instanceof ExecutionContext)) {
 			throw new TypeError("Illegal invocation");
 		}
 		this[kWaitUntil].push(promise);
