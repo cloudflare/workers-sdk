@@ -211,7 +211,7 @@ async function generateTypes(
 	}
 
 	if (configToDTS.logfwdr?.bindings?.length) {
-		envTypeStructure.push(`LOGFWDR_SCHEMA: any;`);
+		envTypeStructure.push(`"LOGFWDR_SCHEMA": any;`);
 	}
 
 	if (configToDTS.data_blobs) {
