@@ -44,6 +44,7 @@ export function options(yargs: CommonYargsArgv) {
 			"retry-delay": {
 				type: "number",
 				describe: "How long a retried messages should be delayed for, in seconds. Must be a positive integer",
+				number: true,
 			},
 			"no-retry-delay": {
 				type: "boolean",
@@ -69,17 +70,15 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostCo
 		dead_letter_queue: args.deadLetterQueue,
 	} as PostConsumerBody;
 
-	if(args.retryDelay !== undefined &&
-		args.noRetryDelay !== undefined) {
-		throw new UserError(`Can't specify a retry delay with when noRetryDelay is set.`);
+
+	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
+	// Negating a number parameter returns 0, making retryDelay an array with [0, <value>]
+	if(Array.isArray(args.retryDelay)) {
+		throw new UserError(`Error: can't use --no-retry-delay with --retry-delay`);
 	}
 
 	if(args.retryDelay != undefined) {
 		body.settings.retry_delay = args.retryDelay
-	}
-
-	if(args.noRetryDelay != undefined) {
-		body.settings.retry_delay = 0
 	}
 
 	return body;

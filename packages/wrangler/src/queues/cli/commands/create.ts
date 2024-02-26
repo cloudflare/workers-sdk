@@ -20,13 +20,11 @@ export function options(yargs: CommonYargsArgv) {
 			"delivery-delay": {
 				type: "number",
 				describe: "How long a published messages should be delayed for, in seconds. Must be a positive integer",
-			}
-		})
-		.options({
+			},
 			"no-delivery-delay": {
 				type: "boolean",
-				describe: "Sets published messages have no delay",
-				boolean: true
+				describe: "Sets published messages to have no delay",
+				boolean: true,
 			}
 		});
 }
@@ -36,20 +34,15 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): Create
 		queue_name: args.name
 	}
 
-	if(args.deliveryDelay !== undefined &&
-		args.noDeliveryDelay !== undefined) {
-		throw new UserError(`Can't specify a delivery delay with when noDeliveryDelay is set.`);
+	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
+	// Negating a number parameter returns 0, making deliveryDelay an array with [0, <value>]
+	if(Array.isArray(args.deliveryDelay)) {
+		throw new UserError(`Error: can't use --no-delivery-delay with --delivery-delay`);
 	}
 
 	if(args.deliveryDelay != undefined) {
 		body.settings = {
 			delivery_delay: args.deliveryDelay
-		}
-	}
-
-	if(args.noDeliveryDelay != undefined) {
-		body.settings = {
-			delivery_delay: 0
 		}
 	}
 

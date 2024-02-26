@@ -211,7 +211,7 @@ describe("wrangler", () => {
 
 			Options:
 			      --delivery-delay     How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]
-			      --no-delivery-delay  Sets published messages have no delay  [boolean]"
+			      --no-delivery-delay  Sets published messages to have no delay  [boolean]"
 		`);
 			});
 
@@ -282,6 +282,20 @@ describe("wrangler", () => {
 					Created queue testQueue."
 			  `);
 				expect(requests.count).toEqual(1);
+			});
+
+			it("should show an error with delivery delay and no delivery delay are used", async () => {
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
+
+				await expect(
+					runWrangler(
+						"queues create testQueue --no-delivery-delay --delivery-delay=10"
+					)
+				).rejects.toThrowError(
+					`Error: can't use --no-delivery-delay with --delivery-delay`
+				);
+
+				expect(requests.count).toEqual(0);
 			});
 		});
 
@@ -432,7 +446,7 @@ describe("wrangler", () => {
 							max_retries: undefined,
 							max_wait_time_ms: undefined,
 							max_concurrency: undefined,
-							retry_delay: undefined
+							retry_delay: undefined,
 						},
 						dead_letter_queue: undefined,
 					};
@@ -453,7 +467,7 @@ describe("wrangler", () => {
 							max_retries: 3,
 							max_wait_time_ms: 10 * 1000,
 							max_concurrency: 3,
-							retry_delay: 10
+							retry_delay: 10,
 						},
 						dead_letter_queue: "myDLQ",
 					};
@@ -477,7 +491,7 @@ describe("wrangler", () => {
 							max_retries: 3,
 							max_wait_time_ms: 10 * 1000,
 							max_concurrency: 3,
-							retry_delay: 0
+							retry_delay: 0,
 						},
 						dead_letter_queue: "myDLQ",
 					};
@@ -490,6 +504,32 @@ describe("wrangler", () => {
 						"Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
+				});
+
+				it("should show an error with retry delay and no retry delay are used", async () => {
+					const expectedBody: PostConsumerBody = {
+						script_name: "testScript",
+						environment_name: "myEnv",
+						settings: {
+							batch_size: 20,
+							max_retries: 3,
+							max_wait_time_ms: 10 * 1000,
+							max_concurrency: 3,
+							retry_delay: 0,
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					const requests = mockPostRequest("testQueue", expectedBody);
+
+					await expect(
+						runWrangler(
+							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --no-retry-delay --retry-delay=10"
+						)
+					).rejects.toThrowError(
+						`Error: can't use --no-retry-delay with --retry-delay`
+					);
+
+					expect(requests.count).toEqual(0);
 				});
 
 				it("should show link to dash when not enabled", async () => {
