@@ -734,7 +734,7 @@ describe("writes debug logs to hidden file", () => {
 	});
 });
 
-describe.only("zone selection", () => {
+describe("zone selection", () => {
 	let worker: DevWorker;
 
 	beforeEach(async () => {
