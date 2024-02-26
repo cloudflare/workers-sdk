@@ -59,7 +59,6 @@ interface RemoteProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady?:
@@ -88,7 +87,6 @@ export function Remote(props: RemoteProps) {
 		usageModel: props.usageModel,
 		env: props.env,
 		legacyEnv: props.legacyEnv,
-		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
 		onReady: props.onReady,
@@ -154,7 +152,6 @@ interface RemoteWorkerProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady:
@@ -187,7 +184,6 @@ export function useWorker(
 				accountId: props.accountId,
 				env: props.env,
 				legacyEnv: props.legacyEnv,
-				zone: props.zone,
 				host: props.host,
 				routes: props.routes,
 				sendMetrics: props.sendMetrics,
@@ -230,7 +226,6 @@ export function useWorker(
 		props.host,
 		props.legacyEnv,
 		props.routes,
-		props.zone,
 		props.sendMetrics,
 		restartCounter,
 	]);
@@ -275,7 +270,6 @@ export function useWorker(
 				accountId: props.accountId,
 				env: props.env,
 				legacyEnv: props.legacyEnv,
-				zone: props.zone,
 				host: props.host,
 				routes: props.routes,
 				sendMetrics: props.sendMetrics,
@@ -376,7 +370,6 @@ export function useWorker(
 		props.modules,
 		props.env,
 		props.legacyEnv,
-		props.zone,
 		props.host,
 		props.routes,
 		session,
@@ -483,7 +476,6 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			accountId: props.accountId,
 			env: props.env,
 			legacyEnv: props.legacyEnv,
-			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
 			sendMetrics: props.sendMetrics,

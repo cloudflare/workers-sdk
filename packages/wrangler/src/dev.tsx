@@ -404,7 +404,6 @@ export async function startDev(args: StartDevOptions) {
 			legacyNodeCompat,
 			nodejsCompat,
 			upstreamProtocol,
-			zoneId,
 			host,
 			routes,
 			getLocalPort,
@@ -439,7 +438,6 @@ export async function startDev(args: StartDevOptions) {
 					findAdditionalModules={configParam.find_additional_modules}
 					entry={entry}
 					env={args.env}
-					zone={zoneId}
 					host={host}
 					routes={routes}
 					processEntrypoint={processEntrypoint}
@@ -536,7 +534,6 @@ export async function startApiDev(args: StartDevOptions) {
 		legacyNodeCompat,
 		nodejsCompat,
 		upstreamProtocol,
-		zoneId,
 		host,
 		routes,
 		getLocalPort,
@@ -571,7 +568,6 @@ export async function startApiDev(args: StartDevOptions) {
 			findAdditionalModules: configParam.find_additional_modules,
 			entry: entry,
 			env: args.env,
-			zone: zoneId,
 			host: host,
 			routes: routes,
 			processEntrypoint,
@@ -715,7 +711,7 @@ async function validateDevServerSettings(
 		"dev"
 	);
 
-	const { zoneId, host, routes } = await getHostAndRoutes(args, config);
+	const { host, routes } = await getHostAndRoutes(args, config);
 	const initialIp = args.ip || config.dev.ip;
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
@@ -815,7 +811,6 @@ async function validateDevServerSettings(
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,
-		zoneId,
 		host,
 		routes,
 		cliDefines,
