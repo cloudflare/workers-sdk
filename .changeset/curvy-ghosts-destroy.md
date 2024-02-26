@@ -36,11 +36,11 @@ Now, the following will be generated:
 
 ```ts
 interface Env {
-  SEND_EMAIL: SendEmail;
-  VECTORIZE: VectorizeIndex;
-  HYPERDRIVE: Hyperdrive;
-  MTLS: Fetcher;
-  BROWSER: Fetcher;
-  AI: Fetcher;
+	SEND_EMAIL: SendEmail;
+	VECTORIZE: VectorizeIndex;
+	HYPERDRIVE: Hyperdrive;
+	MTLS: Fetcher;
+	BROWSER: Fetcher;
+	AI: Fetcher;
 }
 ```
