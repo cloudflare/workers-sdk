@@ -34,7 +34,11 @@ import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
-const TEST_RETRIES = 1;
+const TEST_PM = process.env.TEST_PM ?? "";
+const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? false;
+const TEST_RETRIES = process.env.E2E_RETRIES
+	? parseInt(process.env.E2E_RETRIES)
+	: 1;
 
 type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
@@ -141,9 +145,20 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedPms: ["yarn"],
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Welcome to Remix",
+		},
+		verifyDev: {
+			route: "/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuild: {
+			outputDir: "./build/client",
+			script: "build",
+			route: "/test",
+			expectedText: "C3_TEST",
 		},
 	},
 	next: {
@@ -272,19 +287,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	});
 
 	Object.keys(frameworkTests).forEach((framework) => {
-		const {
-			quarantine,
-			timeout,
-			testCommitMessage,
-			unsupportedPms,
-			unsupportedOSs,
-		} = frameworkTests[framework];
+		const { quarantine, timeout, unsupportedPms, unsupportedOSs } =
+			frameworkTests[framework];
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
-
-		const retries = process.env.E2E_RETRIES
-			? parseInt(process.env.E2E_RETRIES)
-			: TEST_RETRIES;
 
 		// If the framework in question is being run in isolation, always run it.
 		// Otherwise, only run the test if it's configured `quarantine` value matches
@@ -294,7 +300,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			: quarantineModeMatch;
 
 		// Skip if the package manager is unsupported
-		shouldRun &&= !unsupportedPms?.includes(process.env.TEST_PM ?? "");
+		shouldRun &&= !unsupportedPms?.includes(TEST_PM);
 
 		// Skip if the OS is unsupported
 		shouldRun &&= !unsupportedOSs?.includes(process.platform);
@@ -337,12 +343,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					const wranglerPath = join(projectPath, "node_modules/wrangler");
 					expect(wranglerPath).toExist();
 
-					if (testCommitMessage) {
-						await testDeploymentCommitMessage(projectName, framework);
-					}
-
 					// Make a request to the deployed project and verify it was successful
 					await verifyDeployment(
+						framework,
+						projectName,
 						`${deploymentUrl}${verifyDeploy.route}`,
 						verifyDeploy.expectedText
 					);
@@ -369,7 +373,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				}
 			},
 			{
-				retry: retries,
+				retry: TEST_RETRIES,
 				timeout: timeout || TEST_TIMEOUT,
 			}
 		);
@@ -388,7 +392,7 @@ const runCli = async (
 		"webFramework",
 		"--framework",
 		framework,
-		"--deploy",
+		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
 		"--no-git",
 	];
@@ -396,6 +400,9 @@ const runCli = async (
 	args.push(...argv);
 
 	const { output } = await runC3(args, promptHandlers, logStream);
+	if (NO_DEPLOY) {
+		return null;
+	}
 
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
@@ -410,9 +417,21 @@ const runCli = async (
 };
 
 const verifyDeployment = async (
+	framework: string,
+	projectName: string,
 	deploymentUrl: string,
 	expectedText: string
 ) => {
+	if (NO_DEPLOY) {
+		return;
+	}
+
+	const { testCommitMessage } = frameworkTests[framework];
+
+	if (testCommitMessage) {
+		await testDeploymentCommitMessage(projectName, framework);
+	}
+
 	await retry({ times: 5 }, async () => {
 		await sleep(1000);
 		const res = await fetch(deploymentUrl);
@@ -447,7 +466,7 @@ const verifyDevScript = async (
 			pm,
 			"run",
 			template.devScript as string,
-			pm === "npm" ? "--" : "",
+			...(pm === "npm" ? ["--"] : []),
 			"--port",
 			`${TEST_PORT}`,
 		],
