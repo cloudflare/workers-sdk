@@ -1,5 +1,20 @@
 # wrangler
 
+## 3.30.0
+
+### Minor Changes
+
+- [#4742](https://github.com/cloudflare/workers-sdk/pull/4742) [`c2f3f1e`](https://github.com/cloudflare/workers-sdk/commit/c2f3f1e37c1a8f0958676306f3128cd87265ea5b) Thanks [@benycodes](https://github.com/benycodes)! - feat: allow preserving file names when defining rules for non-js modules
+
+  The developer is now able to specify the `preserve_file_names property in wrangler.toml
+  which specifies whether Wrangler will preserve the file names additional modules that are
+  added to the deployment bundle of a Worker.
+
+  If not set to true, files will be named using the pattern ${fileHash}-${basename}.
+  For example, `34de60b44167af5c5a709e62a4e20c4f18c9e3b6-favicon.ico`.
+
+  Resolves [#4741](https://github.com/cloudflare/workers-sdk/issues/4741)
+
 ## 3.29.0
 
 ### Minor Changes
@@ -5531,7 +5546,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
   ```jsx
   import SomeDependency from "some-dependency.js";
 
-  addEventListener("fetch", event => {});
+  addEventListener("fetch", (event) => {});
   ```
 
   `wrangler` 1.x would resolve `import SomeDependency from "some-dependency.js";` to the file `some-dependency.js`. This will work in `wrangler` v2, but it will log a deprecation warning. Instead, you should rewrite the import to specify that it's a relative path, like so:
