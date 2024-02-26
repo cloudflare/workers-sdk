@@ -4,9 +4,12 @@ import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Config } from "../config";
+import type { EnvironmentNonInheritable } from "../config/environment";
 
-const bindingsConfigMock: Partial<Config> = {
+const bindingsConfigMock: Omit<
+	EnvironmentNonInheritable,
+	"define" | "unsafe" | "tail_consumers" | "constellation" | "cloudchamber"
+> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
