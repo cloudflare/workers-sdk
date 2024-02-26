@@ -16,6 +16,7 @@ import {
 	saveAccountToCache,
 } from "../user";
 import { getAccessToken } from "../user/access";
+import { getZoneIdForPreview } from "../zones";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -180,14 +181,16 @@ export function useWorker(
 			if (props.accountId === undefined) {
 				return;
 			}
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
 
 			setSession(
 				await createPreviewSession(
@@ -209,6 +212,8 @@ export function useWorker(
 					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (err instanceof UserError) {
+				logger.error(err.message);
 			}
 			// we want to log the error, but not end the process
 			// since it could recover after the developer fixes whatever's wrong
@@ -266,14 +271,16 @@ export function useWorker(
 				usageModel: props.usageModel,
 			});
 
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
 
 			const workerPreviewToken = await createWorkerPreview(
 				init,
@@ -472,7 +479,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			throw error;
 		}
 		const abortController = new AbortController();
-		const { workerAccount, workerContext } = getWorkerAccountAndContext({
+		const { workerAccount, workerContext } = await getWorkerAccountAndContext({
 			accountId: props.accountId,
 			env: props.env,
 			legacyEnv: props.legacyEnv,
@@ -621,24 +628,26 @@ async function createRemoteWorkerInit(props: {
 	return init;
 }
 
-function getWorkerAccountAndContext(props: {
+async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	env?: string;
 	legacyEnv?: boolean;
-	zone?: string;
 	host?: string;
 	routes: Route[] | undefined;
 	sendMetrics?: boolean;
-}): { workerAccount: CfAccount; workerContext: CfWorkerContext } {
+}): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,
 		apiToken: requireApiToken(),
 	};
 
+	// What zone should the realish preview for this Worker run on?
+	const zoneId = await getZoneIdForPreview(props.host, props.routes);
+
 	const workerContext: CfWorkerContext = {
 		env: props.env,
 		legacyEnv: props.legacyEnv,
-		zone: props.zone,
+		zone: zoneId,
 		host: props.host,
 		routes: props.routes,
 		sendMetrics: props.sendMetrics,

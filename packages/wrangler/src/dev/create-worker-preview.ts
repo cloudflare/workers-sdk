@@ -132,10 +132,16 @@ function randomId(): string {
 
 // URLs are often relative to the zone. Sometimes the base zone
 // will be grey-clouded, and so the host must be swapped out for
-// the worker route host, which is more likely to be orange-clouded
-function switchHost(originalUrl: string, host?: string): URL {
+// the worker route host, which is more likely to be orange-clouded.
+// However, this switching should only happen if we're running a zone preview
+// rather than a workers.dev preview
+function switchHost(
+	originalUrl: string,
+	host: string | undefined,
+	zonePreview: boolean
+): URL {
 	const url = new URL(originalUrl);
-	url.hostname = host ?? url.hostname;
+	url.hostname = zonePreview ? host ?? url.hostname : url.hostname;
 	return url;
 }
 /**
@@ -158,7 +164,11 @@ export async function createPreviewSession(
 		abortSignal
 	);
 
-	const switchedExchangeUrl = switchHost(exchange_url, ctx.host).toString();
+	const switchedExchangeUrl = switchHost(
+		exchange_url,
+		ctx.host,
+		!!ctx.zone
+	).toString();
 
 	logger.debugWithSanitization(
 		"-- START EXCHANGE API REQUEST:",
@@ -192,8 +202,8 @@ export async function createPreviewSession(
 		id: randomId(),
 		value: token,
 		host: ctx.host ?? inspector.host,
-		inspectorUrl: switchHost(inspector.href, ctx.host),
-		prewarmUrl: switchHost(prewarm, ctx.host),
+		inspectorUrl: switchHost(inspector.href, ctx.host, !!ctx.zone),
+		prewarmUrl: switchHost(prewarm, ctx.host, !!ctx.zone),
 	};
 }
 

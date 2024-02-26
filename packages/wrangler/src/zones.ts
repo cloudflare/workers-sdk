@@ -93,7 +93,23 @@ export function getHostFromUrl(urlLike: string): string | undefined {
 		return undefined;
 	}
 }
-
+export async function getZoneIdForPreview(
+	host: string | undefined,
+	routes: Route[] | undefined
+) {
+	let zoneId: string | undefined;
+	if (host) {
+		zoneId = await getZoneIdFromHost(host);
+	}
+	if (!zoneId && routes) {
+		const firstRoute = routes[0];
+		const zone = await getZoneForRoute(firstRoute);
+		if (zone) {
+			zoneId = zone.id;
+		}
+	}
+	return zoneId;
+}
 /**
  * Given something that resembles a host, try to infer a zone id from it.
  *
