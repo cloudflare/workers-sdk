@@ -138,6 +138,14 @@ export async function bundleWorker(
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
 
+	if (targetConsumer === "dev") {
+		middlewareToLoad.push({
+			name: "ensure-req-body-drained",
+			path: "templates/middleware/middleware-ensure-req-body-drained.ts",
+			supports: ["modules", "service-worker"],
+		});
+	}
+
 	if (targetConsumer === "dev" && !!testScheduled) {
 		middlewareToLoad.push({
 			name: "scheduled",
