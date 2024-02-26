@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
 import events from "node:events";
+import process from "node:process";
 import * as vm from "node:vm";
 import {
 	importModule,
@@ -24,6 +25,11 @@ function structuredSerializableParse(value: string): unknown {
 }
 
 globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
+
+globalThis.process = process; // Required by `vite-node`
+process.argv = []; // Required by `@vitest/utils`
+Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `vitest`
+
 globalThis.__console = console;
 
 const originalSetTimeout = globalThis.setTimeout;
