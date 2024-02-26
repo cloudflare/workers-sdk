@@ -16,7 +16,7 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
-import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
+import { getHostFromRoute } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -674,27 +674,14 @@ function maskVars(bindings: CfWorkerInit["bindings"], configParam: Config) {
 	return maskedVars;
 }
 
-async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
+async function getHostAndRoutes(args: StartDevOptions, config: Config) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
 	let host = args.host || config.dev.host;
-	let zoneId: string | undefined;
 	const routes: Route[] | undefined =
 		args.routes || (config.route && [config.route]) || config.routes;
 
-	if (args.remote) {
-		if (host) {
-			zoneId = await getZoneIdFromHost(host);
-		}
-		if (!zoneId && routes) {
-			const firstRoute = routes[0];
-			const zone = await getZoneForRoute(firstRoute);
-			if (zone) {
-				zoneId = zone.id;
-				host = zone.host;
-			}
-		}
-	} else if (!host) {
+	if (!host) {
 		if (routes) {
 			const firstRoute = routes[0];
 			host = getHostFromRoute(firstRoute);
@@ -715,7 +702,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 			}
 		}
 	}
-	return { host, routes, zoneId };
+	return { host, routes };
 }
 
 async function validateDevServerSettings(
@@ -728,7 +715,7 @@ async function validateDevServerSettings(
 		"dev"
 	);
 
-	const { zoneId, host, routes } = await getZoneIdHostAndRoutes(args, config);
+	const { zoneId, host, routes } = await getHostAndRoutes(args, config);
 	const initialIp = args.ip || config.dev.ip;
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
