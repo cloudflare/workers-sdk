@@ -64,7 +64,7 @@ function main() {
 
 	// 2. Run standard `changeset version` command to apply changesets, bump
 	//    versions, and update changelogs
-	execSync("pnpm exec changeset version");
+	execSync("pnpm exec changeset version", { stdio: "inherit" });
 
 	// 3. Force `miniflare`'s minor version to be the same as `workerd`
 	const miniflarePkg = getPkg(miniflarePkgPath);
@@ -126,7 +126,7 @@ function main() {
 	}
 
 	// 4. Update the lockfile
-	console.log(execSync("pnpm install --lockfile-only", { encoding: "utf8" }));
+	execSync("pnpm install --lockfile-only", { stdio: "inherit" });
 }
 
 if (require.main === module) main();
