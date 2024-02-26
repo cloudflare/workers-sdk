@@ -218,7 +218,7 @@ describe("generateTypes()", () => {
 			HYPERDRIVE_BINDING: Hyperdrive;
 			MTLS_BINDING: Fetcher;
 			BROWSER_BINDING: Fetcher;
-			AI_BINDING: Fetcher;
+			AI_BINDING: unknown;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
