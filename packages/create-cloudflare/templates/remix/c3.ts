@@ -1,5 +1,5 @@
 import { logRaw } from "@cloudflare/cli";
-import { brandColor } from "@cloudflare/cli/colors";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { transformFile } from "helpers/codemod";
 import { runFrameworkGenerator } from "helpers/command.js";
@@ -39,7 +39,7 @@ const configure = async () => {
 		},
 	});
 
-	s.stop(`${brandColor("updated")} \`${typeDefsPath}\``);
+	s.stop(`${brandColor("updated")} \`${dim(typeDefsPath)}\``);
 };
 
 const config: TemplateConfig = {
