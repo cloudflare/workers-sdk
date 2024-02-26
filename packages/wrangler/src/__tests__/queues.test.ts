@@ -432,6 +432,7 @@ describe("wrangler", () => {
 							max_retries: undefined,
 							max_wait_time_ms: undefined,
 							max_concurrency: undefined,
+							retry_delay: undefined
 						},
 						dead_letter_queue: undefined,
 					};
@@ -452,13 +453,38 @@ describe("wrangler", () => {
 							max_retries: 3,
 							max_wait_time_ms: 10 * 1000,
 							max_concurrency: 3,
+							retry_delay: 10
 						},
 						dead_letter_queue: "myDLQ",
 					};
 					mockPostRequest("testQueue", expectedBody);
 
 					await runWrangler(
-						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay=10"
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
+				});
+
+				it("should add a consumer with no delay", async () => {
+					const expectedBody: PostConsumerBody = {
+						script_name: "testScript",
+						environment_name: "myEnv",
+						settings: {
+							batch_size: 20,
+							max_retries: 3,
+							max_wait_time_ms: 10 * 1000,
+							max_concurrency: 3,
+							retry_delay: 0
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					mockPostRequest("testQueue", expectedBody);
+
+					await runWrangler(
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --no-retry-delay"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
