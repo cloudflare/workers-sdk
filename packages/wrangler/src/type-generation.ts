@@ -306,8 +306,8 @@ function writeDTSFile({
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
 		combinedTypeStrings += `interface ${envInterface} {${envTypeStructure
-			.map((value, i) => `${i === 0 ? "\n" : ""}\t${value}`)
-			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
+			.map((value) => `\n\t${value}`)
+			.join("")}\n}\n${modulesTypeStructure.join("\n")}`;
 	} else {
 		combinedTypeStrings += `export {};\ndeclare global {\n${envTypeStructure
 			.map((value) => `\tconst ${value}`)
