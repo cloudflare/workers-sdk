@@ -132,7 +132,9 @@ export async function getZoneIdFromHost(host: string): Promise<string> {
 		hostPieces.shift();
 	}
 
-	throw new UserError(`Could not find zone for ${host}`);
+	throw new UserError(
+		`Could not find zone for \`${host}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+	);
 }
 
 /**

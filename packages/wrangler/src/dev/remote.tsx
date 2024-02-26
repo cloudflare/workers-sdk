@@ -212,6 +212,12 @@ export function useWorker(
 					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (
+				(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
+			) {
+				logger.error(
+					`Could not access \`${err.cause.hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+				);
 			} else if (err instanceof UserError) {
 				logger.error(err.message);
 			}

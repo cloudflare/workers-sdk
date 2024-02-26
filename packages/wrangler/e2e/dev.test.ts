@@ -733,3 +733,122 @@ describe("writes debug logs to hidden file", () => {
 		});
 	});
 });
+
+describe.only("zone selection", () => {
+	let worker: DevWorker;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+			`,
+			"src/index.ts": dedent`
+					export default {
+						fetch(request) {
+							return new Response(request.url)
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
+	});
+
+	it("defaults to a workers.dev preview", async () => {
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toContain(`devprod-testing7928.workers.dev`);
+		});
+	});
+
+	it("respects dev.host setting", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[dev]
+					host = "wrangler-testing.testing.devprod.cloudflare.dev"
+			`,
+		}));
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
+		});
+	});
+	it("infers host from first route", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[[routes]]
+					pattern = "wrangler-testing.testing.devprod.cloudflare.dev/*"
+					zone_name = "testing.devprod.cloudflare.dev"
+			`,
+		}));
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
+		});
+	});
+	it("fails with useful error message if host is not routable", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[[routes]]
+					pattern = "not-a-domain.testing.devprod.cloudflare.dev/*"
+					zone_name = "testing.devprod.cloudflare.dev"
+			`,
+		}));
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			await setTimeout(5000);
+			expect(session.stderr).toMatchInlineSnapshot(`
+				"[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.[0m
+
+				  For more details, refer to [4mhttps://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route[0m
+
+
+				"
+			`);
+		});
+	});
+});
