@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240223.0
+
+### Minor Changes
+
+- [#5081](https://github.com/cloudflare/workers-sdk/pull/5081) [`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1) Thanks [@garrettgu10](https://github.com/garrettgu10)! - chore: bump `workerd` to [`1.20240223.1`](https://github.com/cloudflare/workerd/releases/tag/v1.20240223.0)
+
 ## 3.20240208.0
 
 ### Minor Changes

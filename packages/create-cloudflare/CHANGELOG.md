@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.13.0
+
+### Minor Changes
+
+- [#5080](https://github.com/cloudflare/workers-sdk/pull/5080) [`2aa7913`](https://github.com/cloudflare/workers-sdk/commit/2aa79132f2db770c85e99c62336aebbe9af96a8e) Thanks [@jculvey](https://github.com/jculvey)! - feature: Use new `vite-cloudflare` template in Remix projects.
+
+  Remix has released a [new official Cloudflare template](https://remix.run/docs/en/main/future/vite#cloudflare-proxy) that uses `getPlatformProxy` under the hood to provide better support for bindings in dev. Remix projects created with C3 will now use this new template.
+
+  Along with this change, projects will use the default vite-based dev command from `create-remix` instead of using `wrangler pages dev` on build output.
+
+  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accomodate this workflow.
+
+- [#5072](https://github.com/cloudflare/workers-sdk/pull/5072) [`cab7e1c`](https://github.com/cloudflare/workers-sdk/commit/cab7e1c7f24ff0097e15d90030c805fe2785d173) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Astro template.
+
+  C3 will now create Astro projects configured to use miniflare in dev automatically. This is done by adding a configuration for the adapter of `{ runtime: 'local'}` (see [Astro docs](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#runtime) for more details). A `wrangler.toml` file will also be added where bindings can be added to be used in dev.
+
+  Along with this change, projects will now use the default vite-based `astro dev` command instead of using `wrangler pages dev` on build output.
+
+  When Typescript is used, the `src/env.d.ts` file will be updated to add type definitions `runtime.env` which can be re-generated with a newly added `build-cf-types` script.
+
+### Patch Changes
+
+- [#5074](https://github.com/cloudflare/workers-sdk/pull/5074) [`e37c1b8`](https://github.com/cloudflare/workers-sdk/commit/e37c1b8665a3c99873da21c0be7a2fed1d165149) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-svelte` from `6.0.8` to `6.0.9`
+
+- [#5075](https://github.com/cloudflare/workers-sdk/pull/5075) [`c1ed773`](https://github.com/cloudflare/workers-sdk/commit/c1ed7737626bce9930a1fb0fcb28373fd45c4401) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.7.1` to `2.7.2`
+
+- [#5078](https://github.com/cloudflare/workers-sdk/pull/5078) [`64236b0`](https://github.com/cloudflare/workers-sdk/commit/64236b0bf837e8cc31c5886c31d10a8d387f57bd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.2.0` to `17.2.1`
+
 ## 2.12.1
 
 ### Patch Changes
