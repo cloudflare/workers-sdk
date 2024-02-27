@@ -10,7 +10,11 @@ const ALLOWED_INITIAL_MAX = ONE_KIB_BYTES * 1024; // Current max is 1 MiB
 
 async function getSize(modules: Pick<CfModule, "content">[]) {
 	const gzipSize = gzipSync(
-		await new Blob(modules.map((file) => file.content)).arrayBuffer()
+		await new Blob(modules.map((file) => file.content)).arrayBuffer(),
+		{
+			// use maximum compression level
+			level: 9,
+		}
 	).byteLength;
 	const aggregateSize = new Blob(modules.map((file) => file.content)).size;
 

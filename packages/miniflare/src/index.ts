@@ -526,7 +526,9 @@ export function _transformsForContentEncoding(encoding?: string): Transform[] {
 		.map((x) => x.trim());
 	for (const coding of codings) {
 		if (/(x-)?gzip/.test(coding)) {
-			encoders.push(zlib.createGzip());
+			encoders.push(zlib.createGzip({
+				level: 9,
+			}));
 		} else if (/(x-)?deflate/.test(coding)) {
 			encoders.push(zlib.createDeflate());
 		} else if (coding === "br") {
