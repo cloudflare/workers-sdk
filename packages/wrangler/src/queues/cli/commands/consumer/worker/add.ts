@@ -1,10 +1,10 @@
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
-import { UserError } from "../../../../errors";
 import type { PostConsumerBody } from "../../../client";
 import { postConsumer } from "../../../client";
 import type { CommonYargsArgv, StrictYargsOptionsToInterface } from "../../../../yargs-types";
 import { handleFetchError } from "../../../utils";
+import { CommandLineArgsError } from "../../../../index";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -75,7 +75,7 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostCo
 	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
 	// Negating a number parameter returns 0, making retryDelay an array with [0, <value>]
 	if(Array.isArray(args.retryDelay)) {
-		throw new UserError(`Error: can't use --no-retry-delay with --retry-delay`);
+		throw new CommandLineArgsError(`Error: can't use more than a delay setting.`);
 	}
 
 	if(args.retryDelay != undefined) {

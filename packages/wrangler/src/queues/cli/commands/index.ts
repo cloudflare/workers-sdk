@@ -4,6 +4,7 @@ import { handler as createHandler, options as createOptions } from "./create";
 import { handler as deleteHandler, options as deleteOptions } from "./delete";
 import { handler as listHandler, options as listOptions } from "./list";
 import type { CommonYargsArgv } from "../../../yargs-types";
+import { CommandLineArgsError, printWranglerBanner } from "../../../index";
 
 export function queues(yargs: CommonYargsArgv) {
 	yargs.command("list", "List Queues", listOptions, listHandler);

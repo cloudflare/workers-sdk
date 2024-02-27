@@ -16,7 +16,7 @@ export const HandleUnauthorizedError = async (_msg: string, err: Error) => {
 			);
 		}
 	}
-	throw err;
+	return err;
 };
 
 export function handleFetchError(e: {code?: number}): void {

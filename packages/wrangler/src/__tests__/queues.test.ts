@@ -1,6 +1,8 @@
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -15,6 +17,14 @@ describe("wrangler", () => {
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	const { setIsTTY } = useMockIsTTY();
+	beforeEach(() => {
+		setIsTTY(true);
+	});
+	afterEach(() => {
+		clearDialogs();
+	});
 
 	describe("queues", () => {
 		it("should show the correct help text", async () => {
@@ -210,8 +220,8 @@ describe("wrangler", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			Options:
-			      --delivery-delay     How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]
-			      --no-delivery-delay  Sets published messages to have no delay  [boolean]"
+			      --no-delivery-delay  Sets published messages to have no delay  [boolean]
+			      --delivery-delay     How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]"
 		`);
 			});
 
@@ -287,9 +297,12 @@ describe("wrangler", () => {
 			it("should show an error with delivery delay and no delivery delay are used", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
 
-				expect(
-						runWrangler("queues create testQueue --no-delivery-delay --delivery-delay=10"))
-					.toThrowErrorMatchingInlineSnapshot(`"Error: can't use --no-delivery-delay with --delivery-delay"`
+				await expect(
+					runWrangler(
+						"queues create testQueue --no-delivery-delay --delivery-delay=10"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"Error: can't use more than a delay setting."`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -523,7 +536,7 @@ describe("wrangler", () => {
 							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --no-retry-delay --retry-delay=10"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Error: can't use --no-retry-delay with --retry-delay"`
+						`"Error: can't use more than a delay setting."`
 					);
 
 					expect(requests.count).toEqual(0);

@@ -6,8 +6,8 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
-import { UserError } from "../../../errors";
 import { handleFetchError } from "../../utils";
+import { CommandLineArgsError } from "../../../index";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -17,14 +17,14 @@ export function options(yargs: CommonYargsArgv) {
 				description: "The name of the queue",
 			})
 		.options({
-			"delivery-delay": {
-				type: "number",
-				describe: "How long a published messages should be delayed for, in seconds. Must be a positive integer",
-			},
 			"no-delivery-delay": {
 				type: "boolean",
 				describe: "Sets published messages to have no delay",
 				boolean: true,
+			},
+			"delivery-delay": {
+				type: "number",
+				describe: "How long a published messages should be delayed for, in seconds. Must be a positive integer",
 			}
 		})
 		.conflicts('delivery-delay', 'no-delivery-delay')
@@ -38,7 +38,7 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): Create
 	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
 	// Negating a number parameter returns 0, making deliveryDelay an array with [0, <value>]
 	if(Array.isArray(args.deliveryDelay)) {
-		throw new UserError(`Error: can't use --no-delivery-delay with --delivery-delay`);
+		throw new CommandLineArgsError(`Error: can't use more than a delay setting.`);
 	}
 
 	if(args.deliveryDelay != undefined) {
