@@ -287,12 +287,9 @@ describe("wrangler", () => {
 			it("should show an error with delivery delay and no delivery delay are used", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
 
-				await expect(
-					runWrangler(
-						"queues create testQueue --no-delivery-delay --delivery-delay=10"
-					)
-				).rejects.toThrowError(
-					`Error: can't use --no-delivery-delay with --delivery-delay`
+				expect(
+						runWrangler("queues create testQueue --no-delivery-delay --delivery-delay=10"))
+					.toThrowErrorMatchingInlineSnapshot(`"Error: can't use --no-delivery-delay with --delivery-delay"`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -525,8 +522,8 @@ describe("wrangler", () => {
 						runWrangler(
 							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --no-retry-delay --retry-delay=10"
 						)
-					).rejects.toThrowError(
-						`Error: can't use --no-retry-delay with --retry-delay`
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Error: can't use --no-retry-delay with --retry-delay"`
 					);
 
 					expect(requests.count).toEqual(0);

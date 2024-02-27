@@ -51,11 +51,12 @@ export function options(yargs: CommonYargsArgv) {
 				describe: "Sets retried messages have no delay.",
 				boolean: true
 			},
-		});
+		})
+		.conflicts('retry-delay', 'no-retry-delay')
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostConsumerBody {
-	const body = {
+	const body: PostConsumerBody = {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
 		environment_name: args.env ?? "", // API expects empty string as default
@@ -68,7 +69,7 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostCo
 			max_concurrency: args.maxConcurrency,
 		},
 		dead_letter_queue: args.deadLetterQueue,
-	} as PostConsumerBody;
+	};
 
 
 	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.

@@ -26,7 +26,8 @@ export function options(yargs: CommonYargsArgv) {
 				describe: "Sets published messages to have no delay",
 				boolean: true,
 			}
-		});
+		})
+		.conflicts('delivery-delay', 'no-delivery-delay')
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): CreateQueueBody {
@@ -60,6 +61,5 @@ export async function handler(
 		logger.log(`Created queue ${args.name}.`);
 	} catch(e) {
 		handleFetchError(e as {code?: number})
-		throw e;
 	}
 }
