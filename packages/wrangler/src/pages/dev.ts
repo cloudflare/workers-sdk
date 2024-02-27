@@ -220,7 +220,6 @@ export function Options(yargs: CommonYargsArgv) {
 			"show-interactive-dev-session": {
 				describe: "Show interactive dev session",
 				type: "boolean",
-				default: true,
 			},
 		});
 }

@@ -280,7 +280,6 @@ export function devOptions(yargs: CommonYargsArgv) {
 			.option("show-interactive-dev-session", {
 				describe: "Show interactive dev session",
 				type: "boolean",
-				default: true,
 			})
 	);
 }
