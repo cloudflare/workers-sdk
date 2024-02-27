@@ -25,10 +25,11 @@ describe("wrangler dev", () => {
 		const requests: boolean[] = [];
 		const errors: string[] = [];
 
+		const body = new Uint8Array(2_000);
 		for (let i = 0; i < COUNT; i++) {
 			const response = await fetch(`http://${ip}:${port}/random`, {
 				method: "POST",
-				body: new Uint8Array(2), // 2 bytes
+				body,
 			});
 			requests.push(response.ok);
 			if (!response.ok) {
