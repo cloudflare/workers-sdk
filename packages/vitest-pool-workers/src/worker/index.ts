@@ -10,6 +10,7 @@ import {
 	maybeHandleRunRequest,
 	runInRunnerObject,
 	setEnv,
+	stripInternalEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
 // Using relative path here to ensure `esbuild` bundles it
@@ -213,10 +214,14 @@ export class RunnerObject implements DurableObject {
 	}
 }
 
-function createHandlerWrapper<K extends keyof ExportedHandler<Env>>(
+function createHandlerWrapper<K extends keyof ExportedHandler>(
 	key: K
-): NonNullable<ExportedHandler<Env>[K]> {
-	return async (thing: unknown, env: Env, ctx: ExecutionContext) => {
+): NonNullable<ExportedHandler<Record<string, unknown> & Env>[K]> {
+	return async (
+		thing: unknown,
+		env: Record<string, unknown> & Env,
+		ctx: ExecutionContext
+	) => {
 		const mainPath = getResolvedMainPath("service");
 		const mainModule = await importModule(env, mainPath);
 		const defaultExport =
@@ -230,7 +235,8 @@ function createHandlerWrapper<K extends keyof ExportedHandler<Env>>(
 			key in defaultExport &&
 			(defaultExport as Record<string, unknown>)[key];
 		if (typeof handlerFunction === "function") {
-			return handlerFunction.call(defaultExport, thing, env, ctx);
+			const userEnv = stripInternalEnv(env);
+			return handlerFunction.call(defaultExport, thing, userEnv, ctx);
 		} else {
 			let message = `Handler does not export a ${key}() function.`;
 			if (!defaultExport) {
