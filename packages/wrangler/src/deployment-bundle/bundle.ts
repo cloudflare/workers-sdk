@@ -138,7 +138,10 @@ export async function bundleWorker(
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
 
-	if (targetConsumer === "dev") {
+	if (
+		targetConsumer === "dev" &&
+		!process.env.WRANGLER_DISABLE_REQUEST_BODY_DRAINING
+	) {
 		middlewareToLoad.push({
 			name: "ensure-req-body-drained",
 			path: "templates/middleware/middleware-ensure-req-body-drained.ts",

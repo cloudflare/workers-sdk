@@ -39,7 +39,8 @@
 				"HTTP_PROXY",
 				"CI_OS",
 				"SENTRY_DSN",
-				"SYSTEMROOT"
+				"SYSTEMROOT",
+				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING"
 			]
 		}
 	}
