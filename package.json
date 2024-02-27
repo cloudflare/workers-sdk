@@ -25,8 +25,6 @@
 		"gen:package": "turbo gen package"
 	},
 	"dependencies": {
-		"@changesets/changelog-github": "^0.4.5",
-		"@changesets/cli": "^2.22.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.1.0",
 		"@types/node": "^20.0.0",
 		"cross-env": "^7.0.3",
@@ -42,6 +40,8 @@
 	},
 	"devDependencies": {
 		"@actions/artifact": "^2.0.1",
+		"@changesets/changelog-github": "^0.5.0",
+		"@changesets/cli": "^2.27.1",
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"@turbo/gen": "^1.10.13",
 		"@vue/compiler-sfc": "^3.3.4",

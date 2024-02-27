@@ -8,6 +8,6 @@
 	"author": "",
 	"main": "index.js",
 	"dependencies": {
-		"@cloudflare/kv-asset-handler": "~0.2.0"
+		"@cloudflare/kv-asset-handler": "workspace:*"
 	}
 }
