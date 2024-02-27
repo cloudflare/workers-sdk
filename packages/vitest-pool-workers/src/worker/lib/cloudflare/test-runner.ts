@@ -5,6 +5,7 @@ import {
 	fetchMock,
 	getSerializedOptions,
 	internalEnv,
+	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
@@ -141,6 +142,11 @@ export default class WorkersTestRunner extends VitestTestRunner {
 	async updateStackedStorage(action: "push" | "pop"): Promise<void> {
 		if (!this.isolatedStorage) return;
 
+		// Ensure all `ctx.waitUntil()` calls complete before aborting all objects.
+		// `ctx.waitUntil()`s may contain storage calls (e.g. caching responses)
+		// that could re-create Durable Objects and interrupt stack operations.
+		await waitForGlobalWaitUntil();
+
 		// Abort all Durable Objects apart from those marked with `preventEviction`
 		// (i.e. the runner object and the proxy server).
 		// On push, ensures objects are started with newly copied `.sqlite` files.
@@ -175,6 +181,12 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log("onAfterRunFiles");
 			await scheduler.wait(100);
 		}
+
+		// Ensure all `ctx.waitUntil()` calls complete before disposing the runtime
+		// (if using `vitest run`) and aborting all objects. `ctx.waitUntil()`s may
+		// contain storage calls (e.g. caching responses) that could try to access
+		// aborted Durable Objects.
+		await waitForGlobalWaitUntil();
 		// @ts-expect-error `VitestTestRunner` doesn't define `onAfterRunFiles`, but
 		//  could in the future.
 		return super.onAfterRunFiles?.();

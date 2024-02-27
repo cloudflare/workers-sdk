@@ -8,6 +8,7 @@ import {
 	importModule,
 	internalEnv,
 	maybeHandleRunRequest,
+	registerGlobalWaitUntil,
 	runInRunnerObject,
 	setEnv,
 	stripInternalEnv,
@@ -214,6 +215,8 @@ export class RunnerObject implements DurableObject {
 	}
 }
 
+const patchedContexts = new WeakSet<ExecutionContext>();
+
 function createHandlerWrapper<K extends keyof ExportedHandler>(
 	key: K
 ): NonNullable<ExportedHandler<Record<string, unknown> & Env>[K]> {
@@ -236,6 +239,15 @@ function createHandlerWrapper<K extends keyof ExportedHandler>(
 			(defaultExport as Record<string, unknown>)[key];
 		if (typeof handlerFunction === "function") {
 			const userEnv = stripInternalEnv(env);
+			// Ensure calls to `ctx.waitUntil()` registered with global wait-until
+			if (!patchedContexts.has(ctx)) {
+				patchedContexts.add(ctx);
+				const originalWaitUntil = ctx.waitUntil;
+				ctx.waitUntil = (promise: Promise<unknown>) => {
+					registerGlobalWaitUntil(promise);
+					return originalWaitUntil.call(ctx, promise);
+				};
+			}
 			return handlerFunction.call(defaultExport, thing, userEnv, ctx);
 		} else {
 			let message = `Handler does not export a ${key}() function.`;
