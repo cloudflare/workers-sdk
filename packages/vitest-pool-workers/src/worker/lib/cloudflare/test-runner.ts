@@ -139,7 +139,10 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 	}
 
-	async updateStackedStorage(action: "push" | "pop"): Promise<void> {
+	async updateStackedStorage(
+		action: "push" | "pop",
+		source: Test | Suite
+	): Promise<void> {
 		if (!this.isolatedStorage) return;
 
 		// Ensure all `ctx.waitUntil()` calls complete before aborting all objects.
@@ -155,9 +158,16 @@ export default class WorkersTestRunner extends VitestTestRunner {
 
 		// Send request to pool loopback service to update `.sqlite` files
 		const url = "http://placeholder/storage";
+		const sourceString = `${source.file?.name ?? "an unknown file"}'s ${
+			source.type
+		} ${JSON.stringify(source.name)}`;
+
 		const res = await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
 			url,
-			{ method: action === "pop" ? "DELETE" : "POST" }
+			{
+				method: action === "pop" ? "DELETE" : "POST",
+				headers: { "MF-Vitest-Source": sourceString },
+			}
 		);
 		assert.strictEqual(res.status, 204, await res.text());
 	}
@@ -197,7 +207,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(2)}onBeforeRunSuite: ${suite.name}`);
 			await scheduler.wait(100);
 		}
-		await this.updateStackedStorage("push");
+		await this.updateStackedStorage("push", suite);
 
 		return super.onBeforeRunSuite(suite);
 	}
@@ -206,7 +216,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(2)}onAfterRunSuite: ${suite.name}`);
 			await scheduler.wait(100);
 		}
-		await this.updateStackedStorage("pop");
+		await this.updateStackedStorage("pop", suite);
 
 		return super.onAfterRunSuite(suite);
 	}
@@ -221,7 +231,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		if (newActive !== undefined) tries.active = newActive;
 		if (active !== undefined && !tries.popped.has(active)) {
 			tries.popped.add(active);
-			await this.updateStackedStorage("pop");
+			await this.updateStackedStorage("pop", test);
 			return true;
 		}
 		return false;
@@ -283,7 +293,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		const newActive = getTryKey(options);
 		await this.ensurePoppedActiveTryStorage(test, newActive);
 
-		await this.updateStackedStorage("push");
+		await this.updateStackedStorage("push", test);
 		return super.onBeforeTryTask(test);
 	}
 	// @ts-expect-error `VitestRunner` defines an additional `options` parameter
