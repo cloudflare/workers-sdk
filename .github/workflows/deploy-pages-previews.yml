@@ -1,0 +1,69 @@
+name: Deploy Pages Previews
+
+# This workflow is designed to deploy a "preview" version of a Pages project based on PR labels.
+
+# Triggers:
+# - update to a PR that has one of the `preview:...` labels
+#
+# Actions:
+# - deploy the matching Pages project to Cloudflare.
+#
+# PR Label                   | Pages Project
+# ---------------------------------------------------------
+# preview:wrangler-devtools  | packages/wrangler-devtools
+# preview:quick-edit         | packages/quick-edit
+# preview:workers-playground | packages/workers-playground
+#
+# Note: this workflow does not run tests against these packages, only for deploys previews.
+
+on:
+  pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+
+jobs:
+  deploy-pages-projects:
+    # Only run this on PRs that are for the "cloudflare" org and not "from" `main`
+    # - non-Cloudflare PRs will not have the secrets needed
+    # - PRs "from" main would accidentally do a production deployment
+    if: github.repository_owner == 'cloudflare' && github.head_ref != 'main'
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        env:
+          node-version: 16.18
+
+      - name: Build tools and libraries
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+
+      - name: Deploy Wrangler DevTools preview
+        if: contains(github.event.*.labels.*.name, 'preview:wrangler-devtools')
+        run: pnpm --filter @cloudflare/wrangler-devtools run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Build and Deploy Quick Edit preview
+        if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
+        # Quick Edit requires yarn, so needs fairly specific logic
+        run: cd packages/quick-edit && yarn setup && yarn custom:build && pnpm run deploy
+        env:
+          NPM_PUBLISH_TOKEN: NOT_USED # yarn will error if the env var from .npmrc can't be interpolated
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Deploy Workers Playground preview
+        if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
+        run: pnpm --filter workers-playground run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -4,9 +4,11 @@ This package contains a Workers specific version of Chrome Devtools that is used
 
 ## Deployment
 
-Deployments are managed by the Github Action defined at .github/workflows/deploy-pages-projects.yaml.
+Deployments are managed by Github Actions:
 
-This action runs on:
-
-- every push to `main`. This will deploy the project to production, which can then be accessed via [https://cloudflare-devtools.pages.dev/].
-- any PR that has the `preview:wrangler-devtools` label. This will deploy a preview, which can then be accessed via [https://<SHA>.cloudflare-devtools.pages.dev/].
+- deploy-pages-previews.yml:
+  - Runs on any PR that has the `preview:wrangler-devtools` label.
+  - Deploys a preview, which can then be accessed via [https://<SHA>.cloudflare-devtools.pages.dev/].
+- changesets.yml:
+  - Runs when a "Version Packages" PR, containing a changeset that touches this package, is merged to `main`.
+  - Deploys this package to production, which can then be accessed via [https://cloudflare-devtools.pages.dev/].

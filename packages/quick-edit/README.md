@@ -15,12 +15,14 @@ Follow steps (1), (2) and (3) from above, and then run `yarn custom:build`
 
 ## Deployment
 
-Deployments are managed by the Github Action defined at .github/workflows/deploy-pages-projects.yaml.
+Deployments are managed by Github Actions:
 
-This action runs on:
-
-- every push to `main`. This will deploy the project to production, which can then be accessed via [https://quick-edit-cny.pages.dev/].
-- any PR that has the `preview:quick-edit` label. This will deploy a preview, which can then be accessed via [https://<SHA>.quick-edit-cny.pages.dev/].
+- deploy-pages-previews.yml:
+  - Runs on any PR that has the `preview:quick-edit` label.
+  - Deploys a preview, which can then be accessed via [https://<SHA>.quick-edit-cny.pages.dev/].
+- changesets.yml:
+  - Runs when a "Version Packages" PR, containing a changeset that touches this package, is merged to `main`.
+  - Deploys this package to production, which can then be accessed via [https://quick-edit-cny.pages.dev/].
 
 ## Patching VSCode
 
