@@ -19,6 +19,8 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
+import { createChunkingSocket } from "../shared/chunking-socket";
+import type { SocketLike } from "../shared/chunking-socket";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
 
 function structuredSerializableStringify(value: unknown): string {
@@ -69,22 +71,31 @@ function isDifferentIOContextError(e: unknown) {
 
 // Wraps a `WebSocket` with a Node `MessagePort` like interface
 class WebSocketMessagePort extends events.EventEmitter {
-	constructor(private readonly socket: WebSocket) {
+	#chunkingSocket: SocketLike<string>;
+
+	constructor(socket: WebSocket) {
 		super();
-		socket.addEventListener("message", this.#onMessage);
+		this.#chunkingSocket = createChunkingSocket({
+			post(message) {
+				socket.send(message);
+			},
+			on(listener) {
+				socket.addEventListener("message", (event) => {
+					listener(event.data);
+				});
+			},
+		});
+		this.#chunkingSocket.on((message) => {
+			const parsed = structuredSerializableParse(message);
+			this.emit("message", parsed);
+		});
 		socket.accept();
 	}
-
-	#onMessage = (event: MessageEvent) => {
-		assert(typeof event.data === "string");
-		const parsed = structuredSerializableParse(event.data);
-		this.emit("message", parsed);
-	};
 
 	postMessage(data: unknown) {
 		const stringified = structuredSerializableStringify(data);
 		try {
-			this.socket.send(stringified);
+			this.#chunkingSocket.post(stringified);
 		} catch (error) {
 			// If the user tried to perform a dynamic `import()` or `console.log()`
 			// from inside a `export default { fetch() { ... } }` handler using `SELF`
@@ -96,7 +107,7 @@ class WebSocketMessagePort extends events.EventEmitter {
 			// from the runner object.
 			if (isDifferentIOContextError(error)) {
 				void runInRunnerObject(internalEnv, () =>
-					this.socket.send(stringified)
+					this.#chunkingSocket.post(stringified)
 				).catch((e) => {
 					__console.error("Error sending to pool inside runner:", e, data);
 				});

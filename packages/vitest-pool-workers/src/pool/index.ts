@@ -19,6 +19,7 @@ import {
 	WebSocket,
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
+import { createChunkingSocket } from "../shared/chunking-socket";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
 	getProjectPath,
@@ -610,6 +611,17 @@ async function runTests(
 	const webSocket = res.webSocket;
 	assert(webSocket !== null);
 
+	const chunkingSocket = createChunkingSocket({
+		post(message) {
+			webSocket.send(message);
+		},
+		on(listener) {
+			webSocket.addEventListener("message", (event) => {
+				listener(event.data);
+			});
+		},
+	});
+
 	const localRpcFunctions = createMethodsRPC(project.project);
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
@@ -625,21 +637,21 @@ async function runTests(
 			return localRpcFunctions.fetch(...args);
 		},
 	};
+
 	let startupError: unknown;
 	const rpc = createBirpc<RunnerRPC, RuntimeRPC>(patchedLocalRpcFunctions, {
 		eventNames: ["onCancel"],
 		post(value) {
 			if (webSocket.readyState === WebSocket.READY_STATE_OPEN) {
 				debuglog("POOL-->WORKER", value);
-				webSocket.send(structuredSerializableStringify(value));
+				chunkingSocket.post(structuredSerializableStringify(value));
 			} else {
 				debuglog("POOL--*      ", value);
 			}
 		},
 		on(listener) {
-			webSocket.addEventListener("message", (event) => {
-				assert(typeof event.data === "string");
-				const value = structuredSerializableParse(event.data);
+			chunkingSocket.on((message) => {
+				const value = structuredSerializableParse(message);
 				debuglog("POOL<--WORKER", value);
 				if (
 					typeof value === "object" &&
