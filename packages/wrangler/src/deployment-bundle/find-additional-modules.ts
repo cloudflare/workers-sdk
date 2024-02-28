@@ -63,15 +63,12 @@ export async function findAdditionalModules(
 
 			// This is incredibly naive. However, it supports common syntax for requirements.txt
 			for (const requirement of pythonRequirements.split("\n")) {
-				const packageName = requirement.match(/^[^\d\W]\w*/);
-				if (typeof packageName?.[0] === "string") {
-					modules.push({
-						type: "python-requirement",
-						name: packageName?.[0],
-						content: "",
-						filePath: undefined,
-					});
-				}
+				modules.push({
+					type: "python-requirement",
+					name: requirement,
+					content: "",
+					filePath: undefined,
+				});
 			}
 			// We don't care if a requirements.txt isn't found
 		} catch (e) {
