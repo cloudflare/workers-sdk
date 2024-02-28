@@ -15,13 +15,14 @@ import type { Prompt } from "@clack/core";
 const logUpdate = createLogUpdate(process.stdout);
 
 export type Arg = string | boolean | string[] | undefined | number;
-const grayBar = gray(shapes.bar);
-const blCorner = gray(shapes.corners.bl);
-const leftT = gray(shapes.leftT);
+export const grayBar = gray(shapes.bar);
+export const blCorner = gray(shapes.corners.bl);
+export const leftT = gray(shapes.leftT);
 
 export type Option = {
-	label: string;
-	value: string;
+	label: string; // user-visible string
+	sublabel?: string; // user-visible string
+	value: string; // underlying key
 	hidden?: boolean;
 };
 
@@ -38,6 +39,8 @@ export type BasePromptConfig = {
 	format?: (value: Arg) => string;
 	// Returns a user displayed error if the value is invalid
 	validate?: (value: Arg) => string | void;
+	// override some/all renderers (can be used for custom renderers before hoisting back into shared code)
+	renderers?: Partial<ReturnType<typeof getRenderers>>;
 };
 
 export type TextPromptConfig = BasePromptConfig & {
@@ -87,7 +90,10 @@ type RenderProps =
 	| Omit<SelectRefreshablePrompt, "prompt">;
 
 export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
-	const renderers = getRenderers(promptConfig);
+	const renderers = {
+		...getRenderers(promptConfig),
+		...promptConfig.renderers,
+	};
 
 	let prompt:
 		| SelectPrompt<Option>
@@ -150,7 +156,7 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 		prompt = new TextPrompt({
 			...promptConfig,
 			initialValue: promptConfig.initialValue,
-			defaultValue: String(promptConfig.defaultValue),
+			defaultValue: String(promptConfig.defaultValue ?? ""),
 			render() {
 				return dispatchRender(this, prompt);
 			},
@@ -213,14 +219,10 @@ export const getRenderers = (config: PromptConfig) => {
 };
 
 const getTextRenderers = (config: TextPromptConfig) => {
-	const {
-		defaultValue,
-		question,
-		helpText: _helpText,
-		format: _format,
-	} = config;
-	const helpText = _helpText ?? "";
-	const format = _format ?? ((val: Arg) => String(val));
+	const { question } = config;
+	const helpText = config.helpText ?? "";
+	const format = config.format ?? ((val: Arg) => String(val));
+	const defaultValue = config.defaultValue?.toString() ?? "";
 
 	return {
 		initial: () => [
@@ -230,9 +232,7 @@ const getTextRenderers = (config: TextPromptConfig) => {
 		],
 		active: ({ value }: { value: Arg }) => [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
-			`${space(2)}${format(
-				value || dim(typeof defaultValue === "string" ? defaultValue : ``)
-			)}`,
+			`${space(2)}${format(value || dim(defaultValue))}`,
 			``, // extra line for readability
 		],
 		error: ({ value, error }: { value: Arg; error: string }) => [
@@ -242,7 +242,8 @@ const getTextRenderers = (config: TextPromptConfig) => {
 			`${space(2)}${format(value)}`,
 			``, // extra line for readability
 		],
-		submit: ({ value }: { value: Arg }) => renderSubmit(config, format(value)),
+		submit: ({ value }: { value: Arg }) =>
+			renderSubmit(config, format(value ?? "")),
 		cancel: handleCancel,
 	};
 };
@@ -261,15 +262,16 @@ const getSelectRenderers = (
 			const active = i === cursor;
 			const isInListOfValues =
 				Array.isArray(value) && value.includes(optionValue);
-			const color = isInListOfValues || active ? blue : dim;
+			const color = isInListOfValues || active ? blue : white;
 			const text = active ? color.underline(optionLabel) : color(optionLabel);
+			const sublabel = opt.sublabel ? color.grey(opt.sublabel) : "";
 
 			const indicator =
 				isInListOfValues || (active && !Array.isArray(value))
 					? color(shapes.radioActive)
 					: color(shapes.radioInactive);
 
-			return `${space(2)}${indicator} ${text}`;
+			return `${space(2)}${indicator} ${text} ${sublabel}`;
 		};
 
 		const renderOptionCondition = (_: unknown, i: number): boolean => {

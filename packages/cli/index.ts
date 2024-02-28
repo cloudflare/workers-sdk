@@ -133,10 +133,14 @@ export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
 	exit(1);
 };
 
-export const error = (msg?: string, extra?: string) => {
+export const error = (
+	msg?: string,
+	extra?: string,
+	corner = shapes.corners.bl
+) => {
 	if (msg) {
 		process.stderr.write(
-			`${gray(shapes.corners.bl)} ${status.error} ${dim(msg)}\n${
+			`${gray(corner)} ${status.error} ${dim(msg)}\n${
 				extra ? space() + extra + "\n" : ""
 			}`
 		);
