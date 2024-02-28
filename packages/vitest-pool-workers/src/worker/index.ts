@@ -73,7 +73,7 @@ function isDifferentIOContextError(e: unknown) {
 class WebSocketMessagePort extends events.EventEmitter {
 	#chunkingSocket: SocketLike<string>;
 
-	constructor(socket: WebSocket) {
+	constructor(private readonly socket: WebSocket) {
 		super();
 		this.#chunkingSocket = createChunkingSocket({
 			post(message) {
@@ -93,6 +93,8 @@ class WebSocketMessagePort extends events.EventEmitter {
 	}
 
 	postMessage(data: unknown) {
+		if (this.socket.readyState !== WebSocket.READY_STATE_OPEN) return;
+
 		const stringified = structuredSerializableStringify(data);
 		try {
 			this.#chunkingSocket.post(stringified);
