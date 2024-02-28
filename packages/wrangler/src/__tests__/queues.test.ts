@@ -106,6 +106,9 @@ describe("wrangler", () => {
 						producers_total_count: 0,
 						consumers: [],
 						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0
+						}
 					},
 					{
 						queue_id: "def19fa3787741579c9088eb850474af",
@@ -116,6 +119,9 @@ describe("wrangler", () => {
 						producers_total_count: 0,
 						consumers: [],
 						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0
+						}
 					},
 				];
 				const expectedPage = 1;
@@ -145,6 +151,9 @@ describe("wrangler", () => {
 						producers_total_count: 0,
 						consumers: [],
 						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0
+						}
 					},
 				];
 				const expectedPage = 2;
@@ -220,8 +229,7 @@ describe("wrangler", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			Options:
-			      --no-delivery-delay  Sets published messages to have no delay  [boolean]
-			      --delivery-delay     How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]"
+			      --delivery-delay  How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]"
 		`);
 			});
 
@@ -284,22 +292,12 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should send send queue settings with 0 delivery delay when noDeliveryDelay is set", async () => {
-				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
-				await runWrangler("queues create testQueue --no-delivery-delay");
-				expect(std.out).toMatchInlineSnapshot(`
-					"Creating queue testQueue.
-					Created queue testQueue."
-			  `);
-				expect(requests.count).toEqual(1);
-			});
-
-			it("should show an error with delivery delay and no delivery delay are used", async () => {
+			it("should show an error when two delivery delays are set", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
 
 				await expect(
 					runWrangler(
-						"queues create testQueue --no-delivery-delay --delivery-delay=10"
+						"queues create testQueue --delivery-delay=5 --delivery-delay=10"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Error: can't use more than a delay setting."`
@@ -442,8 +440,7 @@ describe("wrangler", () => {
 				      --message-retries    Maximum number of retries for each message  [number]
 				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
 				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
-				      --retry-delay        How long a retried messages should be delayed for, in seconds. Must be a positive integer  [number]
-				      --no-retry-delay     Sets retried messages have no delay.  [boolean]"
+				      --retry-delay        How long a retried messages should be delayed for, in seconds. Must be a positive integer  [number]"
 			`);
 				});
 
@@ -492,31 +489,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should add a consumer with no delay", async () => {
-					const expectedBody: PostConsumerBody = {
-						script_name: "testScript",
-						environment_name: "myEnv",
-						settings: {
-							batch_size: 20,
-							max_retries: 3,
-							max_wait_time_ms: 10 * 1000,
-							max_concurrency: 3,
-							retry_delay: 0,
-						},
-						dead_letter_queue: "myDLQ",
-					};
-					mockPostRequest("testQueue", expectedBody);
-
-					await runWrangler(
-						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --no-retry-delay"
-					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"Adding consumer to queue testQueue.
-						Added consumer to queue testQueue."
-					`);
-				});
-
-				it("should show an error with retry delay and no retry delay are used", async () => {
+				it("should show an error when two retry delays are set", async () => {
 					const expectedBody: PostConsumerBody = {
 						script_name: "testScript",
 						environment_name: "myEnv",
@@ -533,7 +506,7 @@ describe("wrangler", () => {
 
 					await expect(
 						runWrangler(
-							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --no-retry-delay --retry-delay=10"
+							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay=5 --retry-delay=10"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`"Error: can't use more than a delay setting."`

@@ -45,14 +45,8 @@ export function options(yargs: CommonYargsArgv) {
 				type: "number",
 				describe: "How long a retried messages should be delayed for, in seconds. Must be a positive integer",
 				number: true,
-			},
-			"no-retry-delay": {
-				type: "boolean",
-				describe: "Sets retried messages have no delay.",
-				boolean: true
-			},
-		})
-		.conflicts('retry-delay', 'no-retry-delay')
+			}
+		});
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostConsumerBody {

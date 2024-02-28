@@ -17,17 +17,11 @@ export function options(yargs: CommonYargsArgv) {
 				description: "The name of the queue",
 			})
 		.options({
-			"no-delivery-delay": {
-				type: "boolean",
-				describe: "Sets published messages to have no delay",
-				boolean: true,
-			},
 			"delivery-delay": {
 				type: "number",
 				describe: "How long a published messages should be delayed for, in seconds. Must be a positive integer",
 			}
-		})
-		.conflicts('delivery-delay', 'no-delivery-delay')
+		});
 }
 
 function createBody(args: StrictYargsOptionsToInterface<typeof options>): CreateQueueBody {
