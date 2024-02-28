@@ -21,7 +21,7 @@ import type {
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 const ZERO_WIDTH_SPACE = "​"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
-const VERSION_CACHE = new Map<string, WorkerVersion>();
+const VERSION_CACHE = new Map<VersionId, WorkerVersion>();
 
 type Args = StrictYargsOptionsToInterface<typeof versionsDeployOptions>;
 
@@ -41,8 +41,11 @@ type ApiDeployment = {
 	strategy: "percentage" | string;
 	author_email: string;
 	annotations: Record<string, string>;
-	versions: Array<{ version_id: VersionId; percentage: Percentage }>;
 	created_on: string;
+	versions: Array<{
+		version_id: VersionId;
+		percentage: Percentage;
+	}>;
 };
 type ApiVersion = {
 	id: VersionId;
@@ -322,8 +325,8 @@ async function promptPercentages(
 	versionIds: VersionId[],
 	optionalVersionTraffic: Map<VersionId, OptionalPercentage>,
 	yesFlag: boolean,
-	confirmedVersionTraffic = new Map<string, number>()
-) {
+	confirmedVersionTraffic = new Map<VersionId, Percentage>()
+): Promise<Map<VersionId, Percentage>> {
 	let n = 0;
 	for (const versionId of versionIds) {
 		n++;
