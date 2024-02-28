@@ -1,1 +1,1 @@
-export const WRANGLER = process.env.WRANGLER;
+export const WRANGLER = process.env.WRANGLER as string;

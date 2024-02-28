@@ -1,7 +1,7 @@
 import { UserError } from "../errors";
 import type { DevProps } from "./dev";
 
-export function validateDevProps(props: DevProps) {
+export function validateDevProps(props: Omit<DevProps, "host">) {
 	if (
 		!props.isWorkersSite &&
 		props.assetPaths &&

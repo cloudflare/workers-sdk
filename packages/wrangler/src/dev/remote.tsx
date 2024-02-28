@@ -7,6 +7,7 @@ import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncAssets } from "../sites";
@@ -333,7 +334,7 @@ export function useWorker(
 					pathname: workerPreviewToken.inspectorUrl.pathname,
 				},
 				userWorkerInnerUrlOverrides: {
-					hostname: props.host,
+					hostname: props.host ?? getInferredHost(props.routes),
 					port: props.port.toString(),
 				},
 				headers: {
@@ -344,7 +345,11 @@ export function useWorker(
 				proxyLogsToController: true,
 			};
 
-			onReady?.(props.host || "localhost", props.port, proxyData);
+			onReady?.(
+				props.host ?? getInferredHost(props.routes) ?? "localhost",
+				props.port,
+				proxyData
+			);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -634,7 +639,7 @@ async function createRemoteWorkerInit(props: {
 	return init;
 }
 
-async function getWorkerAccountAndContext(props: {
+export async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	env?: string;
 	legacyEnv?: boolean;
@@ -654,7 +659,7 @@ async function getWorkerAccountAndContext(props: {
 		env: props.env,
 		legacyEnv: props.legacyEnv,
 		zone: zoneId,
-		host: props.host,
+		host: props.host ?? getInferredHost(props.routes),
 		routes: props.routes,
 		sendMetrics: props.sendMetrics,
 	};
