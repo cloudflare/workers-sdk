@@ -5,8 +5,8 @@ import { ReadableStream, TransformStream } from "stream/web";
 import util from "util";
 import type { ServiceWorkerGlobalScope } from "@cloudflare/workers-types/experimental";
 import { stringify } from "devalue";
-import { Headers } from "undici";
-import { DispatchFetch, Request, Response } from "../../../http";
+import { Headers, } from "undici";
+import { DispatchFetch, Request, RequestInfo, RequestInit, RequestInitCfType, Response } from "../../../http";
 import { prefixStream, readPrefix } from "../../../shared";
 import {
 	Awaitable,
@@ -267,7 +267,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		if (this.#poisoned) {
 			throw new Error(
 				"Attempted to use poisoned stub. Stubs to runtime objects must be " +
-					"re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+				"re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
 			);
 		}
 	}
@@ -497,7 +497,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		this.#assertSafe();
 
 		const targetName = this.target[kName];
-		// See `isFetcherFetch()` comment for why this special
+		// @ts-expect-error See `isFetcherFetch()` comment for why this special
 		if (isFetcherFetch(targetName, key)) return this.#fetcherFetchCall(args);
 
 		const stringified = stringifyWithStreams(
@@ -588,10 +588,13 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 
 		return this.#parseAsyncResponse(resPromise);
 	}
-	#fetcherFetchCall(args: unknown[]) {
-		// @ts-expect-error `...args` isn't type-safe here, but `undici` should
-		//  validate types at runtime, and throw appropriate errors
-		const request = new Request(...args);
+	#fetcherFetchCall(args: [RequestInfo] | [RequestInfo, RequestInit<RequestInitCfType>]) {
+		// If requestInit has a body, make sure the duplex: half property is set.
+		const requestInit = args[1] ?? {}
+		if (requestInit.body) {
+			requestInit.duplex = "half"
+		}
+		const request = new Request(args[0], requestInit);
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
 		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
