@@ -71,8 +71,6 @@ function createBody(
 		dead_letter_queue: args.deadLetterQueue,
 	};
 
-	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
-	// Negating a number parameter returns 0, making retryDelay an array with [0, <value>]
 	if (Array.isArray(args.retryDelay)) {
 		throw new CommandLineArgsError(
 			`Error: can't use more than a delay setting.`

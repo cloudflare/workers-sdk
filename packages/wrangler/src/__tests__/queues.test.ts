@@ -1,8 +1,6 @@
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs } from "./helpers/mock-dialogs";
-import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -17,14 +15,6 @@ describe("wrangler", () => {
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
-
-	const { setIsTTY } = useMockIsTTY();
-	beforeEach(() => {
-		setIsTTY(true);
-	});
-	afterEach(() => {
-		clearDialogs();
-	});
 
 	describe("queues", () => {
 		it("should show the correct help text", async () => {
@@ -282,7 +272,7 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should send send queue settings with delivery delay", async () => {
+			it("should send queue settings with delivery delay", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
 				await runWrangler("queues create testQueue --delivery-delay=10");
 				expect(std.out).toMatchInlineSnapshot(`

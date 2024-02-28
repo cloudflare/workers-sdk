@@ -32,8 +32,6 @@ function createBody(
 		queue_name: args.name,
 	};
 
-	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
-	// Negating a number parameter returns 0, making deliveryDelay an array with [0, <value>]
 	if (Array.isArray(args.deliveryDelay)) {
 		throw new CommandLineArgsError(
 			`Error: can't use more than a delay setting.`
