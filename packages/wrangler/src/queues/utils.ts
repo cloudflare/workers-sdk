@@ -1,8 +1,11 @@
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { type ParseError } from "../parse";
 import { getAccountId } from "../user";
-import { INVALID_CONSUMER_SETTINGS_ERROR, INVALID_QUEUE_SETTINGS_ERROR } from "./constants";
-import { UserError } from "../errors";
+import {
+	INVALID_CONSUMER_SETTINGS_ERROR,
+	INVALID_QUEUE_SETTINGS_ERROR,
+} from "./constants";
 
 const isFetchError = (err: unknown): err is ParseError => err instanceof Error;
 
@@ -19,7 +22,7 @@ export const HandleUnauthorizedError = async (_msg: string, err: Error) => {
 	return err;
 };
 
-export function handleFetchError(e: {code?: number}): void {
+export function handleFetchError(e: { code?: number }): void {
 	if (e.code === INVALID_CONSUMER_SETTINGS_ERROR) {
 		throw new UserError(`The specified consumer settings are invalid.`);
 	}

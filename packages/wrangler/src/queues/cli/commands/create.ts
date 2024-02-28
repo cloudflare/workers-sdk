@@ -1,47 +1,52 @@
 import { readConfig } from "../../../config";
+import { CommandLineArgsError } from "../../../index";
 import { logger } from "../../../logger";
-import type { CreateQueueBody } from "../../client";
 import { createQueue } from "../../client";
+import { handleFetchError } from "../../utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
-import { handleFetchError } from "../../utils";
-import { CommandLineArgsError } from "../../../index";
+import type { CreateQueueBody } from "../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
-			.positional("name", {
-				type: "string",
-				demandOption: true,
-				description: "The name of the queue",
-			})
+		.positional("name", {
+			type: "string",
+			demandOption: true,
+			description: "The name of the queue",
+		})
 		.options({
 			"delivery-delay": {
 				type: "number",
-				describe: "How long a published messages should be delayed for, in seconds. Must be a positive integer",
-			}
+				describe:
+					"How long a published messages should be delayed for, in seconds. Must be a positive integer",
+			},
 		});
 }
 
-function createBody(args: StrictYargsOptionsToInterface<typeof options>): CreateQueueBody {
+function createBody(
+	args: StrictYargsOptionsToInterface<typeof options>
+): CreateQueueBody {
 	const body: CreateQueueBody = {
-		queue_name: args.name
-	}
+		queue_name: args.name,
+	};
 
 	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
 	// Negating a number parameter returns 0, making deliveryDelay an array with [0, <value>]
-	if(Array.isArray(args.deliveryDelay)) {
-		throw new CommandLineArgsError(`Error: can't use more than a delay setting.`);
+	if (Array.isArray(args.deliveryDelay)) {
+		throw new CommandLineArgsError(
+			`Error: can't use more than a delay setting.`
+		);
 	}
 
-	if(args.deliveryDelay != undefined) {
+	if (args.deliveryDelay != undefined) {
 		body.settings = {
-			delivery_delay: args.deliveryDelay
-		}
+			delivery_delay: args.deliveryDelay,
+		};
 	}
 
-	return body
+	return body;
 }
 
 export async function handler(
@@ -53,7 +58,7 @@ export async function handler(
 		logger.log(`Creating queue ${args.name}.`);
 		await createQueue(config, body);
 		logger.log(`Created queue ${args.name}.`);
-	} catch(e) {
-		handleFetchError(e as {code?: number})
+	} catch (e) {
+		handleFetchError(e as { code?: number });
 	}
 }

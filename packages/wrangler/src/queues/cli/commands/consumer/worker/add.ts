@@ -1,10 +1,13 @@
 import { readConfig } from "../../../../config";
-import { logger } from "../../../../logger";
-import type { PostConsumerBody } from "../../../client";
-import { postConsumer } from "../../../client";
-import type { CommonYargsArgv, StrictYargsOptionsToInterface } from "../../../../yargs-types";
-import { handleFetchError } from "../../../utils";
 import { CommandLineArgsError } from "../../../../index";
+import { logger } from "../../../../logger";
+import { postConsumer } from "../../../client";
+import { handleFetchError } from "../../../utils";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../../../yargs-types";
+import type { PostConsumerBody } from "../../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -43,13 +46,16 @@ export function options(yargs: CommonYargsArgv) {
 			},
 			"retry-delay": {
 				type: "number",
-				describe: "How long a retried messages should be delayed for, in seconds. Must be a positive integer",
+				describe:
+					"How long a retried messages should be delayed for, in seconds. Must be a positive integer",
 				number: true,
-			}
+			},
 		});
 }
 
-function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostConsumerBody {
+function createBody(
+	args: StrictYargsOptionsToInterface<typeof options>
+): PostConsumerBody {
 	const body: PostConsumerBody = {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
@@ -65,15 +71,16 @@ function createBody(args: StrictYargsOptionsToInterface<typeof options>): PostCo
 		dead_letter_queue: args.deadLetterQueue,
 	};
 
-
 	// Workaround, Yargs does not play nicely with both --parameter and --no-parameter set.
 	// Negating a number parameter returns 0, making retryDelay an array with [0, <value>]
-	if(Array.isArray(args.retryDelay)) {
-		throw new CommandLineArgsError(`Error: can't use more than a delay setting.`);
+	if (Array.isArray(args.retryDelay)) {
+		throw new CommandLineArgsError(
+			`Error: can't use more than a delay setting.`
+		);
 	}
 
-	if(args.retryDelay != undefined) {
-		body.settings.retry_delay = args.retryDelay
+	if (args.retryDelay != undefined) {
+		body.settings.retry_delay = args.retryDelay;
 	}
 
 	return body;
@@ -89,7 +96,7 @@ export async function handler(
 		logger.log(`Adding consumer to queue ${args.queueName}.`);
 		await postConsumer(config, args.queueName, body);
 		logger.log(`Added consumer to queue ${args.queueName}.`);
-	} catch(e) {
-		handleFetchError(e as {code?: number})
+	} catch (e) {
+		handleFetchError(e as { code?: number });
 	}
 }

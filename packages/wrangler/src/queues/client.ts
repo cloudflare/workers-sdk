@@ -117,7 +117,7 @@ export interface ConsumerSettings {
 	max_retries?: number;
 	max_wait_time_ms?: number;
 	max_concurrency?: number | null;
-	retry_delay?: number
+	retry_delay?: number;
 }
 
 export interface ConsumerResponse extends PostConsumerBody {
