@@ -1,5 +1,21 @@
 # wrangler
 
+## 3.30.1
+
+### Patch Changes
+
+- [#5106](https://github.com/cloudflare/workers-sdk/pull/5106) [`2ed7f32`](https://github.com/cloudflare/workers-sdk/commit/2ed7f3209bc6bffa85f409d344d6ed76df8686f9) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: automatically drain incoming request bodies
+
+  Previously, requests sent to `wrangler dev` with unconsumed bodies could result in `Network connection lost` errors. This change attempts to work around the issue by ensuring incoming request bodies are drained if they're not used. This is a temporary fix whilst we try to address the underlying issue. Whilst we don't think this change will introduce any other issues, it can be disabled by setting the `WRANGLER_DISABLE_REQUEST_BODY_DRAINING=true` environment variable. Note this fix is only applied if you've enabled Wrangler's bundling—`--no-bundle` mode continues to have the previous behaviour.
+
+- [#5107](https://github.com/cloudflare/workers-sdk/pull/5107) [`65d0399`](https://github.com/cloudflare/workers-sdk/commit/65d0399c0757881c41582972d14afa02f02fffb4) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensures that switching to remote mode during a dev session (from local mode) will correctly use the right zone. Previously, zone detection happened before the dev session was mounted, and so dev sessions started with local mode would have no zone inferred, and would have failed to start, with an ugly error.
+
+- [#5107](https://github.com/cloudflare/workers-sdk/pull/5107) [`65d0399`](https://github.com/cloudflare/workers-sdk/commit/65d0399c0757881c41582972d14afa02f02fffb4) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensure that preview sessions created without a zone don't switch the host on which to start the preview from the one returned by the API.
+
+- [#4833](https://github.com/cloudflare/workers-sdk/pull/4833) [`54f6bfc`](https://github.com/cloudflare/workers-sdk/commit/54f6bfcea14b89cae99f3c26b52c28bcd408aba7) Thanks [@admah](https://github.com/admah)! - fix: remove extra arguments from wrangler init deprecation message and update recommended c3 version
+
+  c3 can now infer the pre-existing type from the presence of the `--existing-script` flag so we can remove the extra `type` argument. C3 2.5.0 introduces an auto-update feature that will make sure users get the latest minor version of c3 and prevent problems where older 2.x.x versions get cached by previous runs of `wrangler init`.
+
 ## 3.30.0
 
 ### Minor Changes
