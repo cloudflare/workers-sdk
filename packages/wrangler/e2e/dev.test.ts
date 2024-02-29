@@ -840,8 +840,13 @@ describe("zone selection", () => {
 			`,
 		}));
 		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
-			await setTimeout(5000);
-			expect(session.stderr).toMatchInlineSnapshot(`
+			const { stderr } = await retry(
+				(s) => !s.stderr.includes("ERROR"),
+				() => {
+					return { stderr: session.stderr };
+				}
+			);
+			expect(stderr).toMatchInlineSnapshot(`
 				"[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.[0m
 
 				  For more details, refer to [4mhttps://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route[0m
