@@ -7,6 +7,7 @@ import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncAssets } from "../sites";
@@ -16,6 +17,7 @@ import {
 	saveAccountToCache,
 } from "../user";
 import { getAccessToken } from "../user/access";
+import { getZoneIdForPreview } from "../zones";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -59,7 +61,6 @@ interface RemoteProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady?:
@@ -88,7 +89,6 @@ export function Remote(props: RemoteProps) {
 		usageModel: props.usageModel,
 		env: props.env,
 		legacyEnv: props.legacyEnv,
-		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
 		onReady: props.onReady,
@@ -154,7 +154,6 @@ interface RemoteWorkerProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady:
@@ -183,15 +182,16 @@ export function useWorker(
 			if (props.accountId === undefined) {
 				return;
 			}
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
 
 			setSession(
 				await createPreviewSession(
@@ -213,6 +213,14 @@ export function useWorker(
 					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (
+				(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
+			) {
+				logger.error(
+					`Could not access \`${err.cause.hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+				);
+			} else if (err instanceof UserError) {
+				logger.error(err.message);
 			}
 			// we want to log the error, but not end the process
 			// since it could recover after the developer fixes whatever's wrong
@@ -230,7 +238,6 @@ export function useWorker(
 		props.host,
 		props.legacyEnv,
 		props.routes,
-		props.zone,
 		props.sendMetrics,
 		restartCounter,
 	]);
@@ -271,15 +278,16 @@ export function useWorker(
 				usageModel: props.usageModel,
 			});
 
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
 
 			const workerPreviewToken = await createWorkerPreview(
 				init,
@@ -326,7 +334,7 @@ export function useWorker(
 					pathname: workerPreviewToken.inspectorUrl.pathname,
 				},
 				userWorkerInnerUrlOverrides: {
-					hostname: props.host,
+					hostname: props.host ?? getInferredHost(props.routes),
 					port: props.port.toString(),
 				},
 				headers: {
@@ -337,7 +345,11 @@ export function useWorker(
 				proxyLogsToController: true,
 			};
 
-			onReady?.(props.host || "localhost", props.port, proxyData);
+			onReady?.(
+				props.host ?? getInferredHost(props.routes) ?? "localhost",
+				props.port,
+				proxyData
+			);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -376,7 +388,6 @@ export function useWorker(
 		props.modules,
 		props.env,
 		props.legacyEnv,
-		props.zone,
 		props.host,
 		props.routes,
 		session,
@@ -479,11 +490,10 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			throw error;
 		}
 		const abortController = new AbortController();
-		const { workerAccount, workerContext } = getWorkerAccountAndContext({
+		const { workerAccount, workerContext } = await getWorkerAccountAndContext({
 			accountId: props.accountId,
 			env: props.env,
 			legacyEnv: props.legacyEnv,
-			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
 			sendMetrics: props.sendMetrics,
@@ -629,25 +639,27 @@ async function createRemoteWorkerInit(props: {
 	return init;
 }
 
-function getWorkerAccountAndContext(props: {
+export async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	env?: string;
 	legacyEnv?: boolean;
-	zone?: string;
 	host?: string;
 	routes: Route[] | undefined;
 	sendMetrics?: boolean;
-}): { workerAccount: CfAccount; workerContext: CfWorkerContext } {
+}): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,
 		apiToken: requireApiToken(),
 	};
 
+	// What zone should the realish preview for this Worker run on?
+	const zoneId = await getZoneIdForPreview(props.host, props.routes);
+
 	const workerContext: CfWorkerContext = {
 		env: props.env,
 		legacyEnv: props.legacyEnv,
-		zone: props.zone,
-		host: props.host,
+		zone: zoneId,
+		host: props.host ?? getInferredHost(props.routes),
 		routes: props.routes,
 		sendMetrics: props.sendMetrics,
 	};

@@ -69,11 +69,11 @@ describe("Zones", () => {
 
 		test("string route (not a zone)", async () => {
 			mockGetZones("wrong.com", []);
-			await expect(
-				getZoneForRoute("wrong.com/*")
-			).rejects.toMatchInlineSnapshot(
-				`[Error: Could not find zone for wrong.com]`
-			);
+			await expect(getZoneForRoute("wrong.com/*")).rejects
+				.toMatchInlineSnapshot(`
+			[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
+		`);
 		});
 		test("zone_id route", async () => {
 			// example-id and other-id intentionally different to show that the API is not called

@@ -165,7 +165,6 @@ export type DevProps = {
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
@@ -496,7 +495,6 @@ function DevSession(props: DevSessionProps) {
 			usageModel={props.usageModel}
 			env={props.env}
 			legacyEnv={props.legacyEnv}
-			zone={props.zone}
 			host={props.host}
 			routes={props.routes}
 			onReady={announceAndOnReady}
