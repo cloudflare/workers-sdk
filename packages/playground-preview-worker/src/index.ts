@@ -209,15 +209,20 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
 	const token = url.searchParams.get("token");
+	try {
+		const referer = new URL(c.req.header("Referer") ?? "");
 
-	if (
-		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
-		!(
-			c.req.header("Referer")?.startsWith("https://workers.cloudflare.com") ||
-			c.req.header("Referer")?.startsWith("http://localhost") ||
-			c.req.header("Referer")?.includes("workers-playground.pages.dev")
-		)
-	) {
+		if (
+			c.req.header("Sec-Fetch-Dest") !== "iframe" ||
+			!(
+				referer.hostname === "workers.cloudflare.com" ||
+				referer.hostname === "localhost" ||
+				referer.hostname.endsWith("workers-playground.pages.dev")
+			)
+		) {
+			throw new PreviewRequestForbidden();
+		}
+	} catch {
 		throw new PreviewRequestForbidden();
 	}
 
