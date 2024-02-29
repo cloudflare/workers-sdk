@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, statSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
@@ -9,7 +9,14 @@ import { spinner } from "@cloudflare/cli/interactive";
 import deepmerge from "deepmerge";
 import degit from "degit";
 import { C3_DEFAULTS } from "helpers/cli";
-import { readJSON, usesTypescript, writeJSON } from "helpers/files";
+import {
+	appendFile,
+	readFile,
+	readJSON,
+	usesTypescript,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
 import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context, PackageJson } from "types";
 
@@ -468,4 +475,59 @@ export const getCopyFilesDestinationDir = (
 	}
 
 	return copyFiles.destinationDir(ctx);
+};
+
+export const addWranglerToGitIgnore = (ctx: C3Context) => {
+	const gitStat = statSync(`${ctx.project.path}/.git`);
+	if (!gitStat.isDirectory()) {
+		// there is no .git directory so the project is likely not using git
+		return;
+	}
+
+	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
+
+	const s = spinner();
+	s.start("Adding Wrangler files to the .gitignore file");
+
+	const fileExisted = existsSync(gitIgnorePath);
+
+	if (!fileExisted) {
+		writeFile(gitIgnorePath, "");
+	}
+
+	const existingGitIgnoreContent = readFile(gitIgnorePath);
+
+	const wranglerGitIgnoreFiles = [".wrangler", ".dev.vars"] as const;
+	const wranglerGitIgnoreFilesToAdd = wranglerGitIgnoreFiles.filter(
+		(file) =>
+			!existingGitIgnoreContent.match(
+				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`)
+			)
+	);
+
+	if (wranglerGitIgnoreFilesToAdd.length === 0) {
+		s.stop(`The .gitignore file already includes all the wrangler files`);
+		return;
+	}
+
+	const linesToAppend = [
+		"",
+		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
+	];
+
+	if (wranglerGitIgnoreFilesToAdd.length === wranglerGitIgnoreFiles.length) {
+		linesToAppend.push("# wrangler files");
+	}
+
+	wranglerGitIgnoreFilesToAdd.forEach((line) => linesToAppend.push(line));
+
+	linesToAppend.push("");
+
+	appendFile(gitIgnorePath, linesToAppend.join("\n"));
+
+	s.stop(
+		`${brandColor(fileExisted ? "updated" : "created")} ${dim(
+			".gitignore file"
+		)}`
+	);
 };

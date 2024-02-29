@@ -27,6 +27,7 @@ import {
 } from "./common";
 import { createProject } from "./pages";
 import {
+	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	selectTemplate,
 	updatePackageName,
@@ -146,6 +147,8 @@ const configure = async (ctx: C3Context) => {
 	if (template.configure) {
 		await template.configure({ ...ctx });
 	}
+
+	addWranglerToGitIgnore(ctx);
 
 	await updatePackageScripts(ctx);
 
