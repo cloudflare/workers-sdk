@@ -1,0 +1,16 @@
+{
+	"name": "tools",
+	"description": "Tooling for this monorepo CI",
+	"private": true,
+	"scripts": {
+		"check:type": "tsc",
+		"test": "vitest run",
+		"check:lint": "eslint ."
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@typescript-eslint/eslint-plugin": "^5.55.0",
+		"@typescript-eslint/parser": "^5.55.0"
+	}
+}

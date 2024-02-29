@@ -1,4 +1,4 @@
-name: Release
+name: Handle Changesets
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       cancel-in-progress: true
 
     if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Release
+    name: Handle Changesets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -22,9 +22,11 @@ jobs:
           # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
           fetch-depth: 0
+
       - uses: pnpm/action-setup@v2
         with:
           version: 8.8.0
+
       - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
@@ -46,7 +48,7 @@ jobs:
         env:
           CI_OS: ${{ runner.os }}
 
-      - name: Check for other errors
+      - name: Check linting and formatting
         run: pnpm run check
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -68,3 +70,9 @@ jobs:
           # This is the "production" key for sparrow analytics.
           # Include this here because this step will rebuild Wrangler and needs to have this available
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
+
+      - name: Deploy non-NPM Packages
+        run: pnpm ts-node tools/deployments/deploy-non-npm-packages.ts
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
