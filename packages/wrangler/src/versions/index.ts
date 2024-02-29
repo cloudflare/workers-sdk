@@ -3,7 +3,12 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import { getRules, getScriptName, printWranglerBanner } from "../index";
+import {
+	getRules,
+	getScriptName,
+	isLegacyEnv,
+	printWranglerBanner,
+} from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -232,6 +237,7 @@ export async function versionsUploadHandler(
 		name: getScriptName(args, config),
 		rules: getRules(config),
 		entry,
+		legacyEnv: isLegacyEnv(config),
 		env: args.env,
 		compatibilityDate: args.latest
 			? new Date().toISOString().substring(0, 10)

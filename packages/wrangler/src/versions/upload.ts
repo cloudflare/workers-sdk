@@ -44,6 +44,7 @@ type Props = {
 	entry: Entry;
 	rules: Config["rules"];
 	name: string | undefined;
+	legacyEnv: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -324,7 +325,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					legacyEnv: false,
+					legacyEnv: props.legacyEnv,
 					env: props.env,
 			  })
 			: undefined;
