@@ -216,6 +216,7 @@ export type SourcelessWorkerOptions = Omit<
 
 export function unstable_getMiniflareWorkerOptions(configPath: string): {
 	workerOptions: SourcelessWorkerOptions;
+	define: Record<string, string>;
 	main?: string;
 } {
 	const config = readConfig(configPath, { experimentalJsonConfig: true });
@@ -264,5 +265,5 @@ export function unstable_getMiniflareWorkerOptions(configPath: string): {
 		...sitesOptions,
 	};
 
-	return { workerOptions, main: config.main };
+	return { workerOptions, define: config.define, main: config.main };
 }

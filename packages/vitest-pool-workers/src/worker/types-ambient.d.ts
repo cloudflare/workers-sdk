@@ -36,6 +36,10 @@ interface SerializedOptions {
 }
 
 declare module "__VITEST_POOL_WORKERS_USER_OBJECT" {}
+declare module "__VITEST_POOL_WORKERS_DEFINES" {
+	const defines: Record<string, unknown>;
+	export default defines;
+}
 
 declare module "node:vm" {
 	export function _setUnsafeEval(newUnsafeEval: UnsafeEval): void;

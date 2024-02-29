@@ -38,7 +38,11 @@ import {
 	handleModuleFallbackRequest,
 	workerdBuiltinModules,
 } from "./module-fallback";
-import type { SourcelessWorkerOptions, WorkersPoolOptions } from "./config";
+import type {
+	SourcelessWorkerOptions,
+	WorkersPoolOptions,
+	WorkersPoolOptionsWithDefines,
+} from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
@@ -122,7 +126,7 @@ function forEachMiniflare(
 
 interface Project {
 	project: WorkspaceProject;
-	options: WorkersPoolOptions;
+	options: WorkersPoolOptionsWithDefines;
 	testFiles: Set<string>;
 	relativePath: string | number;
 	mf?: SingleOrPerTestFileMiniflare;
@@ -187,11 +191,17 @@ function getDurableObjectDesignators(
 	return result;
 }
 
+const POOL_WORKER_DIR = path.dirname(POOL_WORKER_PATH);
 const USER_OBJECT_MODULE_NAME = "__VITEST_POOL_WORKERS_USER_OBJECT";
 const USER_OBJECT_MODULE_PATH = path.join(
-	path.dirname(POOL_WORKER_PATH),
+	POOL_WORKER_DIR,
 	USER_OBJECT_MODULE_NAME
 );
+const DEFINES_MODULE_PATH = path.join(
+	POOL_WORKER_DIR,
+	"__VITEST_POOL_WORKERS_DEFINES"
+);
+
 /**
  * Prefix all Durable Object class names, so they don't clash with other
  * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
@@ -373,7 +383,19 @@ function buildProjectWorkerOptions(
 		unsafePreventEviction: true,
 	};
 
-	// Make sure we define the runner script, including Durable Object wrappers
+	// Vite has its own define mechanism, but we can't control it from custom
+	// pools. Our defines come from `wrangler.toml` files which are only parsed
+	// with the rest of the pool configuration. Instead, we implement our own
+	// define script similar to Vite's. When defines change, Miniflare will be
+	// restarted as the input options will be different.
+	const defines = `export default {
+		${Object.entries(project.options.defines ?? {})
+			.map(([key, value]) => `${JSON.stringify(key)}: ${value}`)
+			.join(",\n")}
+	};
+	`;
+
+	// Make sure we define the runner script, including object wrappers & defines
 	if ("script" in runnerWorker) delete runnerWorker.script;
 	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
 
@@ -397,6 +419,11 @@ function buildProjectWorkerOptions(
 			type: "ESModule",
 			path: path.join(modulesRoot, USER_OBJECT_MODULE_PATH),
 			contents: durableObjectWrappers.join("\n"),
+		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, DEFINES_MODULE_PATH),
+			contents: defines,
 		},
 	];
 

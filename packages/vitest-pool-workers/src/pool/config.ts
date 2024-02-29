@@ -61,6 +61,10 @@ export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	};
 };
 
+export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
+	defines?: Record<string, string>;
+};
+
 type PathParseParams = Pick<ParseParams, "path">;
 
 function isZodErrorLike(value: unknown): value is ZodError {
@@ -117,9 +121,12 @@ async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
 	opts: PathParseParams
-): Promise<WorkersPoolOptions> {
+): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
-	const options = WorkersPoolOptionsSchema.parse(value, opts);
+	const options = WorkersPoolOptionsSchema.parse(
+		value,
+		opts
+	) as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
 
 	// Try to parse runner worker options, coalescing all errors
@@ -170,7 +177,7 @@ async function parseCustomPoolOptions(
 
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
-		const { workerOptions, main } =
+		const { workerOptions, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(configPath);
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
@@ -180,14 +187,16 @@ async function parseCustomPoolOptions(
 			workerOptions,
 			options.miniflare as SourcelessWorkerOptions
 		);
+		// Record any Wrangler `define`s
+		options.defines = define;
 	}
 
-	return options as WorkersPoolOptions;
+	return options;
 }
 
 export async function parseProjectOptions(
 	project: WorkspaceProject
-): Promise<WorkersPoolOptions> {
+): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
 	// hit this case.

@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import events from "node:events";
 import process from "node:process";
 import * as vm from "node:vm";
+import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
 	getResolvedMainPath,
 	importModule,
@@ -151,6 +152,23 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	});
 }
 
+function applyDefines() {
+	// Based off `/@vite/env` implementation:
+	// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/client/env.ts
+	for (const [key, value] of Object.entries(defines)) {
+		const segments = key.split(".");
+		let target = globalThis as Record<string, unknown>;
+		for (let i = 0; i < segments.length; i++) {
+			const segment = segments[i];
+			if (i === segments.length - 1) {
+				target[segment] = value;
+			} else {
+				target = (target[segment] ??= {}) as Record<string, unknown>;
+			}
+		}
+	}
+}
+
 // `RunnerObject` is a singleton and "colo local" ephemeral object. Refer to:
 // https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
 export class RunnerObject implements DurableObject {
@@ -160,6 +178,7 @@ export class RunnerObject implements DurableObject {
 		vm._setUnsafeEval(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		setEnv(env);
+		applyDefines();
 	}
 
 	async handleVitestRunRequest(request: Request): Promise<Response> {
