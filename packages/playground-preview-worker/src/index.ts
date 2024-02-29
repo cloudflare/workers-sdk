@@ -13,6 +13,17 @@ import { handleException, setupSentry } from "./sentry";
 import type { RegistryType } from "promjs";
 import type { Toucan } from "toucan-js";
 
+function maybeParseUrl(url: string | undefined) {
+	if (!url) {
+		return undefined;
+	}
+	try {
+		return new URL(url);
+	} catch {
+		return undefined;
+	}
+}
+
 const app = new Hono<{
 	Bindings: Env;
 	Variables: { sentry: Toucan; prometheus: RegistryType };
@@ -209,20 +220,17 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
 	const token = url.searchParams.get("token");
-	try {
-		const referer = new URL(c.req.header("Referer") ?? "");
+	const referer = maybeParseUrl(c.req.header("Referer"));
 
-		if (
-			c.req.header("Sec-Fetch-Dest") !== "iframe" ||
-			!(
-				referer.hostname === "workers.cloudflare.com" ||
-				referer.hostname === "localhost" ||
-				referer.hostname.endsWith("workers-playground.pages.dev")
-			)
-		) {
-			throw new PreviewRequestForbidden();
-		}
-	} catch {
+	if (
+		!referer ||
+		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
+		!(
+			referer.hostname === "workers.cloudflare.com" ||
+			referer.hostname === "localhost" ||
+			referer.hostname.endsWith("workers-playground.pages.dev")
+		)
+	) {
 		throw new PreviewRequestForbidden();
 	}
 
