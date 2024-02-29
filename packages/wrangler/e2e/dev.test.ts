@@ -846,13 +846,9 @@ describe("zone selection", () => {
 					return { stderr: session.stderr };
 				}
 			);
-			expect(stderr).toMatchInlineSnapshot(`
-				"[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mCould not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.[0m
-
-				  For more details, refer to [4mhttps://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route[0m
-
-
-				"
+			expect(normalizeOutput(stderr)).toMatchInlineSnapshot(`
+				"X [ERROR] Could not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.
+				  For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
 			`);
 		});
 	});
