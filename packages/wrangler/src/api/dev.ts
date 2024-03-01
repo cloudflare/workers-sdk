@@ -144,7 +144,7 @@ export async function unstable_dev(
 		readyResolve = resolve;
 	});
 
-	const defaultLogLevel = testMode ? "none" : "log";
+	const defaultLogLevel = testMode ? "warn" : "log";
 	const local = options?.local ?? true;
 
 	const devOptions: StartDevOptions = {
