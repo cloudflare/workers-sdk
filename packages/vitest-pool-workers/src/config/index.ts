@@ -100,3 +100,5 @@ export function defineWorkersProject(
 ): AnyConfigExport<WorkersProjectConfigExport> {
 	return mapAnyConfigExport(ensureWorkersConfig, config);
 }
+
+export * from "./d1";

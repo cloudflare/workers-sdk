@@ -28,3 +28,4 @@ export { unstable_dev, unstable_pages, unstable_DevEnv };
 export type { UnstableDevWorker, UnstableDevOptions };
 
 export * from "./api/integrations";
+export { default as unstable_splitSqlQuery } from "./d1/splitter";
