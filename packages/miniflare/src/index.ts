@@ -1000,7 +1000,7 @@ export class Miniflare {
 			requestedPort = this.#socketPorts?.get(id);
 		}
 		// Otherwise, default to a new random port
-		return `${host}:${requestedPort ?? 0}`;
+		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
 	async #assembleConfig(loopbackPort: number): Promise<Config> {

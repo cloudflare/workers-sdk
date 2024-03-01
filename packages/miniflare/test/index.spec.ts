@@ -218,6 +218,26 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 		t.is(await res.text(), "body");
 	}
 );
+test("Miniflare: can use IPv6 loopback as host", async (t) => {
+	const mf = new Miniflare({
+		host: "::1",
+		modules: true,
+		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+		serviceBindings: {
+			SERVICE() {
+				return new Response("body");
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("https://example.com");
+	t.is(await res.text(), "body");
+
+	const worker = await mf.getWorker();
+	res = await worker.fetch("https://example.com");
+	t.is(await res.text(), "body");
+});
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
 	const opts: MiniflareOptions = {
