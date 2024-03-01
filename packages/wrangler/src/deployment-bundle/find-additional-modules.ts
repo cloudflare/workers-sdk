@@ -65,34 +65,33 @@ export async function findAdditionalModules(
 		getBundleType(entry.format, entry.file) === "python";
 
 	if (isPythonEntrypoint) {
+		let pythonRequirements = "";
 		try {
-			const pythonRequirements = await readFile(
+			pythonRequirements = await readFile(
 				path.resolve(entry.directory, "requirements.txt"),
 				"utf-8"
 			);
-
-			for (const requirement of pythonRequirements.split("\n")) {
-				if (requirement === "") continue;
-				if (!isValidPythonPackageName(requirement)) {
-					throw new UserError(
-						`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
-					);
-				}
-
-				modules.push({
-					type: "python-requirement",
-					name: requirement,
-					content: "",
-					filePath: undefined,
-				});
-			}
 		} catch (e) {
-			if (e instanceof UserError) throw e;
-
 			// We don't care if a requirements.txt isn't found
 			logger.debug(
 				"Python entrypoint detected, but no requirements.txt file found."
 			);
+		}
+
+		for (const requirement of pythonRequirements.split("\n")) {
+			if (requirement === "") continue;
+			if (!isValidPythonPackageName(requirement)) {
+				throw new UserError(
+					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
+				);
+			}
+
+			modules.push({
+				type: "python-requirement",
+				name: requirement,
+				content: "",
+				filePath: undefined,
+			});
 		}
 	}
 	if (modules.length > 0) {
