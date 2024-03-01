@@ -220,6 +220,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		],
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedPms: ["npm"],
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
