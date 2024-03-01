@@ -1,25 +1,20 @@
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit";
 import { z } from "zod";
-import {
-	Worker_Binding,
-} from "../../runtime";
-import {
-	Plugin,
-	kProxyNodeBinding,
-} from "../shared";
+import { Worker_Binding } from "../../runtime";
+import { Plugin, kProxyNodeBinding } from "../shared";
 
 export enum PeriodType {
 	TENSECONDS = 10,
-	MINUTE = 60
+	MINUTE = 60,
 }
 
 export const RatelimitConfigSchema = z.object({
 	simple: z.object({
 		limit: z.number().gt(0),
-		
+
 		// may relax this to be any number in the future
 		period: z.nativeEnum(PeriodType).optional(),
-	})
+	}),
 });
 export const RatelimitOptionsSchema = z.object({
 	ratelimits: z.record(RatelimitConfigSchema).optional(),
@@ -42,41 +37,47 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 		if (!options.ratelimits) {
 			return [];
 		}
-		const bindings = Object.entries(options.ratelimits).map<Worker_Binding>(([name, config]) => ({
-			name,
-			wrapped: {
-				moduleName: SERVICE_RATELIMIT_MODULE,
-				innerBindings: buildJsonBindings({
-					namespaceId: name,
-					limit: config.simple.limit,
-					period: config.simple.period,
-				})
-			},
-		}));
+		const bindings = Object.entries(options.ratelimits).map<Worker_Binding>(
+			([name, config]) => ({
+				name,
+				wrapped: {
+					moduleName: SERVICE_RATELIMIT_MODULE,
+					innerBindings: buildJsonBindings({
+						namespaceId: name,
+						limit: config.simple.limit,
+						period: config.simple.period,
+					}),
+				},
+			})
+		);
 		return bindings;
 	},
 	getNodeBindings(options: z.infer<typeof RatelimitOptionsSchema>) {
 		if (!options.ratelimits) {
 			return {};
 		}
-		return Object.fromEntries(Object.keys(options.ratelimits).map((name) => [name, kProxyNodeBinding]));
+		return Object.fromEntries(
+			Object.keys(options.ratelimits).map((name) => [name, kProxyNodeBinding])
+		);
 	},
-	async getServices({
-		options,
-	}) {
+	async getServices({ options }) {
 		if (!options.ratelimits) {
 			return [];
 		}
-		
+
 		return {
 			services: [],
-			extensions: [{
-				modules: [{
-					name: SERVICE_RATELIMIT_MODULE,
-					esModule: SCRIPT_RATELIMIT_OBJECT(),
-					internal: true,
-				}],
-			}],
-		}
+			extensions: [
+				{
+					modules: [
+						{
+							name: SERVICE_RATELIMIT_MODULE,
+							esModule: SCRIPT_RATELIMIT_OBJECT(),
+							internal: true,
+						},
+					],
+				},
+			],
+		};
 	},
 };
