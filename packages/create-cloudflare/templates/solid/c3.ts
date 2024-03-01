@@ -68,12 +68,13 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:preview": `${npm} run build && npx wrangler pages dev dist ${await compatDateFlag()} --compatibility-flag nodejs_compat`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && npx wrangler pages dev dist ${await compatDateFlag()} --compatibility-flag nodejs_compat`,
+			deploy: `${npm} run build && wrangler pages deploy ./dist`,
 		},
 	}),
 	devScript: "dev",
-	previewScript: "pages:preview",
+	deployScript: "deploy",
+	previewScript: "preview",
 	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;
