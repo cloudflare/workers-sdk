@@ -77,7 +77,7 @@ While each workspace has its own dependencies, you install the dependencies usin
 
 ## Building and running
 
-Each wrangler workspace in this project is written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
+Workspaces in this project are mostly written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
 
 - Run a distributable for a specific workspace (e.g. wrangler)
   ```sh
@@ -197,7 +197,7 @@ Changes should be committed to a new local branch, which then gets pushed to you
 
 ## PR Review
 
-PR review is a critial and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
 
 As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
@@ -227,35 +227,7 @@ If you need to test the interaction of Wrangler with a real Cloudflare account, 
 
 When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped).
 
-See below for a summary of this repo's Actions, including for each:
-
-1. expected return status (✔️ means that the check should always pass or be skipped, ⚠️ means that the check is expected to sometimes fail)
-2. when the action is run
-3. intended purpose
-
-- **E2E tests ✔️**
-  This runs on the `changeset-release/main` branch (i.e. on every release PR), and on any PRs with the `e2e` label applied. It runs the E2E tests for Wrangler. If you're making a change that feels particularly risky, make sure you add the `e2e` label to get early warning of E2E test failures.
-
-- **Pull Request ✔️**
-  As the name suggests, this contains checks that run on every PR, including fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
-
-- **Deploy all Pages sites ✔️**
-  This runs on `main` (where it deploys production versions of `wrangler-devtools`, `quick-edit`, and `workers-playground`). It's usually skipped on PRs, but if you apply the label `preview:wrangler-devtools`, `preview:quick-edit`, or `preview:workers-playground` it will deploy a branch preview of the matching package.
-
-- **Test old Node.js version ✔️**
-  This runs on all PRs, and makes sure that Wrangler's warning for old Node.js versions works.
-
-- **Playground Worker tests ✔️**
-  This only runs on the `changeset-release/main` branch (i.e. on every release PR), and is intended to test the behaviour of the Worker powering the Workers Playground.
-
-- **Create Pull Request Prerelease ✔️**
-  This creates an installable pre-release of Wrangler, C3, and Miniflare on every PR.
-
-- **C3 E2E Tests ✔️**
-  This runs for all PRs that make changes to C3 (i.e. in the `packages/create-cloudflare` directory), and runs the E2E tests for C3.
-
-- **C3 E2E (Quarantine) ⚠️**
-  This runs for all PRs that make changes to C3 (i.e. in the `packages/create-cloudflare` directory), and runs the _quarantined_ E2E tests for C3. It is expected to sometimes fail.
+A summary of this repositories actions can be found [here](.github/workflows/README.md)
 
 ## Changesets
 
