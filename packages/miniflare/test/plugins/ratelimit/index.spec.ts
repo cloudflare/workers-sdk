@@ -80,7 +80,7 @@ test("ratelimit validation", async (t) => {
 		},
 		{
 			options: { invalid: "foo" },
-			error: "Error: Bad rate limit options: [invalid]",
+			error: "Error: bad rate limit options: [invalid]",
 		},
 		{
 			options: { limit: "bad" },
