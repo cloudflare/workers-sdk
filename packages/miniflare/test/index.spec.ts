@@ -7,6 +7,7 @@ import { existsSync } from "fs";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
+import os from "os";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
@@ -188,6 +189,35 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 	t.not(state1.url.port, state3.url.port);
 	t.is(state2.loopbackPort, state3.loopbackPort);
 });
+
+const interfaces = os.networkInterfaces();
+const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
+	({ family }) => family === "IPv4"
+);
+(localInterface === undefined ? test.skip : test)(
+	"Miniflare: can use local network address as host",
+	async (t) => {
+		assert(localInterface !== undefined);
+		const mf = new Miniflare({
+			host: localInterface.address,
+			modules: true,
+			script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+			serviceBindings: {
+				SERVICE() {
+					return new Response("body");
+				},
+			},
+		});
+		t.teardown(() => mf.dispose());
+
+		let res = await mf.dispatchFetch("https://example.com");
+		t.is(await res.text(), "body");
+
+		const worker = await mf.getWorker();
+		res = await worker.fetch("https://example.com");
+		t.is(await res.text(), "body");
+	}
+);
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
 	const opts: MiniflareOptions = {
