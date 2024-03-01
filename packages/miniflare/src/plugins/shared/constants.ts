@@ -7,6 +7,7 @@ import {
 import { CoreBindings, SharedBindings } from "../../workers";
 
 export const SOCKET_ENTRY = "entry";
+export const SOCKET_ENTRY_LOCAL = "entry:local";
 const SOCKET_DIRECT_PREFIX = "direct";
 
 export function getDirectSocketName(workerIndex: number) {
