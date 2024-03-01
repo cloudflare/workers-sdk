@@ -2,10 +2,7 @@ import fs from "node:fs";
 import { pathToFileURL } from "url";
 import type { CfModule } from "./worker";
 
-function withSourceURL(source: string, sourcePath: string, isPython = false) {
-	if (isPython) {
-		return `${source}\n# sourceURL=${pathToFileURL(sourcePath)}`;
-	}
+function withSourceURL(source: string, sourcePath: string) {
 	return `${source}\n//# sourceURL=${pathToFileURL(sourcePath)}`;
 }
 
@@ -20,11 +17,9 @@ export function withSourceURLs(
 	modules: CfModule[]
 ): { entrypointSource: string; modules: CfModule[] } {
 	let entrypointSource = fs.readFileSync(entrypointPath, "utf8");
-	entrypointSource = withSourceURL(
-		entrypointSource,
-		entrypointPath,
-		entrypointPath.endsWith(".py")
-	);
+	if (!entrypointPath.endsWith(".py")) {
+		entrypointSource = withSourceURL(entrypointSource, entrypointPath);
+	}
 
 	modules = modules.map((module) => {
 		if (

@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Python support for remote dev
+feature: Python support for remote dev
