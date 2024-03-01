@@ -480,18 +480,17 @@ export const getCopyFilesDestinationDir = (
 
 export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
-	const gitIgnoreExists = existsSync(gitIgnorePath);
+	const gitIgnorePreExisted = existsSync(gitIgnorePath);
 
 	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
 
-	if (!gitIgnoreExists && !gitDirExists) {
+	if (!gitIgnorePreExisted && !gitDirExists) {
 		// if there is no .gitIgnore file and neither a .git directory
 		// bail as the project is likely not targeting/using git
 		return;
 	}
 
-	const fileExisted = gitIgnoreExists;
-	if (!fileExisted) {
+	if (!gitIgnorePreExisted) {
 		writeFile(gitIgnorePath, "");
 	}
 
@@ -528,7 +527,7 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	appendFile(gitIgnorePath, linesToAppend.join("\n"));
 
 	s.stop(
-		`${brandColor(fileExisted ? "updated" : "created")} ${dim(
+		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
 			".gitignore file"
 		)}`
 	);
