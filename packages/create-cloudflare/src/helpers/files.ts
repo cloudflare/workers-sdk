@@ -39,8 +39,8 @@ export const readFile = (path: string) => {
 
 export const directoryExists = (path: string): boolean => {
 	try {
-		const { isDirectory } = statSync(path);
-		return isDirectory();
+		const stat = statSync(path);
+		return stat.isDirectory();
 	} catch (error) {
 		if ((error as { code: string }).code === "ENOENT") {
 			return false;
