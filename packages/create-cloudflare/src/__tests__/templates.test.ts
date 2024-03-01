@@ -1,5 +1,10 @@
 import { existsSync, statSync } from "fs";
-import { appendFile, readFile, writeFile } from "helpers/files";
+import {
+	appendFile,
+	directoryExists,
+	readFile,
+	writeFile,
+} from "helpers/files";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { addWranglerToGitIgnore } from "../templates";
 import type { PathLike } from "fs";
@@ -43,6 +48,7 @@ describe("addWranglerToGitIgnore", () => {
 		);
 		vi.mocked(existsSync).mockReset();
 		vi.mocked(readFile).mockReset();
+		vi.mocked(directoryExists).mockReset();
 		appendFileResults.file = undefined;
 		appendFileResults.content = undefined;
 		writeFileResults.file = undefined;
@@ -132,7 +138,7 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("when it appends to the gitignore file it includes an empty line only if there wasn't one already", () => {
+	test("when it appends to the gitignore file it doesn't include an empty line only if there was one already", () => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -161,6 +167,8 @@ describe("addWranglerToGitIgnore", () => {
 		mockGitIgnore("my-project/.gitignore", "");
 		// but let's pretend that it doesn't exist
 		vi.mocked(existsSync).mockImplementation(() => false);
+		// let's also pretend that the .git directory exists
+		vi.mocked(directoryExists).mockImplementation(() => true);
 
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -187,16 +195,10 @@ describe("addWranglerToGitIgnore", () => {
 	});
 
 	test("should not create the gitignore file the project doesn't use git", () => {
-		// let's mock a gitignore file to be read by readFile
-		mockGitIgnore("my-project/.gitignore", "");
-		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-ignore
-		vi.mocked(statSync).mockImplementation(() => ({
-			isDirectory() {
-				return false;
-			},
-		}));
+		// no .gitignore file exists
 		vi.mocked(existsSync).mockImplementation(() => false);
+		// neither a .git directory does
+		vi.mocked(directoryExists).mockImplementation(() => false);
 
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },

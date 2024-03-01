@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "fs";
+import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
@@ -11,6 +11,7 @@ import degit from "degit";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
 	appendFile,
+	directoryExists,
 	readFile,
 	readJSON,
 	usesTypescript,
@@ -478,19 +479,18 @@ export const getCopyFilesDestinationDir = (
 };
 
 export const addWranglerToGitIgnore = (ctx: C3Context) => {
-	const gitStat = statSync(`${ctx.project.path}/.git`);
-	if (!gitStat.isDirectory()) {
-		// there is no .git directory so the project is likely not using git
+	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
+	const gitIgnoreExists = existsSync(gitIgnorePath);
+
+	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
+
+	if (!gitIgnoreExists && !gitDirExists) {
+		// if there is no .gitIgnore file and neither a .git directory
+		// bail as the project is likely not targeting/using git
 		return;
 	}
 
-	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
-
-	const s = spinner();
-	s.start("Adding Wrangler files to the .gitignore file");
-
-	const fileExisted = existsSync(gitIgnorePath);
-
+	const fileExisted = gitIgnoreExists;
 	if (!fileExisted) {
 		writeFile(gitIgnorePath, "");
 	}
@@ -506,9 +506,11 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	);
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {
-		s.stop(`The .gitignore file already includes all the wrangler files`);
 		return;
 	}
+
+	const s = spinner();
+	s.start("Adding Wrangler files to the .gitignore file");
 
 	const linesToAppend = [
 		"",

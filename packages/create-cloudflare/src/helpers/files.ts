@@ -1,4 +1,4 @@
-import fs, { existsSync } from "fs";
+import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
@@ -33,6 +33,18 @@ export const readFile = (path: string) => {
 	try {
 		return fs.readFileSync(path, "utf-8");
 	} catch (error) {
+		return crash(error as string);
+	}
+};
+
+export const directoryExists = (path: string): boolean => {
+	try {
+		const { isDirectory } = statSync(path);
+		return isDirectory();
+	} catch (error) {
+		if ((error as { code: string }).code === "ENOENT") {
+			return false;
+		}
 		return crash(error as string);
 	}
 };
