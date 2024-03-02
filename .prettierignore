@@ -52,3 +52,4 @@ packages/create-cloudflare/templates/**/*.*
 # makes typing unit tests much easier. Our current version of Prettier doesn't
 # support this syntax so exclude those files.
 fixtures/vitest-pool-workers-examples/basics-unit-integration-self/src/index.ts
+fixtures/vitest-pool-workers-examples/queues/src/index.ts
