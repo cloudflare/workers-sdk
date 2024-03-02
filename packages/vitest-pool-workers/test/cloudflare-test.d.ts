@@ -87,10 +87,10 @@ declare module "cloudflare:test" {
 	 * Creates an instance of `MessageBatch` for use as the 1st argument to
 	 * modules-format `queue()` exported handlers.
 	 */
-	export function createMessageBatch(
+	export function createMessageBatch<Body = unknown>(
 		queueName: string,
-		messages: ServiceBindingQueueMessage[]
-	): MessageBatch;
+		messages: ServiceBindingQueueMessage<Body>[]
+	): MessageBatch<Body>;
 	/**
 	 * Gets the ack/retry state of messages in the `MessageBatch`, and waits for
 	 * all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only accepts

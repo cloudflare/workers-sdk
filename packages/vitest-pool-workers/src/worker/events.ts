@@ -140,19 +140,19 @@ const kRetry = Symbol("kRetry");
 const kAck = Symbol("kAck");
 const kRetryAll = Symbol("kRetryAll");
 const kAckAll = Symbol("kAckAll");
-class QueueMessage /* Message */ {
+class QueueMessage<Body = unknown> /* Message */ {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L113
 	readonly #controller: QueueController;
 	readonly id!: string;
 	readonly timestamp!: Date;
-	readonly body!: unknown;
+	readonly body!: Body;
 	[kRetry] = false;
 	[kAck] = false;
 
 	constructor(
 		flag: typeof kConstructFlag,
 		controller: QueueController,
-		message: ServiceBindingQueueMessage
+		message: ServiceBindingQueueMessage<Body>
 	) {
 		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
 		this.#controller = controller;
@@ -242,17 +242,17 @@ class QueueMessage /* Message */ {
 		this[kAck] = true;
 	}
 }
-class QueueController /* MessageBatch */ {
+class QueueController<Body = unknown> /* MessageBatch */ {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L198
 	readonly queue!: string;
-	readonly messages!: QueueMessage[];
+	readonly messages!: QueueMessage<Body>[];
 	[kRetryAll] = false;
 	[kAckAll] = false;
 
 	constructor(
 		flag: typeof kConstructFlag,
 		queueOption: string,
-		messagesOption: ServiceBindingQueueMessage[]
+		messagesOption: ServiceBindingQueueMessage<Body>[]
 	) {
 		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
 
@@ -304,10 +304,10 @@ class QueueController /* MessageBatch */ {
 		this[kAckAll] = true;
 	}
 }
-export function createMessageBatch(
+export function createMessageBatch<Body = unknown>(
 	queueName: string,
-	messages: ServiceBindingQueueMessage[]
-): MessageBatch {
+	messages: ServiceBindingQueueMessage<Body>[]
+): MessageBatch<Body> {
 	if (arguments.length === 0) {
 		// `queueName` will be coerced to a `string`, but it must be defined
 		throw new TypeError(
