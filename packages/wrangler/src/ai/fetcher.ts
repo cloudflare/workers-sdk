@@ -1,4 +1,4 @@
-import {Headers, Response } from "miniflare";
+import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch/internal";
 import { getAccountId } from "../user";
 import type { Request } from "miniflare";
