@@ -55,7 +55,8 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 3
+          ref: ${{ github.head_ref }}
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
