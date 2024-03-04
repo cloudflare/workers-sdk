@@ -27,6 +27,7 @@ body:
         - Workers Runtime
         - Wrangler core
         - Miniflare
+        - KV Asset Handler
         - Other
     validations:
       required: true
