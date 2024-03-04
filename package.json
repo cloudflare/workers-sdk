@@ -47,7 +47,6 @@
 		"@vue/compiler-sfc": "^3.3.4",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
-		"ts-node": "^10.9.2",
 		"turbo": "^1.10.14"
 	},
 	"engines": {

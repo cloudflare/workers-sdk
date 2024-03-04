@@ -72,7 +72,7 @@ jobs:
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Deploy non-NPM Packages
-        run: pnpm ts-node tools/deployments/deploy-non-npm-packages.ts
+        run: node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
         env:
           PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
