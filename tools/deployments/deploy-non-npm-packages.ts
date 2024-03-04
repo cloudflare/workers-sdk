@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -40,7 +41,28 @@ export function deployNonNpmPackages(
  * Get a list of all the packages that got bumped by changesets from the PUBLISHED_PACKAGES environment variable.
  */
 export function getUpdatedPackages(): UpdatedPackage[] {
-	return JSON.parse(process.env.PUBLISHED_PACKAGES ?? "[]");
+	const packages = JSON.parse(process.env.PUBLISHED_PACKAGES ?? "[]");
+
+	assert(
+		Array.isArray(packages),
+		`Expected PUBLISHED_PACKAGES to be an array but got ${typeof packages}.`
+	);
+	packages.forEach((p, i) => {
+		assert(
+			typeof p === "object" && p !== null,
+			`Expected item ${i} in array to be an array but got ${typeof p}.`
+		);
+		assert(
+			typeof p.name === "string",
+			`Expected item ${i} to have a "name" property of type string but got ${p.name}.`
+		);
+		assert(
+			typeof p.version === "string",
+			`Expected item ${i} to have a "version" property of type string but got ${p.version}.`
+		);
+	});
+
+	return packages;
 }
 
 /**
@@ -84,14 +106,11 @@ export function findDeployablePackageNames(): Set<string> {
 export function deployPackage(pkgName: string) {
 	try {
 		execSync(`pnpm -F ${pkgName} deploy`, {
-			env: {
-				...process.env,
-				CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-			},
+			env: process.env,
 			stdio: "inherit",
 		});
 	} catch (e) {
-		console.error(`Failed to deploy "${pkgName}".`);
+		console.error(`::error::Failed to deploy "${pkgName}".`);
 		console.error(
 			"Work out why this happened and then potentially run a manual deployment."
 		);

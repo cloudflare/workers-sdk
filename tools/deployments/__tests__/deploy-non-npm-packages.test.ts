@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import { afterEach } from "node:test";
 import { describe, it, vitest } from "vitest";
 import {
 	deployNonNpmPackages,
@@ -16,6 +17,12 @@ vitest.mock("node:child_process", async () => {
 });
 
 describe("getUpdatedPackages()", () => {
+	const originalEnv = process.env;
+
+	afterEach(() => {
+		process.env = originalEnv;
+	});
+
 	it("should default to an empty array", ({ expect }) => {
 		expect(getUpdatedPackages()).toEqual([]);
 	});
@@ -25,16 +32,63 @@ describe("getUpdatedPackages()", () => {
 			{ name: "a", version: "1.0.0" },
 			{ name: "b", version: "2.3.4" },
 		];
-		const env = process.env;
-		try {
-			process.env = {
-				...env,
-				PUBLISHED_PACKAGES: JSON.stringify(expectedPackages),
-			};
-			expect(getUpdatedPackages()).toEqual(expectedPackages);
-		} finally {
-			process.env = env;
-		}
+		process.env = {
+			PUBLISHED_PACKAGES: JSON.stringify(expectedPackages),
+		};
+		expect(getUpdatedPackages()).toEqual(expectedPackages);
+	});
+
+	it("should validate the shape of the PUBLISHED_PACKAGES JSON", ({
+		expect,
+	}) => {
+		process.env = {
+			PUBLISHED_PACKAGES: `"bad"`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected PUBLISHED_PACKAGES to be an array but got string.]`
+		);
+
+		process.env = {
+			PUBLISHED_PACKAGES: `["bad"]`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected item 0 in array to be an array but got string.]`
+		);
+
+		process.env = {
+			PUBLISHED_PACKAGES: `[{}]`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected item 0 to have a "name" property of type string but got undefined.]`
+		);
+
+		process.env = {
+			PUBLISHED_PACKAGES: `[{ "name": 123 }]`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected item 0 to have a "name" property of type string but got 123.]`
+		);
+
+		process.env = {
+			PUBLISHED_PACKAGES: `[{ "name": "package" }]`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected item 0 to have a "version" property of type string but got undefined.]`
+		);
+
+		process.env = {
+			PUBLISHED_PACKAGES: `[{ "name": "package", "version": ["bad"] }]`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected item 0 to have a "version" property of type string but got bad.]`
+		);
+
+		process.env = {
+			PUBLISHED_PACKAGES: `[{ "name": "package", "version": "1.2.3" }, {}]`,
+		};
+		expect(() => getUpdatedPackages()).toThrowErrorMatchingInlineSnapshot(
+			`[AssertionError: Expected item 1 to have a "name" property of type string but got undefined.]`
+		);
 	});
 });
 
@@ -76,7 +130,7 @@ describe("deployPackage", () => {
 		const logs: string[] = [];
 		vitest.spyOn(console, "error").mockImplementation((v) => logs.push(v));
 		deployPackage("foo");
-		expect(logs[0]).toMatchInlineSnapshot(`"Failed to deploy "foo"."`);
+		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
 	});
 });
 
