@@ -606,7 +606,7 @@ async function createRemoteWorkerInit(props: {
 		main: {
 			name: path.basename(props.bundle.path),
 			filePath: props.bundle.path,
-			type: getBundleType(props.format),
+			type: getBundleType(props.format, path.basename(props.bundle.path)),
 			content,
 		},
 		modules,
