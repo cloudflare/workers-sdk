@@ -16,5 +16,6 @@ export default defineConfig({
 		poolOptions: {
 			useAtomics: true,
 		},
+		restoreMocks: true,
 	},
 });
