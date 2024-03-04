@@ -115,6 +115,12 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Hello Hono!",
 		},
+		promptHandlers: [
+			{
+				matcher: /Do you want to install project dependencies\?/,
+				input: [keys.enter],
+			},
+		],
 	},
 	qwik: {
 		promptHandlers: [
