@@ -11,6 +11,8 @@
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240208.0",
 		"@types/node": "20.8.3",
+		"jose": "^5.2.2",
+		"miniflare": "workspace:*",
 		"typescript": "^5.3.3",
 		"vitest": "1.3.0",
 		"wrangler": "workspace:*"
