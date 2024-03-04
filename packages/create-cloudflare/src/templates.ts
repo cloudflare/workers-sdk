@@ -485,8 +485,8 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
 
 	if (!gitIgnorePreExisted && !gitDirExists) {
-		// if there is no .gitIgnore file and neither a .git directory
-		// bail as the project is likely not targeting/using git
+		// if there is no .gitignore file and neither a .git directory
+		// then bail as the project is likely not targeting/using git
 		return;
 	}
 
