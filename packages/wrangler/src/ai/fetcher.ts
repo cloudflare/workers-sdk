@@ -16,12 +16,9 @@ export async function AIFetcher(request: Request) {
 		duplex: "half",
 	});
 
-	const respHeaders: Record<string, string> = {};
-	for (const [name, value] of res.headers) {
-		respHeaders[name] = value;
-	}
-	respHeaders.headers.delete("Host");
-	respHeaders.headers.delete("Content-Length");
+	const respHeaders = new Headers(res.headers);
+	respHeaders.delete("Host");
+	respHeaders.delete("Content-Length");
 
 	return new Response(res.body, { status: res.status, headers: respHeaders });
 }
