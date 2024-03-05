@@ -20,7 +20,7 @@ import type {
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
-const ZERO_WIDTH_SPACE = "​"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
+const ZERO_WIDTH_SPACE = "\u200B"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
 const VERSION_CACHE = new Map<VersionId, WorkerVersion>();
 
 type Args = StrictYargsOptionsToInterface<typeof versionsDeployOptions>;
