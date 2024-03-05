@@ -1,8 +1,15 @@
-name: Deploy Playground Preview Worker (testing)
+name: Deploy (to testing) and Test Playground Preview Worker
 
-# On a push to `main`, on Cloudflare, where there are changes to the files in this worker's package,
-# or an update to a PR, on Cloudflare, labelled as `playground-worker`,
-# deploy to testing and then run the end-to-end tests against this deployment.
+# This workflow is designed to deploy a "testing" version of the Playground Preview Worker
+# and test it via integration tests.
+
+# Triggers:
+# - push to `main`, on Cloudflare, where there are changes to the files in this worker's package
+# - update to a PR, on Cloudflare, labelled as `playground-worker`
+#
+# Actions:
+# - deploy to testing environment
+# - run the end-to-end tests against testing deployment
 on:
   push:
     branches:

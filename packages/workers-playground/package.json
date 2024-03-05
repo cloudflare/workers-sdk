@@ -8,7 +8,7 @@
 		"dev": "vite",
 		"generate:default-hash": "pnpm exec tsx ./generate-default-hash.ts",
 		"check": "pnpm run generate:default-hash check",
-		"deploy": "wrangler pages deploy --project-name workers-playground ./dist"
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler pages deploy --project-name workers-playground ./dist"
 	},
 	"dependencies": {
 		"@cloudflare/component-button": "^7.0.11",

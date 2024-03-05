@@ -5,6 +5,11 @@ on:
   pull_request:
     paths:
       - packages/create-cloudflare/**
+  push:
+    branches:
+      - main
+    paths:
+      - packages/create-cloudflare/**
 env:
   node-version: 18.17.1
   bun-version: 1.0.3
