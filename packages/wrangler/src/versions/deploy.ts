@@ -24,7 +24,9 @@ const BLANK_INPUT = "-"; // To be used where optional user-input is displayed an
 const ZERO_WIDTH_SPACE = "\u200B"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
 const VERSION_CACHE = new Map<VersionId, WorkerVersion>();
 
-type Args = StrictYargsOptionsToInterface<typeof versionsDeployOptions>;
+export type VersionsDeployArgs = StrictYargsOptionsToInterface<
+	typeof versionsDeployOptions
+>;
 
 type OptionalPercentage = number | null; // null means automatically assign (evenly distribute remaining traffic)
 type Percentage = number;
@@ -116,9 +118,7 @@ export function versionsDeployOptions(yargs: CommonYargsArgv) {
 		});
 }
 
-export async function versionsDeployHandler(
-	args: StrictYargsOptionsToInterface<typeof versionsDeployOptions>
-) {
+export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	await printWranglerBanner();
 
 	const config = getConfig(args);
@@ -211,7 +211,7 @@ export async function versionsDeployHandler(
 }
 
 function getConfig(
-	args: Pick<Args, "config" | "name" | "experimentalJsonConfig">
+	args: Pick<VersionsDeployArgs, "config" | "name" | "experimentalJsonConfig">
 ) {
 	const configPath =
 		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
@@ -521,14 +521,19 @@ async function createDeployment(
 
 export function parseVersionSpecs(
 	args: Pick<
-		StrictYargsOptionsToInterface<typeof versionsDeployOptions>,
-		"versionSpecs" | "versionId" | "percentage"
+		VersionsDeployArgs,
+		"_" | "versionSpecs" | "versionId" | "percentage"
 	>
 ): Map<VersionId, OptionalPercentage> {
 	const versionIds: string[] = [];
 	const percentages: OptionalPercentage[] = [];
 
-	for (const spec of args.versionSpecs ?? []) {
+	// args.versionSpecs weren't being parsed in tests, so fallback to args._ if missing
+	const versionSpecs =
+		args.versionSpecs ??
+		args._.filter((arg): arg is string => typeof arg === "string");
+
+	for (const spec of versionSpecs) {
 		const [versionId, percentageString] = spec.split("@");
 
 		const percentage =
