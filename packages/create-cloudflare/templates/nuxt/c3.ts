@@ -61,6 +61,7 @@ const updateEnvTypes = (ctx: C3Context) => {
 		typesEntrypoint += `/${latestEntrypoint}`;
 	}
 
+	// Replace placeholder with actual types entrypoint
 	file = file.replace("WORKERS_TYPES_ENTRYPOINT", typesEntrypoint);
 	writeFile("env.d.ts", file);
 
