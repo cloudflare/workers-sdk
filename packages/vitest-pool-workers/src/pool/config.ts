@@ -8,7 +8,7 @@ import {
 } from "miniflare";
 import { z } from "zod";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
-import type { WorkerOptions } from "miniflare";
+import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
@@ -53,8 +53,12 @@ const WorkersPoolOptionsSchema = z.object({
 });
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
-	"script" | "scriptPath" | "modules" | "modulesRoot" | "modulesRule"
->;
+	"script" | "scriptPath" | "modules" | "modulesRoot"
+> & {
+	// `modulesRules` is not included in all members of the `SourceOptions` type
+	// from which `WorkerOptions` is derived. Therefore, we manually include it.
+	modulesRules?: ModuleRule[];
+};
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
 		workers?: WorkerOptions[];
@@ -96,7 +100,6 @@ function parseWorkerOptions(
 		delete value["scriptPath"];
 		delete value["modules"];
 		delete value["modulesRoot"];
-		delete value["modulesRules"];
 	}
 
 	const result = {} as WorkerOptions;

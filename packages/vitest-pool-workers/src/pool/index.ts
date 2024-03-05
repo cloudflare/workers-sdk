@@ -8,6 +8,7 @@ import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
+	compileModuleRules,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -16,6 +17,7 @@ import {
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
+	testRegExps,
 	WebSocket,
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
@@ -649,18 +651,35 @@ async function runTests(
 		},
 	});
 
+	// Compile module rules for matching against
+	const rules = project.options.miniflare?.modulesRules;
+	const compiledRules = compileModuleRules(rules ?? []);
+
 	const localRpcFunctions = createMethodsRPC(project.project);
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
+			const specifier = args[0];
+
 			// Mark built-in modules and any virtual modules (e.g. `cloudflare:test`)
 			// as external
 			if (
-				/^(cloudflare|workerd):/.test(args[0]) ||
-				workerdBuiltinModules.has(args[0])
+				/^(cloudflare|workerd):/.test(specifier) ||
+				workerdBuiltinModules.has(specifier)
 			) {
-				return { externalize: args[0] };
+				return { externalize: specifier };
 			}
+
+			// If the specifier matches any module rules, force it to be loaded as
+			// that type. This will be handled by the module fallback service.
+			const maybeRule = compiledRules.find((rule) =>
+				testRegExps(rule.include, specifier)
+			);
+			if (maybeRule !== undefined) {
+				const externalize = specifier + `?mf_vitest_force=${maybeRule.type}`;
+				return { externalize };
+			}
+
 			return localRpcFunctions.fetch(...args);
 		},
 	};

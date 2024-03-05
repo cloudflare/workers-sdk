@@ -6,9 +6,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
-import { Response } from "miniflare";
+import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { isFileNotFoundError } from "./helpers";
-import type { Request, Worker_Module } from "miniflare";
+import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { ViteDevServer } from "vite";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
@@ -37,6 +37,19 @@ function trimSuffix(suffix: string, value: string) {
 	assert(value.endsWith(suffix));
 	return value.substring(0, value.length - suffix.length);
 }
+
+// RegExp for path suffix to force loading module as specific type.
+// (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
+// This suffix will be added by the pool when fetching a module that matches a
+// module rule. In this case, the module will be marked as external with this
+// suffix, causing the fallback service to return a module with the correct
+// type. Note we can't easily implement rules with a Vite plugin, as they:
+// - Depend on `miniflare`/`wrangler` configuration, and we can't modify the
+//   Vite config in the pool
+// - Would require use of an `UnsafeEval` binding to build `WebAssembly.Module`s
+const forceModuleTypeRegexp = new RegExp(
+	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
+);
 
 // Node.js built-in modules provided by `workerd`
 export const workerdBuiltinModules = new Set([
@@ -282,12 +295,58 @@ function buildRedirectResponse(filePath: string) {
 	return new Response(null, { status: 301, headers: { Location: filePath } });
 }
 
-type ModuleContents = Omit<Worker_Module, "name">;
+// `Omit<Worker_Module, "name">` gives type `{}` which isn't very helpful, so
+// we have to do something like this instead.
+type DistributeWorkerModuleForContents<T> = T extends unknown
+	? { [P in Exclude<keyof T, "name">]: NonNullable<T[P]> }
+	: never;
+type ModuleContents = DistributeWorkerModuleForContents<Worker_Module>;
+
+// Refer to docs on `forceModuleTypeRegexp` for more details
+function maybeGetForceTypeModuleContents(
+	filePath: string
+): ModuleContents | undefined {
+	const match = forceModuleTypeRegexp.exec(filePath);
+	if (match === null) return;
+
+	filePath = trimSuffix(match[0], filePath);
+	const type = match[1] as ModuleRuleType;
+	const contents = fs.readFileSync(filePath);
+	switch (type) {
+		case "ESModule":
+			return { esModule: contents.toString() };
+		case "CommonJS":
+			return { commonJsModule: contents.toString() };
+		case "NodeJsCompatModule":
+			return { nodeJsCompatModule: contents.toString() };
+		case "Text":
+			return { text: contents.toString() };
+		case "Data":
+			return { data: contents };
+		case "CompiledWasm":
+			return { wasm: contents };
+		case "PythonModule":
+			return { pythonModule: contents.toString() };
+		case "PythonRequirement":
+			return { pythonRequirement: contents.toString() };
+		default: {
+			// `type` should've been validated against `ModuleRuleType`
+			const exhaustive: never = type;
+			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
+		}
+	}
+}
 function buildModuleResponse(target: string, contents: ModuleContents) {
 	let name = target;
 	if (!isWindows) name = posixPath.relative("/", target);
 	assert(name[0] !== "/");
-	return new Response(JSON.stringify({ name, ...contents }));
+	const result: Record<string, unknown> = { name };
+	for (const key in contents) {
+		const value = (contents as Record<string, unknown>)[key];
+		// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
+		result[key] = value instanceof Uint8Array ? Array.from(value) : value;
+	}
+	return Response.json(result);
 }
 
 async function load(
@@ -308,6 +367,13 @@ async function load(
 		}
 		debuglog(logBase, "redirect:", filePath);
 		return buildRedirectResponse(filePath);
+	}
+
+	// If we're importing with a forced module type, load the file as that type
+	const maybeContents = maybeGetForceTypeModuleContents(filePath);
+	if (maybeContents !== undefined) {
+		debuglog(logBase, "forced:", filePath);
+		return buildModuleResponse(target, maybeContents);
 	}
 
 	// If we're importing from a shim module, don't shim again

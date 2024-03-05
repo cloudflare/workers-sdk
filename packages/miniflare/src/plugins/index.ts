@@ -89,6 +89,7 @@ export {
 	SERVICE_ENTRY,
 	CoreOptionsSchema,
 	CoreSharedOptionsSchema,
+	compileModuleRules,
 	createFetchMock,
 	getGlobalServices,
 	ModuleRuleTypeSchema,
@@ -100,6 +101,7 @@ export {
 	kCurrentWorker,
 } from "./core";
 export type {
+	CompiledModuleRule,
 	ModuleRuleType,
 	ModuleRule,
 	ModuleDefinition,
