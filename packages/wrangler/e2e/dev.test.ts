@@ -283,7 +283,7 @@ describe("basic dev python tests", () => {
 					name = "${workerName}"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
-					compatibility_flags = ["experimental"]
+					compatibility_flags = ["python_workers"]
 			`,
 			"index.py": dedent`
 				from js import Response

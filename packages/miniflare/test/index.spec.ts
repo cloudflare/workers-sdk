@@ -503,7 +503,7 @@ test("Miniflare: service binding to current worker", async (t) => {
 				if (pathname === "/callback") return new Response("callback");
 				const response = await env.SELF.fetch("http://placeholder/callback");
 				const text = await response.text();
-				return new Response("body:" + text); 
+				return new Response("body:" + text);
 			}
 		}`,
 	});
@@ -822,7 +822,7 @@ test("Miniflare: python modules", async (t) => {
 				contents: `def add(a, b):\n  return a + b`,
 			},
 		],
-		compatibilityFlags: ["experimental"],
+		compatibilityFlags: ["python_workers"],
 	});
 	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
