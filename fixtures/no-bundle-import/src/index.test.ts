@@ -7,7 +7,12 @@ describe("Worker", () => {
 	let worker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(path.resolve(__dirname, "index.js"));
+		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
+			logLevel: "none",
+			experimental: {
+				disableExperimentalWarning: true,
+			},
+		});
 	}, 30_000);
 
 	afterAll(() => worker.stop());

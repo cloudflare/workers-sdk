@@ -99,7 +99,6 @@ describe("'wrangler dev' correctly renders pages", () => {
 			headers: { Origin: `http://${ip}:${port}` },
 		});
 		const text = await response.text();
-		console.log(text);
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:https://prod.example.org`);
 	});
@@ -120,7 +119,6 @@ describe("'wrangler dev' correctly renders pages", () => {
 			headers: { Origin: `http://foo.com` },
 		});
 		const text = await response.text();
-		console.log(text);
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:http://foo.com`);
 	});

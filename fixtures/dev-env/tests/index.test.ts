@@ -30,6 +30,8 @@ beforeEach(() => {
 	mf = undefined;
 	res = undefined as any;
 	ws = undefined;
+	// Hide stdout messages from the test logs
+	vi.spyOn(console, "log").mockImplementation(() => {});
 });
 afterEach(async () => {
 	await Promise.allSettled(fireAndForgetPromises);
@@ -330,7 +332,9 @@ describe("startDevWorker: ProxyController", () => {
 	});
 
 	test("User worker exception", async () => {
-		const consoleErrorSpy = vi.spyOn(console, "error");
+		const consoleErrorSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
 
 		const run = await fakeStartUserWorker({
 			script: `

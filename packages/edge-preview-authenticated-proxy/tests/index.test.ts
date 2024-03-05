@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
@@ -24,6 +24,7 @@ describe("Preview Worker", () => {
 			experimental: {
 				disableExperimentalWarning: true,
 			},
+			logLevel: "none",
 		});
 
 		tmpDir = await fs.realpath(
@@ -108,6 +109,7 @@ compatibility_date = "2023-01-01"
 		);
 	});
 	it("should reject invalid exchange_url", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
 			{ method: "POST" }
@@ -190,6 +192,7 @@ compatibility_date = "2023-01-01"
 			.split("=")[1];
 	});
 	it("should reject invalid prewarm url", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
 				`http://127.0.0.1:${remote.port}`
@@ -201,6 +204,7 @@ compatibility_date = "2023-01-01"
 		);
 	});
 	it("should reject invalid remote url", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
 				`http://127.0.0.1:${remote.port}/prewarm`
