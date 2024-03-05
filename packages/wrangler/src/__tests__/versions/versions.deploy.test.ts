@@ -1,5 +1,6 @@
 import yargs from "yargs";
 import {
+	assignAndDistributePercentages,
 	parseVersionSpecs,
 	versionsDeployOptions,
 } from "../../versions/deploy";
@@ -102,6 +103,27 @@ describe("units", () => {
 				"10000000-0000-0000-0000-000000000000": 10,
 				"20000000-0000-0000-0000-000000000000": null,
 			});
+		});
+	});
+
+	describe("assignAndDistributePercentages distributes remaining share of 100%", () => {
+		test.each`
+			description                                              | versionIds                  | optionalVersionTraffic | expected
+			${"from 1 specified value across 1 unspecified value"}   | ${["v1", "v2"]}             | ${{ v1: 10 }}          | ${{ v1: 10, v2: 90 }}
+			${"from 1 specified value across 2 unspecified values"}  | ${["v1", "v2", "v3"]}       | ${{ v1: 10 }}          | ${{ v1: 10, v2: 45, v3: 45 }}
+			${"from 2 specified values across 1 unspecified value"}  | ${["v1", "v2", "v3"]}       | ${{ v1: 10, v2: 60 }}  | ${{ v1: 10, v2: 60, v3: 30 }}
+			${"from 2 specified values across 2 unspecified values"} | ${["v1", "v2", "v3", "v4"]} | ${{ v1: 10, v2: 60 }}  | ${{ v1: 10, v2: 60, v3: 15, v4: 15 }}
+			${"limited to specified versionIds"}                     | ${["v1", "v3"]}             | ${{ v1: 10, v2: 70 }}  | ${{ v1: 10, v3: 90 }}
+			${"zero when no share remains"}                          | ${["v1", "v2", "v3"]}       | ${{ v1: 10, v2: 90 }}  | ${{ v1: 10, v2: 90, v3: 0 }}
+			${"unchanged when fully specified (adding to 100)"}      | ${["v1", "v2"]}             | ${{ v1: 10, v2: 90 }}  | ${{ v1: 10, v2: 90 }}
+			${"unchanged when fully specified (adding to < 100)"}    | ${["v1", "v2"]}             | ${{ v1: 10, v2: 20 }}  | ${{ v1: 10, v2: 20 }}
+		`(" $description", ({ versionIds, optionalVersionTraffic, expected }) => {
+			const result = assignAndDistributePercentages(
+				versionIds,
+				new Map(Object.entries(optionalVersionTraffic))
+			);
+
+			expect(Object.fromEntries(result)).toMatchObject(expected);
 		});
 	});
 });

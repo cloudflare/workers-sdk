@@ -587,7 +587,7 @@ export function parseVersionSpecs(
 	return optionalVersionTraffic;
 }
 
-function assignAndDistributePercentages(
+export function assignAndDistributePercentages(
 	versionIds: VersionId[],
 	optionalVersionTraffic: Map<VersionId, OptionalPercentage>
 ): Map<VersionId, Percentage> {
@@ -611,7 +611,7 @@ function assignAndDistributePercentages(
 	return versionTraffic;
 }
 
-function summariseVersionTraffic(
+export function summariseVersionTraffic(
 	optionalVersionTraffic: Map<VersionId, OptionalPercentage>,
 	versionIds: VersionId[] = Array.from(optionalVersionTraffic.keys())
 ) {
