@@ -32,6 +32,7 @@ export type Options = {
 	functionsDirectory: string;
 	local: boolean;
 	defineNavigatorUserAgent: boolean;
+	external?: string[];
 };
 
 export function buildWorkerFromFunctions({
@@ -49,6 +50,7 @@ export function buildWorkerFromFunctions({
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
+	external,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
@@ -76,6 +78,7 @@ export function buildWorkerFromFunctions({
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		external,
 		plugins: [
 			buildNotifierPlugin(onEnd),
 			{
@@ -170,7 +173,7 @@ export type RawOptions = {
 	outdir?: string;
 	directory: string;
 	bundle?: boolean;
-	external?: string[];
+	externalModules?: string[];
 	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
@@ -182,6 +185,7 @@ export type RawOptions = {
 	local: boolean;
 	additionalModules?: CfModule[];
 	defineNavigatorUserAgent: boolean;
+	external?: string[];
 };
 
 /**
@@ -197,7 +201,7 @@ export function buildRawWorker({
 	outdir,
 	directory,
 	bundle = true,
-	external,
+	externalModules,
 	minify = false,
 	sourcemap = false,
 	watch = false,
@@ -208,6 +212,7 @@ export function buildRawWorker({
 	local,
 	additionalModules = [],
 	defineNavigatorUserAgent,
+	external,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
@@ -215,7 +220,7 @@ export function buildRawWorker({
 		format: "modules",
 		moduleRoot: resolve(directory),
 	};
-	const moduleCollector = external
+	const moduleCollector = externalModules
 		? noopModuleCollector
 		: createModuleCollector({ entry, findAdditionalModules: false });
 
@@ -230,10 +235,11 @@ export function buildRawWorker({
 		nodejsCompat,
 		define: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		external,
 		plugins: [
 			...plugins,
 			buildNotifierPlugin(onEnd),
-			...(external
+			...(externalModules
 				? [
 						// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
 						// This plugin allows us to mark those chunks as external so they are not inlined.
@@ -241,7 +247,11 @@ export function buildRawWorker({
 							name: "external-fixer",
 							setup(pluginBuild) {
 								pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
-									if (external.includes(resolve(args.resolveDir, args.path))) {
+									if (
+										externalModules.includes(
+											resolve(args.resolveDir, args.path)
+										)
+									) {
 										return { path: args.path, external: true };
 									}
 								});
@@ -296,7 +306,9 @@ export async function traverseAndBuildWorkerJSDirectory({
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
 		bundle: true,
-		external: additionalModules.map((m) => join(workerJSDirectory, m.name)),
+		externalModules: additionalModules.map((m) =>
+			join(workerJSDirectory, m.name)
+		),
 		outfile,
 		directory: buildOutputDirectory,
 		local: false,
