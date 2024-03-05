@@ -8,8 +8,9 @@ import type { EnvironmentNonInheritable } from "../config/environment";
 
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
-	"define" | "unsafe" | "tail_consumers" | "constellation" | "cloudchamber"
-> = {
+	"define" | "tail_consumers" | "constellation" | "cloudchamber"
+> &
+	Record<string, unknown> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
