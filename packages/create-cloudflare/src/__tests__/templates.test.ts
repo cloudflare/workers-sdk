@@ -5,7 +5,7 @@ import {
 	readFile,
 	writeFile,
 } from "helpers/files";
-import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { addWranglerToGitIgnore } from "../templates";
 import type { PathLike } from "fs";
 import type { C3Context } from "types";
@@ -23,7 +23,7 @@ describe("addWranglerToGitIgnore", () => {
 		content: string | undefined;
 	} = { file: undefined, content: undefined };
 
-	beforeAll(() => {
+	beforeEach(() => {
 		vi.mocked(writeFile).mockImplementation((file: string, content: string) => {
 			writeFileResults.file = file;
 			writeFileResults.content = content;
