@@ -567,6 +567,30 @@ export const spinner = (
 	};
 };
 
+type FactoryOrValue<T> = T | (() => T);
+const unwrapFactory = <T>(input: FactoryOrValue<T>): T => {
+	const output = typeof input === "function" ? (input as () => T)() : input;
+	return output;
+};
+export const spinnerWhile = async <T>(opts: {
+	promise: FactoryOrValue<Promise<T>>;
+	startMessage: FactoryOrValue<string>;
+	endMessage?: FactoryOrValue<string>;
+	spinner?: ReturnType<typeof spinner>;
+}): Promise<T> => {
+	const s = opts.spinner ?? spinner();
+
+	s.start(unwrapFactory(opts.startMessage));
+
+	try {
+		const result = await unwrapFactory(opts.promise);
+
+		return result;
+	} finally {
+		s.stop(unwrapFactory(opts.endMessage));
+	}
+};
+
 export const isInteractive = () => {
 	return process.stdin.isTTY;
 };

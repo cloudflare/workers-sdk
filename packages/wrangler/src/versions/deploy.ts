@@ -6,7 +6,7 @@ import {
 	grayBar,
 	inputPrompt,
 	leftT,
-	spinner,
+	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
@@ -184,12 +184,17 @@ export async function versionsDeployHandler(
 
 	const start = Date.now();
 
-	await createDeployment(
-		accountId,
-		workerName,
-		confirmedVersionTraffic,
-		message
-	);
+	await spinnerWhile({
+		startMessage: `Deploying ${confirmedVersionsToDeploy.length} version(s)`,
+		async promise() {
+			await createDeployment(
+				accountId,
+				workerName,
+				confirmedVersionTraffic,
+				message
+			);
+		},
+	});
 
 	const elapsedMilliseconds = Date.now() - start;
 	const elapsedSeconds = elapsedMilliseconds / 1000;
@@ -216,13 +221,12 @@ function getConfig(
 }
 
 async function printLatestDeployment(accountId: string, workerName: string) {
-	const s = spinner();
-	s.start("Fetching latest deployment");
-	const [versions, traffic] = await fetchLatestDeploymentVersions(
-		accountId,
-		workerName
-	);
-	s.stop();
+	const [versions, traffic] = await spinnerWhile({
+		startMessage: "Fetching latest deployment",
+		async promise() {
+			return fetchLatestDeploymentVersions(accountId, workerName);
+		},
+	});
 
 	cli.logRaw(
 		`${leftT} Your current deployment has ${versions.length} version(s):`
@@ -251,11 +255,13 @@ async function promptVersionsToDeploy(
 	workerName: string,
 	defaultSelectedVersionIds: VersionId[]
 ): Promise<VersionId[]> {
-	const s = spinner();
-	s.start("Fetching deployable versions");
-	await fetchLatestUploadedVersions(accountId, workerName);
-	await fetchVersions(accountId, workerName, ...defaultSelectedVersionIds);
-	s.stop();
+	await spinnerWhile({
+		startMessage: "Fetching deployable versions",
+		async promise() {
+			await fetchLatestUploadedVersions(accountId, workerName);
+			await fetchVersions(accountId, workerName, ...defaultSelectedVersionIds);
+		},
+	});
 
 	const selectableVersions = Array.from(VERSION_CACHE.values()).sort(
 		(a, b) => b.created.getTime() - a.created.getTime()
