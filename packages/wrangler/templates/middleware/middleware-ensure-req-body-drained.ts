@@ -16,3 +16,4 @@ const drainBody: Middleware = async (request, env, _ctx, middlewareCtx) => {
 };
 
 export default drainBody;
+export const wrap = undefined;
