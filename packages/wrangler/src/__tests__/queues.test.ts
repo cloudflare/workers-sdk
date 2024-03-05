@@ -219,7 +219,7 @@ describe("wrangler", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			Options:
-			      --delivery-delay  How long a published messages should be delayed for, in seconds. Must be a positive integer  [number]"
+			      --delivery-delay  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
 		`);
 			});
 
