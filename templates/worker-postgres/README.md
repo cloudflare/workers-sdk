@@ -1,6 +1,6 @@
 # Template: worker-postgres
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-postgres)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-postgres)
 
 This repo contains example code and a PostgreSQL driver that can be used in any Workers project. If you are interested in using the driver _outside_ of this template, copy the `driver/postgres` module into your project's `node_modules` or directly alongside your source.
 

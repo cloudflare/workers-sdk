@@ -1,6 +1,6 @@
 # Template: worker-aws
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-aws)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-aws)
 
 This is a template for using Amazon Web Services such as DynamoDB and SQS from a Cloudflare Worker.
 
