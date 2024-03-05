@@ -23,6 +23,9 @@ export interface Env {
 	//
 	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
 	// MY_QUEUE: Queue;
+	//
+	// Example binding to a D1 database. Learn more at https://developers.cloudflare.com/d1/
+	// MY_DB: D1Database;
 }
 
 export default {
