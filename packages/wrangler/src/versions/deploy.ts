@@ -11,6 +11,7 @@ import {
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
+import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import type {
@@ -120,7 +121,16 @@ export async function versionsDeployHandler(
 ) {
 	await printWranglerBanner();
 
-	const accountId = await getAccountId(args);
+	const config = getConfig(args);
+	await metrics.sendMetricsEvent(
+		"deploy worker version(s)",
+		{},
+		{
+			sendMetrics: config.send_metrics,
+		}
+	);
+
+	const accountId = await requireAuth(config);
 	const workerName = args.name ?? "worker-app";
 	const optionalVersionTraffic = parseVersionSpecs(args);
 
@@ -193,15 +203,14 @@ export async function versionsDeployHandler(
 	);
 }
 
-async function getAccountId(
-	args: Pick<Args, "config" | "name" | "dryRun" | "experimentalJsonConfig">
+function getConfig(
+	args: Pick<Args, "config" | "name" | "experimentalJsonConfig">
 ) {
 	const configPath =
 		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
 	const config = readConfig(configPath, args);
-	const accountId = await requireAuth(config);
 
-	return accountId;
+	return config;
 }
 
 async function printLatestDeployment(accountId: string, workerName: string) {
