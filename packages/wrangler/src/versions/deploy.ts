@@ -194,9 +194,11 @@ export async function versionsDeployHandler(
 	const elapsedMilliseconds = Date.now() - start;
 	const elapsedSeconds = elapsedMilliseconds / 1000;
 	const elapsedString = `${elapsedSeconds.toFixed(2)} sec`;
-	const trafficSummaryString = Array.from(confirmedVersionTraffic)
-		.map(([versionId, percentage]) => `version ${versionId} at ${percentage}%`)
-		.join(" and ");
+
+	const trafficSummaryList = Array.from(confirmedVersionTraffic).map(
+		([versionId, percentage]) => `version ${versionId} at ${percentage}%`
+	);
+	const trafficSummaryString = new Intl.ListFormat().format(trafficSummaryList);
 
 	cli.success(
 		`Deployed ${workerName} ${trafficSummaryString} (${elapsedString})`
