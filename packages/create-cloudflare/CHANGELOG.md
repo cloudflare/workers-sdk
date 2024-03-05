@@ -1,5 +1,23 @@
 # create-cloudflare
 
+## 2.13.1
+
+### Patch Changes
+
+- [#5097](https://github.com/cloudflare/workers-sdk/pull/5097) [`9d1d11c`](https://github.com/cloudflare/workers-sdk/commit/9d1d11c3acccb0ee7c06af501163906c738b740a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-hono` from `0.4.0` to `0.5.0`
+
+- [#5121](https://github.com/cloudflare/workers-sdk/pull/5121) [`fd2f153`](https://github.com/cloudflare/workers-sdk/commit/fd2f1530ec1737671d13bf918edfaaf53141b8a2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.2.1` to `17.2.2`
+
+- [#5122](https://github.com/cloudflare/workers-sdk/pull/5122) [`b4f7ad8`](https://github.com/cloudflare/workers-sdk/commit/b4f7ad819c26b7c6c9603b0ddb451bc7cef145f3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.7.2` to `2.8.0`
+
+- [#5135](https://github.com/cloudflare/workers-sdk/pull/5135) [`8935526`](https://github.com/cloudflare/workers-sdk/commit/89355269dea7b33242f9b271bdf6a00d3f6e7e87) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update solid preview and deploy scripts to be aligned with the rest of the frameworks
+
+- [#5129](https://github.com/cloudflare/workers-sdk/pull/5129) [`23074c7`](https://github.com/cloudflare/workers-sdk/commit/23074c7d2124ff19b01aa6f9d6482395bbf0659e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that all C3 projects include in their `.gitignore` the wrangler files
+
+  Previously only the worker templates included in their `.gitignore` the wrangler files (those being `.dev.vars` and `.wrangler`). Make sure to instead include such files in the `.gitignore` files of all the templates including the full stack ones.
+
+- [#5135](https://github.com/cloudflare/workers-sdk/pull/5135) [`8935526`](https://github.com/cloudflare/workers-sdk/commit/89355269dea7b33242f9b271bdf6a00d3f6e7e87) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update solid C3 template to write an `app.config.(js/ts)` file instead of `vite.config.(js/ts)`
+
 ## 2.13.0
 
 ### Minor Changes

@@ -1,5 +1,52 @@
 # wrangler
 
+## 3.31.0
+
+### Minor Changes
+
+- [#5119](https://github.com/cloudflare/workers-sdk/pull/5119) [`b0bd413`](https://github.com/cloudflare/workers-sdk/commit/b0bd4137f8504c1a96c5fa60f25c41028c9ba23e) Thanks [@garrettgu10](https://github.com/garrettgu10)! - feature: Python support for remote dev
+
+- [#5118](https://github.com/cloudflare/workers-sdk/pull/5118) [`30694a3`](https://github.com/cloudflare/workers-sdk/commit/30694a31d65016e56e30d14a3b14f2fed6df4370) Thanks [@garrettgu10](https://github.com/garrettgu10)! - fix: Including version identifiers in Python requirements.txt will now throw an error
+
+### Patch Changes
+
+- [#5132](https://github.com/cloudflare/workers-sdk/pull/5132) [`82a3f94`](https://github.com/cloudflare/workers-sdk/commit/82a3f94db091c893b5dfc9496aad6154a54474c5) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: switch default logging level of `unstable_dev()` to `warn`
+
+  When running `unstable_dev()` in its default "test mode", the logging level was set to `none`. This meant any Worker startup errors or helpful warnings wouldn't be shown. This change switches the default to `warn`. To restore the previous behaviour, include `logLevel: "none"` in your options object:
+
+  ```js
+  const worker = await unstable_dev("path/to/script.js", {
+  	logLevel: "none",
+  });
+  ```
+
+- [#5128](https://github.com/cloudflare/workers-sdk/pull/5128) [`d27e2a7`](https://github.com/cloudflare/workers-sdk/commit/d27e2a70904aab98b4e5c7279661a8d98e7da917) Thanks [@taylorlee](https://github.com/taylorlee)! - fix: Add legacy_env support to experimental versions upload command.
+
+- [#5087](https://github.com/cloudflare/workers-sdk/pull/5087) [`a5231de`](https://github.com/cloudflare/workers-sdk/commit/a5231decbf18898811749a64f8e36be4aa5fd941) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make `wrangler types` always generate a `d.ts` file for module workers
+
+  Currently if a config file doesn't define any binding nor module, running
+  `wrangler types` against such file would not produce a `d.ts` file.
+
+  Producing a `d.ts` file can however still be beneficial as it would define a correct
+  env interface (even if empty) that can be expanded/referenced by user code (this can
+  be particularly convenient for scaffolding tools that may want to always generate an
+  env interface).
+
+  Example:
+  Before `wrangler types --env-interface MyEnv` run with an empty `wrangler.toml` file
+  would not generate any file, after these change it would instead generate a file with
+  the following content:
+
+  ```
+  interface MyEnv {
+  }
+  ```
+
+- [#5138](https://github.com/cloudflare/workers-sdk/pull/5138) [`3dd9089`](https://github.com/cloudflare/workers-sdk/commit/3dd9089f34d30dcd6f03e63093e86efa9b8c1e1f) Thanks [@G4brym](https://github.com/G4brym)! - fix: ensure Workers-AI local mode fetcher returns headers to client worker
+
+- Updated dependencies [[`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423), [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423)]:
+  - miniflare@3.20240223.1
+
 ## 3.30.1
 
 ### Patch Changes
@@ -146,6 +193,7 @@
   whilst also making the type compatible with workers-types
 
 - Updated dependencies [[`7723ac17`](https://github.com/cloudflare/workers-sdk/commit/7723ac17906f894afe9af2152437726ac09a6290), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229)]:
+
   - miniflare@3.20240129.3
 
 - [#4475](https://github.com/cloudflare/workers-sdk/pull/4475) [86d94ff](https://github.com/cloudflare/workers-sdk/commit/86d94ff5acd31eee7f02bc68e0b70f792eb3e74c) Thanks [@paulrostorp](https://github.com/paulrostorp)! - feat: support custom HTTPS certificate paths in Wrangler dev commands.
