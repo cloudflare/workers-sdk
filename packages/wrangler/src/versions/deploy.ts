@@ -96,11 +96,6 @@ export function versionsDeployOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			requiresArg: true,
 		})
-		.option("tag", {
-			describe: "Tag attribute of this deployment (optional)",
-			type: "string",
-			requiresArg: true,
-		})
 		.option("yes", {
 			alias: "y",
 			describe: "Automatically accept defaults to prompts.",
@@ -172,19 +167,10 @@ export async function versionsDeployHandler(
 		helpText: "(optional)",
 	});
 
-	// // prompt for deployment tag
-	// const tag = await inputPrompt<string | undefined>({
-	// 	type: "text",
-	// 	label: "Deployment tag",
-	// 	defaultValue: args.tag,
-	// 	question: "Add a deployment tag",
-	// 	helpText: "(optional)",
-	// });
-
-	// if (args.dryRun) {
-	// 	cli.cancel("--dry-run: exiting");
-	// 	return;
-	// }
+	if (args.dryRun) {
+		cli.cancel("--dry-run: exiting");
+		return;
+	}
 
 	const start = Date.now();
 
@@ -193,7 +179,6 @@ export async function versionsDeployHandler(
 		workerName,
 		confirmedVersionTraffic,
 		message
-		// , tag
 	);
 
 	const elapsedMilliseconds = Date.now() - start;
@@ -489,7 +474,6 @@ async function createDeployment(
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
 	message: string | undefined
-	//, tag: string | undefined
 ) {
 	const res = await fetchResult(
 		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`,
@@ -504,7 +488,6 @@ async function createDeployment(
 				annotations: {
 					"workers/triggered_by": "deployment",
 					"workers/message": message,
-					// "workers/tag": tag,
 				},
 			}),
 		}
