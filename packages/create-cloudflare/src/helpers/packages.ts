@@ -2,6 +2,8 @@ import semver from "semver";
 import whichPmRuns from "which-pm-runs";
 import { devDependencies } from "../../package.json";
 
+type PmName = "pnpm" | "npm" | "yarn" | "bun";
+
 /*
   A helper function for determining which pm command to use based on which one the user
   invoked this CLI with.
@@ -12,7 +14,9 @@ import { devDependencies } from "../../package.json";
   - dlx: executing packages that are not installed locally (ex. `pnpm dlx create-solid`)
 */
 export const detectPackageManager = () => {
-	let { name, version } = whichPmRuns() ?? { name: "npm", version: "0.0.0" };
+	const pmInfo = whichPmRuns() as { name: PmName; version: string } | undefined;
+
+	let { name, version } = pmInfo ?? { name: "npm", version: "0.0.0" };
 
 	if (process.env.TEST_PM) {
 		switch (process.env.TEST_PM) {
