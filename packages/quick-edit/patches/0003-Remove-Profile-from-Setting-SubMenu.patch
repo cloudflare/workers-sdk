@@ -1,0 +1,63 @@
+From a523dcb033cd56f38b28a91e3e81b77f33b80b5e Mon Sep 17 00:00:00 2001
+From: Jacob M-G Evans <jacobmgevans@gmail.com>
+Date: Fri, 31 Mar 2023 17:11:28 -0500
+Subject: [PATCH 3/9] Remove Profile from Setting SubMenu
+
+---
+ .../browser/userDataProfile.ts                | 26 +------------------
+ 1 file changed, 1 insertion(+), 25 deletions(-)
+
+diff --git a/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts b/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts
+index bf6cc44..fb9feec 100644
+--- a/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts
++++ b/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts
+@@ -7,7 +7,7 @@ import { Disposable, DisposableStore, IDisposable, MutableDisposable } from 'vs/
+ import { isWeb } from 'vs/base/common/platform';
+ import { ServicesAccessor } from 'vs/editor/browser/editorExtensions';
+ import { localize } from 'vs/nls';
+-import { Action2, IMenuService, ISubmenuItem, MenuId, MenuRegistry, registerAction2 } from 'vs/platform/actions/common/actions';
++import { Action2, IMenuService, MenuId, MenuRegistry, registerAction2 } from 'vs/platform/actions/common/actions';
+ import { ContextKeyExpr, IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+ import { IUserDataProfile, IUserDataProfilesService } from 'vs/platform/userDataProfile/common/userDataProfile';
+ import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
+@@ -70,7 +70,6 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
+ 	}
+ 
+ 	private registerActions(): void {
+-		this.registerProfileSubMenu();
+ 		this._register(this.registerSwitchProfileAction());
+ 
+ 		this.registerProfilesActions();
+@@ -86,29 +85,6 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
+ 		this.registerHelpAction();
+ 	}
+ 
+-	private registerProfileSubMenu(): void {
+-		const getProfilesTitle = () => {
+-			return localize('profiles', "Profiles ({0})", this.userDataProfileService.currentProfile.name);
+-		};
+-		MenuRegistry.appendMenuItem(MenuId.GlobalActivity, <ISubmenuItem>{
+-			get title() {
+-				return getProfilesTitle();
+-			},
+-			submenu: ProfilesMenu,
+-			group: '2_configuration',
+-			order: 1,
+-		});
+-		MenuRegistry.appendMenuItem(MenuId.MenubarPreferencesMenu, <ISubmenuItem>{
+-			get title() {
+-				return getProfilesTitle();
+-			},
+-			submenu: ProfilesMenu,
+-			group: '2_configuration',
+-			order: 1,
+-			when: PROFILES_ENABLEMENT_CONTEXT,
+-		});
+-	}
+-
+ 	private readonly profilesDisposable = this._register(new MutableDisposable<DisposableStore>());
+ 	private registerProfilesActions(): void {
+ 		this.profilesDisposable.value = new DisposableStore();
+-- 
+2.39.3 (Apple Git-145)
+

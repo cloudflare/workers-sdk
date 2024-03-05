@@ -1,6 +1,6 @@
 set -eu
 # The upstream VSCode version (tag) to build from
-VERSION=1.76.0
+VERSION="1.85.2"
 
 rm -rf web
 rm -rf ../../vendor/vscode
@@ -8,7 +8,6 @@ mkdir -p web
 cd ..
 ln -s $PWD/quick-edit-extension $PWD/quick-edit/web/quick-edit-extension
 ln -s $PWD/solarflare-theme $PWD/quick-edit/web/solarflare-theme
-
 cd quick-edit-extension
 pnpm dlx vscode-dts dev $VERSION
 pnpm dlx vscode-dts $VERSION
@@ -26,3 +25,4 @@ git am ../../packages/quick-edit/patches/*.patch
 pnpm exec yarn
 cd ../../packages/quick-edit
 pnpm exec tsx bundle-dts.ts
+ln -s $PWD/../../vendor/vscode $PWD/web/assets

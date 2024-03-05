@@ -1,23 +1,25 @@
-From 6ef1528fb4a6de178b545a91f1f5ea1c5e333c95 Mon Sep 17 00:00:00 2001
+From 7d3749a65d79728ce2544d437107249c390cdb1a Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Tue, 23 May 2023 12:09:58 +0100
-Subject: [PATCH 12/13] Remove nls
+Subject: [PATCH 5/9] Remove nls
 
 ---
- src/vs/code/browser/workbench/workbench.html | 15 +--------------
- 1 file changed, 1 insertion(+), 14 deletions(-)
+ src/vs/code/browser/workbench/workbench.html | 17 +----------------
+ 1 file changed, 1 insertion(+), 16 deletions(-)
 
 diff --git a/src/vs/code/browser/workbench/workbench.html b/src/vs/code/browser/workbench/workbench.html
-index a41b5db..390736d 100644
+index 700231f..390736d 100644
 --- a/src/vs/code/browser/workbench/workbench.html
 +++ b/src/vs/code/browser/workbench/workbench.html
-@@ -41,18 +41,6 @@
+@@ -41,20 +41,6 @@
  			self.webPackagePaths[key] = `${baseUrl}/node_modules/${key}/${self.webPackagePaths[key]}`;
  		});
  
 -		// Set up nls if the user is not using the default language (English)
 -		const nlsConfig = {};
--		const locale = window.localStorage.getItem('vscode.nls.locale') || navigator.language;
+-		// Normalize locale to lowercase because translationServiceUrl is case-sensitive.
+-		// ref: https://github.com/microsoft/vscode/issues/187795
+-		const locale = localStorage.getItem('vscode.nls.locale') || navigator.language.toLowerCase();
 -		if (!locale.startsWith('en')) {
 -			nlsConfig['vs/nls'] = {
 -				availableLanguages: {
@@ -30,7 +32,7 @@ index a41b5db..390736d 100644
  		require.config({
  			baseUrl: `${baseUrl}/out`,
  			recordStats: true,
-@@ -64,8 +52,7 @@
+@@ -66,8 +52,7 @@
  					throw new Error(`Invalid script url: ${value}`)
  				}
  			}),
@@ -41,5 +43,5 @@ index a41b5db..390736d 100644
  	</script>
  	<script>
 -- 
-2.39.2 (Apple Git-143)
+2.39.3 (Apple Git-145)
 

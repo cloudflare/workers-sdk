@@ -47,12 +47,20 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         env:
-          node-version: 16.18
+          node-version: 18.18
 
       - name: Build
         run: pnpm run build
         env:
           CI_OS: ${{ runner.os }}
+
+      - name: Install VSCode build deps
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          yarn global add node-gyp
+          sudo apt-get install -y libkrb5-dev
+        env:
+          NPM_PUBLISH_TOKEN: ""
 
       - name: Build Quick Edit
         run: cd packages/quick-edit && yarn setup && yarn custom:build
