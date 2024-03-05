@@ -3,13 +3,14 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { transformFile } from "helpers/codemod";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { writeFile } from "helpers/files";
+import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import * as recast from "recast";
+import { getLatestTypesEntrypoint } from "../../src/workers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
@@ -27,13 +28,43 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async () => {
-	await installPackages(["nitro-cloudflare-dev"], {
+const configure = async (ctx: C3Context) => {
+	const packages = ["nitro-cloudflare-dev"];
+
+	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
+	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
+	if (pm === "pnpm") {
+		packages.push("h3");
+	}
+
+	await installPackages(packages, {
 		dev: true,
 		startText: "Installing nitro module `nitro-cloudflare-dev`",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
 	updateNuxtConfig();
+
+	updateEnvTypes(ctx);
+};
+
+const updateEnvTypes = (ctx: C3Context) => {
+	const filepath = "env.d.ts";
+
+	const s = spinner();
+	s.start(`Updating ${filepath}`);
+
+	let file = readFile(filepath);
+
+	let typesEntrypoint = `@cloudflare/workers-types/`;
+	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
+	if (latestEntrypoint) {
+		typesEntrypoint += `/${latestEntrypoint}`;
+	}
+
+	file = file.replace("WORKERS_TYPES_ENTRYPOINT", typesEntrypoint);
+	writeFile("env.d.ts", file);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${filepath}\``)}`);
 };
 
 const updateNuxtConfig = () => {
