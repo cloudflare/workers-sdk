@@ -3,7 +3,7 @@
 name: C3 E2E Tests (Dependabot)
 
 on:
-  pull_request_target:
+  pull_request:
     paths:
       - .changeset/c3-frameworks-update-*.md
 
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 3
-          ref: ${{ github.head_ref }}
+
       - name: detect-bumped-framework
         id: detect
         uses: actions/github-script@v6
@@ -56,7 +56,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 3
-          ref: ${{ github.head_ref }}
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
