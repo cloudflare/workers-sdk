@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Added support for queue delivery controls on Queue create and Consumer create.
+feature: add support for queue delivery controls on `wrangler queues create` and `wrangler queues consumer add`
