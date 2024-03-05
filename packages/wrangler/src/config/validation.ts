@@ -115,6 +115,14 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"",
+		"pages_build_output_dir",
+		rawConfig.pages_build_output_dir,
+		"string"
+	);
+
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
 		typeof args["legacy-env"] === "boolean"
@@ -201,6 +209,10 @@ export function normalizeAndValidateConfig(
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
+		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
+			configPath,
+			rawConfig.pages_build_output_dir
+		),
 		legacy_env: isLegacyEnv,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
@@ -385,6 +397,26 @@ function normalizeAndValidateBaseDirField(
 			return path.resolve(directory, rawDir);
 		} else {
 			return rawDir;
+		}
+	} else {
+		return;
+	}
+}
+
+/**
+ * Validate the `pages_build_output_dir` field and return the normalized values.
+ */
+function normalizeAndValidatePagesBuildOutputDir(
+	configPath: string | undefined,
+	rawPagesDir: string | undefined
+): string | undefined {
+	const configDir = path.dirname(configPath ?? "wrangler.toml");
+	if (rawPagesDir !== undefined) {
+		if (typeof rawPagesDir === "string") {
+			const directory = path.resolve(configDir);
+			return path.resolve(directory, rawPagesDir);
+		} else {
+			return rawPagesDir;
 		}
 	} else {
 		return;

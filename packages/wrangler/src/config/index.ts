@@ -5,6 +5,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
+import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
@@ -32,9 +33,11 @@ export function readConfig<CommandArgs>(
 		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
 ): Config {
 	let rawConfig: RawConfig = {};
+
 	if (!configPath) {
 		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
 	}
+
 	// Load the configuration from disk if available
 	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
@@ -42,7 +45,29 @@ export function readConfig<CommandArgs>(
 		rawConfig = parseJSONC(readFileSync(configPath), configPath);
 	}
 
-	// Process the top-level configuration.
+	/**
+	 * Check if configuration file belongs to a Pages project.
+	 *
+	 * The `pages_build_output_dir` config key is used to determine if the
+	 * configuration file belongs to a Workers or Pages project. This key
+	 * should always be set for Pages but never for Workers. Furthermore,
+	 * Pages projects currently have support for `wrangler.toml` only,
+	 * so we should error if `wrangler.json` is detected in a Pages project
+	 */
+	const isPagesConfig = rawConfig.pages_build_output_dir !== undefined;
+	if (
+		isPagesConfig &&
+		(configPath?.endsWith("json") || args.experimentalJsonConfig)
+	) {
+		throw new UserError(
+			`Pages doesn't currently support JSON formatted config \`${
+				configPath ?? "wrangler.json"
+			}\`. Please use wrangler.toml instead.`
+		);
+	}
+
+	// Process the top-level configuration. This is common for both
+	// Workers and Pages
 	const { config, diagnostics } = normalizeAndValidateConfig(
 		rawConfig,
 		configPath,
@@ -54,6 +79,24 @@ export function readConfig<CommandArgs>(
 	}
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
+	}
+
+	// If we detected a Pages project, run config file validation against
+	// Pages specific validation rules
+	if (isPagesConfig) {
+		logger.info(
+			`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
+		);
+
+		const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
+		const pagesDiagnostics = validatePagesConfig(config, envNames);
+
+		if (pagesDiagnostics.hasWarnings()) {
+			logger.warn(pagesDiagnostics.renderWarnings());
+		}
+		if (pagesDiagnostics.hasErrors()) {
+			throw new UserError(pagesDiagnostics.renderErrors());
+		}
 	}
 
 	const mainModule = "script" in args ? args.script : config.main;
