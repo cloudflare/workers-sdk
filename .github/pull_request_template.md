@@ -5,15 +5,15 @@ Fixes #[insert GH or internal issue number(s)].
 ## Author has addressed the following
 
 - Tests
-  - [x] TODO (before merge)
+  - [ ] TODO (before merge)
   - [ ] Included
   - [ ] Not necessary because:
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
-  - [x] TODO (before merge)
+  - [ ] TODO (before merge)
   - [ ] Included
   - [ ] Not necessary because:
 - Public documentation
-  - [x] TODO (before merge)
+  - [ ] TODO (before merge)
   - [ ] Cloudflare docs PR(s): <https://github.com/cloudflare/cloudflare-docs/pull/>...
   - [ ] Not necessary because:
 
