@@ -632,7 +632,7 @@ export function summariseVersionTraffic(
 	};
 }
 
-function validateTrafficSubtotal(
+export function validateTrafficSubtotal(
 	subtotal: number,
 	{ max = 100, min = 100, epsilon = EPSILON } = {}
 ) {
