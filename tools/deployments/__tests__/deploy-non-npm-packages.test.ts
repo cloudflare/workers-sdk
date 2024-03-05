@@ -118,7 +118,7 @@ describe("deployPackage", () => {
 	}) => {
 		deployPackage("foo");
 		expect(execSync).toHaveBeenCalledWith(
-			"pnpm -F foo deploy",
+			"pnpm -F foo run deploy",
 			expect.any(Object)
 		);
 	});

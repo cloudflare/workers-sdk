@@ -105,7 +105,7 @@ export function findDeployablePackageNames(): Set<string> {
  */
 export function deployPackage(pkgName: string) {
 	try {
-		execSync(`pnpm -F ${pkgName} deploy`, {
+		execSync(`pnpm -F ${pkgName} run deploy`, {
 			env: process.env,
 			stdio: "inherit",
 		});
