@@ -47,7 +47,7 @@ export function options(yargs: CommonYargsArgv) {
 			"retry-delay": {
 				type: "number",
 				describe:
-					"How long a retried messages should be delayed for, in seconds. Must be a positive integer",
+					"How long a retried message should be delayed for, in seconds. Must be a positive integer",
 				number: true,
 			},
 		});
