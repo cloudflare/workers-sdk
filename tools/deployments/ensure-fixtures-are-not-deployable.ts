@@ -6,8 +6,8 @@ if (require.main === module) {
 	const errors = ensureFixturesAreNotDeployable();
 	if (errors.length > 0) {
 		console.error("::error::Fixture checks:" + errors.map((e) => `\n- ${e}`));
-		console.log("::endgroup::");
 	}
+	console.log("::endgroup::");
 	process.exit(errors.length > 0 ? 1 : 0);
 }
 
