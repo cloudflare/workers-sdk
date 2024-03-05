@@ -34,7 +34,7 @@ function createBody(
 
 	if (Array.isArray(args.deliveryDelay)) {
 		throw new CommandLineArgsError(
-			`Error: can't use more than a delay setting.`
+			"Cannot specify --delivery-delay multiple times"
 		);
 	}
 
