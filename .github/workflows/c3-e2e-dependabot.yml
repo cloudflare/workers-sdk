@@ -10,11 +10,6 @@ on:
 env:
   node-version: 18.17.1
   bun-version: 1.0.3
-  # we need to fetch 3 commits because dependabot generates one, our changeset
-  # generation workflow generates another and we need the parent of both commits
-  # so that we can diff it (`git diff HEAD~n`) and see what package changed in
-  # the `package.json` file
-  COMMITS_TO_FETCH: 3
 
 jobs:
   get-dependabot-bumped-framework:
@@ -28,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: ${{ env.COMMITS_TO_FETCH }}
+          fetch-depth: 0
 
       - name: detect-bumped-framework
         id: detect
@@ -60,7 +55,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          fetch-depth: ${{ env.COMMITS_TO_FETCH }}
+          fetch-depth: 0
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
