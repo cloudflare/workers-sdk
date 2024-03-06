@@ -42,7 +42,6 @@ export async function getMigrationsPath({
 export async function getUnappliedMigrations({
 	migrationsTableName,
 	migrationsPath,
-	local,
 	remote,
 	config,
 	name,
@@ -51,7 +50,6 @@ export async function getUnappliedMigrations({
 }: {
 	migrationsTableName: string;
 	migrationsPath: string;
-	local: boolean | undefined;
 	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
@@ -61,7 +59,6 @@ export async function getUnappliedMigrations({
 	const appliedMigrations = (
 		await listAppliedMigrations(
 			migrationsTableName,
-			local,
 			remote,
 			config,
 			name,
@@ -86,7 +83,6 @@ export async function getUnappliedMigrations({
 
 const listAppliedMigrations = async (
 	migrationsTableName: string,
-	local: boolean | undefined,
 	remote: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
@@ -94,7 +90,6 @@ const listAppliedMigrations = async (
 	preview: boolean | undefined
 ): Promise<Migration[]> => {
 	const response: QueryResult[] | null = await executeSql({
-		local,
 		remote,
 		config,
 		name,
@@ -145,7 +140,6 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 
 export const initMigrationsTable = async ({
 	migrationsTableName,
-	local,
 	remote,
 	config,
 	name,
@@ -153,7 +147,6 @@ export const initMigrationsTable = async ({
 	preview,
 }: {
 	migrationsTableName: string;
-	local: boolean | undefined;
 	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
@@ -161,7 +154,6 @@ export const initMigrationsTable = async ({
 	preview: boolean | undefined;
 }) => {
 	return executeSql({
-		local,
 		remote,
 		config,
 		name,
