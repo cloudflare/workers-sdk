@@ -6,9 +6,9 @@ The aim of this guideline is to assist all of Wrangler's contributors with guide
 
 ## Styleguide legen
 
-- Italicized text is placeholder text that should be replaced.
+- \*Text in between stars designated placeholder text that should be replaced.\*
 - \<Text contained within angle brackets are placeholder commands or filepaths.\>
-- <code style="color : orange">Bold, yellow text designated the user's input that must occur before the next line can display.</code>
+- #Text in between hashtags designated the user's input that must occur before the next line can display.#
 
 ## Wrangler syntax
 
@@ -19,7 +19,7 @@ wrangler <object / noun> <verb>
 
 - Subcommands should follow the main command with a space
 ```sh
-wrangler \<command\> \<subcommand\> \<arg\> --*option*`
+wrangler <command> <subcommand> <arg> --*option*`
 ```
 
 
@@ -31,10 +31,10 @@ wrangler \<command\> \<subcommand\> \<arg\> --*option*`
 🔧 *Command is currently in open beta / command is experimental*
 
 Commands:
-  wrangler \<command\> \<subcommand\> \<arg\> *description of command*
+  wrangler <command> <subcommand> <arg> *description of command*
 
 Options:
-  -o, --option  *option description* \[data_type\] \[default: true/false\]
+  -o, --option  *option description* [data_type] [default: true/false]
 
 
 --------------------
@@ -44,7 +44,7 @@ Options:
 
 ```
 
-## Wrangler <command> create success state ::
+## Wrangler command create success state ::
 
 ```sh
 🌀 Creating ___ with title "___"
@@ -53,7 +53,7 @@ Options:
 
 To start interacting with this ___ from a Worker, *if additional steps required, such as obtaining account ID from dash, add them here* \(then\) open your Worker’s config file and add the following binding configuration:
 
-\[\[array\]\]
+[[array]]
 binding = "<VARIABLE_NAME>"
 name = "___"
 id = "___"
@@ -70,7 +70,7 @@ id = "___"
 *Description of what the next steps the user can take to be successful. If there are predictable happy paths following a success state, make those paths clear to the user here.*
 ```
 
-## Wrangler <command-related-error>
+## Wrangler command-related-error
 ```sh
 ✘  ERROR  *API error code if applicable*: *concise description of what the error is*:
 
@@ -84,14 +84,14 @@ wrangler <example of full command user tried to run>
 *description of the command’s purpose*
 
 Positionals:
-  positional  <positional description>.  \[data-type\] \[required/optional\]
+  positional  <positional description>.  [data-type] [required/optional]
 
 Options:
-  -o, --option  *option description* \[data type\] \[default: true/false\]
+  -o, --option  *option description* [data type] [default: true/false]
 
 If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose
 
-🪵  Logs were written to \<filepath\>
+🪵  Logs were written to <filepath>
 
 ```
 
@@ -112,17 +112,17 @@ To learn more about ___, read our documentation at https://developers.cloudflare
 If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose
 --------------------
 
-√ Would you like to report this error to Cloudflare? \<y/n\>
+√ Would you like to report this error to Cloudflare? <y/n>
 
-*User inputs y or n*
+**User inputs y or n**
 
-🪵  Logs were written to \<filepath\>
+🪵  Logs were written to <filepath>
 
 ```
 
 ## Wrangler Y/N choice
 ```sh
 *choice description* \<y/n\>
-<code style="color : purple">**User inputs y or n**</code>
+**User inputs y or n**
 
 ```
