@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "fs";
+import { spinner } from "@cloudflare/cli/interactive";
 import {
 	appendFile,
 	directoryExists,
@@ -12,6 +13,16 @@ import type { C3Context } from "types";
 
 vi.mock("fs");
 vi.mock("helpers/files");
+vi.mock("@cloudflare/cli/interactive");
+
+beforeEach(() => {
+	// we mock `spinner` to remove noisy logs from the test runs
+	vi.mocked(spinner).mockImplementation(() => ({
+		start() {},
+		update() {},
+		stop() {},
+	}));
+});
 
 describe("addWranglerToGitIgnore", () => {
 	const writeFileResults: {

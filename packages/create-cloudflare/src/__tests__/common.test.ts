@@ -1,3 +1,4 @@
+import { spinner } from "@cloudflare/cli/interactive";
 import * as command from "helpers/command";
 import { SemVer } from "semver";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
@@ -12,10 +13,20 @@ import {
 import { isUpdateAvailable } from "../helpers/cli";
 
 vi.mock("process");
+vi.mock("@cloudflare/cli/interactive");
 
 function promisify<T>(value: T) {
 	return new Promise<T>((res) => res(value));
 }
+
+beforeEach(() => {
+	// we mock `spinner` to remove noisy logs from the test runs
+	vi.mocked(spinner).mockImplementation(() => ({
+		start() {},
+		update() {},
+		stop() {},
+	}));
+});
 
 describe("isGitConfigured", () => {
 	test("fully configured", async () => {
