@@ -32,6 +32,16 @@ export default {
 		if(url.pathname === "/header") {
 			return new Response(request.headers.get("X-Custom-Header"))
 		}
+		if(url.pathname === "/cookies") {
+			const headers = new Headers();
+
+			headers.append("Set-Cookie", "foo=1");
+			headers.append("Set-Cookie", "bar=2");
+
+			return new Response(undefined, {
+				headers,
+			});
+		}
 		return Response.json({
 			url: request.url,
 			headers: [...request.headers.entries()]
@@ -430,6 +440,19 @@ Content-Type: application/json
 });
 
 describe("Raw HTTP preview", () => {
+	let defaultUserToken: string;
+	beforeAll(async () => {
+		defaultUserToken = await fetchUserToken();
+
+		await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: TEST_WORKER,
+		}).then((response) => response.json());
+	});
 	it("should allow arbitrary headers in cross-origin requests", async () => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "OPTIONS",
@@ -453,5 +476,20 @@ describe("Raw HTTP preview", () => {
 		});
 
 		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
+	});
+
+	it("should preserve multiple cookies", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/cookies`, {
+			method: "GET",
+			headers: {
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+				"X-CF-Token": defaultUserToken,
+			},
+		});
+
+		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
+			`"foo=1, bar=2"`
+		);
 	});
 });
