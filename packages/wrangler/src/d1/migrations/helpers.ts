@@ -128,7 +128,9 @@ function getMigrationNames(migrationsPath: string): Array<string> {
  * Returns the highest current migration number plus one, ignoring any missing numbers.
  */
 export function getNextMigrationNumber(migrationsPath: string): number {
-	const migrationNumbers = getMigrationNames(migrationsPath).map((migration) => parseInt(migration.split("_")[0]));
+	const migrationNumbers = getMigrationNames(migrationsPath).map((migration) =>
+		parseInt(migration.split("_")[0])
+	);
 	const highestMigrationNumber = Math.max(...migrationNumbers);
 
 	return highestMigrationNumber + 1;
