@@ -90,7 +90,7 @@ export function versionsDeployOptions(yargs: CommonYargsArgv) {
 		})
 		.positional("version-specs", {
 			describe:
-				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>...].",
+				"Shorthand notation to deploy Worker Version(s) [<version-id>@<percentage>..]",
 			type: "string",
 			array: true,
 		})
@@ -101,7 +101,7 @@ export function versionsDeployOptions(yargs: CommonYargsArgv) {
 		})
 		.option("yes", {
 			alias: "y",
-			describe: "Automatically accept defaults to prompts.",
+			describe: "Automatically accept defaults to prompts",
 			type: "boolean",
 			default: false,
 		})
@@ -131,7 +131,14 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	);
 
 	const accountId = await requireAuth(config);
-	const workerName = args.name ?? "worker-app";
+	const workerName = args.name ?? config.name;
+
+	if (workerName === undefined) {
+		throw new UserError(
+			'You need to provide a name when deploying a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+		);
+	}
+
 	const optionalVersionTraffic = parseVersionSpecs(args);
 
 	cli.startSection(
@@ -246,8 +253,6 @@ ${trafficString} ${versionIdString}
 	}
 
 	cli.newline();
-
-	VERSION_CACHE; // store in
 }
 
 async function promptVersionsToDeploy(
@@ -528,16 +533,13 @@ export function parseVersionSpecs(
 	const versionIds: string[] = [];
 	const percentages: OptionalPercentage[] = [];
 
-	// args.versionSpecs weren't being parsed in tests, so fallback to args._ if missing
-	const versionSpecs =
-		args.versionSpecs ??
-		args._.filter((arg): arg is string => typeof arg === "string");
-
-	for (const spec of versionSpecs) {
+	for (const spec of args.versionSpecs ?? []) {
 		const [versionId, percentageString] = spec.split("@");
 
 		const percentage =
-			percentageString === "" ? null : parseFloat(percentageString);
+			percentageString === undefined || percentageString === ""
+				? null
+				: parseFloat(percentageString);
 
 		if (percentage !== null) {
 			if (isNaN(percentage)) {

@@ -719,7 +719,7 @@ export function createCLIParser(argv: string[]) {
 					versionsUploadHandler
 				)
 				.command(
-					"deploy",
+					"deploy [version-specs..]",
 					"Safely roll out new versions of your Worker by splitting traffic between multiple versions",
 					versionsDeployOptions,
 					versionsDeployHandler
