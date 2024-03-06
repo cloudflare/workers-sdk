@@ -37,7 +37,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject the use of --preview with --local", async () => {
+	it("should reject the use of --local", async () => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -46,8 +46,10 @@ describe("execute", () => {
 		});
 
 		await expect(
-			runWrangler(`d1 execute db --command "select;" --local --preview`)
-		).rejects.toThrowError(`Error: can't use --preview with --local`);
+			runWrangler(`d1 execute db --command "select;" --local`)
+		).rejects.toThrowError(
+			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue"
+		);
 	});
 
 	it("should reject the use of --remote with --local", async () => {
@@ -60,10 +62,12 @@ describe("execute", () => {
 
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --remote`)
-		).rejects.toThrowError(`Error: can't use --remote with --local`);
+		).rejects.toThrowError(
+			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue."
+		);
 	});
 
-	it("should reject the use of --preview with --local with --json", async () => {
+	it("should reject the use of --local with --json", async () => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -72,35 +76,9 @@ describe("execute", () => {
 		});
 
 		await expect(
-			runWrangler(`d1 execute db --command "select;" --local --preview --json`)
-		).rejects.toThrowError(`Error: can't use --preview with --local`);
-	});
-
-	it("should expect --local when using --persist-to", async () => {
-		setIsTTY(false);
-		writeWranglerToml({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
-		await runWrangler("d1 migrations create db test");
-
-		await expect(
-			runWrangler("d1 migrations apply --local db --preview")
-		).rejects.toThrowError(`Error: can't use --preview with --local`);
-	});
-
-	it("should reject --remote when using --persist-to", async () => {
-		setIsTTY(false);
-		writeWranglerToml({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
-		await runWrangler("d1 migrations create db test");
-
-		await expect(
-			runWrangler("d1 migrations apply db --remote --persist-to asdf")
-		).rejects.toThrowError(`persist-to -> local`);
+			runWrangler(`d1 execute db --command "select;" --local --json`)
+		).rejects.toThrowError(
+			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue."
+		);
 	});
 });

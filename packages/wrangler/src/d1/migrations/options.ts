@@ -26,5 +26,6 @@ export function MigrationOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			requiresArg: true,
 		})
+		.implies("preview", "remote")
 		.implies("persist-to", "local");
 }
