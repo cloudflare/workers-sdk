@@ -131,7 +131,7 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 	const migrationNumbers = getMigrationNames(migrationsPath).map((migration) =>
 		parseInt(migration.split("_")[0])
 	);
-	const highestMigrationNumber = Math.max(...migrationNumbers);
+	const highestMigrationNumber = Math.max(...migrationNumbers, 0);
 
 	return highestMigrationNumber + 1;
 }
