@@ -2,7 +2,7 @@
 
 The aim of this guideline is to assist all of Wrangler's contributors with guidelines on building consistently throughout Wrangler and to provide end users with the best chance for success.
 
-## Styleguide legen
+## Styleguide legend
 
 - \*Text in between stars designates placeholder text that should be replaced.\*
 - \<Text contained within angle brackets are placeholder commands, args or  or filepaths.\>
@@ -21,7 +21,7 @@ wrangler <command> <subcommand> <arg> --<option>`
 ```
 
 
-## Wrangler command -help
+## Wrangler \<command\> -help
 
 ```sh
 🧮 *Brief description of the product, the value it offers and how Wrangler can interact with it*
@@ -42,7 +42,7 @@ Options:
 
 ```
 
-## Wrangler command create success state
+## Create success state with binding
 
 ```sh
 🌀 Creating ___ with title "___"
@@ -58,7 +58,7 @@ id = "___"
 ```
 
 
-## Wrangler command general success state
+## General success state
 ```sh
 🌀 *Action verb* *Object*. *details of what is currently happening if necessary*
 🚧 *Updated additional details of the current status if necessary*
@@ -68,7 +68,7 @@ id = "___"
 *Description of what the next steps the user can take to be successful. If there are predictable happy paths following a success state, make those paths clear to the user here.*
 ```
 
-## Wrangler command-related-error
+## Command related error
 ```sh
 ✘  ERROR  *API error code if applicable*: *Concise description of what the error is*:
 
@@ -95,7 +95,7 @@ If you think this is a bug then please create an issue at https://github.com/clo
 ```
 
 
-## Wrangler <general-error>
+## General error
 ```sh
 ✘  ERROR  *Error code if applicable*: *Concise description of what the error is*
 
@@ -119,7 +119,7 @@ If you think this is a bug then please create an issue at https://github.com/clo
 
 ```
 
-## Wrangler Y/N choice
+## Y/N choice
 ```sh
 *choice description* \<y/n\>
 #User inputs y or n#
