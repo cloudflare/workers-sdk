@@ -81,6 +81,8 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./templates",
 	},
+	devScript: "start",
+	deployScript: "deploy",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
@@ -92,8 +94,6 @@ const config: TemplateConfig = {
 			deploy: `${npm} run build && wrangler pages deploy dist/cloudflare`,
 		},
 	}),
-	deployScript: "deploy",
-	devScript: "start",
 	testFlags: ["--style", "sass"],
 };
 export default config;

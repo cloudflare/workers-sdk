@@ -158,9 +158,6 @@ export default {
 	id: "next",
 	platform: "pages",
 	displayName: "Next",
-	devScript: "dev",
-	previewScript: "preview",
-	deployScript: "deploy",
 	generate,
 	configure,
 	copyFiles: {
@@ -212,6 +209,9 @@ export default {
 			},
 		};
 	},
+	devScript: "dev",
+	previewScript: "preview",
+	deployScript: "deploy",
 	testFlags: [
 		"--typescript",
 		"--no-install",

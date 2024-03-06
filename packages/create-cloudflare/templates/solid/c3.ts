@@ -73,9 +73,9 @@ const config: TemplateConfig = {
 			deploy: `${npm} run build && wrangler pages deploy ./dist`,
 		},
 	}),
+	compatibilityFlags: ["nodejs_compat"],
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
-	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;
