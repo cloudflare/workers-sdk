@@ -11,7 +11,7 @@ import { basename, join } from "path";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/command";
-import { sleep } from "helpers/common";
+import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";

@@ -1,7 +1,7 @@
 import { join } from "path";
 import { retry } from "helpers/command";
-import { sleep } from "helpers/common";
 import { readToml } from "helpers/files";
+import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { deleteWorker } from "../scripts/common";

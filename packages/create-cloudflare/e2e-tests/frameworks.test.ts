@@ -2,8 +2,8 @@ import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
 import { retry } from "helpers/command";
-import { sleep } from "helpers/common";
 import { detectPackageManager } from "helpers/packages";
+import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import {
 	afterEach,
