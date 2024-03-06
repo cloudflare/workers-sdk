@@ -153,7 +153,8 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	const confirmedVersionsToDeploy = await promptVersionsToDeploy(
 		accountId,
 		workerName,
-		[...optionalVersionTraffic.keys()]
+		[...optionalVersionTraffic.keys()],
+		args.yes
 	);
 
 	// validate we have at least 1 version
@@ -180,6 +181,7 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		type: "text",
 		label: "Deployment message",
 		defaultValue: args.message,
+		acceptDefault: args.yes,
 		question: "Add a deployment message",
 		helpText: "(optional)",
 	});
@@ -258,7 +260,8 @@ ${trafficString} ${versionIdString}
 async function promptVersionsToDeploy(
 	accountId: string,
 	workerName: string,
-	defaultSelectedVersionIds: VersionId[]
+	defaultSelectedVersionIds: VersionId[],
+	yesFlag: boolean
 ): Promise<VersionId[]> {
 	await spinnerWhile({
 		startMessage: "Fetching deployable versions",
@@ -289,6 +292,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
 		label: "",
 		helpText: "Use SPACE to select/unselect version(s) and ENTER to submit.",
 		defaultValue: defaultSelectedVersionIds,
+		acceptDefault: yesFlag,
 		validate(versionIds) {
 			if (versionIds === undefined) {
 				return `You must select at least 1 version to deploy.`;
@@ -356,7 +360,8 @@ async function promptPercentages(
 			helpText: "(0-100)",
 			label: `Traffic`,
 			defaultValue,
-			initialValue: confirmedVersionTraffic.get(versionId)?.toString(),
+			initialValue: confirmedVersionTraffic.get(versionId)?.toString(), // if the user already entered a value, override the default
+			acceptDefault: yesFlag,
 			format: (val) => `${val}%`,
 			validate: (val) => {
 				const input = val !== "" ? val : defaultValue;
@@ -386,6 +391,7 @@ async function promptPercentages(
 		confirmedVersionTraffic.set(versionId, percentage);
 	}
 
+	// If the subtotal doesn't pass validation, prompt the user to provide the percentages again (initialValue will be what was entered previously)
 	const { subtotal } = summariseVersionTraffic(
 		confirmedVersionTraffic,
 		versionIds
@@ -394,6 +400,10 @@ async function promptPercentages(
 		validateTrafficSubtotal(subtotal);
 	} catch (err) {
 		if (err instanceof UserError) {
+			// if the user has indicated they'll accept all defaults (yesFlag)
+			// then rethrow to avoid an infinite loop of reprompting
+			if (yesFlag) throw err;
+
 			cli.error(err.message, undefined, leftT);
 
 			return promptPercentages(

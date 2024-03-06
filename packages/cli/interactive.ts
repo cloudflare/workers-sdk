@@ -8,7 +8,7 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import SelectRefreshablePrompt from "./select-list";
-import { cancel, newline, shapes, space, status } from "./index";
+import { cancel, crash, logRaw, newline, shapes, space, status } from "./index";
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 
@@ -33,13 +33,15 @@ export type BasePromptConfig = {
 	helpText?: string;
 	// The value to use by default
 	defaultValue?: Arg;
+	// Accept the initialValue/defaultValue as if the user pressed ENTER when prompted
+	acceptDefault?: boolean;
 	// The status label to be shown after submitting
 	label: string;
 	// Pretty-prints the value in the interactive prompt
 	format?: (value: Arg) => string;
 	// Returns a user displayed error if the value is invalid
 	validate?: (value: Arg) => string | void;
-	// override some/all renderers (can be used for custom renderers before hoisting back into shared code)
+	// Override some/all renderers (can be used for custom renderers before hoisting back into shared code)
 	renderers?: Partial<ReturnType<typeof getRenderers>>;
 };
 
@@ -89,7 +91,25 @@ type RenderProps =
 	| Omit<ConfirmPrompt, "prompt">
 	| Omit<SelectRefreshablePrompt, "prompt">;
 
-export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
+function acceptDefault<T>(
+	promptConfig: PromptConfig,
+	renderers: Pick<ReturnType<typeof getRenderers>, "submit">,
+	initialValue: T
+): T {
+	const error = promptConfig.validate?.(initialValue as Arg);
+	if (error) {
+		crash(error);
+	}
+
+	const lines = renderers.submit({ value: initialValue as Arg });
+	logRaw(lines.join("\n"));
+
+	return initialValue as T;
+}
+
+export const inputPrompt = async <T = string>(
+	promptConfig: PromptConfig
+): Promise<T> => {
 	const renderers = {
 		...getRenderers(promptConfig),
 		...promptConfig.renderers,
@@ -109,18 +129,30 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 	};
 
 	if (promptConfig.type === "select") {
+		const initialValue = String(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new SelectPrompt({
 			...promptConfig,
 			options: promptConfig.options.filter((o) => !o.hidden),
-			initialValue: String(promptConfig.defaultValue),
+			initialValue,
 			render() {
 				return dispatchRender(this, prompt);
 			},
 		});
 	} else if (promptConfig.type === "confirm") {
+		const initialValue = Boolean(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new ConfirmPrompt({
 			...promptConfig,
-			initialValue: Boolean(promptConfig.defaultValue),
+			initialValue,
 			active: promptConfig.activeText || "",
 			inactive: promptConfig.inactiveText || "",
 			render() {
@@ -134,6 +166,11 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 		} else if (promptConfig.defaultValue !== undefined) {
 			initialValues = [String(promptConfig.defaultValue)];
 		}
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValues as T);
+		}
+
 		prompt = new MultiSelectPrompt({
 			...promptConfig,
 			options: promptConfig.options,
@@ -143,16 +180,29 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 			},
 		});
 	} else if (promptConfig.type === "list") {
+		const initialValue = String(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new SelectRefreshablePrompt({
 			...promptConfig,
 			onRefresh:
 				promptConfig.onRefresh ?? (() => Promise.resolve(promptConfig.options)),
-			initialValue: String(promptConfig.defaultValue),
+			initialValue,
 			render() {
 				return dispatchRender(this, prompt);
 			},
 		});
 	} else {
+		const initialValue =
+			promptConfig.initialValue ?? String(promptConfig.defaultValue ?? "");
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new TextPrompt({
 			...promptConfig,
 			initialValue: promptConfig.initialValue,
