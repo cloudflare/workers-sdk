@@ -22,7 +22,7 @@ const pythonWorker = async () => {
 	const metadata = {
 		main_module: "index.py",
 		compatibility_date: `${year}-${month}-${date}`,
-		compatibility_flags: ["experimental"],
+		compatibility_flags: ["python_workers"],
 	};
 
 	worker.set("metadata", JSON.stringify(metadata));
