@@ -212,15 +212,5 @@ export default {
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
-	testFlags: [
-		"--typescript",
-		"--no-install",
-		"--eslint",
-		"--tailwind",
-		"--src-dir",
-		"--app",
-		"--import-alias",
-		"@/*",
-	],
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;

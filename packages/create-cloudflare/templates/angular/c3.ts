@@ -94,6 +94,5 @@ const config: TemplateConfig = {
 			deploy: `${npm} run build && wrangler pages deploy dist/cloudflare`,
 		},
 	}),
-	testFlags: ["--style", "sass"],
 };
 export default config;

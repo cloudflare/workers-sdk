@@ -24,6 +24,5 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
-	testFlags: ["--ts"],
 };
 export default config;

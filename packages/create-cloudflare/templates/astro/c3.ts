@@ -107,14 +107,5 @@ const config: TemplateConfig = {
 			...(usesTypescript(ctx) && { "build-cf-types": `wrangler types` }),
 		},
 	}),
-	testFlags: [
-		"--skip-houston",
-		"--no-install",
-		"--no-git",
-		"--template",
-		"blog",
-		"--typescript",
-		"strict",
-	],
 };
 export default config;

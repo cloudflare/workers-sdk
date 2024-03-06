@@ -22,6 +22,5 @@ const config: TemplateConfig = {
 	}),
 	devScript: "start",
 	deployScript: "deploy",
-	testFlags: [`--package-manager`, npm],
 };
 export default config;
