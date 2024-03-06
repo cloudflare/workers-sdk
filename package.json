@@ -11,7 +11,8 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check:fixtures": "node -r esbuild-register tools/deployments/ensure-fixtures-are-not-deployable.ts",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
