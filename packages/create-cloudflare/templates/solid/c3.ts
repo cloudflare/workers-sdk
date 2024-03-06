@@ -12,7 +12,8 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	// Run the create-solid command
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
+	// -s flag forces solid-start
+	await runFrameworkGenerator(ctx, ["-p", ctx.project.name, "-s"]);
 
 	logRaw("");
 };
@@ -62,7 +63,7 @@ const configure = async (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "solid",
-	displayName: "Solid",
+	displayName: "SolidStart",
 	platform: "pages",
 	generate,
 	configure,
