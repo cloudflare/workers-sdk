@@ -328,7 +328,7 @@ export type DurableObjectBindings = {
  * If any of these fields are defined at the top-level then they should also be specifically defined
  * for each named environment.
  */
-interface EnvironmentNonInheritable {
+export interface EnvironmentNonInheritable {
 	/**
 	 * A map of values to substitute when deploying your worker.
 	 *

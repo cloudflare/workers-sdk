@@ -95,6 +95,12 @@ export async function typesHandler(
 		rules: config.rules,
 		queues: config.queues,
 		constellation: config.constellation,
+		send_email: config.send_email,
+		vectorize: config.vectorize,
+		hyperdrive: config.hyperdrive,
+		mtls_certificates: config.mtls_certificates,
+		browser: config.browser,
+		ai: config.ai,
 		secrets,
 	};
 
@@ -238,6 +244,41 @@ async function generateTypes(
 				envTypeStructure.push(`${queue.binding}: Queue;`);
 			}
 		}
+	}
+
+	if (configToDTS.send_email) {
+		for (const sendEmail of configToDTS.send_email) {
+			envTypeStructure.push(`${sendEmail.name}: SendEmail;`);
+		}
+	}
+
+	if (configToDTS.vectorize) {
+		for (const vectorize of configToDTS.vectorize) {
+			envTypeStructure.push(`${vectorize.binding}: VectorizeIndex;`);
+		}
+	}
+
+	if (configToDTS.hyperdrive) {
+		for (const hyperdrive of configToDTS.hyperdrive) {
+			envTypeStructure.push(`${hyperdrive.binding}: Hyperdrive;`);
+		}
+	}
+
+	if (configToDTS.mtls_certificates) {
+		for (const mtlsCertificate of configToDTS.mtls_certificates) {
+			envTypeStructure.push(`${mtlsCertificate.binding}: Fetcher;`);
+		}
+	}
+
+	if (configToDTS.browser) {
+		// The BrowserWorker type in @cloudflare/puppeteer is of type
+		// { fetch: typeof fetch }, but workers-types doesn't include it
+		// and Fetcher is valid for the purposes of handing it to puppeteer
+		envTypeStructure.push(`${configToDTS.browser.binding}: Fetcher;`);
+	}
+
+	if (configToDTS.ai) {
+		envTypeStructure.push(`${configToDTS.ai.binding}: unknown;`);
 	}
 
 	const modulesTypeStructure: string[] = [];
