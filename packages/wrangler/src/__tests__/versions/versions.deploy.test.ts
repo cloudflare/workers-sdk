@@ -12,11 +12,16 @@ describe("versions deploy", () => {});
 
 describe("units", () => {
 	describe("parseVersionSpecs", () => {
-		// @ts-expect-error passing a fresh yargs() as param but it expects one preconfigured with global options
-		const options = versionsDeployOptions(yargs());
+		const options = yargs().command(
+			"versions deploy [version-specs..]",
+			"",
+			// @ts-expect-error creating the command using a fresh yargs() but it expects one preconfigured with global options
+			versionsDeployOptions,
+			() => {}
+		);
 
 		test("no args", () => {
-			const input = "";
+			const input = "versions deploy";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
@@ -25,7 +30,7 @@ describe("units", () => {
 		});
 
 		test("1 positional arg", () => {
-			const input = "10000000-0000-0000-0000-000000000000@10%";
+			const input = "versions deploy 10000000-0000-0000-0000-000000000000@10%";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
@@ -49,7 +54,7 @@ describe("units", () => {
 
 		test("1 pair of named args", () => {
 			const input =
-				"--version-id 10000000-0000-0000-0000-000000000000 --percentage 10";
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
@@ -60,7 +65,7 @@ describe("units", () => {
 		});
 		test("2 pairs of named args", () => {
 			const input =
-				"--version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000 --percentage 90";
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000 --percentage 90";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
@@ -72,7 +77,7 @@ describe("units", () => {
 		});
 		test("unordered named args", () => {
 			const input =
-				"--version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10 --percentage 90";
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10 --percentage 90";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
@@ -84,7 +89,7 @@ describe("units", () => {
 		});
 		test("unpaired named args", () => {
 			const input =
-				"--version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000";
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
@@ -96,7 +101,7 @@ describe("units", () => {
 		});
 		test("unpaired, unordered named args", () => {
 			const input =
-				"--version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10";
+				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
