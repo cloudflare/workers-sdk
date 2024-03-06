@@ -20,7 +20,7 @@ export function options(yargs: CommonYargsArgv) {
 			"delivery-delay": {
 				type: "number",
 				describe:
-					"How long a published messages should be delayed for, in seconds. Must be a positive integer",
+					"How long a published message should be delayed for, in seconds. Must be a positive integer",
 			},
 		});
 }

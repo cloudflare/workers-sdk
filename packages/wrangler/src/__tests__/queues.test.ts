@@ -290,7 +290,7 @@ describe("wrangler", () => {
 						"queues create testQueue --delivery-delay=5 --delivery-delay=10"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Error: can't use more than a delay setting."`
+					`"Cannot specify --delivery-delay multiple times"`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -430,7 +430,7 @@ describe("wrangler", () => {
 				      --message-retries    Maximum number of retries for each message  [number]
 				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
 				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
-				      --retry-delay        How long a retried messages should be delayed for, in seconds. Must be a positive integer  [number]"
+				      --retry-delay        How long a retried message should be delayed for, in seconds. Must be a positive integer  [number]"
 			`);
 				});
 
@@ -499,7 +499,7 @@ describe("wrangler", () => {
 							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay=5 --retry-delay=10"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Error: can't use more than a delay setting."`
+						`"Cannot specify --retry-delay multiple times"`
 					);
 
 					expect(requests.count).toEqual(0);

@@ -73,7 +73,7 @@ function createBody(
 
 	if (Array.isArray(args.retryDelay)) {
 		throw new CommandLineArgsError(
-			`Error: can't use more than a delay setting.`
+			`Cannot specify --retry-delay multiple times`
 		);
 	}
 
