@@ -1,6 +1,5 @@
 import { execSync } from "child_process";
-import { afterEach } from "node:test";
-import { describe, it, vitest } from "vitest";
+import { afterEach, describe, it, vitest } from "vitest";
 import {
 	deployNonNpmPackages,
 	deployPackage,
