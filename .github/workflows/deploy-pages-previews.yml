@@ -64,6 +64,6 @@ jobs:
 
       - name: Deploy Workers Playground preview
         if: contains(github.event.*.labels.*.name, 'preview:workers-playground')
-        run: pnpm --filter workers-playground run deploy
+        run: pnpm --filter workers-playground run deploy:testing
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
