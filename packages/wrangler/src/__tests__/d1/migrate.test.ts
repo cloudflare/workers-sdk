@@ -57,9 +57,9 @@ describe("migrate", () => {
 			setIsTTY(false);
 			writeWranglerToml();
 			await expect(
-				runWrangler("d1 migrations apply DATABASE")
+				runWrangler("d1 migrations apply DATABASE --remote")
 			).rejects.toThrowError(
-				"Can't find a DB with name/binding 'DATABASE' in local config. Check info in wrangler.toml..."
+				"Couldn't find a D1 DB with the name or binding 'DATABASE' in wrangler.toml."
 			);
 		});
 
@@ -68,24 +68,10 @@ describe("migrate", () => {
 			writeWranglerToml();
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
 			await expect(
-				runWrangler("d1 migrations apply --local DATABASE")
+				runWrangler("d1 migrations apply DATABASE")
 			).rejects.toThrowError(
 				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
 			);
-		});
-
-		it("should reject the use of --preview with --local", async () => {
-			setIsTTY(false);
-			writeWranglerToml({
-				d1_databases: [
-					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-				],
-			});
-			await runWrangler("d1 migrations create db test");
-
-			await expect(
-				runWrangler("d1 migrations apply --local db --preview")
-			).rejects.toThrowError(`Error: can't use --preview with --local`);
 		});
 
 		it("multiple accounts: should throw when trying to apply migrations without an account_id in config", async () => {
@@ -253,9 +239,9 @@ Your database may not be available to serve requests during the migration, conti
 			setIsTTY(false);
 			writeWranglerToml();
 			await expect(
-				runWrangler("d1 migrations list DATABASE")
+				runWrangler("d1 migrations list DATABASE --remote")
 			).rejects.toThrowError(
-				"Can't find a DB with name/binding 'DATABASE' in local config. Check info in wrangler.toml..."
+				"Couldn't find a D1 DB with the name or binding 'DATABASE' in wrangler.toml."
 			);
 		});
 
@@ -263,7 +249,7 @@ Your database may not be available to serve requests during the migration, conti
 			setIsTTY(false);
 
 			await expect(
-				runWrangler("d1 migrations list DATABASE")
+				runWrangler("d1 migrations list DATABASE --remote")
 			).rejects.toThrowError(
 				"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work"
 			);
@@ -274,7 +260,7 @@ Your database may not be available to serve requests during the migration, conti
 			writeWranglerToml();
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
 			await expect(
-				runWrangler("d1 migrations list --local DATABASE")
+				runWrangler("d1 migrations list DATABASE")
 			).rejects.toThrowError(
 				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
 			);

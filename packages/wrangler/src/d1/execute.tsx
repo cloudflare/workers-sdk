@@ -84,7 +84,8 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
 			default: DEFAULT_BATCH_SIZE,
-		});
+		})
+		.implies("preview", "remote");
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
@@ -210,8 +211,6 @@ export async function executeSql({
 
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
-	if (preview && !remote)
-		throw new UserError(`Error: can't use --preview without --remote`);
 	if (persistTo && remote)
 		throw new UserError(`Error: can't use --persist-to with --remote`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
@@ -225,21 +224,22 @@ export async function executeSql({
 			);
 		}
 	}
-	const result = remote
-		? await executeRemotely({
-				config,
-				name,
-				shouldPrompt,
-				batches: batchSplit(queries, batchSize),
-				json,
-				preview,
-		  })
-		: await executeLocally({
-				config,
-				name,
-				queries,
-				persistTo,
-		  });
+	const result =
+		remote || preview
+			? await executeRemotely({
+					config,
+					name,
+					shouldPrompt,
+					batches: batchSplit(queries, batchSize),
+					json,
+					preview,
+			  })
+			: await executeLocally({
+					config,
+					name,
+					queries,
+					persistTo,
+			  });
 
 	if (json) logger.loggerLevel = existingLogLevel;
 	return result;
