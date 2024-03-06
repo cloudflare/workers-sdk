@@ -1,4 +1,5 @@
 import { existsSync, readdirSync } from "fs";
+import { spinner } from "@cloudflare/cli/interactive";
 import { getWorkerdCompatibilityDate } from "helpers/command";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -14,6 +15,16 @@ import type { C3Context } from "types";
 vi.mock("helpers/files");
 vi.mock("helpers/command");
 vi.mock("fs");
+vi.mock("@cloudflare/cli/interactive");
+
+beforeEach(() => {
+	// we mock `spinner` to remove noisy logs from the test runs
+	vi.mocked(spinner).mockImplementation(() => ({
+		start() {},
+		update() {},
+		stop() {},
+	}));
+});
 
 const mockWorkersTypesDirListing = [
 	"2021-11-03",
