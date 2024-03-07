@@ -65,7 +65,7 @@ type ApiVersion = {
 		"workers/message"?: string;
 		"workers/tag"?: string;
 	};
-	// resources: { script: [Object]; script_runtime: [Object]; bindings: [] };
+	// other properties not typed as not used
 };
 
 export function versionsDeployOptions(yargs: CommonYargsArgv) {
@@ -114,7 +114,7 @@ export function versionsDeployOptions(yargs: CommonYargsArgv) {
 			hidden: true, // experimental, not supported long-term
 			describe: "Maximum allowed versions to select",
 			type: "number",
-			default: 2,
+			default: 2, // (when server-side limitation is lifted, we can update this default or just remove the option entirely)
 		});
 }
 
@@ -257,6 +257,21 @@ ${trafficString} ${versionIdString}
 	cli.newline();
 }
 
+/**
+ * Prompts the user to select which versions they want to deploy.
+ * The list of possible versions will include:
+ * - versions within the latest deployment
+ * - the latest 10 uploaded versions
+ * - the versions the user provided as args (if any)
+ *
+ * sorted by upload date (latest first)
+ *
+ * @param accountId
+ * @param workerName
+ * @param defaultSelectedVersionIds
+ * @param yesFlag
+ * @returns
+ */
 async function promptVersionsToDeploy(
 	accountId: string,
 	workerName: string,
@@ -332,6 +347,16 @@ ${grayBar} ${gray("             Message: ", version.message ?? BLANK_INPUT)}`;
 	return result;
 }
 
+/**
+ * Recursive function which prompts the user to enter the percentage of traffic for each version they already selected.
+ * If the user enters percentages which do not total 100, they will be prompted to enter the percentages again.
+ *
+ * @param versionIds The Version IDs the user has selected to deploy
+ * @param optionalVersionTraffic The percentages the user has specified as args (if any)
+ * @param yesFlag Whether the user specified the --yes flag
+ * @param confirmedVersionTraffic The percentages the user has already entered. Used for recursive calls.
+ * @returns A Map of Version IDs to their respective percentages confirmed by the user, totaling 100%
+ */
 async function promptPercentages(
 	versionIds: VersionId[],
 	optionalVersionTraffic: Map<VersionId, OptionalPercentage>,
@@ -392,11 +417,12 @@ async function promptPercentages(
 	}
 
 	// If the subtotal doesn't pass validation, prompt the user to provide the percentages again (initialValue will be what was entered previously)
-	const { subtotal } = summariseVersionTraffic(
-		confirmedVersionTraffic,
-		versionIds
-	);
 	try {
+		const { subtotal } = summariseVersionTraffic(
+			confirmedVersionTraffic,
+			versionIds
+		);
+
 		validateTrafficSubtotal(subtotal);
 	} catch (err) {
 		if (err instanceof UserError) {
