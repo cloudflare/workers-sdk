@@ -99,6 +99,15 @@ See below for a summary of this repo's Actions
 - Actions
   - Publishes the `wrangler` package to npm under the `beta` dist-tag.
 
+## Product-specific branch actions
+
+### D1 (d1.yml)
+
+- Triggers
+  - Commits merged to the `d1` branch, on the Cloudflare fork.
+- Actions
+  - Publishes the `wrangler` package to npm under the `d1` dist-tag.
+
 ## C3 related actions
 
 ### C3 E2E Tests (c3-e2e.yml)
