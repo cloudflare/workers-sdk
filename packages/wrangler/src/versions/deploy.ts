@@ -43,7 +43,7 @@ type ApiDeployment = {
 	source: "api" | string;
 	strategy: "percentage" | string;
 	author_email: string;
-	annotations: Record<string, string>;
+	annotations?: Record<string, string>;
 	created_on: string;
 	versions: Array<{
 		version_id: VersionId;
@@ -60,7 +60,7 @@ type ApiVersion = {
 		author_id: string;
 		author_email: string;
 	};
-	annotations: Record<string, string> & {
+	annotations?: Record<string, string> & {
 		"workers/triggered_by"?: "upload" | string;
 		"workers/message"?: string;
 		"workers/tag"?: string;
@@ -459,7 +459,7 @@ async function fetchLatestDeploymentVersions(
 		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`
 	);
 
-	const latestDeployment = deployments.at(0); // TODO: is the latest deployment .at(0) or .at(-1)?
+	const latestDeployment = deployments.at(-1);
 	if (!latestDeployment) return [[], new Map()];
 
 	const versionTraffic = new Map(
@@ -492,11 +492,10 @@ function castAndCacheWorkerVersion(apiVersion: ApiVersion) {
 	const version: WorkerVersion = {
 		id: apiVersion.id,
 		created: new Date(apiVersion.metadata.created_on),
-		message: apiVersion.annotations["workers/message"],
-		tag: apiVersion.annotations["workers/tag"],
+		message: apiVersion.annotations?.["workers/message"],
+		tag: apiVersion.annotations?.["workers/tag"],
 	};
 
-	console.log(apiVersion, "\n\n\n");
 	VERSION_CACHE.set(version.id, version);
 
 	return version;

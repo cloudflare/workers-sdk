@@ -1,4 +1,6 @@
+import { stderr, stdout } from "@cloudflare/cli/streams";
 import yargs from "yargs";
+import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
 	parseVersionSpecs,
@@ -6,9 +8,659 @@ import {
 	validateTrafficSubtotal,
 	versionsDeployOptions,
 } from "../../versions/deploy";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import {
+	msw,
+	mswGetVersion,
+	mswListNewDeployments,
+	mswListVersions,
+	mswPostNewDeployment,
+} from "../helpers/msw";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import writeWranglerToml from "../helpers/write-wrangler-toml";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
-describe("versions deploy", () => {});
+function mockProcessOutput() {
+	const std = { out: "", err: "" };
+	const onStdOutData = (chunk: Buffer) => (std.out += chunk.toString());
+	const onStdErrData = (chunk: Buffer) => (std.err += chunk.toString());
+
+	beforeEach(() => {
+		stdout.on("data", onStdOutData);
+		stderr.on("data", onStdErrData);
+	});
+
+	afterEach(() => {
+		stdout.off("data", onStdOutData);
+		stderr.off("data", onStdErrData);
+		std.out = "";
+		std.err = "";
+	});
+
+	return std;
+}
+
+describe("versions deploy", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+	const std = mockProcessOutput();
+
+	beforeEach(() => {
+		msw.use(
+			mswListNewDeployments,
+			mswListVersions,
+			mswGetVersion,
+			mswPostNewDeployment
+		);
+	});
+
+	describe("without wrangler.toml", () => {
+		test("succeeds with --name arg", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --name named-worker --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toMatchInlineSnapshot(`undefined`);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (40%) 00000000-0000-0000-0000-000000000000
+			│       Created:  1/1/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (60%) 00000000-0000-0000-0000-000000000000
+			│       Created:  1/1/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│
+			├ Which version(s) do you want to deploy?
+			├ 1 Worker Version(s) selected
+			│
+			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+			│              Created:  1/4/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├ What percentage of traffic should Worker Version 1 receive?
+			├ 100% of traffic
+			├
+			├ Add a deployment message (skipped)
+			│
+			│
+			│
+			╰  SUCCESS  Deployed named-worker version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+		`);
+		});
+
+		test("fails without --name arg", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: You need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+			);
+		});
+	});
+
+	describe("with wrangler.toml", () => {
+		beforeEach(writeWranglerToml);
+
+		test("no args", async () => {
+			const result = runWrangler(
+				"versions deploy --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: You must select at least 1 version to deploy.]`
+			);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (40%) 00000000-0000-0000-0000-000000000000
+			│       Created:  1/4/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (60%) 00000000-0000-0000-0000-000000000000
+			│       Created:  2/3/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│
+			├ Which version(s) do you want to deploy?
+			├ 0 Worker Version(s) selected
+			│"
+		`);
+		});
+
+		test("1 version @ (implicit) 100%", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 1 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 100% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("1 version @ (explicit) 100%", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 1 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 100% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("2 versions @ (implicit) 50% each", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 2 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+					│              Created:  2/3/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 50% of traffic
+					├
+					├ What percentage of traffic should Worker Version 2 receive?
+					├ 50% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 50% and version 00000000-0000-0000-0000-000000000000 at 50% (TIMINGS)"
+			`);
+		});
+
+		test("1 version @ (explicit) 100%", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 1 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 100% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("2 versions @ (explicit) 30% + (implicit) 70%", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000@30% 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 2 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+					│              Created:  2/3/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 30% of traffic
+					├
+					├ What percentage of traffic should Worker Version 2 receive?
+					├ 70% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 30% and version 00000000-0000-0000-0000-000000000000 at 70% (TIMINGS)"
+			`);
+		});
+
+		test("2 versions @ (explicit) 40% + (explicit) 60%", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60% --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 2 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+					│              Created:  2/3/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 40% of traffic
+					├
+					├ What percentage of traffic should Worker Version 2 receive?
+					├ 60% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
+			`);
+		});
+
+		describe("max versions restrictions (temp)", () => {
+			test("2+ versions fails", async () => {
+				const result = runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				);
+
+				await expect(result).rejects.toMatchInlineSnapshot(
+					`[Error: You must select at most 2 versions to deploy.]`
+				);
+
+				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (40%) 00000000-0000-0000-0000-000000000000
+			│       Created:  1/4/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (60%) 00000000-0000-0000-0000-000000000000
+			│       Created:  2/3/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│
+			├ Which version(s) do you want to deploy?
+			├ 3 Worker Version(s) selected
+			│
+			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+			│              Created:  1/4/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+			│              Created:  2/3/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├     Worker Version 3:  00000000-0000-0000-0000-000000000000
+			│              Created:  2/2/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  Rolled back for this version
+			│"
+		`);
+			});
+
+			test("--max-versions allows > 2 versions", async () => {
+				const result = runWrangler(
+					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes --experimental-gradual-rollouts"
+				);
+
+				await expect(result).resolves.toBeUndefined();
+
+				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (40%) 00000000-0000-0000-0000-000000000000
+			│       Created:  1/4/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (60%) 00000000-0000-0000-0000-000000000000
+			│       Created:  2/3/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│
+			├ Which version(s) do you want to deploy?
+			├ 3 Worker Version(s) selected
+			│
+			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+			│              Created:  1/4/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+			│              Created:  2/3/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├     Worker Version 3:  00000000-0000-0000-0000-000000000000
+			│              Created:  2/2/2021, TIMESTAMP AM
+			│                  Tag:  -
+			│              Message:  Rolled back for this version
+			│
+			├ What percentage of traffic should Worker Version 1 receive?
+			├ 33.333% of traffic
+			├
+			├ What percentage of traffic should Worker Version 2 receive?
+			├ 33.334% of traffic
+			├
+			├ What percentage of traffic should Worker Version 3 receive?
+			├ 33.333% of traffic
+			├
+			├ Add a deployment message (skipped)
+			│
+			│
+			│
+			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
+		`);
+
+				expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
+			});
+		});
+
+		test("with a message", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --message 'My versioned deployment message' --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (40%) 00000000-0000-0000-0000-000000000000
+					│       Created:  1/4/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (60%) 00000000-0000-0000-0000-000000000000
+					│       Created:  2/3/2021, TIMESTAMP AM
+					│           Tag:  -
+					│       Message:  -
+					│
+					│
+					├ Which version(s) do you want to deploy?
+					├ 1 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  1/4/2021, TIMESTAMP AM
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 100% of traffic
+					├
+					├ Add a deployment message
+					│ Deployment message My versioned deployment message
+					│
+					│
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("fails for non-existent versionId", async () => {
+			const result = runWrangler(
+				"versions deploy ffffffff-ffff-ffff-ffff-ffffffffffff --yes --experimental-gradual-rollouts"
+			);
+
+			// TODO: could do with a better error message but this will suffice for now (this error isn't possible in the interactive flow)
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed.]`
+			);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (40%) 00000000-0000-0000-0000-000000000000
+			│       Created:  1/4/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (60%) 00000000-0000-0000-0000-000000000000
+			│       Created:  2/3/2021, TIMESTAMP AM
+			│           Tag:  -
+			│       Message:  -
+			│
+			│"
+		`);
+		});
+
+		test("fails if --percentage > 100", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: Percentage value (101%) must be between 0 and 100.]`
+			);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+		});
+
+		test("fails if --percentage < 0", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+			);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+		});
+
+		test("fails if version-spec percentage > 100", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: Percentage value (101%) must be between 0 and 100.]`
+			);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+		});
+
+		test("fails if version-spec percentage < 0", async () => {
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).rejects.toMatchInlineSnapshot(
+				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+			);
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+		});
+	});
+});
 
 describe("units", () => {
 	describe("parseVersionSpecs", () => {
@@ -41,7 +693,7 @@ describe("units", () => {
 		});
 		test("2 positional args", () => {
 			const input =
-				"10000000-0000-0000-0000-000000000000@10% 20000000-0000-0000-0000-000000000000@90%";
+				"versions deploy 10000000-0000-0000-0000-000000000000@10% 20000000-0000-0000-0000-000000000000@90%";
 
 			const args = options.parse(input) as VersionsDeployArgs;
 			const result = parseVersionSpecs(args);
