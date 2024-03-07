@@ -4,6 +4,8 @@ import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";
+import { logger } from "../logger";
+import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
@@ -315,5 +317,75 @@ export async function putR2Sippy(
 	return await fetchResult(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "PUT", body: JSON.stringify(params), headers }
+	);
+}
+
+export const R2EventableOperations = [
+	"PutObject",
+	"DeleteObject",
+	"CompleteMultipartUpload",
+	"AbortMultipartUpload",
+	"CopyObject",
+	"LifecycleDeletion",
+] as const;
+export type R2EventableOperation = typeof R2EventableOperations[number];
+// This type captures the shape of the data expected by EWC API.
+export type EWCRequestBody = {
+	bucketName: string;
+	queue: string;
+	// `jurisdiction` is included here for completeness, but until Queues
+	// supports jurisdictions, then this command will not send anything to do
+	// with jurisdictions.
+	jurisdiction?: string;
+	rules: Array<{
+		prefix?: string;
+		suffix?: string;
+		actions: R2EventableOperation[];
+	}>;
+};
+
+/** Construct & transmit notification configuration to EWC.
+ *
+ * On success, receive HTTP 200 response with a body like:
+ * { event_notification_detail_id: string }
+ *
+ * Possible status codes on failure:
+ * - 400 Bad Request - Either:
+ * 		- Uploaded configuration is invalid
+ * 		- Communication with either R2-gateway-worker or queue-broker-worker fails
+ * - 409 Conflict - A configuration between the bucket and queue already exists
+ * */
+export async function putEventNotificationConfig(
+	apiCredentials: ApiCredentials,
+	accountId: string,
+	bucketName: string,
+	queueUUID: string,
+	actions: R2EventableOperation[],
+	prefix?: string,
+	suffix?: string
+): Promise<{ event_notification_detail_id: string }> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+
+	if ("apiToken" in apiCredentials) {
+		headers["Authorization"] = `Bearer ${apiCredentials.apiToken}`;
+	} else {
+		headers["X-Auth-Key"] = apiCredentials.authKey;
+		headers["X-Auth-Email"] = apiCredentials.authEmail;
+	}
+
+	const body: EWCRequestBody = {
+		bucketName,
+		queue: queueUUID,
+		rules: [{ prefix, suffix, actions }],
+	};
+	logger.log(
+		`Sending this configuration to "${bucketName}":\n${JSON.stringify(body)}`
+	);
+
+	return await fetchResult<{ event_notification_detail_id: string }>(
+		`/accounts/${accountId}/event_notifications/r2/id/${queueUUID}/event_notifications/r2/${bucketName}/configuration`,
+		{ method: "PUT", body: JSON.stringify(body), headers }
 	);
 }
