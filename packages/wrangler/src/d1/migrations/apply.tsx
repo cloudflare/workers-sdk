@@ -55,11 +55,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 	}): Promise<void> => {
 		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
-		if (local) {
-			throw new UserError(
-				"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue."
-			);
-		}
+
 		if (!databaseInfo && remote) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
@@ -81,6 +77,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
 		await initMigrationsTable({
 			migrationsTableName,
+			local,
 			remote,
 			config,
 			name: database,
@@ -92,6 +89,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			await getUnappliedMigrations({
 				migrationsTableName,
 				migrationsPath,
+				local,
 				remote,
 				config,
 				name: database,
@@ -165,6 +163,7 @@ Your database may not be available to serve requests during the migration, conti
 			let errorNotes: Array<string> = [];
 			try {
 				const response = await executeSql({
+					local,
 					remote,
 					config,
 					name: database,

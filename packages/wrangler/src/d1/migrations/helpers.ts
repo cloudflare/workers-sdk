@@ -42,6 +42,7 @@ export async function getMigrationsPath({
 export async function getUnappliedMigrations({
 	migrationsTableName,
 	migrationsPath,
+	local,
 	remote,
 	config,
 	name,
@@ -50,6 +51,7 @@ export async function getUnappliedMigrations({
 }: {
 	migrationsTableName: string;
 	migrationsPath: string;
+	local: boolean | undefined;
 	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
@@ -57,14 +59,15 @@ export async function getUnappliedMigrations({
 	preview: boolean | undefined;
 }): Promise<Array<string>> {
 	const appliedMigrations = (
-		await listAppliedMigrations(
+		await listAppliedMigrations({
 			migrationsTableName,
+			local,
 			remote,
 			config,
 			name,
 			persistTo,
-			preview
-		)
+			preview,
+		})
 	).map((migration) => {
 		return migration.name;
 	});
@@ -81,15 +84,27 @@ export async function getUnappliedMigrations({
 	return unappliedMigrations;
 }
 
-const listAppliedMigrations = async (
-	migrationsTableName: string,
-	remote: boolean | undefined,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	persistTo: string | undefined,
-	preview: boolean | undefined
-): Promise<Migration[]> => {
+type ListAppliedMigrationsProps = {
+	migrationsTableName: string;
+	local: boolean | undefined;
+	remote: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	persistTo: string | undefined;
+	preview: boolean | undefined;
+};
+
+const listAppliedMigrations = async ({
+	migrationsTableName,
+	local,
+	remote,
+	config,
+	name,
+	persistTo,
+	preview,
+}: ListAppliedMigrationsProps): Promise<Migration[]> => {
 	const response: QueryResult[] | null = await executeSql({
+		local,
 		remote,
 		config,
 		name,
@@ -140,6 +155,7 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 
 export const initMigrationsTable = async ({
 	migrationsTableName,
+	local,
 	remote,
 	config,
 	name,
@@ -147,6 +163,7 @@ export const initMigrationsTable = async ({
 	preview,
 }: {
 	migrationsTableName: string;
+	local: boolean | undefined;
 	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
@@ -154,6 +171,7 @@ export const initMigrationsTable = async ({
 	preview: boolean | undefined;
 }) => {
 	return executeSql({
+		local,
 		remote,
 		config,
 		name,

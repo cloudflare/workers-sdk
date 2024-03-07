@@ -7,13 +7,11 @@ export function MigrationOptions(yargs: CommonYargsArgv) {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
 			type: "boolean",
-			deprecated: true,
 		})
 		.option("remote", {
 			describe:
 				"Execute commands/files against a remote DB for use with wrangler dev --remote",
 			type: "boolean",
-			default: false,
 		})
 		.option("preview", {
 			describe: "Execute commands/files against a preview D1 DB",
@@ -26,6 +24,5 @@ export function MigrationOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			requiresArg: true,
 		})
-		.implies("preview", "remote")
 		.implies("persist-to", "local");
 }

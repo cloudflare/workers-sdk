@@ -49,13 +49,11 @@ export function Options(yargs: CommonYargsArgv) {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev",
 			type: "boolean",
-			deprecated: true,
 		})
 		.option("remote", {
 			describe:
 				"Execute commands/files against a remote DB for use with wrangler dev",
 			type: "boolean",
-			default: false,
 		})
 		.option("file", {
 			describe: "A .sql file to ingest",
@@ -84,8 +82,7 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
 			default: DEFAULT_BATCH_SIZE,
-		})
-		.implies("preview", "remote");
+		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
@@ -109,11 +106,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "error";
 	}
 	await printWranglerBanner();
-	if (local) {
-		throw new UserError(
-			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue."
-		);
-	}
+
 	const config = readConfig(args.config, args);
 
 	if (file && command)
@@ -122,6 +115,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const isInteractive = process.stdout.isTTY;
 	try {
 		const response: QueryResult[] | null = await executeSql({
+			local,
 			remote,
 			config,
 			name: database,
@@ -181,6 +175,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 };
 
 export async function executeSql({
+	local,
 	remote,
 	config,
 	name,
@@ -192,6 +187,7 @@ export async function executeSql({
 	preview,
 	batchSize,
 }: {
+	local: boolean | undefined;
 	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
@@ -211,8 +207,15 @@ export async function executeSql({
 
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
-	if (persistTo && remote)
-		throw new UserError(`Error: can't use --persist-to with --remote`);
+	if (local && remote) {
+		throw new UserError(
+			`Error: can't use --local and --remote at the same time`
+		);
+	}
+	if (preview && !remote)
+		throw new UserError(`Error: can't use --preview without --remote`);
+	if (persistTo && !local)
+		throw new UserError(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
 

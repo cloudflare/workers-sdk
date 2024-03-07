@@ -37,21 +37,6 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject the use of --local", async () => {
-		setIsTTY(false);
-		writeWranglerToml({
-			d1_databases: [
-				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
-			],
-		});
-
-		await expect(
-			runWrangler(`d1 execute db --command "select;" --local`)
-		).rejects.toThrowError(
-			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue"
-		);
-	});
-
 	it("should reject the use of --remote with --local", async () => {
 		setIsTTY(false);
 		writeWranglerToml({
@@ -63,11 +48,11 @@ describe("execute", () => {
 		await expect(
 			runWrangler(`d1 execute db --command "select;" --local --remote`)
 		).rejects.toThrowError(
-			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue."
+			"Error: can't use --local and --remote at the same time"
 		);
 	});
 
-	it("should reject the use of --local with --json", async () => {
+	it("should reject the use of --preview with --local", async () => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -76,9 +61,30 @@ describe("execute", () => {
 		});
 
 		await expect(
-			runWrangler(`d1 execute db --command "select;" --local --json`)
+			runWrangler(`d1 execute db --command "select;" --local --preview`)
+		).rejects.toThrowError(`Error: can't use --preview without --remote`);
+	});
+
+	it("should reject the use of --preview with --local with --json", async () => {
+		setIsTTY(false);
+		writeWranglerToml({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await expect(
+			runWrangler(`d1 execute db --command "select;" --local --preview --json`)
 		).rejects.toThrowError(
-			"`wrangler d1 execute` now defaults to local mode. Remove --local from your command to continue."
+			JSON.stringify(
+				{
+					error: {
+						text: "Error: can't use --preview without --remote",
+					},
+				},
+				null,
+				2
+			)
 		);
 	});
 });
