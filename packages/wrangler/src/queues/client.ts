@@ -1,5 +1,6 @@
 import { fetchResult } from "../cfetch";
 import { type Config } from "../config";
+import { UserError } from "../errors";
 import { requireAuth } from "../user";
 
 export async function createQueue(
@@ -96,6 +97,33 @@ export async function postConsumer(
 	);
 }
 
+export async function postTypedConsumer(
+	config: Config,
+	queueName: string,
+	body: PostTypedConsumerBody
+): Promise<ConsumerResponse> {
+	const accountId = await requireAuth(config);
+	const queue = await getQueue(config, queueName);
+	return fetchResult(
+		`/accounts/${accountId}/workers/queues/id/${queue.queue_id}/consumers`,
+		{
+			method: "POST",
+			body: JSON.stringify(body),
+		}
+	);
+}
+
+export interface TypedConsumerResponse extends Consumer {
+	queue_name: string;
+	created_on: string;
+}
+
+export interface PostTypedConsumerBody extends PutConsumerBody {
+	type: string;
+	script_name?: string;
+	environment_name?: string;
+}
+
 export interface PutConsumerBody {
 	settings: ConsumerSettings;
 	dead_letter_queue?: string;
@@ -111,6 +139,7 @@ export interface ConsumerSettings {
 	max_retries?: number;
 	max_wait_time_ms?: number;
 	max_concurrency?: number | null;
+	visibility_timeout_ms?: number;
 }
 
 export interface ConsumerResponse extends PostConsumerBody {
@@ -119,6 +148,22 @@ export interface ConsumerResponse extends PostConsumerBody {
 	environment_name: string;
 	settings: ConsumerSettings;
 	dead_letter_queue?: string;
+}
+
+export async function deletePullConsumer(
+	config: Config,
+	queueName: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
+	const queue = await getQueue(config, queueName);
+	const consumer = queue.consumers[0];
+	if (consumer?.type !== "http_pull") {
+		throw new UserError(`No http_pull consumer exists for queue ${queueName}`);
+	}
+	const resource = `/accounts/${accountId}/workers/queues/id/${queue.queue_id}/consumers/id/${consumer.consumer_id}`;
+	return fetchResult(resource, {
+		method: "DELETE",
+	});
 }
 
 export async function deleteConsumer(
