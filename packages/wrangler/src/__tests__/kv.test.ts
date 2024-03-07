@@ -113,10 +113,10 @@ describe("wrangler", () => {
 			});
 
 			it("should create a namespace", async () => {
-				mockCreateRequest("worker-UnitTestNamespace");
+				mockCreateRequest("UnitTestNamespace");
 				await runWrangler("kv:namespace create UnitTestNamespace");
 				expect(std.out).toMatchInlineSnapshot(`
-			          "🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
+			          "🌀 Creating namespace with title \\"UnitTestNamespace\\"
 			          ✨ Success!
 			          Add the following to your configuration file in your kv_namespaces array:
 			          { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
@@ -124,10 +124,10 @@ describe("wrangler", () => {
 			});
 
 			it("should create a preview namespace if configured to do so", async () => {
-				mockCreateRequest("worker-UnitTestNamespace_preview");
+				mockCreateRequest("UnitTestNamespace_preview");
 				await runWrangler("kv:namespace create UnitTestNamespace --preview");
 				expect(std.out).toMatchInlineSnapshot(`
-			          "🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
+			          "🌀 Creating namespace with title \\"UnitTestNamespace_preview\\"
 			          ✨ Success!
 			          Add the following to your configuration file in your kv_namespaces array:
 			          { binding = \\"UnitTestNamespace\\", preview_id = \\"some-namespace-id\\" }"
@@ -135,11 +135,11 @@ describe("wrangler", () => {
 			});
 
 			it("should create a namespace using configured worker name", async () => {
-				writeFileSync("./wrangler.toml", 'name = "other-worker"', "utf-8");
-				mockCreateRequest("other-worker-UnitTestNamespace");
+				writeFileSync("./wrangler.toml", 'name = "other"', "utf-8");
+				mockCreateRequest("other-UnitTestNamespace");
 				await runWrangler("kv:namespace create UnitTestNamespace");
 				expect(std.out).toMatchInlineSnapshot(`
-			            "🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
+			            "🌀 Creating namespace with title \\"other-UnitTestNamespace\\"
 			            ✨ Success!
 			            Add the following to your configuration file in your kv_namespaces array:
 			            { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
@@ -147,12 +147,12 @@ describe("wrangler", () => {
 			});
 
 			it("should create a namespace in an environment if configured to do so", async () => {
-				mockCreateRequest("worker-customEnv-UnitTestNamespace");
+				mockCreateRequest("customEnv-UnitTestNamespace");
 				await runWrangler(
 					"kv:namespace create UnitTestNamespace --env customEnv"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "🌀 Creating namespace with title \\"worker-customEnv-UnitTestNamespace\\"
+			          "🌀 Creating namespace with title \\"customEnv-UnitTestNamespace\\"
 			          ✨ Success!
 			          Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
 			          { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
