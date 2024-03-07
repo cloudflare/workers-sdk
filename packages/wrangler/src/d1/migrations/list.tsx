@@ -28,7 +28,14 @@ export function ListOptions(yargs: CommonYargsArgv) {
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({ config, database, remote, persistTo, preview }): Promise<void> => {
+	async ({
+		config,
+		database,
+		local,
+		remote,
+		persistTo,
+		preview,
+	}): Promise<void> => {
 		await printWranglerBanner();
 		if (remote) {
 			await requireAuth({});
@@ -57,6 +64,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 
 		await initMigrationsTable({
 			migrationsTableName,
+			local,
 			remote,
 			config,
 			name: database,
@@ -68,6 +76,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 			await getUnappliedMigrations({
 				migrationsTableName,
 				migrationsPath,
+				local,
 				remote,
 				config,
 				name: database,
