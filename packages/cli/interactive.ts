@@ -8,11 +8,12 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import SelectRefreshablePrompt from "./select-list";
+import { stdout } from "./streams";
 import { cancel, crash, logRaw, newline, shapes, space, status } from "./index";
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 
-const logUpdate = createLogUpdate(process.stdout);
+const logUpdate = createLogUpdate(stdout);
 
 export type Arg = string | boolean | string[] | undefined | number;
 export const grayBar = gray(shapes.bar);
@@ -392,7 +393,7 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 	const { question, helpText: _helpText } = config;
 	let options = config.options;
 	const helpText = _helpText ?? "";
-	const { rows } = process.stdout;
+	const { rows } = stdout;
 	const defaultRenderer: Renderer = ({ cursor, value }, prompt: Prompt) => {
 		if (prompt instanceof SelectRefreshablePrompt) {
 			options = prompt.options;
