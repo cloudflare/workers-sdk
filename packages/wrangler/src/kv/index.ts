@@ -22,6 +22,7 @@ import {
 	getKVKeyValue,
 	getKVNamespaceId,
 	isKVKeyValue,
+	isValidKVNamespaceBinding,
 	listKVNamespaceKeys,
 	listKVNamespaces,
 	putKVBulkKeyValue,
@@ -88,10 +89,18 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 					);
 				}
 
-				const name = config.name || "worker";
-				const environment = args.env ? `-${args.env}` : "";
+				if (!isValidKVNamespaceBinding(args.namespace)) {
+					throw new CommandLineArgsError(
+						`The namespace binding name "${args.namespace}" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.`
+					);
+				}
+
+				const name = config.name || "";
+				const environment = args.env ? `${name && "-"}${args.env}` : "";
 				const preview = args.preview ? "_preview" : "";
-				const title = `${name}${environment}-${args.namespace}${preview}`;
+				const title = `${name}${environment}${(name || environment) && "-"}${
+					args.namespace
+				}${preview}`;
 
 				const accountId = await requireAuth(config);
 

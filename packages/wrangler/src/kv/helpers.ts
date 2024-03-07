@@ -428,6 +428,17 @@ export function getKVNamespaceId(
 	return namespaceId;
 }
 
+/**
+ * KV namespace binding names must be valid JS identifiers.
+ */
+export function isValidKVNamespaceBinding(
+	binding: string | undefined
+): binding is string {
+	return (
+		typeof binding === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding)
+	);
+}
+
 // TODO(soon): once we upgrade to TypeScript 5.2, this should actually use `using`:
 //  https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#using-declarations-and-explicit-resource-management
 export async function usingLocalNamespace<T>(
