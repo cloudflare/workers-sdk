@@ -10,7 +10,7 @@ import { tmpdir } from "os";
 import { basename, join } from "path";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
-import { retry } from "helpers/command";
+import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { expect } from "vitest";

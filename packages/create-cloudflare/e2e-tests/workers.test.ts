@@ -1,6 +1,6 @@
 import { join } from "path";
-import { retry } from "helpers/command";
 import { readToml } from "helpers/files";
+import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
