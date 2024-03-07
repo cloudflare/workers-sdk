@@ -3,7 +3,7 @@ import { isDarkMode, observeDarkMode, theme } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import React, { createContext, useEffect, useState } from "react";
 import { BACKGROUND_GRAY } from "./constants";
-import defaultHash from "./defaultHash";
+import defaultHashes from "./defaultHashes";
 import EditorPane from "./EditorPane";
 import SplitPane from "./SplitPane";
 import ToolsPane from "./ToolsPane";
@@ -64,7 +64,12 @@ export default function QuickEditor() {
 
 	useEffect(() => {
 		if (initialWorkerContentHash === "") {
-			setInitialHash(defaultHash);
+			const suffix = location.pathname.slice("/playground".length);
+			setInitialHash(
+				suffix in defaultHashes
+					? defaultHashes[suffix as keyof typeof defaultHashes]
+					: defaultHashes["/"]
+			);
 		}
 	}, [initialWorkerContentHash]);
 
