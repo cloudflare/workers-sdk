@@ -15,7 +15,7 @@ import {
 } from "./errors";
 import {
 	buildRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type {
@@ -200,8 +200,9 @@ export const Handler = async (args: PagesBuildArgs) => {
 		 */
 		if (workerScriptPath) {
 			if (lstatSync(workerScriptPath).isDirectory()) {
-				bundle = await traverseAndBuildWorkerJSDirectory({
+				bundle = await produceWorkerBundleForWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
+					bundle: true,
 					buildOutputDirectory,
 					nodejsCompat,
 					defineNavigatorUserAgent,
