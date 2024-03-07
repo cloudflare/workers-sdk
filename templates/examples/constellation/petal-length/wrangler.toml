@@ -1,0 +1,21 @@
+name = "petal-length-worker"
+main = "src/index.ts"
+compatibility_date = "2023-03-14"
+node_compat = true
+workers_dev = true
+
+[env.dev]
+vars = { ENVIRONMENT = "dev" }
+constellation = [
+    {binding = 'XGBOOST_CLASSIFIER', project_id = 'bde19932-869a-4f3a-bc16-a97af2ad3ce3'},
+    {binding = 'ONNX_CLASSIFIER', project_id = '9bcf069f-635c-440a-8cc8-ef7b32ebbbf2'}
+]
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+route = "ai.cloudflare.com/demos/petal-length*"
+constellation = [
+    {binding = 'XGBOOST_CLASSIFIER', project_id = 'bde19932-869a-4f3a-bc16-a97af2ad3ce3'},
+    {binding = 'ONNX_CLASSIFIER', project_id = '9bcf069f-635c-440a-8cc8-ef7b32ebbbf2'}
+]
+

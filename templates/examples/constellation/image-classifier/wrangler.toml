@@ -1,0 +1,19 @@
+name = "image-classifier-worker"
+main = "src/index.ts"
+compatibility_date = "2023-03-14"
+node_compat = true
+workers_dev = true
+
+[env.dev]
+vars = { ENVIRONMENT = "dev" }
+constellation = [
+    {binding = 'CLASSIFIER', project_id = 'c7ee2bd6-075d-4637-9eb9-b23b16a04235'}
+]
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+route = "ai.cloudflare.com/demos/image-classifier-old*"
+constellation = [
+    {binding = 'CLASSIFIER', project_id = 'c7ee2bd6-075d-4637-9eb9-b23b16a04235'}
+]
+

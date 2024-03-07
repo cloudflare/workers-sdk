@@ -1,0 +1,11 @@
+name = "text-processing-worker"
+main = "src/index.ts"
+compatibility_date = "2023-03-14"
+node_compat = true
+workers_dev = true
+usage_model = "unbound"
+
+constellation = [
+    {binding = 'CONSN', project_id = 'bde19932-869a-4f3a-bc16-a97af2ad3ce3'},
+]
+
