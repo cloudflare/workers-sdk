@@ -7,8 +7,8 @@
 		"build": "tsc && vite build",
 		"build:testing": "tsc && vite build -m development",
 		"dev": "vite",
-		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts",
-		"check:lint": "pnpm run generate:default-hashes check",
+		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.ts",
+		"check:lint": "pnpm exec tsx ./generate-default-hashes.ts check",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler pages deploy --project-name workers-playground ./dist"
 	},
 	"dependencies": {

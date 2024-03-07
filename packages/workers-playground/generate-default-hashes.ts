@@ -7,13 +7,18 @@ const year = String(today.getUTCFullYear());
 const month = String(today.getUTCMonth() + 1).padStart(2, "0");
 const date = String(today.getUTCDate()).padStart(2, "0");
 
-async function generateFileForWorker(workers: Record<string, FormData>) {
+async function serialiseHashes(workers: Record<string, FormData>): Promise<Record<string, string>> {
 	const workerHashes = {};
 	for (const [name, worker] of Object.entries(workers)) {
 		workerHashes[name] = await compressWorker(worker);
 	}
+	return workerHashes
+}
 
-	return `export default ${JSON.stringify(workerHashes)};\n`;
+async function generateFileForWorker(workers: Record<string, FormData>) {
+	const workerHashes = await serialiseHashes(workers)
+
+	return `export default ${JSON.stringify(workerHashes, null, 2)};\n`;
 }
 
 const pythonWorker = async () => {
@@ -105,18 +110,18 @@ const pythonWorkerContent = await pythonWorker();
 const defaultWorkerContent = await defaultWorker();
 
 if (process.argv[2] === "check") {
-	const currentFile = await readFile(
+	const currentFile = await import(
 		"./src/QuickEditor/defaultHashes.ts",
-		"utf8"
 	);
-	const generated = await generateFileForWorker({
+	const generated = await serialiseHashes({
 		"/python": pythonWorkerContent,
 		"/": defaultWorkerContent,
 	});
-	const equal = currentFile === generated;
+
+	const equal = currentFile.default["/"] === generated["/"] &&  currentFile.default["/python"] === generated["/python"];
 	if (!equal) {
-		console.log("Default hash not up to date", equal);
-		console.log("current.txt", currentFile);
+		console.log("Hash not up to date", equal);
+		console.log("current.txt", currentFile.default);
 		console.log("gen.txt", generated);
 	}
 	process.exit(equal ? 0 : 1);
