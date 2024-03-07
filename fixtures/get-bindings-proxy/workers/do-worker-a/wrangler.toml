@@ -1,5 +1,0 @@
-name = "do-worker-a"
-
-[[durable_objects.bindings]]
-name = "MY_DO"
-class_name = "DurableObjectClass"
