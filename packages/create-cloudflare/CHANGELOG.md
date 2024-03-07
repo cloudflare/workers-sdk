@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.13.2
+
+### Patch Changes
+
+- [#5177](https://github.com/cloudflare/workers-sdk/pull/5177) [`1c6a55d`](https://github.com/cloudflare/workers-sdk/commit/1c6a55d8949fe5f51f209317259a3b67ef2c7147) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.2.2` to `17.2.3`
+
+- [#5186](https://github.com/cloudflare/workers-sdk/pull/5186) [`5dfbc2d`](https://github.com/cloudflare/workers-sdk/commit/5dfbc2d241411096a19af072f8d2a6a194417b5f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-solid` from `0.4.10` to `0.5.3`
+
+- [#5157](https://github.com/cloudflare/workers-sdk/pull/5157) [`01a53b2`](https://github.com/cloudflare/workers-sdk/commit/01a53b2a4f80ac1a58826d4ae14d7a338abdb3de) Thanks [@jculvey](https://github.com/jculvey)! - fix: Updates the Nuxt template by adding a `env.d.ts` file which updates the type difinition for `H3EventContext` to include the `cf` property from the request and an `env` type generated from the recently added `build-cf-types` script.
+
+- [#5188](https://github.com/cloudflare/workers-sdk/pull/5188) [`84eeee5`](https://github.com/cloudflare/workers-sdk/commit/84eeee54b27a6c3a1cc8cc559fe23119ea47bce0) Thanks [@jculvey](https://github.com/jculvey)! - fix: Update SolidStart template to work with create-solid@0.5.3
+
 ## 2.13.1
 
 ### Patch Changes

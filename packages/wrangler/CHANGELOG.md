@@ -1,5 +1,61 @@
 # wrangler
 
+## 3.32.0
+
+### Minor Changes
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - chore: bump `workerd` to [`1.20240304.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240304.0)
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - fix: use python_workers compat flag for Python
+
+### Patch Changes
+
+- [#5089](https://github.com/cloudflare/workers-sdk/pull/5089) [`5b85dc9`](https://github.com/cloudflare/workers-sdk/commit/5b85dc949b1f7c8d5e8d083b37dd84d38c4ea978) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: include all currently existing bindings in `wrangler types`
+
+  Add support for Email Send, Vectorize, Hyperdrive, mTLS, Browser Rendering and Workers AI bindings in `wrangler types`
+
+  For example, from the following `wrangler.toml` setup:
+
+  ```toml
+  [browser]
+  binding = "BROWSER"
+
+  [ai]
+  binding = "AI"
+
+  [[send_email]]
+  name = "SEND_EMAIL"
+
+  [[vectorize]]
+  binding = "VECTORIZE"
+  index_name = "VECTORIZE_NAME"
+
+  [[hyperdrive]]
+  binding = "HYPERDRIVE"
+  id = "HYPERDRIVE_ID"
+
+  [[mtls_certificates]]
+  binding = "MTLS"
+  certificate_id = "MTLS_CERTIFICATE_ID"
+  ```
+
+  Previously, nothing would have been included in the generated Environment.
+  Now, the following will be generated:
+
+  ```ts
+  interface Env {
+  	SEND_EMAIL: SendEmail;
+  	VECTORIZE: VectorizeIndex;
+  	HYPERDRIVE: Hyperdrive;
+  	MTLS: Fetcher;
+  	BROWSER: Fetcher;
+  	AI: Fetcher;
+  }
+  ```
+
+- Updated dependencies [[`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f), [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f)]:
+  - miniflare@3.20240304.0
+
 ## 3.31.0
 
 ### Minor Changes
