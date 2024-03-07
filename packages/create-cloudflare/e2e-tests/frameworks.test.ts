@@ -212,15 +212,11 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	solid: {
 		promptHandlers: [
 			{
-				matcher: /Which template do you want to use/,
+				matcher: /Which template would you like to use/,
 				input: [keys.enter],
 			},
 			{
-				matcher: /Server Side Rendering/,
-				input: [keys.enter],
-			},
-			{
-				matcher: /Use TypeScript/,
+				matcher: /Use Typescript/,
 				input: [keys.enter],
 			},
 		],

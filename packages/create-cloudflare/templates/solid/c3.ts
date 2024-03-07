@@ -12,7 +12,8 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	// Run the create-solid command
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
+	// -s flag forces solid-start
+	await runFrameworkGenerator(ctx, ["-p", ctx.project.name, "-s"]);
 
 	logRaw("");
 };
