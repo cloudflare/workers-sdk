@@ -23,14 +23,12 @@ import {
 	runCommands,
 	wranglerLogin,
 } from "helpers/command";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import { readWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
-
-const { name, npm } = detectPackageManager();
 
 export const validateProjectDirectory = (
 	relativePath: string,
@@ -136,6 +134,8 @@ export const setupProjectDirectory = (args: C3Args) => {
 };
 
 export const offerToDeploy = async (ctx: C3Context) => {
+	const { npm } = detectPackageManager();
+
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
 	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
@@ -197,6 +197,8 @@ const isDeployable = async (ctx: C3Context) => {
 };
 
 export const runDeploy = async (ctx: C3Context) => {
+	const { npm, name: pm } = detectPackageManager();
+
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
@@ -211,7 +213,7 @@ export const runDeploy = async (ctx: C3Context) => {
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
 		...(ctx.template.platform === "pages" && ctx.commitMessage && !insideGitRepo
 			? [
-					...(name === "npm" ? ["--"] : []),
+					...(pm === "npm" ? ["--"] : []),
 					"--commit-message",
 					prepareCommitMessage(ctx.commitMessage),
 			  ]
@@ -283,6 +285,8 @@ export const chooseAccount = async (ctx: C3Context) => {
 };
 
 export const printSummary = async (ctx: C3Context) => {
+	const { npm } = detectPackageManager();
+
 	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
 	const nextSteps = [
 		dirRelativePath

@@ -3,14 +3,13 @@ import { join, resolve } from "path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { getWorkerdCompatibilityDate, installPackages } from "helpers/command";
+import { getWorkerdCompatibilityDate } from "helpers/command";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import MagicString from "magic-string";
 import type { C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 export const wranglerTomlExists = (ctx: C3Context) => {
 	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
@@ -72,6 +71,8 @@ export const updateWranglerToml = async (ctx: C3Context) => {
  * and updates the .tsconfig file to use the latest entrypoint version.
  */
 export async function installWorkersTypes(ctx: C3Context) {
+	const { npm } = detectPackageManager();
+
 	if (!usesTypescript(ctx)) {
 		return;
 	}

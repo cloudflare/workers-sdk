@@ -2,7 +2,7 @@ import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { retry, runCommand } from "helpers/command";
 import { debug } from "helpers/logging";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import { getProductionBranch, quoteShellArgs } from "./common";
 import type { C3Context } from "types";
 

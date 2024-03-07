@@ -4,7 +4,7 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { runCommand, runFrameworkGenerator } from "helpers/command";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import { quoteShellArgs } from "../../src/common";
 import type { TemplateConfig } from "../../src/templates";

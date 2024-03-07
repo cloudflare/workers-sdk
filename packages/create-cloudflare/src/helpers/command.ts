@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "fs";
+import { existsSync } from "fs";
 import path from "path";
 import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -7,7 +7,8 @@ import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { quoteShellArgs } from "../common";
 import { getLatestPackageVersion } from "./latestPackageVersion";
-import { detectPackageManager } from "./packages";
+import { detectPackageManager } from "./packageManagers";
+import { installPackages } from "./packages";
 import type { C3Context } from "types";
 
 /**
@@ -202,106 +203,6 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	logRaw("");
 
 	await runCommand(cmd, { env });
-};
-
-type InstallConfig = {
-	startText?: string;
-	doneText?: string;
-	dev?: boolean;
-};
-
-export const installPackages = async (
-	packages: string[],
-	config: InstallConfig
-) => {
-	const { npm } = detectPackageManager();
-
-	let saveFlag;
-	let cmd;
-	switch (npm) {
-		case "yarn":
-			cmd = "add";
-			saveFlag = config.dev ? "-D" : "";
-			break;
-		case "bun":
-			cmd = "add";
-			saveFlag = config.dev ? "-d" : "";
-			break;
-		case "npm":
-		case "pnpm":
-		default:
-			cmd = "install";
-			saveFlag = config.dev ? "--save-dev" : "--save";
-			break;
-	}
-
-	await runCommand([npm, cmd, saveFlag, ...packages], {
-		...config,
-		silent: true,
-	});
-};
-
-/**
- * If a mismatch is detected between the package manager being used and the lockfiles on disk,
- * reset the state by deleting the lockfile and dependencies then re-installing with the package
- * manager used by the calling process.
- *
- * This is needed since some scaffolding tools don't detect and use the pm of the calling process,
- * and instead always use `npm`. With a project in this state, installing additional dependencies
- * with `pnpm` or `yarn` can result in install errors.
- *
- */
-export const rectifyPmMismatch = async (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
-
-	if (!detectPmMismatch(ctx)) {
-		return;
-	}
-
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
-
-	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
-	if (existsSync(lockfilePath)) rmSync(lockfilePath);
-
-	await runCommand([npm, "install"], {
-		silent: true,
-		cwd: ctx.project.path,
-		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	});
-};
-
-const detectPmMismatch = (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
-	const projectPath = ctx.project.path;
-
-	switch (npm) {
-		case "npm":
-			return false;
-		case "yarn":
-			return !existsSync(path.join(projectPath, "yarn.lock"));
-		case "pnpm":
-			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
-		case "bun":
-			return !existsSync(path.join(projectPath, "bun.lockb"));
-	}
-};
-
-export const npmInstall = async (ctx: C3Context) => {
-	// Skip this step if packages have already been installed
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	if (existsSync(nodeModulesPath)) {
-		return;
-	}
-
-	const { npm } = detectPackageManager();
-
-	await runCommand([npm, "install"], {
-		silent: true,
-		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	});
 };
 
 export const installWrangler = async () => {

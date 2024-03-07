@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
 import { retry } from "helpers/command";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import {

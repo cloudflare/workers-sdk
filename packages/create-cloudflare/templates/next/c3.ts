@@ -3,7 +3,7 @@ import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "helpers/command";
 import {
 	copyFile,
 	probePaths,
@@ -14,7 +14,8 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Args, C3Context } from "types";

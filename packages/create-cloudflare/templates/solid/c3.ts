@@ -3,7 +3,7 @@ import { blue } from "@cloudflare/cli/colors";
 import { transformFile } from "helpers/codemod";
 import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";

@@ -1,15 +1,11 @@
 import { existsSync } from "fs";
 import { spawn } from "cross-spawn";
-import { detectPackageManager } from "helpers/packages";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
-import { createTestContext } from "../../__tests__/helpers";
 import {
 	getWorkerdCompatibilityDate,
-	installPackages,
 	installWrangler,
-	npmInstall,
 	runCommand,
 } from "../command";
 import type { ChildProcess } from "child_process";
@@ -78,85 +74,6 @@ describe("Command Helpers", () => {
 		await installWrangler();
 
 		expectSilentSpawnWith("npm install --save-dev wrangler");
-	});
-
-	test("npmInstall", async () => {
-		await npmInstall(createTestContext());
-		expectSilentSpawnWith("npm install");
-	});
-
-	test("npmInstall from pnpm", async () => {
-		vi.mocked(whichPMRuns).mockReturnValue({
-			name: "pnpm",
-			version: "8.5.1",
-		});
-
-		await npmInstall(createTestContext());
-		expectSilentSpawnWith("pnpm install");
-	});
-
-	test("installPackages", async () => {
-		await installPackages(["foo", "bar", "baz"], { dev: true });
-		expectSilentSpawnWith("npm install --save-dev foo bar baz");
-	});
-
-	describe("detectPackageManager", async () => {
-		let pm = detectPackageManager();
-
-		test("npm", () => {
-			expect(pm.npm).toBe("npm");
-			expect(pm.npx).toBe("npx");
-			expect(pm.dlx).toEqual(["npx"]);
-		});
-
-		test("pnpm", () => {
-			vi.mocked(whichPMRuns).mockReturnValue({
-				name: "pnpm",
-				version: "8.5.1",
-			});
-			pm = detectPackageManager();
-			expect(pm.npm).toBe("pnpm");
-			expect(pm.npx).toBe("pnpm");
-			expect(pm.dlx).toEqual(["pnpm", "dlx"]);
-
-			vi.mocked(whichPMRuns).mockReturnValue({
-				name: "pnpm",
-				version: "6.35.1",
-			});
-			pm = detectPackageManager();
-			expect(pm.npm).toBe("pnpm");
-			expect(pm.npx).toBe("pnpm");
-			expect(pm.dlx).toEqual(["pnpm", "dlx"]);
-
-			vi.mocked(whichPMRuns).mockReturnValue({
-				name: "pnpm",
-				version: "5.18.10",
-			});
-			pm = detectPackageManager();
-			expect(pm.npm).toBe("pnpm");
-			expect(pm.npx).toBe("pnpx");
-			expect(pm.dlx).toEqual(["pnpx"]);
-		});
-
-		test("yarn", () => {
-			vi.mocked(whichPMRuns).mockReturnValue({
-				name: "yarn",
-				version: "3.5.1",
-			});
-			pm = detectPackageManager();
-			expect(pm.npm).toBe("yarn");
-			expect(pm.npx).toBe("yarn");
-			expect(pm.dlx).toEqual(["yarn", "dlx"]);
-
-			vi.mocked(whichPMRuns).mockReturnValue({
-				name: "yarn",
-				version: "1.22.0",
-			});
-			pm = detectPackageManager();
-			expect(pm.npm).toBe("yarn");
-			expect(pm.npx).toBe("yarn");
-			expect(pm.dlx).toEqual(["yarn"]);
-		});
 	});
 
 	describe("getWorkerdCompatibilityDate()", () => {

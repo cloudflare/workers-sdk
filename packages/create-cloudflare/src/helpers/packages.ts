@@ -1,100 +1,59 @@
-import semver from "semver";
-import whichPmRuns from "which-pm-runs";
-import { devDependencies } from "../../package.json";
+import { existsSync } from "fs";
+import path from "path";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { runCommand } from "./command";
+import { detectPackageManager } from "./packageManagers";
+import type { C3Context } from "types";
 
-type PmName = "pnpm" | "npm" | "yarn" | "bun";
+type InstallConfig = {
+	startText?: string;
+	doneText?: string;
+	dev?: boolean;
+};
 
-/*
-  A helper function for determining which pm command to use based on which one the user
-  invoked this CLI with.
+export const installPackages = async (
+	packages: string[],
+	config: InstallConfig = {}
+) => {
+	const { npm } = detectPackageManager();
 
-  The entries of the return type are used for the following operations:
-  - npm: running commands with the package manager (ex. `npm install` or `npm run build`)
-  - npx: executing code local to the working directory (ex. `npx wrangler whoami`)
-  - dlx: executing packages that are not installed locally (ex. `pnpm dlx create-solid`)
-*/
-export const detectPackageManager = () => {
-	const pmInfo = whichPmRuns() as { name: PmName; version: string } | undefined;
-
-	let { name, version } = pmInfo ?? { name: "npm", version: "0.0.0" };
-
-	if (process.env.TEST_PM) {
-		switch (process.env.TEST_PM) {
-			case "pnpm":
-				name = "pnpm";
-				version = devDependencies["pnpm"].replace("^", "");
-				process.env.npm_config_user_agent = "pnpm";
-				break;
-			case "yarn":
-				name = "yarn";
-				version = devDependencies["yarn"].replace("^", "");
-				process.env.npm_config_user_agent = "yarn";
-				break;
-			case "bun":
-				name = "bun";
-				version = "1.0.0";
-				process.env.npm_config_user_agent = "bun";
-				break;
-			case "npm":
-				name = "npm";
-				version = "0.0.0";
-				process.env.npm_config_user_agent = "npm";
-				break;
-		}
-	}
-
-	switch (name) {
-		case "pnpm":
-			if (semver.gt(version, "6.0.0")) {
-				return {
-					name,
-					version,
-					npm: "pnpm",
-					npx: "pnpm",
-					dlx: ["pnpm", "dlx"],
-				};
-			}
-			return {
-				name,
-				version,
-				npm: "pnpm",
-				npx: "pnpx",
-				dlx: ["pnpx"],
-			};
+	let saveFlag;
+	let cmd;
+	switch (npm) {
 		case "yarn":
-			if (semver.gt(version, "2.0.0")) {
-				return {
-					name,
-					version,
-					npm: "yarn",
-					npx: "yarn",
-					dlx: ["yarn", "dlx"],
-				};
-			}
-			return {
-				name,
-				version,
-				npm: "yarn",
-				npx: "yarn",
-				dlx: ["yarn"],
-			};
+			cmd = "add";
+			saveFlag = config.dev ? "-D" : "";
+			break;
 		case "bun":
-			return {
-				name,
-				version,
-				npm: "bun",
-				npx: "bunx",
-				dlx: ["bunx"],
-			};
-
+			cmd = "add";
+			saveFlag = config.dev ? "-d" : "";
+			break;
 		case "npm":
+		case "pnpm":
 		default:
-			return {
-				name,
-				version,
-				npm: "npm",
-				npx: "npx",
-				dlx: ["npx"],
-			};
+			cmd = "install";
+			saveFlag = config.dev ? "--save-dev" : "--save";
+			break;
 	}
+
+	await runCommand([npm, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
+		...config,
+		silent: true,
+	});
+};
+
+export const npmInstall = async (ctx: C3Context) => {
+	// Skip this step if packages have already been installed
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	if (existsSync(nodeModulesPath)) {
+		return;
+	}
+
+	const { npm } = detectPackageManager();
+
+	await runCommand([npm, "install"], {
+		silent: true,
+		startText: "Installing dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
 };
