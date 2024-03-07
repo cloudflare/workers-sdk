@@ -1,5 +1,7 @@
+import * as cloudflareCli from "@cloudflare/cli";
 import chalk from "chalk";
 import fetchMock from "jest-fetch-mock";
+import { logger } from "../logger";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
 
@@ -48,6 +50,10 @@ jest.mock("child_process", () => {
 			return jest.requireActual("child_process").spawnSync(binary, ...args);
 		}),
 	};
+});
+
+beforeEach(() => {
+	cloudflareCli.setStdout({ write: (msg) => console.log(msg) });
 });
 
 jest.mock("log-update", () => {

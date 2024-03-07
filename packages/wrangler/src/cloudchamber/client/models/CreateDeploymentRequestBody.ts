@@ -35,7 +35,7 @@ export type CreateDeploymentRequestBody = {
 	 */
 	environment_variables?: Array<EnvironmentVariable>;
 	/**
-	 * Specify the GPU memory to be used for the deployment. (Mandatory for GPU deployments)
+	 * Specify the GPU memory to be used for the deployment. (Mandatory for gVisor deployments)
 	 */
 	gpu_memory?: MemorySizeWithUnit;
 };

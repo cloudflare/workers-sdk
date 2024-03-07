@@ -5,6 +5,7 @@ import { registriesCommand } from "./images/images";
 import { listCommand, listDeploymentsYargs } from "./list";
 import { modifyCommand, modifyCommandOptionalYargs } from "./modify";
 import { sshCommand } from "./ssh/ssh";
+import { whoamiCommand } from "./whoami";
 import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
@@ -48,6 +49,12 @@ export const cloudchamber = (
 			"Modify an existing deployment",
 			(args) => modifyCommandOptionalYargs(args),
 			(args) => handleFailure(modifyCommand)(args)
+		)
+		.command(
+			"whoami",
+			"See Cloudchamber related information",
+			(args) => args,
+			(args) => handleFailure(whoamiCommand)(args)
 		)
 		.command("ssh", "Manage the ssh keys of your account", (args) =>
 			sshCommand(args).command(subHelp)

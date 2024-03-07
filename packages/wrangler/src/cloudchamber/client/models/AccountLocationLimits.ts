@@ -12,5 +12,4 @@ export type AccountLocationLimits = {
 	memory_per_deployment: MemorySizeWithUnit;
 	total_vcpu: number;
 	total_memory: MemorySizeWithUnit;
-	mallard_max_per_node?: number;
 };

@@ -7,6 +7,7 @@ import type { CancelablePromise } from "../core/CancelablePromise";
 import type { AccountRegistryToken } from "../models/AccountRegistryToken";
 import type { CreateImageRegistryRequestBody } from "../models/CreateImageRegistryRequestBody";
 import type { CustomerImageRegistry } from "../models/CustomerImageRegistry";
+import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ImageRegistryCredentialsConfiguration } from "../models/ImageRegistryCredentialsConfiguration";
 
 export class ImageRegistriesService {
@@ -43,10 +44,12 @@ export class ImageRegistriesService {
 	 * Delete a registry from the account
 	 * Delete a registry from the account, this will make Cloudchamber unable to pull images from the registry
 	 * @param domain
-	 * @returns any Deleted successfully
+	 * @returns EmptyResponse The image registry is deleted
 	 * @throws ApiError
 	 */
-	public static deleteImageRegistry(domain: string): CancelablePromise<any> {
+	public static deleteImageRegistry(
+		domain: string
+	): CancelablePromise<EmptyResponse> {
 		return __request(OpenAPI, {
 			method: "DELETE",
 			url: "/registries/{domain}",

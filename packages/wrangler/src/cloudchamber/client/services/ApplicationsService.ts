@@ -5,8 +5,10 @@ import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { Application } from "../models/Application";
+import type { ApplicationName } from "../models/ApplicationName";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { EmptyResponse } from "../models/EmptyResponse";
+import type { Image } from "../models/Image";
 import type { ListApplications } from "../models/ListApplications";
 
 export class ApplicationsService {
@@ -36,13 +38,25 @@ export class ApplicationsService {
 	/**
 	 * List Applications associated with your account
 	 * Lists all the applications that are associated with your account
+	 * @param name Filter applications by name
+	 * @param image Filter applications by image
+	 * @param label Filter applications by label
 	 * @returns ListApplications Get all application associated with your account
 	 * @throws ApiError
 	 */
-	public static listApplications(): CancelablePromise<ListApplications> {
+	public static listApplications(
+		name?: ApplicationName,
+		image?: Image,
+		label?: Array<string>
+	): CancelablePromise<ListApplications> {
 		return __request(OpenAPI, {
 			method: "GET",
 			url: "/applications",
+			query: {
+				name: name,
+				image: image,
+				label: label,
+			},
 			errors: {
 				401: `Unauthorized`,
 				500: `There has been an internal error`,

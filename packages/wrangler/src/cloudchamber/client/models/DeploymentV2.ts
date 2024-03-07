@@ -7,6 +7,7 @@ import type { ApplicationID } from "./ApplicationID";
 import type { DeploymentID } from "./DeploymentID";
 import type { DeploymentLocation } from "./DeploymentLocation";
 import type { DeploymentVersion } from "./DeploymentVersion";
+import type { DNSConfiguration } from "./DNSConfiguration";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Image } from "./Image";
 import type { ISO8601Timestamp } from "./ISO8601Timestamp";
@@ -16,6 +17,7 @@ import type { Network } from "./Network";
 import type { NodeGroup } from "./NodeGroup";
 import type { Placement } from "./Placement";
 import type { Ref } from "./Ref";
+import type { Runtime } from "./Runtime";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -60,4 +62,6 @@ export type DeploymentV2 = {
 	 * The GPU memory of this deployment. If deployment is not node_group 'gpu', this will be null
 	 */
 	gpu_memory?: MemorySizeWithUnit;
+	dns?: DNSConfiguration;
+	runtime: Runtime;
 };
