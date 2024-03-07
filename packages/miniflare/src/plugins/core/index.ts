@@ -36,7 +36,6 @@ import {
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	HEADER_CF_BLOB,
 	Plugin,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
@@ -716,7 +715,7 @@ export function getGlobalServices({
 	return [
 		{
 			name: SERVICE_LOOPBACK,
-			external: { http: { cfBlobHeader: HEADER_CF_BLOB } },
+			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
 		},
 		{
 			name: SERVICE_ENTRY,

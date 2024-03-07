@@ -17,11 +17,6 @@ export function getDirectSocketName(workerIndex: number) {
 // Service looping back to Miniflare's Node.js process (for storage, etc)
 export const SERVICE_LOOPBACK = "loopback";
 
-// Even though we inject the `cf` blob in the entry script, we still need to
-// specify a header, so we receive things like `cf.cacheKey` in loopback
-// requests.
-export const HEADER_CF_BLOB = "MF-CF-Blob";
-
 export const WORKER_BINDING_SERVICE_LOOPBACK: Worker_Binding = {
 	name: CoreBindings.SERVICE_LOOPBACK,
 	service: { name: SERVICE_LOOPBACK },

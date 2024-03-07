@@ -5,6 +5,7 @@ export const CoreHeaders = {
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
+	CF_BLOB: "MF-CF-Blob",
 
 	// API Proxy
 	OP_SECRET: "MF-Op-Secret",
