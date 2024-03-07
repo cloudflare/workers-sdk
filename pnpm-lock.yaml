@@ -1120,7 +1120,7 @@ importers:
         specifier: 5.28.3
         version: 5.28.3
       wrangler:
-        specifier: ^3.24.0
+        specifier: ^3.32.0
         version: link:../wrangler
 
   packages/prerelease-registry:
