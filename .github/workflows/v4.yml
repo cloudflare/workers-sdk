@@ -1,0 +1,76 @@
+name: Version 4 Prerelease
+
+on:
+  push:
+    branches:
+      - v4
+jobs:
+  prerelease:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Build & Publish a pre-release to npm
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 16.18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.18
+          cache: "pnpm"
+
+      - name: "Create .env file"
+        run: |
+          touch .env
+          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
+          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
+          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
+          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install npm Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Modify package.json version
+        run: node .github/version-script.js
+
+      - name: Build
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+
+      - name: Check for errors
+        run: pnpm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Publish to npm
+        run: pnpm publish --tag next
+        env:
+          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          # this is the "test/staging" key for sparrow analytics
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+        working-directory: packages/wrangler
+
+      - name: Get Package Version
+        run: echo "WRANGLER_VERSION=$(npm view wrangler@next version)" >> $GITHUB_ENV
+        working-directory: packages/wrangler
