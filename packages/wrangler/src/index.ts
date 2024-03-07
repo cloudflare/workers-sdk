@@ -201,7 +201,7 @@ export function createCLIParser(argv: string[]) {
 		// the `wrangler` variable
 		.version(false)
 		.option("v", {
-			describe: "Show Wrangler version number",
+			describe: "Show version number",
 			alias: "version",
 			type: "boolean",
 		})
