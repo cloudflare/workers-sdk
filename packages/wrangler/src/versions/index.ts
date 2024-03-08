@@ -12,6 +12,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
+import { versionsListHandler, versionsListOptions } from "./list";
 import versionsUpload from "./upload";
 import type { Config } from "../config";
 import type {
@@ -230,14 +231,20 @@ export default function registerVersionsSubcommands(
 ) {
 	versionYargs
 		.command(
+			"list",
+			"List the 10 most recent Versions of your Worker [beta]",
+			versionsListOptions,
+			versionsListHandler
+		)
+		.command(
 			"upload",
-			"Uploads your Worker code and config as a new version [beta]",
+			"Uploads your Worker code and config as a new Version [beta]",
 			versionsUploadOptions,
 			versionsUploadHandler
 		)
 		.command(
 			"deploy [version-specs..]",
-			"Safely roll out new versions of your Worker by splitting traffic between multiple versions [beta]",
+			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]",
 			versionsDeployOptions,
 			versionsDeployHandler
 		);
