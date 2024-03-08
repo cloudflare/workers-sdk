@@ -7,12 +7,12 @@ import { dim } from "@cloudflare/cli/colors";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
-import { installWrangler, runCommand } from "helpers/command";
+import { runCommand } from "helpers/command";
 import {
 	detectPackageManager,
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
-import { npmInstall } from "helpers/packages";
+import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
 import {
 	gitCommit,

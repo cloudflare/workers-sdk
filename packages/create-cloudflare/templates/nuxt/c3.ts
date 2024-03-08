@@ -3,11 +3,11 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { transformFile } from "helpers/codemod";
 import { runFrameworkGenerator } from "helpers/command";
+import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import { getLatestTypesEntrypoint } from "../../src/workers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
