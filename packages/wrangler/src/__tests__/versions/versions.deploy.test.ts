@@ -21,7 +21,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
-function mockProcessOutput() {
+function collectStreamOutput() {
 	const std = { out: "", err: "" };
 	const onStdOutData = (chunk: Buffer) => (std.out += chunk.toString());
 	const onStdErrData = (chunk: Buffer) => (std.err += chunk.toString());
@@ -45,7 +45,7 @@ describe("versions deploy", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-	const std = mockProcessOutput();
+	const std = collectStreamOutput();
 
 	beforeEach(() => {
 		msw.use(

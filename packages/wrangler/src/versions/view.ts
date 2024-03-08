@@ -44,6 +44,7 @@ export function versionsViewOptions(yargs: CommonYargsArgv) {
 			describe: "The Worker Version ID to view",
 			type: "string",
 			requiresArg: true,
+			demandOption: true,
 		})
 		.option("name", {
 			describe: "Name of the worker",
