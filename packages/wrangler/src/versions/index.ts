@@ -11,6 +11,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
 import versionsUpload from "./upload";
 import type { Config } from "../config";
 import type {
@@ -222,4 +223,22 @@ export async function versionsUploadHandler(
 		tag: args.tag,
 		message: args.message,
 	});
+}
+
+export default function registerVersionsSubcommands(
+	versionYargs: CommonYargsArgv
+) {
+	versionYargs
+		.command(
+			"upload",
+			"Uploads your Worker code and config as a new version [beta]",
+			versionsUploadOptions,
+			versionsUploadHandler
+		)
+		.command(
+			"deploy [version-specs..]",
+			"Safely roll out new versions of your Worker by splitting traffic between multiple versions [beta]",
+			versionsDeployOptions,
+			versionsDeployHandler
+		);
 }
