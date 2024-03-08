@@ -2,4 +2,4 @@
 "miniflare": patch
 ---
 
-fix node 21.7.0 compatiblity
+fix: ensure `miniflare` works with Node 21.7.0+
