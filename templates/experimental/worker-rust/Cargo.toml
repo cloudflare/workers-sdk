@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 worker = "0.0.18"
 
 [profile.release]
+opt-level = "s" # optimize for size in release builds
 lto = true
 strip = true
 codegen-units = 1
