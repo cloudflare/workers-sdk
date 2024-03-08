@@ -67,6 +67,7 @@ export type EventNames =
 	| "rollback deployments"
 	| "upload worker version"
 	| "deploy worker versions"
+	| "view worker version"
 	| "list worker versions";
 
 /**

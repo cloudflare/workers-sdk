@@ -14,6 +14,7 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
 import { versionsListHandler, versionsListOptions } from "./list";
 import versionsUpload from "./upload";
+import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -230,6 +231,12 @@ export default function registerVersionsSubcommands(
 	versionYargs: CommonYargsArgv
 ) {
 	versionYargs
+		.command(
+			"view <version-id>",
+			"View the details of a specific version of your Worker [beta]",
+			versionsViewOptions,
+			versionsViewHandler
+		)
 		.command(
 			"list",
 			"List the 10 most recent Versions of your Worker [beta]",
