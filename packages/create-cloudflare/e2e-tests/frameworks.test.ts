@@ -54,7 +54,10 @@ type FrameworkTestConfig = RunnerConfig & {
 		route: string;
 		expectedText: string;
 	};
+	flags?: string[];
 };
+
+const { name: pm, npx } = detectPackageManager();
 
 // These are ordered based on speed and reliability for ease of debugging
 const frameworkTests: Record<string, FrameworkTestConfig> = {
@@ -75,6 +78,15 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/test",
 			expectedText: "C3_TEST",
 		},
+		flags: [
+			"--skip-houston",
+			"--no-install",
+			"--no-git",
+			"--template",
+			"blog",
+			"--typescript",
+			"strict",
+		],
 	},
 	docusaurus: {
 		unsupportedPms: ["bun"],
@@ -85,6 +97,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Dinosaurs are cool",
 		},
+		flags: [`--package-manager`, pm],
 	},
 	angular: {
 		testCommitMessage: true,
@@ -93,6 +106,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Congratulations! Your app is running.",
 		},
+		flags: ["--style", "sass"],
 	},
 	gatsby: {
 		unsupportedPms: ["bun", "pnpm"],
@@ -166,6 +180,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/test",
 			expectedText: "C3_TEST",
 		},
+		flags: ["--typescript", "--no-install", "--no-git-init"],
 	},
 	next: {
 		promptHandlers: [
@@ -180,6 +195,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Create Next App",
 		},
+		flags: [
+			"--typescript",
+			"--no-install",
+			"--eslint",
+			"--tailwind",
+			"--src-dir",
+			"--app",
+			"--import-alias",
+			"@/*",
+		],
 	},
 	nuxt: {
 		testCommitMessage: true,
@@ -269,6 +294,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Vite App",
 		},
+		flags: ["--ts"],
 	},
 };
 
@@ -315,7 +341,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				const projectName = getName(framework);
 				const frameworkConfig = frameworkMap[framework as FrameworkName];
 
-				const { argv, promptHandlers, verifyDeploy } =
+				const { promptHandlers, verifyDeploy, flags } =
 					frameworkTests[framework];
 
 				if (!verifyDeploy) {
@@ -332,7 +358,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						projectPath,
 						logStream,
 						{
-							argv: [...(argv ?? [])],
+							argv: [...(flags ? ["--", ...flags] : [])],
 							promptHandlers,
 						}
 					);
@@ -463,7 +489,6 @@ const verifyDevScript = async (
 	// Run the devserver on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
 
-	const { name: pm } = detectPackageManager();
 	const proc = spawnWithLogging(
 		[
 			pm,
@@ -518,8 +543,6 @@ const verifyBuildScript = async (
 	}
 
 	const { outputDir, script, route, expectedText } = verifyBuild;
-
-	const { name: pm, npx } = detectPackageManager();
 
 	// Run the `build-cf-types` script to generate types for bindings in fixture
 	const buildTypesProc = spawnWithLogging(

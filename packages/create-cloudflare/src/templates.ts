@@ -85,8 +85,6 @@ export type TemplateConfig = {
 		ctx: C3Context
 	) => Promise<Record<string, string | object>>;
 
-	/** An array of flags that will be added to the call to the framework cli during tests.*/
-	testFlags?: string[];
 	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
 	compatibilityFlags?: string[];
 

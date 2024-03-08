@@ -201,11 +201,6 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	// newline
 	logRaw("");
 
-	if (process.env.VITEST) {
-		const flags = ctx.template.testFlags ?? [];
-		cmd.push(...flags);
-	}
-
 	await runCommand(cmd, { env });
 };
 

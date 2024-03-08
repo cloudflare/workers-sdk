@@ -62,6 +62,5 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
-	testFlags: ["--typescript", "--no-install", "--no-git-init"],
 };
 export default config;

@@ -117,8 +117,6 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./templates",
 	},
-	devScript: "dev",
-	deployScript: "deploy",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
@@ -128,5 +126,8 @@ const config: TemplateConfig = {
 			"build-cf-types": `wrangler types`,
 		},
 	}),
+	devScript: "dev",
+	deployScript: "deploy",
+	previewScript: "preview",
 };
 export default config;
