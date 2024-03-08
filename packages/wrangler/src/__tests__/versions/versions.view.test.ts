@@ -26,17 +26,22 @@ describe("versions view", () => {
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"wrangler versions view <version-id>
+			expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler versions view <version-id>
+
 			View the details of a specific version of your Worker [beta]
+
 			Positionals:
 			  version-id  The Worker Version ID to view  [string] [required]
+
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
 			  -v, --version                   Show version number  [boolean]
+
 			Options:
 			      --name  Name of the worker  [string]"
 		`);
@@ -55,17 +60,22 @@ describe("versions view", () => {
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"wrangler versions view <version-id>
+			expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler versions view <version-id>
+
 			View the details of a specific version of your Worker [beta]
+
 			Positionals:
 			  version-id  The Worker Version ID to view  [string] [required]
+
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
 			  -v, --version                   Show version number  [boolean]
+
 			Options:
 			      --name  Name of the worker  [string]"
 		`);
@@ -84,7 +94,7 @@ describe("versions view", () => {
 				`[Error: You need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(
 				`"X [ERROR] You need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
@@ -98,13 +108,14 @@ describe("versions view", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"Version ID:  00000000-0000-0000-0000-000000000000
-			Created:     1/1/2021, TIMESTAMP AM
+			expect(std.out).toMatchInlineSnapshot(`
+			"Version ID:  10000000-0000-0000-0000-000000000000
+			Created:     1/1/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      wrangler
 			Tag:         -
-			Message:     -"
+			Message:     -
+			"
 		`);
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
@@ -123,17 +134,22 @@ describe("versions view", () => {
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"wrangler versions view <version-id>
+			expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler versions view <version-id>
+
 			View the details of a specific version of your Worker [beta]
+
 			Positionals:
 			  version-id  The Worker Version ID to view  [string] [required]
+
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
 			  -v, --version                   Show version number  [boolean]
+
 			Options:
 			      --name  Name of the worker  [string]"
 		`);
@@ -150,13 +166,14 @@ describe("versions view", () => {
 
 			await expect(result).resolves.toBeUndefined();
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"Version ID:  00000000-0000-0000-0000-000000000000
-			Created:     1/1/2021, TIMESTAMP AM
+			expect(std.out).toMatchInlineSnapshot(`
+			"Version ID:  10000000-0000-0000-0000-000000000000
+			Created:     1/1/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      wrangler
 			Tag:         -
-			Message:     -"
+			Message:     -
+			"
 		`);
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);

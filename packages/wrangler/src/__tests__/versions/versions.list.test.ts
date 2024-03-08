@@ -1,3 +1,4 @@
+import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswListVersions } from "../helpers/msw";
@@ -27,11 +28,9 @@ describe("versions list", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 
-			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`[0m
-
-			"
-		`);
+			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(
+				`"X [ERROR] You need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
+			);
 		});
 
 		test("prints versions to stdout", async () => {
