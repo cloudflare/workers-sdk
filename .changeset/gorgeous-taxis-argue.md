@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-fix: fix `wrangler d1 migrations apply` to allow migrations that dont end in a semicolon
+fix: fix `wrangler d1 migrations apply` to allow migrations that don't end in a semicolon
 
 Prior to this PR, migrations such as: `SELECT 1` would fail with a nonsensical error about INSERTS: `✘ [ERROR] near "INSERT": syntax error at offset 199 [code: 7500]`
 
