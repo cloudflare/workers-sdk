@@ -25,9 +25,9 @@ import {
 } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
+import { readWranglerToml } from "helpers/wrangler/config";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
-import { readWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
 
 export const validateProjectDirectory = (
@@ -188,7 +188,7 @@ const isDeployable = async (ctx: C3Context) => {
 		return true;
 	}
 
-	const wranglerToml = await readWranglerToml(ctx);
+	const wranglerToml = readWranglerToml(ctx);
 	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
 		return false;
 	}
