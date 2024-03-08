@@ -22,7 +22,7 @@ import type {
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
-import { Dispatcher, Pool } from "undici";
+import { Dispatcher, Pool, getGlobalDispatcher } from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -30,6 +30,7 @@ import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
 import {
 	DispatchFetch,
+	DispatchFetchDispatcher,
 	ENTRY_SOCKET_HTTP_OPTIONS,
 	Headers,
 	Request,
@@ -39,13 +40,11 @@ import {
 	fetch,
 	getAccessibleHosts,
 	getEntrySocketHttpOptions,
-	registerAllowUnauthorizedDispatcher,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
-	HEADER_CF_BLOB,
 	KV_PLUGIN_NAME,
 	PLUGIN_ENTRIES,
 	PluginServicesOptions,
@@ -816,8 +815,8 @@ export class Miniflare {
 		}
 
 		// Extract cf blob (if any) from headers
-		const cfBlob = headers.get(HEADER_CF_BLOB);
-		headers.delete(HEADER_CF_BLOB);
+		const cfBlob = headers.get(CoreHeaders.CF_BLOB);
+		headers.delete(CoreHeaders.CF_BLOB);
 		assert(!Array.isArray(cfBlob)); // Only `Set-Cookie` headers are arrays
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
 
@@ -1336,7 +1335,6 @@ export class Miniflare {
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 			});
-			registerAllowUnauthorizedDispatcher(this.#runtimeDispatcher);
 		}
 		if (this.#proxyClient === undefined) {
 			this.#proxyClient = new ProxyClient(
@@ -1508,14 +1506,13 @@ export class Miniflare {
 
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
-		forward.headers.set(CoreHeaders.ORIGINAL_URL, url.toString());
-		forward.headers.set(CoreHeaders.DISABLE_PRETTY_ERROR, "true");
+		const actualRuntimeOrigin = this.#runtimeEntryURL.origin;
+		const userRuntimeOrigin = url.origin;
+
+		// Rewrite URL for WebSocket requests which won't use `DispatchFetchDispatcher`
 		url.protocol = this.#runtimeEntryURL.protocol;
 		url.host = this.#runtimeEntryURL.host;
-		if (forward.cf) {
-			const cf = { ...fallbackCf, ...forward.cf };
-			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(cf));
-		}
+
 		// Remove `Content-Length: 0` headers from requests when a body is set to
 		// avoid `RequestContentLengthMismatch` errors
 		if (
@@ -1525,8 +1522,17 @@ export class Miniflare {
 			forward.headers.delete("Content-Length");
 		}
 
+		const cfBlob = forward.cf ? { ...fallbackCf, ...forward.cf } : undefined;
+		const dispatcher = new DispatchFetchDispatcher(
+			getGlobalDispatcher(),
+			this.#runtimeDispatcher,
+			actualRuntimeOrigin,
+			userRuntimeOrigin,
+			cfBlob
+		);
+
 		const forwardInit = forward as RequestInit;
-		forwardInit.dispatcher = this.#runtimeDispatcher;
+		forwardInit.dispatcher = dispatcher;
 		const response = await fetch(url, forwardInit);
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
