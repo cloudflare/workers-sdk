@@ -30,14 +30,15 @@ import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
 import {
 	DispatchFetch,
+	ENTRY_SOCKET_HTTP_OPTIONS,
 	Headers,
 	Request,
 	RequestInit,
 	Response,
-	configureEntrySocket,
 	coupleWebSocket,
 	fetch,
 	getAccessibleHosts,
+	getEntrySocketHttpOptions,
 	registerAllowUnauthorizedDispatcher,
 } from "./http";
 import {
@@ -55,7 +56,9 @@ import {
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
+	SERVICE_ENTRY,
 	SOCKET_ENTRY,
+	SOCKET_ENTRY_LOCAL,
 	SharedOptions,
 	WorkerOptions,
 	WrappedBindingNames,
@@ -95,6 +98,7 @@ import {
 	NoOpLog,
 	OptionalZodTypeOf,
 	_isCyclic,
+	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
 import {
@@ -105,16 +109,20 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
-import { _formatZodError } from "./zod-format";
+import { formatZodError } from "./zod-format";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
-function getAccessibleHost(host: string) {
-	const accessibleHost =
-		host === "*" || host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
-	return getURLSafeHost(accessibleHost);
+function maybeGetLocallyAccessibleHost(
+	h: string
+): "localhost" | "127.0.0.1" | "[::1]" | undefined {
+	if (h === "localhost") return "localhost";
+	if (h === "127.0.0.1" || h === "*" || h === "0.0.0.0" || h === "::") {
+		return "127.0.0.1";
+	}
+	if (h === "::1") return "[::1]";
 }
 
 function getServerPort(server: http.Server) {
@@ -144,6 +152,20 @@ function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 		Array.isArray(opts.workers)
 	);
 }
+export function getRootPath(opts: unknown): string {
+	// `opts` will be validated properly with Zod, this is just a quick check/
+	// extract for the `rootPath` option since it's required for parsing
+	if (
+		typeof opts === "object" &&
+		opts !== null &&
+		"rootPath" in opts &&
+		typeof opts.rootPath === "string"
+	) {
+		return opts.rootPath;
+	} else {
+		return ""; // Default to cwd
+	}
+}
 
 function validateOptions(
 	opts: unknown
@@ -162,25 +184,40 @@ function validateOptions(
 		() => ({}) as PluginWorkerOptions
 	);
 
+	// If we haven't defined multiple workers, shared options and worker options
+	// are the same, but we only want to resolve the `rootPath` once. Otherwise,
+	// if specified a relative `rootPath` (e.g. "./dir"), we end up with a root
+	// path of `$PWD/dir/dir` when resolving other options.
+	const sharedRootPath = multipleWorkers ? getRootPath(sharedOpts) : "";
+	const workerRootPaths = workerOpts.map((opts) =>
+		path.resolve(sharedRootPath, getRootPath(opts))
+	);
+
 	// Validate all options
 	try {
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			// @ts-expect-error types of individual plugin options are unknown
-			pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
+			pluginSharedOpts[key] =
+				plugin.sharedOptions === undefined
+					? undefined
+					: parseWithRootPath(sharedRootPath, plugin.sharedOptions, sharedOpts);
 			for (let i = 0; i < workerOpts.length; i++) {
 				// Make sure paths are correct in validation errors
-				const path = multipleWorkers ? ["workers", i] : undefined;
+				const optionsPath = multipleWorkers ? ["workers", i] : undefined;
 				// @ts-expect-error types of individual plugin options are unknown
-				pluginWorkerOpts[i][key] = plugin.options.parse(workerOpts[i], {
-					path,
-				});
+				pluginWorkerOpts[i][key] = parseWithRootPath(
+					workerRootPaths[i],
+					plugin.options,
+					workerOpts[i],
+					{ path: optionsPath }
+				);
 			}
 		}
 	} catch (e) {
 		if (e instanceof z.ZodError) {
 			let formatted: string | undefined;
 			try {
-				formatted = _formatZodError(e, opts);
+				formatted = formatZodError(e, opts);
 			} catch (formatError) {
 				// If formatting failed for some reason, we'd like to know, so log a
 				// bunch of debugging information, including the full validation error
@@ -615,6 +652,8 @@ export class Miniflare {
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
 
+	#cfObject?: Record<string, any> = {};
+
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
@@ -743,7 +782,7 @@ export class Miniflare {
 		// Should only define custom service bindings if `service` is a function
 		assert(typeof service === "function");
 		try {
-			const response = await service(request);
+			const response = await service(request, this);
 			// Validate return type as `service` is a user defined function
 			// TODO: should we validate outside this try/catch?
 			return z.instanceof(Response).parse(response);
@@ -783,10 +822,8 @@ export class Miniflare {
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
 
 		// Extract original URL passed to `fetch`
-		const url = new URL(
-			headers.get(CoreHeaders.ORIGINAL_URL) ?? req.url ?? "",
-			"http://localhost"
-		);
+		const originalUrl = headers.get(CoreHeaders.ORIGINAL_URL);
+		const url = new URL(originalUrl ?? req.url ?? "", "http://localhost");
 		headers.delete(CoreHeaders.ORIGINAL_URL);
 
 		const noBody = req.method === "GET" || req.method === "HEAD";
@@ -807,6 +844,15 @@ export class Miniflare {
 				response = await this.#handleLoopbackCustomService(
 					request,
 					customService
+				);
+			} else if (
+				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
+				request.headers.has("X-Resolve-Method") &&
+				originalUrl === null
+			) {
+				response = await this.#sharedOpts.core.unsafeModuleFallbackService(
+					request,
+					this
 				);
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
@@ -954,7 +1000,7 @@ export class Miniflare {
 			requestedPort = this.#socketPorts?.get(id);
 		}
 		// Otherwise, default to a new random port
-		return `${host}:${requestedPort ?? 0}`;
+		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
 	async #assembleConfig(loopbackPort: number): Promise<Config> {
@@ -962,6 +1008,7 @@ export class Miniflare {
 		const sharedOpts = this.#sharedOpts;
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
+		this.#cfObject = sharedOpts.core.cf;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
@@ -983,7 +1030,25 @@ export class Miniflare {
 			},
 		];
 
-		const sockets: Socket[] = [await configureEntrySocket(sharedOpts.core)];
+		const sockets: Socket[] = [
+			{
+				name: SOCKET_ENTRY,
+				service: { name: SERVICE_ENTRY },
+				...(await getEntrySocketHttpOptions(sharedOpts.core)),
+			},
+		];
+		const configuredHost = sharedOpts.core.host ?? DEFAULT_HOST;
+		if (maybeGetLocallyAccessibleHost(configuredHost) === undefined) {
+			// If we aren't able to locally access `workerd` on the configured host, configure an additional socket that's
+			// only accessible on `127.0.0.1:0`
+			sockets.push({
+				name: SOCKET_ENTRY_LOCAL,
+				service: { name: SERVICE_ENTRY },
+				http: ENTRY_SOCKET_HTTP_OPTIONS,
+				address: "127.0.0.1:0",
+			});
+		}
+
 		// Bindings for `ProxyServer` Durable Object
 		const proxyBindings: Worker_Binding[] = [];
 
@@ -1053,6 +1118,7 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
+			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			const pluginServicesOptionsBase: Omit<
@@ -1065,6 +1131,8 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				workerNames,
+				loopbackPort,
+				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
@@ -1169,7 +1237,13 @@ export class Miniflare {
 			);
 		}
 
-		return { services: servicesArray, sockets, extensions };
+		const autogates = [
+			// Enables Python support in workerd.
+			// TODO(later): remove this once this gate is removed from workerd.
+			"workerd-autogate-builtin-wasm-modules",
+		];
+
+		return { services: servicesArray, sockets, extensions, autogates };
 	}
 
 	async #assembleAndUpdateConfig() {
@@ -1193,13 +1267,11 @@ export class Miniflare {
 		}
 
 		// Reload runtime
-		const host = this.#sharedOpts.core.host ?? DEFAULT_HOST;
-		const urlSafeHost = getURLSafeHost(host);
-		const accessibleHost = getAccessibleHost(host);
+		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const entryAddress = this.#getSocketAddress(
 			SOCKET_ENTRY,
 			this.#previousSharedOpts?.core.port,
-			host,
+			configuredHost,
 			this.#sharedOpts.core.port
 		);
 		let inspectorAddress: string | undefined;
@@ -1211,10 +1283,14 @@ export class Miniflare {
 				this.#sharedOpts.core.inspectorPort
 			);
 		}
+		const loopbackAddress = `${
+			maybeGetLocallyAccessibleHost(configuredHost) ??
+			getURLSafeHost(configuredHost)
+		}:${loopbackPort}`;
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
 			entryAddress,
-			loopbackPort,
+			loopbackAddress,
 			requiredSockets,
 			inspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
@@ -1240,11 +1316,22 @@ export class Miniflare {
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
 		const previousEntryURL = this.#runtimeEntryURL;
+
 		const entryPort = maybeSocketPorts.get(SOCKET_ENTRY);
 		assert(entryPort !== undefined);
-		this.#runtimeEntryURL = new URL(
-			`${secure ? "https" : "http"}://${accessibleHost}:${entryPort}`
-		);
+
+		const maybeAccessibleHost = maybeGetLocallyAccessibleHost(configuredHost);
+		if (maybeAccessibleHost === undefined) {
+			// If the configured host wasn't locally accessible, we should've configured a 2nd local entry socket that is
+			const localEntryPort = maybeSocketPorts.get(SOCKET_ENTRY_LOCAL);
+			assert(localEntryPort !== undefined, "Expected local entry socket port");
+			this.#runtimeEntryURL = new URL(`http://127.0.0.1:${localEntryPort}`);
+		} else {
+			this.#runtimeEntryURL = new URL(
+				`${secure ? "https" : "http"}://${maybeAccessibleHost}:${entryPort}`
+			);
+		}
+
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
@@ -1266,19 +1353,23 @@ export class Miniflare {
 			// Only log and trigger reload if there aren't pending updates
 			const ready = initial ? "Ready" : "Updated and ready";
 
+			const urlSafeHost = getURLSafeHost(configuredHost);
 			this.#log.info(
 				`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
 			);
 
 			if (initial) {
 				const hosts: string[] = [];
-				if (host === "::" || host === "*" || host === "0.0.0.0") {
+				if (configuredHost === "::" || configuredHost === "*") {
+					hosts.push("localhost");
+					hosts.push("[::1]");
+				}
+				if (
+					configuredHost === "::" ||
+					configuredHost === "*" ||
+					configuredHost === "0.0.0.0"
+				) {
 					hosts.push(...getAccessibleHosts(true));
-
-					if (host !== "0.0.0.0") {
-						hosts.push("localhost");
-						hosts.push("[::1]");
-					}
 				}
 
 				for (const h of hosts) {
@@ -1316,6 +1407,13 @@ export class Miniflare {
 	}
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
+	}
+
+	async getCf(): Promise<Record<string, any>> {
+		this.#checkDisposed();
+		await this.ready;
+
+		return JSON.parse(JSON.stringify(this.#cfObject));
 	}
 
 	async getInspectorURL(): Promise<URL> {
@@ -1362,7 +1460,8 @@ export class Miniflare {
 
 		// Construct accessible URL from configured host and port
 		const host = workerOpts.core.unsafeDirectHost ?? DEFAULT_HOST;
-		const accessibleHost = getAccessibleHost(host);
+		const accessibleHost =
+			maybeGetLocallyAccessibleHost(host) ?? getURLSafeHost(host);
 		// noinspection HttpUrlsUsage
 		return new URL(`http://${accessibleHost}:${maybePort}`);
 	}
@@ -1525,6 +1624,7 @@ export class Miniflare {
 		// Get a `Fetcher` to that worker (NOTE: the `ProxyServer` Durable Object
 		// shares its `env` with Miniflare's entry worker, so has access to routes)
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
+
 		const fetcher = proxyClient.env[bindingName];
 		if (fetcher === undefined) {
 			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist
@@ -1605,6 +1705,17 @@ export class Miniflare {
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
+	unsafeGetPersistPaths(): Map<keyof Plugins, string> {
+		const result = new Map<keyof Plugins, string>();
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			const sharedOpts = this.#sharedOpts[key];
+			// @ts-expect-error `sharedOptions` will match the plugin's type here
+			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
+			if (maybePath !== undefined) result.set(key, maybePath);
+		}
+		return result;
+	}
+
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
@@ -1637,4 +1748,5 @@ export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
+export * from "./merge";
 export * from "./zod-format";

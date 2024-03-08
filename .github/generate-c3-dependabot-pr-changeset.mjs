@@ -54,7 +54,7 @@ ${generateChangesetBody(changes)}
 function generateChangesetBody(changes) {
 	if (changes.length === 1) {
 		const { package: pkg, from, to } = changes[0];
-		return `C3: Bumped \`${pkg}\` from \`${from}\` to \`${to}\``;
+		return `chore: Bumped \`${pkg}\` from \`${from}\` to \`${to}\``;
 	}
 
 	return `Framework CLI versions updated in C3

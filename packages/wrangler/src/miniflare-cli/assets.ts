@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
@@ -6,6 +7,7 @@ import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/pars
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
+import { Dispatcher, getGlobalDispatcher } from "undici";
 import { hashFile } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
@@ -15,6 +17,7 @@ import type {
 } from "@cloudflare/pages-shared/metadata-generator/types";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";
+import type { IncomingHttpHeaders } from "undici/types/header";
 
 export interface Options {
 	log: Logger;
@@ -38,7 +41,9 @@ export default async function generateASSETSBinding(options: Options) {
 					proxyRequest.headers.delete("Sec-WebSocket-Accept");
 					proxyRequest.headers.delete("Sec-WebSocket-Key");
 				}
-				return await fetch(proxyRequest);
+				return await fetch(proxyRequest, {
+					dispatcher: new ProxyDispatcher(miniflareRequest.headers.get("Host")),
+				});
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
@@ -61,6 +66,64 @@ export default async function generateASSETSBinding(options: Options) {
 			}
 		}
 	};
+}
+
+/**
+ * An Undici custom Dispatcher that is used for the fetch requests
+ * of the Pages dev server proxy.
+ *
+ * Notably, the ProxyDispatcher reinstates the Host header that was removed by the
+ * Undici `fetch` function call. Undici removes the Host header as a security precaution,
+ * but this is not relevant for an internal Proxy.
+ *
+ * The ProxyDispatcher will delegate through to the current global `Dispatcher`,
+ * ensuring that the request is routed correctly in case a developer has changed the
+ * global Dispatcher by a call to `setGlobalDispatcher()`.
+ */
+class ProxyDispatcher extends Dispatcher {
+	private dispatcher: Dispatcher = getGlobalDispatcher();
+
+	constructor(private host: string | null) {
+		super();
+	}
+
+	dispatch(
+		options: Dispatcher.DispatchOptions,
+		handler: Dispatcher.DispatchHandlers
+	): boolean {
+		if (this.host !== null) {
+			ProxyDispatcher.reinstateHostHeader(options.headers, this.host);
+		}
+		return this.dispatcher.dispatch(options, handler);
+	}
+
+	close() {
+		return this.dispatcher.close();
+	}
+
+	destroy() {
+		return this.dispatcher.destroy();
+	}
+
+	/**
+	 * Ensure that the request contains a Host header, which would have been deleted
+	 * by the `fetch()` function before calling `dispatcher.dispatch()`.
+	 */
+	private static reinstateHostHeader(
+		headers: string[] | IncomingHttpHeaders | null | undefined,
+		host: string
+	) {
+		assert(headers, "Expected all proxy requests to contain headers.");
+		assert(
+			!Array.isArray(headers),
+			"Expected proxy request headers to be a hash object"
+		);
+		assert(
+			Object.keys(headers).every((h) => h.toLowerCase() !== "host"),
+			"Expected Host header to have been deleted."
+		);
+		headers["Host"] = host;
+	}
 }
 
 async function generateAssetsFetch(

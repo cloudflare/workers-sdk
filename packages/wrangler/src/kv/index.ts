@@ -13,6 +13,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
+import { getValidBindingName } from "../utils/getValidBindingName";
 import {
 	createKVNamespace,
 	deleteKVBulkKeyValue,
@@ -21,7 +22,6 @@ import {
 	getKVKeyValue,
 	getKVNamespaceId,
 	isKVKeyValue,
-	isValidKVNamespaceBinding,
 	listKVNamespaceKeys,
 	listKVNamespaces,
 	putKVBulkKeyValue,
@@ -53,12 +53,6 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 			async (args) => {
 				await printWranglerBanner();
 
-				if (!isValidKVNamespaceBinding(args.namespace)) {
-					throw new CommandLineArgsError(
-						`The namespace binding name "${args.namespace}" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.`
-					);
-				}
-
 				const config = readConfig(args.config, args);
 				if (!config.name) {
 					logger.warn(
@@ -88,7 +82,10 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 					`Add the following to your configuration file in your kv_namespaces array${envString}:`
 				);
 				logger.log(
-					`{ binding = "${args.namespace}", ${previewString}id = "${namespaceId}" }`
+					`{ binding = "${getValidBindingName(
+						args.namespace,
+						"KV"
+					)}", ${previewString}id = "${namespaceId}" }`
 				);
 
 				// TODO: automatically write this block to the wrangler.toml config file??

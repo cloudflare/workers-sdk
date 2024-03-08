@@ -5,6 +5,7 @@ import { rest } from "msw";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
+import { getWorkerAccountAndContext } from "../dev/remote";
 import { CI } from "../is-ci";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -17,6 +18,36 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+
+async function expectedHostAndZone(
+	host: string,
+	zone: string
+): Promise<unknown> {
+	const config = (Dev as jest.Mock).mock.calls[0][0];
+	expect(config).toEqual(
+		expect.objectContaining({
+			localUpstream: host,
+		})
+	);
+	await expect(
+		getWorkerAccountAndContext({
+			accountId: "",
+			host: config.host,
+			routes: config.routes,
+		})
+	).resolves.toEqual(
+		expect.objectContaining({
+			workerContext: {
+				host,
+				zone,
+				routes: config.routes,
+			},
+		})
+	);
+
+	(Dev as jest.Mock).mockClear();
+	return config;
+}
 
 describe("wrangler dev", () => {
 	beforeEach(() => {
@@ -142,10 +173,7 @@ describe("wrangler dev", () => {
 				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field."`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.[0m
 
@@ -216,10 +244,14 @@ describe("wrangler dev", () => {
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+
+			const devConfig = await expectedHostAndZone(
+				"5.some-host.com",
+				"some-zone-id-5"
+			);
+
+			expect(devConfig).toEqual(
 				expect.objectContaining({
-					host: "5.some-host.com",
-					zone: "some-zone-id-5",
 					routes: ["http://5.some-host.com/some/path/*"],
 				})
 			);
@@ -233,12 +265,8 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev --remote --host some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "some-host.com",
-					zone: "some-zone-id",
-				})
-			);
+
+			await expectedHostAndZone("some-host.com", "some-zone-id");
 		});
 
 		it("should read wrangler.toml's dev.host", async () => {
@@ -261,7 +289,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev --route http://some-host.com/some/path/*");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			await expectedHostAndZone("some-host.com", "some-zone-id");
 		});
 
 		it("should read wrangler.toml's routes", async () => {
@@ -275,7 +303,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			await expectedHostAndZone("some-host.com", "some-zone-id");
 		});
 
 		it("should read wrangler.toml's environment specific routes", async () => {
@@ -297,7 +325,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev --env staging");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			await expectedHostAndZone("some-host.com", "some-zone-id");
 		});
 
 		it("should strip leading `*` from given host when deducing a zone id", async () => {
@@ -308,7 +336,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			await expectedHostAndZone("some-host.com", "some-zone-id");
 		});
 
 		it("should strip leading `*.` from given host when deducing a zone id", async () => {
@@ -319,7 +347,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			await expectedHostAndZone("some-host.com", "some-zone-id");
 		});
 
 		it("should, when provided, use a configured zone_id", async () => {
@@ -331,12 +359,8 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "some-domain.com",
-					zone: "some-zone-id",
-				})
-			);
+
+			await expectedHostAndZone("some-domain.com", "some-zone-id");
 		});
 
 		it("should, when provided, use a zone_name to get a zone_id", async () => {
@@ -352,13 +376,8 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-zone.com", [{ id: "a-zone-id" }]);
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					// note that it uses the provided zone_name as a host too
-					host: "some-zone.com",
-					zone: "a-zone-id",
-				})
-			);
+
+			await expectedHostAndZone("some-zone.com", "a-zone-id");
 		});
 
 		it("should find the host from the given pattern, not zone_name", async () => {
@@ -388,9 +407,11 @@ describe("wrangler dev", () => {
 				],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("dev --remote")).rejects.toEqual(
-				new Error("Could not find zone for does-not-exist.com")
-			);
+			await expect(runWrangler("dev --remote")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+			"Could not find zone for \`does-not-exist.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
+		`);
 		});
 
 		it("should fallback to zone_name when given the pattern */*", async () => {
@@ -467,14 +488,7 @@ describe("wrangler dev", () => {
 
 			await runWrangler("dev --remote --host 111.222.333.some-host.com");
 
-			const devMockCall = (Dev as jest.Mock).mock.calls[0][0];
-
-			expect(devMockCall).toHaveProperty("host", "111.222.333.some-host.com");
-			expect(devMockCall).toHaveProperty(
-				"localUpstream",
-				"111.222.333.some-host.com"
-			);
-			expect(devMockCall).toHaveProperty("zone", "some-zone-id");
+			await expectedHostAndZone("111.222.333.some-host.com", "some-zone-id");
 		});
 
 		it("should, in order, use args.host/config.dev.host/args.routes/(config.route|config.routes)", async () => {
@@ -489,13 +503,8 @@ describe("wrangler dev", () => {
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "5.some-host.com",
-					zone: "some-zone-id-5",
-				})
-			);
-			(Dev as jest.Mock).mockClear();
+
+			await expectedHostAndZone("5.some-host.com", "some-zone-id-5");
 
 			// config.route
 			mockGetZones("4.some-host.com", [{ id: "some-zone-id-4" }]);
@@ -504,13 +513,8 @@ describe("wrangler dev", () => {
 				route: "https://4.some-host.com/some/path/*",
 			});
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "4.some-host.com",
-					zone: "some-zone-id-4",
-				})
-			);
-			(Dev as jest.Mock).mockClear();
+
+			await expectedHostAndZone("4.some-host.com", "some-zone-id-4");
 
 			// --routes
 			mockGetZones("3.some-host.com", [{ id: "some-zone-id-3" }]);
@@ -521,13 +525,8 @@ describe("wrangler dev", () => {
 			await runWrangler(
 				"dev --remote --routes http://3.some-host.com/some/path/*"
 			);
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "3.some-host.com",
-					zone: "some-zone-id-3",
-				})
-			);
-			(Dev as jest.Mock).mockClear();
+
+			await expectedHostAndZone("3.some-host.com", "some-zone-id-3");
 
 			// config.dev.host
 			mockGetZones("2.some-host.com", [{ id: "some-zone-id-2" }]);
@@ -541,13 +540,7 @@ describe("wrangler dev", () => {
 			await runWrangler(
 				"dev --remote --routes http://3.some-host.com/some/path/*"
 			);
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "2.some-host.com",
-					zone: "some-zone-id-2",
-				})
-			);
-			(Dev as jest.Mock).mockClear();
+			await expectedHostAndZone("2.some-host.com", "some-zone-id-2");
 
 			// --host
 			mockGetZones("1.some-host.com", [{ id: "some-zone-id-1" }]);
@@ -561,13 +554,7 @@ describe("wrangler dev", () => {
 			await runWrangler(
 				"dev --remote --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
 			);
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "1.some-host.com",
-					zone: "some-zone-id-1",
-				})
-			);
-			(Dev as jest.Mock).mockClear();
+			await expectedHostAndZone("1.some-host.com", "some-zone-id-1");
 		});
 
 		it("should error if a host can't resolve to a zone", async () => {
@@ -576,11 +563,11 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", []);
-			await expect(
-				runWrangler("dev --remote --host some-host.com")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Could not find zone for some-host.com"`
-			);
+			await expect(runWrangler("dev --remote --host some-host.com")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+			"Could not find zone for \`some-host.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
+		`);
 		});
 
 		it("should not try to resolve a zone when starting in local mode", async () => {
@@ -615,7 +602,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual(
+			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
 				"4.some-host.com"
 			);
 		});
@@ -699,8 +686,7 @@ describe("wrangler dev", () => {
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
-
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
@@ -879,12 +865,12 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.2.3.4",
+					ip: "::1",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("1.2.3.4");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("::1");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -894,12 +880,14 @@ describe("wrangler dev", () => {
 			writeWranglerToml({
 				main: "index.js",
 				dev: {
-					ip: "1.2.3.4",
+					ip: "::1",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --ip=5.6.7.8");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("5.6.7.8");
+			await runWrangler("dev --ip=127.0.0.1");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual(
+				"127.0.0.1"
+			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1251,6 +1239,8 @@ describe("wrangler dev", () => {
 			      --routes, --route                            Routes to upload  [array]
 			      --host                                       Host to forward requests to, defaults to the zone of project  [string]
 			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+			      --https-key-path                             Path to a custom certificate key  [string]
+			      --https-cert-path                            Path to a custom certificate  [string]
 			      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
 			      --assets                                     Static assets to be served  [string]
 			      --site                                       Root folder of static assets for Workers Sites  [string]

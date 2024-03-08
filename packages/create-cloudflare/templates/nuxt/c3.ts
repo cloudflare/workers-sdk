@@ -1,15 +1,16 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, writeFile } from "helpers/files";
+import { transformFile } from "helpers/codemod";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
+import * as recast from "recast";
+import { getLatestTypesEntrypoint } from "../../src/workers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
@@ -27,19 +28,85 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async () => {
-	const configFileName = "nuxt.config.ts";
-	const configFilePath = resolve(configFileName);
+const configure = async (ctx: C3Context) => {
+	const packages = ["nitro-cloudflare-dev"];
+
+	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
+	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
+	if (pm === "pnpm") {
+		packages.push("h3");
+	}
+
+	await installPackages(packages, {
+		dev: true,
+		startText: "Installing nitro module `nitro-cloudflare-dev`",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
+	updateNuxtConfig();
+
+	updateEnvTypes(ctx);
+};
+
+const updateEnvTypes = (ctx: C3Context) => {
+	const filepath = "env.d.ts";
+
 	const s = spinner();
-	s.start(`Updating \`${configFileName}\``);
-	// Add the cloudflare preset into the configuration file.
-	const originalConfigFile = readFileSync(configFilePath, "utf8");
-	const updatedConfigFile = originalConfigFile.replace(
-		"defineNuxtConfig({",
-		"defineNuxtConfig({\n  nitro: {\n    preset: 'cloudflare-pages'\n  },"
+	s.start(`Updating ${filepath}`);
+
+	let file = readFile(filepath);
+
+	let typesEntrypoint = `@cloudflare/workers-types/`;
+	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
+	if (latestEntrypoint) {
+		typesEntrypoint += `/${latestEntrypoint}`;
+	}
+
+	// Replace placeholder with actual types entrypoint
+	file = file.replace("WORKERS_TYPES_ENTRYPOINT", typesEntrypoint);
+	writeFile("env.d.ts", file);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${filepath}\``)}`);
+};
+
+const updateNuxtConfig = () => {
+	const s = spinner();
+
+	const configFile = "nuxt.config.ts";
+	s.start(`Updating \`${configFile}\``);
+
+	const b = recast.types.builders;
+
+	const presetDef = b.objectProperty(
+		b.identifier("nitro"),
+		b.objectExpression([
+			b.objectProperty(
+				b.identifier("preset"),
+				b.stringLiteral("cloudflare-pages")
+			),
+		])
 	);
-	writeFile(configFilePath, updatedConfigFile);
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFileName}\``)}`);
+
+	const moduleDef = b.objectProperty(
+		b.identifier("modules"),
+		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
+	);
+
+	transformFile(configFile, {
+		visitCallExpression: function (n) {
+			const callee = n.node.callee as recast.types.namedTypes.Identifier;
+			if (callee.name === "defineNuxtConfig") {
+				const obj = n.node
+					.arguments[0] as recast.types.namedTypes.ObjectExpression;
+
+				obj.properties.push(presetDef);
+				obj.properties.push(moduleDef);
+			}
+
+			return this.traverse(n);
+		},
+	});
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
 const config: TemplateConfig = {
@@ -47,13 +114,20 @@ const config: TemplateConfig = {
 	id: "nuxt",
 	platform: "pages",
 	displayName: "Nuxt",
+	copyFiles: {
+		path: "./templates",
+	},
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+			deploy: `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && wrangler pages dev ./dist`,
+			"build-cf-types": `wrangler types`,
 		},
 	}),
+	devScript: "dev",
+	deployScript: "deploy",
+	previewScript: "preview",
 };
 export default config;

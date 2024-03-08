@@ -35,12 +35,12 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
-import { UserError } from "./errors";
+import { JsonFriendlyFatalError, UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import { kvBulk, kvKey, kvNamespace } from "./kv";
-import { logBuildFailure, logger } from "./logger";
+import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
@@ -56,7 +56,7 @@ import {
 	setupSentry,
 } from "./sentry";
 import { tailHandler, tailOptions } from "./tail";
-import { generateTypes } from "./type-generation";
+import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
 import {
 	getAuthFromEnv,
@@ -70,6 +70,7 @@ import { versionsUploadHandler, versionsUploadOptions } from "./versions";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
+import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type { Arguments, CommandModule } from "yargs";
 
@@ -223,6 +224,11 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 		})
 		.check((args) => {
+			// Update logger level, before we do any logging
+			if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
+				logger.loggerLevel = args.logLevel as LoggerLevel;
+			}
+
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
 			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
@@ -585,36 +591,10 @@ export function createCLIParser(argv: string[]) {
 
 	// type generation
 	wrangler.command(
-		"types",
+		"types [path]",
 		"📝 Generate types from bindings & module rules in config",
-		() => {},
-		async (args) => {
-			await printWranglerBanner();
-			const config = readConfig(undefined, args);
-
-			const configBindings: Partial<Config> = {
-				kv_namespaces: config.kv_namespaces ?? [],
-				vars: { ...config.vars },
-				wasm_modules: config.wasm_modules,
-				text_blobs: {
-					...config.text_blobs,
-				},
-				data_blobs: config.data_blobs,
-				durable_objects: config.durable_objects,
-				r2_buckets: config.r2_buckets,
-				d1_databases: config.d1_databases,
-				services: config.services,
-				analytics_engine_datasets: config.analytics_engine_datasets,
-				dispatch_namespaces: config.dispatch_namespaces,
-				logfwdr: config.logfwdr,
-				unsafe: config.unsafe,
-				rules: config.rules,
-				queues: config.queues,
-				constellation: config.constellation,
-			};
-
-			await generateTypes(configBindings, config);
-		}
+		typesOptions,
+		typesHandler
 	);
 
 	//deployments
@@ -787,6 +767,8 @@ export async function main(argv: string[]): Promise<void> {
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
+		} else if (e instanceof JsonFriendlyFatalError) {
+			logger.log(e.message);
 		} else if (
 			e instanceof Error &&
 			e.message.includes("Raw mode is not supported on")
@@ -820,10 +802,12 @@ export async function main(argv: string[]): Promise<void> {
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
-			logger.log(
-				`${fgGreenColor}%s${resetColor}`,
-				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
-			);
+			if (!(e instanceof UserError)) {
+				logger.log(
+					`${fgGreenColor}%s${resetColor}`,
+					"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
+				);
+			}
 		}
 
 		if (

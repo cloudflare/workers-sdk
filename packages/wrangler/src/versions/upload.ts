@@ -23,6 +23,7 @@ import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { getQueue } from "../queues/client";
@@ -43,6 +44,7 @@ type Props = {
 	entry: Entry;
 	rules: Config["rules"];
 	name: string | undefined;
+	legacyEnv: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -294,6 +296,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							targetConsumer: "deploy",
 							local: false,
 							projectRoot: props.projectRoot,
+							defineNavigatorUserAgent: isNavigatorDefined(
+								props.compatibilityDate ?? config.compatibility_date,
+								props.compatibilityFlags ?? config.compatibility_flags
+							),
 						}
 				  );
 
@@ -319,7 +325,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					legacyEnv: false,
+					legacyEnv: props.legacyEnv,
 					env: props.env,
 			  })
 			: undefined;

@@ -1609,10 +1609,7 @@ addEventListener('fetch', event => {});`
 			                - \\"site.bucket\\" is a required field."
 		            `);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -1777,10 +1774,7 @@ addEventListener('fetch', event => {});`
 				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field."`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.[0m
 
@@ -2058,8 +2052,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -2085,8 +2078,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "",
 			}
 		`);
@@ -2113,8 +2105,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "",
 			}
 		`);
@@ -2140,8 +2131,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2174,8 +2164,7 @@ addEventListener('fetch', event => {});`
 
 			",
 			  "info": "",
-			  "out": "
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -3068,10 +3057,7 @@ addEventListener('fetch', event => {});`
 			Building list of assets to upload...
 			 + large-file.0ea0637a45.txt (uploading new version of large-file.txt)"
 		`);
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
@@ -3204,10 +3190,7 @@ addEventListener('fetch', event => {});`
 			"Fetching list of already uploaded assets...
 			Building list of assets to upload..."
 		`);
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
 
@@ -4669,10 +4652,9 @@ addEventListener('fetch', event => {});`
 			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
 		            `);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Running custom build: node -e \\"4+4;\\"
-
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			"Running custom build: node -e \\"4+4;\\"
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
@@ -4708,10 +4690,9 @@ addEventListener('fetch', event => {});`
 			              \`\`\`"
 		            `);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Running custom build: node -e \\"4+4;\\"
-
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			"Running custom build: node -e \\"4+4;\\"
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
@@ -5682,10 +5663,7 @@ addEventListener('fetch', event => {});`
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -5793,10 +5771,7 @@ addEventListener('fetch', event => {});`
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -5948,10 +5923,7 @@ addEventListener('fetch', event => {});`
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
-			expect(std.out).toMatchInlineSnapshot(`
-			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
 
@@ -6027,10 +5999,7 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code[0m
 
@@ -6170,10 +6139,7 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
 
@@ -6283,10 +6249,7 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
 
@@ -7455,6 +7418,69 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
+		it("should be able to preserve file names when defining rules for uploading non-js modules (sw)", async () => {
+			writeWranglerToml({
+				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+				preserve_file_names: true,
+			});
+			fs.writeFileSync("./index.js", `import TEXT from './text.file';`);
+			fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				expectedBindings: [
+					{
+						name: "__text_file",
+						part: "__text_file",
+						type: "text_blob",
+					},
+				],
+				expectedModules: {
+					__text_file: "SOME TEXT CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should be able to preserve file names when defining rules for uploading non-js modules (esm)", async () => {
+			writeWranglerToml({
+				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+				preserve_file_names: true,
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`import TEXT from './text.file'; export default {};`
+			);
+			fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./text.file": "SOME TEXT CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		describe("inject process.env.NODE_ENV", () => {
 			let actualProcessEnvNodeEnv: string | undefined;
 			beforeEach(() => {
@@ -7938,7 +7964,7 @@ export default{
 	});
 
 	describe("`nodejs_compat` compatibility flag", () => {
-		it('when absent, should error on any "external" `node:*` imports', async () => {
+		it('when absent, should warn on any "external" `node:*` imports', async () => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -7948,15 +7974,18 @@ export default{
       export default {}
       `
 			);
-			let err: esbuild.BuildFailure | undefined;
-			try {
-				await runWrangler("deploy index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
-			} catch (e) {
-				err = e as esbuild.BuildFailure;
-			}
-			expect(
-				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
-			).toMatch(/Could not resolve "node:async_hooks"/);
+			await runWrangler("deploy index.js --dry-run");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package \\"node:async_hooks\\" wasn't found on the file system but is built into node.[0m
+
+			  Your Worker may throw errors at runtime unless you enable the \\"nodejs_compat\\" compatibility flag.
+			  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
+			  from:
+			   - index.js
+
+			"
+		`);
 		});
 
 		it('when present, should support any "external" `node:*` imports', async () => {
@@ -8767,6 +8796,72 @@ export default{
 			  - Name: MYBROWSER
 			- AI:
 			  - Name: AI_BIND
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
+	describe("python", () => {
+		it("should upload python module defined in wrangler.toml", async () => {
+			writeWranglerToml({
+				main: "index.py",
+			});
+			await fs.promises.writeFile(
+				"index.py",
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.py",
+			});
+
+			await runWrangler("deploy");
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬────────┬──────────┐
+			│ Name                                 │ Type   │ Size     │
+			├──────────────────────────────────────┼────────┼──────────┤
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+			└──────────────────────────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+
+		it("should upload python module specified in CLI args", async () => {
+			writeWranglerToml();
+			await fs.promises.writeFile(
+				"index.py",
+				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.py",
+			});
+
+			await runWrangler("deploy index.py");
+			expect(
+				std.out.replace(
+					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
+					".wrangler/tmp/deploy/index.py"
+				)
+			).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬────────┬──────────┐
+			│ Name                                 │ Type   │ Size     │
+			├──────────────────────────────────────┼────────┼──────────┤
+			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+			└──────────────────────────────────────┴────────┴──────────┘
+			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev

@@ -1,0 +1,13 @@
+{
+	"include": ["server"],
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "CommonJS",
+		"lib": ["ES2020"],
+		"types": ["node"],
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"noEmit": true,
+		"skipLibCheck": true
+	}
+}

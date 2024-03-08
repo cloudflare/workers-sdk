@@ -58,10 +58,13 @@ export const ProxyAddresses = {
 // there's no need to serialise the `Request`/`Response`: we just pass
 // everything to `dispatchFetch()` and return what that gives us.
 export function isFetcherFetch(targetName: string, key: string) {
-	// `DurableObject` is the internal name of `DurableObjectStub`:
-	// https://github.com/cloudflare/workerd/blob/34e3f96dae6a4ba799fe0ab9ad9f3f5a88633fc7/src/workerd/api/actor.h#L86
+	// `DurableObject` and `WorkerRpc` are the internal names of `DurableObjectStub`:
+	// https://github.com/cloudflare/workerd/blob/62b9ceee4c94d2b238692397dc4f604fef84f474/src/workerd/api/actor.h#L86
+	// https://github.com/cloudflare/workerd/blob/62b9ceee4c94d2b238692397dc4f604fef84f474/src/workerd/api/worker-rpc.h#L30
 	return (
-		(targetName === "Fetcher" || targetName === "DurableObject") &&
+		(targetName === "Fetcher" ||
+			targetName === "DurableObject" ||
+			targetName === "WorkerRpc") &&
 		key === "fetch"
 	);
 }

@@ -115,6 +115,8 @@ export async function startPreviewServer({
 	previewToken,
 	assetDirectory,
 	localProtocol,
+	customHttpsKeyPath,
+	customHttpsCertPath,
 	localPort: port,
 	ip,
 	onReady,
@@ -122,6 +124,8 @@ export async function startPreviewServer({
 	previewToken: CfPreviewToken;
 	assetDirectory: string | undefined;
 	localProtocol: "https" | "http";
+	customHttpsKeyPath: string | undefined;
+	customHttpsCertPath: string | undefined;
 	localPort: number;
 	ip: string;
 	onReady: ((readyIp: string, readyPort: number) => void) | undefined;
@@ -129,7 +133,11 @@ export async function startPreviewServer({
 	try {
 		const abortController = new AbortController();
 
-		const server = await createProxyServer(localProtocol);
+		const server = await createProxyServer(
+			localProtocol,
+			customHttpsKeyPath,
+			customHttpsCertPath
+		);
 		const proxy = {
 			server,
 			terminator: createHttpTerminator({
@@ -154,7 +162,7 @@ export async function startPreviewServer({
 			accessTokenRef,
 		});
 
-		await waitForPortToBeAvailable(port, {
+		await waitForPortToBeAvailable(port, ip, {
 			retryPeriod: 200,
 			timeout: 2000,
 			abortSignal: abortController.signal,
@@ -199,12 +207,16 @@ export function usePreviewServer({
 	previewToken,
 	assetDirectory,
 	localProtocol,
+	httpsKeyPath,
+	httpsCertPath,
 	localPort: port,
 	ip,
 }: {
 	previewToken: CfPreviewToken | undefined;
 	assetDirectory: string | undefined;
 	localProtocol: "https" | "http";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localPort: number;
 	ip: string;
 }) {
@@ -217,7 +229,7 @@ export function usePreviewServer({
 	 */
 	useEffect(() => {
 		if (proxy === undefined) {
-			createProxyServer(localProtocol)
+			createProxyServer(localProtocol, httpsKeyPath, httpsCertPath)
 				.then((server) => {
 					setProxy({
 						server,
@@ -231,7 +243,7 @@ export function usePreviewServer({
 					logger.error("Failed to create proxy server:", err);
 				});
 		}
-	}, [proxy, localProtocol]);
+	}, [proxy, localProtocol, httpsKeyPath, httpsCertPath]);
 
 	/**
 	 * When we're not connected / getting a fresh token on changes,
@@ -295,7 +307,7 @@ export function usePreviewServer({
 			return;
 		}
 
-		waitForPortToBeAvailable(port, {
+		waitForPortToBeAvailable(port, ip, {
 			retryPeriod: 200,
 			timeout: 2000,
 			abortSignal: abortController.signal,
@@ -579,11 +591,15 @@ const HTTP1_HEADERS = new Set([
 ]);
 
 async function createProxyServer(
-	localProtocol: "https" | "http"
+	localProtocol: "https" | "http",
+	customHttpsKeyPath: string | undefined,
+	customHttpsCertPath: string | undefined
 ): Promise<HttpServer | HttpsServer> {
 	const server: HttpServer | HttpsServer =
 		localProtocol === "https"
-			? createHttpsServer(await getHttpsOptions())
+			? createHttpsServer(
+					await getHttpsOptions(customHttpsKeyPath, customHttpsCertPath)
+			  )
 			: createHttpServer();
 
 	return server
@@ -636,9 +652,13 @@ function createStreamHandler(
  */
 export async function waitForPortToBeAvailable(
 	port: number,
+	host: string,
 	options: { retryPeriod: number; timeout: number; abortSignal: AbortSignal }
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
+		if (host === "*") {
+			host = "0.0.0.0";
+		}
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		options.abortSignal.addEventListener("abort", () => {
 			const abortError = new Error("waitForPortToBeAvailable() aborted");
@@ -686,7 +706,7 @@ export async function waitForPortToBeAvailable(
 					doReject(err);
 				}
 			});
-			server.listen(port, () =>
+			server.listen(port, host, () =>
 				terminator
 					.terminate()
 					.then(doResolve, () =>

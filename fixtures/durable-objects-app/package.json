@@ -1,6 +1,5 @@
 {
 	"name": "do-worker-app",
-	"version": "1.0.0",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -14,7 +13,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "^5.28.2",
+		"undici": "^5.28.3",
 		"wrangler": "workspace:*"
 	}
 }

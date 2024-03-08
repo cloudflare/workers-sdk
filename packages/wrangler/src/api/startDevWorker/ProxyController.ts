@@ -58,7 +58,10 @@ export class ProxyController extends EventEmitter {
 		const cert =
 			this.latestConfig.dev?.server?.secure ||
 			this.latestConfig.dev?.inspector?.secure
-				? getHttpsOptions()
+				? getHttpsOptions(
+						this.latestConfig.dev.server?.httpsKeyPath,
+						this.latestConfig.dev.server?.httpsCertPath
+				  )
 				: undefined;
 
 		const proxyWorkerOptions: MiniflareOptions = {

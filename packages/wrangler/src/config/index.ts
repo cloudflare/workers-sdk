@@ -25,7 +25,6 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
@@ -55,6 +54,17 @@ export function readConfig<CommandArgs>(
 	}
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
+	}
+
+	const mainModule = "script" in args ? args.script : config.main;
+	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
+		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
+		config.no_bundle = true;
+
+		// Workers with a python entrypoint need module rules for "*.py". Add one automatically as a DX nicety
+		if (!config.rules.some((rule) => rule.type === "PythonModule")) {
+			config.rules.push({ type: "PythonModule", globs: ["**/*.py"] });
+		}
 	}
 
 	return config;

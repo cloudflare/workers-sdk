@@ -5,6 +5,7 @@ import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
+import { isNavigatorDefined } from "../../navigator-user-agent";
 import { buildFunctions } from "../../pages/buildFunctions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
@@ -141,8 +142,12 @@ export async function deploy({
 	const deploymentConfig =
 		project.deployment_configs[isProduction ? "production" : "preview"];
 	const nodejsCompat =
-		deploymentConfig.compatibility_flags?.includes("nodejs_compat");
+		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ?? false;
 
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		deploymentConfig.compatibility_date,
+		deploymentConfig.compatibility_flags
+	);
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -175,6 +180,7 @@ export async function deploy({
 				routesOutputPath,
 				local: false,
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 
 			builtFunctions = readFileSync(
@@ -254,6 +260,7 @@ export async function deploy({
 			workerJSDirectory: _workerPath,
 			buildOutputDirectory: directory,
 			nodejsCompat,
+			defineNavigatorUserAgent,
 		});
 	} else if (_workerJS) {
 		if (bundle) {
@@ -270,9 +277,10 @@ export async function deploy({
 				watch: false,
 				onEnd: () => {},
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 		} else {
-			await checkRawWorker(_workerPath, () => {});
+			await checkRawWorker(_workerPath, nodejsCompat, () => {});
 			// TODO: Let users configure this in the future.
 			workerBundle = {
 				modules: [],

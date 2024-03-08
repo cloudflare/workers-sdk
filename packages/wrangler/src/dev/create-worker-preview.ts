@@ -2,8 +2,9 @@ import { URL } from "node:url";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { UserError } from "../errors";
 import { logger } from "../logger";
-import { parseJSON } from "../parse";
+import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import type {
 	CfWorkerContext,
@@ -132,10 +133,16 @@ function randomId(): string {
 
 // URLs are often relative to the zone. Sometimes the base zone
 // will be grey-clouded, and so the host must be swapped out for
-// the worker route host, which is more likely to be orange-clouded
-function switchHost(originalUrl: string, host?: string): URL {
+// the worker route host, which is more likely to be orange-clouded.
+// However, this switching should only happen if we're running a zone preview
+// rather than a workers.dev preview
+function switchHost(
+	originalUrl: string,
+	host: string | undefined,
+	zonePreview: boolean
+): URL {
 	const url = new URL(originalUrl);
-	url.hostname = host ?? url.hostname;
+	url.hostname = zonePreview ? host ?? url.hostname : url.hostname;
 	return url;
 }
 /**
@@ -158,7 +165,11 @@ export async function createPreviewSession(
 		abortSignal
 	);
 
-	const switchedExchangeUrl = switchHost(exchange_url, ctx.host).toString();
+	const switchedExchangeUrl = switchHost(
+		exchange_url,
+		ctx.host,
+		!!ctx.zone
+	).toString();
 
 	logger.debugWithSanitization(
 		"-- START EXCHANGE API REQUEST:",
@@ -179,22 +190,35 @@ export async function createPreviewSession(
 	logger.debugWithSanitization("RESPONSE:", bodyText);
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
+	try {
+		const { inspector_websocket, prewarm, token } = parseJSON<{
+			inspector_websocket: string;
+			token: string;
+			prewarm: string;
+		}>(bodyText);
+		const inspector = new URL(inspector_websocket);
+		inspector.searchParams.append("cf_workers_preview_token", token);
 
-	const { inspector_websocket, prewarm, token } = parseJSON<{
-		inspector_websocket: string;
-		token: string;
-		prewarm: string;
-	}>(bodyText);
-	const inspector = new URL(inspector_websocket);
-	inspector.searchParams.append("cf_workers_preview_token", token);
-
-	return {
-		id: randomId(),
-		value: token,
-		host: ctx.host ?? inspector.host,
-		inspectorUrl: switchHost(inspector.href, ctx.host),
-		prewarmUrl: switchHost(prewarm, ctx.host),
-	};
+		return {
+			id: randomId(),
+			value: token,
+			host: ctx.host ?? inspector.host,
+			inspectorUrl: switchHost(inspector.href, ctx.host, !!ctx.zone),
+			prewarmUrl: switchHost(prewarm, ctx.host, !!ctx.zone),
+		};
+	} catch (e) {
+		if (!(e instanceof ParseError)) {
+			throw e;
+		} else {
+			throw new UserError(
+				`Could not create remote preview session on ${
+					ctx.zone
+						? ` host \`${ctx.host}\` on zone \`${ctx.zone}\``
+						: `your account`
+				}.`
+			);
+		}
+	}
 }
 
 /**

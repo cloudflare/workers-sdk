@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.10.0",
+	"version": "2.13.2",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -27,6 +27,7 @@
 	],
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
+		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
 		"check:lint": "eslint .",
 		"check:type": "tsc",
 		"lint": "eslint",
@@ -68,6 +69,7 @@
 		"deepmerge": "^4.3.1",
 		"degit": "^2.8.4",
 		"dns2": "^2.1.0",
+		"dotenv": "^16.0.0",
 		"esbuild": "^0.17.12",
 		"execa": "^7.1.1",
 		"glob": "^10.3.3",
@@ -78,7 +80,7 @@
 		"recast": "^0.22.0",
 		"semver": "^7.5.1",
 		"typescript": "^5.0.2",
-		"undici": "5.28.2",
+		"undici": "5.28.3",
 		"vite-tsconfig-paths": "^4.0.8",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",

@@ -7,6 +7,7 @@ import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { syncAssets } from "../sites";
@@ -16,6 +17,7 @@ import {
 	saveAccountToCache,
 } from "../user";
 import { getAccessToken } from "../user/access";
+import { getZoneIdForPreview } from "../zones";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -29,6 +31,7 @@ import type {
 	CfWorkerContext,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ParseError } from "../parse";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
 import type {
@@ -47,6 +50,8 @@ interface RemoteProps {
 	port: number;
 	ip: string;
 	localProtocol: "https" | "http";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	inspect: boolean;
 	inspectorPort: number;
 	accountId: string | undefined;
@@ -56,7 +61,6 @@ interface RemoteProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady?:
@@ -85,7 +89,6 @@ export function Remote(props: RemoteProps) {
 		usageModel: props.usageModel,
 		env: props.env,
 		legacyEnv: props.legacyEnv,
-		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
 		onReady: props.onReady,
@@ -151,7 +154,6 @@ interface RemoteWorkerProps {
 	usageModel: "bundled" | "unbound" | undefined;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady:
@@ -180,15 +182,16 @@ export function useWorker(
 			if (props.accountId === undefined) {
 				return;
 			}
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
 
 			setSession(
 				await createPreviewSession(
@@ -210,6 +213,14 @@ export function useWorker(
 					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (
+				(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
+			) {
+				logger.error(
+					`Could not access \`${err.cause.hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+				);
+			} else if (err instanceof UserError) {
+				logger.error(err.message);
 			}
 			// we want to log the error, but not end the process
 			// since it could recover after the developer fixes whatever's wrong
@@ -227,7 +238,6 @@ export function useWorker(
 		props.host,
 		props.legacyEnv,
 		props.routes,
-		props.zone,
 		props.sendMetrics,
 		restartCounter,
 	]);
@@ -268,15 +278,16 @@ export function useWorker(
 				usageModel: props.usageModel,
 			});
 
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
 
 			const workerPreviewToken = await createWorkerPreview(
 				init,
@@ -322,41 +333,39 @@ export function useWorker(
 					port: workerPreviewToken.inspectorUrl.port.toString(),
 					pathname: workerPreviewToken.inspectorUrl.pathname,
 				},
-				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
+				userWorkerInnerUrlOverrides: {
+					hostname: props.host ?? getInferredHost(props.routes),
+					port: props.port.toString(),
+				},
 				headers: {
 					"cf-workers-preview-token": workerPreviewToken.value,
-					Cookie: accessToken && `CF_Authorization=${accessToken}`,
+					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
 				},
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 				proxyLogsToController: true,
 			};
 
-			onReady?.(props.host || "localhost", props.port, proxyData);
+			onReady?.(
+				props.host ?? getInferredHost(props.routes) ?? "localhost",
+				props.port,
+				proxyData
+			);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
 			// since it could recover after the developer fixes whatever's wrong
-			if ((err as { code: string }).code !== "ABORT_ERR") {
-				// instead of logging the raw API error to the user,
-				// give them friendly instructions
-				// for error 10063 (workers.dev subdomain required)
-				if (err.code === 10063) {
-					const errorMessage =
-						"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-					const solutionMessage =
-						"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-					const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-					logger.error(
-						`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
-					);
-				} else if (err.code === 10049) {
+			// instead of logging the raw API error to the user,
+			// give them friendly instructions
+			if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
+				// code 10049 happens when the preview token expires
+				if (err.code === 10049) {
 					logger.log("Preview token expired, fetching a new one");
-					// code 10049 happens when the preview token expires
+
 					// since we want a new preview token when this happens,
 					// lets increment the counter, and trigger a rerun of
 					// the useEffect above
 					setRestartCounter((prevCount) => prevCount + 1);
-				} else {
+				} else if (!handleUserFriendlyError(err, props.accountId)) {
 					logger.error("Error on remote worker:", err);
 				}
 			}
@@ -379,7 +388,6 @@ export function useWorker(
 		props.modules,
 		props.env,
 		props.legacyEnv,
-		props.zone,
 		props.host,
 		props.routes,
 		session,
@@ -427,6 +435,8 @@ export async function startRemoteServer(props: RemoteProps) {
 			? undefined
 			: props.assetPaths?.assetDirectory,
 		localProtocol: props.localProtocol,
+		customHttpsKeyPath: props.httpsKeyPath,
+		customHttpsCertPath: props.httpsCertPath,
 		localPort: props.port,
 		ip: props.ip,
 		onReady: async (ip, port) => {
@@ -444,10 +454,13 @@ export async function startRemoteServer(props: RemoteProps) {
 					port: previewToken.inspectorUrl.port.toString(),
 					pathname: previewToken.inspectorUrl.pathname,
 				},
-				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
+				userWorkerInnerUrlOverrides: {
+					hostname: props.host,
+					port: props.port.toString(),
+				},
 				headers: {
 					"cf-workers-preview-token": previewToken.value,
-					Cookie: accessToken && `CF_Authorization=${accessToken}`,
+					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
 				},
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 				proxyLogsToController: true,
@@ -477,11 +490,10 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			throw error;
 		}
 		const abortController = new AbortController();
-		const { workerAccount, workerContext } = getWorkerAccountAndContext({
+		const { workerAccount, workerContext } = await getWorkerAccountAndContext({
 			accountId: props.accountId,
 			env: props.env,
 			legacyEnv: props.legacyEnv,
-			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
 			sendMetrics: props.sendMetrics,
@@ -525,21 +537,15 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		return workerPreviewToken;
 	}
 	return start().catch((err) => {
-		if ((err as { code?: string })?.code !== "ABORT_ERR") {
-			// instead of logging the raw API error to the user,
-			// give them friendly instructions
-			// for error 10063 (workers.dev subdomain required)
-			if (err?.code === 10063) {
-				const errorMessage =
-					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-				const solutionMessage =
-					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-			} else if (err?.code === 10049) {
-				// code 10049 happens when the preview token expires
+		// we want to log the error, but not end the process
+		// since it could recover after the developer fixes whatever's wrong
+		// instead of logging the raw API error to the user,
+		// give them friendly instructions
+		if ((err as unknown as { code: string })?.code !== "ABORT_ERR") {
+			// code 10049 happens when the preview token expires
+			if (err.code === 10049) {
 				logger.log("Preview token expired, restart server to fetch a new one");
-			} else {
+			} else if (!handleUserFriendlyError(err, props.accountId)) {
 				helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
 				logger.error("Error on remote worker:", err);
 			}
@@ -600,7 +606,7 @@ async function createRemoteWorkerInit(props: {
 		main: {
 			name: path.basename(props.bundle.path),
 			filePath: props.bundle.path,
-			type: getBundleType(props.format),
+			type: getBundleType(props.format, path.basename(props.bundle.path)),
 			content,
 		},
 		modules,
@@ -633,25 +639,27 @@ async function createRemoteWorkerInit(props: {
 	return init;
 }
 
-function getWorkerAccountAndContext(props: {
+export async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	env?: string;
 	legacyEnv?: boolean;
-	zone?: string;
 	host?: string;
 	routes: Route[] | undefined;
 	sendMetrics?: boolean;
-}): { workerAccount: CfAccount; workerContext: CfWorkerContext } {
+}): Promise<{ workerAccount: CfAccount; workerContext: CfWorkerContext }> {
 	const workerAccount: CfAccount = {
 		accountId: props.accountId,
 		apiToken: requireApiToken(),
 	};
 
+	// What zone should the realish preview for this Worker run on?
+	const zoneId = await getZoneIdForPreview(props.host, props.routes);
+
 	const workerContext: CfWorkerContext = {
 		env: props.env,
 		legacyEnv: props.legacyEnv,
-		zone: props.zone,
-		host: props.host,
+		zone: zoneId,
+		host: props.host ?? getInferredHost(props.routes),
 		routes: props.routes,
 		sendMetrics: props.sendMetrics,
 	};
@@ -683,4 +691,56 @@ function ChooseAccount(props: {
 			/>
 		</>
 	);
+}
+
+/**
+ * A switch for handling thrown error mappings to user friendly
+ * messages, does not perform any logic other than logging errors.
+ * @returns if the error was handled or not
+ */
+function handleUserFriendlyError(error: ParseError, accountId?: string) {
+	switch ((error as unknown as { code: number }).code) {
+		// code 10021 is a validation error
+		case 10021: {
+			// if it is the following message, give a more user friendly
+			// error, otherwise do not handle this error in this function
+			if (
+				error.notes[0].text ===
+				"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+			) {
+				const errorMessage =
+					"Error: You must use a real database in the preview_database_id configuration.";
+				const solutionMessage =
+					"You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here:";
+				const documentationLink = `https://developers.cloudflare.com/d1/configuration/local-development`;
+
+				logger.error(
+					`${errorMessage}\n${solutionMessage}\n${documentationLink}`
+				);
+
+				return true;
+			}
+
+			return false;
+		}
+
+		// for error 10063 (workers.dev subdomain required)
+		case 10063: {
+			const errorMessage =
+				"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
+			const solutionMessage =
+				"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
+			const onboardingLink = accountId
+				? `https://dash.cloudflare.com/${accountId}/workers/onboarding`
+				: "https://dash.cloudflare.com/?to=/:account/workers/onboarding";
+
+			logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+
+			return true;
+		}
+
+		default: {
+			return false;
+		}
+	}
 }

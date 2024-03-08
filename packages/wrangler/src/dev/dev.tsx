@@ -24,6 +24,7 @@ import {
 	unregisterWorker,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
@@ -143,6 +144,8 @@ export type DevProps = {
 	tsconfig: string | undefined;
 	upstreamProtocol: "https" | "http";
 	localProtocol: "https" | "http";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
@@ -162,7 +165,6 @@ export type DevProps = {
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
-	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
@@ -197,6 +199,17 @@ export function DevImplementation(props: DevProps): JSX.Element {
 let ip: string;
 let port: number;
 
+// When starting on `port: 0`, we won't know the port to use until `workerd` has started. If the user tries to open the
+// browser before we know this, they'll open `localhost:0` which is incorrect.
+let portUsable = false;
+let portUsablePromiseResolve: () => void;
+const portUsablePromise = new Promise<void>(
+	(resolve) => (portUsablePromiseResolve = resolve)
+);
+// If the user has pressed `b`, but the port isn't ready yet, prevent any further presses of `b` opening a browser,
+// until the port is ready.
+let blockBrowserOpen = false;
+
 function InteractiveDevSession(props: DevProps) {
 	const toggles = useHotkeys({
 		initial: {
@@ -216,6 +229,8 @@ function InteractiveDevSession(props: DevProps) {
 	useTunnel(toggles.tunnel);
 
 	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
+		portUsable = true;
+		portUsablePromiseResolve();
 		ip = newIp;
 		port = newPort;
 		props.onReady?.(newIp, newPort, proxyData);
@@ -269,6 +284,8 @@ function DevSession(props: DevSessionProps) {
 					hostname: props.initialIp,
 					port: props.initialPort,
 					secure: props.localProtocol === "https",
+					httpsKeyPath: props.httpsKeyPath,
+					httpsCertPath: props.httpsCertPath,
 				},
 				inspector: {
 					port: props.inspectorPort,
@@ -285,6 +302,8 @@ function DevSession(props: DevSessionProps) {
 			props.initialIp,
 			props.initialPort,
 			props.localProtocol,
+			props.httpsKeyPath,
+			props.httpsCertPath,
 			props.localUpstream,
 			props.inspectorPort,
 			props.liveReload,
@@ -354,6 +373,10 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onBundleStart,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
 	});
 	useEffect(() => {
 		if (bundle) onReloadStart(bundle);
@@ -440,6 +463,8 @@ function DevSession(props: DevSessionProps) {
 			crons={props.crons}
 			queueConsumers={props.queueConsumers}
 			localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
 			localUpstream={props.localUpstream}
 			upstreamProtocol={props.upstreamProtocol}
 			inspect={props.inspect}
@@ -459,6 +484,8 @@ function DevSession(props: DevSessionProps) {
 			port={props.initialPort}
 			ip={props.initialIp}
 			localProtocol={props.localProtocol}
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
 			inspectorPort={props.inspectorPort}
 			// TODO: @threepointone #1167
 			// liveReload={props.liveReload}
@@ -468,7 +495,6 @@ function DevSession(props: DevSessionProps) {
 			usageModel={props.usageModel}
 			env={props.env}
 			legacyEnv={props.legacyEnv}
-			zone={props.zone}
 			host={props.host}
 			routes={props.routes}
 			onReady={announceAndOnReady}
@@ -645,6 +671,13 @@ function useHotkeys(props: {
 					break;
 				// open browser
 				case "b": {
+					if (port === 0) {
+						if (!portUsable) logger.info("Waiting for port...");
+						if (blockBrowserOpen) return;
+						blockBrowserOpen = true;
+						await portUsablePromise;
+						blockBrowserOpen = false;
+					}
 					if (ip === "0.0.0.0" || ip === "*") {
 						await openInBrowser(`${localProtocol}://127.0.0.1:${port}`);
 						return;

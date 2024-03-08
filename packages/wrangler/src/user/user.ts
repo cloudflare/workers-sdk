@@ -1014,7 +1014,7 @@ export async function login(
 			}
 		});
 
-		server.listen(8976);
+		server.listen(8976, "localhost");
 	});
 	if (props?.browser) {
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);

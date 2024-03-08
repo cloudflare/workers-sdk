@@ -71,7 +71,7 @@ test.before(async (t) => {
         import { BlobStore } from "miniflare:shared";
         export default {
           async fetch(request, env, ctx) {
-            const store = new BlobStore(env.BLOBS, env.NAMESPACE);
+            const store = new BlobStore(env.BLOBS, env.NAMESPACE, false);
             if (request.method === "POST") {
               let args = await request.json();
               args = args.map((arg) => arg === null ? undefined : arg);

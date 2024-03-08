@@ -1,6 +1,6 @@
 # Template: pages-functions-static-form
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/pages-functions-static-form)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/pages-plugin-static-forms)
 
 A template for Pages using static-forms plugin.
 

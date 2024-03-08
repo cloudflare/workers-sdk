@@ -1,5 +1,218 @@
 # miniflare
 
+## 3.20240304.0
+
+### Minor Changes
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - chore: bump `workerd` to [`1.20240304.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240304.0)
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - fix: use python_workers compat flag for Python
+
+## 3.20240223.1
+
+### Patch Changes
+
+- [#5133](https://github.com/cloudflare/workers-sdk/pull/5133) [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure internals can access `workerd` when starting on non-local `host`
+
+  Previously, if Miniflare was configured to start on a `host` that wasn't `127.0.0.1`, `::1`, `*`, `::`, or `0.0.0.0`, calls to `Miniflare` API methods relying on the magic proxy (e.g. `getKVNamespace()`, `getWorker()`, etc.) would fail. This change ensures `workerd` is always accessible to Miniflare's internals. This also fixes `wrangler dev` when using local network address such as `192.168.0.10` with the `--ip` flag.
+
+- [#5133](https://github.com/cloudflare/workers-sdk/pull/5133) [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure IPv6 addresses can be used as `host`s
+
+  Previously, if Miniflare was configured to start on an IPv6 `host`, it could crash. This change ensures IPv6 addresses are handled correctly. This also fixes `wrangler dev` when using IPv6 addresses such as `::1` with the `--ip` flag.
+
+## 3.20240223.0
+
+### Minor Changes
+
+- [#5081](https://github.com/cloudflare/workers-sdk/pull/5081) [`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1) Thanks [@garrettgu10](https://github.com/garrettgu10)! - chore: bump `workerd` to [`1.20240223.1`](https://github.com/cloudflare/workerd/releases/tag/v1.20240223.0)
+
+## 3.20240208.0
+
+### Minor Changes
+
+- [#5068](https://github.com/cloudflare/workers-sdk/pull/5068) [`b03db864`](https://github.com/cloudflare/workers-sdk/commit/b03db864a36924c31b8ddd82a027c83df4f68c43) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `workerd` to [`1.20240208.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240208.0)
+
+## 3.20240129.3
+
+### Minor Changes
+
+- [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: pass `Miniflare` instance as argument to custom service binding handlers
+
+  This change adds a new `Miniflare`-typed parameter to function-valued service binding handlers. This provides easy access to the correct bindings when re-using service functions across instances.
+
+  <!--prettier-ignore-start-->
+
+  ```js
+  import assert from "node:assert";
+  import { Miniflare, Response } from "miniflare";
+
+  const mf = new Miniflare({
+  	serviceBindings: {
+  		SERVICE(request, instance) {
+  			assert(instance === mf);
+  			return new Response();
+  		},
+  	},
+  });
+  ```
+
+  <!--prettier-ignore-end-->
+
+* [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: allow `URL`s to be passed in `hyperdrives`
+
+  Previously, the `hyperdrives` option only accepted `string`s as connection strings. This change allows `URL` objects to be passed too.
+
+- [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: add support for custom root paths
+
+  Miniflare has lots of file-path-valued options (e.g. `scriptPath`, `kvPersist`, `textBlobBindings`). Previously, these were always resolved relative to the current working directory before being used. This change adds a new `rootPath` shared, and per-worker option for customising this behaviour. Instead of resolving relative to the current working directory, Miniflare will now resolve path-valued options relative to the closest `rootPath` option. Paths are still resolved relative to the current working directory if no `rootPath`s are defined. Worker-level `rootPath`s are themselves resolved relative to the shared `rootPath` if defined.
+
+  <!--prettier-ignore-start-->
+
+  ```js
+  import { Miniflare } from "miniflare";
+
+  const mf1 = new Miniflare({
+  	scriptPath: "index.mjs",
+  });
+
+  const mf2 = new Miniflare({
+  	rootPath: "a/b",
+  	scriptPath: "c/index.mjs",
+  });
+
+  const mf3 = new Miniflare({
+  	rootPath: "/a/b",
+  	workers: [
+  		{
+  			name: "1",
+  			rootPath: "c",
+  			scriptPath: "index.mjs",
+  		},
+  		{
+  			name: "2",
+  			scriptPath: "index.mjs",
+  		},
+  	],
+  });
+  ```
+
+  <!--prettier-ignore-end-->
+
+* [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: allow easy binding to current worker
+
+  Previously, if you wanted to create a service binding to the current Worker, you'd need to know the Worker's name. This is usually possible, but can get tricky when dealing with many Workers. This change adds a new `kCurrentWorker` symbol that can be used instead of a Worker name in `serviceBindings`. `kCurrentWorker` always points to the Worker with the binding.
+
+  <!--prettier-ignore-start-->
+
+  ```js
+  import { kCurrentWorker, Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	serviceBindings: {
+  		SELF: kCurrentWorker,
+  	},
+  	modules: true,
+  	script: `export default {
+      fetch(request, env, ctx) {
+        const { pathname } = new URL(request.url);
+        if (pathname === "/recurse") {
+          return env.SELF.fetch("http://placeholder");
+        }
+        return new Response("body");
+      }
+    }`,
+  });
+
+  const response = await mf.dispatchFetch("http://placeholder/recurse");
+  console.log(await response.text()); // body
+  ```
+
+  <!--prettier-ignore-end-->
+
+### Patch Changes
+
+- [#4954](https://github.com/cloudflare/workers-sdk/pull/4954) [`7723ac17`](https://github.com/cloudflare/workers-sdk/commit/7723ac17906f894afe9af2152437726ac09a6290) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: allow relative `scriptPath`/`modulesRoot`s to break out of current working directory
+
+  Previously, Miniflare would resolve relative `scriptPath`s against `moduleRoot` multiple times resulting in incorrect paths and module names. This would lead to `can't use ".." to break out of starting directory` `workerd` errors. This change ensures Miniflare uses `scriptPath` as is, and only resolves it relative to `modulesRoot` when computing module names. Note this bug didn't affect service workers. This allows you to reference a modules `scriptPath` outside the working directory with something like:
+
+  ```js
+  const mf = new Miniflare({
+  	modules: true,
+  	modulesRoot: "..",
+  	scriptPath: "../worker.mjs",
+  });
+  ```
+
+  Fixes #4721
+
+* [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: return non-WebSocket responses for failed WebSocket upgrading `fetch()`es
+
+  Previously, Miniflare's `fetch()` would throw an error if the `Upgrade: websocket` header was set, and a non-WebSocket response was returned from the origin. This change ensures the non-WebSocket response is returned from `fetch()` instead, with `webSocket` set to `null`. This allows the caller to handle the response as they see fit.
+
+- [#4795](https://github.com/cloudflare/workers-sdk/pull/4795) [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `MiniflareOptions`, `WorkerOptions`, and `SharedOptions` types are correct
+
+  Miniflare uses Zod for validating options. Previously, Miniflare inferred `*Options` from the _output_ types of its Zod schemas, rather than the _input_ types. In most cases, these were the same. However, the `hyperdrives` option has different input/output types, preventing these from being type checked correctly.
+
+## 3.20240129.2
+
+### Patch Changes
+
+- [#4950](https://github.com/cloudflare/workers-sdk/pull/4950) [`05360e43`](https://github.com/cloudflare/workers-sdk/commit/05360e432bff922def960e86690232c762fad284) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure we do not rewrite external Origin headers in wrangler dev
+
+  In https://github.com/cloudflare/workers-sdk/pull/4812 we tried to fix the Origin headers to match the Host header but were overzealous and rewrote Origin headers for external origins (outside of the proxy server's origin).
+
+  This is now fixed, and moreover we rewrite any headers that refer to the proxy server on the request with the configured host and vice versa on the response.
+
+  This should ensure that CORS is not broken in browsers when a different host is being simulated based on routes in the Wrangler configuration.
+
+## 3.20240129.1
+
+### Minor Changes
+
+- [#4905](https://github.com/cloudflare/workers-sdk/pull/4905) [`148feff6`](https://github.com/cloudflare/workers-sdk/commit/148feff60c9bf3886c0e0fd1ea98049955c27659) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: add a `getCf` method to Miniflare instances
+
+  add a new `getCf` method attached to instances of `Miniflare`, this `getCf` returns
+  the `cf` object that the Miniflare instance provides to the actual workers and it
+  depends of the core option of the same name
+
+  Example:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({ ... });
+
+  const cf = await mf.getCf();
+
+  console.log(`country = ${cf.country} ; colo = ${cf.colo}`); // logs 'country = GB ; colo = LHR'
+  ```
+
+## 3.20240129.0
+
+### Minor Changes
+
+- [#4873](https://github.com/cloudflare/workers-sdk/pull/4873) [`1e424ff2`](https://github.com/cloudflare/workers-sdk/commit/1e424ff280610657e997df8290d0b39b0393c845) Thanks [@dom96](https://github.com/dom96)! - feature: implemented basic Python support
+
+  Here is an example showing how to construct a MiniFlare instance with a Python module:
+
+  ```js
+  const mf = new Miniflare({
+  	modules: [
+  		{
+  			type: "PythonModule",
+  			path: "index",
+  			contents:
+  				"from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
+  		},
+  	],
+  	compatibilityFlags: ["experimental"],
+  });
+  ```
+
+### Patch Changes
+
+- [#4874](https://github.com/cloudflare/workers-sdk/pull/4874) [`749fa3c0`](https://github.com/cloudflare/workers-sdk/commit/749fa3c05e6b9fcaa59a72f60f7936b7beaed5ad) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `workerd` to [`1.20240129.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240129.0)
+
 ## 3.20231218.4
 
 ### Patch Changes

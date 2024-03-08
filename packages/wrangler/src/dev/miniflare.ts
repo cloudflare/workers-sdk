@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
@@ -111,6 +111,8 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
@@ -179,16 +181,21 @@ async function buildSourceOptions(
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
 		const modulesRoot = path.dirname(scriptPath);
-		const { entrypointSource, modules } = withSourceURLs(
-			scriptPath,
-			config.bundle.modules
-		);
+		const { entrypointSource, modules } =
+			config.bundle.type === "python"
+				? {
+						entrypointSource: readFileSync(scriptPath, "utf8"),
+						modules: config.bundle.modules,
+				  }
+				: withSourceURLs(scriptPath, config.bundle.modules);
+
 		return {
 			modulesRoot,
+
 			modules: [
 				// Entrypoint
 				{
-					type: "ESModule",
+					type: ModuleTypeToRuleType[config.bundle.type],
 					path: scriptPath,
 					contents: entrypointSource,
 				},
@@ -427,7 +434,9 @@ export function buildPersistOptions(
 	}
 }
 
-function buildSitesOptions({ assetPaths }: ConfigBundle) {
+export function buildSitesOptions({
+	assetPaths,
+}: Pick<ConfigBundle, "assetPaths">) {
 	if (assetPaths !== undefined) {
 		const { baseDirectory, assetDirectory, includePatterns, excludePatterns } =
 			assetPaths;
@@ -576,7 +585,10 @@ async function buildMiniflareOptions(
 
 	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
 	if (config.localProtocol === "https") {
-		const cert = await getHttpsOptions();
+		const cert = await getHttpsOptions(
+			config.httpsKeyPath,
+			config.httpsCertPath
+		);
 		httpsOptions = {
 			httpsKey: cert.key,
 			httpsCert: cert.cert,

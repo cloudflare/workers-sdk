@@ -1,10 +1,28 @@
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import prom from "promjs";
-import { Toucan } from "toucan-js";
-import { ZodIssue } from "zod";
+import {
+	HttpError,
+	PreviewRequestFailed,
+	PreviewRequestForbidden,
+	RawHttpFailed,
+	TokenUpdateFailed,
+	UploadFailed,
+} from "./errors";
 import { handleException, setupSentry } from "./sentry";
 import type { RegistryType } from "promjs";
+import type { Toucan } from "toucan-js";
+
+function maybeParseUrl(url: string | undefined) {
+	if (!url) {
+		return undefined;
+	}
+	try {
+		return new URL(url);
+	} catch {
+		return undefined;
+	}
+}
 
 const app = new Hono<{
 	Bindings: Env;
@@ -20,118 +38,6 @@ const app = new Hono<{
 
 const rootDomain = ROOT;
 const previewDomain = PREVIEW;
-export class HttpError extends Error {
-	constructor(
-		message: string,
-		readonly status: number,
-		// Only report errors to sentry when they represent actionable errors
-		readonly reportable: boolean
-	) {
-		super(message);
-		Object.setPrototypeOf(this, new.target.prototype);
-	}
-	toResponse() {
-		return Response.json(
-			{
-				error: this.name,
-				message: this.message,
-				data: this.data,
-			},
-			{
-				status: this.status,
-				headers: {
-					"Access-Control-Allow-Origin": "*",
-					"Access-Control-Allow-Methods": "GET,PUT,POST",
-				},
-			}
-		);
-	}
-
-	get data(): Record<string, unknown> {
-		return {};
-	}
-}
-
-export class WorkerTimeout extends HttpError {
-	name = "WorkerTimeout";
-	constructor() {
-		super("Worker timed out", 400, false);
-	}
-
-	toResponse(): Response {
-		return new Response("Worker timed out");
-	}
-}
-
-export class ServiceWorkerNotSupported extends HttpError {
-	name = "ServiceWorkerNotSupported";
-	constructor() {
-		super(
-			"Service Workers are not supported in the Workers Playground",
-			400,
-			false
-		);
-	}
-}
-export class ZodSchemaError extends HttpError {
-	name = "ZodSchemaError";
-	constructor(private issues: ZodIssue[]) {
-		super("Something went wrong", 500, true);
-	}
-
-	get data(): { issues: string } {
-		return { issues: JSON.stringify(this.issues) };
-	}
-}
-
-export class PreviewError extends HttpError {
-	name = "PreviewError";
-	constructor(private error: string) {
-		super(error, 400, false);
-	}
-
-	get data(): { error: string } {
-		return { error: this.error };
-	}
-}
-
-class TokenUpdateFailed extends HttpError {
-	name = "TokenUpdateFailed";
-	constructor() {
-		super("Provide token", 400, false);
-	}
-}
-
-class RawHttpFailed extends HttpError {
-	name = "RawHttpFailed";
-	constructor() {
-		super("Provide token", 400, false);
-	}
-}
-
-class PreviewRequestFailed extends HttpError {
-	name = "PreviewRequestFailed";
-	constructor(private tokenId: string | undefined, reportable: boolean) {
-		super("Token not found", 400, reportable);
-	}
-	get data(): { tokenId: string | undefined } {
-		return { tokenId: this.tokenId };
-	}
-}
-
-class UploadFailed extends HttpError {
-	name = "UploadFailed";
-	constructor() {
-		super("Token not provided", 401, false);
-	}
-}
-
-class PreviewRequestForbidden extends HttpError {
-	name = "PreviewRequestForbidden";
-	constructor() {
-		super("Preview request forbidden", 403, false);
-	}
-}
 
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
@@ -144,8 +50,13 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 	if (!token) {
 		throw new RawHttpFailed();
 	}
-
-	const userObject = env.UserSession.get(env.UserSession.idFromString(token));
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = env.UserSession.idFromString(token);
+	} catch {
+		throw new RawHttpFailed();
+	}
+	const userObject = env.UserSession.get(userObjectId);
 
 	// Delete these consumed headers so as not to bloat the request.
 	// Some tokens can be quite large and may cause nginx to reject the
@@ -165,23 +76,31 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		})
 	);
 
+	const responseHeaders = new Headers(workerResponse.headers);
+
+	const rawHeaders = new Headers({
+		"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Credentials": "true",
+		"cf-ew-status": workerResponse.status.toString(),
+		"Access-Control-Expose-Headers": "*",
+		Vary: "Origin",
+	});
+
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
-	const rawHeaders: Record<string, string> = {};
-	for (const header of workerResponse.headers.entries()) {
-		rawHeaders[`cf-ew-raw-${header[0]}`] = header[1];
+	const setCookieHeader = responseHeaders.getSetCookie();
+	for (const cookie of setCookieHeader) {
+		rawHeaders.append("cf-ew-raw-set-cookie", cookie);
 	}
+	responseHeaders.delete("Set-Cookie");
+	for (const header of responseHeaders.entries()) {
+		rawHeaders.set(`cf-ew-raw-${header[0]}`, header[1]);
+	}
+
 	return new Response(workerResponse.body, {
 		...workerResponse,
-		headers: {
-			...rawHeaders,
-			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-			"Access-Control-Allow-Methods": "*",
-			"Access-Control-Allow-Credentials": "true",
-			"cf-ew-status": workerResponse.status.toString(),
-			"Access-Control-Expose-Headers": "*",
-			Vary: "Origin",
-		},
+		headers: rawHeaders,
 	});
 }
 
@@ -249,15 +168,17 @@ app.get(`${rootDomain}/`, async (c) => {
 });
 
 app.post(`${rootDomain}/api/worker`, async (c) => {
-	let userId = getCookie(c, "user");
-
+	const userId = getCookie(c, "user");
 	if (!userId) {
 		throw new UploadFailed();
 	}
-
-	const userObject = c.env.UserSession.get(
-		c.env.UserSession.idFromString(userId)
-	);
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(userId);
+	} catch {
+		throw new UploadFailed();
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
 
 	return userObject.fetch("https://example.com", {
 		body: c.req.body,
@@ -268,15 +189,17 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 
 app.get(`${rootDomain}/api/inspector`, async (c) => {
 	const url = new URL(c.req.url);
-	let userId = url.searchParams.get("user");
-
+	const userId = url.searchParams.get("user");
 	if (!userId) {
 		throw new PreviewRequestFailed("", false);
 	}
-
-	const userObject = c.env.UserSession.get(
-		c.env.UserSession.idFromString(userId)
-	);
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(userId);
+	} catch {
+		throw new PreviewRequestFailed(userId, false);
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
 
 	return userObject.fetch(c.req.raw);
 });
@@ -297,10 +220,16 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
 	const token = url.searchParams.get("token");
+	const referer = maybeParseUrl(c.req.header("Referer"));
 
 	if (
+		!referer ||
 		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
-		!c.req.header("Referer")?.startsWith("https://workers.cloudflare.com")
+		!(
+			referer.hostname === "workers.cloudflare.com" ||
+			referer.hostname === "localhost" ||
+			referer.hostname.endsWith("workers-playground.pages.dev")
+		)
 	) {
 		throw new PreviewRequestForbidden();
 	}
@@ -308,11 +237,19 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	if (!token) {
 		throw new TokenUpdateFailed();
 	}
+	// Validate `token` is an actual Durable Object ID
+	try {
+		c.env.UserSession.idFromString(token);
+	} catch {
+		throw new TokenUpdateFailed();
+	}
+
 	setCookie(c, "token", token, {
 		secure: true,
 		sameSite: "None",
 		httpOnly: true,
 		domain: url.hostname,
+		partitioned: true,
 	});
 
 	return c.redirect(url.searchParams.get("suffix") ?? "/", 307);
@@ -337,14 +274,16 @@ app.all(`${previewDomain}/*`, async (c) => {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
 	const token = getCookie(c, "token");
-
 	if (!token) {
 		throw new PreviewRequestFailed(token, false);
 	}
-
-	const userObject = c.env.UserSession.get(
-		c.env.UserSession.idFromString(token)
-	);
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(token);
+	} catch {
+		throw new PreviewRequestFailed(token, false);
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
 
 	const original = await userObject.fetch(
 		url,

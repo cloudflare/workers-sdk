@@ -11,22 +11,21 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check:fixtures": "node -r esbuild-register tools/deployments/ensure-fixtures-are-not-deployable.ts",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:lint": "node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint",
+		"check:lint": "dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test",
-		"test:ci": "vitest run && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare",
+		"test:ci": "vitest run --no-file-parallelism && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
 	},
 	"dependencies": {
-		"@changesets/changelog-github": "^0.4.5",
-		"@changesets/cli": "^2.22.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.1.0",
 		"@types/node": "^20.0.0",
 		"cross-env": "^7.0.3",
@@ -37,11 +36,13 @@
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
 		"typescript": "^4.8.4",
-		"vite": "^4.0.4",
-		"vitest": "^0.34.6"
+		"vite": "^5.0.12",
+		"vitest": "^1.2.2"
 	},
 	"devDependencies": {
 		"@actions/artifact": "^2.0.1",
+		"@changesets/changelog-github": "^0.5.0",
+		"@changesets/cli": "^2.27.1",
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"@turbo/gen": "^1.10.13",
 		"@vue/compiler-sfc": "^3.3.4",
@@ -53,7 +54,7 @@
 		"node": ">=16.17.0"
 	},
 	"volta": {
-		"node": "16.13.0"
+		"node": "16.17.0"
 	},
 	"pnpm": {
 		"peerDependencyRules": {

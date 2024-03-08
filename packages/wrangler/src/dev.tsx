@@ -16,7 +16,7 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
-import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
+import { getHostFromRoute, getZoneIdForPreview } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -115,6 +115,16 @@ export function devOptions(yargs: CommonYargsArgv) {
 			.option("local-protocol", {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
+			})
+			.option("https-key-path", {
+				describe: "Path to a custom certificate key",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("https-cert-path", {
+				describe: "Path to a custom certificate",
+				type: "string",
+				requiresArg: true,
 			})
 			.options("local-upstream", {
 				type: "string",
@@ -342,6 +352,7 @@ export type StartDevOptions = DevArguments &
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
 		forceLocal?: boolean;
+		accountId?: string;
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
@@ -393,7 +404,6 @@ export async function startDev(args: StartDevOptions) {
 			legacyNodeCompat,
 			nodejsCompat,
 			upstreamProtocol,
-			zoneId,
 			host,
 			routes,
 			getLocalPort,
@@ -428,7 +438,6 @@ export async function startDev(args: StartDevOptions) {
 					findAdditionalModules={configParam.find_additional_modules}
 					entry={entry}
 					env={args.env}
-					zone={zoneId}
 					host={host}
 					routes={routes}
 					processEntrypoint={processEntrypoint}
@@ -446,10 +455,16 @@ export async function startDev(args: StartDevOptions) {
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
-					localUpstream={args.localUpstream ?? host}
+					httpsKeyPath={args.httpsKeyPath}
+					httpsCertPath={args.httpsCertPath}
+					localUpstream={args.localUpstream ?? host ?? getInferredHost(routes)}
 					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
-					accountId={configParam.account_id || getAccountFromCache()?.id}
+					accountId={
+						args.accountId ??
+						configParam.account_id ??
+						getAccountFromCache()?.id
+					}
 					assetPaths={assetPaths}
 					assetsConfig={configParam.assets}
 					initialPort={
@@ -519,7 +534,6 @@ export async function startApiDev(args: StartDevOptions) {
 		legacyNodeCompat,
 		nodejsCompat,
 		upstreamProtocol,
-		zoneId,
 		host,
 		routes,
 		getLocalPort,
@@ -554,7 +568,6 @@ export async function startApiDev(args: StartDevOptions) {
 			findAdditionalModules: configParam.find_additional_modules,
 			entry: entry,
 			env: args.env,
-			zone: zoneId,
 			host: host,
 			routes: routes,
 			processEntrypoint,
@@ -572,10 +585,13 @@ export async function startApiDev(args: StartDevOptions) {
 			tsconfig: args.tsconfig ?? configParam.tsconfig,
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol ?? configParam.dev.local_protocol,
-			localUpstream: args.localUpstream ?? host,
+			httpsKeyPath: args.httpsKeyPath,
+			httpsCertPath: args.httpsCertPath,
+			localUpstream: args.localUpstream ?? host ?? getInferredHost(routes),
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,
-			accountId: configParam.account_id ?? getAccountFromCache()?.id,
+			accountId:
+				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			assetPaths: assetPaths,
 			assetsConfig: configParam.assets,
 			//port can be 0, which means to use a random port
@@ -626,12 +642,16 @@ export async function startApiDev(args: StartDevOptions) {
 	};
 }
 /**
+ * Get an available TCP port number.
+ *
  * Avoiding calling `getPort()` multiple times by memoizing the first result.
  */
-function memoizeGetPort(defaultPort?: number) {
+function memoizeGetPort(defaultPort: number, host: string) {
 	let portValue: number;
 	return async () => {
-		return portValue || (portValue = await getPort({ port: defaultPort }));
+		// Check a specific host to avoid probing all local addresses.
+		portValue = portValue ?? (await getPort({ port: defaultPort, host: host }));
+		return portValue;
 	};
 }
 /**
@@ -650,48 +670,37 @@ function maskVars(bindings: CfWorkerInit["bindings"], configParam: Config) {
 	return maskedVars;
 }
 
-async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
+async function getHostAndRoutes(args: StartDevOptions, config: Config) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
-	let host = args.host || config.dev.host;
-	let zoneId: string | undefined;
+	const host = args.host || config.dev.host;
 	const routes: Route[] | undefined =
 		args.routes || (config.route && [config.route]) || config.routes;
 
-	if (args.remote) {
-		if (host) {
-			zoneId = await getZoneIdFromHost(host);
-		}
-		if (!zoneId && routes) {
-			const firstRoute = routes[0];
-			const zone = await getZoneForRoute(firstRoute);
-			if (zone) {
-				zoneId = zone.id;
-				host = zone.host;
-			}
-		}
-	} else if (!host) {
-		if (routes) {
-			const firstRoute = routes[0];
-			host = getHostFromRoute(firstRoute);
+	return { host, routes };
+}
 
-			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
-			if (host === undefined) {
-				throw new UserError(
-					`Cannot infer host from first route: ${JSON.stringify(
-						firstRoute
-					)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+export function getInferredHost(routes: Route[] | undefined) {
+	if (routes) {
+		const firstRoute = routes[0];
+		const host = getHostFromRoute(firstRoute);
+
+		// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
+		if (host === undefined) {
+			throw new UserError(
+				`Cannot infer host from first route: ${JSON.stringify(
+					firstRoute
+				)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
 
 	\`\`\`
 	[dev]
 	host = "example.com"
 	\`\`\`
 `
-				);
-			}
+			);
 		}
+		return host;
 	}
-	return { host, routes, zoneId };
 }
 
 async function validateDevServerSettings(
@@ -704,15 +713,25 @@ async function validateDevServerSettings(
 		"dev"
 	);
 
-	const { zoneId, host, routes } = await getZoneIdHostAndRoutes(args, config);
-	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
-	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
+	const { host, routes } = await getHostAndRoutes(args, config);
+
+	// TODO: Remove this hack
+	// This function throws if the zone ID can't be found given the provided host and routes
+	// However, it's called as part of initialising a preview session, which is nested deep within
+	// React/Ink and useEffect()s, which swallow the error and turn it into a logw. Because it's a non-recoverable user error,
+	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
+	// the error to be thrown where it will correctly exit the Wrangler process
+	if (args.remote) await getZoneIdForPreview(host, routes);
+	const initialIp = args.ip || config.dev.ip;
+	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
+	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
+	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 
 	// Our inspector proxy server will be binding to the result of
 	// `getInspectorPort`. If we attempted to bind workerd to the same inspector
 	// port, we'd get a port already in use error. Therefore, generate a new port
 	// for our runtime to bind its inspector service to.
-	const getRuntimeInspectorPort = memoizeGetPort();
+	const getRuntimeInspectorPort = memoizeGetPort(0, "127.0.0.1");
 
 	if (config.services && config.services.length > 0) {
 		logger.warn(
@@ -802,7 +821,6 @@ async function validateDevServerSettings(
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,
-		zoneId,
 		host,
 		routes,
 		cliDefines,
@@ -949,11 +967,25 @@ export function getBindings(
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
-			if (!hyperdrive.localConnectionString) {
+			const connectionStringFromEnv =
+				process.env[
+					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
+				];
+			if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
 				throw new UserError(
-					`In development, you should use a local postgres connection string to emulate hyperdrive functionality. Please setup postgres locally and set the value of "${hyperdrive.binding}"'s "localConnectionString" to the postgres connection string in your wrangler.toml`
+					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 				);
 			}
+
+			// If there is a non-empty connection string specified in the environment,
+			// use that as our local connection string configuration.
+			if (connectionStringFromEnv) {
+				logger.log(
+					`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
+				);
+				hyperdrive.localConnectionString = connectionStringFromEnv;
+			}
+
 			return hyperdrive;
 		}),
 	};

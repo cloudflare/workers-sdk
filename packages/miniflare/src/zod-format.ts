@@ -15,9 +15,9 @@ import {
 	red,
 	yellow,
 } from "kleur/colors";
-import { z } from "zod";
+import type { z } from "zod";
 
-// This file contains a `_formatZodError(error, input)` function for formatting
+// This file contains a `formatZodError(error, input)` function for formatting
 // a Zod `error` that came from parsing a specific `input`. This works by
 // building an "annotated" version of the `input`, with roughly the same shape,
 // but including messages from the `error`. This is then printed to a string.
@@ -54,7 +54,7 @@ import { z } from "zod";
 //   [Symbol(kActual)]: 42
 // }
 //
-// const formatted = _formatZodError(error, input);
+// const formatted = formatZodError(error, input);
 //       ↳ 42
 //         ^ Expected boolean, received number
 // ```
@@ -111,7 +111,7 @@ import { z } from "zod";
 //   }
 // }
 //
-// const formatted = _formatZodError(error, input);
+// const formatted = formatZodError(error, input);
 //       ↳ {
 //           a: false,
 //              ^ Expected number, received boolean
@@ -156,7 +156,7 @@ import { z } from "zod";
 //   <1 empty item>
 // ]
 //
-// const formatted = _formatZodError(error, input);
+// const formatted = formatZodError(error, input);
 //       ↳ [
 //           ...,
 //           /* [2] */ false,
@@ -225,7 +225,7 @@ import { z } from "zod";
 //   }
 // }
 //
-// const formatted = _formatZodError(error, input);
+// const formatted = formatZodError(error, input);
 //       ↳ {
 //           ...,
 //           a: undefined,
@@ -509,8 +509,7 @@ function print(
 	return "";
 }
 
-/** @internal */
-export function _formatZodError(error: z.ZodError, input: unknown): string {
+export function formatZodError(error: z.ZodError, input: unknown): string {
 	// Shallow copy and sort array, with `invalid_union` errors first, so we don't
 	// annotate the input with an `invalid_type` error instead
 	const sortedIssues = Array.from(error.issues).sort((a, b) => {

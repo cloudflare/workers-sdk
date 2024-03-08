@@ -1,6 +1,5 @@
 {
 	"name": "dev-env",
-	"version": "1.0.1",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -16,8 +15,8 @@
 		"@types/ws": "^8.5.7",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"get-port": "^7.0.0",
-		"miniflare": "3.20231218.4",
-		"undici": "^5.28.2",
+		"miniflare": "workspace:*",
+		"undici": "^5.28.3",
 		"wrangler": "workspace:*",
 		"ws": "^8.14.2"
 	},

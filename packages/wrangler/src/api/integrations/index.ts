@@ -1,1 +1,2 @@
-export * from "./bindings";
+export * from "./platform";
+export * from "./deprecated";

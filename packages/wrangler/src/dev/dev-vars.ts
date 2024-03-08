@@ -21,14 +21,17 @@ import type { Config } from "../config";
  */
 export function getVarsForDev(
 	config: Pick<Config, "configPath" | "vars">,
-	env: string | undefined
+	env: string | undefined,
+	silent = false
 ): Config["vars"] {
 	const configDir = path.resolve(path.dirname(config.configPath ?? "."));
 	const devVarsPath = path.resolve(configDir, ".dev.vars");
 	const loaded = loadDotEnv(devVarsPath, env);
 	if (loaded !== undefined) {
 		const devVarsRelativePath = path.relative(process.cwd(), loaded.path);
-		logger.log(`Using vars defined in ${devVarsRelativePath}`);
+		if (!silent) {
+			logger.log(`Using vars defined in ${devVarsRelativePath}`);
+		}
 		return {
 			...config.vars,
 			...loaded.parsed,

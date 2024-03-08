@@ -29,7 +29,7 @@ export type SocketPorts = Map<SocketIdentifier, number /* port */>;
 
 export interface RuntimeOptions {
 	entryAddress: string;
-	loopbackPort: number;
+	loopbackAddress: string;
 	requiredSockets: SocketIdentifier[];
 	inspectorAddress?: string;
 	verbose?: boolean;
@@ -102,7 +102,7 @@ function getRuntimeArgs(options: RuntimeOptions) {
 		// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
 		"--experimental",
 		`--socket-addr=${SOCKET_ENTRY}=${options.entryAddress}`,
-		`--external-addr=${SERVICE_LOOPBACK}=localhost:${options.loopbackPort}`,
+		`--external-addr=${SERVICE_LOOPBACK}=${options.loopbackAddress}`,
 		// Configure extra pipe for receiving control messages (e.g. when ready)
 		"--control-fd=3",
 		// Read config from stdin

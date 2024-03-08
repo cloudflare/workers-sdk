@@ -1,6 +1,5 @@
 {
 	"name": "interactive-dev-tests",
-	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"test": "vitest run",
@@ -9,7 +8,7 @@
 	},
 	"devDependencies": {
 		"strip-ansi": "^7.1.0",
-		"undici": "^5.28.2"
+		"undici": "^5.28.3"
 	},
 	"optionalDependencies": {
 		"node-pty": "^1.0.0"

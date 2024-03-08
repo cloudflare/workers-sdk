@@ -186,8 +186,9 @@ export class BlobStore {
 
 	readonly #fetcher: Fetcher;
 	readonly #baseURL: string;
+	readonly #stickyBlobs: boolean;
 
-	constructor(fetcher: Fetcher, namespace: string) {
+	constructor(fetcher: Fetcher, namespace: string, stickyBlobs: boolean) {
 		namespace = encodeURIComponent(sanitisePath(namespace));
 		this.#fetcher = fetcher;
 		// `baseURL`'s `pathname` (`/${namespace}/blobs/`) is relative to the
@@ -195,6 +196,7 @@ export class BlobStore {
 		// `kvPersist` is `/path/to/kv`, the `blobs` directory for a KV namespace
 		// with ID `TEST_NAMESPACE` would be `/path/to/kv/TEST_NAMESPACE/blobs`.
 		this.#baseURL = `http://placeholder/${namespace}/blobs/`;
+		this.#stickyBlobs = stickyBlobs;
 	}
 
 	private idURL(id: BlobId) {
@@ -241,6 +243,8 @@ export class BlobStore {
 	}
 
 	async delete(id: BlobId): Promise<void> {
+		// If sticky blobs are enabled, don't delete any blobs
+		if (this.#stickyBlobs) return;
 		// Get path for this ID and delete, ignoring if outside root or not found
 		const idURL = this.idURL(id);
 		if (idURL === null) return;

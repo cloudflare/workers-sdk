@@ -9,6 +9,7 @@ import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
@@ -179,6 +180,16 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			},
+			"https-key-path": {
+				describe: "Path to a custom certificate key",
+				type: "string",
+				requiresArg: true,
+			},
+			"https-cert-path": {
+				describe: "Path to a custom certificate",
+				type: "string",
+				requiresArg: true,
+			},
 			"persist-to": {
 				describe:
 					"Specify directory to use for local persistence (defaults to .wrangler/state)",
@@ -229,6 +240,8 @@ export const Handler = async ({
 	service: requestedServices = [],
 	liveReload,
 	localProtocol,
+	httpsKeyPath,
+	httpsCertPath,
 	persistTo,
 	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
@@ -303,7 +316,11 @@ export const Handler = async ({
 
 	let scriptPath = "";
 
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		compatibilityDate,
+		compatibilityFlags
+	);
 	let modules: CfModule[] = [];
 
 	if (usingWorkerDirectory) {
@@ -312,6 +329,7 @@ export const Handler = async ({
 				workerJSDirectory: workerScriptPath,
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompat,
+				defineNavigatorUserAgent,
 			});
 			modules = bundleResult.modules;
 			scriptPath = bundleResult.resolvedEntryPointPath;
@@ -336,7 +354,9 @@ export const Handler = async ({
 	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
 		let runBuild = async () => {
-			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
+			await checkRawWorker(workerScriptPath, nodejsCompat, () =>
+				scriptReadyResolve()
+			);
 		};
 
 		if (enableBundling) {
@@ -360,6 +380,7 @@ export const Handler = async ({
 						sourcemap: true,
 						watch: false,
 						onEnd: () => scriptReadyResolve(),
+						defineNavigatorUserAgent,
 					});
 				} catch (e: unknown) {
 					logger.warn("Failed to bundle _worker.js.", e);
@@ -371,7 +392,10 @@ export const Handler = async ({
 		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
-		}).on("all", async () => {
+		}).on("all", async (event) => {
+			if (event === "unlink") {
+				return;
+			}
 			await runBuild();
 		});
 	} else if (usingFunctions) {
@@ -413,6 +437,7 @@ export const Handler = async ({
 					nodejsCompat,
 					local: true,
 					routesModule,
+					defineNavigatorUserAgent,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};
@@ -539,8 +564,11 @@ export const Handler = async ({
 			watch([routesJSONPath], {
 				persistent: true,
 				ignoreInitial: true,
-			}).on("all", async () => {
+			}).on("all", async (event) => {
 				try {
+					if (event === "unlink") {
+						return;
+					}
 					/**
 					 * Watch for _routes.json file changes and validate file each time.
 					 * If file is valid proceed to running the build.
@@ -621,6 +649,8 @@ export const Handler = async ({
 		port,
 		inspectorPort,
 		localProtocol,
+		httpsKeyPath,
+		httpsCertPath,
 		compatibilityDate,
 		compatibilityFlags,
 		nodeCompat: legacyNodeCompat,

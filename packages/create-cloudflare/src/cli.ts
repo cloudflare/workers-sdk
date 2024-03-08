@@ -27,9 +27,11 @@ import {
 } from "./common";
 import { createProject } from "./pages";
 import {
+	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	selectTemplate,
-	updatePackageJson,
+	updatePackageName,
+	updatePackageScripts,
 } from "./templates";
 import { installWorkersTypes, updateWranglerToml } from "./workers";
 import type { C3Args, C3Context } from "types";
@@ -122,7 +124,7 @@ const create = async (ctx: C3Context) => {
 	}
 
 	await copyTemplateFiles(ctx);
-	await updatePackageJson(ctx);
+	await updatePackageName(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
@@ -137,12 +139,18 @@ const configure = async (ctx: C3Context) => {
 	await installWrangler();
 	await installWorkersTypes(ctx);
 
+	// Note: updateWranglerToml _must_ be called before the configure phase since
+	//       pre-existing workers assume its presence in their configure phase
 	await updateWranglerToml(ctx);
 
 	const { template } = ctx;
 	if (template.configure) {
 		await template.configure({ ...ctx });
 	}
+
+	addWranglerToGitIgnore(ctx);
+
+	await updatePackageScripts(ctx);
 
 	await offerGit(ctx);
 	await gitCommit(ctx);

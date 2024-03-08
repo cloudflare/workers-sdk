@@ -6,10 +6,16 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { getWorkerdCompatibilityDate, installPackages } from "helpers/command";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
+import * as jsonc from "jsonc-parser";
 import MagicString from "magic-string";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
+
+export const wranglerTomlExists = (ctx: C3Context) => {
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	return existsSync(wranglerTomlPath);
+};
 
 export const readWranglerToml = (ctx: C3Context) => {
 	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
@@ -26,7 +32,7 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
  * to the selected project name and adding the latest compatibility date.
  */
 export const updateWranglerToml = async (ctx: C3Context) => {
-	if (ctx.template.platform !== "workers") {
+	if (!wranglerTomlExists(ctx)) {
 		return;
 	}
 
@@ -100,32 +106,46 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 
 	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 
-	let updated = tsconfig;
+	try {
+		const config = jsonc.parse(tsconfig);
+		const currentTypes = config.compilerOptions?.types ?? [];
 
-	if (tsconfig.match(`@cloudflare/workers-types`)) {
-		// Don't update existing instances if they contain an explicit entrypoint
-		if (tsconfig.match(`"@cloudflare/workers-types"`)) {
-			updated = tsconfig.replace("@cloudflare/workers-types", typesEntrypoint);
-		}
-	} else {
-		try {
-			// Note: this simple implementation doesn't handle tsconfigs containing comments
-			//       (as it is not needed for the existing use cases)
+		const explicitEntrypoint = (currentTypes as string[]).some((t) =>
+			t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/)
+		);
 
-			const tsConfigJson = JSON.parse(tsconfig);
-			tsConfigJson.compilerOptions ??= {};
-			tsConfigJson.compilerOptions.types = [
-				...(tsConfigJson.compilerOptions.types ?? []),
-				typesEntrypoint,
-			];
-			updated = JSON.stringify(tsConfigJson, null, 2);
-		} catch {
-			warn("Could not parse tsconfig.json file");
-			updated = tsconfig;
-		}
+		// If a type declaration with an explicit entrypoint exists, leave the types as is
+		// Otherwise, add the latest entrypoint
+		const newTypes = explicitEntrypoint
+			? [...currentTypes]
+			: [
+					...currentTypes.filter(
+						(t: string) => t !== "@cloudflare/workers-types"
+					),
+					typesEntrypoint,
+			  ];
+
+		// If we detect any tabs, use tabs, otherwise use spaces.
+		// We need to pass an explicit value here in order to preserve formatting properly.
+		const useSpaces = !tsconfig.match(/\t/g);
+
+		// Calculate required edits and apply them to file
+		const edits = jsonc.modify(
+			tsconfig,
+			["compilerOptions", "types"],
+			newTypes,
+			{
+				formattingOptions: { insertSpaces: useSpaces },
+			}
+		);
+		const updated = jsonc.applyEdits(tsconfig, edits);
+		writeFile(tsconfigPath, updated);
+	} catch (error) {
+		warn(
+			"Failed to update `tsconfig.json` with latest `@cloudflare/workers-types` entrypoint."
+		);
 	}
 
-	writeFile(tsconfigPath, updated);
 	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
 }
 

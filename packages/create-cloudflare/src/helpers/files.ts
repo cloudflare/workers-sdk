@@ -1,9 +1,17 @@
-import fs, { existsSync } from "fs";
+import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "./command";
 import type { C3Context } from "types";
+
+export const copyFile = (path: string, dest: string) => {
+	try {
+		fs.copyFileSync(path, dest);
+	} catch (error) {
+		crash(error as string);
+	}
+};
 
 export const writeFile = (path: string, content: string) => {
 	try {
@@ -25,6 +33,18 @@ export const readFile = (path: string) => {
 	try {
 		return fs.readFileSync(path, "utf-8");
 	} catch (error) {
+		return crash(error as string);
+	}
+};
+
+export const directoryExists = (path: string): boolean => {
+	try {
+		const stat = statSync(path);
+		return stat.isDirectory();
+	} catch (error) {
+		if ((error as { code: string }).code === "ENOENT") {
+			return false;
+		}
 		return crash(error as string);
 	}
 };

@@ -2868,7 +2868,8 @@ async function onRequest() {
 			contents.includes("worker_default as default");
 
 		const simulateServer = (
-			generatedWorkerBundleCheck: (workerJsContent: string) => void
+			generatedWorkerBundleCheck: (workerJsContent: string) => void,
+			compatibility_flags?: string[]
 		) => {
 			mockGetUploadTokenRequest(
 				"<<funfetti-auth-jwt>>",
@@ -2929,7 +2930,10 @@ async function onRequest() {
 								errors: [],
 								messages: [],
 								result: {
-									deployment_configs: { production: {}, preview: {} },
+									deployment_configs: {
+										production: { compatibility_flags },
+										preview: { compatibility_flags },
+									},
 								},
 							})
 						)
@@ -2951,6 +2955,108 @@ async function onRequest() {
 			);
 			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should not allow 3rd party imports when not bundling", async () => {
+			// Add in a 3rd party import to the bundle
+			writeFileSync(
+				"public/_worker.js",
+				`
+				import { Test } from "test-package";
+
+				export default {
+					async fetch() {
+						console.log(Test);
+						return new Response("Ok");
+					},
+				};`
+			);
+
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+			);
+			let error = "Code did not throw!";
+			try {
+				await runWrangler("pages deploy public --project-name=foo --no-bundle");
+			} catch (e) {
+				error = `${e}`;
+			}
+			expect(error).toContain(
+				"ERROR: [plugin: block-worker-js-imports] _worker.js is not being bundled by Wrangler but it is importing from another file."
+			);
+		});
+
+		it("should allow `cloudflare:...` imports when not bundling", async () => {
+			// Add in a 3rd party import to the bundle
+			writeFileSync(
+				"public/_worker.js",
+				`
+				import { EmailMessage } from "cloudflare:email";
+
+				export default {
+					async fetch() {
+						console.log("EmailMessage", EmailMessage);
+						return new Response("Ok");
+					},
+				};`
+			);
+
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+			);
+			await runWrangler("pages deploy public --project-name=foo --no-bundle");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should allow `node:...` imports when not bundling and marked with nodejs_compat", async () => {
+			// Add in a node built-in import to the bundle
+			writeFileSync(
+				"public/_worker.js",
+				`
+				import { Buffer } from "node:buffer";
+
+				export default {
+					async fetch() {
+						return new Response(Buffer.from("Ok", "utf8"));
+					},
+				};`
+			);
+
+			simulateServer(
+				(generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).toBeFalsy(),
+				["nodejs_compat"]
+			);
+			await runWrangler("pages deploy public --project-name=foo --no-bundle");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should not allow `node:...` imports when not bundling and not marked nodejs_compat", async () => {
+			// Add in a node built-in import to the bundle
+			writeFileSync(
+				"public/_worker.js",
+				`
+				import { Buffer } from "node:buffer";
+
+				export default {
+					async fetch() {
+						return new Response(Buffer.from("Ok", "utf8"));
+					},
+				};`
+			);
+
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+			);
+			let error = "Code did not throw!";
+			try {
+				await runWrangler("pages deploy public --project-name=foo --no-bundle");
+			} catch (e) {
+				error = `${e}`;
+			}
+			expect(error).toContain(
+				"ERROR: [plugin: block-worker-js-imports] _worker.js is not being bundled by Wrangler but it is importing from another file."
+			);
 		});
 
 		it("should not bundle the _worker.js when `--bundle` is set to false", async () => {

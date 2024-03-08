@@ -11,7 +11,14 @@ import {
 } from "vitest";
 import { version } from "../package.json";
 import { frameworkToTest } from "./frameworkToTest";
-import { isQuarantineMode, keys, recreateLogFolder, runC3 } from "./helpers";
+import {
+	createTestLogStream,
+	isQuarantineMode,
+	keys,
+	recreateLogFolder,
+	runC3,
+} from "./helpers";
+import type { WriteStream } from "fs";
 import type { Suite } from "vitest";
 
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
@@ -21,13 +28,15 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 	() => {
 		const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
 		const projectPath = join(tmpDirPath, "basic-tests");
+		let logStream: WriteStream;
 
 		beforeAll((ctx) => {
 			recreateLogFolder(ctx as Suite);
 		});
 
-		beforeEach(() => {
+		beforeEach((ctx) => {
 			rmSync(projectPath, { recursive: true, force: true });
+			logStream = createTestLogStream(ctx);
 		});
 
 		afterEach(() => {
@@ -36,18 +45,18 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			}
 		});
 
-		test("--version", async (ctx) => {
-			const { output } = await runC3({ ctx, argv: ["--version"] });
+		test("--version", async () => {
+			const { output } = await runC3(["--version"], [], logStream);
 			expect(output).toEqual(version);
 		});
 
-		test("--version with positionals", async (ctx) => {
+		test("--version with positionals", async () => {
 			const argv = ["foo", "bar", "baz", "--version"];
-			const { output } = await runC3({ ctx, argv });
+			const { output } = await runC3(argv, [], logStream);
 			expect(output).toEqual(version);
 		});
 
-		test("--version with flags", async (ctx) => {
+		test("--version with flags", async () => {
 			const argv = [
 				"foo",
 				"--type",
@@ -55,17 +64,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				"--no-deploy",
 				"--version",
 			];
-			const { output } = await runC3({ ctx, argv });
+			const { output } = await runC3(argv, [], logStream);
 			expect(output).toEqual(version);
 		});
 
 		test.skipIf(process.platform === "win32")(
 			"Using arrow keys + enter",
-			async (ctx) => {
-				const { output } = await runC3({
-					ctx,
-					argv: [projectPath],
-					promptHandlers: [
+			async () => {
+				const { output } = await runC3(
+					[projectPath],
+					[
 						{
 							matcher: /What type of application do you want to create/,
 							input: [keys.enter],
@@ -83,7 +91,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: [keys.left, keys.enter],
 						},
 					],
-				});
+					logStream
+				);
 
 				expect(projectPath).toExist();
 				expect(output).toContain(`type "Hello World" Worker`);
@@ -95,11 +104,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 
 		test.skipIf(process.platform === "win32")(
 			"Typing custom responses",
-			async (ctx) => {
-				const { output } = await runC3({
-					argv: [],
-					ctx,
-					promptHandlers: [
+			async () => {
+				const { output } = await runC3(
+					[],
+					[
 						{
 							matcher:
 								/In which directory do you want to create your application/,
@@ -122,7 +130,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: ["n"],
 						},
 					],
-				});
+					logStream
+				);
 
 				expect(projectPath).toExist();
 				expect(output).toContain(`type Example router & proxy Worker`);
@@ -134,11 +143,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 
 		test.skipIf(process.platform === "win32")(
 			"Mixed args and interactive",
-			async (ctx) => {
-				const { output } = await runC3({
-					ctx,
-					argv: [projectPath, "--ts", "--no-deploy"],
-					promptHandlers: [
+			async () => {
+				const { output } = await runC3(
+					[projectPath, "--ts", "--no-deploy"],
+					[
 						{
 							matcher: /What type of application do you want to create/,
 							input: [keys.enter],
@@ -148,7 +156,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: ["n"],
 						},
 					],
-				});
+					logStream
+				);
 
 				expect(projectPath).toExist();
 				expect(output).toContain(`type "Hello World" Worker`);

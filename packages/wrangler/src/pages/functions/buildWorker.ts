@@ -31,6 +31,7 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
+	defineNavigatorUserAgent: boolean;
 };
 
 export function buildWorkerFromFunctions({
@@ -47,6 +48,7 @@ export function buildWorkerFromFunctions({
 	nodejsCompat,
 	functionsDirectory,
 	local,
+	defineNavigatorUserAgent,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
@@ -158,6 +160,7 @@ export function buildWorkerFromFunctions({
 		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }
 
@@ -178,6 +181,7 @@ export type RawOptions = {
 	nodejsCompat?: boolean;
 	local: boolean;
 	additionalModules?: CfModule[];
+	defineNavigatorUserAgent: boolean;
 };
 
 /**
@@ -203,6 +207,7 @@ export function buildRawWorker({
 	nodejsCompat,
 	local,
 	additionalModules = [],
+	defineNavigatorUserAgent,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
@@ -252,6 +257,7 @@ export function buildRawWorker({
 		forPages: true,
 		local,
 		projectRoot: getPagesProjectRoot(),
+		defineNavigatorUserAgent,
 	});
 }
 
@@ -259,10 +265,12 @@ export async function traverseAndBuildWorkerJSDirectory({
 	workerJSDirectory,
 	buildOutputDirectory,
 	nodejsCompat,
+	defineNavigatorUserAgent,
 }: {
 	workerJSDirectory: string;
 	buildOutputDirectory: string;
 	nodejsCompat?: boolean;
+	defineNavigatorUserAgent: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
@@ -297,6 +305,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		onEnd: () => {},
 		nodejsCompat,
 		additionalModules,
+		defineNavigatorUserAgent,
 	});
 
 	return {
@@ -342,33 +351,50 @@ export function buildNotifierPlugin(onEnd: () => void): Plugin {
  * This is useful when the user chooses not to bundle the `_worker.js` file by setting
  * `--no-bundle` at the command line.
  */
-export async function checkRawWorker(scriptPath: string, onEnd: () => void) {
+export async function checkRawWorker(
+	scriptPath: string,
+	nodejsCompat: boolean,
+	onEnd: () => void
+) {
 	await esBuild({
 		entryPoints: [scriptPath],
 		write: false,
 		// we need it to be bundled so that any imports that are used are affected by the blocker plugin
 		bundle: true,
-		plugins: [blockWorkerJsImports, buildNotifierPlugin(onEnd)],
+		plugins: [blockWorkerJsImports(nodejsCompat), buildNotifierPlugin(onEnd)],
+		logLevel: "silent",
 	});
 }
 
-const blockWorkerJsImports: Plugin = {
-	name: "block-worker-js-imports",
-	setup(build) {
-		build.onResolve({ filter: /.*/g }, (args) => {
-			// If it's the entrypoint, let it be as is
-			if (args.kind === "entry-point") {
-				return {
-					path: args.path,
-				};
-			}
-			// Otherwise, block any imports that the file is requesting
-			throw new FatalError(
-				"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
-					"This will throw an error if deployed.\n" +
-					"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`.",
-				1
-			);
-		});
-	},
-};
+function blockWorkerJsImports(nodejsCompat: boolean): Plugin {
+	return {
+		name: "block-worker-js-imports",
+		setup(build) {
+			build.onResolve({ filter: /.*/g }, (args) => {
+				// If it's the entrypoint, let it be as is
+				if (args.kind === "entry-point") {
+					return {
+						path: args.path,
+					};
+				}
+				// If it's a node or cf built-in, mark it as external
+				if (
+					(nodejsCompat && args.path.startsWith("node:")) ||
+					args.path.startsWith("cloudflare:")
+				) {
+					return {
+						path: args.path,
+						external: true,
+					};
+				}
+				// Otherwise, block any other imports that the file is requesting
+				throw new FatalError(
+					"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
+						"This will throw an error if deployed.\n" +
+						"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`.",
+					1
+				);
+			});
+		},
+	};
+}

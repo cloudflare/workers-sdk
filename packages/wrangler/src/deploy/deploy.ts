@@ -26,6 +26,7 @@ import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
+import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { getQueue, putConsumer } from "../queues/client";
@@ -480,6 +481,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// `findAdditionalModules` always defaults to `false`
 			findAdditionalModules: config.find_additional_modules ?? false,
 			rules: props.rules,
+			preserveFileNames: config.preserve_file_names ?? false,
 		});
 
 		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
@@ -516,8 +518,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							targetConsumer: "deploy",
 							local: false,
 							projectRoot: props.projectRoot,
+							defineNavigatorUserAgent: isNavigatorDefined(
+								props.compatibilityDate ?? config.compatibility_date,
+								props.compatibilityFlags ?? config.compatibility_flags
+							),
 						}
 				  );
+
+		// Add modules to dependencies for size warning
+		for (const module of modules) {
+			const modulePath =
+				module.filePath === undefined
+					? module.name
+					: path.relative("", module.filePath);
+			const bytesInOutput =
+				typeof module.content === "string"
+					? Buffer.byteLength(module.content)
+					: module.content.byteLength;
+			dependencies[modulePath] = { bytesInOutput };
+		}
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -718,6 +737,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					err.notes.length > 0
 				) {
 					err.preventReport();
+
+					if (
+						err.notes[0].text ===
+						"binding DB of type d1 must have a valid `id` specified [code: 10021]"
+					) {
+						throw new UserError(
+							"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development"
+						);
+					}
 
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
@@ -1152,10 +1180,11 @@ async function noBundleWorker(
 		await writeAdditionalModules(modules, outDir);
 	}
 
+	const bundleType = getBundleType(entry.format, entry.file);
 	return {
 		modules,
 		dependencies: {} as { [path: string]: { bytesInOutput: number } },
 		resolvedEntryPointPath: entry.file,
-		bundleType: getBundleType(entry.format),
+		bundleType,
 	};
 }

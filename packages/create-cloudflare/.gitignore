@@ -12,3 +12,6 @@ templates/**/pnpm-lock.yaml
 
 # the build step renames .gitignore files to __dot__gitignore
 templates/**/__dot__gitignore
+
+scripts/snippets
+!scripts/snippets/.gitkeep

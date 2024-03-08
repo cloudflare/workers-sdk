@@ -8,6 +8,7 @@ import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
+import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
 
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
@@ -18,6 +19,7 @@ export const PLUGINS = {
 	[QUEUES_PLUGIN_NAME]: QUEUES_PLUGIN,
 	[R2_PLUGIN_NAME]: R2_PLUGIN,
 	[HYPERDRIVE_PLUGIN_NAME]: HYPERDRIVE_PLUGIN,
+	[RATELIMIT_PLUGIN_NAME]: RATELIMIT_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -56,20 +58,21 @@ export type Plugins = typeof PLUGINS;
 //
 // Considering we don't have too many plugins, we now just define these types
 // manually, which has the added benefit of faster type checking.
-export type WorkerOptions = z.infer<typeof CORE_PLUGIN.options> &
-	z.infer<typeof CACHE_PLUGIN.options> &
-	z.infer<typeof D1_PLUGIN.options> &
-	z.infer<typeof DURABLE_OBJECTS_PLUGIN.options> &
-	z.infer<typeof KV_PLUGIN.options> &
-	z.infer<typeof QUEUES_PLUGIN.options> &
-	z.infer<typeof R2_PLUGIN.options> &
-	z.input<typeof HYPERDRIVE_PLUGIN.options>;
-export type SharedOptions = z.infer<typeof CORE_PLUGIN.sharedOptions> &
-	z.infer<typeof CACHE_PLUGIN.sharedOptions> &
-	z.infer<typeof D1_PLUGIN.sharedOptions> &
-	z.infer<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
-	z.infer<typeof KV_PLUGIN.sharedOptions> &
-	z.infer<typeof R2_PLUGIN.sharedOptions>;
+export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
+	z.input<typeof CACHE_PLUGIN.options> &
+	z.input<typeof D1_PLUGIN.options> &
+	z.input<typeof DURABLE_OBJECTS_PLUGIN.options> &
+	z.input<typeof KV_PLUGIN.options> &
+	z.input<typeof QUEUES_PLUGIN.options> &
+	z.input<typeof R2_PLUGIN.options> &
+	z.input<typeof HYPERDRIVE_PLUGIN.options> &
+	z.input<typeof RATELIMIT_PLUGIN.options>;
+export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
+	z.input<typeof CACHE_PLUGIN.sharedOptions> &
+	z.input<typeof D1_PLUGIN.sharedOptions> &
+	z.input<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
+	z.input<typeof KV_PLUGIN.sharedOptions> &
+	z.input<typeof R2_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
@@ -94,6 +97,7 @@ export {
 	SourceOptionsSchema,
 	ProxyClient,
 	getFreshSourceMapSupport,
+	kCurrentWorker,
 } from "./core";
 export type {
 	ModuleRuleType,
@@ -109,3 +113,4 @@ export * from "./kv";
 export * from "./queues";
 export * from "./r2";
 export * from "./hyperdrive";
+export * from "./ratelimit";

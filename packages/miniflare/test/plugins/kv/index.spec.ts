@@ -2,6 +2,7 @@ import assert from "assert";
 import { Blob } from "buffer";
 import fs from "fs/promises";
 import path from "path";
+import consumers from "stream/consumers";
 import type {
 	KVNamespace,
 	KVNamespaceListOptions,
@@ -643,4 +644,44 @@ test("migrates database to new location", async (t) => {
 
 	const namespace = await mf.getKVNamespace("NAMESPACE");
 	t.is(await namespace.get("key"), "value");
+});
+
+test("sticky blobs never deleted", async (t) => {
+	// Checking regular behaviour that old blobs deleted in `put: overrides
+	// existing keys` test. Only testing sticky blobs for KV, as the blob store
+	// should only be constructed in the shared `MiniflareDurableObject` ABC.
+
+	// Create instance with sticky blobs enabled (can't use `t.context.mf`)
+	const mf = new Miniflare({
+		script: "",
+		modules: true,
+		kvNamespaces: ["NAMESPACE"],
+		unsafeStickyBlobs: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	// Create control stub for newly created instance's namespace
+	const objectNamespace = await mf._getInternalDurableObjectNamespace(
+		KV_PLUGIN_NAME,
+		"kv:ns",
+		"KVNamespaceObject"
+	);
+	const objectId = objectNamespace.idFromName("NAMESPACE");
+	const objectStub = objectNamespace.get(objectId);
+	const object = new MiniflareDurableObjectControlStub(objectStub);
+	await object.enableFakeTimers(secondsToMillis(TIME_NOW));
+	const stmts = sqlStmts(object);
+
+	// Store something in the namespace and get the blob ID
+	const ns = await mf.getKVNamespace("NAMESPACE");
+	await ns.put("key", "value 1");
+	const blobId = await stmts.getBlobIdByKey("key");
+	assert(blobId !== undefined);
+
+	// Override key and check we can still access the old blob
+	await ns.put("key", "value 2");
+	await object.waitForFakeTasks();
+	const blob = await object.getBlob(blobId);
+	assert(blob !== null);
+	t.is(await consumers.text(blob), "value 1");
 });

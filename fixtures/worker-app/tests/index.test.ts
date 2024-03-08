@@ -91,7 +91,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toBe(`https://prod.example.org//thing?a=1`);
 	});
 
-	it("updates the Host and Origin headers appropriately", async ({
+	it("rewrites the Host and Origin headers appropriately", async ({
 		expect,
 	}) => {
 		const response = await fetch(`http://${ip}:${port}/test`, {
@@ -99,17 +99,53 @@ describe("'wrangler dev' correctly renders pages", () => {
 			headers: { Origin: `http://${ip}:${port}` },
 		});
 		const text = await response.text();
-		console.log(text);
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:https://prod.example.org`);
 	});
 
-	it("does not update Origin header if one is not passed by the client", async ({
+	it("does not rewrite Origin header if one is not passed by the client", async ({
 		expect,
 	}) => {
 		const response = await fetch(`http://${ip}:${port}/test`, {});
 		const text = await response.text();
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:null`);
+	});
+
+	it("does not rewrite Origin header if it not the same origin as the proxy Worker", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/test`, {
+			headers: { Origin: `http://foo.com` },
+		});
+		const text = await response.text();
+		expect(text).toContain(`HOST:prod.example.org`);
+		expect(text).toContain(`ORIGIN:http://foo.com`);
+	});
+
+	it("rewrites response headers containing the emulated host", async ({
+		expect,
+	}) => {
+		// This /redirect request will add a Location header that points to prod.example.com/foo
+		// But we should rewrite this back to that of the proxy.
+		const response = await fetch(`http://${ip}:${port}/redirect`, {
+			redirect: "manual",
+		});
+		expect(response.status).toBe(302);
+		expect(await response.text()).toEqual("");
+		expect(response.headers.get("Location")).toEqual(
+			`http://${ip}:${port}/foo`
+		);
+	});
+
+	it("rewrites set-cookie headers to the hostname, not host", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/cookie`);
+
+		expect(response.headers.getSetCookie()).toStrictEqual([
+			`hello=world; Domain=${ip}`,
+			`hello2=world2; Domain=${ip}; Secure`,
+		]);
 	});
 });

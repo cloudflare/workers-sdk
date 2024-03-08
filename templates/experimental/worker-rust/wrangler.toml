@@ -1,6 +1,6 @@
 name = "worker-rust"
 main = "build/worker/shim.mjs"
-compatibility_date = "2023-06-28"
+compatibility_date = "2023-12-01"
 
 [build]
 command = "cargo install -q worker-build && worker-build --release"

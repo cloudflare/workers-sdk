@@ -4,6 +4,7 @@ import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import type { Rule } from "../config/environment";
@@ -29,6 +30,16 @@ async function* getFiles(
 }
 
 /**
+ * Checks if a given string is a valid Python package identifier.
+ * See https://packaging.python.org/en/latest/specifications/name-normalization/
+ * @param name The package name to validate
+ */
+function isValidPythonPackageName(name: string): boolean {
+	const regex = /^([A-Z0-9]|[A-Z0-9][A-Z0-9._-]*[A-Z0-9])$/i;
+	return regex.test(name);
+}
+
+/**
  * Search the filesystem under the `moduleRoot` of the `entry` for potential additional modules
  * that match the given `rules`.
  */
@@ -49,6 +60,40 @@ export async function findAdditionalModules(
 			name: m.name,
 		}));
 
+	// Try to find a requirements.txt file
+	const isPythonEntrypoint =
+		getBundleType(entry.format, entry.file) === "python";
+
+	if (isPythonEntrypoint) {
+		let pythonRequirements = "";
+		try {
+			pythonRequirements = await readFile(
+				path.resolve(entry.directory, "requirements.txt"),
+				"utf-8"
+			);
+		} catch (e) {
+			// We don't care if a requirements.txt isn't found
+			logger.debug(
+				"Python entrypoint detected, but no requirements.txt file found."
+			);
+		}
+
+		for (const requirement of pythonRequirements.split("\n")) {
+			if (requirement === "") continue;
+			if (!isValidPythonPackageName(requirement)) {
+				throw new UserError(
+					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
+				);
+			}
+
+			modules.push({
+				type: "python-requirement",
+				name: requirement,
+				content: "",
+				filePath: undefined,
+			});
+		}
+	}
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
 		logger.table(
@@ -56,7 +101,10 @@ export async function findAdditionalModules(
 				return {
 					Name: name,
 					Type: type ?? "",
-					Size: `${(content.length / 1024).toFixed(2)} KiB`,
+					Size:
+						type === "python-requirement"
+							? ""
+							: `${(content.length / 1024).toFixed(2)} KiB`,
 				};
 			})
 		);

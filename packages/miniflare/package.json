@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "3.20231218.4",
+	"version": "3.20240304.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -33,7 +33,7 @@
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"test": "node scripts/build.mjs && ava && rimraf ./.tmp",
 		"test:ci": "pnpm run test",
-		"check:lint": "eslint \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
+		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
 		"lint:fix": "pnpm run check:lint --fix",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},
@@ -49,14 +49,14 @@
 		"glob-to-regexp": "^0.4.1",
 		"stoppable": "^1.1.0",
 		"undici": "^5.28.2",
-		"workerd": "1.20240129.0",
+		"workerd": "1.20240304.0",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",
 		"zod": "^3.20.6"
 	},
 	"devDependencies": {
 		"@ava/typescript": "^4.0.0",
-		"@cloudflare/kv-asset-handler": "^0.3.0",
+		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-types": "^4.20231002.0",
 		"@microsoft/api-extractor": "^7.36.3",
 		"@types/debug": "^4.1.7",
@@ -76,6 +76,7 @@
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "^0.16.17",
+		"eslint": "^8.6.0",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-es": "^4.1.0",
 		"eslint-plugin-import": "2.26.x",

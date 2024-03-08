@@ -1,6 +1,5 @@
 {
 	"name": "worker-app",
-	"version": "1.0.1",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -13,11 +12,12 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"wrangler": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "^5.28.2"
+		"undici": "^5.28.3",
+		"wrangler": "workspace:*"
 	},
 	"dependencies": {
+		"cookie": "^0.6.0",
 		"isomorphic-random-example": "workspace:^"
 	}
 }

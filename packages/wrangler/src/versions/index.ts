@@ -3,7 +3,12 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import { getRules, getScriptName, printWranglerBanner } from "../index";
+import {
+	getRules,
+	getScriptName,
+	isLegacyEnv,
+	printWranglerBanner,
+} from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -19,6 +24,17 @@ async function standardPricingWarning(
 	accountId: string | undefined,
 	config: Config
 ) {
+	if (Date.now() >= Date.UTC(2024, 2, 1, 14)) {
+		if (config.usage_model !== undefined) {
+			logger.warn(
+				"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+			);
+		}
+
+		// TODO: After March 1st 2024 remove the code below
+		return;
+	}
+
 	try {
 		const { standard, reason } = await fetchResult<{
 			standard: boolean;
@@ -221,6 +237,7 @@ export async function versionsUploadHandler(
 		name: getScriptName(args, config),
 		rules: getRules(config),
 		entry,
+		legacyEnv: isLegacyEnv(config),
 		env: args.env,
 		compatibilityDate: args.latest
 			? new Date().toISOString().substring(0, 10)

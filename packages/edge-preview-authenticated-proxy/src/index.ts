@@ -74,6 +74,19 @@ class PreviewRequestFailed extends HttpError {
 	}
 }
 
+class InvalidURL extends HttpError {
+	constructor(private readonly url: string) {
+		super("Invalid URL", 400, false);
+	}
+	get data() {
+		return { url: this.url };
+	}
+}
+
+function assertValidURL(maybeUrl: string) {
+	if (!URL.canParse(maybeUrl)) throw new InvalidURL(maybeUrl);
+}
+
 function switchRemote(url: URL, remote: string) {
 	const workerUrl = new URL(url);
 	const remoteUrl = new URL(remote);
@@ -207,23 +220,31 @@ async function handleRawHttp(request: Request, url: URL) {
 		})
 	);
 
+	const responseHeaders = new Headers(workerResponse.headers);
+
+	const rawHeaders = new Headers({
+		"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Credentials": "true",
+		"cf-ew-status": workerResponse.status.toString(),
+		"Access-Control-Expose-Headers": "*",
+		Vary: "Origin",
+	});
+
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
-	const rawHeaders: Record<string, string> = {};
-	for (const header of workerResponse.headers.entries()) {
-		rawHeaders[`cf-ew-raw-${header[0]}`] = header[1];
+	const setCookieHeader = responseHeaders.getSetCookie();
+	for (const setCookie of setCookieHeader) {
+		rawHeaders.append("cf-ew-raw-set-cookie", setCookie);
 	}
+	responseHeaders.delete("Set-Cookie");
+	for (const header of responseHeaders.entries()) {
+		rawHeaders.set(`cf-ew-raw-${header[0]}`, header[1]);
+	}
+
 	return new Response(workerResponse.body, {
 		...workerResponse,
-		headers: {
-			...rawHeaders,
-			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-			"Access-Control-Allow-Methods": "*",
-			"Access-Control-Allow-Credentials": "true",
-			"cf-ew-status": workerResponse.status.toString(),
-			"Access-Control-Expose-Headers": "*",
-			Vary: "Origin",
-		},
+		headers: rawHeaders,
 	});
 }
 
@@ -251,6 +272,9 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 	if (!token || !prewarmUrl || !remote) {
 		throw new TokenUpdateFailed();
 	}
+
+	assertValidURL(prewarmUrl);
+	assertValidURL(remote);
 
 	ctx.waitUntil(
 		fetch(prewarmUrl, {
@@ -281,6 +305,7 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 				sameSite: "none",
 				httpOnly: true,
 				domain: url.hostname,
+				partitioned: true,
 			}),
 		},
 	});
@@ -296,6 +321,7 @@ async function handleTokenExchange(url: URL) {
 	if (!exchangeUrl) {
 		throw new NoExchangeUrl();
 	}
+	assertValidURL(exchangeUrl);
 	const exchangeRes = await fetch(exchangeUrl);
 	if (exchangeRes.status !== 200) {
 		const exchange = new URL(exchangeUrl);

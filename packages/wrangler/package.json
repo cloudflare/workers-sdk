@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.25.0",
+	"version": "3.32.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -63,7 +63,7 @@
 		"test": "pnpm run assert-git-version && jest",
 		"test:ci": "pnpm run test --coverage",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
-		"test:e2e": "vitest --test-timeout 240000 --single-thread --dir ./e2e --retry 2 run",
+		"test:e2e": "vitest -c ./e2e/vitest.config.ts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
@@ -101,7 +101,7 @@
 		}
 	},
 	"dependencies": {
-		"@cloudflare/kv-asset-handler": "^0.2.0",
+		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
@@ -201,7 +201,7 @@
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"ts-dedent": "^2.2.0",
-		"undici": "5.28.2",
+		"undici": "5.28.3",
 		"update-check": "^1.5.4",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^8.3.0",
@@ -210,6 +210,14 @@
 	},
 	"optionalDependencies": {
 		"fsevents": "~2.3.2"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "^4.20230914.0"
+	},
+	"peerDependenciesMeta": {
+		"@cloudflare/workers-types": {
+			"optional": true
+		}
 	},
 	"engines": {
 		"node": ">=16.17.0"

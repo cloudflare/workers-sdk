@@ -1,5 +1,176 @@
 # create-cloudflare
 
+## 2.13.2
+
+### Patch Changes
+
+- [#5177](https://github.com/cloudflare/workers-sdk/pull/5177) [`1c6a55d`](https://github.com/cloudflare/workers-sdk/commit/1c6a55d8949fe5f51f209317259a3b67ef2c7147) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.2.2` to `17.2.3`
+
+- [#5186](https://github.com/cloudflare/workers-sdk/pull/5186) [`5dfbc2d`](https://github.com/cloudflare/workers-sdk/commit/5dfbc2d241411096a19af072f8d2a6a194417b5f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-solid` from `0.4.10` to `0.5.3`
+
+- [#5157](https://github.com/cloudflare/workers-sdk/pull/5157) [`01a53b2`](https://github.com/cloudflare/workers-sdk/commit/01a53b2a4f80ac1a58826d4ae14d7a338abdb3de) Thanks [@jculvey](https://github.com/jculvey)! - fix: Updates the Nuxt template by adding a `env.d.ts` file which updates the type difinition for `H3EventContext` to include the `cf` property from the request and an `env` type generated from the recently added `build-cf-types` script.
+
+- [#5188](https://github.com/cloudflare/workers-sdk/pull/5188) [`84eeee5`](https://github.com/cloudflare/workers-sdk/commit/84eeee54b27a6c3a1cc8cc559fe23119ea47bce0) Thanks [@jculvey](https://github.com/jculvey)! - fix: Update SolidStart template to work with create-solid@0.5.3
+
+## 2.13.1
+
+### Patch Changes
+
+- [#5097](https://github.com/cloudflare/workers-sdk/pull/5097) [`9d1d11c`](https://github.com/cloudflare/workers-sdk/commit/9d1d11c3acccb0ee7c06af501163906c738b740a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-hono` from `0.4.0` to `0.5.0`
+
+- [#5121](https://github.com/cloudflare/workers-sdk/pull/5121) [`fd2f153`](https://github.com/cloudflare/workers-sdk/commit/fd2f1530ec1737671d13bf918edfaaf53141b8a2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.2.1` to `17.2.2`
+
+- [#5122](https://github.com/cloudflare/workers-sdk/pull/5122) [`b4f7ad8`](https://github.com/cloudflare/workers-sdk/commit/b4f7ad819c26b7c6c9603b0ddb451bc7cef145f3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.7.2` to `2.8.0`
+
+- [#5135](https://github.com/cloudflare/workers-sdk/pull/5135) [`8935526`](https://github.com/cloudflare/workers-sdk/commit/89355269dea7b33242f9b271bdf6a00d3f6e7e87) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update solid preview and deploy scripts to be aligned with the rest of the frameworks
+
+- [#5129](https://github.com/cloudflare/workers-sdk/pull/5129) [`23074c7`](https://github.com/cloudflare/workers-sdk/commit/23074c7d2124ff19b01aa6f9d6482395bbf0659e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that all C3 projects include in their `.gitignore` the wrangler files
+
+  Previously only the worker templates included in their `.gitignore` the wrangler files (those being `.dev.vars` and `.wrangler`). Make sure to instead include such files in the `.gitignore` files of all the templates including the full stack ones.
+
+- [#5135](https://github.com/cloudflare/workers-sdk/pull/5135) [`8935526`](https://github.com/cloudflare/workers-sdk/commit/89355269dea7b33242f9b271bdf6a00d3f6e7e87) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update solid C3 template to write an `app.config.(js/ts)` file instead of `vite.config.(js/ts)`
+
+## 2.13.0
+
+### Minor Changes
+
+- [#5080](https://github.com/cloudflare/workers-sdk/pull/5080) [`2aa7913`](https://github.com/cloudflare/workers-sdk/commit/2aa79132f2db770c85e99c62336aebbe9af96a8e) Thanks [@jculvey](https://github.com/jculvey)! - feature: Use new `vite-cloudflare` template in Remix projects.
+
+  Remix has released a [new official Cloudflare template](https://remix.run/docs/en/main/future/vite#cloudflare-proxy) that uses `getPlatformProxy` under the hood to provide better support for bindings in dev. Remix projects created with C3 will now use this new template.
+
+  Along with this change, projects will use the default vite-based dev command from `create-remix` instead of using `wrangler pages dev` on build output.
+
+  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accomodate this workflow.
+
+- [#5072](https://github.com/cloudflare/workers-sdk/pull/5072) [`cab7e1c`](https://github.com/cloudflare/workers-sdk/commit/cab7e1c7f24ff0097e15d90030c805fe2785d173) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Astro template.
+
+  C3 will now create Astro projects configured to use miniflare in dev automatically. This is done by adding a configuration for the adapter of `{ runtime: 'local'}` (see [Astro docs](https://docs.astro.build/en/guides/integrations-guide/cloudflare/#runtime) for more details). A `wrangler.toml` file will also be added where bindings can be added to be used in dev.
+
+  Along with this change, projects will now use the default vite-based `astro dev` command instead of using `wrangler pages dev` on build output.
+
+  When Typescript is used, the `src/env.d.ts` file will be updated to add type definitions `runtime.env` which can be re-generated with a newly added `build-cf-types` script.
+
+### Patch Changes
+
+- [#5074](https://github.com/cloudflare/workers-sdk/pull/5074) [`e37c1b8`](https://github.com/cloudflare/workers-sdk/commit/e37c1b8665a3c99873da21c0be7a2fed1d165149) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-svelte` from `6.0.8` to `6.0.9`
+
+- [#5075](https://github.com/cloudflare/workers-sdk/pull/5075) [`c1ed773`](https://github.com/cloudflare/workers-sdk/commit/c1ed7737626bce9930a1fb0fcb28373fd45c4401) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.7.1` to `2.7.2`
+
+- [#5078](https://github.com/cloudflare/workers-sdk/pull/5078) [`64236b0`](https://github.com/cloudflare/workers-sdk/commit/64236b0bf837e8cc31c5886c31d10a8d387f57bd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.2.0` to `17.2.1`
+
+## 2.12.1
+
+### Patch Changes
+
+- [#5066](https://github.com/cloudflare/workers-sdk/pull/5066) [`ef064279`](https://github.com/cloudflare/workers-sdk/commit/ef0642796dbe17b30fd7b83ccfd3efc651ce0a1a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.6.0` to `2.7.1`
+
+* [#5052](https://github.com/cloudflare/workers-sdk/pull/5052) [`f68e83e2`](https://github.com/cloudflare/workers-sdk/commit/f68e83e270fde93a8c6b0553f062b6e4ab80aa75) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add script to Qwik template for building Env type definitions.
+
+  When creating a project with the Qwik template, the `QwikCityPlatform` type will be updated to contain a definition for the `env` property. These types can be re-generated with a newly added `build-cf-types` script.
+
+## 2.12.0
+
+### Minor Changes
+
+- [#4996](https://github.com/cloudflare/workers-sdk/pull/4996) [`246512c8`](https://github.com/cloudflare/workers-sdk/commit/246512c8e34fa218b1d52d3a52cd6aa348fdf563) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add `getBindingsProxy` support to `nuxt` template via `nitro-cloudflare-dev` module.
+
+  The `nuxt` template now uses the default dev command from `create-nuxt` instead of using `wrangler pages dev` on build output in order to improve the developer workflow. `nitro-cloudflare-dev` is a nitro module that leverages `getBindingsProxy` and allows bindings to work in nitro commands.
+
+* [#5027](https://github.com/cloudflare/workers-sdk/pull/5027) [`a751489f`](https://github.com/cloudflare/workers-sdk/commit/a751489f2530bc7a7adec1167319cd145f080812) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Svelte template.
+
+  C3 will now create Svelte projects with a hook that uses `getPlatformProxy` to proxy bindings in development mode. A `wrangler.toml` file will also be added where bindings can be added to be used in conjunction with `getPlatformProxy`.
+
+  Along with this change, projects will use the default vite-based dev command from `create-svelte` instead of using `wrangler pages dev` on build output.
+
+  When Typescript is used, the `app.d.ts` will be updated to add type definitions for `cf` and `ctx` to the `Platform` interface from the `@cloudflare/workers-types` package. Types for bindings on `platform.env` can be re-generated with a newly added `build-cf-types` script.
+
+### Patch Changes
+
+- [#5001](https://github.com/cloudflare/workers-sdk/pull/5001) [`efe8b444`](https://github.com/cloudflare/workers-sdk/commit/efe8b444e4220cfb23c443dc172582ee58119bc5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-hono` from `0.3.2` to `0.4.0`
+
+* [#5011](https://github.com/cloudflare/workers-sdk/pull/5011) [`89482d44`](https://github.com/cloudflare/workers-sdk/commit/89482d4475780c3cd3efbbd004c6b4f85c8daf53) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.4` to `1.4.5`
+
+- [#5019](https://github.com/cloudflare/workers-sdk/pull/5019) [`f939ed73`](https://github.com/cloudflare/workers-sdk/commit/f939ed739a89de174099f128530a29bd51b04899) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.3` to `17.2.0`
+
+* [#5020](https://github.com/cloudflare/workers-sdk/pull/5020) [`0e74c743`](https://github.com/cloudflare/workers-sdk/commit/0e74c743236d2a9055648eac9397d566ac90d83b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `nuxi` from `3.10.0` to `3.10.1`
+
+- [#5021](https://github.com/cloudflare/workers-sdk/pull/5021) [`ae1ef47c`](https://github.com/cloudflare/workers-sdk/commit/ae1ef47c8981a1059b5c8a2adaf7edeb38c1c49d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-astro` from `4.7.2` to `4.7.3`
+
+* [#5009](https://github.com/cloudflare/workers-sdk/pull/5009) [`1e263694`](https://github.com/cloudflare/workers-sdk/commit/1e2636940cc05b06475cce6d96a882f03216ff78) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update Next.js template
+
+  Update the C3 Next.js template so that it uses the latest `@cloudflare/next-on-pages` tooling (i.e. `setupDevPlatform` and `getRequestContext`)
+
+- [#4996](https://github.com/cloudflare/workers-sdk/pull/4996) [`246512c8`](https://github.com/cloudflare/workers-sdk/commit/246512c8e34fa218b1d52d3a52cd6aa348fdf563) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add an empty `wrangler.toml` file to qwik and nuxt templates.
+
+* [#4999](https://github.com/cloudflare/workers-sdk/pull/4999) [`ce6d4bc4`](https://github.com/cloudflare/workers-sdk/commit/ce6d4bc4753625d2aaf1b832bbb47fc50b24a98b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure not to wrongly ask users if they want to use typescript
+
+  currently if a CLI invoked by C3 asks the user if they want to use
+  typescript and the user opted out of it, C3 could actually again offer
+  typescript to the user afterwords, make sure that this does not happen
+
+- [#5010](https://github.com/cloudflare/workers-sdk/pull/5010) [`9f787042`](https://github.com/cloudflare/workers-sdk/commit/9f787042fc6894f5f1ebdc99e0ae10afbe6bdae6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update qwik template to use `getPlatformProxy`
+
+  update the C3 Qwik template to use the `getPlatformProxy` utility instead of the deprecated `getBindingsProxy` one
+
+## 2.11.3
+
+### Patch Changes
+
+- [#4963](https://github.com/cloudflare/workers-sdk/pull/4963) [`b3110c30`](https://github.com/cloudflare/workers-sdk/commit/b3110c304c4355dd153c90aafb82c0113c0544c0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.2` to `17.1.3`
+
+## 2.11.2
+
+### Patch Changes
+
+- [#4935](https://github.com/cloudflare/workers-sdk/pull/4935) [`0699506d`](https://github.com/cloudflare/workers-sdk/commit/0699506d9cab929779d19ec2af9b53ccb70c0e7b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.3` to `1.4.4`
+
+* [#4927](https://github.com/cloudflare/workers-sdk/pull/4927) [`49696ab3`](https://github.com/cloudflare/workers-sdk/commit/49696ab391d09243b54a0c32cf220fcc272871ec) Thanks [@jculvey](https://github.com/jculvey)! - feature: Add `getBindingsProxy` support to `qwik` template
+
+  The `qwik` template now uses `getBindingsProxy` for handling requests for bound resources
+  in dev. This allows projects to use `vite` for dev instead of `wrangler pages dev` on built output.
+
+## 2.11.1
+
+### Patch Changes
+
+- [#4881](https://github.com/cloudflare/workers-sdk/pull/4881) [`37141ba5`](https://github.com/cloudflare/workers-sdk/commit/37141ba5fe3df960fb744ba5c665c4d606a51f57) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.4.2` to `1.4.3`
+
+* [#4892](https://github.com/cloudflare/workers-sdk/pull/4892) [`598b2c49`](https://github.com/cloudflare/workers-sdk/commit/598b2c49d78421fe793f2a7fda467f3fa68d6e8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `@angular/create` from `17.1.1` to `17.1.2`
+
+- [#4903](https://github.com/cloudflare/workers-sdk/pull/4903) [`582396a7`](https://github.com/cloudflare/workers-sdk/commit/582396a78bbeb9efd3c42dd22bb4cad6cc5fbaa7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.5.1` to `2.6.0`
+
+## 2.11.0
+
+### Minor Changes
+
+- [#4850](https://github.com/cloudflare/workers-sdk/pull/4850) [`eb76082b`](https://github.com/cloudflare/workers-sdk/commit/eb76082bfc96c588cc26a2eed7c49407bb797dd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: introduce a new optional `previewScript` to the C3 summary
+
+  such script is to be used to locally preview the application (using wrangler)
+
+### Patch Changes
+
+- [#4855](https://github.com/cloudflare/workers-sdk/pull/4855) [`c58c253b`](https://github.com/cloudflare/workers-sdk/commit/c58c253bf5abf347c8c5a05e12561cc9d8544b95) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-docusaurus` from `3.1.0` to `3.1.1`
+
+* [#4856](https://github.com/cloudflare/workers-sdk/pull/4856) [`f6a707d3`](https://github.com/cloudflare/workers-sdk/commit/f6a707d37522794dc828ddd7895c038c05ab094f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-astro` from `4.7.1` to `4.7.2`
+
+- [#4857](https://github.com/cloudflare/workers-sdk/pull/4857) [`9adfeae5`](https://github.com/cloudflare/workers-sdk/commit/9adfeae5763e00075cea80cb34585598fdc28c19) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-qwik` from `1.4.1` to `1.4.2`
+
+* [#4858](https://github.com/cloudflare/workers-sdk/pull/4858) [`f2ca5e2e`](https://github.com/cloudflare/workers-sdk/commit/f2ca5e2e6df50f7e3977ef3a9e408bd7e11f60be) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-solid` from `0.3.10` to `0.4.10`
+
+- [#4870](https://github.com/cloudflare/workers-sdk/pull/4870) [`7a341949`](https://github.com/cloudflare/workers-sdk/commit/7a341949216fa6bfdb892f0c4d1f797415741856) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-vue` from `3.9.1` to `3.9.2`
+
+* [#4863](https://github.com/cloudflare/workers-sdk/pull/4863) [`ed40cf84`](https://github.com/cloudflare/workers-sdk/commit/ed40cf849ae8f164574137ea34bb86ed88a6e168) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: handle new Next.js `next.config.mjs` default files
+
+  Since `create-next-app` `v14.1.0` the default generated config file is `next.config.mjs`
+  (instead of `next.config.js`), so such new default files need to be handled accordingly
+
+- [#4850](https://github.com/cloudflare/workers-sdk/pull/4850) [`eb76082b`](https://github.com/cloudflare/workers-sdk/commit/eb76082bfc96c588cc26a2eed7c49407bb797dd5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update the svelteKit c3 scripts
+
+  replace the incorrect `pages:dev` with a new `pages:preview` script
+  (and use the standard `dev` script as the `devScript`)
+
+* [#4863](https://github.com/cloudflare/workers-sdk/pull/4863) [`ed40cf84`](https://github.com/cloudflare/workers-sdk/commit/ed40cf849ae8f164574137ea34bb86ed88a6e168) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: Bumped `create-next-app` from `14.0.4` to `14.1.0`
+
 ## 2.10.0
 
 ### Minor Changes

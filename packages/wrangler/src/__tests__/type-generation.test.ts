@@ -1,11 +1,16 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
+import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Config } from "../config";
+import type { EnvironmentNonInheritable } from "../config/environment";
 
-const bindingsConfigMock: Partial<Config> = {
+const bindingsConfigMock: Omit<
+	EnvironmentNonInheritable,
+	"define" | "tail_consumers" | "constellation" | "cloudchamber"
+> &
+	Record<string, unknown> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
@@ -61,6 +66,18 @@ const bindingsConfigMock: Partial<Config> = {
 	dispatch_namespaces: [
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
 	],
+	send_email: [{ name: "SEND_EMAIL_BINDING" }],
+	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
+	mtls_certificates: [
+		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
+	],
+	browser: {
+		binding: "BROWSER_BINDING",
+	},
+	ai: {
+		binding: "AI_BINDING",
+	},
 	logfwdr: {
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
 	},
@@ -95,6 +112,75 @@ const bindingsConfigMock: Partial<Config> = {
 describe("generateTypes()", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
+
+	it("should show a warning when no config file is detected", async () => {
+		await runWrangler("types");
+		expect(std.warn).toMatchInlineSnapshot(`
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected, aborting[0m
+
+		"
+	`);
+	});
+
+	it("should show a warning when no custom config file is detected", async () => {
+		await runWrangler("types -c hello.toml");
+		expect(std.warn).toMatchInlineSnapshot(`
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected (at hello.toml), aborting[0m
+
+		"
+	`);
+	});
+
+	it("should respect the top level -c|--config flag", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					var: "from wrangler toml",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./my-wrangler-config-a.toml",
+			TOML.stringify({
+				vars: {
+					var: "from my-wrangler-config-a",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		fs.writeFileSync(
+			"./my-wrangler-config-b.toml",
+			TOML.stringify({
+				vars: {
+					var: "from my-wrangler-config-b",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types");
+		await runWrangler("types --config ./my-wrangler-config-a.toml");
+		await runWrangler("types -c my-wrangler-config-b.toml");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			var: \\"from wrangler toml\\";
+		}
+
+		interface Env {
+			var: \\"from my-wrangler-config-a\\";
+		}
+
+		interface Env {
+			var: \\"from my-wrangler-config-b\\";
+		}
+		"
+	`);
+	});
 
 	it("should log the interface type generated and declare modules", async () => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
@@ -131,6 +217,12 @@ describe("generateTypes()", () => {
 			SOME_TEXT_BLOB2: string;
 			testing_unsafe: any;
 			TEST_QUEUE_BINDING: Queue;
+			SEND_EMAIL_BINDING: SendEmail;
+			VECTORIZE_BINDING: VectorizeIndex;
+			HYPERDRIVE_BINDING: Hyperdrive;
+			MTLS_BINDING: Fetcher;
+			BROWSER_BINDING: Fetcher;
+			AI_BINDING: unknown;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
@@ -164,21 +256,49 @@ describe("generateTypes()", () => {
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
-	it("should not create DTS file if there is nothing in the config to generate types from", async () => {
-		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
-		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
-				compatibility_date: "2022-01-12",
-				name: "test-name",
-				main: "./index.ts",
-			}),
-			"utf-8"
-		);
+	describe("when nothing was found", () => {
+		it("should not create DTS file for service syntax workers", async () => {
+			fs.writeFileSync(
+				"./index.ts",
+				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
+			);
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
 
-		await runWrangler("types");
-		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+			await runWrangler("types");
+			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
+			fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types");
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toMatch(
+				/interface Env \{\s*\}/
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"interface Env {
+			}
+			"
+		`);
+		});
 	});
 
 	it("should create a DTS file at the location that the command is executed from", async () => {
@@ -234,5 +354,242 @@ describe("generateTypes()", () => {
 		}
 		"
 	`);
+	});
+
+	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: bindingsConfigMock.vars,
+			} as unknown as TOML.JsonMap),
+			"utf-8"
+		);
+
+		await runWrangler("types");
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			SOMETHING: \\"asdasdfasdf\\";
+			ANOTHER: \\"thing\\";
+			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+		}
+		"
+	`);
+	});
+
+	it("should include secret keys from .dev.vars", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler toml",
+					myTomlVarB: "B from wrangler toml",
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		const localVarsEnvContent = dedent`
+		# Preceding comment
+		SECRET_A="A from .dev.vars"
+		MULTI_LINE_SECRET="A: line 1
+		line 2"
+		UNQUOTED_SECRET= unquoted value
+		`;
+		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
+
+		await runWrangler("types");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			myTomlVarA: \\"A from wrangler toml\\";
+			myTomlVarB: \\"B from wrangler toml\\";
+			SECRET_A: string;
+			MULTI_LINE_SECRET: string;
+			UNQUOTED_SECRET: string;
+		}
+		"
+	`);
+	});
+
+	it("should override vars with secrets", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				vars: {
+					MY_VARIABLE_A: "my variable",
+					MY_VARIABLE_B: { variable: true },
+				},
+			} as TOML.JsonMap),
+			"utf-8"
+		);
+
+		const localVarsEnvContent = dedent`
+		# Preceding comment
+		MY_VARIABLE_A = "my secret"
+		MY_VARIABLE_B = "my secret A"
+		`;
+		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
+
+		await runWrangler("types");
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"interface Env {
+			MY_VARIABLE_A: string;
+			MY_VARIABLE_B: string;
+		}
+		"
+	`);
+	});
+
+	describe("customization", () => {
+		describe("env", () => {
+			it("should allow the user to customize the interface name", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await runWrangler("types --env-interface CloudflareEnv");
+				expect(std.out).toMatchInlineSnapshot(`
+			"interface CloudflareEnv {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			}
+			"
+		`);
+			});
+
+			it("should error if --env-interface is specified with no argument", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await expect(runWrangler("types --env-interface")).rejects.toThrowError(
+					`Not enough arguments following: env-interface`
+				);
+			});
+
+			it("should error if an invalid interface identifier is provided to --env-interface", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				const invalidInterfaceNames = [
+					"Cloudflare Env",
+					"1",
+					"123Env",
+					"cloudflare-env",
+					"env()v",
+					"{}",
+				];
+
+				for (const interfaceName of invalidInterfaceNames) {
+					await expect(
+						runWrangler(`types --env-interface '${interfaceName}'`)
+					).rejects.toThrowError(
+						/The provided env-interface value .*? does not satisfy the validation regex/
+					);
+				}
+			});
+
+			it("should warn if --env-interface is used with a service-syntax worker", async () => {
+				fs.writeFileSync(
+					"./index.ts",
+					`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
+				}); async function handleRequest(request) {  return new Response('Hello worker!', {headers: { 'content-type': 'text/plain' },});}`
+				);
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						name: "test-name",
+						main: "./index.ts",
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await expect(
+					runWrangler("types --env-interface CloudflareEnv")
+				).rejects.toThrowError(
+					"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
+				);
+			});
+		});
+
+		describe("output file", () => {
+			it("should allow the user to specify where to write the result", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				await runWrangler("types cloudflare-env.d.ts");
+
+				expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+
+				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8")).toMatch(
+					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+				);
+			});
+
+			it("should error if the user points to a non-d.ts file", async () => {
+				fs.writeFileSync(
+					"./wrangler.toml",
+					TOML.stringify({
+						vars: bindingsConfigMock.vars,
+					} as TOML.JsonMap),
+					"utf-8"
+				);
+
+				const invalidPaths = [
+					"index.ts",
+					"worker.js",
+					"file.txt",
+					"env.d",
+					"env",
+				];
+
+				for (const path of invalidPaths) {
+					await expect(runWrangler(`types ${path}`)).rejects.toThrowError(
+						/The provided path value .*? does not point to a declaration file/
+					);
+				}
+			});
+		});
+
+		it("should allow multiple customization to be applied together", async () => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					vars: bindingsConfigMock.vars,
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+
+			await runWrangler(
+				"types --env-interface MyCloudflareEnvInterface my-cloudflare-env-interface.d.ts"
+			);
+
+			expect(
+				fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8")
+			).toMatch(
+				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+			);
+		});
 	});
 });

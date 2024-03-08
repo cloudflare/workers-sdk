@@ -67,6 +67,10 @@ const revivers: ReducersRevivers = {
 export const PROXY_SECRET = crypto.randomBytes(16);
 const PROXY_SECRET_HEX = PROXY_SECRET.toString("hex");
 
+function isClientError(status: number) {
+	return 400 <= status && status < 500;
+}
+
 // Exported public API of the proxy system
 export class ProxyClient {
 	#bridge: ProxyClientBridge;
@@ -300,6 +304,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	}
 	async #parseAsyncResponse(resPromise: Promise<Response>): Promise<unknown> {
 		const res = await resPromise;
+		assert(!isClientError(res.status));
 
 		const typeHeader = res.headers.get(CoreHeaders.OP_RESULT_TYPE);
 		if (typeHeader === "Promise, ReadableStream") return res.body;
@@ -332,12 +337,14 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			{ value: stringifiedResult, unbufferedStream },
 			this.revivers
 		);
+
 		// We get an empty stack trace if we thread the caller through here,
 		// specifying `this.#parseAsyncResponse` is good enough though, we just
 		// get an extra `processTicksAndRejections` entry
 		return this.#maybeThrow(res, result, this.#parseAsyncResponse);
 	}
 	#parseSyncResponse(syncRes: SynchronousResponse, caller: Function): unknown {
+		assert(!isClientError(syncRes.status));
 		assert(syncRes.body !== null);
 		// Unbuffered streams should only be sent as part of async responses
 		assert(syncRes.headers.get(CoreHeaders.OP_STRINGIFIED_SIZE) === null);

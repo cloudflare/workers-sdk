@@ -1154,6 +1154,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		preserve_file_names: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"preserve_file_names",
+			isBoolean,
+			undefined
+		),
 		base_dir: normalizeAndValidateBaseDirField(
 			configPath,
 			inheritable(

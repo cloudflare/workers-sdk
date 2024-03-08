@@ -112,39 +112,6 @@ describe("wrangler", () => {
 		        `);
 			});
 
-			it("should error if the namespace to create is not valid", async () => {
-				await expect(
-					runWrangler("kv:namespace create abc-def")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number."`
-				);
-
-				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv:namespace create <namespace>
-
-			Create a new namespace
-
-			Positionals:
-			  namespace  The name of the new namespace  [string] [required]
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			Options:
-			      --preview  Interact with a preview namespace  [boolean]"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`
-			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe namespace binding name \\"abc-def\\" is invalid. It can only have alphanumeric and _ characters, and cannot begin with a number.[0m
-
-			          "
-		        `);
-			});
-
 			it("should create a namespace", async () => {
 				mockCreateRequest("worker-UnitTestNamespace");
 				await runWrangler("kv:namespace create UnitTestNamespace");
@@ -756,10 +723,7 @@ describe("wrangler", () => {
 					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
 				);
 
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
@@ -778,10 +742,7 @@ describe("wrangler", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace."`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.[0m
 
@@ -949,10 +910,7 @@ describe("wrangler", () => {
 
 			          "
 		        `);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 			});
 		});
 
@@ -1206,10 +1164,7 @@ describe("wrangler", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
 				);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
@@ -1469,10 +1424,7 @@ describe("wrangler", () => {
 						                "Unexpected JSON input from \\"keys.json\\".
 						                Expected an array of key-value objects but got type \\"object\\"."
 					              `);
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -1531,10 +1483,7 @@ describe("wrangler", () => {
 						                The item at index 12 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"base64\\":\\"string\\"}"
 					              `);
 
-				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
 
@@ -1673,10 +1622,7 @@ describe("wrangler", () => {
 						                Expected an array of strings but got:
 						                12354"
 					              `);
-				expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -1698,10 +1644,7 @@ describe("wrangler", () => {
 						                The item at index 2 is type: \\"object\\" - {\\"key\\":\\"someKey\\"}
 						                The item at index 3 is type: \\"object\\" - null"
 					              `);
-				expect(std.out).toMatchInlineSnapshot(`
-			"
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

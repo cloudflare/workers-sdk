@@ -1,8 +1,8 @@
 import {
 	deleteProject,
 	deleteWorker,
-	listC3Projects,
-	listC3Workers,
+	listTmpE2EProjects,
+	listTmpE2EWorkers,
 	Project,
 } from "./common";
 
@@ -17,7 +17,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
 }
 
 const run = async () => {
-	const projectsToDelete = await listC3Projects();
+	const projectsToDelete = await listTmpE2EProjects();
 
 	for (const project of projectsToDelete) {
 		console.log("Deleting Pages project: " + project.name);
@@ -30,7 +30,7 @@ const run = async () => {
 		console.log(`Successfully deleted ${projectsToDelete.length} projects`);
 	}
 
-	const workersToDelete = await listC3Workers();
+	const workersToDelete = await listTmpE2EWorkers();
 
 	for (const worker of workersToDelete) {
 		console.log("Deleting worker: " + worker.id);
