@@ -1,7 +1,6 @@
 import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runCommand } from "helpers/command";
-import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { getProductionBranch, quoteShellArgs } from "./common";
@@ -93,8 +92,6 @@ export const createProject = async (ctx: C3Context) => {
 				)}`,
 			})
 		);
-
-		debug(`Validated pages project ${ctx.project.name}`);
 	} catch (error) {
 		crash("Pages project isn't ready yet. Please try deploying again later.");
 	}
