@@ -485,7 +485,7 @@ async function fetchLatestDeploymentVersions(
 		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`
 	);
 
-	const latestDeployment = deployments.at(-1);
+	const latestDeployment = deployments.at(0);
 	if (!latestDeployment) return [[], new Map()];
 
 	const versionTraffic = new Map(
