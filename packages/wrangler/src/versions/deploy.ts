@@ -123,7 +123,7 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
-		"deploy worker version(s)",
+		"deploy worker versions",
 		{},
 		{
 			sendMetrics: config.send_metrics,
