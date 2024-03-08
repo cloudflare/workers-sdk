@@ -213,6 +213,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/\/\/.+symbol-dispose\.js/, "// symbol-dispose.js"],
 			]
 		);
 
@@ -224,6 +225,10 @@ export default {
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
+
+		// symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// ../utils/meaning-of-life.js
 		var MEANING_OF_LIFE = 21;
@@ -359,6 +364,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/\/\/.+symbol-dispose\.js/, "// symbol-dispose.js"],
 			]
 		);
 
@@ -370,6 +376,10 @@ export default {
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
+
+		// symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// _worker.js
 		var worker_default = {
@@ -489,6 +499,7 @@ export const cat = "dog";`
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs"],
 				[/bundledWorker-0.[0-9]*.map/g, "bundledWorker-0.test.map"],
+				[/\/\/.+symbol-dispose\.js/, "// symbol-dispose.js"],
 			]
 		);
 
@@ -500,6 +511,10 @@ export const cat = "dog";`
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 		Content-Type: application/javascript+module
+
+		// symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// _worker.js/index.js
 		import { cat } from \\"./cat.js\\";
