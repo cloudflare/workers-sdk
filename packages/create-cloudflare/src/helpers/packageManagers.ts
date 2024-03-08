@@ -9,15 +9,15 @@ import type { C3Context } from "types";
 
 export type PmName = "pnpm" | "npm" | "yarn" | "bun";
 
-/*
-  A helper function for determining which pm command to use based on which one the user
-  invoked this CLI with.
-
-  The entries of the return type are used for the following operations:
-  - npm: running commands with the package manager (ex. `npm install` or `npm run build`)
-  - npx: executing code local to the working directory (ex. `npx wrangler whoami`)
-  - dlx: executing packages that are not installed locally (ex. `pnpm dlx create-solid`)
-*/
+/**
+ * Detects the package manager which was used to invoke C3 and provides a map of its associated commands.
+ *
+ * @returns
+ * An object containing entries for the following operations:
+ * - npm: running commands with the package manager (ex. `npm install` or `npm run build`)
+ * - npx: executing code local to the working directory (ex. `npx wrangler whoami`)
+ * - dlx: executing packages that are not installed locally (ex. `pnpm dlx create-solid`)
+ */
 export const detectPackageManager = () => {
 	const pmInfo = whichPmRuns() as { name: PmName; version: string } | undefined;
 

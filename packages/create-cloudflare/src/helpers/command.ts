@@ -22,8 +22,6 @@ type RunOptions = {
 	cwd?: string;
 	/** If defined this function is called to all you to transform the output from the command into a new string. */
 	transformOutput?: (output: string) => string;
-	/** If defined, this function is called to return a string that is used if the `transformOutput()` fails. */
-	fallbackOutput?: (error: unknown) => string;
 };
 
 type MultiRunOptions = RunOptions & {
@@ -38,6 +36,21 @@ type PrintOptions<T> = {
 	doneText?: string | ((output: T) => string);
 };
 
+/**
+ * An awaitable wrapper around `spawn` that optionally displays progress to user and process output capture.
+ *
+ * @param command - The command to run as an array of strings
+ * @param opts.silent - Should the command's stdout and stderr be dispalyed to the user
+ * @param opts.captureOutput - Should the output of the command the returned as a string.
+ * @param opts.env - An object of environment variables to be injected when running the command
+ * @param opts.cwd - The directory in which the command should be run
+ * @param opts.useSpinner - Should a spinner be shown when running the command
+ * @param opts.startText - Spinner start text
+ * @param opts.endText - Spinner end text
+ * @param opts.transformOutput - A transformer to be run on command output before returning
+ *
+ * @returns Output collected from the stdout of the command, if `captureOutput` was set to true. Otherwise `null`.
+ */
 export const runCommand = async (
 	command: Command,
 	opts: RunOptions = {}
@@ -88,12 +101,7 @@ export const runCommand = async (
 					} catch (e) {
 						// Something went wrong.
 						// Perhaps the command or the transform failed.
-						// If there is a fallback use the result of calling that
-						if (opts.fallbackOutput) {
-							resolvePromise(opts.fallbackOutput(e));
-						} else {
-							reject(new Error(output, { cause: e }));
-						}
+						reject(new Error(output, { cause: e }));
 					}
 				});
 
@@ -105,7 +113,9 @@ export const runCommand = async (
 	});
 };
 
-// run multiple commands in sequence (not parallel)
+/**
+ * Run multiple commands in sequence (not parallel)
+ */
 export async function runCommands({ commands, ...opts }: MultiRunOptions) {
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
@@ -154,6 +164,13 @@ export const printAsyncStatus = async <T>({
 	return promise;
 };
 
+/**
+ * Run a scaffolding tool with `npx` or its equivalent. The `ctx` object must be
+ * populated with a framework that exists `src/frameworks/package.json`.
+ *
+ * @param ctx - The C3 context object
+ * @param args - An array of additional arguments to be used
+ */
 export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	const cli = getFrameworkCli(ctx, true);
 	const { npm, dlx } = detectPackageManager();

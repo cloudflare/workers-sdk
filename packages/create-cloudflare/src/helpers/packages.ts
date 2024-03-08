@@ -19,7 +19,6 @@ type InstallConfig = {
  * @param config.dev - Add packages as `devDependencies`
  * @param config.startText - Spinner start text
  * @param config.doneText - Spinner done text
- *
  */
 export const installPackages = async (
 	packages: string[],
