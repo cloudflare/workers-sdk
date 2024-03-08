@@ -44,28 +44,28 @@ describe("versions list", () => {
 			"Version ID:  40000000-0000-0000-0000-000000000000
 			Created:     1/1/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Upload
 			Tag:         -
 			Message:     -
 
 			Version ID:  30000000-0000-0000-0000-000000000000
 			Created:     2/2/2021, 12:00:00 AM
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Rollback
 			Tag:         -
 			Message:     Rolled back for this version
 
 			Version ID:  20000000-0000-0000-0000-000000000000
 			Created:     2/3/2021, 12:00:00 AM
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Wrangler 🤠
 			Tag:         -
 			Message:     -
 
 			Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     1/4/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Rollback
 			Tag:         -
 			Message:     -
 			"
@@ -89,28 +89,28 @@ describe("versions list", () => {
 			"Version ID:  40000000-0000-0000-0000-000000000000
 			Created:     1/1/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Upload
 			Tag:         -
 			Message:     -
 
 			Version ID:  30000000-0000-0000-0000-000000000000
 			Created:     2/2/2021, 12:00:00 AM
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Rollback
 			Tag:         -
 			Message:     Rolled back for this version
 
 			Version ID:  20000000-0000-0000-0000-000000000000
 			Created:     2/3/2021, 12:00:00 AM
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Wrangler 🤠
 			Tag:         -
 			Message:     -
 
 			Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     1/4/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Rollback
 			Tag:         -
 			Message:     -
 			"

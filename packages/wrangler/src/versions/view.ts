@@ -1,11 +1,10 @@
-import path from "path";
 import { fetchResult } from "../cfetch";
-import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import renderLabelledValues from "../utils/render-labelled-values";
+import { getConfig, getSource } from "./list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -81,18 +80,8 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 		"Version ID:": version.id,
 		"Created:": new Date(version.metadata["created_on"]).toLocaleString(),
 		"Author:": version.metadata.author_email,
-		"Source:": version.metadata.source,
+		"Source:": getSource(version),
 		"Tag:": version.annotations?.["workers/tag"] ?? BLANK_INPUT,
 		"Message:": version.annotations?.["workers/message"] ?? BLANK_INPUT,
 	});
-}
-
-function getConfig(
-	args: Pick<VersionsViewArgs, "config" | "name" | "experimentalJsonConfig">
-) {
-	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
-	const config = readConfig(configPath, args);
-
-	return config;
 }

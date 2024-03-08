@@ -112,7 +112,7 @@ describe("versions view", () => {
 			"Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     1/1/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Upload
 			Tag:         -
 			Message:     -
 			"
@@ -170,7 +170,7 @@ describe("versions view", () => {
 			"Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     1/1/2021, 12:00:00 AM
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Upload
 			Tag:         -
 			Message:     -
 			"
