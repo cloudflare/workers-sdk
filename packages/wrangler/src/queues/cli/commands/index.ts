@@ -1,5 +1,6 @@
 import { HandleUnauthorizedError } from "../../utils";
 import { consumers } from "./consumer";
+import { consumers as pullConsumers } from "./consumer/http-pull";
 import { handler as createHandler, options as createOptions } from "./create";
 import { handler as deleteHandler, options as deleteOptions } from "./delete";
 import { handler as listHandler, options as listOptions } from "./list";
@@ -20,6 +21,22 @@ export function queues(yargs: CommonYargsArgv) {
 		"Delete a Queue",
 		deleteOptions,
 		deleteHandler
+	);
+
+	yargs.command(
+		"consumer:http",
+		"Configure Queue HTTP Pull Consumers",
+		async (consumersYargs) => {
+			await pullConsumers(consumersYargs);
+		}
+	);
+
+	yargs.command(
+		"consumer:worker",
+		"Configure Queue Worker Consumers",
+		async (consumersYargs) => {
+			await consumers(consumersYargs);
+		}
 	);
 
 	yargs.command(

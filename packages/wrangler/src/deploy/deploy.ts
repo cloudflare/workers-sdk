@@ -29,7 +29,7 @@ import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
-import { getQueue, putConsumer } from "../queues/client";
+import { getQueue, postTypedConsumer, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import {
@@ -48,7 +48,7 @@ import type {
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { PutConsumerBody } from "../queues/client";
+import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
@@ -1146,27 +1146,49 @@ async function ensureQueuesExist(config: Config) {
 function updateQueueConsumers(config: Config): Promise<string[]>[] {
 	const consumers = config.queues.consumers || [];
 	return consumers.map((consumer) => {
-		const body: PutConsumerBody = {
-			dead_letter_queue: consumer.dead_letter_queue,
-			settings: {
-				batch_size: consumer.max_batch_size,
-				max_retries: consumer.max_retries,
-				max_wait_time_ms: consumer.max_batch_timeout
-					? 1000 * consumer.max_batch_timeout
-					: undefined,
-				max_concurrency: consumer.max_concurrency,
-			},
-		};
+		if (consumer.type === "http_pull") {
+			// Note: It's weird to define a pull consumer in a worker's config
+			const body: PostTypedConsumerBody = {
+				type: "http_pull",
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					visibility_timeout_ms: consumer.visibility_timeout_ms,
+				},
+			};
+			return postTypedConsumer(config, consumer.queue, body).then(() => [
+				`Consumer for ${consumer.queue}`,
+			]);
+		} else {
+			const body: PutConsumerBody = {
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					max_wait_time_ms: consumer.max_batch_timeout
+						? 1000 * consumer.max_batch_timeout
+						: undefined,
+					max_concurrency: consumer.max_concurrency,
+				},
+			};
 
-		if (config.name === undefined) {
-			// TODO: how can we reliably get the current script name?
-			throw new UserError("Script name is required to update queue consumers");
+			if (config.name === undefined) {
+				// TODO: how can we reliably get the current script name?
+				throw new UserError(
+					"Script name is required to update queue consumers"
+				);
+			}
+			const scriptName = config.name;
+			const envName = undefined; // TODO: script environment for wrangler deploy?
+			return putConsumer(
+				config,
+				consumer.queue,
+				scriptName,
+				envName,
+				body
+			).then(() => [`Consumer for ${consumer.queue}`]);
 		}
-		const scriptName = config.name;
-		const envName = undefined; // TODO: script environment for wrangler deploy?
-		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
-			() => [`Consumer for ${consumer.queue}`]
-		);
 	});
 }
 

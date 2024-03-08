@@ -4,7 +4,11 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { PostConsumerBody, QueueResponse } from "../queues/client";
+import type {
+	PostConsumerBody,
+	PostTypedConsumerBody,
+	QueueResponse,
+} from "../queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -22,10 +26,12 @@ describe("wrangler", () => {
 			🇶 Configure Workers Queues
 
 			Commands:
-			  wrangler queues list           List Queues
-			  wrangler queues create <name>  Create a Queue
-			  wrangler queues delete <name>  Delete a Queue
-			  wrangler queues consumer       Configure Queue Consumers
+			  wrangler queues list             List Queues
+			  wrangler queues create <name>    Create a Queue
+			  wrangler queues delete <name>    Delete a Queue
+			  wrangler queues consumer:http    Configure Queue HTTP Pull Consumers
+			  wrangler queues consumer:worker  Configure Queue Worker Consumers
+			  wrangler queues consumer         Configure Queue Consumers
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -552,6 +558,244 @@ describe("wrangler", () => {
 						"Removing consumer from queue testQueue.
 						Removed consumer from queue testQueue."
 					`);
+				});
+			});
+		});
+
+		describe("http_pull consumers", () => {
+			it("should show the correct help text", async () => {
+				await runWrangler("queues consumer:http --help");
+
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues consumer:http
+
+				Configure Queue HTTP Pull Consumers
+
+				Commands:
+				  wrangler queues consumer:http add <queue-name>     Add a Queue HTTP Pull Consumer
+				  wrangler queues consumer:http remove <queue-name>  Remove a Queue HTTP Pull Consumer
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
+			});
+
+			describe("add", () => {
+				function mockGetQueueRequest(expectedQueueName: string) {
+					const requests = { count: 0 };
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/workers/queues/:queueName",
+							async (request, response, context) => {
+								requests.count += 1;
+								expect(request.params.queueName).toEqual(expectedQueueName);
+								expect(request.params.accountId).toEqual("some-account-id");
+								return response.once(
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											queue_id: "fake-queue-id",
+										},
+									})
+								);
+							}
+						)
+					);
+					return requests;
+				}
+				function mockPostRequest(
+					expectedQueueId: string,
+					expectedBody: PostTypedConsumerBody
+				) {
+					const requests = { count: 0 };
+					msw.use(
+						rest.post(
+							"*/accounts/:accountId/workers/queues/id/:queueId/consumers",
+							async (request, response, context) => {
+								requests.count += 1;
+								expect(request.params.queueId).toEqual(expectedQueueId);
+								expect(request.params.accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual(expectedBody);
+								return response.once(
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									})
+								);
+							}
+						)
+					);
+					return requests;
+				}
+
+				it("should show the correct help text", async () => {
+					await runWrangler("queues consumer:http add --help");
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues consumer:http add <queue-name>
+
+				Add a Queue HTTP Pull Consumer
+
+				Positionals:
+				  queue-name  Name of the queue for the consumer  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				      --batch-size          Maximum number of messages per batch  [number]
+				      --message-retries     Maximum number of retries for each message  [number]
+				      --dead-letter-queue   Queue to send messages that failed to be consumed  [string]
+				      --visibility-timeout  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]"
+			`);
+				});
+
+				it("should add a consumer using defaults", async () => {
+					const expectedBody: PostTypedConsumerBody = {
+						type: "http_pull",
+						settings: {
+							batch_size: undefined,
+							max_retries: undefined,
+							visibility_timeout_ms: undefined,
+						},
+						dead_letter_queue: undefined,
+					};
+					mockPostRequest("fake-queue-id", expectedBody);
+					mockGetQueueRequest("testQueue");
+
+					await runWrangler("queues consumer:http add testQueue");
+					expect(std.out).toMatchInlineSnapshot(`
+							"Adding consumer to queue testQueue.
+							Added consumer to queue testQueue."
+					`);
+				});
+
+				it("should add a consumer using custom values", async () => {
+					const expectedBody: PostTypedConsumerBody = {
+						type: "http_pull",
+						settings: {
+							batch_size: 20,
+							max_retries: 3,
+							visibility_timeout_ms: 6000,
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					mockPostRequest("fake-queue-id", expectedBody);
+					mockGetQueueRequest("testQueue");
+
+					await runWrangler(
+						"queues consumer:http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout 6 --dead-letter-queue myDLQ"
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
+				});
+			});
+
+			describe("delete", () => {
+				function mockGetQueueRequest(expectedQueueName: string) {
+					const requests = { count: 0 };
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/workers/queues/:queueName",
+							async (request, response, context) => {
+								requests.count += 1;
+								expect(request.params.queueName).toEqual(expectedQueueName);
+								expect(request.params.accountId).toEqual("some-account-id");
+								return response.once(
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											queue_id: "fake-queue-id",
+											consumers: [
+												{ consumer_id: "fake-consumer-id", type: "http_pull" },
+											],
+										},
+									})
+								);
+							}
+						)
+					);
+					return requests;
+				}
+				function mockDeleteRequest(
+					expectedQueueId: string,
+					expectedConsumerId: string
+				) {
+					const requests = { count: 0 };
+					const resource = `accounts/:accountId/workers/queues/id/:expectedQueueId/consumers/id/:expectedConsumerId`;
+					msw.use(
+						rest.delete(`*/${resource}`, async (request, response, context) => {
+							requests.count++;
+							expect(request.params.accountId).toBe("some-account-id");
+							expect(request.params.expectedQueueId).toBe(expectedQueueId);
+							expect(request.params.expectedConsumerId).toBe(
+								expectedConsumerId
+							);
+							return response.once(
+								context.status(200),
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {},
+								})
+							);
+						})
+					);
+
+					return requests;
+				}
+
+				it("should show the correct help text", async () => {
+					await runWrangler("queues consumer:http remove --help");
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+					"wrangler queues consumer:http remove <queue-name>
+
+					Remove a Queue HTTP Pull Consumer
+
+					Positionals:
+					  queue-name  Name of the queue for the consumer  [string] [required]
+
+					Flags:
+					  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
+				`);
+				});
+
+				it("should delete a pull consumer", async () => {
+					mockGetQueueRequest("testQueue");
+					const requests = mockDeleteRequest(
+						"fake-queue-id",
+						"fake-consumer-id"
+					);
+					await runWrangler("queues consumer:http remove testQueue");
+
+					expect(requests.count).toEqual(1);
+					expect(std.out).toMatchInlineSnapshot(`
+							"Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
+						`);
 				});
 			});
 		});
