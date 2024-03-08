@@ -6,6 +6,7 @@ import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import renderLabelledValues from "../utils/render-labelled-values";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -71,29 +72,14 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	);
 
 	for (const version of versions) {
-		const view = {
-			"Version ID": version.id,
-			Created: new Date(version.metadata["created_on"]).toLocaleString(),
-			Author: version.metadata.author_email,
-			Source: version.metadata.source,
-			Tag: version.annotations?.["workers/tag"] ?? BLANK_INPUT,
-			Message: version.annotations?.["workers/message"] ?? BLANK_INPUT,
-		};
-
-		const alignment = 17;
-		for (const [label, value] of Object.entries(view)) {
-			const paddedLabel = `${label}:`.padEnd(alignment);
-			const alignedValue = value
-				?.split("\n")
-				.map((line, lineNo) =>
-					lineNo === 0 ? line : " ".repeat(alignment) + line
-				)
-				.join("\n");
-
-			cli.logRaw(paddedLabel + alignedValue);
-		}
-
-		cli.logRaw(``);
+		renderLabelledValues({
+			"Version ID:": version.id,
+			"Created:": new Date(version.metadata["created_on"]).toLocaleString(),
+			"Author:": version.metadata.author_email,
+			"Source:": version.metadata.source,
+			"Tag:": version.annotations?.["workers/tag"] ?? BLANK_INPUT,
+			"Message:": version.annotations?.["workers/message"] ?? BLANK_INPUT,
+		});
 	}
 }
 
