@@ -1,5 +1,4 @@
 import path from "path";
-import * as cli from "@cloudflare/cli";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
