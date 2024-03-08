@@ -625,8 +625,7 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 			async cancel() {
 				await iterator.return?.();
 			},
-		},
-		0
+		}
 	);
 }
 
