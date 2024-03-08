@@ -127,9 +127,3 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 
 	return { used: false };
 };
-
-// Generate a compatibility date flag
-export const compatDateFlag = async () => {
-	const workerdCompatDate = await getWorkerdCompatibilityDate();
-	return `--compatibility-date=${workerdCompatDate}`;
-};

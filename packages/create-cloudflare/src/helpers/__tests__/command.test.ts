@@ -1,13 +1,8 @@
 import { existsSync } from "fs";
 import { spawn } from "cross-spawn";
-import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
-import {
-	getWorkerdCompatibilityDate,
-	installWrangler,
-	runCommand,
-} from "../command";
+import { installWrangler, runCommand } from "../command";
 import type { ChildProcess } from "child_process";
 
 // We can change how the mock spawn works by setting these variables
@@ -74,59 +69,5 @@ describe("Command Helpers", () => {
 		await installWrangler();
 
 		expectSilentSpawnWith("npm install --save-dev wrangler");
-	});
-
-	describe("getWorkerdCompatibilityDate()", () => {
-		const originalDispatcher = getGlobalDispatcher();
-		let agent: MockAgent;
-
-		beforeEach(() => {
-			// Mock out the undici Agent
-			agent = new MockAgent();
-			agent.disableNetConnect();
-			setGlobalDispatcher(agent);
-		});
-
-		afterEach(() => {
-			agent.assertNoPendingInterceptors();
-			setGlobalDispatcher(originalDispatcher);
-		});
-
-		test("normal flow", async () => {
-			agent
-				.get("https://registry.npmjs.org")
-				.intercept({ path: "/workerd" })
-				.reply(
-					200,
-					JSON.stringify({
-						"dist-tags": { latest: "2.20250110.5" },
-					})
-				);
-			const date = await getWorkerdCompatibilityDate();
-			expect(date).toBe("2025-01-10");
-		});
-
-		test("empty result", async () => {
-			agent
-				.get("https://registry.npmjs.org")
-				.intercept({ path: "/workerd" })
-				.reply(
-					200,
-					JSON.stringify({
-						"dist-tags": { latest: "" },
-					})
-				);
-			const date = await getWorkerdCompatibilityDate();
-			expect(date).toBe("2023-05-18");
-		});
-
-		test("command failed", async () => {
-			agent
-				.get("https://registry.npmjs.org")
-				.intercept({ path: "/workerd" })
-				.replyWithError(new Error("Unknown error"));
-			const date = await getWorkerdCompatibilityDate();
-			expect(date).toBe("2023-05-18");
-		});
 	});
 });

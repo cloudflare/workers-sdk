@@ -6,7 +6,6 @@ import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { quoteShellArgs } from "../common";
-import { getLatestPackageVersion } from "./latestPackageVersion";
 import { detectPackageManager } from "./packageManagers";
 import { installPackages } from "./packages";
 import type { C3Context } from "types";
@@ -255,47 +254,3 @@ export const listAccounts = async () => {
 
 	return accounts;
 };
-
-/**
- * Look up the latest release of workerd and use its date as the compatibility_date
- * configuration value for wrangler.toml.
- *
- * If the look up fails then we fall back to a well known date.
- *
- * The date is extracted from the version number of the workerd package tagged as `latest`.
- * The format of the version is `major.yyyymmdd.patch`.
- *
- * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
- */
-export async function getWorkerdCompatibilityDate() {
-	const { compatDate: workerdCompatibilityDate } = await printAsyncStatus<{
-		compatDate: string;
-		isFallback: boolean;
-	}>({
-		useSpinner: true,
-		startText: "Retrieving current workerd compatibility date",
-		doneText: ({ compatDate, isFallback }) =>
-			`${brandColor("compatibility date")}${
-				isFallback ? dim(" Could not find workerd date, falling back to") : ""
-			} ${dim(compatDate)}`,
-		async promise() {
-			try {
-				const latestWorkerdVersion = await getLatestPackageVersion("workerd");
-
-				// The format of the workerd version is `major.yyyymmdd.patch`.
-				const match = latestWorkerdVersion.match(
-					/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/
-				);
-
-				if (match) {
-					const [, year, month, date] = match ?? [];
-					return { compatDate: `${year}-${month}-${date}`, isFallback: false };
-				}
-			} catch {}
-
-			return { compatDate: "2023-05-18", isFallback: true };
-		},
-	});
-
-	return workerdCompatibilityDate;
-}

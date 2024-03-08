@@ -1,9 +1,12 @@
-import { existsSync, readdirSync } from "fs";
+import { existsSync } from "fs";
 import { join, resolve } from "path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { getWorkerdCompatibilityDate } from "helpers/command";
+import {
+	getLatestTypesEntrypoint,
+	getWorkerdCompatibilityDate,
+} from "helpers/compatDate";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -148,33 +151,4 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 	}
 
 	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
-}
-
-// The `@cloudflare/workers-types` package is versioned by compatibility dates, so we
-// must look up the latest entrypiont from the installed dependency on disk.
-// See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
-export function getLatestTypesEntrypoint(ctx: C3Context) {
-	const workersTypesPath = resolve(
-		ctx.project.path,
-		"node_modules",
-		"@cloudflare",
-		"workers-types"
-	);
-
-	try {
-		const entrypoints = readdirSync(workersTypesPath);
-
-		const sorted = entrypoints
-			.filter((filename) => filename.match(/(\d{4})-(\d{2})-(\d{2})/))
-			.sort()
-			.reverse();
-
-		if (sorted.length === 0) {
-			return null;
-		}
-
-		return sorted[0];
-	} catch (error) {
-		return null;
-	}
 }
