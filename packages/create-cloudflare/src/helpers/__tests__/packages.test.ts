@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { installPackages, npmInstall } from "helpers/packages";
+import { installPackages, installWrangler, npmInstall } from "helpers/packages";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";
@@ -78,5 +78,17 @@ describe("Package Helpers", () => {
 				expect(mock).toHaveBeenCalledFirstWith([...initialArgs, ...packages]);
 			}
 		);
+	});
+
+	test("installWrangler", async () => {
+		await installWrangler();
+
+		const { mock } = mockRunCommand();
+		expect(mock).toHaveBeenCalledFirstWith([
+			"npm",
+			"install",
+			"--save-dev",
+			"wrangler",
+		]);
 	});
 });

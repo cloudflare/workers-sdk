@@ -12,6 +12,15 @@ type InstallConfig = {
 	dev?: boolean;
 };
 
+/**
+ * Install a list of packages to the local project directory and add it to `package.json`
+ *
+ * @param packages - An array of package specifiers to be installed
+ * @param config.dev - Add packages as `devDependencies`
+ * @param config.startText - Spinner start text
+ * @param config.doneText - Spinner done text
+ *
+ */
 export const installPackages = async (
 	packages: string[],
 	config: InstallConfig = {}
@@ -43,6 +52,9 @@ export const installPackages = async (
 	});
 };
 
+/**
+ * Install dependencies in the project directory via `npm install` or its equivalent.
+ */
 export const npmInstall = async (ctx: C3Context) => {
 	// Skip this step if packages have already been installed
 	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
@@ -71,3 +83,25 @@ export async function getLatestPackageVersion(packageSpecifier: string) {
 	const npmInfo = (await resp.json()) as NpmInfoResponse;
 	return npmInfo["dist-tags"].latest;
 }
+
+/**
+ *  Installs the latest version of wrangler in the project directory if it isn't already.
+ */
+export const installWrangler = async () => {
+	const { npm } = detectPackageManager();
+
+	// Exit early if already installed
+	if (existsSync(path.resolve("node_modules", "wrangler"))) {
+		return;
+	}
+
+	await installPackages([`wrangler`], {
+		dev: true,
+		startText: `Installing wrangler ${dim(
+			"A command line tool for building Cloudflare Workers"
+		)}`,
+		doneText: `${brandColor("installed")} ${dim(
+			`via \`${npm} install wrangler --save-dev\``
+		)}`,
+	});
+};

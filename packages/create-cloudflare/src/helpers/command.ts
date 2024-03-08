@@ -1,5 +1,3 @@
-import { existsSync } from "fs";
-import path from "path";
 import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
@@ -7,7 +5,6 @@ import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { quoteShellArgs } from "../common";
 import { detectPackageManager } from "./packageManagers";
-import { installPackages } from "./packages";
 import type { C3Context } from "types";
 
 /**
@@ -180,25 +177,6 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	logRaw("");
 
 	await runCommand(cmd, { env });
-};
-
-export const installWrangler = async () => {
-	const { npm } = detectPackageManager();
-
-	// Exit early if already installed
-	if (existsSync(path.resolve("node_modules", "wrangler"))) {
-		return;
-	}
-
-	await installPackages([`wrangler`], {
-		dev: true,
-		startText: `Installing wrangler ${dim(
-			"A command line tool for building Cloudflare Workers"
-		)}`,
-		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``
-		)}`,
-	});
 };
 
 export const isLoggedIn = async () => {
