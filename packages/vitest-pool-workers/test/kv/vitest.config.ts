@@ -7,7 +7,6 @@ export default defineWorkersProject({
 		pool: "../..",
 		poolOptions: {
 			workers: {
-				isolatedStorage: true,
 				miniflare: {
 					serviceBindings: {
 						SEED_NURSERY: {

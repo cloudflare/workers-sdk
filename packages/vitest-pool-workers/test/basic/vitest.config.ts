@@ -9,6 +9,7 @@ export default defineWorkersProject({
 		pool: "../..",
 		poolOptions: {
 			workers: ({ inject }) => ({
+				isolatedStorage: false,
 				singleWorker: true,
 				miniflare: {
 					compatibilityDate: "2024-01-01",

@@ -36,7 +36,7 @@ const WorkersPoolOptionsSchema = z.object({
 	 * hooks can be used to seed data. If this is disabled, all tests will share
 	 * the same storage.
 	 */
-	isolatedStorage: z.boolean().default(false),
+	isolatedStorage: z.boolean().default(true),
 	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of

@@ -7,7 +7,6 @@ export default defineWorkersProject({
 		pool: "../..",
 		poolOptions: {
 			workers: {
-				isolatedStorage: true,
 				miniflare: {
 					compatibilityDate: "2024-01-01",
 					compatibilityFlags: ["nodejs_compat"],
