@@ -6734,6 +6734,46 @@ addEventListener('fetch', event => {});`
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("should support service bindings with entrypoints", async () => {
+				writeWranglerToml({
+					services: [
+						{
+							binding: "FOO",
+							service: "foo-service",
+							environment: "production",
+							entrypoint: "MyHandler",
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "service",
+							name: "FOO",
+							service: "foo-service",
+							environment: "production",
+							entrypoint: "MyHandler",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Services:
+			  - FOO: foo-service - production (#MyHandler)
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {

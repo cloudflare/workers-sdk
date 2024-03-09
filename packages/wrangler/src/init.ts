@@ -1070,6 +1070,7 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 									binding: binding.name,
 									service: binding.service,
 									environment: binding.environment,
+									entrypoint: binding.entrypoint,
 								},
 							];
 						}
