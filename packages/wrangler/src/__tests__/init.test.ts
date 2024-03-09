@@ -2516,6 +2516,7 @@ describe("init", () => {
 						name: "website",
 						service: "website",
 						type: "service",
+						entrypoint: "WWWHandler",
 					},
 					{
 						type: "dispatch_namespace",
@@ -2686,6 +2687,7 @@ describe("init", () => {
 						environment: "production",
 						binding: "website",
 						service: "website",
+						entrypoint: "WWWHandler",
 					},
 				],
 				triggers: {
@@ -3158,6 +3160,7 @@ describe("init", () => {
 			binding = \\"website\\"
 			service = \\"website\\"
 			environment = \\"production\\"
+			entrypoint = \\"WWWHandler\\"
 
 			[[dispatch_namespaces]]
 			binding = \\"name-namespace-mock\\"

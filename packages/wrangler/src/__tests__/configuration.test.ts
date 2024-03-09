@@ -938,6 +938,7 @@ describe("normalizeAndValidateConfig()", () => {
 						binding: "SERVICE_BINDING_1",
 						service: "SERVICE_TYPE_1",
 						environment: "SERVICE_BINDING_ENVIRONMENT_1",
+						entrypoint: "SERVICE_BINDING_ENVIRONMENT_1",
 					},
 				],
 				analytics_engine_datasets: [
@@ -2538,6 +2539,17 @@ describe("normalizeAndValidateConfig()", () => {
 								service: 456,
 								environment: "SERVICE_BINDING_ENVIRONMENT_1",
 							},
+							{
+								binding: "SERVICE_BINDING_1",
+								service: "SERVICE_BINDING_SERVICE_1",
+								environment: "SERVICE_BINDING_ENVIRONMENT_1",
+								entrypoint: 123,
+							},
+							{
+								binding: "SERVICE_BINDING_1",
+								service: "SERVICE_BINDING_SERVICE_1",
+								entrypoint: 123,
+							},
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -2551,22 +2563,24 @@ describe("normalizeAndValidateConfig()", () => {
 			"
 		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			            - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
-			            - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
-			            - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			            - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
-			            - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			            - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			            - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
-			            - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
-			            - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
-			            - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
-			            - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
-			            - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
-			            - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}."
-		        `);
+			"Processing wrangler configuration:
+			  - \\"services[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"services[0]\\" bindings should have a string \\"service\\" field but got {}.
+			  - \\"services[1]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\"}.
+			  - \\"services[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			  - \\"services[2]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456}.
+			  - \\"services[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[3]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[3]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[4]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[4]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":456,\\"environment\\":789}.
+			  - \\"services[5]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+			  - \\"services[5]\\" bindings should have a string \\"environment\\" field but got {\\"binding\\":123,\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":789}.
+			  - \\"services[6]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
+			  - \\"services[6]\\" bindings should have a string \\"service\\" field but got {\\"binding\\":123,\\"service\\":456,\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\"}.
+			  - \\"services[7]\\" bindings should have a string \\"entrypoint\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"environment\\":\\"SERVICE_BINDING_ENVIRONMENT_1\\",\\"entrypoint\\":123}.
+			  - \\"services[8]\\" bindings should have a string \\"entrypoint\\" field but got {\\"binding\\":\\"SERVICE_BINDING_1\\",\\"service\\":\\"SERVICE_BINDING_SERVICE_1\\",\\"entrypoint\\":123}."
+		`);
 			});
 		});
 

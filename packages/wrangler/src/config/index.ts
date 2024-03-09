@@ -371,10 +371,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (services !== undefined && services.length > 0) {
 		output.push({
 			type: "Services",
-			entries: services.map(({ binding, service, environment }) => {
+			entries: services.map(({ binding, service, environment, entrypoint }) => {
 				let value = service;
 				if (environment) {
-					value += ` - ${environment}`;
+					value += ` - ${environment}${entrypoint ? ` (#${entrypoint})` : ""}`;
 				}
 
 				return {

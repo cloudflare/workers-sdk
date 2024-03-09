@@ -75,7 +75,13 @@ export type WorkerMetadataBinding =
 	  }
 	| { type: "constellation"; name: string; project: string }
 	| { type: "hyperdrive"; name: string; id: string }
-	| { type: "service"; name: string; service: string; environment?: string }
+	| {
+			type: "service";
+			name: string;
+			service: string;
+			environment?: string;
+			entrypoint?: string;
+	  }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| {
 			type: "dispatch_namespace";
@@ -244,14 +250,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.services?.forEach(({ binding, service, environment }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "service",
-			service,
-			...(environment && { environment }),
-		});
-	});
+	bindings.services?.forEach(
+		({ binding, service, environment, entrypoint }) => {
+			metadataBindings.push({
+				name: binding,
+				type: "service",
+				service,
+				...(environment && { environment }),
+				...(entrypoint && { entrypoint }),
+			});
+		}
+	);
 
 	bindings.analytics_engine_datasets?.forEach(({ binding, dataset }) => {
 		metadataBindings.push({
