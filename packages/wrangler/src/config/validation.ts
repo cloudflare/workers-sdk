@@ -2638,7 +2638,7 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
-	// Service bindings must have a binding, service, and environment.
+	// Service bindings must have a binding, a service, optionally an environment, and, optionally an entrypoint.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
@@ -2658,6 +2658,14 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "environment", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "entrypoint", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "entrypoint" field but got ${JSON.stringify(
 				value
 			)}.`
 		);

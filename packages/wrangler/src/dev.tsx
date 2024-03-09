@@ -334,6 +334,7 @@ export type AdditionalDevProps = {
 		binding: string;
 		service: string;
 		environment?: string;
+		entrypoint?: string;
 	}[];
 	r2?: {
 		binding: string;
@@ -745,7 +746,7 @@ async function validateDevServerSettings(
 					(service) =>
 						`${service.binding} (${service.service}${
 							service.environment ? `@${service.environment}` : ""
-						})`
+						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
 				)
 				.join(", ")}`
 		);

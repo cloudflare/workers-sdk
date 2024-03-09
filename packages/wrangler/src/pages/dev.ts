@@ -60,11 +60,13 @@ const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 /* SERVICE_BINDING_REGEXP matches strings like:
  * - "binding=service"
  * - "binding=service@environment"
+ * - "binding=service#entrypoint"
  * This is used to capture both the binding name (how the binding is used in JS) alongside the name of the service it needs to bind to.
  * Additionally it can also accept an environment which indicates what environment the service has to be running for.
+ * Additionally it can also accept an entrypoint which indicates what named entrypoint of the service to use, if not the default.
  */
 const SERVICE_BINDING_REGEXP = new RegExp(
-	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
+	/^(?<binding>[^=]+)=(?<service>[^@#\s]+)(@(?<environment>.*)$)?(#(?<entrypoint>.*))?$/
 );
 
 const DEFAULT_SCRIPT_PATH = "_worker.js";
@@ -523,7 +525,7 @@ export const Handler = async ({
 		);
 	}
 
-	let entrypoint = scriptPath;
+	let scriptEntrypoint = scriptPath;
 
 	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
 	if (
@@ -568,11 +570,11 @@ export const Handler = async ({
 				routesJSONContents = readFileSync(routesJSONPath, "utf-8");
 				validateRoutes(JSON.parse(routesJSONContents), directory);
 
-				entrypoint = join(
+				scriptEntrypoint = join(
 					getPagesTmpDir(),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
-				await runBuild(scriptPath, entrypoint, routesJSONContents);
+				await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
@@ -598,7 +600,7 @@ export const Handler = async ({
 					 */
 					routesJSONContents = readFileSync(routesJSONPath, "utf-8");
 					validateRoutes(JSON.parse(routesJSONContents), directory as string);
-					await runBuild(scriptPath, entrypoint, routesJSONContents);
+					await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 				} catch (err) {
 					/**
 					 * If _routes.json is invalid, don't exit but instead fallback to a sensible default
@@ -627,7 +629,7 @@ export const Handler = async ({
 					);
 
 					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
-					await runBuild(scriptPath, entrypoint, routesJSONContents);
+					await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 				}
 			});
 		}
@@ -635,7 +637,7 @@ export const Handler = async ({
 
 	const services = requestedServices
 		.map((serviceBinding) => {
-			const { binding, service, environment } =
+			const { binding, service, environment, entrypoint } =
 				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
 
 			if (!binding || !service) {
@@ -656,6 +658,7 @@ export const Handler = async ({
 				binding,
 				service: serviceName,
 				environment,
+				entrypoint,
 			};
 		})
 		.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
@@ -667,7 +670,7 @@ export const Handler = async ({
 		logger.warn("Support for service binding environments is experimental.");
 	}
 
-	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
+	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
 		ip,
 		port,
 		inspectorPort,
