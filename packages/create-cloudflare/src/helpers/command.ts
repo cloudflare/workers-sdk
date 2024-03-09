@@ -1,7 +1,6 @@
 import { stripAnsi } from "@cloudflare/cli";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
-import { quoteShellArgs } from "../common";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
@@ -159,3 +158,37 @@ export const printAsyncStatus = async <T>({
 
 	return promise;
 };
+
+/**
+ * Formats an array of command line arguments to be displayed to the user
+ * in a platform safe way. Args used in conjunction with `runCommand` are safe
+ * since we use `cross-spawn` to handle multi-platform support.
+ *
+ * However, when we output commands to the user, we have to make sure that they
+ * are compatible with the platform they are using.
+ *
+ * @param args - The arguments to format to the user
+ */
+export function quoteShellArgs(args: string[]): string {
+	if (process.platform === "win32") {
+		// Simple Windows command prompt quoting if there are special characters.
+		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
+		return args
+			.map((arg) =>
+				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg
+			)
+			.join(" ");
+	} else {
+		return args
+			.map((s) => {
+				if (/["\s]/.test(s) && !/'/.test(s)) {
+					return "'" + s.replace(/(['\\])/g, "\\$1") + "'";
+				}
+				if (/["'\s]/.test(s)) {
+					return '"' + s.replace(/(["\\$`!])/g, "\\$1") + '"';
+				}
+				return s;
+			})
+			.join(" ");
+	}
+}

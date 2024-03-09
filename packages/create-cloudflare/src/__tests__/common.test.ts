@@ -7,7 +7,6 @@ import { version as currentVersion } from "../../package.json";
 import {
 	isAllowedExistingFile,
 	isGitConfigured,
-	quoteShellArgs,
 	validateProjectDirectory,
 } from "../common";
 import { isUpdateAvailable } from "../helpers/cli";
@@ -171,22 +170,4 @@ describe("isUpdateAvailable", () => {
 				}
 			);
 	}
-});
-
-describe("quoteShellArgs", () => {
-	test.runIf(process.platform !== "win32")("mac", async () => {
-		expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
-		expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
-		expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-			`'foo/10 bar/20-baz/'`
-		);
-	});
-
-	test.runIf(process.platform === "win32")("windows", async () => {
-		expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
-		expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
-		expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-			`"foo/10 bar/20-baz/"`
-		);
-	});
 });

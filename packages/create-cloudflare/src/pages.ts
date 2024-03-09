@@ -1,9 +1,9 @@
 import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { runCommand } from "helpers/command";
+import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
-import { getProductionBranch, quoteShellArgs } from "./common";
+import { getProductionBranch } from "./common";
 import type { C3Context } from "types";
 
 /** How many times to retry the create project command before failing. */

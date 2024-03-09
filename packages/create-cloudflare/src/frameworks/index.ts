@@ -1,8 +1,7 @@
 import { crash, logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
-import { runCommand } from "helpers/command";
+import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import { quoteShellArgs } from "../common";
 import clisPackageJson from "./package.json";
 import type { C3Context } from "types";
 

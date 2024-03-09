@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { spawn } from "cross-spawn";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
-import { runCommand } from "../command";
+import { quoteShellArgs, runCommand } from "../command";
 import type { ChildProcess } from "child_process";
 
 // We can change how the mock spawn works by setting these variables
@@ -52,6 +52,24 @@ describe("Command Helpers", () => {
 		expect(spawn).toHaveBeenCalledWith("ls", ["-l"], {
 			stdio: "inherit",
 			env: process.env,
+		});
+	});
+
+	describe("quoteShellArgs", () => {
+		test.runIf(process.platform !== "win32")("mac", async () => {
+			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
+			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
+			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
+				`'foo/10 bar/20-baz/'`
+			);
+		});
+
+		test.runIf(process.platform === "win32")("windows", async () => {
+			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
+			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
+			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
+				`"foo/10 bar/20-baz/"`
+			);
 		});
 	});
 });

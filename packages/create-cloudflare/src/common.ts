@@ -16,7 +16,12 @@ import { bgGreen, blue, brandColor, dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
-import { printAsyncStatus, runCommand, runCommands } from "helpers/command";
+import {
+	printAsyncStatus,
+	quoteShellArgs,
+	runCommand,
+	runCommands,
+} from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
@@ -582,28 +587,4 @@ export async function getProductionBranch(cwd: string) {
  */
 function prepareCommitMessage(commitMessage: string): string {
 	return JSON.stringify(commitMessage);
-}
-
-export function quoteShellArgs(args: string[]): string {
-	if (process.platform === "win32") {
-		// Simple Windows command prompt quoting if there are special characters.
-		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
-		return args
-			.map((arg) =>
-				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg
-			)
-			.join(" ");
-	} else {
-		return args
-			.map((s) => {
-				if (/["\s]/.test(s) && !/'/.test(s)) {
-					return "'" + s.replace(/(['\\])/g, "\\$1") + "'";
-				}
-				if (/["'\s]/.test(s)) {
-					return '"' + s.replace(/(["\\$`!])/g, "\\$1") + '"';
-				}
-				return s;
-			})
-			.join(" ");
-	}
 }
