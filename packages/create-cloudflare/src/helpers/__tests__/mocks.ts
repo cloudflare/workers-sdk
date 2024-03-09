@@ -1,4 +1,5 @@
 import { readdirSync } from "fs";
+import { spinner } from "@cloudflare/cli/interactive";
 import { runCommand } from "helpers/command";
 import { vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
@@ -36,6 +37,24 @@ export const mockWorkersTypesDirectory = (
 		}
 		return [];
 	});
+};
+
+export const mockSpinner = () => {
+	const start = vi.fn();
+	const update = vi.fn();
+	const stop = vi.fn();
+
+	vi.mocked(spinner).mockImplementation(() => ({
+		start,
+		stop,
+		update,
+	}));
+
+	return {
+		start,
+		stop,
+		update,
+	};
 };
 
 const mockWorkersTypesDirListing = [
