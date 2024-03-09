@@ -1,8 +1,8 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { runFrameworkGenerator } from "helpers/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";

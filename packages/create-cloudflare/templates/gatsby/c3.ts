@@ -1,5 +1,5 @@
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";

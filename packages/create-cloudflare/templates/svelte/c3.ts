@@ -1,8 +1,8 @@
 import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { runFrameworkGenerator } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";

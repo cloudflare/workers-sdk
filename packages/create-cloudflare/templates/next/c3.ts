@@ -3,7 +3,7 @@ import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "frameworks/index";
 import {
 	copyFile,
 	probePaths,

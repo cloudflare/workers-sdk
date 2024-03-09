@@ -2,7 +2,6 @@ import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import TOML from "@iarna/toml";
-import { getWorkerdCompatibilityDate } from "./command";
 import type { C3Context } from "types";
 
 export const copyFile = (path: string, dest: string) => {

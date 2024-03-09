@@ -1,7 +1,8 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { runCommand, runFrameworkGenerator } from "helpers/command";
+import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";

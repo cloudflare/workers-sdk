@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "frameworks/index";
 import { compatDateFlag } from "helpers/compatDate";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
