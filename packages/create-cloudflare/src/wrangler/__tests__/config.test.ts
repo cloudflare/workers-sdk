@@ -2,9 +2,9 @@ import { existsSync } from "fs";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { updateWranglerToml } from "helpers/wrangler/config";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { createTestContext } from "../../../__tests__/helpers";
+import { createTestContext } from "../../__tests__/helpers";
+import { updateWranglerToml } from "../config";
 
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");

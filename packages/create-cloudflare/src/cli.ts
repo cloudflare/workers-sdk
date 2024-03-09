@@ -13,7 +13,6 @@ import {
 	rectifyPmMismatch,
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
-import { updateWranglerToml } from "helpers/wrangler/config";
 import { version } from "../package.json";
 import {
 	gitCommit,
@@ -34,6 +33,7 @@ import {
 	updatePackageScripts,
 } from "./templates";
 import { installWorkersTypes } from "./workers";
+import { updateWranglerToml } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();

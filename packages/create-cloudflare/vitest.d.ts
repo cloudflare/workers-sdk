@@ -6,7 +6,6 @@ import 'vitest'
 
 interface CustomMatchers<R = unknown> {
 	toExist(): R;
-	toHaveBeenCalledFirstWith(args: string[]): R;
 }
 
 declare module 'vitest' {

@@ -24,7 +24,7 @@ describe("Package Helpers", () => {
 
 			await npmInstall(createTestContext());
 
-			expect(mock).toHaveBeenCalledFirstWith(["npm", "install"]);
+			expect(mock).toHaveBeenCalledWith(["npm", "install"], expect.anything());
 		});
 
 		test("pnpm", async () => {
@@ -32,7 +32,7 @@ describe("Package Helpers", () => {
 			mockPackageManager("pnpm", "8.5.1");
 
 			await npmInstall(createTestContext());
-			expect(mock).toHaveBeenCalledFirstWith(["pnpm", "install"]);
+			expect(mock).toHaveBeenCalledWith(["pnpm", "install"], expect.anything());
 		});
 	});
 
@@ -56,7 +56,10 @@ describe("Package Helpers", () => {
 			const packages = ["foo", "bar", "baz"];
 			await installPackages(packages);
 
-			expect(mock).toHaveBeenCalledFirstWith([...initialArgs, ...packages]);
+			expect(mock).toHaveBeenCalledWith(
+				[...initialArgs, ...packages],
+				expect.anything()
+			);
 		});
 
 		const devCases: TestCase[] = [
@@ -75,7 +78,10 @@ describe("Package Helpers", () => {
 				const packages = ["foo", "bar", "baz"];
 				await installPackages(packages, { dev: true });
 
-				expect(mock).toHaveBeenCalledFirstWith([...initialArgs, ...packages]);
+				expect(mock).toHaveBeenCalledWith(
+					[...initialArgs, ...packages],
+					expect.anything()
+				);
 			}
 		);
 	});
@@ -84,11 +90,9 @@ describe("Package Helpers", () => {
 		await installWrangler();
 
 		const { mock } = mockRunCommand();
-		expect(mock).toHaveBeenCalledFirstWith([
-			"npm",
-			"install",
-			"--save-dev",
-			"wrangler",
-		]);
+		expect(mock).toHaveBeenCalledWith(
+			["npm", "install", "--save-dev", "wrangler"],
+			expect.anything()
+		);
 	});
 });

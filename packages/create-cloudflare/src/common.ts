@@ -16,18 +16,13 @@ import { bgGreen, blue, brandColor, dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
-import {
-	listAccounts,
-	printAsyncStatus,
-	runCommand,
-	runCommands,
-	wranglerLogin,
-} from "helpers/command";
+import { printAsyncStatus, runCommand, runCommands } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
-import { readWranglerToml } from "helpers/wrangler/config";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
+import { listAccounts, wranglerLogin } from "./wrangler/accounts";
+import { readWranglerToml } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
 export const validateProjectDirectory = (
