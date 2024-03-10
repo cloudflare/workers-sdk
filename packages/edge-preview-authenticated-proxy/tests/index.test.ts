@@ -2,7 +2,7 @@ import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
@@ -24,6 +24,7 @@ describe("Preview Worker", () => {
 			experimental: {
 				disableExperimentalWarning: true,
 			},
+			logLevel: "none",
 		});
 
 		tmpDir = await fs.realpath(
@@ -108,6 +109,7 @@ compatibility_date = "2023-01-01"
 		);
 	});
 	it("should reject invalid exchange_url", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
 			{ method: "POST" }
@@ -142,7 +144,7 @@ compatibility_date = "2023-01-01"
 		expect(
 			removeUUID(resp.headers.get("set-cookie") ?? "")
 		).toMatchInlineSnapshot(
-			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
@@ -152,7 +154,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}`,
 				},
 			}
 		);
@@ -183,13 +185,14 @@ compatibility_date = "2023-01-01"
 		expect(
 			removeUUID(resp.headers.get("set-cookie") ?? "")
 		).toMatchInlineSnapshot(
-			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+			'"token=00000000-0000-0000-0000-000000000000; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None"'
 		);
 		tokenId = (resp.headers.get("set-cookie") ?? "")
 			.split(";")[0]
 			.split("=")[1];
 	});
 	it("should reject invalid prewarm url", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
 				`http://127.0.0.1:${remote.port}`
@@ -201,6 +204,7 @@ compatibility_date = "2023-01-01"
 		);
 	});
 	it("should reject invalid remote url", async () => {
+		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
 				`http://127.0.0.1:${remote.port}/prewarm`
@@ -218,7 +222,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 			}
 		);
@@ -237,7 +241,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "GET",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -255,7 +259,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "PUT",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -270,7 +274,7 @@ compatibility_date = "2023-01-01"
 				method: "PUT",
 				headers: {
 					"X-Custom-Header": "custom",
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -284,7 +288,7 @@ compatibility_date = "2023-01-01"
 			{
 				method: "PUT",
 				headers: {
-					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+					cookie: `token=${tokenId}; Domain=random-data.preview.devprod.cloudflare.dev; HttpOnly; Secure; Partitioned; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -296,6 +300,8 @@ compatibility_date = "2023-01-01"
 
 describe("Raw HTTP preview", () => {
 	let worker: UnstableDevWorker;
+	let remote: UnstableDevWorker;
+	let tmpDir: string;
 
 	beforeAll(async () => {
 		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
@@ -304,6 +310,66 @@ describe("Raw HTTP preview", () => {
 			experimental: {
 				disableExperimentalWarning: true,
 			},
+		});
+
+		tmpDir = await fs.realpath(
+			await fs.mkdtemp(path.join(os.tmpdir(), "preview-tests"))
+		);
+
+		await fs.writeFile(
+			path.join(tmpDir, "remote.js"),
+			/*javascript*/ `
+				export default {
+					fetch(request) {
+						const url = new URL(request.url)
+						if(url.pathname === "/exchange") {
+							return Response.json({
+								token: "TEST_TOKEN",
+								prewarm: "TEST_PREWARM"
+							})
+						}
+						if(url.pathname === "/redirect") {
+							return Response.redirect("https://example.com", 302)
+						}
+						if(url.pathname === "/method") {
+							return new Response(request.method)
+						}
+						if(url.pathname === "/status") {
+							return new Response(407)
+						}
+						if(url.pathname === "/header") {
+							return new Response(request.headers.get("X-Custom-Header"))
+						}
+						if(url.pathname === "/cookies") {
+							const headers = new Headers();
+
+							headers.append("Set-Cookie", "foo=1");
+							headers.append("Set-Cookie", "bar=2");
+
+							return new Response(undefined, {
+								headers,
+							});
+						}
+						return Response.json({
+							url: request.url,
+							headers: [...request.headers.entries()]
+						})
+					}
+				}
+			`.trim()
+		);
+
+		await fs.writeFile(
+			path.join(tmpDir, "wrangler.toml"),
+			/*toml*/ `
+name = "remote-worker"
+compatibility_date = "2023-01-01"
+			`.trim()
+		);
+
+		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
+			config: path.join(tmpDir, "wrangler.toml"),
+			experimental: { disableExperimentalWarning: true },
 		});
 	});
 
@@ -339,5 +405,25 @@ describe("Raw HTTP preview", () => {
 		);
 
 		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
+	});
+
+	it("should preserve multiple cookies", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/cookies`,
+			{
+				method: "GET",
+				headers: {
+					"Access-Control-Request-Method": "GET",
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+				},
+			}
+		);
+
+		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
+			`"foo=1, bar=2"`
+		);
 	});
 });

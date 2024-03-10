@@ -1,4 +1,5 @@
 globalThis.global = globalThis;
+process.versions = { node: "18.0.0" };
 
 const MockAgent = require("undici/lib/mock/mock-agent");
 const { kClients } = require("undici/lib/core/symbols");

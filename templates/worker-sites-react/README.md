@@ -1,6 +1,6 @@
 # Template: worker-sites-react
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-sites-react)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-sites-react)
 
 This project is a React application generated with [create-react-app](https://github.com/facebook/create-react-app), and deployed with [Workers Sites](https://developers.cloudflare.com/workers/sites).
 

@@ -1,5 +1,35 @@
 # @cloudflare/pages-shared
 
+## 0.11.17
+
+### Patch Changes
+
+- Updated dependencies [[`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f), [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f)]:
+  - miniflare@3.20240304.0
+
+## 0.11.16
+
+### Patch Changes
+
+- Updated dependencies [[`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423), [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423)]:
+  - miniflare@3.20240223.1
+
+## 0.11.15
+
+### Patch Changes
+
+- Updated dependencies [[`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1)]:
+  - miniflare@3.20240223.0
+
+## 0.11.14
+
+### Patch Changes
+
+- [#4945](https://github.com/cloudflare/workers-sdk/pull/4945) [`73b20fa9`](https://github.com/cloudflare/workers-sdk/commit/73b20fa98ad09541c0bb8e7076e1b60151b793a5) Thanks [@jahands](https://github.com/jahands)! - feat: Add feature metrics to asset-server
+
+- Updated dependencies [[`b03db864`](https://github.com/cloudflare/workers-sdk/commit/b03db864a36924c31b8ddd82a027c83df4f68c43)]:
+  - miniflare@3.20240208.0
+
 ## 0.11.13
 
 ### Patch Changes

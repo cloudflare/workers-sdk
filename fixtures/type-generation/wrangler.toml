@@ -1,0 +1,4 @@
+name = "type-generation-fixture"
+
+[vars]
+MY_VAR = "my-var-value"

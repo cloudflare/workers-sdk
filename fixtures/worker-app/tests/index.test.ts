@@ -99,7 +99,6 @@ describe("'wrangler dev' correctly renders pages", () => {
 			headers: { Origin: `http://${ip}:${port}` },
 		});
 		const text = await response.text();
-		console.log(text);
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:https://prod.example.org`);
 	});
@@ -120,7 +119,6 @@ describe("'wrangler dev' correctly renders pages", () => {
 			headers: { Origin: `http://foo.com` },
 		});
 		const text = await response.text();
-		console.log(text);
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:http://foo.com`);
 	});
@@ -138,5 +136,16 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(response.headers.get("Location")).toEqual(
 			`http://${ip}:${port}/foo`
 		);
+	});
+
+	it("rewrites set-cookie headers to the hostname, not host", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/cookie`);
+
+		expect(response.headers.getSetCookie()).toStrictEqual([
+			`hello=world; Domain=${ip}`,
+			`hello2=world2; Domain=${ip}; Secure`,
+		]);
 	});
 });

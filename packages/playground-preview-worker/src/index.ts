@@ -13,6 +13,17 @@ import { handleException, setupSentry } from "./sentry";
 import type { RegistryType } from "promjs";
 import type { Toucan } from "toucan-js";
 
+function maybeParseUrl(url: string | undefined) {
+	if (!url) {
+		return undefined;
+	}
+	try {
+		return new URL(url);
+	} catch {
+		return undefined;
+	}
+}
+
 const app = new Hono<{
 	Bindings: Env;
 	Variables: { sentry: Toucan; prometheus: RegistryType };
@@ -65,23 +76,31 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		})
 	);
 
+	const responseHeaders = new Headers(workerResponse.headers);
+
+	const rawHeaders = new Headers({
+		"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+		"Access-Control-Allow-Methods": "*",
+		"Access-Control-Allow-Credentials": "true",
+		"cf-ew-status": workerResponse.status.toString(),
+		"Access-Control-Expose-Headers": "*",
+		Vary: "Origin",
+	});
+
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
-	const rawHeaders: Record<string, string> = {};
-	for (const header of workerResponse.headers.entries()) {
-		rawHeaders[`cf-ew-raw-${header[0]}`] = header[1];
+	const setCookieHeader = responseHeaders.getSetCookie();
+	for (const cookie of setCookieHeader) {
+		rawHeaders.append("cf-ew-raw-set-cookie", cookie);
 	}
+	responseHeaders.delete("Set-Cookie");
+	for (const header of responseHeaders.entries()) {
+		rawHeaders.set(`cf-ew-raw-${header[0]}`, header[1]);
+	}
+
 	return new Response(workerResponse.body, {
 		...workerResponse,
-		headers: {
-			...rawHeaders,
-			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-			"Access-Control-Allow-Methods": "*",
-			"Access-Control-Allow-Credentials": "true",
-			"cf-ew-status": workerResponse.status.toString(),
-			"Access-Control-Expose-Headers": "*",
-			Vary: "Origin",
-		},
+		headers: rawHeaders,
 	});
 }
 
@@ -201,12 +220,15 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
 	const token = url.searchParams.get("token");
+	const referer = maybeParseUrl(c.req.header("Referer"));
 
 	if (
+		!referer ||
 		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
 		!(
-			c.req.header("Referer")?.startsWith("https://workers.cloudflare.com") ||
-			c.req.header("Referer")?.startsWith("http://localhost")
+			referer.hostname === "workers.cloudflare.com" ||
+			referer.hostname === "localhost" ||
+			referer.hostname.endsWith("workers-playground.pages.dev")
 		)
 	) {
 		throw new PreviewRequestForbidden();

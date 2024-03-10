@@ -7,9 +7,18 @@ type ConfigModuleRuleType =
 	| "CommonJS"
 	| "CompiledWasm"
 	| "Text"
-	| "Data";
+	| "Data"
+	| "PythonModule"
+	| "PythonRequirement";
 
-type CfModuleType = "esm" | "commonjs" | "compiled-wasm" | "text" | "buffer";
+type CfModuleType =
+	| "esm"
+	| "commonjs"
+	| "compiled-wasm"
+	| "text"
+	| "buffer"
+	| "python"
+	| "python-requirement";
 
 type Rule = {
 	type: ConfigModuleRuleType;
@@ -60,6 +69,8 @@ const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> = {
 	CompiledWasm: "compiled-wasm",
 	Data: "buffer",
 	Text: "text",
+	PythonModule: "python",
+	PythonRequirement: "python-requirement",
 };
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
@@ -69,6 +80,7 @@ export const DEFAULT_MODULE_RULES: Rule[] = [
 	{ type: "Data", globs: ["**/*.bin"] },
 	{ type: "CompiledWasm", globs: ["**/*.wasm"] },
 	{ type: "ESModule", globs: ["**/*.js"] },
+	{ type: "PythonModule", globs: ["**/*.py"] },
 ];
 
 export function toMimeType(type: CfModuleType): string {
@@ -83,6 +95,8 @@ export function toMimeType(type: CfModuleType): string {
 			return "application/octet-stream";
 		case "text":
 			return "text/plain";
+		case "python":
+			return "text/x-python";
 		default:
 			throw new TypeError(`Unsupported module: ${type}`);
 	}

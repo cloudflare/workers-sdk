@@ -1,5 +1,220 @@
 # wrangler
 
+## 3.32.0
+
+### Minor Changes
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - chore: bump `workerd` to [`1.20240304.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240304.0)
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - fix: use python_workers compat flag for Python
+
+### Patch Changes
+
+- [#5089](https://github.com/cloudflare/workers-sdk/pull/5089) [`5b85dc9`](https://github.com/cloudflare/workers-sdk/commit/5b85dc949b1f7c8d5e8d083b37dd84d38c4ea978) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: include all currently existing bindings in `wrangler types`
+
+  Add support for Email Send, Vectorize, Hyperdrive, mTLS, Browser Rendering and Workers AI bindings in `wrangler types`
+
+  For example, from the following `wrangler.toml` setup:
+
+  ```toml
+  [browser]
+  binding = "BROWSER"
+
+  [ai]
+  binding = "AI"
+
+  [[send_email]]
+  name = "SEND_EMAIL"
+
+  [[vectorize]]
+  binding = "VECTORIZE"
+  index_name = "VECTORIZE_NAME"
+
+  [[hyperdrive]]
+  binding = "HYPERDRIVE"
+  id = "HYPERDRIVE_ID"
+
+  [[mtls_certificates]]
+  binding = "MTLS"
+  certificate_id = "MTLS_CERTIFICATE_ID"
+  ```
+
+  Previously, nothing would have been included in the generated Environment.
+  Now, the following will be generated:
+
+  ```ts
+  interface Env {
+  	SEND_EMAIL: SendEmail;
+  	VECTORIZE: VectorizeIndex;
+  	HYPERDRIVE: Hyperdrive;
+  	MTLS: Fetcher;
+  	BROWSER: Fetcher;
+  	AI: Fetcher;
+  }
+  ```
+
+- Updated dependencies [[`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f), [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f)]:
+  - miniflare@3.20240304.0
+
+## 3.31.0
+
+### Minor Changes
+
+- [#5119](https://github.com/cloudflare/workers-sdk/pull/5119) [`b0bd413`](https://github.com/cloudflare/workers-sdk/commit/b0bd4137f8504c1a96c5fa60f25c41028c9ba23e) Thanks [@garrettgu10](https://github.com/garrettgu10)! - feature: Python support for remote dev
+
+- [#5118](https://github.com/cloudflare/workers-sdk/pull/5118) [`30694a3`](https://github.com/cloudflare/workers-sdk/commit/30694a31d65016e56e30d14a3b14f2fed6df4370) Thanks [@garrettgu10](https://github.com/garrettgu10)! - fix: Including version identifiers in Python requirements.txt will now throw an error
+
+### Patch Changes
+
+- [#5132](https://github.com/cloudflare/workers-sdk/pull/5132) [`82a3f94`](https://github.com/cloudflare/workers-sdk/commit/82a3f94db091c893b5dfc9496aad6154a54474c5) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: switch default logging level of `unstable_dev()` to `warn`
+
+  When running `unstable_dev()` in its default "test mode", the logging level was set to `none`. This meant any Worker startup errors or helpful warnings wouldn't be shown. This change switches the default to `warn`. To restore the previous behaviour, include `logLevel: "none"` in your options object:
+
+  ```js
+  const worker = await unstable_dev("path/to/script.js", {
+  	logLevel: "none",
+  });
+  ```
+
+- [#5128](https://github.com/cloudflare/workers-sdk/pull/5128) [`d27e2a7`](https://github.com/cloudflare/workers-sdk/commit/d27e2a70904aab98b4e5c7279661a8d98e7da917) Thanks [@taylorlee](https://github.com/taylorlee)! - fix: Add legacy_env support to experimental versions upload command.
+
+- [#5087](https://github.com/cloudflare/workers-sdk/pull/5087) [`a5231de`](https://github.com/cloudflare/workers-sdk/commit/a5231decbf18898811749a64f8e36be4aa5fd941) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make `wrangler types` always generate a `d.ts` file for module workers
+
+  Currently if a config file doesn't define any binding nor module, running
+  `wrangler types` against such file would not produce a `d.ts` file.
+
+  Producing a `d.ts` file can however still be beneficial as it would define a correct
+  env interface (even if empty) that can be expanded/referenced by user code (this can
+  be particularly convenient for scaffolding tools that may want to always generate an
+  env interface).
+
+  Example:
+  Before `wrangler types --env-interface MyEnv` run with an empty `wrangler.toml` file
+  would not generate any file, after these change it would instead generate a file with
+  the following content:
+
+  ```
+  interface MyEnv {
+  }
+  ```
+
+- [#5138](https://github.com/cloudflare/workers-sdk/pull/5138) [`3dd9089`](https://github.com/cloudflare/workers-sdk/commit/3dd9089f34d30dcd6f03e63093e86efa9b8c1e1f) Thanks [@G4brym](https://github.com/G4brym)! - fix: ensure Workers-AI local mode fetcher returns headers to client worker
+
+- Updated dependencies [[`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423), [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423)]:
+  - miniflare@3.20240223.1
+
+## 3.30.1
+
+### Patch Changes
+
+- [#5106](https://github.com/cloudflare/workers-sdk/pull/5106) [`2ed7f32`](https://github.com/cloudflare/workers-sdk/commit/2ed7f3209bc6bffa85f409d344d6ed76df8686f9) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: automatically drain incoming request bodies
+
+  Previously, requests sent to `wrangler dev` with unconsumed bodies could result in `Network connection lost` errors. This change attempts to work around the issue by ensuring incoming request bodies are drained if they're not used. This is a temporary fix whilst we try to address the underlying issue. Whilst we don't think this change will introduce any other issues, it can be disabled by setting the `WRANGLER_DISABLE_REQUEST_BODY_DRAINING=true` environment variable. Note this fix is only applied if you've enabled Wrangler's bundling—`--no-bundle` mode continues to have the previous behaviour.
+
+- [#5107](https://github.com/cloudflare/workers-sdk/pull/5107) [`65d0399`](https://github.com/cloudflare/workers-sdk/commit/65d0399c0757881c41582972d14afa02f02fffb4) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensures that switching to remote mode during a dev session (from local mode) will correctly use the right zone. Previously, zone detection happened before the dev session was mounted, and so dev sessions started with local mode would have no zone inferred, and would have failed to start, with an ugly error.
+
+- [#5107](https://github.com/cloudflare/workers-sdk/pull/5107) [`65d0399`](https://github.com/cloudflare/workers-sdk/commit/65d0399c0757881c41582972d14afa02f02fffb4) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensure that preview sessions created without a zone don't switch the host on which to start the preview from the one returned by the API.
+
+- [#4833](https://github.com/cloudflare/workers-sdk/pull/4833) [`54f6bfc`](https://github.com/cloudflare/workers-sdk/commit/54f6bfcea14b89cae99f3c26b52c28bcd408aba7) Thanks [@admah](https://github.com/admah)! - fix: remove extra arguments from wrangler init deprecation message and update recommended c3 version
+
+  c3 can now infer the pre-existing type from the presence of the `--existing-script` flag so we can remove the extra `type` argument. C3 2.5.0 introduces an auto-update feature that will make sure users get the latest minor version of c3 and prevent problems where older 2.x.x versions get cached by previous runs of `wrangler init`.
+
+## 3.30.0
+
+### Minor Changes
+
+- [#4742](https://github.com/cloudflare/workers-sdk/pull/4742) [`c2f3f1e`](https://github.com/cloudflare/workers-sdk/commit/c2f3f1e37c1a8f0958676306f3128cd87265ea5b) Thanks [@benycodes](https://github.com/benycodes)! - feat: allow preserving file names when defining rules for non-js modules
+
+  The developer is now able to specify the `preserve_file_names property in wrangler.toml
+  which specifies whether Wrangler will preserve the file names additional modules that are
+  added to the deployment bundle of a Worker.
+
+  If not set to true, files will be named using the pattern ${fileHash}-${basename}.
+  For example, `34de60b44167af5c5a709e62a4e20c4f18c9e3b6-favicon.ico`.
+
+  Resolves [#4741](https://github.com/cloudflare/workers-sdk/issues/4741)
+
+### Patch Changes
+
+- Updated dependencies [[`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1)]:
+  - miniflare@3.20240223.0
+
+## 3.29.0
+
+### Minor Changes
+
+- [#5042](https://github.com/cloudflare/workers-sdk/pull/5042) [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add new `--env-interface` to `wrangler types`
+
+  Allow users to specify the name of the interface that they want `wrangler types` to generate for the `env` parameter, via the new CLI flag `--env-interface`
+
+  Example:
+
+  ```sh
+  wrangler types --env-interface CloudflareEnv
+  ```
+
+  generates
+
+  ```ts
+  interface CloudflareEnv {}
+  ```
+
+  instead of
+
+  ```ts
+  interface Env {}
+  ```
+
+* [#5042](https://github.com/cloudflare/workers-sdk/pull/5042) [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add new `path` positional argument to `wrangler types`
+
+  Allow users to specify the path to the typings (.d.ts) file they want
+  `wrangler types` to generate
+
+  Example:
+
+  ```sh
+  wrangler types ./my-env.d.ts
+  ```
+
+  generates a `my-env.d.ts` file in the current directory
+  instead of creating a `worker-configuration.d.ts` file
+
+### Patch Changes
+
+- [#5042](https://github.com/cloudflare/workers-sdk/pull/5042) [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: include command run in the `wrangler types` comment
+
+  In the comment added to the `.d.ts` file generated by `wrangler types`
+  include the command run to generated the file
+
+* [#4303](https://github.com/cloudflare/workers-sdk/pull/4303) [`1c460287`](https://github.com/cloudflare/workers-sdk/commit/1c460287f8836102b372ce0c7dddec093259692e) Thanks [@richardscarrott](https://github.com/richardscarrott)! - fix: allow Pages Functions to import built-in node:\* modules, even when not bundling with wrangler
+
+- [#4957](https://github.com/cloudflare/workers-sdk/pull/4957) [`50f93bd2`](https://github.com/cloudflare/workers-sdk/commit/50f93bd2ce8f14294bee73b844897c5bfa083955) Thanks [@garrettgu10](https://github.com/garrettgu10)! - fix: don't strip `.py` extensions from Python modules
+
+* [#5042](https://github.com/cloudflare/workers-sdk/pull/5042) [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make `wrangler types` honor top level config argument
+
+  The `wrangler types` command currently ignores the `-c|--config` argument
+  (although it is still getting shown in the command's help message). Make
+  sure that the command honors the flag.
+  Also, if no config file is detected
+  present a warning to the user
+
+- [#5042](https://github.com/cloudflare/workers-sdk/pull/5042) [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make the `wrangler types` command pick up local secret keys from `.dev.vars`
+
+  Make sure that the `wrangler types` command correctly picks up
+  secret keys defined in `.dev.vars` and includes them in the generated
+  file (marking them as generic `string` types of course)
+
+- Updated dependencies [[`b03db864`](https://github.com/cloudflare/workers-sdk/commit/b03db864a36924c31b8ddd82a027c83df4f68c43)]:
+  - miniflare@3.20240208.0
+
+## 3.28.4
+
+### Patch Changes
+
+- [#5050](https://github.com/cloudflare/workers-sdk/pull/5050) [`88be4b84`](https://github.com/cloudflare/workers-sdk/commit/88be4b847f8891041afcc4704e69a84d3abe6126) Thanks [@nora-soderlund](https://github.com/nora-soderlund)! - fix: allow kv:namespace create to accept a namespace name that contains characters not allowed in a binding name
+
+  This command tries to use the namespace name as the binding. Previously, we would unnecessarily error if this namespace name did not fit the binding name constraints. Now we accept such names and then remove invalid characters when generating the binding name.
+
 ## 3.28.3
 
 ### Patch Changes
@@ -34,7 +249,14 @@
   whilst also making the type compatible with workers-types
 
 - Updated dependencies [[`7723ac17`](https://github.com/cloudflare/workers-sdk/commit/7723ac17906f894afe9af2152437726ac09a6290), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229)]:
+
   - miniflare@3.20240129.3
+
+- [#4475](https://github.com/cloudflare/workers-sdk/pull/4475) [86d94ff](https://github.com/cloudflare/workers-sdk/commit/86d94ff5acd31eee7f02bc68e0b70f792eb3e74c) Thanks [@paulrostorp](https://github.com/paulrostorp)! - feat: support custom HTTPS certificate paths in Wrangler dev commands.
+
+  Adds flags --https-key-path and --https-cert-path to `wrangler dev` and `wrangler pages dev` commands.
+
+  Fixes [#2118](https://github.com/cloudflare/workers-sdk/issues/2118)
 
 ## 3.28.2
 
@@ -5455,7 +5677,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
   ```jsx
   import SomeDependency from "some-dependency.js";
 
-  addEventListener("fetch", event => {});
+  addEventListener("fetch", (event) => {});
   ```
 
   `wrangler` 1.x would resolve `import SomeDependency from "some-dependency.js";` to the file `some-dependency.js`. This will work in `wrangler` v2, but it will log a deprecation warning. Instead, you should rewrite the import to specify that it's a relative path, like so:

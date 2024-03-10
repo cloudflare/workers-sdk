@@ -32,6 +32,16 @@ export default {
 		if(url.pathname === "/header") {
 			return new Response(request.headers.get("X-Custom-Header"))
 		}
+		if(url.pathname === "/cookies") {
+			const headers = new Headers();
+
+			headers.append("Set-Cookie", "foo=1");
+			headers.append("Set-Cookie", "bar=2");
+
+			return new Response(undefined, {
+				headers,
+			});
+		}
 		return Response.json({
 			url: request.url,
 			headers: [...request.headers.entries()]
@@ -261,6 +271,122 @@ describe("Preview Worker", () => {
 			`"{"error":"RawHttpFailed","message":"Provide valid token","data":{}}"`
 		);
 	});
+
+	describe("Referer", () => {
+		it("should allow localhost", async () => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "http://localhost:5173/some/path",
+					},
+				}
+			);
+			expect(resp.headers.get("location")).toMatchInlineSnapshot(
+				'"/hello?world"'
+			);
+			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
+				`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+			);
+		});
+		it("should allow workers.cloudflare.com", async () => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://workers.cloudflare.com/some/path",
+					},
+				}
+			);
+			expect(resp.headers.get("location")).toMatchInlineSnapshot(
+				'"/hello?world"'
+			);
+			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
+				`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+			);
+		});
+		it("should allow workers-playground.pages.dev", async () => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer:
+							"https://preview-id.workers-playground.pages.dev/some/path",
+					},
+				}
+			);
+			expect(resp.headers.get("location")).toMatchInlineSnapshot(
+				'"/hello?world"'
+			);
+			expect(resp.headers.get("set-cookie") ?? "").toMatchInlineSnapshot(
+				`"token=${defaultUserToken}; Domain=random-data.playground-testing.devprod.cloudflare.dev; Path=/; HttpOnly; Secure; SameSite=None; Partitioned"`
+			);
+		});
+		it("should reject unknown referer", async () => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://example.com/some/path",
+					},
+				}
+			);
+			expect(await resp.json()).toMatchInlineSnapshot(`
+				{
+				  "data": {},
+				  "error": "PreviewRequestForbidden",
+				  "message": "Preview request forbidden",
+				}
+			`);
+		});
+		it("should reject unknown referer with pages.dev in path", async () => {
+			const resp = await fetch(
+				`${PREVIEW_REMOTE}/.update-preview-token?token=${defaultUserToken}&suffix=${encodeURIComponent(
+					"/hello?world"
+				)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+					// These are forbidden headers, but undici currently allows setting them
+					headers: {
+						"Sec-Fetch-Dest": "iframe",
+						Referer: "https://example.com/workers-playground.pages.dev",
+					},
+				}
+			);
+			expect(await resp.json()).toMatchInlineSnapshot(`
+				{
+				  "data": {},
+				  "error": "PreviewRequestForbidden",
+				  "message": "Preview request forbidden",
+				}
+			`);
+		});
+	});
 });
 
 describe("Upload Worker", () => {
@@ -430,6 +556,19 @@ Content-Type: application/json
 });
 
 describe("Raw HTTP preview", () => {
+	let defaultUserToken: string;
+	beforeAll(async () => {
+		defaultUserToken = await fetchUserToken();
+
+		await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type": TEST_WORKER_CONTENT_TYPE,
+			},
+			body: TEST_WORKER,
+		}).then((response) => response.json());
+	});
 	it("should allow arbitrary headers in cross-origin requests", async () => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "OPTIONS",
@@ -453,5 +592,20 @@ describe("Raw HTTP preview", () => {
 		});
 
 		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
+	});
+
+	it("should preserve multiple cookies", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/cookies`, {
+			method: "GET",
+			headers: {
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+				"X-CF-Token": defaultUserToken,
+			},
+		});
+
+		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
+			`"foo=1, bar=2"`
+		);
 	});
 });

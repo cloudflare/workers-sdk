@@ -56,7 +56,7 @@ import {
 	setupSentry,
 } from "./sentry";
 import { tailHandler, tailOptions } from "./tail";
-import { generateTypes } from "./type-generation";
+import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
 import {
 	getAuthFromEnv,
@@ -591,36 +591,10 @@ export function createCLIParser(argv: string[]) {
 
 	// type generation
 	wrangler.command(
-		"types",
+		"types [path]",
 		"📝 Generate types from bindings & module rules in config",
-		() => {},
-		async (args) => {
-			await printWranglerBanner();
-			const config = readConfig(undefined, args);
-
-			const configBindings: Partial<Config> = {
-				kv_namespaces: config.kv_namespaces ?? [],
-				vars: { ...config.vars },
-				wasm_modules: config.wasm_modules,
-				text_blobs: {
-					...config.text_blobs,
-				},
-				data_blobs: config.data_blobs,
-				durable_objects: config.durable_objects,
-				r2_buckets: config.r2_buckets,
-				d1_databases: config.d1_databases,
-				services: config.services,
-				analytics_engine_datasets: config.analytics_engine_datasets,
-				dispatch_namespaces: config.dispatch_namespaces,
-				logfwdr: config.logfwdr,
-				unsafe: config.unsafe,
-				rules: config.rules,
-				queues: config.queues,
-				constellation: config.constellation,
-			};
-
-			await generateTypes(configBindings, config);
-		}
+		typesOptions,
+		typesHandler
 	);
 
 	//deployments

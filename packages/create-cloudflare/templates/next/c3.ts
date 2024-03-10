@@ -158,9 +158,6 @@ export default {
 	id: "next",
 	platform: "pages",
 	displayName: "Next",
-	devScript: "dev",
-	previewScript: "preview",
-	deployScript: "deploy",
 	generate,
 	configure,
 	copyFiles: {
@@ -212,15 +209,8 @@ export default {
 			},
 		};
 	},
-	testFlags: [
-		"--typescript",
-		"--no-install",
-		"--eslint",
-		"--tailwind",
-		"--src-dir",
-		"--app",
-		"--import-alias",
-		"@/*",
-	],
+	devScript: "dev",
+	previewScript: "preview",
+	deployScript: "deploy",
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;

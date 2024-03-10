@@ -1,5 +1,37 @@
 # miniflare
 
+## 3.20240304.0
+
+### Minor Changes
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - chore: bump `workerd` to [`1.20240304.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240304.0)
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - fix: use python_workers compat flag for Python
+
+## 3.20240223.1
+
+### Patch Changes
+
+- [#5133](https://github.com/cloudflare/workers-sdk/pull/5133) [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure internals can access `workerd` when starting on non-local `host`
+
+  Previously, if Miniflare was configured to start on a `host` that wasn't `127.0.0.1`, `::1`, `*`, `::`, or `0.0.0.0`, calls to `Miniflare` API methods relying on the magic proxy (e.g. `getKVNamespace()`, `getWorker()`, etc.) would fail. This change ensures `workerd` is always accessible to Miniflare's internals. This also fixes `wrangler dev` when using local network address such as `192.168.0.10` with the `--ip` flag.
+
+- [#5133](https://github.com/cloudflare/workers-sdk/pull/5133) [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure IPv6 addresses can be used as `host`s
+
+  Previously, if Miniflare was configured to start on an IPv6 `host`, it could crash. This change ensures IPv6 addresses are handled correctly. This also fixes `wrangler dev` when using IPv6 addresses such as `::1` with the `--ip` flag.
+
+## 3.20240223.0
+
+### Minor Changes
+
+- [#5081](https://github.com/cloudflare/workers-sdk/pull/5081) [`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1) Thanks [@garrettgu10](https://github.com/garrettgu10)! - chore: bump `workerd` to [`1.20240223.1`](https://github.com/cloudflare/workerd/releases/tag/v1.20240223.0)
+
+## 3.20240208.0
+
+### Minor Changes
+
+- [#5068](https://github.com/cloudflare/workers-sdk/pull/5068) [`b03db864`](https://github.com/cloudflare/workers-sdk/commit/b03db864a36924c31b8ddd82a027c83df4f68c43) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `workerd` to [`1.20240208.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240208.0)
+
 ## 3.20240129.3
 
 ### Minor Changes

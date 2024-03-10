@@ -197,8 +197,6 @@ export async function initHandler(args: InitArgs) {
 			fromDashWorkerName,
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),
-			"--type",
-			"pre-existing",
 			"--existing-script",
 			fromDashWorkerName,
 		];

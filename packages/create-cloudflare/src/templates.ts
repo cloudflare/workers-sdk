@@ -9,7 +9,15 @@ import { spinner } from "@cloudflare/cli/interactive";
 import deepmerge from "deepmerge";
 import degit from "degit";
 import { C3_DEFAULTS } from "helpers/cli";
-import { readJSON, usesTypescript, writeJSON } from "helpers/files";
+import {
+	appendFile,
+	directoryExists,
+	readFile,
+	readJSON,
+	usesTypescript,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
 import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context, PackageJson } from "types";
 
@@ -77,8 +85,6 @@ export type TemplateConfig = {
 		ctx: C3Context
 	) => Promise<Record<string, string | object>>;
 
-	/** An array of flags that will be added to the call to the framework cli during tests.*/
-	testFlags?: string[];
 	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
 	compatibilityFlags?: string[];
 
@@ -468,4 +474,59 @@ export const getCopyFilesDestinationDir = (
 	}
 
 	return copyFiles.destinationDir(ctx);
+};
+
+export const addWranglerToGitIgnore = (ctx: C3Context) => {
+	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
+	const gitIgnorePreExisted = existsSync(gitIgnorePath);
+
+	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
+
+	if (!gitIgnorePreExisted && !gitDirExists) {
+		// if there is no .gitignore file and neither a .git directory
+		// then bail as the project is likely not targeting/using git
+		return;
+	}
+
+	if (!gitIgnorePreExisted) {
+		writeFile(gitIgnorePath, "");
+	}
+
+	const existingGitIgnoreContent = readFile(gitIgnorePath);
+
+	const wranglerGitIgnoreFiles = [".wrangler", ".dev.vars"] as const;
+	const wranglerGitIgnoreFilesToAdd = wranglerGitIgnoreFiles.filter(
+		(file) =>
+			!existingGitIgnoreContent.match(
+				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`)
+			)
+	);
+
+	if (wranglerGitIgnoreFilesToAdd.length === 0) {
+		return;
+	}
+
+	const s = spinner();
+	s.start("Adding Wrangler files to the .gitignore file");
+
+	const linesToAppend = [
+		"",
+		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
+	];
+
+	if (wranglerGitIgnoreFilesToAdd.length === wranglerGitIgnoreFiles.length) {
+		linesToAppend.push("# wrangler files");
+	}
+
+	wranglerGitIgnoreFilesToAdd.forEach((line) => linesToAppend.push(line));
+
+	linesToAppend.push("");
+
+	appendFile(gitIgnorePath, linesToAppend.join("\n"));
+
+	s.stop(
+		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
+			".gitignore file"
+		)}`
+	);
 };

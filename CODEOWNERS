@@ -18,14 +18,18 @@
 /packages/create-cloudflare/ @cloudflare/c3
 
 # kv-asset-handler ownership
-/packages/kv-asset-handler/ @cloudflare/developer-advocacy @kristianfreeman @rickyrobinett @lauragift21 @LoganGrasby @craigsdennis
+/packages/kv-asset-handler/ @cloudflare/wrangler
 
-# Owners intentionally left blank on these shared directories
+# Owners intentionally left blank on these shared directories / files
 # to avoid noisy review requests
 /.changeset/
 /fixtures/
+pnpm-lock.yaml
 
 # Only wrangler-admins are needed to approve releases
 # Product teams can request hold on release by reaching out to wrangler-admins
 **/CHANGELOG.md @cloudflare/wrangler-admins
 **/package.json @cloudflare/wrangler
+
+# To allow dependabot updates to C3 frameworks to be approved by C3 team
+/packages/create-cloudflare/**/package.json @cloudflare/wrangler @cloudflare/c3

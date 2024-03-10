@@ -1,6 +1,6 @@
 # Template: worker-example-request-scheduler
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-example-request-scheduler)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-example-request-scheduler)
 
 A example for building a scalable request scheduler.
 

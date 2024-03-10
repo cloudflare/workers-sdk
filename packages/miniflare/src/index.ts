@@ -22,7 +22,7 @@ import type {
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
-import { Dispatcher, Pool } from "undici";
+import { Dispatcher, Pool, getGlobalDispatcher } from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -30,21 +30,21 @@ import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
 import {
 	DispatchFetch,
+	DispatchFetchDispatcher,
+	ENTRY_SOCKET_HTTP_OPTIONS,
 	Headers,
 	Request,
 	RequestInit,
 	Response,
-	configureEntrySocket,
 	coupleWebSocket,
 	fetch,
 	getAccessibleHosts,
-	registerAllowUnauthorizedDispatcher,
+	getEntrySocketHttpOptions,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
-	HEADER_CF_BLOB,
 	KV_PLUGIN_NAME,
 	PLUGIN_ENTRIES,
 	PluginServicesOptions,
@@ -55,7 +55,9 @@ import {
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
+	SERVICE_ENTRY,
 	SOCKET_ENTRY,
+	SOCKET_ENTRY_LOCAL,
 	SharedOptions,
 	WorkerOptions,
 	WrappedBindingNames,
@@ -112,10 +114,14 @@ const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
 	return net.isIPv6(host) ? `[${host}]` : host;
 }
-function getAccessibleHost(host: string) {
-	const accessibleHost =
-		host === "*" || host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
-	return getURLSafeHost(accessibleHost);
+function maybeGetLocallyAccessibleHost(
+	h: string
+): "localhost" | "127.0.0.1" | "[::1]" | undefined {
+	if (h === "localhost") return "localhost";
+	if (h === "127.0.0.1" || h === "*" || h === "0.0.0.0" || h === "::") {
+		return "127.0.0.1";
+	}
+	if (h === "::1") return "[::1]";
 }
 
 function getServerPort(server: http.Server) {
@@ -174,7 +180,7 @@ function validateOptions(
 	// Initialise return values
 	const pluginSharedOpts = {} as PluginSharedOptions;
 	const pluginWorkerOpts = Array.from(Array(workerOpts.length)).map(
-		() => ({} as PluginWorkerOptions)
+		() => ({}) as PluginWorkerOptions
 	);
 
 	// If we haven't defined multiple workers, shared options and worker options
@@ -618,8 +624,7 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 			async cancel() {
 				await iterator.return?.();
 			},
-		},
-		0
+		}
 	);
 }
 
@@ -809,8 +814,8 @@ export class Miniflare {
 		}
 
 		// Extract cf blob (if any) from headers
-		const cfBlob = headers.get(HEADER_CF_BLOB);
-		headers.delete(HEADER_CF_BLOB);
+		const cfBlob = headers.get(CoreHeaders.CF_BLOB);
+		headers.delete(CoreHeaders.CF_BLOB);
 		assert(!Array.isArray(cfBlob)); // Only `Set-Cookie` headers are arrays
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
 
@@ -993,7 +998,7 @@ export class Miniflare {
 			requestedPort = this.#socketPorts?.get(id);
 		}
 		// Otherwise, default to a new random port
-		return `${host}:${requestedPort ?? 0}`;
+		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
 	async #assembleConfig(loopbackPort: number): Promise<Config> {
@@ -1023,7 +1028,25 @@ export class Miniflare {
 			},
 		];
 
-		const sockets: Socket[] = [await configureEntrySocket(sharedOpts.core)];
+		const sockets: Socket[] = [
+			{
+				name: SOCKET_ENTRY,
+				service: { name: SERVICE_ENTRY },
+				...(await getEntrySocketHttpOptions(sharedOpts.core)),
+			},
+		];
+		const configuredHost = sharedOpts.core.host ?? DEFAULT_HOST;
+		if (maybeGetLocallyAccessibleHost(configuredHost) === undefined) {
+			// If we aren't able to locally access `workerd` on the configured host, configure an additional socket that's
+			// only accessible on `127.0.0.1:0`
+			sockets.push({
+				name: SOCKET_ENTRY_LOCAL,
+				service: { name: SERVICE_ENTRY },
+				http: ENTRY_SOCKET_HTTP_OPTIONS,
+				address: "127.0.0.1:0",
+			});
+		}
+
 		// Bindings for `ProxyServer` Durable Object
 		const proxyBindings: Worker_Binding[] = [];
 
@@ -1242,13 +1265,11 @@ export class Miniflare {
 		}
 
 		// Reload runtime
-		const host = this.#sharedOpts.core.host ?? DEFAULT_HOST;
-		const urlSafeHost = getURLSafeHost(host);
-		const accessibleHost = getAccessibleHost(host);
+		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const entryAddress = this.#getSocketAddress(
 			SOCKET_ENTRY,
 			this.#previousSharedOpts?.core.port,
-			host,
+			configuredHost,
 			this.#sharedOpts.core.port
 		);
 		let inspectorAddress: string | undefined;
@@ -1260,10 +1281,14 @@ export class Miniflare {
 				this.#sharedOpts.core.inspectorPort
 			);
 		}
+		const loopbackAddress = `${
+			maybeGetLocallyAccessibleHost(configuredHost) ??
+			getURLSafeHost(configuredHost)
+		}:${loopbackPort}`;
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
 			entryAddress,
-			loopbackPort,
+			loopbackAddress,
 			requiredSockets,
 			inspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
@@ -1289,16 +1314,26 @@ export class Miniflare {
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
 		const previousEntryURL = this.#runtimeEntryURL;
+
 		const entryPort = maybeSocketPorts.get(SOCKET_ENTRY);
 		assert(entryPort !== undefined);
-		this.#runtimeEntryURL = new URL(
-			`${secure ? "https" : "http"}://${accessibleHost}:${entryPort}`
-		);
+
+		const maybeAccessibleHost = maybeGetLocallyAccessibleHost(configuredHost);
+		if (maybeAccessibleHost === undefined) {
+			// If the configured host wasn't locally accessible, we should've configured a 2nd local entry socket that is
+			const localEntryPort = maybeSocketPorts.get(SOCKET_ENTRY_LOCAL);
+			assert(localEntryPort !== undefined, "Expected local entry socket port");
+			this.#runtimeEntryURL = new URL(`http://127.0.0.1:${localEntryPort}`);
+		} else {
+			this.#runtimeEntryURL = new URL(
+				`${secure ? "https" : "http"}://${maybeAccessibleHost}:${entryPort}`
+			);
+		}
+
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			this.#runtimeDispatcher = new Pool(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 			});
-			registerAllowUnauthorizedDispatcher(this.#runtimeDispatcher);
 		}
 		if (this.#proxyClient === undefined) {
 			this.#proxyClient = new ProxyClient(
@@ -1315,19 +1350,23 @@ export class Miniflare {
 			// Only log and trigger reload if there aren't pending updates
 			const ready = initial ? "Ready" : "Updated and ready";
 
+			const urlSafeHost = getURLSafeHost(configuredHost);
 			this.#log.info(
 				`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
 			);
 
 			if (initial) {
 				const hosts: string[] = [];
-				if (host === "::" || host === "*" || host === "0.0.0.0") {
+				if (configuredHost === "::" || configuredHost === "*") {
+					hosts.push("localhost");
+					hosts.push("[::1]");
+				}
+				if (
+					configuredHost === "::" ||
+					configuredHost === "*" ||
+					configuredHost === "0.0.0.0"
+				) {
 					hosts.push(...getAccessibleHosts(true));
-
-					if (host !== "0.0.0.0") {
-						hosts.push("localhost");
-						hosts.push("[::1]");
-					}
 				}
 
 				for (const h of hosts) {
@@ -1418,7 +1457,8 @@ export class Miniflare {
 
 		// Construct accessible URL from configured host and port
 		const host = workerOpts.core.unsafeDirectHost ?? DEFAULT_HOST;
-		const accessibleHost = getAccessibleHost(host);
+		const accessibleHost =
+			maybeGetLocallyAccessibleHost(host) ?? getURLSafeHost(host);
 		// noinspection HttpUrlsUsage
 		return new URL(`http://${accessibleHost}:${maybePort}`);
 	}
@@ -1465,14 +1505,13 @@ export class Miniflare {
 
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
-		forward.headers.set(CoreHeaders.ORIGINAL_URL, url.toString());
-		forward.headers.set(CoreHeaders.DISABLE_PRETTY_ERROR, "true");
+		const actualRuntimeOrigin = this.#runtimeEntryURL.origin;
+		const userRuntimeOrigin = url.origin;
+
+		// Rewrite URL for WebSocket requests which won't use `DispatchFetchDispatcher`
 		url.protocol = this.#runtimeEntryURL.protocol;
 		url.host = this.#runtimeEntryURL.host;
-		if (forward.cf) {
-			const cf = { ...fallbackCf, ...forward.cf };
-			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(cf));
-		}
+
 		// Remove `Content-Length: 0` headers from requests when a body is set to
 		// avoid `RequestContentLengthMismatch` errors
 		if (
@@ -1482,8 +1521,17 @@ export class Miniflare {
 			forward.headers.delete("Content-Length");
 		}
 
+		const cfBlob = forward.cf ? { ...fallbackCf, ...forward.cf } : undefined;
+		const dispatcher = new DispatchFetchDispatcher(
+			getGlobalDispatcher(),
+			this.#runtimeDispatcher,
+			actualRuntimeOrigin,
+			userRuntimeOrigin,
+			cfBlob
+		);
+
 		const forwardInit = forward as RequestInit;
-		forwardInit.dispatcher = this.#runtimeDispatcher;
+		forwardInit.dispatcher = dispatcher;
 		const response = await fetch(url, forwardInit);
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
@@ -1705,4 +1753,5 @@ export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
+export * from "./merge";
 export * from "./zod-format";

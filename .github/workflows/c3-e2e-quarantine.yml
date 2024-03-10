@@ -2,6 +2,9 @@
 
 name: C3 E2E (Quarantine)
 on:
+  pull_request:
+    paths:
+      - packages/create-cloudflare/**
   push:
     branches:
       - main

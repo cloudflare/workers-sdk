@@ -7418,6 +7418,69 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
+		it("should be able to preserve file names when defining rules for uploading non-js modules (sw)", async () => {
+			writeWranglerToml({
+				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+				preserve_file_names: true,
+			});
+			fs.writeFileSync("./index.js", `import TEXT from './text.file';`);
+			fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				expectedBindings: [
+					{
+						name: "__text_file",
+						part: "__text_file",
+						type: "text_blob",
+					},
+				],
+				expectedModules: {
+					__text_file: "SOME TEXT CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should be able to preserve file names when defining rules for uploading non-js modules (esm)", async () => {
+			writeWranglerToml({
+				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
+				preserve_file_names: true,
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`import TEXT from './text.file'; export default {};`
+			);
+			fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedType: "esm",
+				expectedBindings: [],
+				expectedModules: {
+					"./text.file": "SOME TEXT CONTENT",
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		describe("inject process.env.NODE_ENV", () => {
 			let actualProcessEnvNodeEnv: string | undefined;
 			beforeEach(() => {
@@ -8752,7 +8815,7 @@ export default{
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "index",
+				expectedMainModule: "index.py",
 			});
 
 			await runWrangler("deploy");
@@ -8783,7 +8846,7 @@ export default{
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedMainModule: "index",
+				expectedMainModule: "index.py",
 			});
 
 			await runWrangler("deploy index.py");

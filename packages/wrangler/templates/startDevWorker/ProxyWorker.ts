@@ -304,6 +304,8 @@ function insertLiveReloadScript(
  * so that this proxy is transparent to the Client Browser and User Worker.
  */
 function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
+	const setCookie = headers.getAll("Set-Cookie");
+	headers.delete("Set-Cookie");
 	headers.forEach((value, key) => {
 		if (typeof value === "string" && value.includes(from.host)) {
 			headers.set(
@@ -312,4 +314,13 @@ function rewriteUrlRelatedHeaders(headers: Headers, from: URL, to: URL) {
 			);
 		}
 	});
+	for (const cookie of setCookie) {
+		headers.append(
+			"Set-Cookie",
+			cookie.replace(
+				new RegExp(`Domain=${from.hostname}($|;|,)`),
+				`Domain=${to.hostname}$1`
+			)
+		);
+	}
 }

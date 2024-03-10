@@ -6,7 +6,7 @@ import {
 	Fetcher,
 	R2Bucket,
 } from "@cloudflare/workers-types";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 import { getBindingsProxy } from "./shared";
 import type { KVNamespace } from "@cloudflare/workers-types";
@@ -30,6 +30,11 @@ const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
 describe("getBindingsProxy - bindings", () => {
 	let devWorkers: UnstableDevWorker[];
+
+	beforeEach(() => {
+		// Hide stdout messages from the test logs
+		vi.spyOn(console, "log").mockImplementation(() => {});
+	});
 
 	// Note: we're skipping the service workers and durable object tests
 	//       so there's no need to start separate workers right now, the

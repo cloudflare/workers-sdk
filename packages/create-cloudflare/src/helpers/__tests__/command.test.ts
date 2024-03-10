@@ -1,6 +1,7 @@
+import { existsSync } from "fs";
 import { spawn } from "cross-spawn";
 import { detectPackageManager } from "helpers/packages";
-import { fetch, Response } from "undici";
+import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";
@@ -11,67 +12,49 @@ import {
 	npmInstall,
 	runCommand,
 } from "../command";
+import type { ChildProcess } from "child_process";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;
 let spawnStdout: string | undefined = undefined;
 let spawnStderr: string | undefined = undefined;
-let fetchResult: Response | undefined = undefined;
+
+vi.mock("cross-spawn");
+vi.mock("fs");
+vi.mock("which-pm-runs");
 
 describe("Command Helpers", () => {
 	afterEach(() => {
-		vi.clearAllMocks();
 		spawnResultCode = 0;
 		spawnStdout = undefined;
 		spawnStderr = undefined;
-		fetchResult = undefined;
 	});
 
 	beforeEach(() => {
 		// Mock out the child_process.spawn function
-		vi.mock("cross-spawn", () => {
-			const mockedSpawn = vi.fn().mockImplementation(() => {
-				return {
-					on: vi.fn().mockImplementation((event, cb) => {
-						if (event === "close") {
-							cb(spawnResultCode);
-						}
-					}),
-					stdout: {
-						on(event: "data", cb: (data: string) => void) {
-							spawnStdout !== undefined && cb(spawnStdout);
-						},
+		vi.mocked(spawn).mockImplementation(() => {
+			return {
+				on: vi.fn().mockImplementation((event, cb) => {
+					if (event === "close") {
+						cb(spawnResultCode);
+					}
+				}),
+				stdout: {
+					on(_event: "data", cb: (data: string) => void) {
+						spawnStdout !== undefined && cb(spawnStdout);
 					},
-					stderr: {
-						on(event: "data", cb: (data: string) => void) {
-							spawnStderr !== undefined && cb(spawnStderr);
-						},
+				},
+				stderr: {
+					on(_event: "data", cb: (data: string) => void) {
+						spawnStderr !== undefined && cb(spawnStderr);
 					},
-				};
-			});
-
-			return { spawn: mockedSpawn };
+				},
+			} as unknown as ChildProcess;
 		});
 
-		// Mock out the undici fetch function
-		vi.mock("undici", async () => {
-			const actual = (await vi.importActual("undici")) as Record<
-				string,
-				unknown
-			>;
-			const mockedFetch = vi.fn().mockImplementation(() => {
-				return fetchResult;
-			});
-
-			return { ...actual, fetch: mockedFetch };
-		});
-
-		vi.mock("which-pm-runs");
 		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 
-		vi.mock("fs", () => ({
-			existsSync: vi.fn(() => false),
-		}));
+		vi.mocked(existsSync).mockImplementation(() => false);
 	});
 
 	const expectSilentSpawnWith = (cmd: string) => {
@@ -177,32 +160,55 @@ describe("Command Helpers", () => {
 	});
 
 	describe("getWorkerdCompatibilityDate()", () => {
+		const originalDispatcher = getGlobalDispatcher();
+		let agent: MockAgent;
+
+		beforeEach(() => {
+			// Mock out the undici Agent
+			agent = new MockAgent();
+			agent.disableNetConnect();
+			setGlobalDispatcher(agent);
+		});
+
+		afterEach(() => {
+			agent.assertNoPendingInterceptors();
+			setGlobalDispatcher(originalDispatcher);
+		});
+
 		test("normal flow", async () => {
-			fetchResult = new Response(
-				JSON.stringify({
-					"dist-tags": { latest: "2.20250110.5" },
-				})
-			);
+			agent
+				.get("https://registry.npmjs.org")
+				.intercept({ path: "/workerd" })
+				.reply(
+					200,
+					JSON.stringify({
+						"dist-tags": { latest: "2.20250110.5" },
+					})
+				);
 			const date = await getWorkerdCompatibilityDate();
-			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2025-01-10");
 		});
 
 		test("empty result", async () => {
-			fetchResult = new Response(
-				JSON.stringify({
-					"dist-tags": { latest: "" },
-				})
-			);
+			agent
+				.get("https://registry.npmjs.org")
+				.intercept({ path: "/workerd" })
+				.reply(
+					200,
+					JSON.stringify({
+						"dist-tags": { latest: "" },
+					})
+				);
 			const date = await getWorkerdCompatibilityDate();
-			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2023-05-18");
 		});
 
 		test("command failed", async () => {
-			fetchResult = new Response("Unknown error");
+			agent
+				.get("https://registry.npmjs.org")
+				.intercept({ path: "/workerd" })
+				.replyWithError(new Error("Unknown error"));
 			const date = await getWorkerdCompatibilityDate();
-			expect(fetch).toHaveBeenCalledWith("https://registry.npmjs.org/workerd");
 			expect(date).toBe("2023-05-18");
 		});
 	});

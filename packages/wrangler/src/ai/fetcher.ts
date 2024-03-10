@@ -1,4 +1,4 @@
-import { Response } from "miniflare";
+import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch/internal";
 import { getAccountId } from "../user";
 import type { Request } from "miniflare";
@@ -16,5 +16,9 @@ export async function AIFetcher(request: Request) {
 		duplex: "half",
 	});
 
-	return new Response(res.body, { status: res.status });
+	const respHeaders = new Headers(res.headers);
+	respHeaders.delete("Host");
+	respHeaders.delete("Content-Length");
+
+	return new Response(res.body, { status: res.status, headers: respHeaders });
 }

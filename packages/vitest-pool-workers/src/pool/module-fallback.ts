@@ -39,11 +39,7 @@ function trimSuffix(suffix: string, value: string) {
 }
 
 // Node.js built-in modules provided by `workerd`
-const workerdBuiltinModules = VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES.filter(
-	// `workerd`'s implementation of "node:process" doesn't support everything we
-	// need, so use our polyfill instead
-	(specifier) => specifier !== "node:process"
-);
+const workerdBuiltinModules = VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES;
 const conditions = new Set(["workerd", "worker", "browser", "import"]);
 
 // `chai` contains circular `require()`s which aren't supported by `workerd`

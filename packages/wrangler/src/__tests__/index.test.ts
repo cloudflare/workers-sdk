@@ -57,7 +57,7 @@ describe("wrangler", () => {
 			  wrangler login                       🔓 Login to Cloudflare
 			  wrangler logout                      🚪 Logout from Cloudflare
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
-			  wrangler types                       📝 Generate types from bindings & module rules in config
+			  wrangler types [path]                📝 Generate types from bindings & module rules in config
 			  wrangler deployments                 🚢 List and view details for deployments
 			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
 
@@ -111,7 +111,7 @@ describe("wrangler", () => {
 			  wrangler login                       🔓 Login to Cloudflare
 			  wrangler logout                      🚪 Logout from Cloudflare
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
-			  wrangler types                       📝 Generate types from bindings & module rules in config
+			  wrangler types [path]                📝 Generate types from bindings & module rules in config
 			  wrangler deployments                 🚢 List and view details for deployments
 			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
 

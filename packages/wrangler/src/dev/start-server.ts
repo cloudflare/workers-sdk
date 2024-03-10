@@ -236,7 +236,6 @@ export async function startDevServer(
 			usageModel: props.usageModel,
 			env: props.env,
 			legacyEnv: props.legacyEnv,
-			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
 			onReady: async (ip, port, proxyData) => {

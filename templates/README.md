@@ -26,10 +26,10 @@ There are a few ways to quickly jumpstart your next project using one of the tem
 
    ```sh
    # full repository clone
-   $ git clone --depth 1 https://github.com/cloudflare/templates
+   $ git clone --depth 1 https://github.com/cloudflare/workers-sdk
 
    # copy the "worker-typescript" example to "my-project" directory
-   $ cp -rf templates/worker-typescript my-project
+   $ cp -rf workers-sdk/templates/worker-typescript my-project
 
    # setup & begin development
    $ cd my-project && npm install && npm run dev

@@ -1,24 +1,19 @@
 import fs from "fs/promises";
 import { z } from "zod";
-import {
-	CORE_PLUGIN,
-	HEADER_CF_BLOB,
-	SERVICE_ENTRY,
-	SOCKET_ENTRY,
-} from "../plugins";
-import { HttpOptions, Socket, Socket_Https } from "../runtime";
-import { Awaitable } from "../workers";
+import { CORE_PLUGIN } from "../plugins";
+import { HttpOptions, Socket_Https } from "../runtime";
+import { Awaitable, CoreHeaders } from "../workers";
 import { CERT, KEY } from "./cert";
 
-export async function configureEntrySocket(
-	coreOpts: z.infer<typeof CORE_PLUGIN.sharedOptions>
-): Promise<Socket> {
-	const httpOptions = {
-		// Even though we inject a `cf` object in the entry worker, allow it to
-		// be customised via `dispatchFetch`
-		cfBlobHeader: HEADER_CF_BLOB,
-	};
+export const ENTRY_SOCKET_HTTP_OPTIONS: HttpOptions = {
+	// Even though we inject a `cf` object in the entry worker, allow it to
+	// be customised via `dispatchFetch`
+	cfBlobHeader: CoreHeaders.CF_BLOB,
+};
 
+export async function getEntrySocketHttpOptions(
+	coreOpts: z.infer<typeof CORE_PLUGIN.sharedOptions>
+): Promise<{ http: HttpOptions } | { https: Socket_Https }> {
 	let privateKey: string | undefined = undefined;
 	let certificateChain: string | undefined = undefined;
 
@@ -36,12 +31,10 @@ export async function configureEntrySocket(
 		certificateChain = CERT;
 	}
 
-	let options: { http: HttpOptions } | { https: Socket_Https };
-
 	if (privateKey && certificateChain) {
-		options = {
+		return {
 			https: {
-				options: httpOptions,
+				options: ENTRY_SOCKET_HTTP_OPTIONS,
 				tlsOptions: {
 					keypair: {
 						privateKey: privateKey,
@@ -51,16 +44,8 @@ export async function configureEntrySocket(
 			},
 		};
 	} else {
-		options = {
-			http: httpOptions,
-		};
+		return { http: ENTRY_SOCKET_HTTP_OPTIONS };
 	}
-
-	return {
-		name: SOCKET_ENTRY,
-		service: { name: SERVICE_ENTRY },
-		...options,
-	};
 }
 
 function valueOrFile(

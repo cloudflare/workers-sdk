@@ -1,7 +1,8 @@
 import { existsSync, readdirSync } from "fs";
+import { spinner } from "@cloudflare/cli/interactive";
 import { getWorkerdCompatibilityDate } from "helpers/command";
 import { readFile, writeFile } from "helpers/files";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	addWorkersTypesToTsConfig,
 	getLatestTypesEntrypoint,
@@ -14,6 +15,16 @@ import type { C3Context } from "types";
 vi.mock("helpers/files");
 vi.mock("helpers/command");
 vi.mock("fs");
+vi.mock("@cloudflare/cli/interactive");
+
+beforeEach(() => {
+	// we mock `spinner` to remove noisy logs from the test runs
+	vi.mocked(spinner).mockImplementation(() => ({
+		start() {},
+		update() {},
+		stop() {},
+	}));
+});
 
 const mockWorkersTypesDirListing = [
 	"2021-11-03",
@@ -42,10 +53,6 @@ const mockWorkersTypesDirectory = (
 
 describe("getLatestTypesEntrypoint", () => {
 	const ctx = createTestContext();
-
-	afterEach(() => {
-		vi.clearAllMocks();
-	});
 
 	test("happy path", async () => {
 		mockWorkersTypesDirectory();
@@ -94,10 +101,6 @@ describe("addWorkersTypesToTsConfig", () => {
 		);
 	});
 
-	afterEach(() => {
-		vi.clearAllMocks();
-	});
-
 	test("happy path", async () => {
 		await addWorkersTypesToTsConfig(ctx);
 
@@ -140,12 +143,18 @@ describe("updateWranglerToml", () => {
 	const ctx = createTestContext();
 
 	const mockCompatDate = "2024-01-17";
-	vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
-		Promise.resolve(mockCompatDate)
-	);
 
-	afterEach(() => {
-		vi.clearAllMocks();
+	beforeEach(() => {
+		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
+			Promise.resolve(mockCompatDate)
+		);
+		vi.mocked(existsSync).mockImplementation(() => true);
+		mockWorkersTypesDirectory();
+
+		// Mock the read of tsconfig.json
+		vi.mocked(readFile).mockImplementation(
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
+		);
 	});
 
 	test("placeholder replacement", async () => {

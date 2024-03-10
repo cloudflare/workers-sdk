@@ -148,7 +148,17 @@ const worker: ExportedHandler = {
 			return Response.redirect(redirectUrl, 302);
 		}
 
-		return Response.redirect("https://workers.cloudflare.com/playground", 302);
+		if (pathname === "/python") {
+			return Response.redirect(
+				"https://workers.cloudflare.com/playground/python",
+				302
+			);
+		} else {
+			return Response.redirect(
+				"https://workers.cloudflare.com/playground",
+				302
+			);
+		}
 	},
 };
 

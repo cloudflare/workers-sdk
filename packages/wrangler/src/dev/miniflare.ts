@@ -16,7 +16,6 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
-	CfModuleType,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -176,15 +175,6 @@ function buildLog(): Log {
 	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
-// TODO(soon): workerd requires python modules to be named without a file extension
-// We should remove this restriction
-function stripPySuffix(modulePath: string, type?: CfModuleType) {
-	if (type === "python" && modulePath.endsWith(".py")) {
-		return modulePath.slice(0, -3);
-	}
-	return modulePath;
-}
-
 async function buildSourceOptions(
 	config: ConfigBundle
 ): Promise<SourceOptions> {
@@ -206,16 +196,13 @@ async function buildSourceOptions(
 				// Entrypoint
 				{
 					type: ModuleTypeToRuleType[config.bundle.type],
-					path: stripPySuffix(scriptPath, config.bundle.type),
+					path: scriptPath,
 					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
 					type: ModuleTypeToRuleType[module.type ?? "esm"],
-					path: stripPySuffix(
-						path.resolve(modulesRoot, module.name),
-						module.type
-					),
+					path: path.resolve(modulesRoot, module.name),
 					contents: module.content,
 				})),
 			],
@@ -447,7 +434,9 @@ export function buildPersistOptions(
 	}
 }
 
-function buildSitesOptions({ assetPaths }: ConfigBundle) {
+export function buildSitesOptions({
+	assetPaths,
+}: Pick<ConfigBundle, "assetPaths">) {
 	if (assetPaths !== undefined) {
 		const { baseDirectory, assetDirectory, includePatterns, excludePatterns } =
 			assetPaths;
