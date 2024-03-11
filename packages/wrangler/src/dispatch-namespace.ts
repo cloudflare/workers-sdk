@@ -81,29 +81,6 @@ async function getWorkerNamespaceInfo(accountId: string, name: string) {
 	);
 }
 
-/**
- * Rename a dynamic dispatch namespace
- */
-async function renameWorkerNamespace(
-	accountId: string,
-	oldName: string,
-	newName: string
-) {
-	void printWranglerBanner();
-
-	await fetchResult(
-		`/accounts/${accountId}/workers/dispatch/namespaces/${oldName}`,
-		{
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ name: newName }),
-		}
-	);
-	logger.log(`Renamed dispatch namespace "${oldName}" to "${newName}"`);
-}
-
 export function workerNamespaceCommands(
 	workerNamespaceYargs: CommonYargsArgv,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
@@ -178,32 +155,6 @@ export function workerNamespaceCommands(
 				const accountId = await requireAuth(config);
 				await deleteWorkerNamespace(accountId, args.name);
 				await metrics.sendMetricsEvent("delete dispatch namespace", {
-					sendMetrics: config.send_metrics,
-				});
-			}
-		)
-		.command(
-			"rename <old-name> <new-name>",
-			"Rename a dispatch namespace",
-			(yargs) => {
-				return yargs
-					.positional("old-name", {
-						describe: "Name of the dispatch namespace",
-						type: "string",
-						demandOption: true,
-					})
-					.positional("new-name", {
-						describe: "New name of the dispatch namespace",
-						type: "string",
-						demandOption: true,
-					});
-			},
-			async (args) => {
-				await printWranglerBanner();
-				const config = readConfig(args.config, args);
-				const accountId = await requireAuth(config);
-				await renameWorkerNamespace(accountId, args.oldName, args.newName);
-				await metrics.sendMetricsEvent("rename dispatch namespace", {
 					sendMetrics: config.send_metrics,
 				});
 			}
