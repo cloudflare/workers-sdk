@@ -14,6 +14,7 @@ import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
+import { nodejsHybridPlugin } from "./esbuild-plugins/hybrid-nodejs-compat";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
@@ -341,10 +342,16 @@ export async function bundleWorker(
 		},
 		plugins: [
 			moduleCollector.plugin,
-			...(legacyNodeCompat
+			// Legacy build time Node.js compatibility
+			...(legacyNodeCompat && !nodejsCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
-			nodejsCompatPlugin(!!nodejsCompat),
+			// Runtime Node.js compatibility
+			...(!!nodejsCompat && !legacyNodeCompat
+				? [nodejsCompatPlugin(!!nodejsCompat && !legacyNodeCompat)]
+				: []),
+			// Hybrid Node.js compatibility
+			...(!!nodejsCompat && legacyNodeCompat ? [nodejsHybridPlugin()] : []),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
