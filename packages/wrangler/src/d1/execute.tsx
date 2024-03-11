@@ -50,6 +50,11 @@ export function Options(yargs: CommonYargsArgv) {
 				"Execute commands/files against a local DB for use with wrangler dev",
 			type: "boolean",
 		})
+		.option("remote", {
+			describe:
+				"Execute commands/files against a remote DB for use with wrangler dev",
+			type: "boolean",
+		})
 		.option("file", {
 			describe: "A .sql file to ingest",
 			type: "string",
@@ -85,6 +90,7 @@ type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const {
 		local,
+		remote,
 		database,
 		yes,
 		persistTo,
@@ -100,6 +106,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "error";
 	}
 	await printWranglerBanner();
+
 	const config = readConfig(args.config, args);
 
 	if (file && command)
@@ -109,6 +116,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	try {
 		const response: QueryResult[] | null = await executeSql({
 			local,
+			remote,
 			config,
 			name: database,
 			shouldPrompt: isInteractive && !yes,
@@ -168,6 +176,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 
 export async function executeSql({
 	local,
+	remote,
 	config,
 	name,
 	shouldPrompt,
@@ -179,6 +188,7 @@ export async function executeSql({
 	batchSize,
 }: {
 	local: boolean | undefined;
+	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	shouldPrompt: boolean | undefined;
@@ -194,10 +204,16 @@ export async function executeSql({
 		// set loggerLevel to error to avoid logs appearing in JSON output
 		logger.loggerLevel = "error";
 	}
+
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
-	if (preview && local)
-		throw new UserError(`Error: can't use --preview with --local`);
+	if (local && remote) {
+		throw new UserError(
+			`Error: can't use --local and --remote at the same time`
+		);
+	}
+	if (preview && !remote)
+		throw new UserError(`Error: can't use --preview without --remote`);
 	if (persistTo && !local)
 		throw new UserError(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
@@ -211,21 +227,23 @@ export async function executeSql({
 			);
 		}
 	}
-	const result = local
-		? await executeLocally({
-				config,
-				name,
-				queries,
-				persistTo,
-		  })
-		: await executeRemotely({
-				config,
-				name,
-				shouldPrompt,
-				batches: batchSplit(queries, batchSize),
-				json,
-				preview,
-		  });
+	const result =
+		remote || preview
+			? await executeRemotely({
+					config,
+					name,
+					shouldPrompt,
+					batches: batchSplit(queries, batchSize),
+					json,
+					preview,
+			  })
+			: await executeLocally({
+					config,
+					name,
+					queries,
+					persistTo,
+			  });
+
 	if (json) logger.loggerLevel = existingLogLevel;
 	return result;
 }
@@ -244,7 +262,7 @@ async function executeLocally({
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new UserError(
-			`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+			`Couldn't find a D1 DB with the name or binding '${name}' in wrangler.toml.`
 		);
 	}
 
@@ -256,6 +274,9 @@ async function executeLocally({
 		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
 			d1Persist
 		)}:`
+	);
+	logger.log(
+		"🌀 To execute on your remote database, add a --remote flag to your wrangler command."
 	);
 
 	const mf = new Miniflare({
@@ -337,7 +358,7 @@ async function executeRemotely({
 	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
 	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);
 	logger.log(
-		"🌀 To execute on your local development database, pass the --local flag to 'wrangler d1 execute'"
+		"🌀 To execute on your local development database, remove the --remote flag from your wrangler command."
 	);
 
 	const results: QueryResult[] = [];

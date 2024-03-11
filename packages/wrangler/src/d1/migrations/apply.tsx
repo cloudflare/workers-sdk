@@ -48,15 +48,17 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		config,
 		database,
 		local,
+		remote,
 		persistTo,
 		preview,
 		batchSize,
 	}): Promise<void> => {
 		await printWranglerBanner();
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
-		if (!databaseInfo && !local) {
+
+		if (!databaseInfo && remote) {
 			throw new UserError(
-				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
+				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
 			);
 		}
 
@@ -76,6 +78,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		await initMigrationsTable({
 			migrationsTableName,
 			local,
+			remote,
 			config,
 			name: database,
 			persistTo,
@@ -87,6 +90,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 				migrationsTableName,
 				migrationsPath,
 				local,
+				remote,
 				config,
 				name: database,
 				persistTo,
@@ -160,6 +164,7 @@ Your database may not be available to serve requests during the migration, conti
 			try {
 				const response = await executeSql({
 					local,
+					remote,
 					config,
 					name: database,
 					shouldPrompt: isInteractive() && !CI.isCI(),

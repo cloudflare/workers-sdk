@@ -43,6 +43,7 @@ export async function getUnappliedMigrations({
 	migrationsTableName,
 	migrationsPath,
 	local,
+	remote,
 	config,
 	name,
 	persistTo,
@@ -51,20 +52,22 @@ export async function getUnappliedMigrations({
 	migrationsTableName: string;
 	migrationsPath: string;
 	local: boolean | undefined;
+	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	persistTo: string | undefined;
 	preview: boolean | undefined;
 }): Promise<Array<string>> {
 	const appliedMigrations = (
-		await listAppliedMigrations(
+		await listAppliedMigrations({
 			migrationsTableName,
 			local,
+			remote,
 			config,
 			name,
 			persistTo,
-			preview
-		)
+			preview,
+		})
 	).map((migration) => {
 		return migration.name;
 	});
@@ -81,16 +84,28 @@ export async function getUnappliedMigrations({
 	return unappliedMigrations;
 }
 
-const listAppliedMigrations = async (
-	migrationsTableName: string,
-	local: boolean | undefined,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	persistTo: string | undefined,
-	preview: boolean | undefined
-): Promise<Migration[]> => {
+type ListAppliedMigrationsProps = {
+	migrationsTableName: string;
+	local: boolean | undefined;
+	remote: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	persistTo: string | undefined;
+	preview: boolean | undefined;
+};
+
+const listAppliedMigrations = async ({
+	migrationsTableName,
+	local,
+	remote,
+	config,
+	name,
+	persistTo,
+	preview,
+}: ListAppliedMigrationsProps): Promise<Migration[]> => {
 	const response: QueryResult[] | null = await executeSql({
 		local,
+		remote,
 		config,
 		name,
 		shouldPrompt: isInteractive() && !CI.isCI(),
@@ -141,6 +156,7 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 export const initMigrationsTable = async ({
 	migrationsTableName,
 	local,
+	remote,
 	config,
 	name,
 	persistTo,
@@ -148,6 +164,7 @@ export const initMigrationsTable = async ({
 }: {
 	migrationsTableName: string;
 	local: boolean | undefined;
+	remote: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	persistTo: string | undefined;
@@ -155,6 +172,7 @@ export const initMigrationsTable = async ({
 }) => {
 	return executeSql({
 		local,
+		remote,
 		config,
 		name,
 		shouldPrompt: isInteractive() && !CI.isCI(),

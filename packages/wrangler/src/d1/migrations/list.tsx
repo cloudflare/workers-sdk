@@ -28,16 +28,23 @@ export function ListOptions(yargs: CommonYargsArgv) {
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({ config, database, local, persistTo, preview }): Promise<void> => {
+	async ({
+		config,
+		database,
+		local,
+		remote,
+		persistTo,
+		preview,
+	}): Promise<void> => {
 		await printWranglerBanner();
-		if (!local) {
+		if (remote) {
 			await requireAuth({});
 		}
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
-		if (!databaseInfo && !local) {
+		if (!databaseInfo && remote) {
 			throw new UserError(
-				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
+				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
 			);
 		}
 
@@ -58,6 +65,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		await initMigrationsTable({
 			migrationsTableName,
 			local,
+			remote,
 			config,
 			name: database,
 			persistTo,
@@ -69,6 +77,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 				migrationsTableName,
 				migrationsPath,
 				local,
+				remote,
 				config,
 				name: database,
 				persistTo,

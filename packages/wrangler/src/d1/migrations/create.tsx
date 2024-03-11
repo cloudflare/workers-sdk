@@ -32,7 +32,7 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new UserError(
-				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
+				`Couldn't find a D1 DB with the name or binding '${database}' in wrangler.toml.`
 			);
 		}
 
