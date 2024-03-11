@@ -1,5 +1,10 @@
 name = "do-worker-b"
+compatibility_date = "2024-03-04"
 
 [[durable_objects.bindings]]
 name = "MY_DO"
 class_name = "DurableObjectClass"
+
+[[migrations]]
+tag = "v1" # Should be unique for each entry
+new_classes = ["DurableObjectClass"]

@@ -1,16 +1,24 @@
 import { readdir } from "fs/promises";
 import path from "path";
+import { setTimeout } from "timers/promises";
 import {
 	D1Database,
 	DurableObjectNamespace,
 	Fetcher,
 	R2Bucket,
 } from "@cloudflare/workers-types";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { unstable_dev } from "wrangler";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
+import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 import { getBindingsProxy } from "./shared";
 import type { KVNamespace } from "@cloudflare/workers-types";
-import type { UnstableDevWorker } from "wrangler";
 
 type Bindings = {
 	MY_VAR: string;
@@ -29,25 +37,21 @@ type Bindings = {
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
 describe("getBindingsProxy - bindings", () => {
-	let devWorkers: UnstableDevWorker[];
+	let devWorkers: Awaited<ReturnType<typeof startWorkers>>;
 
 	beforeEach(() => {
 		// Hide stdout messages from the test logs
 		vi.spyOn(console, "log").mockImplementation(() => {});
 	});
 
-	// Note: we're skipping the service workers and durable object tests
-	//       so there's no need to start separate workers right now, the
-	//       following beforeAll and afterAll should be un-commented when
-	//       we reenable the tests
+	beforeAll(async () => {
+		devWorkers = await startWorkers();
+		await setTimeout(1000);
+	});
 
-	// beforeAll(async () => {
-	// 	devWorkers = await startWorkers();
-	// });
-
-	// afterAll(async () => {
-	// 	await Promise.allSettled(devWorkers.map((i) => i.stop()));
-	// });
+	afterAll(async () => {
+		await Promise.allSettled(devWorkers.map((i) => i.stop()));
+	});
 
 	describe("var bindings", () => {
 		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
@@ -134,12 +138,11 @@ describe("getBindingsProxy - bindings", () => {
 		}
 	});
 
-	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
-	//       when we run all our fixtures together (possibly because of race condition issues)
-	it.skip("provides service bindings to external local workers", async () => {
+	it("provides service bindings to external local workers", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
+
 		try {
 			const { MY_SERVICE_A, MY_SERVICE_B } = bindings;
 			await testServiceBinding(MY_SERVICE_A, "Hello World from hello-worker-a");
@@ -166,7 +169,7 @@ describe("getBindingsProxy - bindings", () => {
 
 	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
 	//       when we run all our fixtures together (possibly because of race condition issues)
-	it.skip("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
+	it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
 		const { bindings, dispose } = await getBindingsProxy<Bindings>({
 			configPath: wranglerTomlFilePath,
 		});
@@ -231,15 +234,17 @@ describe("getBindingsProxy - bindings", () => {
  *
  * @returns the workers' UnstableDevWorker instances
  */
-async function startWorkers(): Promise<UnstableDevWorker[]> {
+async function startWorkers() {
 	const workersDirPath = path.join(__dirname, "..", "workers");
 	const workers = await readdir(workersDirPath);
 	return await Promise.all(
-		workers.map((workerName) => {
+		workers.map(async (workerName) => {
 			const workerPath = path.join(workersDirPath, workerName);
-			return unstable_dev(path.join(workerPath, "index.ts"), {
-				config: path.join(workerPath, "wrangler.toml"),
-			});
+			return await runWranglerDev(workerPath, [
+				"index.ts",
+				"--inspector-port=0",
+				"--port=0",
+			]);
 		})
 	);
 }

@@ -1,5 +1,5 @@
 name = "c"
-
+compatibility_date = "2024-03-04"
 [durable_objects]
 bindings = [
 	{ name = "SW_REFERENCED_DO", class_name = "MyDurableObject", script_name = "a" }

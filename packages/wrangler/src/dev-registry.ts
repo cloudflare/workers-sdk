@@ -1,21 +1,17 @@
-import net from "net";
-import { createServer } from "node:http";
-import bodyParser from "body-parser";
-import express from "express";
-import { createHttpTerminator } from "http-terminator";
-import { fetch } from "undici";
-import { logger } from "./logger";
+import { mkdir, readdir, readFile, unlink, writeFile } from "fs/promises";
+import path from "path";
+import { watch } from "chokidar";
+import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import type { Config } from "./config";
-import type { HttpTerminator } from "http-terminator";
-import type { Server } from "node:http";
 
-const DEV_REGISTRY_PORT = 6284;
-const DEV_REGISTRY_HOST = `http://127.0.0.1:${DEV_REGISTRY_PORT}`;
-
-let server: Server | null;
-let terminator: HttpTerminator;
+export const SERVICE_REGISTRY_PATH = path.join(
+	getGlobalWranglerConfigPath(),
+	"registry"
+);
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
+
+let workers: WorkerRegistry | undefined;
 
 export type WorkerDefinition = {
 	port: number | undefined;
@@ -28,87 +24,42 @@ export type WorkerDefinition = {
 	durableObjectsPort?: number;
 };
 
-/**
- * A helper function to check whether our service registry is already running
- */
-async function isPortAvailable() {
-	return new Promise((resolve, reject) => {
-		const netServer = net
-			.createServer()
-			.once("error", (err) => {
-				netServer.close();
-				if ((err as unknown as { code: string }).code === "EADDRINUSE") {
-					resolve(false);
-				} else {
-					reject(err);
-				}
-			})
-			.once("listening", () => {
-				netServer.close();
-				resolve(true);
-			});
-		netServer.listen(DEV_REGISTRY_PORT, "127.0.0.1");
-	});
+async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
+	await mkdir(SERVICE_REGISTRY_PATH, { recursive: true });
+	workers ??= {};
+	const newWorkers = new Set<string>();
+	const workerDefinitions = await readdir(SERVICE_REGISTRY_PATH);
+	for (const file of workerDefinitions) {
+		workers[file] = JSON.parse(
+			await readFile(path.join(SERVICE_REGISTRY_PATH, file), "utf8")
+		);
+		newWorkers.add(file);
+	}
+
+	for (const worker of Object.keys(workers)) {
+		if (!newWorkers.has(worker)) {
+			delete workers[worker];
+		}
+	}
+	return workers;
 }
 
-const jsonBodyParser = bodyParser.json();
+let watcher: ReturnType<typeof watch> | undefined;
 
-/**
- * Start the service registry. It's a simple server
- * that exposes endpoints for registering and unregistering
- * services, as well as getting the state of the registry.
- */
+// Start watching the filesystem for changes to worker definitions
 export async function startWorkerRegistry() {
-	if ((await isPortAvailable()) && !server) {
-		const app = express();
-
-		let workers: WorkerRegistry = {};
-		app
-			.get("/workers", async (req, res) => {
-				res.json(workers);
-			})
-			.post("/workers/:workerId", jsonBodyParser, async (req, res) => {
-				workers[req.params.workerId] = req.body;
-				res.json(null);
-			})
-			.delete(`/workers/:workerId`, async (req, res) => {
-				delete workers[req.params.workerId];
-				res.json(null);
-			})
-			.delete("/workers", async (req, res) => {
-				workers = {};
-				res.json(null);
-			});
-		server = createServer(app);
-		terminator = createHttpTerminator({ server });
-		server.listen(DEV_REGISTRY_PORT, "127.0.0.1");
-
-		/**
-		 * The registry server may have already been started by another wrangler process.
-		 * If wrangler processes are run in parallel, isPortAvailable() can return true
-		 * while another process spins up the server
-		 */
-		server.once("error", (err) => {
-			if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
-				throw err;
-			}
-		});
-
-		/**
-		 * The registry server may close. Reset the server to null for restart.
-		 */
-		server.on("close", () => {
-			server = null;
-		});
-	}
+	watcher = watch(SERVICE_REGISTRY_PATH, {
+		persistent: true,
+	}).on("all", async () => {
+		await loadWorkerDefinitions();
+	});
 }
 
 /**
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	await terminator?.terminate();
-	server = null;
+	await watcher?.close();
 }
 
 /**
@@ -118,69 +69,26 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
-	/**
-	 * Prevent the dev registry be closed.
-	 */
-	await startWorkerRegistry();
-	try {
-		return await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(definition),
-		});
-	} catch (e) {
-		if (
-			!["ECONNRESET", "ECONNREFUSED"].includes(
-				(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
-			)
-		) {
-			logger.error("Failed to register worker in local service registry", e);
-		} else {
-			logger.debug("Failed to register worker in local service registry", e);
-		}
-	}
+	await mkdir(SERVICE_REGISTRY_PATH, { recursive: true });
+	await writeFile(
+		path.join(SERVICE_REGISTRY_PATH, name),
+		JSON.stringify(definition, null, 2)
+	);
 }
 
 /**
  * Unregister a worker from the registry.
  */
 export async function unregisterWorker(name: string) {
-	try {
-		await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
-			method: "DELETE",
-		});
-	} catch (e) {
-		if (
-			!["ECONNRESET", "ECONNREFUSED"].includes(
-				(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
-			)
-		) {
-			throw e;
-			// logger.error("failed to unregister worker", e);
-		}
-	}
+	await unlink(path.join(SERVICE_REGISTRY_PATH, name));
 }
 
 /**
  * Get the state of the service registry.
  */
-export async function getRegisteredWorkers(): Promise<
-	WorkerRegistry | undefined
-> {
-	try {
-		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
-		return (await response.json()) as WorkerRegistry;
-	} catch (e) {
-		if (
-			!["ECONNRESET", "ECONNREFUSED"].includes(
-				(e as unknown as { cause?: { code?: string } }).cause?.code || "___"
-			)
-		) {
-			throw e;
-		}
-	}
+export async function getRegisteredWorkers(): Promise<WorkerRegistry> {
+	if (!workers) await loadWorkerDefinitions();
+	return workers as WorkerRegistry;
 }
 
 /**

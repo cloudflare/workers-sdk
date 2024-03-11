@@ -29,7 +29,7 @@ type WranglerInstance = {
 	port: string;
 };
 
-describe.skip("Pages Functions", () => {
+describe("Pages Functions", () => {
 	let wranglerInstances: (WranglerInstance | UnstableDevWorker)[] = [];
 	let pagesAppPort: string;
 
@@ -38,24 +38,30 @@ describe.skip("Pages Functions", () => {
 			path.join(__dirname, "../module-worker-a/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-a/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 			}
 		);
+		// TODO: unstable_dev doesn't reload local service bindings when they change, so make sure `module-worker-a` has definitely registered before continuing
+		await setTimeout(1_000);
 		wranglerInstances[1] = await unstable_dev(
 			path.join(__dirname, "../module-worker-b/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-b/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 			}
 		);
 		wranglerInstances[2] = await unstable_dev(
 			path.join(__dirname, "../service-worker-a/index.ts"),
 			{
 				config: path.join(__dirname, "../service-worker-a/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 			}
 		);
 		wranglerInstances[3] = await unstable_dev(
 			path.join(__dirname, "../module-worker-c/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-c/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 				env: "staging",
 			}
 		);
@@ -63,6 +69,7 @@ describe.skip("Pages Functions", () => {
 			path.join(__dirname, "../module-worker-d/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-d/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 				env: "production",
 			}
 		);
@@ -70,6 +77,7 @@ describe.skip("Pages Functions", () => {
 			pages: true,
 			dirName: "pages-functions-app",
 			extraArgs: [
+				"--compatibility-date=2024-03-04",
 				"--service=MODULE_A_SERVICE=module-worker-a",
 				"--service=MODULE_B_SERVICE=module-worker-b",
 				"--service=SERVICE_A_SERVICE=service-worker-a",
@@ -77,7 +85,6 @@ describe.skip("Pages Functions", () => {
 				"--service=STAGING_MODULE_D_SERVICE=module-worker-d@staging",
 			],
 		});
-
 		pagesAppPort = wranglerInstances[5].port;
 	});
 

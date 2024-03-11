@@ -10,11 +10,7 @@ function spyOnConsoleMethod(name: keyof typeof console) {
 	});
 }
 beforeEach(() => {
-	spyOnConsoleMethod("debug");
-	spyOnConsoleMethod("log");
-	spyOnConsoleMethod("info");
 	spyOnConsoleMethod("error");
-	spyOnConsoleMethod("warn");
 });
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -34,5 +30,5 @@ it("logs startup errors", async () => {
 		await worker.stop();
 		expect.fail("Expected unstable_dev() to fail");
 	} catch {}
-	expect(output).toContain('No such module "node:buffer"');
+	expect(output).toContain(`No such module "node:buffer"`);
 });

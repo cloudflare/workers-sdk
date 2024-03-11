@@ -1,5 +1,6 @@
 import { fork } from "child_process";
 import * as path from "path";
+import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
@@ -8,7 +9,7 @@ import type { UnstableDevWorker } from "wrangler";
 
 // TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
 // and improves reliability of this test.
-describe.skip(
+describe(
 	"Pages Functions",
 	() => {
 		let a: UnstableDevWorker;
@@ -26,14 +27,20 @@ describe.skip(
 		beforeAll(async () => {
 			a = await unstable_dev(path.join(__dirname, "../a/index.ts"), {
 				config: path.join(__dirname, "../a/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 			});
+			await setTimeout(1000);
 			b = await unstable_dev(path.join(__dirname, "../b/index.ts"), {
 				config: path.join(__dirname, "../b/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 			});
+			await setTimeout(1000);
 
 			c = await unstable_dev(path.join(__dirname, "../c/index.ts"), {
 				config: path.join(__dirname, "../c/wrangler.toml"),
+				experimental: { disableExperimentalWarning: true },
 			});
+			await setTimeout(1000);
 
 			dWranglerProcess = fork(
 				path.join(
@@ -49,6 +56,7 @@ describe.skip(
 					"pages",
 					"dev",
 					"public",
+					"--compatibility-date=2024-03-04",
 					"--do=PAGES_REFERENCED_DO=MyDurableObject@a",
 					"--port=0",
 					"--inspector-port=0",
@@ -63,6 +71,7 @@ describe.skip(
 				dPort = parsedMessage.port;
 				dResolveReadyPromise(undefined);
 			});
+			await setTimeout(1000);
 		});
 
 		afterAll(async () => {
@@ -85,10 +94,6 @@ describe.skip(
 
 		it("connects up Durable Objects and keeps state across wrangler instances", async () => {
 			await dReadyPromise;
-
-			// Service registry is polled every 300ms,
-			// so let's give all the Workers a little time to find each other
-			await new Promise((resolve) => setTimeout(resolve, 700));
 
 			const responseA = await a.fetch(`/`, {
 				headers: {
