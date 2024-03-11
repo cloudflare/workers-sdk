@@ -55,6 +55,11 @@ export async function deployments(
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
 ) {
+	const versioned = await isUsingGradualRollouts({
+		name: scriptName,
+		experimentalGradualRollouts: undefined,
+	});
+
 	await metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
