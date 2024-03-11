@@ -294,6 +294,10 @@ We use the following guidelines to determine the kind of change for a PR:
 - New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
 
+### Styleguide
+
+When contributing to Wrangler, please refer to the[`STYLEGUIDE.md file`](https://github.com/STYLEGUIDE.md) file where possible to help maintain consistent patterns throughout Wrangler.
+
 ## Releases
 
 We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.

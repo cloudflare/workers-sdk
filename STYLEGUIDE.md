@@ -1,6 +1,6 @@
 # Wrangler Styleguide
 
-The aim of this guideline is to assist all of Wrangler's contributors with guidelines on building consistently throughout Wrangler and to provide end users with the best chance for success.
+The aim of this guideline is to assist Wrangler contributors with maintaining consistent patterns throughout Wrangler and to provide end users with the best chance for success.
 
 ## Styleguide legend
 
