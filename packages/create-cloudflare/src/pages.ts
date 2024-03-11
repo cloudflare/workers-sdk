@@ -3,7 +3,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
-import { getProductionBranch } from "./common";
+import { getProductionBranch } from "./git";
 import type { C3Context } from "types";
 
 /** How many times to retry the create project command before failing. */

@@ -15,15 +15,12 @@ import {
 import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
 import {
-	gitCommit,
-	isInsideGitRepo,
-	offerGit,
 	offerToDeploy,
 	printSummary,
 	runDeploy,
 	setupProjectDirectory,
-	validateProjectDirectory,
 } from "./common";
+import { gitCommit, isInsideGitRepo, offerGit } from "./git";
 import { createProject } from "./pages";
 import {
 	addWranglerToGitIgnore,
@@ -32,6 +29,7 @@ import {
 	updatePackageName,
 	updatePackageScripts,
 } from "./templates";
+import { validateProjectDirectory } from "./validators";
 import { installWorkersTypes } from "./workers";
 import { updateWranglerToml } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
