@@ -387,10 +387,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
 	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	assert(
-		!(legacyNodeCompat && nodejsCompat),
-		"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-	);
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
