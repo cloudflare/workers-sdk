@@ -14,6 +14,13 @@ import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import {
+	ApiDeployment,
+	ApiVersion,
+	Percentage,
+	VersionId,
+	WorkerVersion,
+} from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -22,51 +29,13 @@ import type {
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 const ZERO_WIDTH_SPACE = "\u200B"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
-const VERSION_CACHE = new Map<VersionId, WorkerVersion>();
 
 export type VersionsDeployArgs = StrictYargsOptionsToInterface<
 	typeof versionsDeployOptions
 >;
 
 type OptionalPercentage = number | null; // null means automatically assign (evenly distribute remaining traffic)
-type Percentage = number;
-type UUID = string;
-type VersionId = UUID;
-type WorkerVersion = {
-	id: VersionId;
-	created: Date;
-	tag?: string;
-	message?: string;
-};
-type ApiDeployment = {
-	id: string;
-	source: "api" | string;
-	strategy: "percentage" | string;
-	author_email: string;
-	annotations?: Record<string, string>;
-	created_on: string;
-	versions: Array<{
-		version_id: VersionId;
-		percentage: Percentage;
-	}>;
-};
-type ApiVersion = {
-	id: VersionId;
-	number: number;
-	metadata: {
-		created_on: string;
-		modified_on: string;
-		source: "api" | string;
-		author_id: string;
-		author_email: string;
-	};
-	annotations?: Record<string, string> & {
-		"workers/triggered_by"?: "upload" | string;
-		"workers/message"?: string;
-		"workers/tag"?: string;
-	};
-	// other properties not typed as not used
-};
+type VersionCache = Map<VersionId, WorkerVersion>;
 
 export function versionsDeployOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -139,6 +108,7 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		);
 	}
 
+	const versionCache: VersionCache = new Map();
 	const optionalVersionTraffic = parseVersionSpecs(args);
 
 	cli.startSection(
@@ -147,13 +117,14 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 		true
 	);
 
-	await printLatestDeployment(accountId, workerName);
+	await printLatestDeployment(accountId, workerName, versionCache);
 
 	// prompt to confirm or change the versionIds from the args
 	const confirmedVersionsToDeploy = await promptVersionsToDeploy(
 		accountId,
 		workerName,
 		[...optionalVersionTraffic.keys()],
+		versionCache,
 		args.yes
 	);
 
@@ -229,11 +200,15 @@ function getConfig(
 	return config;
 }
 
-async function printLatestDeployment(accountId: string, workerName: string) {
+async function printLatestDeployment(
+	accountId: string,
+	workerName: string,
+	versionCache: VersionCache
+) {
 	const [versions, traffic] = await spinnerWhile({
 		startMessage: "Fetching latest deployment",
 		async promise() {
-			return fetchLatestDeploymentVersions(accountId, workerName);
+			return fetchLatestDeploymentVersions(accountId, workerName, versionCache);
 		},
 	});
 
@@ -276,17 +251,23 @@ async function promptVersionsToDeploy(
 	accountId: string,
 	workerName: string,
 	defaultSelectedVersionIds: VersionId[],
+	versionCache: VersionCache,
 	yesFlag: boolean
 ): Promise<VersionId[]> {
 	await spinnerWhile({
 		startMessage: "Fetching deployable versions",
 		async promise() {
-			await fetchLatestUploadedVersions(accountId, workerName);
-			await fetchVersions(accountId, workerName, ...defaultSelectedVersionIds);
+			await fetchLatestUploadedVersions(accountId, workerName, versionCache);
+			await fetchVersions(
+				accountId,
+				workerName,
+				versionCache,
+				...defaultSelectedVersionIds
+			);
 		},
 	});
 
-	const selectableVersions = Array.from(VERSION_CACHE.values()).sort(
+	const selectableVersions = Array.from(versionCache.values()).sort(
 		(a, b) => b.created.getTime() - a.created.getTime()
 	);
 
@@ -322,7 +303,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
 				);
 
 				const versions = versionIds?.map((versionId, i) => {
-					const version = VERSION_CACHE.get(versionId);
+					const version = versionCache.get(versionId);
 
 					// shouldn't be possible, but better a UserError than an assertion error
 					if (version === undefined) throw new UserError("Invalid Version ID");
@@ -449,112 +430,6 @@ async function promptPercentages(
 // ***********
 //    API
 // ***********
-
-async function fetchVersion(
-	accountId: string,
-	workerName: string,
-	versionId: VersionId
-) {
-	const cachedVersion = VERSION_CACHE.get(versionId);
-	if (cachedVersion) return cachedVersion;
-
-	const apiVersion = await fetchResult<ApiVersion>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions/${versionId}`
-	);
-
-	const version = castAndCacheWorkerVersion(apiVersion);
-
-	return version;
-}
-async function fetchVersions(
-	accountId: string,
-	workerName: string,
-	...versionIds: VersionId[]
-) {
-	return Promise.all(
-		versionIds.map((versionId) =>
-			fetchVersion(accountId, workerName, versionId)
-		)
-	);
-}
-async function fetchLatestDeploymentVersions(
-	accountId: string,
-	workerName: string
-): Promise<[WorkerVersion[], Map<VersionId, Percentage>]> {
-	const { deployments } = await fetchResult<{ deployments: ApiDeployment[] }>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`
-	);
-
-	const latestDeployment = deployments.at(0);
-	if (!latestDeployment) return [[], new Map()];
-
-	const versionTraffic = new Map(
-		latestDeployment.versions.map(({ version_id: versionId, percentage }) => [
-			versionId,
-			percentage,
-		])
-	);
-	const versions = await fetchVersions(
-		accountId,
-		workerName,
-		...versionTraffic.keys()
-	);
-
-	return [versions, versionTraffic];
-}
-async function fetchLatestUploadedVersions(
-	accountId: string,
-	workerName: string
-): Promise<WorkerVersion[]> {
-	const { items } = await fetchResult<{ items: ApiVersion[] }>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions`
-	);
-
-	const versions = items.map(castAndCacheWorkerVersion);
-
-	return versions;
-}
-function castAndCacheWorkerVersion(apiVersion: ApiVersion) {
-	const version: WorkerVersion = {
-		id: apiVersion.id,
-		created: new Date(apiVersion.metadata.created_on),
-		message: apiVersion.annotations?.["workers/message"],
-		tag: apiVersion.annotations?.["workers/tag"],
-	};
-
-	VERSION_CACHE.set(version.id, version);
-
-	return version;
-}
-async function createDeployment(
-	accountId: string,
-	workerName: string,
-	versionTraffic: Map<VersionId, Percentage>,
-	message: string | undefined
-) {
-	const res = await fetchResult(
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				strategy: "percentage",
-				versions: Array.from(versionTraffic).map(
-					([version_id, percentage]) => ({ version_id, percentage })
-				),
-				annotations: {
-					"workers/triggered_by": "deployment",
-					"workers/message": message,
-				},
-			}),
-		}
-	);
-
-	// TODO: handle specific errors
-
-	return res;
-}
-
 // ***********
 //    UNITS
 // ***********

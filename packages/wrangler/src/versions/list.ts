@@ -7,6 +7,7 @@ import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
+import { ApiVersion } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -17,26 +18,6 @@ const BLANK_INPUT = "-"; // To be used where optional user-input is displayed an
 export type VersionsListArgs = StrictYargsOptionsToInterface<
 	typeof versionsListOptions
 >;
-
-type UUID = string;
-type VersionId = UUID;
-type ApiVersion = {
-	id: VersionId;
-	number: number;
-	metadata: {
-		created_on: string;
-		modified_on: string;
-		source: "api" | string;
-		author_id: string;
-		author_email: string;
-	};
-	annotations?: {
-		"workers/triggered_by"?: "upload" | string;
-		"workers/message"?: string;
-		"workers/tag"?: string;
-	};
-	// other properties not typed as not used
-};
 
 export function versionsListOptions(yargs: CommonYargsArgv) {
 	return yargs.option("name", {
@@ -74,7 +55,7 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	for (const version of versions) {
 		const formattedVersion = formatLabelledValues({
 			"Version ID": version.id,
-			Created: new Date(version.metadata["created_on"]).toLocaleString(),
+			Created: new Date(version.metadata["created_on"]).toISOString(),
 			Author: version.metadata.author_email,
 			Source: version.metadata.source,
 			Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
