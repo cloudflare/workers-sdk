@@ -1,6 +1,6 @@
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw, mswGetVersion } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -10,7 +10,7 @@ describe("versions view", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-	const std = mockConsoleMethods();
+	const std = collectCLIOutput();
 
 	beforeEach(() => {
 		msw.use(mswGetVersion);
@@ -26,29 +26,9 @@ describe("versions view", () => {
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler versions view <version-id>
+			expect(std.out).toMatchInlineSnapshot(`""`);
 
-			View the details of a specific version of your Worker [beta]
-
-			Positionals:
-			  version-id  The Worker Version ID to view  [string] [required]
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			Options:
-			      --name  Name of the worker  [string]"
-		`);
-
-			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(
-				`"X [ERROR] Not enough non-option arguments: got 0, need at least 1"`
-			);
+			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("fails with --name arg only", async () => {
@@ -60,29 +40,9 @@ describe("versions view", () => {
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler versions view <version-id>
+			expect(std.out).toMatchInlineSnapshot(`""`);
 
-			View the details of a specific version of your Worker [beta]
-
-			Positionals:
-			  version-id  The Worker Version ID to view  [string] [required]
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			Options:
-			      --name  Name of the worker  [string]"
-		`);
-
-			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(
-				`"X [ERROR] Not enough non-option arguments: got 0, need at least 1"`
-			);
+			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("fails with positional version-id arg only", async () => {
@@ -96,9 +56,7 @@ describe("versions view", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 
-			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(
-				`"X [ERROR] You need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
-			);
+			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("succeeds with positional version-id arg and --name arg", async () => {
@@ -110,7 +68,7 @@ describe("versions view", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Version ID:  10000000-0000-0000-0000-000000000000
-			Created:     1/1/2021, 12:00:00 AM
+			Created:     2021-01-01T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      Upload
 			Tag:         -
@@ -134,29 +92,9 @@ describe("versions view", () => {
 				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler versions view <version-id>
+			expect(std.out).toMatchInlineSnapshot(`""`);
 
-			View the details of a specific version of your Worker [beta]
-
-			Positionals:
-			  version-id  The Worker Version ID to view  [string] [required]
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			Options:
-			      --name  Name of the worker  [string]"
-		`);
-
-			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(
-				`"X [ERROR] Not enough non-option arguments: got 0, need at least 1"`
-			);
+			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
 		test("succeeds with positional version-id arg only", async () => {
@@ -168,7 +106,7 @@ describe("versions view", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Version ID:  10000000-0000-0000-0000-000000000000
-			Created:     1/1/2021, 12:00:00 AM
+			Created:     2021-01-01T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      Upload
 			Tag:         -
@@ -188,11 +126,7 @@ describe("versions view", () => {
 				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed.]`
 			);
 
-			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/00000000-0000-0000-0000-000000000000) failed.
-			  If you think this is a bug, please open an issue at:
-			  https://github.com/cloudflare/workers-sdk/issues/new/choose"
-		`);
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});

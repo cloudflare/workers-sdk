@@ -248,7 +248,7 @@ async function printLatestDeployment(accountId: string, workerName: string) {
 		cli.log(
 			gray(`
 ${trafficString} ${versionIdString}
-      Created:  ${version.created.toLocaleString()}
+      Created:  ${version.created.toISOString()}
           Tag:  ${version.tag ?? BLANK_INPUT}
       Message:  ${version.message ?? BLANK_INPUT}`)
 		);
@@ -299,7 +299,7 @@ async function promptVersionsToDeploy(
 			value: version.id,
 			label: version.id,
 			sublabel: gray(`
-${ZERO_WIDTH_SPACE}       Created:  ${version.created.toLocaleString()}
+${ZERO_WIDTH_SPACE}       Created:  ${version.created.toISOString()}
 ${ZERO_WIDTH_SPACE}           Tag:  ${version.tag ?? BLANK_INPUT}
 ${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
             `),
@@ -329,7 +329,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
 
 					return `${grayBar}
 ${leftT} ${white(`    Worker Version ${i + 1}: `, version.id)}
-${grayBar} ${gray("             Created: ", version.created.toLocaleString())}
+${grayBar} ${gray("             Created: ", version.created.toISOString())}
 ${grayBar} ${gray("                 Tag: ", version.tag ?? BLANK_INPUT)}
 ${grayBar} ${gray("             Message: ", version.message ?? BLANK_INPUT)}`;
 				});

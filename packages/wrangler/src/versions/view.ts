@@ -1,9 +1,10 @@
+import { logRaw } from "@cloudflare/cli";
 import { fetchResult } from "../cfetch";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
-import renderLabelledValues from "../utils/render-labelled-values";
+import formatLabelledValues from "../utils/render-labelled-values";
 import { getConfig, getSource } from "./list";
 import type {
 	CommonYargsArgv,
@@ -76,12 +77,14 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 		`/accounts/${accountId}/workers/scripts/${workerName}/versions/${args.versionId}`
 	);
 
-	renderLabelledValues({
-		"Version ID:": version.id,
-		"Created:": new Date(version.metadata["created_on"]).toLocaleString(),
-		"Author:": version.metadata.author_email,
-		"Source:": getSource(version),
-		"Tag:": version.annotations?.["workers/tag"] ?? BLANK_INPUT,
-		"Message:": version.annotations?.["workers/message"] ?? BLANK_INPUT,
+	const formattedVersion = formatLabelledValues({
+		"Version ID": version.id,
+		Created: new Date(version.metadata["created_on"]).toISOString(),
+		Author: version.metadata.author_email,
+		Source: version.metadata.source,
+		Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
+		Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 	});
+
+	logRaw(formattedVersion);
 }

@@ -71,12 +71,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/1/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/1/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -85,7 +85,7 @@ describe("versions deploy", () => {
 			├ 1 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -130,12 +130,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -160,12 +160,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -174,7 +174,7 @@ describe("versions deploy", () => {
 			├ 1 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -203,12 +203,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -217,7 +217,7 @@ describe("versions deploy", () => {
 			├ 1 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -246,12 +246,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -260,12 +260,12 @@ describe("versions deploy", () => {
 			├ 2 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/3/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -297,12 +297,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -311,7 +311,7 @@ describe("versions deploy", () => {
 			├ 1 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -340,12 +340,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -354,12 +354,12 @@ describe("versions deploy", () => {
 			├ 2 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/3/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -391,12 +391,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -405,12 +405,12 @@ describe("versions deploy", () => {
 			├ 2 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/3/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -445,12 +445,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -459,17 +459,17 @@ describe("versions deploy", () => {
 			├ 3 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/3/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 3:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/2/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  Rolled back for this version
 			│"
@@ -490,12 +490,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -504,17 +504,17 @@ describe("versions deploy", () => {
 			├ 3 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/3/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
 			├     Worker Version 3:  00000000-0000-0000-0000-000000000000
-			│              Created:  2/2/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  Rolled back for this version
 			│
@@ -552,12 +552,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
@@ -566,7 +566,7 @@ describe("versions deploy", () => {
 			├ 1 Worker Version(s) selected
 			│
 			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  1/4/2021, TIMESTAMP AM
+			│              Created:  TIMESTAMP
 			│                  Tag:  -
 			│              Message:  -
 			│
@@ -599,12 +599,12 @@ describe("versions deploy", () => {
 			├ Your current deployment has 2 version(s):
 			│
 			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  1/4/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
 			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  2/3/2021, TIMESTAMP AM
+			│       Created:  TIMESTAMP
 			│           Tag:  -
 			│       Message:  -
 			│
