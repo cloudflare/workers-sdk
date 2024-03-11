@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { dirname } from "path";
+import { mkdirSync } from "fs";
+import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
@@ -14,14 +15,10 @@ import {
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
-import {
-	offerToDeploy,
-	printSummary,
-	runDeploy,
-	setupProjectDirectory,
-} from "./common";
+import { offerToDeploy, runDeploy } from "./deploy";
 import { gitCommit, isInsideGitRepo, offerGit } from "./git";
 import { createProject } from "./pages";
+import { printSummary } from "./summary";
 import {
 	addWranglerToGitIgnore,
 	copyTemplateFiles,
@@ -104,6 +101,26 @@ export const runCli = async (args: Partial<C3Args>) => {
 	};
 
 	await runTemplate(ctx);
+};
+
+export const setupProjectDirectory = (args: C3Args) => {
+	// Crash if the directory already exists
+	const path = resolve(args.projectName);
+	const err = validateProjectDirectory(path, args);
+	if (err) {
+		crash(err);
+	}
+
+	const directory = dirname(path);
+	const pathBasename = basename(path);
+
+	// If the target is a nested directory, create the parent
+	mkdirSync(directory, { recursive: true });
+
+	// Change to the parent directory
+	chdir(directory);
+
+	return { name: pathBasename, path };
 };
 
 const runTemplate = async (ctx: C3Context) => {

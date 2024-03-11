@@ -1,7 +1,45 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
+import type { C3Context } from "types";
+
+export const chooseAccount = async (ctx: C3Context) => {
+	const s = spinner();
+	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
+	const accounts = await listAccounts();
+
+	let accountId: string;
+
+	if (Object.keys(accounts).length == 1) {
+		const accountName = Object.keys(accounts)[0];
+		accountId = accounts[accountName];
+		s.stop(`${brandColor("account")} ${dim(accountName)}`);
+	} else {
+		s.stop(
+			`${brandColor("account")} ${dim("more than one account available")}`
+		);
+		const accountOptions = Object.entries(accounts).map(
+			([accountName, id]) => ({
+				label: accountName,
+				value: id,
+			})
+		);
+
+		accountId = await inputPrompt({
+			type: "select",
+			question: "Which account do you want to use?",
+			options: accountOptions,
+			label: "account",
+			defaultValue: accountOptions[0].value,
+		});
+	}
+	const accountName = Object.keys(accounts).find(
+		(account) => accounts[account] == accountId
+	) as string;
+
+	ctx.account = { id: accountId, name: accountName };
+};
 
 export const wranglerLogin = async () => {
 	const { npx } = detectPackageManager();

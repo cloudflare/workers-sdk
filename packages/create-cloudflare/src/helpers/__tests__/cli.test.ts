@@ -2,8 +2,8 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { SemVer } from "semver";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { version as currentVersion } from "../../package.json";
-import { isUpdateAvailable } from "../helpers/cli";
+import { version as currentVersion } from "../../../package.json";
+import { isUpdateAvailable } from "../cli";
 
 vi.mock("process");
 vi.mock("@cloudflare/cli/interactive");
