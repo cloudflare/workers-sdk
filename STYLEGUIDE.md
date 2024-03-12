@@ -121,7 +121,7 @@ If you think this is a bug then please create an issue at https://github.com/clo
 
 ## Y/N choice
 ```sh
-*choice description* \<y/n\>
+*choice description* <y/n>
 #User inputs y or n#
 
 ```
