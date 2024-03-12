@@ -304,9 +304,7 @@ ${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
 
 				const versions = versionIds?.map((versionId, i) => {
 					const version = versionCache.get(versionId);
-
-					// shouldn't be possible, but better a UserError than an assertion error
-					if (version === undefined) throw new UserError("Invalid Version ID");
+					assert(version);
 
 					return `${grayBar}
 ${leftT} ${white(`    Worker Version ${i + 1}: `, version.id)}
