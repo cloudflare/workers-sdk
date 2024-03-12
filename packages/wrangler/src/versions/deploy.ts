@@ -8,7 +8,6 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
-import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
@@ -20,11 +19,11 @@ import {
 	fetchLatestUploadedVersions,
 	fetchVersions,
 } from "./api";
-import { Percentage, VersionCache, VersionId } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Percentage, VersionCache, VersionId } from "./types";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish

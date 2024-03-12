@@ -9,12 +9,12 @@ import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { fetchLatestDeployment, fetchVersions } from "../api";
-import { VersionCache } from "../types";
 import { getDeploymentSource } from "./list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
+import type { VersionCache } from "../types";
 
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 

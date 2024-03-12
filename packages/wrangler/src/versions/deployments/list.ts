@@ -8,17 +8,13 @@ import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
-import {
-	fetchLatestDeployment,
-	fetchLatestDeployments,
-	fetchVersions,
-} from "../api";
+import { fetchLatestDeployments, fetchVersions } from "../api";
 import { getVersionSource } from "../list";
-import { ApiDeployment, VersionCache } from "../types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
+import type { ApiDeployment, VersionCache } from "../types";
 
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 

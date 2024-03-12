@@ -1,12 +1,7 @@
 import { normalizeOutput } from "../../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
-import {
-	msw,
-	mswGetVersion,
-	mswListNewDeployments,
-	mswListVersions,
-} from "../../helpers/msw";
+import { msw, mswGetVersion, mswListNewDeployments } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
 import writeWranglerToml from "../../helpers/write-wrangler-toml";
@@ -52,7 +47,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (90%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -83,7 +78,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (90%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -

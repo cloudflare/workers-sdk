@@ -1,4 +1,3 @@
-import { CommonYargsArgv } from "../../yargs-types";
 import {
 	versionsDeploymentsListHandler,
 	versionsDeploymentsListOptions,
@@ -7,6 +6,7 @@ import {
 	versionsDeploymentsStatusHandler,
 	versionsDeploymentsStatusOptions,
 } from "./status";
+import type { CommonYargsArgv } from "../../yargs-types";
 
 export default function registerVersionsDeploymentsSubcommands(
 	versionDeploymentsYargs: CommonYargsArgv

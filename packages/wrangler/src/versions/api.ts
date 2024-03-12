@@ -1,5 +1,5 @@
 import { fetchResult } from "../cfetch";
-import {
+import type {
 	ApiDeployment,
 	ApiVersion,
 	Percentage,
