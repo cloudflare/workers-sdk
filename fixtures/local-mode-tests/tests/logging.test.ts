@@ -22,6 +22,7 @@ afterEach(() => {
 });
 
 it("logs startup errors", async () => {
+	let caughtError: unknown;
 	try {
 		const worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "nodejs-compat.ts"),
@@ -33,6 +34,12 @@ it("logs startup errors", async () => {
 		);
 		await worker.stop();
 		expect.fail("Expected unstable_dev() to fail");
-	} catch {}
-	expect(output).toContain('No such module "node:buffer"');
+	} catch (e) {
+		caughtError = e;
+	}
+	const context = util.inspect(
+		{ caughtError, output },
+		{ maxStringLength: null }
+	);
+	expect(output, context).toContain('No such module "node:buffer"');
 });
