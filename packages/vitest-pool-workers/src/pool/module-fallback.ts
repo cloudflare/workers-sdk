@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -27,6 +28,8 @@ export function ensurePosixLikePath(filePath: string) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = platformPath.dirname(__filename);
+const require = createRequire(__filename);
+
 const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
 const emptyLibPath = posixPath.join(libPath, "cloudflare/empty-internal.cjs");
@@ -235,7 +238,18 @@ async function viteResolve(
 		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
 		custom: { "node-resolve": { isRequire } },
 	});
-	if (resolved === null) throw new Error("Not found");
+	if (resolved === null) {
+		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
+		// starting with a dot. Unfortunately, the `@prisma/client` package includes
+		// `require(".prisma/client/wasm")` which needs to resolve to something in
+		// `node_modules/.prisma/client`. Since Prisma officially supports Workers,
+		// it's quite likely users will want to use it with the Vitest pool. To fix
+		// this, we fall back to Node's resolution algorithm in this case.
+		if (isRequire && specifier[0] === ".") {
+			return require.resolve(specifier, { paths: [referrer] });
+		}
+		throw new Error("Not found");
+	}
 	// Handle case where `package.json` `browser` field stubs out built-in with an
 	// empty module (e.g. `{ "browser": { "fs": false } }`).
 	if (resolved.id === "__vite-browser-external") return emptyLibPath;
