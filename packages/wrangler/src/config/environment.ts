@@ -441,8 +441,8 @@ export interface EnvironmentNonInheritable {
 			/** The name of the queue from which this consumer should consume. */
 			queue: string;
 
-			/** The consumer type, e.g., worker, http-pull, r2-bucket, etc */
-			type: string;
+			/** The consumer type, e.g., worker, http-pull, r2-bucket, etc. Default is worker. */
+			type?: string;
 
 			/** The maximum number of messages per batch */
 			max_batch_size?: number;
