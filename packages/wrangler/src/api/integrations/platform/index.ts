@@ -8,10 +8,13 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { getAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { deepFreeze } from "../utils";
+import { getBindingNames } from "./bindingNames";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
+import type { BindingNames } from "./bindingNames";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
@@ -50,6 +53,10 @@ export type PlatformProxy<
 	 */
 	env: Env;
 	/**
+	 * Name of the available bindings, grouped by type
+	 */
+	bindingNames: Readonly<BindingNames>;
+	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
 	cf: CfProperties;
@@ -86,11 +93,11 @@ export async function getPlatformProxy<
 	});
 
 	// getBindingsProxy doesn't currently support selecting an environment
-	const env = undefined;
+	const environment = undefined;
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig(
 		rawConfig,
-		env,
+		environment,
 		options
 	);
 
@@ -102,16 +109,19 @@ export async function getPlatformProxy<
 
 	const bindings: Env = await mf.getBindings();
 
-	const vars = getVarsForDev(rawConfig, env);
+	const vars = getVarsForDev(rawConfig, environment);
 
 	const cf = await mf.getCf();
 	deepFreeze(cf);
 
+	const env = {
+		...vars,
+		...bindings,
+	};
+
 	return {
-		env: {
-			...vars,
-			...bindings,
-		},
+		env,
+		bindingNames: getBindingNames(env),
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
@@ -196,17 +206,6 @@ function getMiniflarePersistOptions(
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
 	};
-}
-
-function deepFreeze<T extends Record<string | number | symbol, unknown>>(
-	obj: T
-): void {
-	Object.freeze(obj);
-	Object.entries(obj).forEach(([, prop]) => {
-		if (prop !== null && typeof prop === "object" && !Object.isFrozen(prop)) {
-			deepFreeze(prop as Record<string | number | symbol, unknown>);
-		}
-	});
 }
 
 export type SourcelessWorkerOptions = Omit<
