@@ -8,6 +8,7 @@ import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import {
+	compileModuleRules,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -16,9 +17,11 @@ import {
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
+	testRegExps,
 	WebSocket,
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
+import { createChunkingSocket } from "../shared/chunking-socket";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
 	getProjectPath,
@@ -35,8 +38,13 @@ import {
 import {
 	ensurePosixLikePath,
 	handleModuleFallbackRequest,
+	workerdBuiltinModules,
 } from "./module-fallback";
-import type { SourcelessWorkerOptions, WorkersPoolOptions } from "./config";
+import type {
+	SourcelessWorkerOptions,
+	WorkersPoolOptions,
+	WorkersPoolOptionsWithDefines,
+} from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
@@ -47,6 +55,13 @@ import type {
 	WorkerContext,
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
+
+// https://github.com/vitest-dev/vitest/blob/v1.3.0/packages/vite-node/src/client.ts#L386
+declare const __vite_ssr_import__: unknown;
+assert(
+	typeof __vite_ssr_import__ === "undefined",
+	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
+);
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -113,7 +128,7 @@ function forEachMiniflare(
 
 interface Project {
 	project: WorkspaceProject;
-	options: WorkersPoolOptions;
+	options: WorkersPoolOptionsWithDefines;
 	testFiles: Set<string>;
 	relativePath: string | number;
 	mf?: SingleOrPerTestFileMiniflare;
@@ -178,11 +193,17 @@ function getDurableObjectDesignators(
 	return result;
 }
 
+const POOL_WORKER_DIR = path.dirname(POOL_WORKER_PATH);
 const USER_OBJECT_MODULE_NAME = "__VITEST_POOL_WORKERS_USER_OBJECT";
 const USER_OBJECT_MODULE_PATH = path.join(
-	path.dirname(POOL_WORKER_PATH),
+	POOL_WORKER_DIR,
 	USER_OBJECT_MODULE_NAME
 );
+const DEFINES_MODULE_PATH = path.join(
+	POOL_WORKER_DIR,
+	"__VITEST_POOL_WORKERS_DEFINES"
+);
+
 /**
  * Prefix all Durable Object class names, so they don't clash with other
  * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
@@ -364,7 +385,19 @@ function buildProjectWorkerOptions(
 		unsafePreventEviction: true,
 	};
 
-	// Make sure we define the runner script, including Durable Object wrappers
+	// Vite has its own define mechanism, but we can't control it from custom
+	// pools. Our defines come from `wrangler.toml` files which are only parsed
+	// with the rest of the pool configuration. Instead, we implement our own
+	// define script similar to Vite's. When defines change, Miniflare will be
+	// restarted as the input options will be different.
+	const defines = `export default {
+		${Object.entries(project.options.defines ?? {})
+			.map(([key, value]) => `${JSON.stringify(key)}: ${value}`)
+			.join(",\n")}
+	};
+	`;
+
+	// Make sure we define the runner script, including object wrappers & defines
 	if ("script" in runnerWorker) delete runnerWorker.script;
 	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
 
@@ -388,6 +421,11 @@ function buildProjectWorkerOptions(
 			type: "ESModule",
 			path: path.join(modulesRoot, USER_OBJECT_MODULE_PATH),
 			contents: durableObjectWrappers.join("\n"),
+		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, DEFINES_MODULE_PATH),
+			contents: defines,
 		},
 	];
 
@@ -428,16 +466,34 @@ function buildProjectWorkerOptions(
 const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
 	log: mfLog,
 	verbose: true,
-	unsafeModuleFallbackService: handleModuleFallbackRequest,
 	handleRuntimeStdio,
 	unsafeStickyBlobs: true,
 };
+
+type ModuleFallbackService = NonNullable<
+	MiniflareOptions["unsafeModuleFallbackService"]
+>;
+// Reuse the same bound module fallback service when constructing Miniflare
+// options, so deep equality checks succeed
+const moduleFallbackServices = new WeakMap<Vitest, ModuleFallbackService>();
+function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
+	let service = moduleFallbackServices.get(ctx);
+	if (service !== undefined) return service;
+	service = handleModuleFallbackRequest.bind(undefined, ctx.vitenode.server);
+	moduleFallbackServices.set(ctx, service);
+	return service;
+}
+
 /**
  * Builds options for the Miniflare instance running tests for the given Vitest
  * project. The first `runnerWorker` returned may be duplicated in the instance
  * if `singleWorker` is disabled so tests can execute in-parallel and isolation.
  */
-function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
+function buildProjectMiniflareOptions(
+	ctx: Vitest,
+	project: Project
+): MiniflareOptions {
+	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] =
 		buildProjectWorkerOptions(project);
 
@@ -451,6 +507,7 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		//  --> multiple instances each with single runner worker
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
 	} else {
@@ -470,14 +527,16 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		}
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [...testWorkers, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
 	}
 }
 async function getProjectMiniflare(
+	ctx: Vitest,
 	project: Project
 ): Promise<SingleOrPerTestFileMiniflare> {
-	const mfOptions = buildProjectMiniflareOptions(project);
+	const mfOptions = buildProjectMiniflareOptions(ctx, project);
 	const changed = !util.isDeepStrictEqual(project.previousMfOptions, mfOptions);
 	project.previousMfOptions = mfOptions;
 
@@ -581,32 +640,64 @@ async function runTests(
 	const webSocket = res.webSocket;
 	assert(webSocket !== null);
 
+	const chunkingSocket = createChunkingSocket({
+		post(message) {
+			webSocket.send(message);
+		},
+		on(listener) {
+			webSocket.addEventListener("message", (event) => {
+				listener(event.data);
+			});
+		},
+	});
+
+	// Compile module rules for matching against
+	const rules = project.options.miniflare?.modulesRules;
+	const compiledRules = compileModuleRules(rules ?? []);
+
 	const localRpcFunctions = createMethodsRPC(project.project);
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
-			// Always mark `cloudflare:*`/`workerd:*` modules as external
-			if (/^(cloudflare|workerd):/.test(args[0])) {
-				return { externalize: args[0] };
+			const specifier = args[0];
+
+			// Mark built-in modules and any virtual modules (e.g. `cloudflare:test`)
+			// as external
+			if (
+				/^(cloudflare|workerd):/.test(specifier) ||
+				workerdBuiltinModules.has(specifier)
+			) {
+				return { externalize: specifier };
 			}
+
+			// If the specifier matches any module rules, force it to be loaded as
+			// that type. This will be handled by the module fallback service.
+			const maybeRule = compiledRules.find((rule) =>
+				testRegExps(rule.include, specifier)
+			);
+			if (maybeRule !== undefined) {
+				const externalize = specifier + `?mf_vitest_force=${maybeRule.type}`;
+				return { externalize };
+			}
+
 			return localRpcFunctions.fetch(...args);
 		},
 	};
+
 	let startupError: unknown;
 	const rpc = createBirpc<RunnerRPC, RuntimeRPC>(patchedLocalRpcFunctions, {
 		eventNames: ["onCancel"],
 		post(value) {
 			if (webSocket.readyState === WebSocket.READY_STATE_OPEN) {
 				debuglog("POOL-->WORKER", value);
-				webSocket.send(structuredSerializableStringify(value));
+				chunkingSocket.post(structuredSerializableStringify(value));
 			} else {
 				debuglog("POOL--*      ", value);
 			}
 		},
 		on(listener) {
-			webSocket.addEventListener("message", (event) => {
-				assert(typeof event.data === "string");
-				const value = structuredSerializableParse(event.data);
+			chunkingSocket.on((message) => {
+				const value = structuredSerializableParse(message);
 				debuglog("POOL<--WORKER", value);
 				if (
 					typeof value === "object" &&
@@ -789,7 +880,7 @@ export default function (ctx: Vitest): ProcessPool {
 					},
 				};
 
-				const mf = await getProjectMiniflare(project);
+				const mf = await getProjectMiniflare(ctx, project);
 				if (options.singleWorker) {
 					// Single Worker, Isolated or Shared Storage
 					//  --> single instance with single runner worker
@@ -864,7 +955,13 @@ export default function (ctx: Vitest): ProcessPool {
 			const promises: Promise<unknown>[] = [];
 			for (const project of allProjects.values()) {
 				if (project.mf !== undefined) {
-					promises.push(forEachMiniflare(project.mf, (mf) => mf.dispose()));
+					promises.push(
+						forEachMiniflare(project.mf, async (mf) => {
+							// Finish in-progress storage resets before disposing
+							await waitForStorageReset(mf);
+							await mf.dispose();
+						})
+					);
 				}
 			}
 			allProjects.clear();

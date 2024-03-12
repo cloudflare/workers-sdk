@@ -9,6 +9,47 @@ const kConstructFlag = Symbol("kConstructFlag");
 // `ExecutionContext`
 // =============================================================================
 
+/**
+ * Empty array and wait for all promises to resolve until no more added.
+ * If a single promise rejects, the rejection will be passed-through.
+ * If multiple promises reject, the rejections will be aggregated.
+ */
+async function waitForWaitUntil(/* mut */ waitUntil: unknown[]): Promise<void> {
+	const errors: unknown[] = [];
+
+	while (waitUntil.length > 0) {
+		const results = await Promise.allSettled(waitUntil.splice(0));
+		// Record all rejected promises
+		for (const result of results) {
+			if (result.status === "rejected") errors.push(result.reason);
+		}
+	}
+
+	if (errors.length === 1) {
+		// If there was only one rejection, rethrow it
+		throw errors[0];
+	} else if (errors.length > 1) {
+		// If there were more rejections, rethrow them all
+		throw new AggregateError(errors);
+	}
+}
+
+// If isolated storage is enabled, we ensure all `waitUntil()`s are `await`ed at
+// the end of each test, as these may contain storage calls (e.g. caching
+// responses). Note we can't wait at the end of `.concurrent` tests, as we can't
+// track which `waitUntil()`s belong to which tests.
+//
+// If isolated storage is disabled, we ensure all `waitUntil()`s are `await`ed
+// at the end of each test *file*. This ensures we don't try to dispose the
+// runtime until all `waitUntil()`s complete.
+const globalWaitUntil: unknown[] = [];
+export function registerGlobalWaitUntil(promise: unknown) {
+	globalWaitUntil.push(promise);
+}
+export function waitForGlobalWaitUntil(): Promise<void> {
+	return waitForWaitUntil(globalWaitUntil);
+}
+
 const kWaitUntil = Symbol("kWaitUntil");
 class ExecutionContext {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/global-scope.h#L168
@@ -19,10 +60,11 @@ class ExecutionContext {
 	}
 
 	waitUntil(promise: unknown) {
-		if (!(this instanceof ExtendableEvent)) {
+		if (!(this instanceof ExecutionContext)) {
 			throw new TypeError("Illegal invocation");
 		}
 		this[kWaitUntil].push(promise);
+		registerGlobalWaitUntil(promise);
 	}
 
 	passThroughOnException(): void {}
@@ -40,12 +82,7 @@ export async function waitOnExecutionContext(
 				"You must call 'createExecutionContext()' to get an 'ExecutionContext' instance."
 		);
 	}
-	const waitUntil = ctx[kWaitUntil];
-	let previousLength = 0;
-	while (previousLength !== waitUntil.length) {
-		previousLength = waitUntil.length;
-		await Promise.all(ctx[kWaitUntil]);
-	}
+	return waitForWaitUntil(ctx[kWaitUntil]);
 }
 
 // =============================================================================
@@ -103,19 +140,19 @@ const kRetry = Symbol("kRetry");
 const kAck = Symbol("kAck");
 const kRetryAll = Symbol("kRetryAll");
 const kAckAll = Symbol("kAckAll");
-class QueueMessage /* Message */ {
+class QueueMessage<Body = unknown> /* Message */ {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L113
 	readonly #controller: QueueController;
 	readonly id!: string;
 	readonly timestamp!: Date;
-	readonly body!: unknown;
+	readonly body!: Body;
 	[kRetry] = false;
 	[kAck] = false;
 
 	constructor(
 		flag: typeof kConstructFlag,
 		controller: QueueController,
-		message: ServiceBindingQueueMessage
+		message: ServiceBindingQueueMessage<Body>
 	) {
 		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
 		this.#controller = controller;
@@ -205,17 +242,17 @@ class QueueMessage /* Message */ {
 		this[kAck] = true;
 	}
 }
-class QueueController /* MessageBatch */ {
+class QueueController<Body = unknown> /* MessageBatch */ {
 	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L198
 	readonly queue!: string;
-	readonly messages!: QueueMessage[];
+	readonly messages!: QueueMessage<Body>[];
 	[kRetryAll] = false;
 	[kAckAll] = false;
 
 	constructor(
 		flag: typeof kConstructFlag,
 		queueOption: string,
-		messagesOption: ServiceBindingQueueMessage[]
+		messagesOption: ServiceBindingQueueMessage<Body>[]
 	) {
 		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
 
@@ -267,10 +304,10 @@ class QueueController /* MessageBatch */ {
 		this[kAckAll] = true;
 	}
 }
-export function createMessageBatch(
+export function createMessageBatch<Body = unknown>(
 	queueName: string,
-	messages: ServiceBindingQueueMessage[]
-): MessageBatch {
+	messages: ServiceBindingQueueMessage<Body>[]
+): MessageBatch<Body> {
 	if (arguments.length === 0) {
 		// `queueName` will be coerced to a `string`, but it must be defined
 		throw new TypeError(

@@ -10,4 +10,5 @@ export {
 	createScheduledController,
 	createMessageBatch,
 	getQueueResult,
+	applyD1Migrations,
 } from "cloudflare:test-internal";

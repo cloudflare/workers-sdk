@@ -136,4 +136,10 @@ describe("kv", () => {
 		const res = await fetch("https://example.com");
 		expect(await res.text()).toMatchSnapshot("mocked-data");
 	});
+
+	it("defines", async () => {
+		expect(DEFINED_THING).toBe("thing");
+		expect(NESTED.DEFINED.THING).toStrictEqual([1, 2, 3]);
+		expect(NESTED.DEFINED.THING).toBe(NESTED.DEFINED.THING);
+	});
 });
