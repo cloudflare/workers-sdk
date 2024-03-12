@@ -23,6 +23,9 @@ patchedDependencies:
   ink@3.2.0:
     hash: iiwbcf44d6ccmi6a27ljqs7qce
     path: patches/ink@3.2.0.patch
+  pg@8.11.3:
+    hash: afbi5l3roukyz2s7kkn56yzjte
+    path: patches/pg@8.11.3.patch
   toucan-js@3.2.2:
     hash: dxprwy4mawdnq3drjhp7shhm2m
     path: patches/toucan-js@3.2.2.patch
@@ -322,7 +325,10 @@ importers:
         version: 8.11.2
       pg:
         specifier: ^8.11.3
-        version: 8.11.3
+        version: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
+      pg-cloudflare:
+        specifier: ^1.1.1
+        version: 1.1.1
       unenv:
         specifier: ^1.9.0
         version: 1.9.0
@@ -17191,7 +17197,6 @@ packages:
     resolution: {integrity: sha512-xWPagP/4B6BgFO+EKz3JONXv3YDgvkbVrGw2mTo3D6tVDQRh1e7cqVGvyR3BE+eQgAvx1XhW/iEASj4/jCWl3Q==}
     requiresBuild: true
     dev: true
-    optional: true
 
   /pg-connection-string@2.6.2:
     resolution: {integrity: sha512-ch6OwaeaPYcova4kKZ15sbJ2hKb/VP48ZD2gE7i1J+L4MspCtBMAx8nMgz7bksc7IojCIIWuEhHibSMFH8m8oA==}
@@ -17212,7 +17217,7 @@ packages:
     peerDependencies:
       pg: '>=8.0'
     dependencies:
-      pg: 8.11.3
+      pg: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
     dev: true
 
   /pg-protocol@1.6.0:
@@ -17243,7 +17248,7 @@ packages:
       postgres-range: 1.1.4
     dev: true
 
-  /pg@8.11.3:
+  /pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte):
     resolution: {integrity: sha512-+9iuvG8QfaaUrrph+kpF24cXkH1YOOUeArRNYIxq1viYHZagBxrTno7cecY1Fa44tJeZvaoG+Djpkc3JwehN5g==}
     engines: {node: '>= 8.0.0'}
     peerDependencies:
@@ -17262,6 +17267,7 @@ packages:
     optionalDependencies:
       pg-cloudflare: 1.1.1
     dev: true
+    patched: true
 
   /pgpass@1.0.5:
     resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
