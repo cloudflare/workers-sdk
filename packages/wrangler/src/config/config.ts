@@ -30,6 +30,18 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	DeprecatedConfigFields &
 	EnvironmentMap;
 
+// Pages-specific configuration fields
+export interface PagesConfigFields {
+	/**
+	 * The directory of static assets to serve.
+	 *
+	 * The presence of this field in `wrangler.toml` indicates a Pages project,
+	 * and will prompt the handling of the configuration file according to the
+	 * Pages-specific validation rules.
+	 */
+	pages_build_output_dir?: string;
+}
+
 export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
 
