@@ -38,6 +38,7 @@ it("logs startup errors", async () => {
 	} catch (e) {
 		caughtError = e;
 	}
+	// wait a bit to give time for the `console` logging to complete
 	await setTimeout(500);
 	const context = util.inspect(
 		{ caughtError, output },
