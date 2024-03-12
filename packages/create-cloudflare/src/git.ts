@@ -1,9 +1,10 @@
 import { updateStatus } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { C3_DEFAULTS } from "helpers/cli";
-import { printAsyncStatus, runCommand, runCommands } from "helpers/command";
+import { runCommand, runCommands } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
@@ -52,11 +53,7 @@ export const offerGit = async (ctx: C3Context) => {
 	});
 
 	if (ctx.args.git) {
-		await printAsyncStatus({
-			promise: initializeGit(ctx.project.path),
-			startText: "Initializing git repo",
-			doneText: `${brandColor("initialized")} ${dim(`git`)}`,
-		});
+		await initializeGit(ctx.project.path);
 	}
 };
 
@@ -201,6 +198,9 @@ export async function isInsideGitRepo(cwd: string) {
  * If that is the case then we just fallback to the default initial branch name.
  */
 export async function initializeGit(cwd: string) {
+	const s = spinner();
+	s.start("Initializing git repo");
+
 	try {
 		// Get the default init branch name
 		const defaultBranchName = await runCommand(
@@ -216,6 +216,8 @@ export async function initializeGit(cwd: string) {
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
 		await runCommand(["git", "init"], { useSpinner: false, silent: true, cwd });
+	} finally {
+		s.stop(`${brandColor("initialized")} ${dim(`git`)}`);
 	}
 }
 
