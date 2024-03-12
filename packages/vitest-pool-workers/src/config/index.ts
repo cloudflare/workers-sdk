@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { MessageChannel, receiveMessageOnPort } from "node:worker_threads";
 import type { WorkersPoolOptions } from "../pool/config";
+import type { PluginOption } from "vite";
 import type { Awaitable, inject } from "vitest";
 import type { ConfigEnv, UserConfig, UserWorkspaceConfig } from "vitest/config";
 
@@ -63,29 +64,50 @@ export type WorkersUserConfig<T extends UserConfig> = T & {
 export type WorkersUserConfigExport = WorkersUserConfig<UserConfig>;
 export type WorkersProjectConfigExport = WorkersUserConfig<UserWorkspaceConfig>;
 
-function isObject(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null;
+function ensureArrayIncludes<T>(array: T[], items: T[]) {
+	for (const item of items) if (!array.includes(item)) array.push(item);
 }
 
+const requiredConditions = ["workerd", "worker", "browser"];
+const requiredMainFields = ["browser", "module", "jsnext:main", "jsnext"];
+
+const configPlugin: PluginOption = {
+	name: "@cloudflare/vitest-pool-workers:config",
+	// Run after `vitest:project` plugin:
+	// https://github.com/vitest-dev/vitest/blob/8014614475afa880f4e583b166bb91dea5415cc6/packages/vitest/src/node/plugins/workspace.ts#L26
+	config(config) {
+		config.resolve ??= {};
+		config.resolve.conditions ??= [];
+		config.resolve.mainFields ??= [];
+		config.ssr ??= {};
+		config.test ??= {};
+
+		// Remove "node" condition added by the `vitest:project` plugin. We're
+		// running tests inside `workerd`, not Node.js, so "node" isn't needed.
+		const nodeIndex = config.resolve.conditions.indexOf("node");
+		if (nodeIndex !== -1) config.resolve.conditions.splice(nodeIndex, 1);
+
+		// Use the same resolve conditions as `wrangler`, minus "import" as this
+		// breaks Vite's `require()` resolve
+		ensureArrayIncludes(config.resolve.conditions, requiredConditions);
+
+		// Vitest sets this to an empty array if unset, so restore Vite defaults:
+		// https://github.com/vitest-dev/vitest/blob/v1.3.0/packages/vitest/src/node/plugins/index.ts#L77
+		ensureArrayIncludes(config.resolve.mainFields, requiredMainFields);
+
+		// Apply `package.json` `browser` field remapping in SSR mode:
+		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L175
+		config.ssr.target = "webworker";
+
+		// Ideally, we would force `pool` to be @cloudflare/vitest-pool-workers here,
+		// but the tests in `packages/vitest-pool-workers` define `pool` as "../..".
+		config.test.pool ??= "@cloudflare/vitest-pool-workers";
+	},
+};
+
 function ensureWorkersConfig<T extends UserConfig>(config: T): T {
-	if (!isObject(config.resolve)) config.resolve = {};
-	// Use the same resolve conditions as `wrangler`, minus "import" as this
-	// breaks Vite's `require()` resolve
-	config.resolve.conditions ??= ["workerd", "worker", "browser"];
-	// Vitest sets this to an empty array if unset, so restore Vite defaults:
-	// https://github.com/vitest-dev/vitest/blob/v1.3.0/packages/vitest/src/node/plugins/index.ts#L77
-	config.resolve.mainFields ??= ["browser", "module", "jsnext:main", "jsnext"];
-
-	if (!isObject(config.ssr)) config.ssr = {};
-	// Apply `package.json` `browser` field remapping in SSR mode:
-	// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L175
-	config.ssr.target ??= "webworker";
-
-	if (!isObject(config.test)) config.test = {};
-	// Ideally, we would force `pool` to be @cloudflare/vitest-pool-workers here,
-	// but the tests in `packages/vitest-pool-workers` define `pool` as "../..".
-	config.test.pool ??= "@cloudflare/vitest-pool-workers";
-
+	config.plugins ??= [];
+	config.plugins.push(configPlugin);
 	return config;
 }
 
