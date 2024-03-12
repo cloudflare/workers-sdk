@@ -28,7 +28,7 @@ describe("deployments list", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name when deploying a worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -46,7 +46,7 @@ describe("deployments list", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"Created:     2021-01-04T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      api
+			Source:      Rollback
 			Message:     -
 			Version(s):  (10%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -60,7 +60,7 @@ describe("deployments list", () => {
 
 			Created:     2021-01-01T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Upload
 			Message:     -
 			Version(s):  (20%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -74,7 +74,7 @@ describe("deployments list", () => {
 
 			Created:     2021-02-02T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Rollback
 			Message:     Rolled back for this version
 			Version(s):  (30%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -88,7 +88,7 @@ describe("deployments list", () => {
 
 			Created:     2021-02-03T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Wrangler 🤠
 			Message:     -
 			Version(s):  (40%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -119,7 +119,7 @@ describe("deployments list", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"Created:     2021-01-04T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      api
+			Source:      Rollback
 			Message:     -
 			Version(s):  (10%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -133,7 +133,7 @@ describe("deployments list", () => {
 
 			Created:     2021-01-01T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
-			Source:      wrangler
+			Source:      Upload
 			Message:     -
 			Version(s):  (20%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -147,7 +147,7 @@ describe("deployments list", () => {
 
 			Created:     2021-02-02T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Rollback
 			Message:     Rolled back for this version
 			Version(s):  (30%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
@@ -161,7 +161,7 @@ describe("deployments list", () => {
 
 			Created:     2021-02-03T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
-			Source:      wrangler
+			Source:      Wrangler 🤠
 			Message:     -
 			Version(s):  (40%) 10000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
