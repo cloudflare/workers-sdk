@@ -19,17 +19,17 @@ describe("ai help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler ai
 
-		🤖 Interact with AI models
+		🔹Manage AI models
 
 		Commands:
-		  wrangler ai models  List catalog models
+		  wrangler ai models  🔹List catalog models
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]"
 	`);
 	});
 
@@ -47,17 +47,17 @@ describe("ai help", () => {
 		"
 		wrangler ai
 
-		🤖 Interact with AI models
+		🔹Manage AI models
 
 		Commands:
-		  wrangler ai models  List catalog models
+		  wrangler ai models  🔹List catalog models
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]"
 	`);
 	});
 });

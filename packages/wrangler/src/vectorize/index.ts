@@ -11,23 +11,28 @@ export function vectorize(yargs: CommonYargsArgv) {
 		yargs
 			.command(
 				"create <name>",
-				"Create a Vectorize index",
+				"🔹Create a Vectorize index",
 				createOptions,
 				createHandler
 			)
 			.command(
 				"delete <name>",
-				"Delete a Vectorize index",
+				"🔹Delete a Vectorize index",
 				deleteOptions,
 				deleteHandler
 			)
 			.command(
 				"get <name>",
-				"Get a Vectorize index by name",
+				"🔹Get a Vectorize index by name",
 				getOptions,
 				getHandler
 			)
-			.command("list", "List your Vectorize indexes", listOptions, listHandler)
+			.command(
+				"list",
+				"🔹List your Vectorize indexes",
+				listOptions,
+				listHandler
+			)
 			// TODO: coming during open beta
 			// .command(
 			// 	"query <name>",
@@ -37,7 +42,7 @@ export function vectorize(yargs: CommonYargsArgv) {
 			// )
 			.command(
 				"insert <name>",
-				"Insert vectors into a Vectorize index",
+				"🔹Insert vectors into a Vectorize index",
 				insertOptions,
 				insertHandler
 			)

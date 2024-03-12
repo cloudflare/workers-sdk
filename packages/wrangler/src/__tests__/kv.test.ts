@@ -58,17 +58,17 @@ describe("wrangler", () => {
 			"
 			wrangler kv:namespace create <namespace>
 
-			Create a new namespace
+			🔹Create a new namespace
 
 			Positionals:
 			  namespace  The name of the new namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --preview  Interact with a preview namespace  [boolean]"
@@ -90,17 +90,17 @@ describe("wrangler", () => {
 			"
 			wrangler kv:namespace create <namespace>
 
-			Create a new namespace
+			🔹Create a new namespace
 
 			Positionals:
 			  namespace  The name of the new namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --preview  Interact with a preview namespace  [boolean]"
@@ -516,18 +516,18 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+			🔹Write a single key/value pair to the given namespace
 
 			Positionals:
 			  key    The key to write to  [string] [required]
 			  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The binding of the namespace to write to  [string]
@@ -558,18 +558,18 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+			🔹Write a single key/value pair to the given namespace
 
 			Positionals:
 			  key    The key to write to  [string] [required]
 			  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The binding of the namespace to write to  [string]
@@ -600,18 +600,18 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+			🔹Write a single key/value pair to the given namespace
 
 			Positionals:
 			  key    The key to write to  [string] [required]
 			  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The binding of the namespace to write to  [string]
@@ -642,18 +642,18 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+			🔹Write a single key/value pair to the given namespace
 
 			Positionals:
 			  key    The key to write to  [string] [required]
 			  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The binding of the namespace to write to  [string]
@@ -684,18 +684,18 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+			🔹Write a single key/value pair to the given namespace
 
 			Positionals:
 			  key    The key to write to  [string] [required]
 			  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The binding of the namespace to write to  [string]
@@ -1055,17 +1055,17 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key get <key>
 
-			Reads a single value by key from the given namespace.
+			🔹Read a single value by key from the given namespace
 
 			Positionals:
 			  key  The key value to get.  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The name of the namespace to get from  [string]
@@ -1092,17 +1092,17 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key get <key>
 
-			Reads a single value by key from the given namespace.
+			🔹Read a single value by key from the given namespace
 
 			Positionals:
 			  key  The key value to get.  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The name of the namespace to get from  [string]
@@ -1130,17 +1130,17 @@ describe("wrangler", () => {
 			"
 			wrangler kv:key get <key>
 
-			Reads a single value by key from the given namespace.
+			🔹Read a single value by key from the given namespace
 
 			Positionals:
 			  key  The key value to get.  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --binding       The name of the namespace to get from  [string]

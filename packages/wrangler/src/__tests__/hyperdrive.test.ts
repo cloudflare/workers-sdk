@@ -20,21 +20,21 @@ describe("hyperdrive help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler hyperdrive
 
-		🚀 Configure Hyperdrive databases
+		🔹Configure Hyperdrive databases open beta
 
 		Commands:
-		  wrangler hyperdrive create <name>  Create a Hyperdrive config
-		  wrangler hyperdrive delete <id>    Delete a Hyperdrive config
-		  wrangler hyperdrive get <id>       Get a Hyperdrive config
-		  wrangler hyperdrive list           List Hyperdrive configs
-		  wrangler hyperdrive update <id>    Update a Hyperdrive config
+		  wrangler hyperdrive create <name>  🔹Create a Hyperdrive config
+		  wrangler hyperdrive delete <id>    🔹Delete a Hyperdrive config
+		  wrangler hyperdrive get <id>       🔹Get a Hyperdrive config
+		  wrangler hyperdrive list           🔹List Hyperdrive configs
+		  wrangler hyperdrive update <id>    🔹Update a Hyperdrive config
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		--------------------
 		📣 Hyperdrive is currently in open beta
@@ -58,21 +58,21 @@ describe("hyperdrive help", () => {
 		"
 		wrangler hyperdrive
 
-		🚀 Configure Hyperdrive databases
+		🔹Configure Hyperdrive databases open beta
 
 		Commands:
-		  wrangler hyperdrive create <name>  Create a Hyperdrive config
-		  wrangler hyperdrive delete <id>    Delete a Hyperdrive config
-		  wrangler hyperdrive get <id>       Get a Hyperdrive config
-		  wrangler hyperdrive list           List Hyperdrive configs
-		  wrangler hyperdrive update <id>    Update a Hyperdrive config
+		  wrangler hyperdrive create <name>  🔹Create a Hyperdrive config
+		  wrangler hyperdrive delete <id>    🔹Delete a Hyperdrive config
+		  wrangler hyperdrive get <id>       🔹Get a Hyperdrive config
+		  wrangler hyperdrive list           🔹List Hyperdrive configs
+		  wrangler hyperdrive update <id>    🔹Update a Hyperdrive config
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		--------------------
 		📣 Hyperdrive is currently in open beta

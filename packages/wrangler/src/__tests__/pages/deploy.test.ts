@@ -52,16 +52,16 @@ describe("deployment create", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler pages deploy [directory]
 
-		🆙 Deploy a directory of static assets as a Pages deployment
+		🔹Deploy a directory of static assets as a Pages deployment
 
 		Positionals:
 		  directory  The directory of static files to upload  [string]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		Options:
 		      --project-name    The name of the project you want to deploy to  [string]

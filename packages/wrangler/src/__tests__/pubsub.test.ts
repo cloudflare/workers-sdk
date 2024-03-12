@@ -28,18 +28,18 @@ describe("wrangler", () => {
 			  "info": "",
 			  "out": "wrangler pubsub
 
-			📮 Interact and manage Pub/Sub Brokers
+			🔹Manage Pub/Sub brokers private beta
 
 			Commands:
 			  wrangler pubsub namespace  Manage your Pub/Sub Namespaces
 			  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 			  "warn": "",
@@ -67,12 +67,12 @@ describe("wrangler", () => {
 				  wrangler pubsub namespace delete <name>    Delete a Pub/Sub Namespace
 				  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				Global Flags:
+				  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+				  -c, --config                    ⚑Path to .toml configuration file  [string]
+				  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+				  -h, --help                      ⚑Show help  [boolean]
+				  -v, --version                   ⚑Show version number  [boolean]
 
 				👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 				  "warn": "",
@@ -190,12 +190,12 @@ describe("wrangler", () => {
 				  wrangler pubsub broker show-revocations <name>  Show all previously revoked client credentials.
 				  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				Global Flags:
+				  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+				  -c, --config                    ⚑Path to .toml configuration file  [string]
+				  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+				  -h, --help                      ⚑Show help  [boolean]
+				  -v, --version                   ⚑Show version number  [boolean]
 
 				👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
 				  "warn": "",

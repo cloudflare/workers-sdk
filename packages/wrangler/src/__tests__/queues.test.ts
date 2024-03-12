@@ -19,20 +19,20 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"wrangler queues
 
-			🇶 Configure Workers Queues
+			🔹Manage Workers Queues
 
 			Commands:
-			  wrangler queues list           List Queues
-			  wrangler queues create <name>  Create a Queue
-			  wrangler queues delete <name>  Delete a Queue
-			  wrangler queues consumer       Configure Queue Consumers
+			  wrangler queues list           🔹List Queues
+			  wrangler queues create <name>  🔹Create a Queue
+			  wrangler queues delete <name>  🔹Delete a Queue
+			  wrangler queues consumer       🔹Configure Queue consumers
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]"
 		`);
 		});
 
@@ -67,14 +67,14 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"wrangler queues list
 
-			List Queues
+			🔹List Queues
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --page  Page number for pagination  [number]"
@@ -185,17 +185,17 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"wrangler queues create <name>
 
-			Create a Queue
+			🔹Create a Queue
 
 			Positionals:
 			  name  The name of the queue  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]"
 		`);
 			});
 
@@ -279,17 +279,17 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"wrangler queues delete <name>
 
-			Delete a Queue
+			🔹Delete a Queue
 
 			Positionals:
 			  name  The name of the queue  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]"
 		`);
 			});
 
@@ -312,18 +312,18 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"wrangler queues consumer
 
-			Configure Queue Consumers
+			🔹Configure Queue consumers
 
 			Commands:
-			  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Consumer
-			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Consumer
+			  wrangler queues consumer add <queue-name> <script-name>     🔹Add a Queue consumer
+			  wrangler queues consumer remove <queue-name> <script-name>  🔹Remove a Queue consumer
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]"
 		`);
 			});
 
@@ -361,18 +361,18 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues consumer add <queue-name> <script-name>
 
-				Add a Queue Consumer
+				🔹Add a Queue consumer
 
 				Positionals:
 				  queue-name   Name of the queue to configure  [string] [required]
 				  script-name  Name of the consumer script  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				Global Flags:
+				  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+				  -c, --config                    ⚑Path to .toml configuration file  [string]
+				  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+				  -h, --help                      ⚑Show help  [boolean]
+				  -v, --version                   ⚑Show version number  [boolean]
 
 				Options:
 				      --batch-size         Maximum number of messages per batch  [number]
@@ -511,18 +511,18 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues consumer remove <queue-name> <script-name>
 
-				Remove a Queue Consumer
+				🔹Remove a Queue consumer
 
 				Positionals:
 				  queue-name   Name of the queue to configure  [string] [required]
 				  script-name  Name of the consumer script  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				Global Flags:
+				  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+				  -c, --config                    ⚑Path to .toml configuration file  [string]
+				  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+				  -h, --help                      ⚑Show help  [boolean]
+				  -v, --version                   ⚑Show version number  [boolean]"
 			`);
 				});
 

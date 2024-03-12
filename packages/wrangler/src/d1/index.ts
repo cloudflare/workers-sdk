@@ -13,10 +13,10 @@ import type { CommonYargsArgv } from "../yargs-types";
 export function d1(yargs: CommonYargsArgv) {
 	return (
 		yargs
-			.command("list", "List D1 databases", List.Options, List.Handler)
+			.command("list", "🔹List D1 databases", List.Options, List.Handler)
 			.command(
 				"info <name>",
-				"Get information about a D1 database, including the current database size and state.",
+				"🔹Get information about a D1 database, including the current database size and state",
 				Info.Options,
 				Info.Handler
 			)
@@ -28,40 +28,40 @@ export function d1(yargs: CommonYargsArgv) {
 			)
 			.command(
 				"create <name>",
-				"Create D1 database",
+				"🔹Create D1 database",
 				Create.Options,
 				Create.Handler
 			)
 			.command(
 				"delete <name>",
-				"Delete D1 database",
+				"🔹Delete D1 database",
 				Delete.Options,
 				Delete.Handler
 			)
-			.command("backup", "Interact with D1 Backups", (backupArgs) =>
+			.command("backup", "🔹Interact with D1 backups", (backupArgs) =>
 				backupArgs
 					.demandCommand()
 					.command(
 						"list <name>",
-						"List your D1 backups",
+						"🔹List your D1 backups",
 						Backups.ListOptions,
 						Backups.ListHandler
 					)
 					.command(
 						"create <name>",
-						"Create a new D1 backup",
+						"🔹Create a new D1 backup",
 						Backups.CreateOptions,
 						Backups.CreateHandler
 					)
 					.command(
 						"restore <name> <backup-id>",
-						"Restore a DB backup",
+						"🔹Restore a DB backup",
 						Backups.RestoreOptions,
 						Backups.RestoreHandler
 					)
 					.command(
 						"download <name> <backup-id>",
-						"Download a DB backup",
+						"🔹Download a DB backup",
 						Backups.DownloadOptions,
 						Backups.DownloadHandler
 					)
@@ -83,47 +83,47 @@ export function d1(yargs: CommonYargsArgv) {
 			// )
 			.command(
 				"execute <database>",
-				"Executed command or SQL file",
+				"🔹Execute a command or SQL file",
 				Execute.Options,
 				Execute.Handler
 			)
 			.command(
 				"time-travel",
-				"Use Time Travel to restore, fork or copy a database at a specific point-in-time.",
+				"🔹Use Time Travel to restore, fork or copy a database at a specific point-in-time",
 				(yargs2) =>
 					yargs2
 						.demandCommand()
 						.command(
 							"info <database>",
-							"Retrieve information about a database at a specific point-in-time using Time Travel.",
+							"🔹Retrieve information about a database at a specific point-in-time",
 							TimeTravel.InfoOptions,
 							TimeTravel.InfoHandler
 						)
 						.command(
 							"restore <database>",
-							"Restore a database back to a specific point-in-time.",
+							"🔹Restore a database back to a specific point-in-time",
 							TimeTravel.RestoreOptions,
 							TimeTravel.RestoreHandler
 						)
 			)
-			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
+			.command("migrations", "🔹Interact with D1 migrations", (yargs2) =>
 				yargs2
 					.demandCommand()
 					.command(
 						"list <database>",
-						"List your D1 migrations",
+						"🔹List your D1 migrations",
 						Migrations.ListOptions,
 						Migrations.ListHandler
 					)
 					.command(
 						"create <database> <message>",
-						"Create a new Migration",
+						"🔹Create a new migration",
 						Migrations.CreateOptions,
 						Migrations.CreateHandler
 					)
 					.command(
 						"apply <database>",
-						"Apply D1 Migrations",
+						"🔹Apply D1 migrations",
 						Migrations.ApplyOptions,
 						Migrations.ApplyHandler
 					)

@@ -26,7 +26,7 @@ export function pages(yargs: CommonYargsArgv) {
 		yargs
 			.command(
 				"dev [directory] [-- command..]",
-				"🧑‍💻 Develop your full-stack Pages application locally",
+				"🔹Develop your full-stack Pages application locally",
 				Dev.Options,
 				Dev.Handler
 			)
@@ -49,23 +49,23 @@ export function pages(yargs: CommonYargsArgv) {
 						Functions.OptimizeRoutesHandler
 					)
 			)
-			.command("project", "⚡️ Interact with your Pages projects", (args) =>
-				args
+			.command("project", "🔹Interact with your Pages projects", (yargs) =>
+				yargs
 					.command(
 						"list",
-						"List your Cloudflare Pages projects",
+						"🔹List your Cloudflare Pages projects",
 						Projects.ListOptions,
 						Projects.ListHandler
 					)
 					.command(
 						"create [project-name]",
-						"Create a new Cloudflare Pages project",
+						"🔹Create a new Cloudflare Pages project",
 						Projects.CreateOptions,
 						Projects.CreateHandler
 					)
 					.command(
 						"delete [project-name]",
-						"Delete a Cloudflare Pages project",
+						"🔹Delete a Cloudflare Pages project",
 						Projects.DeleteOptions,
 						Projects.DeleteHandler
 					)
@@ -79,24 +79,24 @@ export function pages(yargs: CommonYargsArgv) {
 			)
 			.command(
 				"deployment",
-				"🚀 Interact with the deployments of a project",
-				(args) =>
-					args
+				"🔹Interact with the deployments of a project",
+				(yargs) =>
+					yargs
 						.command(
 							"list",
-							"List deployments in your Cloudflare Pages project",
+							"🔹List deployments in your Cloudflare Pages project",
 							Deployments.ListOptions,
 							Deployments.ListHandler
 						)
 						.command(
 							"create [directory]",
-							"🆙 Publish a directory of static assets as a Pages deployment",
+							"🔹Publish a directory of static assets as a Pages deployment",
 							Deploy.Options,
 							Deploy.Handler
 						)
 						.command(
 							"tail [deployment]",
-							"Start a tailing session for a project's deployment and " +
+							"🔹Start a tailing session for a project's deployment and " +
 								"livestream logs from your Functions",
 							DeploymentTails.Options,
 							DeploymentTails.Handler
@@ -104,7 +104,7 @@ export function pages(yargs: CommonYargsArgv) {
 			)
 			.command(
 				["deploy [directory]", "publish [directory]"],
-				"🆙 Deploy a directory of static assets as a Pages deployment",
+				"🔹Deploy a directory of static assets as a Pages deployment",
 				Deploy.Options,
 				Deploy.Handler
 			)

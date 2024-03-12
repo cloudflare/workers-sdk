@@ -19,21 +19,21 @@ describe("vectorize help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler vectorize
 
-		🧮 Interact with Vectorize indexes
+		🔹Manage Vectorize indexes open beta
 
 		Commands:
-		  wrangler vectorize create <name>  Create a Vectorize index
-		  wrangler vectorize delete <name>  Delete a Vectorize index
-		  wrangler vectorize get <name>     Get a Vectorize index by name
-		  wrangler vectorize list           List your Vectorize indexes
-		  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
+		  wrangler vectorize create <name>  🔹Create a Vectorize index
+		  wrangler vectorize delete <name>  🔹Delete a Vectorize index
+		  wrangler vectorize get <name>     🔹Get a Vectorize index by name
+		  wrangler vectorize list           🔹List your Vectorize indexes
+		  wrangler vectorize insert <name>  🔹Insert vectors into a Vectorize index
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		--------------------
 		📣 Vectorize is currently in open beta
@@ -58,21 +58,21 @@ describe("vectorize help", () => {
 		"
 		wrangler vectorize
 
-		🧮 Interact with Vectorize indexes
+		🔹Manage Vectorize indexes open beta
 
 		Commands:
-		  wrangler vectorize create <name>  Create a Vectorize index
-		  wrangler vectorize delete <name>  Delete a Vectorize index
-		  wrangler vectorize get <name>     Get a Vectorize index by name
-		  wrangler vectorize list           List your Vectorize indexes
-		  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
+		  wrangler vectorize create <name>  🔹Create a Vectorize index
+		  wrangler vectorize delete <name>  🔹Delete a Vectorize index
+		  wrangler vectorize get <name>     🔹Get a Vectorize index by name
+		  wrangler vectorize list           🔹List your Vectorize indexes
+		  wrangler vectorize insert <name>  🔹Insert vectors into a Vectorize index
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		--------------------
 		📣 Vectorize is currently in open beta
@@ -97,17 +97,17 @@ describe("vectorize help", () => {
 		"
 		wrangler vectorize get <name>
 
-		Get a Vectorize index by name
+		🔹Get a Vectorize index by name
 
 		Positionals:
 		  name  The name of the Vectorize index.  [string] [required]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		Options:
 		      --json  return output as clean JSON  [boolean] [default: false]

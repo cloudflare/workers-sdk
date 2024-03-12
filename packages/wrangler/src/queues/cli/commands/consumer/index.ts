@@ -5,14 +5,14 @@ import type { CommonYargsArgv } from "../../../../yargs-types";
 export function consumers(yargs: CommonYargsArgv) {
 	yargs.command(
 		"add <queue-name> <script-name>",
-		"Add a Queue Consumer",
+		"🔹Add a Queue consumer",
 		addOptions,
 		addHandler
 	);
 
 	yargs.command(
 		"remove <queue-name> <script-name>",
-		"Remove a Queue Consumer",
+		"🔹Remove a Queue consumer",
 		removeOptions,
 		removeHandler
 	);

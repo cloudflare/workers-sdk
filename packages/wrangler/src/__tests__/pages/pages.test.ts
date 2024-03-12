@@ -20,20 +20,20 @@ describe("pages", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler pages
 
-		⚡️ Configure Cloudflare Pages
+		🔹Configure Cloudflare Pages applications
 
 		Commands:
-		  wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
-		  wrangler pages project                         ⚡️ Interact with your Pages projects
-		  wrangler pages deployment                      🚀 Interact with the deployments of a project
-		  wrangler pages deploy [directory]              🆙 Deploy a directory of static assets as a Pages deployment  [aliases: publish]
+		  wrangler pages dev [directory] [-- command..]  🔹Develop your full-stack Pages application locally
+		  wrangler pages project                         🔹Interact with your Pages projects
+		  wrangler pages deployment                      🔹Interact with the deployments of a project
+		  wrangler pages deploy [directory]              🔹Deploy a directory of static assets as a Pages deployment  [aliases: publish]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]"
 	`);
 	});
 

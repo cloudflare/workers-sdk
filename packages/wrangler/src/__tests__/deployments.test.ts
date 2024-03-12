@@ -55,18 +55,18 @@ describe("deployments", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler deployments
 
-		🚢 List and view details for deployments
+		🔸List and view details for deployments for a Worker open beta
 
 		Commands:
-		  wrangler deployments list                  🚢 Displays the 10 most recent deployments for a worker
-		  wrangler deployments view [deployment-id]  🔍 View a deployment
+		  wrangler deployments list                  🔸Displays the 10 most recent deployments for a worker
+		  wrangler deployments view [deployment-id]  🔸View a deployment
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		Global Flags:
+		  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+		  -c, --config                    ⚑Path to .toml configuration file  [string]
+		  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+		  -h, --help                      ⚑Show help  [boolean]
+		  -v, --version                   ⚑Show version number  [boolean]
 
 		Options:
 		      --name  The name of your worker  [string]
