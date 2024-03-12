@@ -383,6 +383,13 @@ async function load(
 		return buildRedirectResponse(filePath);
 	}
 
+	// If this is a WebAssembly module, force load it as one. This ensures we
+	// support `.wasm` files inside `node_modules` (e.g. Prisma's client).
+	// It seems unlikely a package would want to do anything else with a `.wasm`
+	// file. Note if a module rule was applied to `.wasm` files, this path will
+	// have a `?mf_vitest_force` suffix already, so this line won't do anything.
+	if (filePath.endsWith(".wasm")) filePath += `?mf_vitest_force=CompiledWasm`;
+
 	// If we're importing with a forced module type, load the file as that type
 	const maybeContents = maybeGetForceTypeModuleContents(filePath);
 	if (maybeContents !== undefined) {
