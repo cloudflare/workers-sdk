@@ -99,7 +99,7 @@ export function formatSource(source: string): string {
 		case "terraform":
 			return "Terraform 🏗️";
 		default:
-			return "Other";
+			return `Other (${source})`;
 	}
 }
 export function formatTrigger(trigger: string): string {
@@ -113,6 +113,6 @@ export function formatTrigger(trigger: string): string {
 		case "promotion":
 			return "Promotion";
 		default:
-			return "Unknown";
+			return `Unknown (${trigger})`;
 	}
 }
