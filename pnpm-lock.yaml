@@ -11,6 +11,8 @@ overrides:
   '@cloudflare/elements>@types/react': ^18
   capnpc-ts>typescript: 4.2.4
 
+packageExtensionsChecksum: e9aba68adadc55d14e2e76f543f29319
+
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: r2d7tqjujhdts7e7zxsa3stjki
@@ -21,6 +23,9 @@ patchedDependencies:
   ink@3.2.0:
     hash: iiwbcf44d6ccmi6a27ljqs7qce
     path: patches/ink@3.2.0.patch
+  pg@8.11.3:
+    hash: afbi5l3roukyz2s7kkn56yzjte
+    path: patches/pg@8.11.3.patch
   toucan-js@3.2.2:
     hash: dxprwy4mawdnq3drjhp7shhm2m
     path: patches/toucan-js@3.2.2.patch
@@ -334,8 +339,11 @@ importers:
         specifier: ^8.11.2
         version: 8.11.6
       pg:
-        specifier: ^8.11.3
-        version: 8.11.5
+        specifier: 8.11.3
+        version: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
+      pg-cloudflare:
+        specifier: ^1.1.1
+        version: 1.1.1
       unenv:
         specifier: ^1.9.0
         version: 1.9.0
@@ -5578,6 +5586,10 @@ packages:
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
 
+  buffer-writer@2.0.0:
+    resolution: {integrity: sha512-a7ZpuTZU1TRtnwyCNW3I5dc0wWNC3VR9S++Ewyk2HHZdrO3CQJqSpd+95Us590V6AL7JqUAH2IwZ/398PmNFgw==}
+    engines: {node: '>=4'}
+
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
@@ -8809,6 +8821,9 @@ packages:
     resolution: {integrity: sha512-GYTTew2slBcYdvRHqjhwaaydVMvn/qrGC323+nKclYioNSLTDUM/lGgtGTgyHVtYcozb+XkE8CNhwcraOmZ9Mg==}
     engines: {node: '>=18'}
 
+  packet-reader@1.0.0:
+    resolution: {integrity: sha512-HAKu/fG3HpHFO0AA8WE8q2g+gBJaZ9MG7fcKk+IJPLTGAD6Psw4443l+9DGRbOIh3/aXr7Phy0TjilYivJo5XQ==}
+
   pako@0.2.9:
     resolution: {integrity: sha512-NUcwaKxUxWrZLpDG+z/xZaCgQITkA/Dv4V/T6bw7VON6l1Xz/VnrBqrYjZQ12TamKHzITTfOEIYUj48y2KXImA==}
 
@@ -8967,8 +8982,8 @@ packages:
     resolution: {integrity: sha512-cRL3JpS3lKMGsKaWndugWQoLOCoP+Cic8oseVcbr0qhPzYD5DWXK+RZ9LY9wxRf7RQia4SCwQlXk0q6FCPrVng==}
     engines: {node: '>=10'}
 
-  pg@8.11.5:
-    resolution: {integrity: sha512-jqgNHSKL5cbDjFlHyYsCXmQDrfIX/3RsNwYqpd4N0Kt8niLuNoRNH+aazv6cOd43gPh9Y4DjQCtb+X0MH0Hvnw==}
+  pg@8.11.3:
+    resolution: {integrity: sha512-+9iuvG8QfaaUrrph+kpF24cXkH1YOOUeArRNYIxq1viYHZagBxrTno7cecY1Fa44tJeZvaoG+Djpkc3JwehN5g==}
     engines: {node: '>= 8.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -15641,6 +15656,8 @@ snapshots:
 
   buffer-from@1.1.2: {}
 
+  buffer-writer@2.0.0: {}
+
   buffer@5.7.1:
     dependencies:
       base64-js: 1.5.1
@@ -19654,6 +19671,8 @@ snapshots:
       find-up-simple: 1.0.0
       load-json-file: 7.0.1
 
+  packet-reader@1.0.0: {}
+
   pako@0.2.9: {}
 
   pako@1.0.11: {}
@@ -19782,8 +19801,7 @@ snapshots:
       estree-walker: 3.0.3
       is-reference: 3.0.0
 
-  pg-cloudflare@1.1.1:
-    optional: true
+  pg-cloudflare@1.1.1: {}
 
   pg-connection-string@2.6.4: {}
 
@@ -19791,9 +19809,9 @@ snapshots:
 
   pg-numeric@1.0.2: {}
 
-  pg-pool@3.6.2(pg@8.11.5):
+  pg-pool@3.6.2(pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)):
     dependencies:
-      pg: 8.11.5
+      pg: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
 
   pg-protocol@1.6.1: {}
 
@@ -19815,10 +19833,12 @@ snapshots:
       postgres-interval: 3.0.0
       postgres-range: 1.1.4
 
-  pg@8.11.5:
+  pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte):
     dependencies:
+      buffer-writer: 2.0.0
+      packet-reader: 1.0.0
       pg-connection-string: 2.6.4
-      pg-pool: 3.6.2(pg@8.11.5)
+      pg-pool: 3.6.2(pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte))
       pg-protocol: 1.6.1
       pg-types: 2.2.0
       pgpass: 1.0.5

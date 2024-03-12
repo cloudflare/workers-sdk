@@ -7,7 +7,8 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240222.0",
 		"@types/pg": "^8.11.2",
-		"pg": "^8.11.3",
+		"pg": "8.11.3",
+		"pg-cloudflare": "^1.1.1",
 		"unenv": "^1.9.0",
 		"wrangler": "workspace:*"
 	}
