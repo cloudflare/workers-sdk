@@ -57,7 +57,7 @@ export async function versionsListHandler(args: VersionsListArgs) {
 			"Version ID": version.id,
 			Created: new Date(version.metadata["created_on"]).toISOString(),
 			Author: version.metadata.author_email,
-			Source: version.metadata.source,
+			Source: getVersionSource(version),
 			Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
 			Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 		});
@@ -76,7 +76,7 @@ export function getConfig(
 	return config;
 }
 
-export function getSource(version: {
+export function getVersionSource(version: {
 	metadata: Pick<ApiVersion["metadata"], "source">;
 	annotations?: Pick<
 		NonNullable<ApiVersion["annotations"]>,

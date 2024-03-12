@@ -9,6 +9,7 @@ import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
+import { getVersionSource } from "../list";
 import { ApiDeployment, ApiVersion } from "../types";
 import type {
 	CommonYargsArgv,
@@ -97,7 +98,7 @@ export async function versionsDeploymentsListHandler(
 			// explicitly not outputting Deployment ID
 			Created: new Date(deployment.created_on).toISOString(),
 			Author: deployment.author_email,
-			Source: deployment.source,
+			Source: getDeploymentSource(deployment),
 			Message: deployment.annotations?.["workers/message"] || BLANK_INPUT,
 			"Version(s)": formattedVersions.join("\n\n"),
 		});
@@ -117,4 +118,11 @@ function getConfig(
 	const config = readConfig(configPath, args);
 
 	return config;
+}
+
+export function getDeploymentSource(deployment: ApiDeployment) {
+	return getVersionSource({
+		metadata: { source: deployment.source },
+		annotations: deployment.annotations,
+	});
 }

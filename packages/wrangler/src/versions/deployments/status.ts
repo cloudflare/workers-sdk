@@ -10,6 +10,7 @@ import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { ApiDeployment, ApiVersion } from "../types";
+import { getDeploymentSource } from "./list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -100,7 +101,7 @@ export async function versionsDeploymentsStatusHandler(
 		// explicitly not outputting Deployment ID
 		Created: new Date(latestDeployment.created_on).toISOString(),
 		Author: latestDeployment.author_email,
-		Source: latestDeployment.source,
+		Source: getDeploymentSource(latestDeployment),
 		Message: latestDeployment.annotations?.["workers/message"] || BLANK_INPUT,
 		"Version(s)": formattedVersions.join("\n\n"),
 	});

@@ -5,7 +5,7 @@ import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { getConfig } from "./list";
+import { getConfig, getVersionSource } from "./list";
 import { ApiVersion } from "./types";
 import type {
 	CommonYargsArgv,
@@ -62,7 +62,7 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 		"Version ID": version.id,
 		Created: new Date(version.metadata["created_on"]).toISOString(),
 		Author: version.metadata.author_email,
-		Source: version.metadata.source,
+		Source: getVersionSource(version),
 		Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
 		Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 	});
