@@ -1,16 +1,20 @@
 import assert from "assert";
 import path from "path";
 import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim, gray, white } from "@cloudflare/cli/colors";
-import { fetchResult } from "../../cfetch";
+import { brandColor, gray } from "@cloudflare/cli/colors";
 import { findWranglerToml, readConfig } from "../../config";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
+import {
+	fetchLatestDeployment,
+	fetchLatestDeployments,
+	fetchVersions,
+} from "../api";
 import { getVersionSource } from "../list";
-import { ApiDeployment, ApiVersion } from "../types";
+import { ApiDeployment, VersionCache } from "../types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -53,27 +57,16 @@ export async function versionsDeploymentsListHandler(
 		);
 	}
 
-	const { deployments } = await fetchResult<{
-		deployments: ApiDeployment[];
-	}>(`/accounts/${accountId}/workers/scripts/${workerName}/deployments`);
-
+	const deployments = await fetchLatestDeployments(accountId, workerName);
+	const versionCache: VersionCache = new Map();
 	const versionIds = deployments.flatMap((d) =>
 		d.versions.map((v) => v.version_id)
 	);
-	const versions = await Promise.all(
-		versionIds.map((versionId) =>
-			fetchResult<ApiVersion>(
-				`/accounts/${accountId}/workers/scripts/${workerName}/versions/${versionId}`
-			)
-		)
-	);
-	const versionsById = new Map(
-		versions.map((version) => [version.id, version])
-	);
+	await fetchVersions(accountId, workerName, versionCache, ...versionIds);
 
 	const formattedDeployments = deployments.map((deployment) => {
 		const formattedVersions = deployment.versions.map((traffic) => {
-			const version = versionsById.get(traffic.version_id);
+			const version = versionCache.get(traffic.version_id);
 			assert(version);
 
 			const percentage = brandColor(`(${traffic.percentage}%)`);

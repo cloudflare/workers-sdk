@@ -1,12 +1,11 @@
 import { logRaw } from "@cloudflare/cli";
-import { fetchResult } from "../cfetch";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
+import { fetchVersion } from "./api";
 import { getConfig, getVersionSource } from "./list";
-import { ApiVersion } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -54,9 +53,7 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 		);
 	}
 
-	const version = await fetchResult<ApiVersion>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions/${args.versionId}`
-	);
+	const version = await fetchVersion(accountId, workerName, args.versionId);
 
 	const formattedVersion = formatLabelledValues({
 		"Version ID": version.id,

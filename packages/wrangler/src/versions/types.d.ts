@@ -2,12 +2,7 @@
 export type Percentage = number;
 export type UUID = string;
 export type VersionId = UUID;
-export type WorkerVersion = {
-	id: VersionId;
-	created: Date;
-	tag?: string;
-	message?: string;
-};
+
 export type ApiDeployment = {
 	id: string;
 	source: "api" | string;
@@ -37,3 +32,5 @@ export type ApiVersion = {
 	};
 	// other properties not typed as not used
 };
+
+type VersionCache = Map<VersionId, ApiVersion>;

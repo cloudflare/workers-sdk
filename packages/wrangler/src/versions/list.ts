@@ -1,13 +1,13 @@
 import path from "path";
 import { logRaw } from "@cloudflare/cli";
-import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { ApiVersion } from "./types";
+import { fetchLatestUploadedVersions } from "./api";
+import { ApiVersion, VersionCache } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -48,8 +48,11 @@ export async function versionsListHandler(args: VersionsListArgs) {
 		);
 	}
 
-	const { items: versions } = await fetchResult<{ items: ApiVersion[] }>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions`
+	const versionCache: VersionCache = new Map();
+	const versions = await fetchLatestUploadedVersions(
+		accountId,
+		workerName,
+		versionCache
 	);
 
 	for (const version of versions) {

@@ -15,12 +15,12 @@ import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import {
-	ApiDeployment,
-	ApiVersion,
-	Percentage,
-	VersionId,
-	WorkerVersion,
-} from "./types";
+	createDeployment,
+	fetchLatestDeploymentVersions,
+	fetchLatestUploadedVersions,
+	fetchVersions,
+} from "./api";
+import { Percentage, VersionCache, VersionId } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -35,7 +35,6 @@ export type VersionsDeployArgs = StrictYargsOptionsToInterface<
 >;
 
 type OptionalPercentage = number | null; // null means automatically assign (evenly distribute remaining traffic)
-type VersionCache = Map<VersionId, WorkerVersion>;
 
 export function versionsDeployOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -223,9 +222,9 @@ async function printLatestDeployment(
 		cli.log(
 			gray(`
 ${trafficString} ${versionIdString}
-      Created:  ${version.created.toISOString()}
-          Tag:  ${version.tag ?? BLANK_INPUT}
-      Message:  ${version.message ?? BLANK_INPUT}`)
+      Created:  ${version.metadata.created_on}
+          Tag:  ${version.annotations?.["workers/tag"] ?? BLANK_INPUT}
+      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`)
 		);
 	}
 
@@ -268,7 +267,7 @@ async function promptVersionsToDeploy(
 	});
 
 	const selectableVersions = Array.from(versionCache.values()).sort(
-		(a, b) => b.created.getTime() - a.created.getTime()
+		(a, b) => b.metadata.created_on.localeCompare(a.metadata.created_on) // String#localeCompare should work because they are ISO strings
 	);
 
 	const question = "Which version(s) do you want to deploy?";
@@ -280,9 +279,13 @@ async function promptVersionsToDeploy(
 			value: version.id,
 			label: version.id,
 			sublabel: gray(`
-${ZERO_WIDTH_SPACE}       Created:  ${version.created.toISOString()}
-${ZERO_WIDTH_SPACE}           Tag:  ${version.tag ?? BLANK_INPUT}
-${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
+${ZERO_WIDTH_SPACE}       Created:  ${version.metadata.created_on}
+${ZERO_WIDTH_SPACE}           Tag:  ${
+				version.annotations?.["workers/tag"] ?? BLANK_INPUT
+			}
+${ZERO_WIDTH_SPACE}       Message:  ${
+				version.annotations?.["workers/message"] ?? BLANK_INPUT
+			}
             `),
 		})),
 		label: "",
@@ -308,9 +311,15 @@ ${ZERO_WIDTH_SPACE}       Message:  ${version.message ?? BLANK_INPUT}
 
 					return `${grayBar}
 ${leftT} ${white(`    Worker Version ${i + 1}: `, version.id)}
-${grayBar} ${gray("             Created: ", version.created.toISOString())}
-${grayBar} ${gray("                 Tag: ", version.tag ?? BLANK_INPUT)}
-${grayBar} ${gray("             Message: ", version.message ?? BLANK_INPUT)}`;
+${grayBar} ${gray("             Created: ", version.metadata.created_on)}
+${grayBar} ${gray(
+						"                 Tag: ",
+						version.annotations?.["workers/tag"] ?? BLANK_INPUT
+					)}
+${grayBar} ${gray(
+						"             Message: ",
+						version.annotations?.["workers/message"] ?? BLANK_INPUT
+					)}`;
 				});
 
 				return [
@@ -425,9 +434,6 @@ async function promptPercentages(
 	return confirmedVersionTraffic;
 }
 
-// ***********
-//    API
-// ***********
 // ***********
 //    UNITS
 // ***********
