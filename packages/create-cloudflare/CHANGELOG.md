@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.14.0
+
+### Minor Changes
+
+- [#5187](https://github.com/cloudflare/workers-sdk/pull/5187) [`8e9faf2`](https://github.com/cloudflare/workers-sdk/commit/8e9faf27449b61c04c6455cef249c3fe103bf6ad) Thanks [@jculvey](https://github.com/jculvey)! - feature: replace the word "publish" with "deploy" everywhere.
+
+  Aligns most `webFramework` templates to use `dev` and `deploy` instead of `pages:dev` and `pages:deploy` in package scripts.
+
 ## 2.13.2
 
 ### Patch Changes

@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.33.0
+
+### Minor Changes
+
+- [#4930](https://github.com/cloudflare/workers-sdk/pull/4930) [`2680462`](https://github.com/cloudflare/workers-sdk/commit/268046269394e27654550ad034d286aa0e6aaf4b) Thanks [@rozenmd](https://github.com/rozenmd)! - refactor: default `wrangler d1 execute` and `wrangler d1 migrations` commands to local mode first, to match `wrangler dev`
+
+  This PR defaults `wrangler d1 execute` and `wrangler d1 migrations` commands to use the local development environment provided by wrangler to match the default behaviour in `wrangler dev`.
+
+  BREAKING CHANGE (for a beta feature): `wrangler d1 execute` and `wrangler d1 migrations` commands now default `--local` to `true`. When running `wrangler d1 execute` against a remote D1 database, you will need to provide the `--remote` flag.
+
+### Patch Changes
+
+- [#5184](https://github.com/cloudflare/workers-sdk/pull/5184) [`046930e`](https://github.com/cloudflare/workers-sdk/commit/046930eb898db6d45a6b26751dede07793435d28) Thanks [@nora-soderlund](https://github.com/nora-soderlund)! - fix: change d1 migrations create to use the highest migration number rather than the first non-existing migration number to allow for gaps in the migration files.
+
+- Updated dependencies [[`1235d48`](https://github.com/cloudflare/workers-sdk/commit/1235d48fed9f4e348011fd62fce6458006947501), [`27fb22b`](https://github.com/cloudflare/workers-sdk/commit/27fb22b7c6b224aecc852915d9fee600d9d86efc)]:
+  - miniflare@3.20240304.1
+
 ## 3.32.0
 
 ### Minor Changes

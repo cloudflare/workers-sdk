@@ -1,5 +1,19 @@
 # miniflare
 
+## 3.20240304.1
+
+### Patch Changes
+
+- [#5201](https://github.com/cloudflare/workers-sdk/pull/5201) [`1235d48`](https://github.com/cloudflare/workers-sdk/commit/1235d48fed9f4e348011fd62fce6458006947501) Thanks [@wydengyre](https://github.com/wydengyre)! - fix: ensure `miniflare` works with Node 21.7.0+
+
+- [#5191](https://github.com/cloudflare/workers-sdk/pull/5191) [`27fb22b`](https://github.com/cloudflare/workers-sdk/commit/27fb22b7c6b224aecc852915d9fee600d9d86efc) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure redirect responses handled correctly with `dispatchFetch()`
+
+  Previously, if your Worker returned a redirect response, calling `dispatchFetch(url)` would send another request to the original `url` rather than the redirect. This change ensures redirects are followed correctly.
+
+  - If your Worker returns a relative redirect or an absolute redirect with the same origin as the original `url`, the request will be sent to the Worker.
+  - If your Worker instead returns an absolute redirect with a different origin, the request will be sent to the Internet.
+  - If a redirected request to a different origin returns an absolute redirect with the same origin as the original `url`, the request will also be sent to the Worker.
+
 ## 3.20240304.0
 
 ### Minor Changes
