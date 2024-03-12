@@ -234,6 +234,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 					"Expire old assets in given seconds rather than immediate deletion.",
 				type: "number",
 			})
+			.option("dispatch-namespace", {
+				describe:
+					"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
+				type: "string",
+			})
 	);
 }
 
@@ -337,5 +342,6 @@ export async function deployHandler(
 		logpush: args.logpush,
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
+		dispatchNamespace: args.dispatchNamespace,
 	});
 }

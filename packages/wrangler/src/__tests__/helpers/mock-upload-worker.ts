@@ -27,6 +27,7 @@ export function mockUploadWorkerRequest(
 		legacyEnv?: boolean;
 		keepVars?: boolean;
 		tag?: string;
+		expectedDispatchNamespace?: string;
 	} = {}
 ) {
 	const {
@@ -46,11 +47,19 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema,
 		expectedLimits,
 		keepVars,
+		expectedDispatchNamespace,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
 			rest.put(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				handleUpload
+			)
+		);
+	} else if (expectedDispatchNamespace) {
+		msw.use(
+			rest.put(
+				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
 				handleUpload
 			)
 		);
@@ -79,6 +88,9 @@ export function mockUploadWorkerRequest(
 			"true"
 		);
 		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
+		if (expectedDispatchNamespace) {
+			expect(req.params.dispatchNamespace).toEqual(expectedDispatchNamespace);
+		}
 
 		const formBody = await (
 			req as MockedRequest as RestRequestWithFormData

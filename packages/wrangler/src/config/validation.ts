@@ -128,10 +128,19 @@ export function normalizeAndValidateConfig(
 		);
 	}
 
+	const isDispatchNamespace =
+		typeof args["dispatch-namespace"] === "string" &&
+		args["dispatch-namespace"].trim() !== "";
+
 	const topLevelEnv = normalizeAndValidateEnvironment(
 		diagnostics,
 		configPath,
-		rawConfig
+		rawConfig,
+		undefined,
+		undefined,
+		undefined,
+		undefined,
+		isDispatchNamespace
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
@@ -152,7 +161,8 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig
+				rawConfig,
+				isDispatchNamespace
 			);
 			diagnostics.addChild(envDiagnostics);
 		} else {
@@ -166,7 +176,8 @@ export function normalizeAndValidateConfig(
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig
+				rawConfig,
+				isDispatchNamespace
 			);
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
@@ -1009,6 +1020,19 @@ function normalizeAndValidateEnvironment(
 	isLegacyEnv: boolean,
 	rawConfig: RawConfig
 ): Environment;
+/**
+ * Validate the named environment configuration and return the normalized values.
+ */
+function normalizeAndValidateEnvironment(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawEnv: RawEnvironment,
+	envName?: string,
+	topLevelEnv?: Environment,
+	isLegacyEnv?: boolean,
+	rawConfig?: RawConfig,
+	isDispatchNamespace?: boolean
+): Environment;
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
@@ -1016,7 +1040,8 @@ function normalizeAndValidateEnvironment(
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig | undefined
+	rawConfig?: RawConfig | undefined,
+	isDispatchNamespace?: boolean | undefined
 ): Environment {
 	deprecated(
 		diagnostics,
@@ -1130,7 +1155,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"name",
-			isValidName,
+			isDispatchNamespace ? isString : isValidName,
 			appendEnvName(envName),
 			undefined
 		),
