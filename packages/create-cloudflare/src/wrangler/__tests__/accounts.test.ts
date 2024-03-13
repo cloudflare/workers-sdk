@@ -1,5 +1,4 @@
-import { spinner } from "@cloudflare/cli/interactive";
-import { mockPackageManager } from "helpers/__tests__/mocks";
+import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runCommand } from "helpers/command";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { isLoggedIn, listAccounts, wranglerLogin } from "../accounts";
@@ -34,16 +33,10 @@ vi.mock("which-pm-runs");
 vi.mock("@cloudflare/cli/interactive");
 
 describe("wrangler account helpers", () => {
-	const start = vi.fn();
-	const update = vi.fn();
-	const stop = vi.fn();
+	let spinner: ReturnType<typeof mockSpinner>;
 
 	beforeEach(() => {
-		vi.mocked(spinner).mockImplementation(() => ({
-			start,
-			stop,
-			update,
-		}));
+		spinner = mockSpinner();
 	});
 
 	describe("wranglerLogin", async () => {
@@ -64,8 +57,8 @@ describe("wrangler account helpers", () => {
 				["npx", "wrangler", "login"],
 				expect.anything()
 			);
-			expect(start).toHaveBeenCalledOnce();
-			expect(stop).toHaveBeenCalledOnce();
+			expect(spinner.start).toHaveBeenCalledOnce();
+			expect(spinner.stop).toHaveBeenCalledOnce();
 		});
 
 		test("logged out (successful login)", async () => {
@@ -86,8 +79,8 @@ describe("wrangler account helpers", () => {
 				["npx", "wrangler", "login"],
 				expect.anything()
 			);
-			expect(start).toHaveBeenCalledTimes(2);
-			expect(stop).toHaveBeenCalledTimes(2);
+			expect(spinner.start).toHaveBeenCalledTimes(2);
+			expect(spinner.stop).toHaveBeenCalledTimes(2);
 		});
 
 		test("logged out (login denied)", async () => {
@@ -108,8 +101,8 @@ describe("wrangler account helpers", () => {
 				["npx", "wrangler", "login"],
 				expect.anything()
 			);
-			expect(start).toHaveBeenCalledTimes(2);
-			expect(stop).toHaveBeenCalledTimes(2);
+			expect(spinner.start).toHaveBeenCalledTimes(2);
+			expect(spinner.stop).toHaveBeenCalledTimes(2);
 		});
 	});
 

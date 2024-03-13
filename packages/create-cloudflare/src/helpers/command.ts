@@ -126,7 +126,7 @@ export async function runCommands({ commands, ...opts }: MultiRunOptions) {
 	});
 }
 
-export const printAsyncStatus = async <T>({
+const printAsyncStatus = async <T>({
 	promise,
 	...opts
 }: PrintOptions<T>): Promise<T> => {

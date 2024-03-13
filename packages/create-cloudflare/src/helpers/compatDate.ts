@@ -1,7 +1,7 @@
 import { readdirSync } from "fs";
 import { resolve } from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { printAsyncStatus } from "./command";
+import { spinner } from "@cloudflare/cli/interactive";
 import { getLatestPackageVersion } from "./packages";
 import type { C3Context } from "types";
 
@@ -17,36 +17,32 @@ import type { C3Context } from "types";
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
 export async function getWorkerdCompatibilityDate() {
-	const { compatDate: workerdCompatibilityDate } = await printAsyncStatus<{
-		compatDate: string;
-		isFallback: boolean;
-	}>({
-		useSpinner: true,
-		startText: "Retrieving current workerd compatibility date",
-		doneText: ({ compatDate, isFallback }) =>
-			`${brandColor("compatibility date")}${
-				isFallback ? dim(" Could not find workerd date, falling back to") : ""
-			} ${dim(compatDate)}`,
-		async promise() {
-			try {
-				const latestWorkerdVersion = await getLatestPackageVersion("workerd");
+	const s = spinner();
+	s.start("Retrieving current workerd compatibility date");
 
-				// The format of the workerd version is `major.yyyymmdd.patch`.
-				const match = latestWorkerdVersion.match(
-					/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/
-				);
+	try {
+		const latestWorkerdVersion = await getLatestPackageVersion("workerd");
 
-				if (match) {
-					const [, year, month, date] = match ?? [];
-					return { compatDate: `${year}-${month}-${date}`, isFallback: false };
-				}
-			} catch {}
+		// The format of the workerd version is `major.yyyymmdd.patch`.
+		const match = latestWorkerdVersion.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
 
-			return { compatDate: "2023-05-18", isFallback: true };
-		},
-	});
+		if (match) {
+			const [, year, month, date] = match ?? [];
+			const compatDate = `${year}-${month}-${date}`;
 
-	return workerdCompatibilityDate;
+			s.stop(`${brandColor("compatibility date")} ${dim(compatDate)}`);
+			return compatDate;
+		}
+	} catch {}
+
+	const fallbackDate = "2023-05-18";
+
+	s.stop(
+		`${brandColor("compatibility date")} ${dim(
+			` Could not find workerd date, falling back to ${fallbackDate}`
+		)}`
+	);
+	return fallbackDate;
 }
 
 /**

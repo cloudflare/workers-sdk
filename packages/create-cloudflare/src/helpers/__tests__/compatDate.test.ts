@@ -6,7 +6,7 @@ import {
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import { mockWorkersTypesDirectory } from "./mocks";
+import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
 
 vi.mock("helpers/files");
 vi.mock("fs");
@@ -15,8 +15,11 @@ vi.mock("@cloudflare/cli/interactive");
 describe("Compatibility Date Helpers", () => {
 	const originalDispatcher = getGlobalDispatcher();
 	let agent: MockAgent;
+	let spinner: ReturnType<typeof mockSpinner>;
 
 	beforeEach(() => {
+		spinner = mockSpinner();
+
 		// Mock out the undici Agent
 		agent = new MockAgent();
 		agent.disableNetConnect();
@@ -45,14 +48,26 @@ describe("Compatibility Date Helpers", () => {
 			mockRegistryFetch("2.20250110.5");
 
 			const date = await getWorkerdCompatibilityDate();
-			expect(date).toBe("2025-01-10");
+
+			const expectedDate = "2025-01-10";
+			expect(date).toBe(expectedDate);
+			expect(spinner.start).toHaveBeenCalled();
+			expect(spinner.stop).toHaveBeenCalledWith(
+				expect.stringContaining(expectedDate)
+			);
 		});
 
 		test("empty result", async () => {
 			mockRegistryFetch("");
 
 			const date = await getWorkerdCompatibilityDate();
-			expect(date).toBe("2023-05-18");
+
+			const fallbackDate = "2023-05-18";
+			expect(date).toBe(fallbackDate);
+			expect(spinner.start).toHaveBeenCalled();
+			expect(spinner.stop).toHaveBeenCalledWith(
+				expect.stringContaining(fallbackDate)
+			);
 		});
 
 		test("command failed", async () => {
@@ -60,8 +75,15 @@ describe("Compatibility Date Helpers", () => {
 				.get("https://registry.npmjs.org")
 				.intercept({ path: "/workerd" })
 				.replyWithError(new Error("Unknown error"));
+
 			const date = await getWorkerdCompatibilityDate();
-			expect(date).toBe("2023-05-18");
+
+			const fallbackDate = "2023-05-18";
+			expect(date).toBe(fallbackDate);
+			expect(spinner.start).toHaveBeenCalled();
+			expect(spinner.stop).toHaveBeenCalledWith(
+				expect.stringContaining(fallbackDate)
+			);
 		});
 	});
 

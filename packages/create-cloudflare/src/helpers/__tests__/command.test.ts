@@ -22,7 +22,6 @@ describe("Command Helpers", () => {
 	});
 
 	beforeEach(() => {
-		// Mock out the child_process.spawn function
 		vi.mocked(spawn).mockImplementation(() => {
 			return {
 				on: vi.fn().mockImplementation((event, cb) => {

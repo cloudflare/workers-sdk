@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { spinner } from "@cloudflare/cli/interactive";
+import { mockSpinner } from "helpers/__tests__/mocks";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -13,12 +13,7 @@ vi.mock("fs");
 vi.mock("@cloudflare/cli/interactive");
 
 beforeEach(() => {
-	// we mock `spinner` to remove noisy logs from the test runs
-	vi.mocked(spinner).mockImplementation(() => ({
-		start() {},
-		update() {},
-		stop() {},
-	}));
+	mockSpinner();
 });
 
 const mockCompatDate = "2024-01-17";

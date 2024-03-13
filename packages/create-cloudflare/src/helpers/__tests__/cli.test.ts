@@ -1,20 +1,15 @@
-import { spinner } from "@cloudflare/cli/interactive";
 import { SemVer } from "semver";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { version as currentVersion } from "../../../package.json";
 import { isUpdateAvailable } from "../cli";
+import { mockSpinner } from "./mocks";
 
 vi.mock("process");
 vi.mock("@cloudflare/cli/interactive");
 
 beforeEach(() => {
-	// we mock `spinner` to remove noisy logs from the test runs
-	vi.mocked(spinner).mockImplementation(() => ({
-		start() {},
-		update() {},
-		stop() {},
-	}));
+	mockSpinner();
 });
 
 describe("isUpdateAvailable", () => {

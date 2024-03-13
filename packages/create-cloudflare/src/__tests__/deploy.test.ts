@@ -1,7 +1,6 @@
 import { crash } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
-import { spinner } from "@cloudflare/cli/interactive";
-import { mockPackageManager } from "helpers/__tests__/mocks";
+import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -32,18 +31,10 @@ const mockInsideGitRepo = (isInside = true) => {
 };
 
 describe("deploy helpers", async () => {
-	const start = vi.fn();
-	const update = vi.fn();
-	const stop = vi.fn();
-
 	beforeEach(() => {
 		mockPackageManager("npm");
 
-		vi.mocked(spinner).mockImplementation(() => ({
-			start,
-			stop,
-			update,
-		}));
+		mockSpinner();
 	});
 
 	describe("offerToDeploy", async () => {
