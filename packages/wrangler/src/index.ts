@@ -67,6 +67,10 @@ import {
 } from "./user";
 import { vectorize } from "./vectorize/index";
 import { versionsUploadHandler, versionsUploadOptions } from "./versions";
+import {
+	versionsDeployHandler,
+	versionsDeployOptions,
+} from "./versions/deploy";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
@@ -707,12 +711,19 @@ export function createCLIParser(argv: string[]) {
 	);
 	if (experimentalGradualRollouts) {
 		wrangler.command("versions", false, (versionYargs) => {
-			return versionYargs.command(
-				"upload",
-				"Upload a Worker for Gradual Rollouts [beta]",
-				versionsUploadOptions,
-				versionsUploadHandler
-			);
+			return versionYargs
+				.command(
+					"upload",
+					"Uploads your Worker code and config as a new version [beta]",
+					versionsUploadOptions,
+					versionsUploadHandler
+				)
+				.command(
+					"deploy [version-specs..]",
+					"Safely roll out new versions of your Worker by splitting traffic between multiple versions [beta]",
+					versionsDeployOptions,
+					versionsDeployHandler
+				);
 		});
 	}
 

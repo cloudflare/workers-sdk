@@ -10,6 +10,7 @@ import {
 	hidden,
 	white,
 } from "./colors";
+import { stderr, stdout } from "./streams";
 
 export const shapes = {
 	diamond: "◇",
@@ -51,7 +52,7 @@ export const space = (n = 1) => {
 // Primitive for printing to stdout. Use this instead of
 // console.log or printing to stdout directly
 export const logRaw = (msg: string) => {
-	process.stdout.write(`${msg}\n`);
+	stdout.write(`${msg}\n`);
 };
 
 // A simple stylized log for use within a prompt
@@ -133,10 +134,14 @@ export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
 	exit(1);
 };
 
-export const error = (msg?: string, extra?: string) => {
+export const error = (
+	msg?: string,
+	extra?: string,
+	corner = shapes.corners.bl
+) => {
 	if (msg) {
-		process.stderr.write(
-			`${gray(shapes.corners.bl)} ${status.error} ${dim(msg)}\n${
+		stderr.write(
+			`${gray(corner)} ${status.error} ${dim(msg)}\n${
 				extra ? space() + extra + "\n" : ""
 			}`
 		);
