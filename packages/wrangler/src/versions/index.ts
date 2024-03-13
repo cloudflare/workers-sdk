@@ -11,7 +11,10 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
+import { versionsListHandler, versionsListOptions } from "./list";
 import versionsUpload from "./upload";
+import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -222,4 +225,34 @@ export async function versionsUploadHandler(
 		tag: args.tag,
 		message: args.message,
 	});
+}
+
+export default function registerVersionsSubcommands(
+	versionYargs: CommonYargsArgv
+) {
+	versionYargs
+		.command(
+			"view <version-id>",
+			"View the details of a specific version of your Worker [beta]",
+			versionsViewOptions,
+			versionsViewHandler
+		)
+		.command(
+			"list",
+			"List the 10 most recent Versions of your Worker [beta]",
+			versionsListOptions,
+			versionsListHandler
+		)
+		.command(
+			"upload",
+			"Uploads your Worker code and config as a new Version [beta]",
+			versionsUploadOptions,
+			versionsUploadHandler
+		)
+		.command(
+			"deploy [version-specs..]",
+			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]",
+			versionsDeployOptions,
+			versionsDeployHandler
+		);
 }
