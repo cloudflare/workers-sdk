@@ -19,11 +19,6 @@ type RunOptions = {
 	transformOutput?: (output: string) => string;
 };
 
-type MultiRunOptions = RunOptions & {
-	commands: Command[];
-	startText: string;
-};
-
 type PrintOptions<T> = {
 	promise: Promise<T> | (() => Promise<T>);
 	useSpinner?: boolean;
@@ -107,24 +102,6 @@ export const runCommand = async (
 		},
 	});
 };
-
-/**
- * Run multiple commands in sequence (not parallel)
- */
-export async function runCommands({ commands, ...opts }: MultiRunOptions) {
-	return printAsyncStatus({
-		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText,
-		doneText: opts.doneText,
-		async promise() {
-			const results = [];
-			for (const command of commands) {
-				results.push(await runCommand(command, { ...opts, useSpinner: false }));
-			}
-			return results.join("\n");
-		},
-	});
-}
 
 const printAsyncStatus = async <T>({
 	promise,

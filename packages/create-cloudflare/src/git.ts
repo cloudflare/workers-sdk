@@ -4,7 +4,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { C3_DEFAULTS } from "helpers/cli";
-import { runCommand, runCommands } from "helpers/command";
+import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
@@ -67,19 +67,27 @@ export const gitCommit = async (ctx: C3Context) => {
 	// we only commit if the git repo was initialized (directly or not) by c3
 	if (ctx.gitRepoAlreadyExisted) return;
 
-	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
-		return;
+	const gitInstalled = await isGitInstalled();
+	const gitInitialized = await isInsideGitRepo(ctx.project.path);
 
-	await runCommands({
+	if (!gitInstalled || !gitInitialized) {
+		return;
+	}
+
+	const s = spinner();
+	s.start("Committing new files");
+
+	await runCommand(["git", "add", "."], {
 		silent: true,
 		cwd: ctx.project.path,
-		commands: [
-			["git", "add", "."],
-			["git", "commit", "-m", commitMessage],
-		],
-		startText: "Committing new files",
-		doneText: `${brandColor("git")} ${dim(`commit`)}`,
 	});
+
+	await runCommand(["git", "commit", "-m", commitMessage], {
+		silent: true,
+		cwd: ctx.project.path,
+	});
+
+	s.stop(`${brandColor("git")} ${dim(`commit`)}`);
 };
 
 const createCommitMessage = async (ctx: C3Context) => {

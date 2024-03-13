@@ -5,6 +5,7 @@ import { runCommand } from "helpers/command";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	getProductionBranch,
+	gitCommit,
 	initializeGit,
 	isGitConfigured,
 	isGitInstalled,
@@ -223,5 +224,77 @@ describe("git helpers", () => {
 			);
 			expect(ctx.args.git).toBe(false);
 		});
+	});
+
+	describe("gitCommit", async () => {
+		let spinner: ReturnType<typeof mockSpinner>;
+
+		beforeEach(() => {
+			spinner = mockSpinner();
+			// Mocks for `createCommitMessage`
+			mockGitInstalled(true);
+			mockInsideGitRepo(true);
+		});
+
+		test("happy path", async () => {
+			const ctx = createTestContext();
+			ctx.gitRepoAlreadyExisted = false;
+
+			mockGitInstalled(true);
+			mockInsideGitRepo(true);
+
+			await gitCommit(ctx);
+
+			expect(spinner.start).toHaveBeenCalledOnce();
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["git", "add", "."],
+				expect.any(Object)
+			);
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["git", "commit", "-m", expect.any(String)],
+				expect.any(Object)
+			);
+			expect(spinner.stop).toHaveBeenCalledOnce();
+		});
+
+		test("git repo already existed (early exit)", async () => {
+			const ctx = createTestContext();
+			ctx.gitRepoAlreadyExisted = true;
+
+			await gitCommit(ctx);
+
+			expect(spinner.start).not.toHaveBeenCalled();
+			expect(spinner.stop).not.toHaveBeenCalled();
+			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
+				["git", "commit", "-m", expect.any(String)],
+				expect.any(Object)
+			);
+		});
+
+		const cases = [
+			[true, false],
+			[false, true],
+			[false, false],
+		];
+
+		test.each(cases)(
+			"early exit (git installed: %s, git initialized: %s)",
+			async (gitInstalled, gitInitialized) => {
+				const ctx = createTestContext();
+				ctx.gitRepoAlreadyExisted = true;
+
+				mockGitInstalled(gitInstalled);
+				mockInsideGitRepo(gitInitialized);
+
+				await gitCommit(ctx);
+
+				expect(spinner.start).not.toHaveBeenCalled();
+				expect(spinner.stop).not.toHaveBeenCalled();
+				expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
+					["git", "commit", "-m", expect.any(String)],
+					expect.any(Object)
+				);
+			}
+		);
 	});
 });
