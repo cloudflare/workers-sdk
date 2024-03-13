@@ -112,7 +112,7 @@ declare module "cloudflare:test" {
 	 * state in the `migrationsTableName` table. `migrationsTableName` defaults to
 	 * `d1_migrations`. Call the `readD1Migrations()` function from the
 	 * `@cloudflare/vitest-pool-workers/config` package inside Node.js to get the
-	 * `migrations array.
+	 * `migrations` array.
 	 */
 	export function applyD1Migrations(
 		db: D1Database,
