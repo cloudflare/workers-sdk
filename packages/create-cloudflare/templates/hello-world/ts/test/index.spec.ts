@@ -10,10 +10,10 @@ const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 describe("Hello World worker", () => {
   it("responds with Hello World! (unit style)", async () => {
     const request = new IncomingRequest("http://example.com");
-    //create an empty context to pass to `worker.fetch()`.
+    // Create an empty context to pass to `worker.fetch()`.
     const ctx = createExecutionContext();
     const response = await worker.fetch(request, env, ctx);
-    // wait for all Promises passed to ctx.waitUntil() to settle before running test assertions
+    // Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
     await waitOnExecutionContext(ctx);
     expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
   });
