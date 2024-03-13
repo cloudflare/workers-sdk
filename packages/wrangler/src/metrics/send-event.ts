@@ -68,7 +68,10 @@ export type EventNames =
 	| "upload worker version"
 	| "deploy worker versions"
 	| "view worker version"
-	| "list worker versions";
+	| "list worker versions"
+	| "view versioned deployment"
+	| "view latest versioned deployment"
+	| "list versioned deployments";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

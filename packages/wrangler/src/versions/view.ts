@@ -1,10 +1,11 @@
-import { fetchResult } from "../cfetch";
+import { logRaw } from "@cloudflare/cli";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
-import renderLabelledValues from "../utils/render-labelled-values";
-import { getConfig, getSource } from "./list";
+import formatLabelledValues from "../utils/render-labelled-values";
+import { fetchVersion } from "./api";
+import { getConfig, getVersionSource } from "./list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -15,26 +16,6 @@ const BLANK_INPUT = "-"; // To be used where optional user-input is displayed an
 export type VersionsViewArgs = StrictYargsOptionsToInterface<
 	typeof versionsViewOptions
 >;
-
-type UUID = string;
-type VersionId = UUID;
-type ApiVersion = {
-	id: VersionId;
-	number: number;
-	metadata: {
-		created_on: string;
-		modified_on: string;
-		source: "api" | string;
-		author_id: string;
-		author_email: string;
-	};
-	annotations?: Record<string, string> & {
-		"workers/triggered_by"?: "upload" | string;
-		"workers/message"?: string;
-		"workers/tag"?: string;
-	};
-	// other properties not typed as not used
-};
 
 export function versionsViewOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -68,20 +49,20 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 
 	if (workerName === undefined) {
 		throw new UserError(
-			'You need to provide a name when deploying a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
 		);
 	}
 
-	const version = await fetchResult<ApiVersion>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions/${args.versionId}`
-	);
+	const version = await fetchVersion(accountId, workerName, args.versionId);
 
-	renderLabelledValues({
-		"Version ID:": version.id,
-		"Created:": new Date(version.metadata["created_on"]).toLocaleString(),
-		"Author:": version.metadata.author_email,
-		"Source:": getSource(version),
-		"Tag:": version.annotations?.["workers/tag"] ?? BLANK_INPUT,
-		"Message:": version.annotations?.["workers/message"] ?? BLANK_INPUT,
+	const formattedVersion = formatLabelledValues({
+		"Version ID": version.id,
+		Created: new Date(version.metadata["created_on"]).toISOString(),
+		Author: version.metadata.author_email,
+		Source: getVersionSource(version),
+		Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
+		Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 	});
+
+	logRaw(formattedVersion);
 }

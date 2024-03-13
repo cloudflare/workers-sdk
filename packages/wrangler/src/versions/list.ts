@@ -1,41 +1,23 @@
 import path from "path";
-import { fetchResult } from "../cfetch";
+import { logRaw } from "@cloudflare/cli";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
-import renderLabelledValues from "../utils/render-labelled-values";
+import formatLabelledValues from "../utils/render-labelled-values";
+import { fetchLatestUploadedVersions } from "./api";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { ApiVersion, VersionCache } from "./types";
 
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 
 export type VersionsListArgs = StrictYargsOptionsToInterface<
 	typeof versionsListOptions
 >;
-
-type UUID = string;
-type VersionId = UUID;
-type ApiVersion = {
-	id: VersionId;
-	number: number;
-	metadata: {
-		created_on: string;
-		modified_on: string;
-		source: "api" | string;
-		author_id: string;
-		author_email: string;
-	};
-	annotations?: {
-		"workers/triggered_by"?: "upload" | string;
-		"workers/message"?: string;
-		"workers/tag"?: string;
-	};
-	// other properties not typed as not used
-};
 
 export function versionsListOptions(yargs: CommonYargsArgv) {
 	return yargs.option("name", {
@@ -62,23 +44,28 @@ export async function versionsListHandler(args: VersionsListArgs) {
 
 	if (workerName === undefined) {
 		throw new UserError(
-			'You need to provide a name when deploying a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
 		);
 	}
 
-	const { items: versions } = await fetchResult<{ items: ApiVersion[] }>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions`
+	const versionCache: VersionCache = new Map();
+	const versions = await fetchLatestUploadedVersions(
+		accountId,
+		workerName,
+		versionCache
 	);
 
 	for (const version of versions) {
-		renderLabelledValues({
-			"Version ID:": version.id,
-			"Created:": new Date(version.metadata["created_on"]).toLocaleString(),
-			"Author:": version.metadata.author_email,
-			"Source:": getSource(version),
-			"Tag:": version.annotations?.["workers/tag"] ?? BLANK_INPUT,
-			"Message:": version.annotations?.["workers/message"] ?? BLANK_INPUT,
+		const formattedVersion = formatLabelledValues({
+			"Version ID": version.id,
+			Created: new Date(version.metadata["created_on"]).toISOString(),
+			Author: version.metadata.author_email,
+			Source: getVersionSource(version),
+			Tag: version.annotations?.["workers/tag"] || BLANK_INPUT,
+			Message: version.annotations?.["workers/message"] || BLANK_INPUT,
 		});
+
+		logRaw(formattedVersion);
 	}
 }
 
@@ -92,7 +79,7 @@ export function getConfig(
 	return config;
 }
 
-export function getSource(version: {
+export function getVersionSource(version: {
 	metadata: Pick<ApiVersion["metadata"], "source">;
 	annotations?: Pick<
 		NonNullable<ApiVersion["annotations"]>,
@@ -115,7 +102,7 @@ export function formatSource(source: string): string {
 		case "terraform":
 			return "Terraform 🏗️";
 		default:
-			return "Other";
+			return `Other (${source})`;
 	}
 }
 export function formatTrigger(trigger: string): string {
@@ -129,6 +116,6 @@ export function formatTrigger(trigger: string): string {
 		case "promotion":
 			return "Promotion";
 		default:
-			return "Unknown";
+			return `Unknown (${trigger})`;
 	}
 }

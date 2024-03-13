@@ -67,6 +67,7 @@ import {
 } from "./user";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
+import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
@@ -175,6 +176,10 @@ export function demandOneOfOption(...options: string[]) {
 export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
+	const experimentalGradualRollouts = argv.includes(
+		"--experimental-gradual-rollouts"
+	);
+
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
 	const wrangler: CommonYargsArgv = makeCLI(argv)
@@ -600,49 +605,60 @@ export function createCLIParser(argv: string[]) {
 	//deployments
 	const deploymentsWarning =
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	wrangler.command(
-		"deployments",
-		"🚢 List and view details for deployments",
-		(yargs) =>
-			yargs
-				.option("name", {
-					describe: "The name of your worker",
-					type: "string",
-				})
-				.command(
-					"list",
-					"🚢 Displays the 10 most recent deployments for a worker",
-					async (listYargs) => listYargs,
-					async (listYargs) => {
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
-						await deployments(accountId, scriptName, config);
-					}
-				)
-				.command(
-					"view [deployment-id]",
-					"🔍 View a deployment",
-					async (viewYargs) =>
-						viewYargs.positional("deployment-id", {
-							describe: "The ID of the deployment you want to inspect",
-							type: "string",
-							demandOption: false,
-						}),
-					async (viewYargs) => {
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
+	if (experimentalGradualRollouts) {
+		wrangler
+			.command(
+				"deployments",
+				"List and view the current and past deployments for your Worker",
+				registerVersionsDeploymentsSubcommands
+			)
+			.command(subHelp)
+			.epilogue(deploymentsWarning);
+	} else {
+		wrangler.command(
+			"deployments",
+			"🚢 List and view details for deployments",
+			(yargs) =>
+				yargs
+					.option("name", {
+						describe: "The name of your worker",
+						type: "string",
+					})
+					.command(
+						"list",
+						"🚢 Displays the 10 most recent deployments for a worker",
+						async (listYargs) => listYargs,
+						async (listYargs) => {
+							const { accountId, scriptName, config } =
+								await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
+							await deployments(accountId, scriptName, config);
+						}
+					)
+					.command(
+						"view [deployment-id]",
+						"🔍 View a deployment",
+						async (viewYargs) =>
+							viewYargs.positional("deployment-id", {
+								describe: "The ID of the deployment you want to inspect",
+								type: "string",
+								demandOption: false,
+							}),
+						async (viewYargs) => {
+							const { accountId, scriptName, config } =
+								await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
 
-						await viewDeployment(
-							accountId,
-							scriptName,
-							config,
-							viewYargs.deploymentId
-						);
-					}
-				)
-				.command(subHelp)
-				.epilogue(deploymentsWarning)
-	);
+							await viewDeployment(
+								accountId,
+								scriptName,
+								config,
+								viewYargs.deploymentId
+							);
+						}
+					)
+					.command(subHelp)
+					.epilogue(deploymentsWarning)
+		);
+	}
 
 	const rollbackWarning =
 		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
@@ -702,9 +718,6 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// versions
-	const experimentalGradualRollouts = argv.includes(
-		"--experimental-gradual-rollouts"
-	);
 	if (experimentalGradualRollouts) {
 		wrangler.command("versions", false, registerVersionsSubcommands);
 	}
