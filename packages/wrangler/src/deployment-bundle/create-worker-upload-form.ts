@@ -111,6 +111,7 @@ export interface WorkerMetadata {
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
+	annotations?: Record<string, string>;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 }
@@ -470,6 +471,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(placement && { placement }),
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
+		...(annotations && { annotations }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

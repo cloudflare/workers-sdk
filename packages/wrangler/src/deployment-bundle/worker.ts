@@ -306,6 +306,7 @@ export interface CfWorkerInit {
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
+	annotations?: Record<string, string | undefined>;
 }
 
 export interface CfWorkerContext {

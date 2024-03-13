@@ -384,6 +384,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
+			annotations: {
+				"workers/message": props.message,
+				"workers/tag": props.tag,
+				"workers/triggered_by": "wrangler",
+			},
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
@@ -421,15 +426,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// We can also now tell whether available_on_subdomain is set
 			try {
 				const body = createWorkerUploadForm(worker);
-
-				body.set(
-					"annotations",
-					JSON.stringify({
-						"workers/message": props.message,
-						"workers/tag": props.tag,
-						"workers/triggered_by": "wrangler",
-					})
-				);
 
 				const result = await fetchResult<{
 					available_on_subdomain: boolean;
