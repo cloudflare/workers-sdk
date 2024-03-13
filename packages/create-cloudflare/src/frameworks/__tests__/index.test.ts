@@ -43,13 +43,10 @@ describe("frameworks", () => {
 
 		test.each(cases)("$pm", async ({ pm, pmCmd, env }) => {
 			mockPackageManager(pm as PmName);
-			const mockRunCommand = vi
-				.mocked(runCommand)
-				.mockReturnValueOnce(Promise.resolve(""));
 
 			await runFrameworkGenerator(ctx, ["-p", "my-project"]);
 
-			expect(mockRunCommand).toHaveBeenCalledWith(
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				[pmCmd, cli, "-p", "my-project", "--template", "potato"],
 				{ env }
 			);

@@ -1,9 +1,10 @@
 import { existsSync } from "fs";
+import { runCommand } from "helpers/command";
 import { installPackages, installWrangler, npmInstall } from "helpers/packages";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";
-import { mockPackageManager, mockRunCommand } from "./mocks";
+import { mockPackageManager } from "./mocks";
 import type { PmName } from "helpers/packageManagers";
 
 vi.mock("fs");
@@ -20,19 +21,22 @@ describe("Package Helpers", () => {
 
 	describe("npmInstall", () => {
 		test("npm", async () => {
-			const { mock } = mockRunCommand();
-
 			await npmInstall(createTestContext());
 
-			expect(mock).toHaveBeenCalledWith(["npm", "install"], expect.anything());
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["npm", "install"],
+				expect.anything()
+			);
 		});
 
 		test("pnpm", async () => {
-			const { mock } = mockRunCommand();
 			mockPackageManager("pnpm", "8.5.1");
 
 			await npmInstall(createTestContext());
-			expect(mock).toHaveBeenCalledWith(["pnpm", "install"], expect.anything());
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["pnpm", "install"],
+				expect.anything()
+			);
 		});
 	});
 
@@ -51,12 +55,10 @@ describe("Package Helpers", () => {
 
 		test.each(cases)("with $pm", async ({ pm, initialArgs }) => {
 			mockPackageManager(pm);
-			const { mock } = mockRunCommand("");
-
 			const packages = ["foo", "bar", "baz"];
 			await installPackages(packages);
 
-			expect(mock).toHaveBeenCalledWith(
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				[...initialArgs, ...packages],
 				expect.anything()
 			);
@@ -73,12 +75,10 @@ describe("Package Helpers", () => {
 			"with $pm (dev = true)",
 			async ({ pm, initialArgs }) => {
 				mockPackageManager(pm);
-				const { mock } = mockRunCommand("");
-
 				const packages = ["foo", "bar", "baz"];
 				await installPackages(packages, { dev: true });
 
-				expect(mock).toHaveBeenCalledWith(
+				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 					[...initialArgs, ...packages],
 					expect.anything()
 				);
@@ -89,8 +89,7 @@ describe("Package Helpers", () => {
 	test("installWrangler", async () => {
 		await installWrangler();
 
-		const { mock } = mockRunCommand();
-		expect(mock).toHaveBeenCalledWith(
+		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 			["npm", "install", "--save-dev", "wrangler"],
 			expect.anything()
 		);
