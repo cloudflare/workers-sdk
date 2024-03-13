@@ -70,5 +70,10 @@
 	},
 	"[typescript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
-	}
+	},
+	"github.codespaces.defaultExtensions": [
+		
+		"GitHub.codespaces",
+		"GitHub.vscode-pull-request-github"
+	]
 }
