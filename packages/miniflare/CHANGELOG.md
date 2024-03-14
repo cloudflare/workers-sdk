@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240304.2
+
+### Patch Changes
+
+- [#5247](https://github.com/cloudflare/workers-sdk/pull/5247) [`2e50d51`](https://github.com/cloudflare/workers-sdk/commit/2e50d51632dfe905bd32de8176231bb256c88dab) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Add internal APIs to support the Workers Vitest integration
+
 ## 3.20240304.1
 
 ### Patch Changes
