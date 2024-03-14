@@ -128,10 +128,15 @@ export function normalizeAndValidateConfig(
 		);
 	}
 
+	const isDispatchNamespace =
+		typeof args["dispatch-namespace"] === "string" &&
+		args["dispatch-namespace"].trim() !== "";
+
 	const topLevelEnv = normalizeAndValidateEnvironment(
 		diagnostics,
 		configPath,
-		rawConfig
+		rawConfig,
+		isDispatchNamespace
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
@@ -149,6 +154,7 @@ export function normalizeAndValidateConfig(
 				envDiagnostics,
 				configPath,
 				rawEnv,
+				isDispatchNamespace,
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
@@ -163,6 +169,7 @@ export function normalizeAndValidateConfig(
 				envDiagnostics,
 				configPath,
 				{},
+				isDispatchNamespace,
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
@@ -995,7 +1002,8 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	topLevelEnv: RawEnvironment
+	topLevelEnv: RawEnvironment,
+	isDispatchNamespace: boolean
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -1004,15 +1012,30 @@ function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName: string,
 	topLevelEnv: Environment,
 	isLegacyEnv: boolean,
 	rawConfig: RawConfig
 ): Environment;
+/**
+ * Validate the named environment configuration and return the normalized values.
+ */
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
+	envName?: string,
+	topLevelEnv?: Environment,
+	isLegacyEnv?: boolean,
+	rawConfig?: RawConfig
+): Environment;
+function normalizeAndValidateEnvironment(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
@@ -1130,7 +1153,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"name",
-			isValidName,
+			isDispatchNamespace ? isString : isValidName,
 			appendEnvName(envName),
 			undefined
 		),
