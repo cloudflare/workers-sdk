@@ -914,7 +914,7 @@ test("Miniflare: python modules", async (t) => {
 				type: "PythonModule",
 				path: "index.py",
 				contents:
-					"from test_module import add; from js import Response;\ndef fetch(request):\n  return Response.new(add(2,2))",
+					"from test_module import add; from js import Response;\ndef on_fetch(request):\n  return Response.new(add(2,2))",
 			},
 			{
 				type: "PythonModule",
@@ -1180,10 +1180,12 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	]);
 	t.deepEqual(queueResult, {
 		outcome: "ok",
-		retryAll: true,
 		ackAll: false,
-		explicitRetries: [],
+		retryBatch: {
+			retry: true,
+		},
 		explicitAcks: [],
+		retryMessages: [],
 	});
 	queueResult = await fetcher.queue("queue", [
 		{ id: "c", timestamp: new Date(3000), body: new Uint8Array([1, 2, 3]) },
@@ -1191,10 +1193,12 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	]);
 	t.deepEqual(queueResult, {
 		outcome: "ok",
-		retryAll: false,
 		ackAll: false,
-		explicitRetries: [],
+		retryBatch: {
+			retry: false
+		},
 		explicitAcks: ["perfect"],
+		retryMessages: [],
 	});
 
 	res = await fetcher.fetch("http://localhost/queue");
