@@ -1,9 +1,10 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
+import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { compatDateFlag } from "helpers/compatDate";
+import { usesTypescript } from "helpers/files";
+import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";

@@ -4,8 +4,8 @@ import { join } from "path";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packages";
-import { chooseAccount } from "../../src/common";
+import { detectPackageManager } from "helpers/packageManagers";
+import { chooseAccount } from "../../src/wrangler/accounts";
 import type { C3Context } from "types";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
