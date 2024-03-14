@@ -1,21 +1,27 @@
 import { readdirSync } from "fs";
 import { spinner } from "@cloudflare/cli/interactive";
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import type { Dirent } from "fs";
 import type { PmName } from "helpers/packageManagers";
 
-// Requires the `which-pm-runs` module to be mocked in the test file like so:
-//    vi.mock("which-pm-runs");
 export const mockPackageManager = (name: PmName, version = "1.0.0") => {
+	if (!vi.isMockFunction(whichPMRuns)) {
+		expect.fail(
+			"When using `mockPackageManager` you must first call: vi.mock('which-pm-runs');"
+		);
+	}
 	vi.mocked(whichPMRuns).mockReturnValue({ name, version });
 };
 
-// Requires the `fs` module to be mocked in the test file like so:
-//    vi.mock("fs");
 export const mockWorkersTypesDirectory = (
 	mockImpl: () => string[] = () => [...mockWorkersTypesDirListing]
 ) => {
+	if (!vi.isMockFunction(readdirSync)) {
+		expect.fail(
+			"When using `mockWorkersTypesDirectory` you must first call: vi.mock('fs');"
+		);
+	}
 	vi.mocked(readdirSync).mockImplementation((path) => {
 		if (path.toString().match("workers-types")) {
 			// vitest won't resolve the type for the correct `readdirSync` overload thus the trickery
@@ -26,6 +32,12 @@ export const mockWorkersTypesDirectory = (
 };
 
 export const mockSpinner = () => {
+	if (!vi.isMockFunction(spinner)) {
+		expect.fail(
+			"When using `mockPackageManager` you must first call: vi.mock('@cloudflare/cli/interactive');"
+		);
+	}
+
 	const start = vi.fn();
 	const update = vi.fn();
 	const stop = vi.fn();

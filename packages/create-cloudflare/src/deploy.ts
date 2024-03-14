@@ -91,7 +91,7 @@ export const runDeploy = async (ctx: C3Context) => {
 			? [
 					...(pm === "npm" ? ["--"] : []),
 					"--commit-message",
-					prepareCommitMessage(ctx.commitMessage),
+					JSON.stringify(ctx.commitMessage),
 			  ]
 			: []),
 	];
@@ -122,9 +122,3 @@ export const runDeploy = async (ctx: C3Context) => {
 		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
 	}
 };
-
-/** * Ensure that the commit message has newlines etc properly escaped.
- */
-function prepareCommitMessage(commitMessage: string): string {
-	return JSON.stringify(commitMessage);
-}

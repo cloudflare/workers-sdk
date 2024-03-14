@@ -24,7 +24,7 @@ export const validateTemplateUrl = (value: Arg) => {
 };
 
 /**
- * Checks that a candidate project path is a valid.
+ * Checks that a candidate project path is valid.
  *
  * To be a valid target for a c3 project, it must:
  * - Be empty (excluding a small allow-list of files)

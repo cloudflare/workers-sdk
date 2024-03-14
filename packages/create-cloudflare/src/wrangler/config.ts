@@ -45,17 +45,21 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 	writeWranglerToml(ctx, newToml.toString());
 };
 
+const getWranglerTomlPath = (ctx: C3Context) => {
+	return resolve(ctx.project.path, "wrangler.toml");
+};
+
 export const wranglerTomlExists = (ctx: C3Context) => {
-	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	const wranglerTomlPath = getWranglerTomlPath(ctx);
 	return existsSync(wranglerTomlPath);
 };
 
 export const readWranglerToml = (ctx: C3Context) => {
-	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	const wranglerTomlPath = getWranglerTomlPath(ctx);
 	return readFile(wranglerTomlPath);
 };
 
 export const writeWranglerToml = (ctx: C3Context, contents: string) => {
-	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	const wranglerTomlPath = getWranglerTomlPath(ctx);
 	return writeFile(wranglerTomlPath, contents);
 };

@@ -9,6 +9,7 @@ import type { PmName } from "helpers/packageManagers";
 
 vi.mock("fs");
 vi.mock("which-pm-runs");
+vi.mock("which-pm-runs");
 vi.mock("helpers/command");
 
 describe("Package Helpers", () => {
@@ -47,8 +48,8 @@ describe("Package Helpers", () => {
 		};
 
 		const cases: TestCase[] = [
-			{ pm: "npm", initialArgs: ["npm", "install", "--save"] },
-			{ pm: "pnpm", initialArgs: ["pnpm", "install", "--save"] },
+			{ pm: "npm", initialArgs: ["npm", "install"] },
+			{ pm: "pnpm", initialArgs: ["pnpm", "install"] },
 			{ pm: "bun", initialArgs: ["bun", "add"] },
 			{ pm: "yarn", initialArgs: ["yarn", "add"] },
 		];

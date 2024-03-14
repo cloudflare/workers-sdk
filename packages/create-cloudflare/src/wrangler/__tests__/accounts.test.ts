@@ -36,12 +36,12 @@ describe("wrangler account helpers", () => {
 	let spinner: ReturnType<typeof mockSpinner>;
 
 	beforeEach(() => {
+		mockPackageManager("npm");
 		spinner = mockSpinner();
 	});
 
 	describe("wranglerLogin", async () => {
 		test("logged in", async () => {
-			mockPackageManager("npm");
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
@@ -62,7 +62,6 @@ describe("wrangler account helpers", () => {
 		});
 
 		test("logged out (successful login)", async () => {
-			mockPackageManager("npm");
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
@@ -84,7 +83,6 @@ describe("wrangler account helpers", () => {
 		});
 
 		test("logged out (login denied)", async () => {
-			mockPackageManager("npm");
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
@@ -107,7 +105,6 @@ describe("wrangler account helpers", () => {
 	});
 
 	test("listAccounts", async () => {
-		mockPackageManager("npm");
 		const mock = vi
 			.mocked(runCommand)
 			.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
@@ -122,7 +119,6 @@ describe("wrangler account helpers", () => {
 
 	describe("isLoggedIn", async () => {
 		test("logged in", async () => {
-			mockPackageManager("npm");
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
@@ -137,7 +133,6 @@ describe("wrangler account helpers", () => {
 		});
 
 		test("logged out", async () => {
-			mockPackageManager("npm");
 			const mock = vi
 				.mocked(runCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput));
@@ -152,7 +147,6 @@ describe("wrangler account helpers", () => {
 		});
 
 		test("wrangler whoami error", async () => {
-			mockPackageManager("npm");
 			const mock = vi
 				.mocked(runCommand)
 				.mockRejectedValueOnce(new Error("fail!"));

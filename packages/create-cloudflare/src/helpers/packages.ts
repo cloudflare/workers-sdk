@@ -41,7 +41,7 @@ export const installPackages = async (
 		case "pnpm":
 		default:
 			cmd = "install";
-			saveFlag = config.dev ? "--save-dev" : "--save";
+			saveFlag = config.dev ? "--save-dev" : "";
 			break;
 	}
 

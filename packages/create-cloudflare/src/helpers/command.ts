@@ -27,7 +27,7 @@ type PrintOptions<T> = {
 };
 
 /**
- * An awaitable wrapper around `spawn` that optionally displays progress to user and process output capture.
+ * An awaitable wrapper around `spawn` that optionally displays progress to user and processes/captures the command's output
  *
  * @param command - The command to run as an array of strings
  * @param opts.silent - Should the command's stdout and stderr be dispalyed to the user

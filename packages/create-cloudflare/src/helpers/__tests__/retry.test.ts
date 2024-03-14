@@ -11,7 +11,19 @@ describe("retry", () => {
 		expect(tries).toBe(1);
 	});
 
-	test("success after failure", async () => {
+	test("success after one failure", async () => {
+		let tries = 0;
+		await retry({ times: 3 }, async () => {
+			tries++;
+			if (tries > 1) {
+				return Promise.resolve(true);
+			}
+			throw Error();
+		});
+		expect(tries).toBe(2);
+	});
+
+	test("success after multiple failures", async () => {
 		let tries = 0;
 		let fails = 2;
 
