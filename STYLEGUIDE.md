@@ -125,3 +125,25 @@ If you think this is a bug then please create an issue at https://github.com/clo
 #User inputs y or n#
 
 ```
+
+## Wrangler prompts
+
+### Written value prompt
+```sh
+wrangler <command>
+<prompt request>
+<defaut_value>
+
+#User enters value then presses enter#
+
+<success state detailing what task/s have been performed and with what values where applicable>
+```
+
+### Multiple choice prompt
+```sh
+Wrangler <command>
+<prompt request>
+  ◉ <Choice 1>
+  ○ <Choice 2>
+  ○ <Choice 3>
+```
