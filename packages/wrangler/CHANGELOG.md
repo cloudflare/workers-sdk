@@ -1,5 +1,21 @@
 # wrangler
 
+## 3.34.0
+
+### Minor Changes
+
+- [#5224](https://github.com/cloudflare/workers-sdk/pull/5224) [`03484c2`](https://github.com/cloudflare/workers-sdk/commit/03484c2d64f42a2820feeec9076dc3f210baf4f9) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: Implement `wrangler deployments list` and `wrangler deployments status` behind `--experimental-gradual-rollouts` flag.
+
+- [#5115](https://github.com/cloudflare/workers-sdk/pull/5115) [`29e8151`](https://github.com/cloudflare/workers-sdk/commit/29e8151bc2235bd13074584df5f90187955123d2) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: Implement `wrangler versions deploy` command.
+
+  For now, invocations should use the `--experimental-gradual-rollouts` flag.
+
+  Without args, a user will be guided through prompts. If args are specified, they are used as the default values for the prompts. If the `--yes` flag is specified, the defaults are automatically accepted for a non-interactive flow.
+
+- [#5208](https://github.com/cloudflare/workers-sdk/pull/5208) [`4730b6c`](https://github.com/cloudflare/workers-sdk/commit/4730b6c087080d79838d3fd86480d8aff693834a) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: Implement `wrangler versions list` and `wrangler versions view` commands behind the `--experimental-gradual-rollouts` flag.
+
+- [#5064](https://github.com/cloudflare/workers-sdk/pull/5064) [`bd935cf`](https://github.com/cloudflare/workers-sdk/commit/bd935cfdf1bebfff53b1817d475b1d36eccec9c0) Thanks [@OilyLime](https://github.com/OilyLime)! - feature: Improve create and update logic for hyperdrive to include caching settings
+
 ## 3.33.0
 
 ### Minor Changes

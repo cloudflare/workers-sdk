@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
-	"version": "0.0.8",
+	"version": "0.1.0",
 	"main": "dist/pool/index.mjs",
 	"types": "test/cloudflare-test.d.ts",
 	"exports": {

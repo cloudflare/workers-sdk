@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.14.1
+
+### Patch Changes
+
+- [#5228](https://github.com/cloudflare/workers-sdk/pull/5228) [`a72fccb`](https://github.com/cloudflare/workers-sdk/commit/a72fccb9cfa98669aebf4d485efb5785bb9a112c) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: remove tab_width from all template .editorconfig files
+
 ## 2.14.0
 
 ### Minor Changes
