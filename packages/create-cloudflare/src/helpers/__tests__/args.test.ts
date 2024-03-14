@@ -101,5 +101,15 @@ describe("Cli", () => {
 				"5",
 			]);
 		});
+
+		const stringArgs = [
+			"--framework",
+			"--template",
+			"--type",
+			"--existing-script",
+		];
+		test.each(stringArgs)("%s requires an argument", async (arg) => {
+			await expect(parseArgs(["my-react-project", arg])).rejects.toThrowError();
+		});
 	});
 });
