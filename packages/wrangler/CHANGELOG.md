@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.34.2
+
+### Patch Changes
+
+- [#5238](https://github.com/cloudflare/workers-sdk/pull/5238) [`a0768bc`](https://github.com/cloudflare/workers-sdk/commit/a0768bcc9d76be8a88fe3e1aa45f3b3805da3df6) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: `versions upload` annotations (`--message` and/or `--tag`) are now applied correctly to the uploaded Worker Version
+
 ## 3.34.1
 
 ### Patch Changes
