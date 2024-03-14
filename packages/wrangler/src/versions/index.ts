@@ -143,12 +143,6 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				describe: "Don't actually deploy",
 				type: "boolean",
 			})
-			.option("keep-vars", {
-				describe:
-					"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
-				default: false,
-				type: "boolean",
-			})
 			// args only for `versions upload`, not `deploy`
 			.option("tag", {
 				describe: "A tag for this Worker Gradual Rollouts Version",
@@ -219,7 +213,7 @@ export async function versionsUploadHandler(
 		outDir: args.outdir,
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
-		keepVars: args.keepVars,
+		keepVars: false,
 		projectRoot,
 
 		tag: args.tag,

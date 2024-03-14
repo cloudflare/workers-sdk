@@ -66,6 +66,7 @@ export async function versionsListHandler(args: VersionsListArgs) {
 		});
 
 		logRaw(formattedVersion);
+		logRaw(``);
 	}
 }
 

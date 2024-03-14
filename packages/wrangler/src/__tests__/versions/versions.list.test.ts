@@ -45,24 +45,28 @@ describe("versions list", () => {
 			Source:      Upload
 			Tag:         -
 			Message:     -
+
 			Version ID:  30000000-0000-0000-0000-000000000000
 			Created:     2021-02-02T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     Rolled back for this version
+
 			Version ID:  20000000-0000-0000-0000-000000000000
 			Created:     2021-02-03T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Wrangler 🤠
 			Tag:         -
 			Message:     -
+
 			Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     2021-01-04T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     -
+
 			"
 		`);
 
@@ -87,24 +91,28 @@ describe("versions list", () => {
 			Source:      Upload
 			Tag:         -
 			Message:     -
+
 			Version ID:  30000000-0000-0000-0000-000000000000
 			Created:     2021-02-02T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     Rolled back for this version
+
 			Version ID:  20000000-0000-0000-0000-000000000000
 			Created:     2021-02-03T00:00:00.000Z
 			Author:      Kathryn-Janeway@federation.org
 			Source:      Wrangler 🤠
 			Tag:         -
 			Message:     -
+
 			Version ID:  10000000-0000-0000-0000-000000000000
 			Created:     2021-01-04T00:00:00.000Z
 			Author:      Jean-Luc-Picard@federation.org
 			Source:      Rollback
 			Tag:         -
 			Message:     -
+
 			"
 		`);
 
