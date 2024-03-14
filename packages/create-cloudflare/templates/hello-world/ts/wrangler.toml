@@ -1,7 +1,6 @@
 name = "<TBD>"
 main = "src/index.ts"
 compatibility_date = "<TBD>"
-compatibility_flags = ["nodejs_compat"]
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
