@@ -95,7 +95,8 @@ export type WorkerMetadataBinding =
 			destination: string;
 	  };
 
-export interface WorkerMetadata {
+// for PUT /accounts/:accountId/workers/scripts/:scriptName
+export type WorkerMetadataPut = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
 	/** The name of the entry point module. Only exists when the worker is in the service-worker format */
@@ -111,10 +112,16 @@ export interface WorkerMetadata {
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
-	annotations?: Record<string, string>;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
-}
+};
+
+// for POST /accounts/:accountId/workers/:workerName/versions
+export type WorkerMetadataVersionsPost = WorkerMetadataPut & {
+	annotations?: Record<string, string>;
+};
+
+export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
 
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
@@ -133,6 +140,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		placement,
 		tail_consumers,
 		limits,
+		annotations,
 	} = worker;
 
 	let { modules } = worker;
