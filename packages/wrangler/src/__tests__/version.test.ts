@@ -23,6 +23,7 @@ describe("version", () => {
 
 		await runWrangler("-v");
 		expect(std.out).toMatch(version);
+		expect(std.warn).toBe("");
 	});
 
 	// This run separately as command handling is different
@@ -31,6 +32,7 @@ describe("version", () => {
 
 		await runWrangler("--version");
 		expect(std.out).toMatch(version);
+		expect(std.warn).toBe("");
 	});
 
 	it("should output current version if !isTTY calling (deprecated) `version` command", async () => {
