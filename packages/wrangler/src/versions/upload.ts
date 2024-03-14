@@ -387,7 +387,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			annotations: {
 				"workers/message": props.message,
 				"workers/tag": props.tag,
-				"workers/triggered_by": "wrangler",
 			},
 		};
 
