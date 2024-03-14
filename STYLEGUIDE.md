@@ -136,7 +136,7 @@ wrangler <command>
 
 #User enters value then presses enter#
 
-<success state detailing what task/s have been performed and with what values where applicable>
+<response detailing what task/s have been performed and with what values where applicable OR continue to next prompt>
 ```
 
 ### Multiple choice prompt
@@ -146,4 +146,8 @@ Wrangler <command>
   ◉ <Choice 1>
   ○ <Choice 2>
   ○ <Choice 3>
+
+  #User presses enter#
+
+<response detailing what task/s have been performed and with what values where applicable OR continue to next prompt>
 ```
