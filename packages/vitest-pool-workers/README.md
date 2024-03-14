@@ -1,6 +1,6 @@
 # `@cloudflare/vitest-pool-workers`
 
-The Workers Vitest integration allows you to run your Vitest tests inside the Workers runtime.
+The Workers Vitest integration allows you to write Vitest tests that run inside the Workers runtime.
 Refer to the [documentation](https://developers.cloudflare.com/workers/testing/vitest-integration/) and [examples](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/vitest-pool-workers-examples/) for more information.
 
 - ✅ Supports both **unit tests** and **integration tests**
