@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.14.2
+
+### Patch Changes
+
+- [#5249](https://github.com/cloudflare/workers-sdk/pull/5249) [`5315602`](https://github.com/cloudflare/workers-sdk/commit/531560267ce2527fdce6fa3b6685bde1610defdb) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - test: add vitest-pool-workers package and example tests to `hello-world` templates
+
 ## 2.14.1
 
 ### Patch Changes
