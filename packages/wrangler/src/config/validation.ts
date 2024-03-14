@@ -136,10 +136,6 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		configPath,
 		rawConfig,
-		undefined,
-		undefined,
-		undefined,
-		undefined,
 		isDispatchNamespace
 	);
 
@@ -158,11 +154,11 @@ export function normalizeAndValidateConfig(
 				envDiagnostics,
 				configPath,
 				rawEnv,
+				isDispatchNamespace,
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig,
-				isDispatchNamespace
+				rawConfig
 			);
 			diagnostics.addChild(envDiagnostics);
 		} else {
@@ -173,11 +169,11 @@ export function normalizeAndValidateConfig(
 				envDiagnostics,
 				configPath,
 				{},
+				isDispatchNamespace,
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
-				rawConfig,
-				isDispatchNamespace
+				rawConfig
 			);
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
@@ -1006,7 +1002,8 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	topLevelEnv: RawEnvironment
+	topLevelEnv: RawEnvironment,
+	isDispatchNamespace: boolean
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -1015,6 +1012,7 @@ function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName: string,
 	topLevelEnv: Environment,
 	isLegacyEnv: boolean,
@@ -1027,21 +1025,21 @@ function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName?: string,
 	topLevelEnv?: Environment,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig,
-	isDispatchNamespace?: boolean
+	rawConfig?: RawConfig
 ): Environment;
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
-	rawConfig?: RawConfig | undefined,
-	isDispatchNamespace?: boolean | undefined
+	rawConfig?: RawConfig | undefined
 ): Environment {
 	deprecated(
 		diagnostics,
