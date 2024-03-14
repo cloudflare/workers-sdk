@@ -1190,6 +1190,19 @@ describe("normalizeAndValidateConfig()", () => {
 			            - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got \\"!@#$%^&*(()\\"."
 		        `);
 			});
+
+			it("should accept any Worker name if the dispatch-namespace flag is used", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "example.com",
+						main: "index.js",
+					},
+					undefined,
+					{ env: undefined, "dispatch-namespace": "test-naemspace" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		describe("[build]", () => {
