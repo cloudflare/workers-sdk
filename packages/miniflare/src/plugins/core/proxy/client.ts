@@ -590,11 +590,10 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	}
 	#fetcherFetchCall(args: [RequestInfo] | [RequestInfo, RequestInit<RequestInitCfType>]) {
 		// If requestInit has a body, make sure the duplex: half property is set.
-		const requestInit = args[1] ?? {}
-		if (requestInit.body) {
-			requestInit.duplex = "half"
-		}
-		const request = new Request(args[0], requestInit);
+		const request = args[1] && args[1].body
+			? new Request(args[0], { ...args[1], duplex: 'half' })
+			: new Request(args[0], args[1]);
+
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
 		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
