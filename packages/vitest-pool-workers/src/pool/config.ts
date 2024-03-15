@@ -207,18 +207,17 @@ export async function parseProjectOptions(
 	if (environment !== undefined && environment !== "node") {
 		const quotedEnvironment = JSON.stringify(environment);
 
-		let migrationGuide = "";
+		let migrationGuide = ".";
 		if (environment === "miniflare") {
-			// TODO(soon): include a link to the migration guide once it's written
 			migrationGuide =
-				", and refer to the migration guide if upgrading from `vitest-environment-miniflare`";
+				", and refer to the migration guide if upgrading from `vitest-environment-miniflare`:\nhttps://developers.cloudflare.com/workers/testing/vitest-integration/get-started/migrate-from-miniflare-2/";
 		}
 
 		const relativePath = getRelativeProjectPath(project);
 		const message = [
 			`Unexpected custom \`environment\` ${quotedEnvironment} in project ${relativePath}.`,
 			"The Workers pool always runs your tests inside of an environment providing Workers runtime APIs.",
-			`Please remove the \`environment\` configuration${migrationGuide}.`,
+			`Please remove the \`environment\` configuration${migrationGuide}`,
 			"Use `poolMatchGlobs`/`environmentMatchGlobs` to run a subset of your tests in a different pool/environment.",
 		].join("\n");
 		throw new TypeError(message);
