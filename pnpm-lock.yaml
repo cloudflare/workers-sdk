@@ -82,11 +82,11 @@ importers:
         specifier: ^7.3.0
         version: 7.3.0
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: 0.18.20
+        version: 0.18.20
       esbuild-register:
         specifier: ^3.5.0
-        version: 3.5.0(esbuild@0.17.19)
+        version: 3.5.0(esbuild@0.18.20)
       jsonc-parser:
         specifier: ^3.2.0
         version: 3.2.0
@@ -795,8 +795,8 @@ importers:
         specifier: ^5.2.0
         version: 5.3.0
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: 0.18.20
+        version: 0.18.20
       log-update:
         specifier: ^5.0.1
         version: 5.0.1
@@ -1161,8 +1161,8 @@ importers:
         specifier: ^0.0.1182435
         version: 0.0.1182435
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: 0.18.20
+        version: 0.18.20
       eslint:
         specifier: ^8.49.0
         version: 8.57.0
@@ -1357,8 +1357,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.2
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: 0.18.20
+        version: 0.18.20
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -1661,10 +1661,10 @@ importers:
         version: link:../workers-shared
       '@esbuild-plugins/node-globals-polyfill':
         specifier: ^0.2.3
-        version: 0.2.3(esbuild@0.17.19)
+        version: 0.2.3(esbuild@0.18.20)
       '@esbuild-plugins/node-modules-polyfill':
         specifier: ^0.2.2
-        version: 0.2.2(esbuild@0.17.19)
+        version: 0.2.2(esbuild@0.18.20)
       blake3-wasm:
         specifier: ^2.1.5
         version: 2.1.5
@@ -1675,8 +1675,8 @@ importers:
         specifier: ^3.6.0
         version: 3.6.0
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: 0.18.20
+        version: 0.18.20
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -9736,13 +9736,13 @@ snapshots:
       '@esbuild-kit/core-utils': 3.3.2
       get-tsconfig: 4.7.0
 
-  '@esbuild-plugins/node-globals-polyfill@0.2.3(esbuild@0.17.19)':
+  '@esbuild-plugins/node-globals-polyfill@0.2.3(esbuild@0.18.20)':
     dependencies:
-      esbuild: 0.17.19
+      esbuild: 0.18.20
 
-  '@esbuild-plugins/node-modules-polyfill@0.2.2(esbuild@0.17.19)':
+  '@esbuild-plugins/node-modules-polyfill@0.2.2(esbuild@0.18.20)':
     dependencies:
-      esbuild: 0.17.19
+      esbuild: 0.18.20
       escape-string-regexp: 4.0.0
       rollup-plugin-node-polyfills: 0.2.1
 
@@ -12537,6 +12537,13 @@ snapshots:
     dependencies:
       debug: 4.3.5
       esbuild: 0.17.19
+    transitivePeerDependencies:
+      - supports-color
+
+  esbuild-register@3.5.0(esbuild@0.18.20):
+    dependencies:
+      debug: 4.3.5
+      esbuild: 0.18.20
     transitivePeerDependencies:
       - supports-color
 

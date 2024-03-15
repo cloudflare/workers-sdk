@@ -2299,8 +2299,13 @@ addEventListener('fetch', event => {});`
 						}
 					}`
 				);
+				// If this test fails in the future, it's likely the line number of the
+				// `ReferenceError` in `index.js` below is incorrect. To get the new
+				// number, run `wrangler deploy index.ts --dry-run --outdir=dist` with
+				// `index.ts` containing the contents above. Then look in `dist/index.js`
+				// for a line containing `x;`. This is the line number you want.
 				mockDeployWithValidationError(
-					"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n"
+					"Uncaught ReferenceError: x is not defined\n  at index.js:6:1\n"
 				);
 				mockSubDomainRequest();
 

@@ -70,9 +70,9 @@ const rewriteNodeToInternalPlugin = {
 };
 
 /**
- * @type {Map<string, esbuild.BuildResult>}
+ * @type {Map<string, esbuild.BuildContext>}
  */
-const workersBuilders = new Map();
+const workerContexts = new Map();
 /**
  * @type {esbuild.Plugin}
  */
@@ -93,9 +93,9 @@ const embedWorkersPlugin = {
 			return { path: result.path, namespace };
 		});
 		build.onLoad({ filter: /.*/, namespace }, async (args) => {
-			let builder = workersBuilders.get(args.path);
-			if (builder === undefined) {
-				builder = await esbuild.context({
+			let context = workerContexts.get(args.path);
+			if (context === undefined) {
+				context = await esbuild.context({
 					platform: "node", // Marks `node:*` imports as external
 					format: "esm",
 					target: "esnext",
@@ -114,21 +114,21 @@ const embedWorkersPlugin = {
 							? [rewriteNodeToInternalPlugin]
 							: [],
 				});
+				workerContexts.set(args.path, context);
 			}
-			const metafile = (await builder.rebuild()).metafile;
-			workersBuilders.set(args.path, builder);
+			const result = await context.rebuild();
 			await fs.mkdir("worker-metafiles", { recursive: true });
 			await fs.writeFile(
 				path.join(
 					"worker-metafiles",
 					path.basename(args.path) + ".metafile.json"
 				),
-				JSON.stringify(metafile)
+				JSON.stringify(result.metafile)
 			);
 			let outPath = args.path.substring(workersRoot.length + 1);
 			outPath = outPath.substring(0, outPath.lastIndexOf(".")) + ".js";
 			outPath = JSON.stringify(outPath);
-			const watchFiles = Object.keys(metafile.inputs);
+			const watchFiles = Object.keys(result.metafile.inputs);
 			const contents = `
       import fs from "fs";
       import path from "path";
@@ -165,7 +165,7 @@ async function buildPackage() {
 	}
 	const outPath = path.join(pkgRoot, "dist");
 
-	const buildOptions = {
+	const context = await esbuild.context({
 		platform: "node",
 		format: "cjs",
 		target: "esnext",
@@ -191,12 +191,15 @@ async function buildPackage() {
 		outdir: outPath,
 		outbase: pkgRoot,
 		entryPoints: [indexPath, ...testPaths],
-	};
+	});
 	if (watch) {
-		const ctx = await esbuild.context(buildOptions);
-		await ctx.watch();
+		await context.watch();
 	} else {
-		await esbuild.build(buildOptions);
+		await context.rebuild();
+		await context.dispose();
+		for (const workerContext of workerContexts.values()) {
+			await workerContext.dispose();
+		}
 	}
 }
 

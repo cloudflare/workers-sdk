@@ -1,7 +1,9 @@
 import { Blob } from "node:buffer";
+import path from "node:path";
 import { gzipSync } from "node:zlib";
 import chalk from "chalk";
 import { logger } from "../logger";
+import { getBasePath } from "../paths";
 import type { CfModule } from "./worker";
 import type { Metafile } from "esbuild";
 
@@ -47,7 +49,11 @@ export function printOffendingDependencies(
 ) {
 	const warning: string[] = [];
 
-	const dependenciesSorted = Object.entries(dependencies);
+	const basePath = getBasePath();
+	const dependenciesSorted = Object.entries(dependencies).filter(
+		// Ignore internal dependencies (note `dep` may be relative)
+		([dep]) => !path.resolve(dep).includes(basePath)
+	);
 	dependenciesSorted.sort(
 		([_adep, aData], [_bdep, bData]) =>
 			bData.bytesInOutput - aData.bytesInOutput

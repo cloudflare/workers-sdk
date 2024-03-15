@@ -21,6 +21,24 @@ import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
 
+function normaliseWorkerBundle(bundle: string): string {
+	// some fields in workerBundle, such as the undici form boundary
+	// or the file hashes, are randomly generated. Let's replace these
+	// dynamic values with static ones so we can properly test the
+	// contents of `workerBundle`
+	// see https://jestjs.io/docs/snapshot-testing#property-matchers
+	bundle = bundle.replace(
+		/------formdata-undici-0.[0-9]*/g,
+		"------formdata-undici-0.test"
+	);
+	bundle = bundle.replace(
+		/bundledWorker-0.[0-9]*.mjs/g,
+		"bundledWorker-0.test.mjs"
+	);
+	bundle = bundle.replace(/\/\/.+symbol-dispose\.js/, "// symbol-dispose.js");
+	return bundle;
+}
+
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -3488,6 +3506,10 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 				Content-Type: application/javascript+module
+
+				// symbol-dispose.js
+				Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+				Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 				// _worker.js
 				var worker_default = {
