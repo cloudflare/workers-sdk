@@ -64,6 +64,15 @@ See below for a summary of this repo's Actions
 - Actions
   - Add the issue to a Github project.
 
+### Generate changesets for dependabot PRs (dependabot-versioning-prs.yml)
+
+- Triggers
+  - Updates to PRs, by the dependabot user, which update any of:
+    - frameworks dependencies in C3,
+    - miniflare.
+- Actions
+  - Generates changesets for the affected package.
+
 ## Main branch actions
 
 ### Main branch (main.yml)
@@ -125,13 +134,6 @@ See below for a summary of this repo's Actions
   - Updates to PRs, on the Cloudflare fork, which touch files in the `packages/create-cloudflare` directory.
 - Actions
   - Runs the _quarantined_ E2E tests for C3. It is expected to sometimes fail.
-
-### C3: Generate changeset for dependabot PRs (c3-dependabot-versioning-prs.yml)
-
-- Triggers
-  - Updates to PRs, by the dependabot user, which update the frameworks dependencies in C3.
-- Actions
-  - Generates changesets for the updated framework.
 
 ### C3 E2E Tests (Dependabot) (c3-e2e-dependabot.yml)
 
