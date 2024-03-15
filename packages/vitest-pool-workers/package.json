@@ -1,6 +1,30 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
 	"version": "0.1.2",
+	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"worker",
+		"vitest",
+		"jest",
+		"pool",
+		"environment",
+		"miniflare",
+		"unit",
+		"integration",
+		"test"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vitest-pool-workers#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/vitest-pool-workers"
+	},
+	"license": "MIT",
 	"main": "dist/pool/index.mjs",
 	"types": "test/cloudflare-test.d.ts",
 	"exports": {
