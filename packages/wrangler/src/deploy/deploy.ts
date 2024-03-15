@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import chalk from "chalk";
@@ -51,8 +51,17 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../config/environment";
+import type {
+	BundleResult,
+	SourceMapMetadata,
+} from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
+import type {
+	CfModule,
+	CfPlacement,
+	CfWorkerInit,
+	CfWorkerSourceMap,
+} from "../deployment-bundle/worker";
 import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -83,6 +92,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	sourceMaps: boolean | undefined;
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
@@ -492,46 +502,52 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			preserveFileNames: config.preserve_file_names ?? false,
 		});
 
-		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
-			props.noBundle
-				? await noBundleWorker(props.entry, props.rules, props.outDir)
-				: await bundleWorker(
-						props.entry,
-						typeof destination === "string" ? destination : destination.path,
-						{
-							bundle: true,
-							additionalModules: [],
-							moduleCollector,
-							serveAssetsFromWorker:
-								!props.isWorkersSite && Boolean(props.assetPaths),
-							doBindings: config.durable_objects.bindings,
-							jsxFactory,
-							jsxFragment,
-							tsconfig: props.tsconfig ?? config.tsconfig,
-							minify,
-							legacyNodeCompat,
-							nodejsCompat,
-							define: { ...config.define, ...props.defines },
-							checkFetch: false,
-							assets: config.assets,
-							// enable the cache when publishing
-							bypassAssetCache: false,
-							services: config.services,
-							// We don't set workerDefinitions here,
-							// because we don't want to apply the dev-time
-							// facades on top of it
-							workerDefinitions: undefined,
-							// We want to know if the build is for development or publishing
-							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-							targetConsumer: "deploy",
-							local: false,
-							projectRoot: props.projectRoot,
-							defineNavigatorUserAgent: isNavigatorDefined(
-								props.compatibilityDate ?? config.compatibility_date,
-								props.compatibilityFlags ?? config.compatibility_flags
-							),
-						}
-				  );
+		const {
+			modules,
+			dependencies,
+			resolvedEntryPointPath,
+			bundleType,
+			...bundle
+		} = props.noBundle
+			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			: await bundleWorker(
+					props.entry,
+					typeof destination === "string" ? destination : destination.path,
+					{
+						bundle: true,
+						additionalModules: [],
+						moduleCollector,
+						serveAssetsFromWorker:
+							!props.isWorkersSite && Boolean(props.assetPaths),
+						doBindings: config.durable_objects.bindings,
+						jsxFactory,
+						jsxFragment,
+						tsconfig: props.tsconfig ?? config.tsconfig,
+						minify,
+						sourcemap: props.sourceMaps ?? config.source_maps,
+						legacyNodeCompat,
+						nodejsCompat,
+						define: { ...config.define, ...props.defines },
+						checkFetch: false,
+						assets: config.assets,
+						// enable the cache when publishing
+						bypassAssetCache: false,
+						services: config.services,
+						// We don't set workerDefinitions here,
+						// because we don't want to apply the dev-time
+						// facades on top of it
+						workerDefinitions: undefined,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+						targetConsumer: "deploy",
+						local: false,
+						projectRoot: props.projectRoot,
+						defineNavigatorUserAgent: isNavigatorDefined(
+							props.compatibilityDate ?? config.compatibility_date,
+							props.compatibilityFlags ?? config.compatibility_flags
+						),
+					}
+			  );
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -640,17 +656,37 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
+		const main: CfModule = {
+			name: entryPointName,
+			filePath: resolvedEntryPointPath,
+			content: content,
+			type: bundleType,
+		};
+		let sourceMaps: CfWorkerSourceMap[] | undefined = undefined;
+		if (props.sourceMaps ?? config.source_maps) {
+			const { sourceMapPath, sourceMapMetadata } =
+				bundle as Partial<BundleResult>;
+			if (sourceMapPath && sourceMapMetadata) {
+				// This worker was bundled by Wrangler, so we already know where
+				// the source map is located.
+				sourceMaps = loadBundledSourceMap(
+					main,
+					sourceMapPath,
+					sourceMapMetadata
+				);
+			} else if (props.noBundle) {
+				// Don't know where source maps are located, so need to find
+				// them by scanning the contents of the user-specified modules.
+				sourceMaps = scanSourceMaps([main, ...modules]);
+			}
+		}
 		const worker: CfWorkerInit = {
 			name: scriptName,
-			main: {
-				name: entryPointName,
-				filePath: resolvedEntryPointPath,
-				content: content,
-				type: bundleType,
-			},
+			main,
 			bindings,
 			migrations,
 			modules,
+			sourceMaps,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,
@@ -971,6 +1007,88 @@ function deployWfpUserWorker(
 	// Will go under the "Uploaded" text
 	logger.log("  Dispatch Namespace:", dispatchNamespace);
 	logger.log("Current Deployment ID:", deploymentId);
+}
+
+interface SourceMapV3 {
+	version: 3;
+	file: string;
+	sourceRoot: string;
+	sources: string[];
+	sourcesContent: string[];
+	mappings: string;
+	names: string[];
+}
+
+/**
+ * Load and normalize a source map emitted by Wrangler using the given path and
+ * directory metadata.
+ */
+function loadBundledSourceMap(
+	{ name, filePath }: CfModule,
+	sourceMapPath: string,
+	metadata: SourceMapMetadata
+): CfWorkerSourceMap[] {
+	if (filePath === undefined) {
+		return [];
+	}
+	const map = JSON.parse(readFileSync(sourceMapPath).toString()) as SourceMapV3;
+	// Overwrite the file property of the source map to match the name of the
+	// main module in the multipart upload.
+	map.file = name;
+	// Remove the temporary directory prefix generated by Wrangler that appears
+	// in the source root path.
+	map.sourceRoot = map.sourceRoot.slice(metadata.tmpDir.length);
+	map.sources = map.sources.map((source) => {
+		const originalPath = path.join(path.dirname(filePath), source);
+		// Remove the temporary build directory prefix generated by Wrangler
+		// that appears in the source path.
+		return originalPath.slice(metadata.entryDirectory.length + 1);
+	});
+	return [
+		{
+			name: name + ".map",
+			content: JSON.stringify(map),
+		},
+	];
+}
+
+/**
+ * Find source maps by scanning module contents for special `//#
+ * sourceMappingURL=` comments pointing to source map files.
+ */
+function scanSourceMaps(modules: CfModule[]): CfWorkerSourceMap[] {
+	const maps: CfWorkerSourceMap[] = [];
+	for (const module of modules) {
+		const commentPrefix = "//# sourceMappingURL=";
+		const commentIndex = module.content.indexOf(commentPrefix);
+		if (commentIndex === -1 || module.filePath === undefined) {
+			continue;
+		}
+		// Assume the source map path in the comment is relative to the
+		// generated file it appears in.
+		const commentPath = module.content
+			.slice(commentIndex + commentPrefix.length)
+			.toString()
+			.trim();
+		// Convert source map path to an absolute path that we can read.
+		const wranglerPath = path.join(path.dirname(module.filePath), commentPath);
+		if (!existsSync(wranglerPath)) {
+			throw new Error(
+				`Invalid source map path in ${module.filePath}: ${wranglerPath} does not exist.`
+			);
+		}
+		const map = JSON.parse(
+			readFileSync(wranglerPath).toString()
+		) as SourceMapV3;
+		// Overwrite the file property of the sourcemap to match the name of the
+		// corresponding module in the multipart upload.
+		map.file = module.name;
+		maps.push({
+			name: module.name + ".map",
+			content: JSON.stringify(map),
+		});
+	}
+	return maps;
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(

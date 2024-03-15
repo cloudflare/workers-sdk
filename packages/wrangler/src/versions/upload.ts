@@ -381,6 +381,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
 			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
 			logpush: undefined,
+			sourceMaps: undefined,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,

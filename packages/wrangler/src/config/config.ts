@@ -385,6 +385,7 @@ export const defaultWranglerConfig: Config = {
 	zone_id: undefined,
 	logfwdr: { bindings: [] },
 	logpush: undefined,
+	source_maps: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

@@ -1521,6 +1521,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		source_maps: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"source_maps",
+			isBoolean,
+			undefined
+		),
 	};
 
 	return environment;
