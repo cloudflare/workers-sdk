@@ -1,0 +1,13 @@
+name = "little-sea-39dd"
+main = "src/index.ts"
+compatibility_date = "2024-03-04"
+compatibility_flags = ["nodejs_compat"]
+node_compat = true
+
+
+[vars]
+DB_HOSTNAME = "hh-pgsql-public.ebi.ac.uk"
+DB_PORT = "5432"
+DB_NAME = "pfmegrnargs"
+DB_USERNAME = "reader"
+DB_PASSWORD = "NWDMCE5xdipIjRrp"

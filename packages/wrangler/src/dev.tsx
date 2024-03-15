@@ -792,11 +792,6 @@ async function validateDevServerSettings(
 	const compatibilityFlags =
 		args.compatibilityFlags ?? config.compatibility_flags;
 	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-		);
-	}
 
 	if (args.experimentalEnableLocalPersistence) {
 		logger.warn(
