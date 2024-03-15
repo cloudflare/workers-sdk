@@ -28,6 +28,7 @@ body:
         - Wrangler core
         - Miniflare
         - KV Asset Handler
+        - Workers Vitest Integration
         - Other
     validations:
       required: true
