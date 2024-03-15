@@ -387,6 +387,7 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// [DEPRECATED] secret:bulk
 	wrangler.command(
 		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
@@ -709,14 +710,8 @@ export function createCLIParser(argv: string[]) {
 		false,
 		() => {},
 		async () => {
-			if (process.stdout.isTTY) {
-				await printWranglerBanner();
-			} else {
-				logger.log(wranglerVersion);
-			}
-
-			logger.warn(
-				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
+			throw new UserError(
+				"The `wrangler version` command has been removed. You can run `wrangler --version` to get the Wrangler version or `wrangler versions --help` for Worker Versions subcommands."
 			);
 		}
 	);

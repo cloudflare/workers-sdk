@@ -38,12 +38,10 @@ describe("version", () => {
 	it("should output current version if !isTTY calling (deprecated) `version` command", async () => {
 		setIsTTY(false);
 
-		await runWrangler("version");
-		expect(std.out).toMatch(version);
-		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler version\` is deprecated and will be removed in a future major version. Please use \`wrangler --version\` instead.[0m
-
-		"
-	`);
+		await expect(runWrangler("version")).rejects.toMatchInlineSnapshot(
+			`[Error: The \`wrangler version\` command has been removed. You can run \`wrangler --version\` to get the Wrangler version or \`wrangler versions --help\` for Worker Versions subcommands.]`
+		);
+		expect(std.out).not.toMatch(version);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
 });

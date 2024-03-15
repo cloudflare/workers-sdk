@@ -40,7 +40,7 @@ describe("sentry", () => {
 	});
 	describe("non interactive", () => {
 		it("should not hit sentry in normal usage", async () => {
-			await runWrangler("version");
+			await runWrangler("--version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
@@ -68,7 +68,7 @@ describe("sentry", () => {
 		});
 
 		it("should not hit sentry in normal usage", async () => {
-			await runWrangler("version");
+			await runWrangler("--version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
