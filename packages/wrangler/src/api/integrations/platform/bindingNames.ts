@@ -51,7 +51,7 @@ function isVar(binding: unknown): boolean {
 		return true;
 	}
 
-  // TO IMPLEMENT
+	// TO IMPLEMENT
 	// if(isfullyserializable) return true;
 
 	return false;
