@@ -23,10 +23,12 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		})
 		.option("type", {
 			type: "string",
+			requiresArg: true,
 			description: "The type of application that should be created",
 		})
 		.option("framework", {
 			type: "string",
+			requiresArg: true,
 			description:
 				"The type of framework to use to create a web application (when using this option `--type` is ignored)",
 		})
@@ -50,10 +52,12 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		})
 		.option("existing-script", {
 			type: "string",
+			requiresArg: true,
 			hidden: true,
 		})
 		.option("template", {
 			type: "string",
+			requiresArg: true,
 			description:
 				"A degit compatible string or the url to a git repository (with optionally a directory path) containing the C3 template to use",
 		})
