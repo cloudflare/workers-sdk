@@ -288,6 +288,12 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					sendMetrics: config.send_metrics,
 				});
 			}
+		)
+		.command(
+			"bulk [json]",
+			"🗄️  Bulk upload secrets for a Worker",
+			secretBulkOptions,
+			secretBulkHandler
 		);
 };
 
@@ -354,6 +360,12 @@ type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();
 	const config = readConfig(secretBulkArgs.config, secretBulkArgs);
+
+	if (secretBulkArgs._.includes("secret:bulk")) {
+		logger.warn(
+			"`wrangler secret:bulk` is deprecated and will be removed in a future major version.\nPlease use `wrangler secret bulk` instead, which accepts exactly the same arguments."
+		);
+	}
 
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
