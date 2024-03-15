@@ -1,6 +1,7 @@
 import cookie from "cookie";
 import { randomBytes } from "isomorphic-random-example";
 import { now } from "./dep";
+import { testExplicitResourceManagement } from "./explicit-resource-management";
 import { logErrors } from "./log";
 
 console.log("startup log");
@@ -38,6 +39,12 @@ export default {
 					],
 				],
 			});
+
+		if (pathname === "/explicit-resource-management") {
+			const logs = [];
+			await testExplicitResourceManagement(logs);
+			return Response.json(logs);
+		}
 
 		if (request.headers.get("X-Test-URL") !== null) {
 			return new Response(request.url);

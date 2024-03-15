@@ -20,6 +20,24 @@ import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
+function normaliseWorkerBundle(bundle: string): string {
+	// some fields in workerBundle, such as the undici form boundary
+	// or the file hashes, are randomly generated. Let's replace these
+	// dynamic values with static ones so we can properly test the
+	// contents of `workerBundle`
+	// see https://jestjs.io/docs/snapshot-testing#property-matchers
+	bundle = bundle.replace(
+		/------formdata-undici-0.[0-9]*/g,
+		"------formdata-undici-0.test"
+	);
+	bundle = bundle.replace(
+		/bundledWorker-0.[0-9]*.mjs/g,
+		"bundledWorker-0.test.mjs"
+	);
+	bundle = bundle.replace(/\/\/.+symbol-dispose\.js/, "// symbol-dispose.js");
+	return bundle;
+}
+
 describe("deployment create", () => {
 	const std = mockConsoleMethods();
 	const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
@@ -1999,24 +2017,10 @@ and that at least one include rule is provided.
 				            }
 			          `);
 
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
-					);
-
 					// we care about a couple of things here, like the presence of `metadata`,
 					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 					// small enough, let's go ahead and snapshot test the whole thing
-					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+					expect(normaliseWorkerBundle(workerBundle)).toMatchInlineSnapshot(`
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
@@ -2024,6 +2028,10 @@ and that at least one include rule is provided.
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 				Content-Type: application/javascript+module
+
+				// symbol-dispose.js
+				Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+				Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 				// _worker.js
 				var worker_default = {
@@ -2315,24 +2323,11 @@ and that at least one include rule is provided.
 				}
 			`);
 
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = customWorkerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
-					);
-
 					// we care about a couple of things here, like the presence of `metadata`,
 					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 					// small enough, let's go ahead and snapshot test the whole thing
-					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+					expect(normaliseWorkerBundle(customWorkerBundle))
+						.toMatchInlineSnapshot(`
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
@@ -2340,6 +2335,10 @@ and that at least one include rule is provided.
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 				Content-Type: application/javascript+module
+
+				// symbol-dispose.js
+				Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+				Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 				// _worker.js
 				var worker_default = {
@@ -2731,19 +2730,9 @@ async function onRequest() {
 				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
 				}
 			`);
-					// some fields in workerBundle, such as the undici form boundary
-					// or the file hashes, are randomly generated. Let's replace these
-					// dynamic values with static ones so we can properly test the
-					// contents of `workerBundle`
-					// see https://jestjs.io/docs/snapshot-testing#property-matchers
-					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
-					);
-					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
-					);
+
+					let workerBundleWithConstantData =
+						normaliseWorkerBundle(workerBundle);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
 						/[0-9a-z]*-hello.wasm/g,
 						"test-hello.wasm"
@@ -2764,6 +2753,10 @@ async function onRequest() {
 				------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 				Content-Type: application/javascript+module
+
+				// symbol-dispose.js
+				Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+				Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 				// _worker.js
 				import wasm from \\"./test-hello.wasm\\";
