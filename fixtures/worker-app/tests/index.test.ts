@@ -148,4 +148,20 @@ describe("'wrangler dev' correctly renders pages", () => {
 			`hello2=world2; Domain=${ip}; Secure`,
 		]);
 	});
+
+	it("uses explicit resource management", async ({ expect }) => {
+		const response = await fetch(
+			`http://${ip}:${port}/explicit-resource-management`
+		);
+		expect(await response.json()).toMatchInlineSnapshot(`
+			[
+			  "Connected",
+			  "Connected",
+			  "Sent hello",
+			  "Sent goodbye",
+			  "Disconnected asynchronously",
+			  "Disconnected synchronously",
+			]
+		`);
+	});
 });

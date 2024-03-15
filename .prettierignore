@@ -47,3 +47,7 @@ packages/miniflare
 # so let's ignore all the c3 template files, exlcuding the c3.ts ones
 packages/create-cloudflare/templates/**/*.*
 !packages/create-cloudflare/templates/**/c3.ts
+
+# Prettier 2 doesn't support `using` syntax. We'd like to test this syntax works
+# so ignore files containing it until we upgrade to Prettier 3.
+fixtures/worker-app/src/explicit-resource-management.js
