@@ -303,6 +303,12 @@ interface EnvironmentInheritable {
 	logpush: boolean | undefined;
 
 	/**
+	 * Include source maps when uploading this worker.
+	 * @inheritable
+	 */
+	upload_source_maps: boolean | undefined;
+
+	/**
 	 * Specify how the worker should be located to minimize round-trip time.
 	 *
 	 * More details: https://developers.cloudflare.com/workers/platform/smart-placement/

@@ -19,6 +19,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
@@ -56,6 +57,7 @@ type Props = {
 	tsconfig: string | undefined;
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
+	uploadSourceMaps: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
@@ -262,41 +264,49 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			findAdditionalModules: config.find_additional_modules ?? false,
 			rules: props.rules,
 		});
+		const uploadSourceMaps =
+			props.uploadSourceMaps ?? config.upload_source_maps;
 
-		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
-			props.noBundle
-				? await noBundleWorker(props.entry, props.rules, props.outDir)
-				: await bundleWorker(
-						props.entry,
-						typeof destination === "string" ? destination : destination.path,
-						{
-							bundle: true,
-							additionalModules: [],
-							moduleCollector,
-							serveAssetsFromWorker: false,
-							doBindings: config.durable_objects.bindings,
-							jsxFactory,
-							jsxFragment,
-							tsconfig: props.tsconfig ?? config.tsconfig,
-							minify,
-							legacyNodeCompat,
-							nodejsCompat,
-							define: { ...config.define, ...props.defines },
-							checkFetch: false,
-							assets: config.assets,
-							// enable the cache when publishing
-							bypassAssetCache: false,
-							// We want to know if the build is for development or publishing
-							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-							targetConsumer: "deploy",
-							local: false,
-							projectRoot: props.projectRoot,
-							defineNavigatorUserAgent: isNavigatorDefined(
-								props.compatibilityDate ?? config.compatibility_date,
-								props.compatibilityFlags ?? config.compatibility_flags
-							),
-						}
-				  );
+		const {
+			modules,
+			dependencies,
+			resolvedEntryPointPath,
+			bundleType,
+			...bundle
+		} = props.noBundle
+			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			: await bundleWorker(
+					props.entry,
+					typeof destination === "string" ? destination : destination.path,
+					{
+						bundle: true,
+						additionalModules: [],
+						moduleCollector,
+						serveAssetsFromWorker: false,
+						doBindings: config.durable_objects.bindings,
+						jsxFactory,
+						jsxFragment,
+						tsconfig: props.tsconfig ?? config.tsconfig,
+						minify,
+						sourcemap: uploadSourceMaps,
+						legacyNodeCompat,
+						nodejsCompat,
+						define: { ...config.define, ...props.defines },
+						checkFetch: false,
+						assets: config.assets,
+						// enable the cache when publishing
+						bypassAssetCache: false,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+						targetConsumer: "deploy",
+						local: false,
+						projectRoot: props.projectRoot,
+						defineNavigatorUserAgent: isNavigatorDefined(
+							props.compatibilityDate ?? config.compatibility_date,
+							props.compatibilityFlags ?? config.compatibility_flags
+						),
+					}
+			  );
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -361,17 +371,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
+		const main = {
+			name: entryPointName,
+			filePath: resolvedEntryPointPath,
+			content: content,
+			type: bundleType,
+		};
 		const worker: CfWorkerInit = {
 			name: scriptName,
-			main: {
-				name: entryPointName,
-				filePath: resolvedEntryPointPath,
-				content: content,
-				type: bundleType,
-			},
+			main,
 			bindings,
 			migrations,
 			modules,
+			sourceMaps: uploadSourceMaps
+				? loadSourceMaps(main, modules, bundle)
+				: undefined,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,

@@ -91,6 +91,7 @@ describe("normalizeAndValidateConfig()", () => {
 			first_party_worker: undefined,
 			keep_vars: undefined,
 			logpush: undefined,
+			upload_source_maps: undefined,
 			placement: undefined,
 			tail_consumers: undefined,
 		});
@@ -966,6 +967,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
+				upload_source_maps: true,
 				placement: {
 					mode: "smart",
 				},
@@ -1043,6 +1045,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
+				upload_source_maps: "INVALID",
 				placement: {
 					mode: "INVALID",
 				},
@@ -1115,7 +1118,8 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
-			  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\"."
+			  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
+			  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."
 		`);
 		});
 
@@ -3330,6 +3334,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
+				upload_source_maps: true,
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -3375,6 +3380,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: false,
 				first_party_worker: false,
 				logpush: false,
+				upload_source_maps: false,
 			};
 			const rawConfig: RawConfig = {
 				name: "mock-name",
@@ -3399,6 +3405,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
+				upload_source_maps: true,
 				env: {
 					ENV1: rawEnv,
 				},
@@ -3672,6 +3679,7 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
+				upload_source_maps: "INVALID",
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -3709,7 +3717,8 @@ describe("normalizeAndValidateConfig()", () => {
 			    - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"node_compat\\" to be of type boolean but got \\"INVALID\\".
 			    - Expected \\"first_party_worker\\" to be of type boolean but got \\"INVALID\\".
-			    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\"."
+			    - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
+			    - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\"."
 		`);
 		});
 

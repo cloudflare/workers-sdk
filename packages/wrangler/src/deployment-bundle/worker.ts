@@ -281,6 +281,10 @@ export interface CfWorkerInit {
 	 */
 	modules: CfModule[] | undefined;
 	/**
+	 * The list of source maps to include on upload.
+	 */
+	sourceMaps: CfWorkerSourceMap[] | undefined;
+	/**
 	 * All the bindings
 	 */
 	bindings: {
@@ -327,4 +331,30 @@ export interface CfWorkerContext {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
+}
+
+export interface CfWorkerSourceMap {
+	/**
+	 * The name of the source map.
+	 *
+	 * @example
+	 * 'out.js.map'
+	 */
+	name: string;
+	/**
+	 * The content of the source map, which is a JSON object described by the v3
+	 * spec.
+	 *
+	 * @example
+	 * {
+	 *   "version" : 3,
+	 *   "file": "out.js",
+	 *   "sourceRoot": "",
+	 *   "sources": ["foo.js", "bar.js"],
+	 *   "sourcesContent": [null, null],
+	 *   "names": ["src", "maps", "are", "fun"],
+	 *   "mappings": "A,AAAB;;ABCDE;"
+	 * }
+	 */
+	content: string | Buffer;
 }
