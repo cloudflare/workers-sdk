@@ -703,7 +703,7 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
-	// version
+	// version (DEPRECATED)
 	wrangler.command(
 		"version",
 		false,
@@ -714,6 +714,10 @@ export function createCLIParser(argv: string[]) {
 			} else {
 				logger.log(wranglerVersion);
 			}
+
+			logger.warn(
+				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
+			);
 		}
 	);
 
