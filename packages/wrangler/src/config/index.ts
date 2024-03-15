@@ -31,16 +31,11 @@ export function readConfig<CommandArgs>(
 	args: CommandArgs &
 		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
 ): Config {
-	let rawConfig: RawConfig = {};
-	if (!configPath) {
-		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
-	}
-	// Load the configuration from disk if available
-	if (configPath?.endsWith("toml")) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
-	} else if (configPath?.endsWith("json")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
-	}
+	const { rawConfig, configPath: updateConfigPath } = getRawConfig<CommandArgs>(
+		configPath,
+		args
+	);
+	configPath = updateConfigPath;
 
 	// Process the top-level configuration.
 	const { config, diagnostics } = normalizeAndValidateConfig(
@@ -68,6 +63,30 @@ export function readConfig<CommandArgs>(
 	}
 
 	return config;
+}
+
+/**
+ * Get the raw (pre-processed) Wrangler configuration; read it from the give `configPath` if available.
+ * Returns the raw configuration alongside the `configPath` for it (which is equal to the provided one, if one was)
+ */
+export function getRawConfig<CommandArgs>(
+	configPath: string | undefined,
+	args: CommandArgs &
+		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
+) {
+	let rawConfig: RawConfig = {};
+	if (!configPath) {
+		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+	}
+
+	// Load the configuration from disk if available
+	if (configPath?.endsWith("toml")) {
+		rawConfig = parseTOML(readFileSync(configPath), configPath);
+	} else if (configPath?.endsWith("json")) {
+		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+	}
+
+	return { rawConfig, configPath };
 }
 
 /**
