@@ -1,6 +1,7 @@
 /* eslint-disable no-shadow */
 
 import * as Build from "./build";
+import * as BuildEnv from "./build-env";
 import * as Deploy from "./deploy";
 import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
@@ -41,6 +42,12 @@ export function pages(yargs: CommonYargsArgv) {
 						"Compile a folder of Cloudflare Pages Functions into a single Worker",
 						Build.Options,
 						Build.Handler
+					)
+					.command(
+						"build-env",
+						"Render a list of environment variables from the config file",
+						BuildEnv.Options,
+						BuildEnv.Handler
 					)
 					.command(
 						"optimize-routes [routesPath] [outputRoutesPath]",
