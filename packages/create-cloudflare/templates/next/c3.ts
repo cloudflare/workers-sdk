@@ -192,7 +192,7 @@ export default {
 			},
 		},
 	},
-	transformPackageJson: async () => {
+	transformPackageJson: async (_, ctx) => {
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";
 		const isNpmOrBun = isNpm || isBun;
@@ -207,6 +207,9 @@ export default {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
 				preview: `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static`,
 				deploy: `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+				...(usesTypescript(ctx) && {
+					"build-cf-types": `wrangler types --env-interface CloudflareEnv env.d.ts`,
+				}),
 			},
 		};
 	},
