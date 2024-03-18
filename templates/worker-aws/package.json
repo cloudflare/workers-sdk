@@ -15,7 +15,7 @@
 		"@aws-sdk/client-sqs": "^3.82.0"
 	},
 	"devDependencies": {
-		"@esbuild-plugins/node-modules-polyfill": "0.1.4",
+		"esbuild-plugins-node-modules-polyfill": "^1.6.3",
 		"worktop.build": "0.0.5",
 		"wrangler": "^3.0.0"
 	}

@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
+import { builtinModules } from "node:module";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -33,6 +33,11 @@ export const COMMON_ESBUILD_OPTIONS = {
 
 // build conditions used by esbuild, and when resolving custom `import` calls
 export const BUILD_CONDITIONS = ["workerd", "worker", "browser"];
+
+const modulesToPolyfill: Record<string, boolean | "empty"> = {
+	...Object.fromEntries(builtinModules.map((m) => [m, true])),
+	net: "empty",
+};
 
 /**
  * Information about Wrangler's bundling process that needs passed through
@@ -348,7 +353,12 @@ export async function bundleWorker(
 		plugins: [
 			moduleCollector.plugin,
 			...(legacyNodeCompat
-				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+				? [
+						nodeModulesPolyfillPlugin({
+							globals: { Buffer: true, process: true },
+							modules: modulesToPolyfill,
+						}),
+				  ]
 				: []),
 			nodejsCompatPlugin(!!nodejsCompat),
 			cloudflareInternalPlugin,
