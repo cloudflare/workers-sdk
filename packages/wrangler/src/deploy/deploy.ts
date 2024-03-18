@@ -1165,9 +1165,8 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 	const consumers = config.queues.consumers || [];
 	return consumers.map((consumer) => {
 		if (consumer.type === "http_pull") {
-			// Note: It's weird to define a pull consumer in a worker's config
 			const body: PostTypedConsumerBody = {
-				type: "http_pull",
+				type: consumer.type,
 				dead_letter_queue: consumer.dead_letter_queue,
 				settings: {
 					batch_size: consumer.max_batch_size,
@@ -1175,9 +1174,17 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 					visibility_timeout_ms: consumer.visibility_timeout_ms,
 				},
 			};
-			return postTypedConsumer(config, consumer.queue, body).then(() => [
-				`Consumer for ${consumer.queue}`,
-			]);
+			return postTypedConsumer(config, consumer.queue, body)
+				.then(() => [`Consumer for ${consumer.queue}`])
+				.catch((err) => {
+					const queueErr = err as FetchError;
+					if (queueErr.code === 11004) {
+						// consumer_exists
+						return Promise.resolve([`Consumer for ${consumer.queue}`]);
+					} else {
+						throw err;
+					}
+				});
 		} else {
 			const body: PutConsumerBody = {
 				dead_letter_queue: consumer.dead_letter_queue,

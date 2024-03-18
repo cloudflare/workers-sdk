@@ -101,7 +101,7 @@ export async function postTypedConsumer(
 	config: Config,
 	queueName: string,
 	body: PostTypedConsumerBody
-): Promise<ConsumerResponse> {
+): Promise<TypedConsumerResponse> {
 	const accountId = await requireAuth(config);
 	const queue = await getQueue(config, queueName);
 	return fetchResult(

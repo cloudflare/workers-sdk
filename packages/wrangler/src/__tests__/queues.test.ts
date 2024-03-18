@@ -26,12 +26,10 @@ describe("wrangler", () => {
 			🇶 Configure Workers Queues
 
 			Commands:
-			  wrangler queues list             List Queues
-			  wrangler queues create <name>    Create a Queue
-			  wrangler queues delete <name>    Delete a Queue
-			  wrangler queues consumer:http    Configure Queue HTTP Pull Consumers
-			  wrangler queues consumer:worker  Configure Queue Worker Consumers
-			  wrangler queues consumer         Configure Queue Consumers
+			  wrangler queues list           List Queues
+			  wrangler queues create <name>  Create a Queue
+			  wrangler queues delete <name>  Delete a Queue
+			  wrangler queues consumer       Configure Queue Consumers
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -321,8 +319,10 @@ describe("wrangler", () => {
 			Configure Queue Consumers
 
 			Commands:
-			  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Consumer
-			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Consumer
+			  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
+			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Worker Consumer
+			  wrangler queues consumer http                               Configure Queue HTTP Pull Consumers
+			  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -367,7 +367,7 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues consumer add <queue-name> <script-name>
 
-				Add a Queue Consumer
+				Add a Queue Worker Consumer
 
 				Positionals:
 				  queue-name   Name of the queue to configure  [string] [required]
@@ -517,7 +517,7 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues consumer remove <queue-name> <script-name>
 
-				Remove a Queue Consumer
+				Remove a Queue Worker Consumer
 
 				Positionals:
 				  queue-name   Name of the queue to configure  [string] [required]
@@ -564,25 +564,25 @@ describe("wrangler", () => {
 
 		describe("http_pull consumers", () => {
 			it("should show the correct help text", async () => {
-				await runWrangler("queues consumer:http --help");
+				await runWrangler("queues consumer http --help");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues consumer:http
+			"wrangler queues consumer http
 
-				Configure Queue HTTP Pull Consumers
+			Configure Queue HTTP Pull Consumers
 
-				Commands:
-				  wrangler queues consumer:http add <queue-name>     Add a Queue HTTP Pull Consumer
-				  wrangler queues consumer:http remove <queue-name>  Remove a Queue HTTP Pull Consumer
+			Commands:
+			  wrangler queues consumer http add <queue-name>     Add a Queue HTTP Pull Consumer
+			  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
-			`);
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 			});
 
 			describe("add", () => {
@@ -638,10 +638,10 @@ describe("wrangler", () => {
 				}
 
 				it("should show the correct help text", async () => {
-					await runWrangler("queues consumer:http add --help");
+					await runWrangler("queues consumer http add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues consumer:http add <queue-name>
+				"wrangler queues consumer http add <queue-name>
 
 				Add a Queue HTTP Pull Consumer
 
@@ -656,10 +656,10 @@ describe("wrangler", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				Options:
-				      --batch-size          Maximum number of messages per batch  [number]
-				      --message-retries     Maximum number of retries for each message  [number]
-				      --dead-letter-queue   Queue to send messages that failed to be consumed  [string]
-				      --visibility-timeout  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]"
+				      --batch-size               Maximum number of messages per batch  [number]
+				      --message-retries          Maximum number of retries for each message  [number]
+				      --dead-letter-queue        Queue to send messages that failed to be consumed  [string]
+				      --visibility-timeout-secs  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]"
 			`);
 				});
 
@@ -676,7 +676,7 @@ describe("wrangler", () => {
 					mockPostRequest("fake-queue-id", expectedBody);
 					mockGetQueueRequest("testQueue");
 
-					await runWrangler("queues consumer:http add testQueue");
+					await runWrangler("queues consumer http add testQueue");
 					expect(std.out).toMatchInlineSnapshot(`
 							"Adding consumer to queue testQueue.
 							Added consumer to queue testQueue."
@@ -697,7 +697,7 @@ describe("wrangler", () => {
 					mockGetQueueRequest("testQueue");
 
 					await runWrangler(
-						"queues consumer:http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout 6 --dead-letter-queue myDLQ"
+						"queues consumer http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout-secs 6 --dead-letter-queue myDLQ"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
@@ -764,23 +764,23 @@ describe("wrangler", () => {
 				}
 
 				it("should show the correct help text", async () => {
-					await runWrangler("queues consumer:http remove --help");
+					await runWrangler("queues consumer http remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-					"wrangler queues consumer:http remove <queue-name>
+				"wrangler queues consumer http remove <queue-name>
 
-					Remove a Queue HTTP Pull Consumer
+				Remove a Queue HTTP Pull Consumer
 
-					Positionals:
-					  queue-name  Name of the queue for the consumer  [string] [required]
+				Positionals:
+				  queue-name  Name of the queue for the consumer  [string] [required]
 
-					Flags:
-					  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-					  -c, --config                    Path to .toml configuration file  [string]
-					  -e, --env                       Environment to use for operations and .env files  [string]
-					  -h, --help                      Show help  [boolean]
-					  -v, --version                   Show version number  [boolean]"
-				`);
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 				});
 
 				it("should delete a pull consumer", async () => {
@@ -789,7 +789,7 @@ describe("wrangler", () => {
 						"fake-queue-id",
 						"fake-consumer-id"
 					);
-					await runWrangler("queues consumer:http remove testQueue");
+					await runWrangler("queues consumer http remove testQueue");
 
 					expect(requests.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`

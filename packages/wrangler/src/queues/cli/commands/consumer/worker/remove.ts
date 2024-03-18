@@ -1,10 +1,10 @@
-import { readConfig } from "../../../../config";
-import { logger } from "../../../../logger";
-import { deleteConsumer } from "../../../client";
+import { readConfig } from "../../../../../config";
+import { logger } from "../../../../../logger";
+import { deleteConsumer } from "../../../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
-} from "../../../../yargs-types";
+} from "../../../../../yargs-types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs

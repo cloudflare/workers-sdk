@@ -8,7 +8,7 @@ import {
 } from "./remove";
 import type { CommonYargsArgv } from "../../../../../yargs-types";
 
-export function consumers(yargs: CommonYargsArgv) {
+export function pullConsumers(yargs: CommonYargsArgv) {
 	yargs.command(
 		"add <queue-name>",
 		"Add a Queue HTTP Pull Consumer",

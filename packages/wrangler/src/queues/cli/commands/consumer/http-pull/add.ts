@@ -27,7 +27,7 @@ export function options(yargs: CommonYargsArgv) {
 				type: "string",
 				describe: "Queue to send messages that failed to be consumed",
 			},
-			"visibility-timeout": {
+			"visibility-timeout-secs": {
 				type: "number",
 				describe:
 					"The number of seconds a message will wait for an acknowledgement before being returned to the queue.",
@@ -45,8 +45,8 @@ export async function handler(
 		settings: {
 			batch_size: args.batchSize,
 			max_retries: args.messageRetries,
-			visibility_timeout_ms: args.visibilityTimeout
-				? args.visibilityTimeout * 1000
+			visibility_timeout_ms: args.visibilityTimeoutSecs
+				? args.visibilityTimeoutSecs * 1000
 				: undefined,
 		},
 		dead_letter_queue: args.deadLetterQueue,
