@@ -5,6 +5,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { MockWebSocket as MockWebSocket2 } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -211,13 +212,6 @@ describe("tail", () => {
 
 			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
-		});
-
-		it("errors when the websocket closes unexpectedly", async () => {
-			const api = mockWebsocketAPIs();
-			await api.closeHelper();
-
-			await expect(runWrangler("tail test-worker")).rejects.toThrow();
 		});
 
 		it("activates debug mode when the cli arg is passed in", async () => {
@@ -731,6 +725,51 @@ describe("tail", () => {
 			        "
 		      `);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("disconnects", () => {
+		it("errors when the websocket is already closed", async () => {
+			const api = mockWebsocketAPIs();
+			await api.closeHelper();
+
+			await expect(runWrangler("tail test-worker")).rejects.toThrow();
+		});
+
+		it("errors when the websocket stops reacting to pings (pretty format)", async () => {
+			const api = mockWebsocketAPIs();
+			jest.useFakeTimers({
+				doNotFake: ["setTimeout"],
+			});
+			// Block the websocket from replying to the ping
+			jest.spyOn(MockWebSocket2.prototype, "ping").mockImplementation();
+			await runWrangler("tail test-worker --format=pretty");
+			await api.ws.connected;
+			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
+			await jest.advanceTimersByTimeAsync(2000);
+			await expect(
+				jest.advanceTimersByTimeAsync(2000)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Tail disconnected, exiting."`
+			);
+		});
+
+		it("errors when the websocket stops reacting to pings (json format)", async () => {
+			const api = mockWebsocketAPIs();
+			jest.useFakeTimers({
+				doNotFake: ["setTimeout"],
+			});
+			// Block the websocket from replying to the ping
+			jest.spyOn(MockWebSocket2.prototype, "ping").mockImplementation();
+			await runWrangler("tail test-worker --format=json");
+			await api.ws.connected;
+			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
+			await jest.advanceTimersByTimeAsync(2000);
+			await expect(
+				jest.advanceTimersByTimeAsync(2000)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"\\"Tail disconnected, exiting.\\""`
+			);
 		});
 	});
 });
