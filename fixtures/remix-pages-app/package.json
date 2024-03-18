@@ -2,40 +2,45 @@
 	"name": "remix-pages-app",
 	"private": true,
 	"sideEffects": false,
+	"type": "module",
 	"scripts": {
 		"build": "remix build",
-		"type:tests": "tsc -p ./tests/tsconfig.json",
-		"dev:remix": "remix watch",
-		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
-		"dev": "remix build && run-p \"dev:*\"",
-		"start": "cross-env NODE_ENV=production pnpm run dev:wrangler",
-		"check:type": "tsc",
+		"dev": "remix dev --manual -c \"npm run start\"",
+		"lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
+		"start": "wrangler pages dev --compatibility-date=2023-06-21 ./public",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"typecheck": "tsc",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"@remix-run/cloudflare-pages": "^1.17.0",
-		"cross-env": "^7.0.3",
-		"react": "^17.0.2",
-		"react-dom": "^17.0.2",
-		"undici": "^5.28.3"
+		"@remix-run/cloudflare": "^2.8.1",
+		"@remix-run/cloudflare-pages": "^2.8.1",
+		"@remix-run/css-bundle": "^2.8.1",
+		"@remix-run/react": "^2.8.1",
+		"isbot": "^4.1.0",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^3.18.0",
-		"@remix-run/cloudflare": "^1.17.0",
-		"@remix-run/dev": "^1.17.0",
-		"@remix-run/eslint-config": "^1.17.0",
-		"@remix-run/react": "^1.17.0",
-		"@types/react": "^17.0.52",
-		"@types/react-dom": "^17.0.18",
-		"eslint": "^8.27.0",
-		"npm-run-all": "^4.1.5",
-		"remix": "^1.17.0",
-		"typescript": "^4.8.4",
+		"@cloudflare/workers-types": "^4.20240312.0",
+		"@remix-run/dev": "^2.8.1",
+		"@types/react": "^18.2.20",
+		"@types/react-dom": "^18.2.7",
+		"@typescript-eslint/eslint-plugin": "^6.7.4",
+		"@typescript-eslint/parser": "^6.7.4",
+		"eslint": "^8.38.0",
+		"eslint-import-resolver-typescript": "^3.6.1",
+		"eslint-plugin-import": "^2.28.1",
+		"eslint-plugin-jsx-a11y": "^6.7.1",
+		"eslint-plugin-react": "^7.33.2",
+		"eslint-plugin-react-hooks": "^4.6.0",
+		"typescript": "^5.1.0",
+		"undici": "^5.28.3",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	}
 }
