@@ -2,4 +2,4 @@
 "create-cloudflare": minor
 ---
 
-add `build-cf-types` script to Next.js projects
+feature: add `build-cf-types` script to Next.js projects
