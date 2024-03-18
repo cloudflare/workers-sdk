@@ -341,17 +341,19 @@ export async function getQueueResult(
 	}
 	await waitOnExecutionContext(ctx);
 
-	const explicitRetries: string[] = [];
+	const retryMessages: QueueRetryMessage[] = [];
 	const explicitAcks: string[] = [];
 	for (const message of batch.messages) {
-		if (message[kRetry]) explicitRetries.push(message.id);
+		if (message[kRetry]) retryMessages.push({ msgId: message.id });
 		if (message[kAck]) explicitAcks.push(message.id);
 	}
 	return {
 		outcome: "ok",
-		retryAll: batch[kRetryAll],
+		retryBatch: {
+			retry: batch[kRetryAll],
+		},
 		ackAll: batch[kAckAll],
-		explicitRetries,
+		retryMessages,
 		explicitAcks,
 	};
 }

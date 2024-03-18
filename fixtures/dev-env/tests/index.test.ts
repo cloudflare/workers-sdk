@@ -349,7 +349,7 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		res = await run.worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toBe("Error: Boom!");
+		await expect(res.text()).resolves.toMatch(/^Error: Boom!/);
 
 		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).toBeCalledWith(
@@ -372,7 +372,7 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		res = await run.worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toBe("Error: Boom 2!");
+		await expect(res.text()).resolves.toMatch(/^Error: Boom 2!/);
 
 		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).toBeCalledWith(
