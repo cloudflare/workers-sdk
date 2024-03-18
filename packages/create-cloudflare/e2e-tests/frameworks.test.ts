@@ -159,6 +159,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/test",
 			expectedText: "C3_TEST",
 		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
+		},
 		verifyBuild: {
 			outputDir: "./dist",
 			script: "build",
@@ -178,6 +182,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		verifyDev: {
 			route: "/test",
 			expectedText: "C3_TEST",
+		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
 		},
 		verifyBuild: {
 			outputDir: "./build/client",
@@ -226,6 +234,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		verifyDev: {
 			route: "/test",
 			expectedText: "C3_TEST",
+		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
 		},
 		verifyBuild: {
 			outputDir: "./dist",
