@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 feature: Add support for configuring HTTP Pull consumers for Queues
