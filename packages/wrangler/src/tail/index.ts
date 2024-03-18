@@ -218,7 +218,7 @@ export async function tailHandler(args: TailArgs) {
 		/** The corelation message to send to tail when pinging. */
 		const PING_MESSAGE = Buffer.from("wrangler tail ping");
 		/** How long to wait between pings. */
-		const PING_INTERVAL = 2000;
+		const PING_INTERVAL = 10000;
 
 		let waitingForPong = false;
 

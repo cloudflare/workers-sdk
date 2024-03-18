@@ -746,9 +746,9 @@ describe("tail", () => {
 			await runWrangler("tail test-worker --format=pretty");
 			await api.ws.connected;
 			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
-			await jest.advanceTimersByTimeAsync(2000);
+			await jest.advanceTimersByTimeAsync(10000);
 			await expect(
-				jest.advanceTimersByTimeAsync(2000)
+				jest.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Tail disconnected, exiting."`
 			);
@@ -763,10 +763,10 @@ describe("tail", () => {
 			jest.spyOn(MockWebSocket2.prototype, "ping").mockImplementation();
 			await runWrangler("tail test-worker --format=json");
 			await api.ws.connected;
-			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
-			await jest.advanceTimersByTimeAsync(2000);
+			// The ping is sent every 10 secs, so it should not fail until the second ping is due.
+			await jest.advanceTimersByTimeAsync(10000);
 			await expect(
-				jest.advanceTimersByTimeAsync(2000)
+				jest.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"\\"Tail disconnected, exiting.\\""`
 			);
