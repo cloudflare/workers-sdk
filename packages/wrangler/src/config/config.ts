@@ -364,7 +364,7 @@ export const defaultWranglerConfig: Config = {
 	},
 	usage_model: undefined,
 	rules: [],
-	build: {},
+	build: { command: undefined, watch_dir: "./src", cwd: undefined },
 	no_bundle: undefined,
 	minify: undefined,
 	node_compat: undefined,

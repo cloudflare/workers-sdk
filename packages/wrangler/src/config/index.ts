@@ -84,7 +84,7 @@ export function readConfig<CommandArgs>(
 	// If we detected a Pages project, run config file validation against
 	// Pages specific validation rules
 	if (isPagesConfig) {
-		logger.info(
+		logger.debug(
 			`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
 		);
 
