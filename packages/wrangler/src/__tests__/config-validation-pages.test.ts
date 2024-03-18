@@ -15,7 +15,7 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Running configuration file validation for Pages:
 			  - Configuration file cannot contain both both \\"main\\" and \\"pages_build_output_dir\\" configuration keys.
-			    			Please use \\"main\\" if you are deploying a Worker, or \\"pages_build_output_dir\\" if you are deploying a Pages project.
+			    Please use \\"main\\" if you are deploying a Worker, or \\"pages_build_output_dir\\" if you are deploying a Pages project.
 			  - Configuration file for Pages projects does not support \\"main\\""
 		`);
 		});
@@ -60,9 +60,9 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Running configuration file validation for Pages:
-			  - Configuration file contains environment names that are not supported by Pages projects:
-			    			unsupported-env-name-1,unsupported-env-name-2.
-			    			The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
+			  - Configuration file contains the following environment names that are not supported by Pages projects:
+			    \\"unsupported-env-name-1\\",\\"unsupported-env-name-2\\".
+			    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
 		`);
 
 			diagnostics = validatePagesConfig(config, [
@@ -73,9 +73,9 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Running configuration file validation for Pages:
-			  - Configuration file contains environment names that are not supported by Pages projects:
-			    			unsupported-env-name.
-			    			The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
+			  - Configuration file contains the following environment names that are not supported by Pages projects:
+			    \\"unsupported-env-name\\".
+			    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
 		`);
 		});
 	});

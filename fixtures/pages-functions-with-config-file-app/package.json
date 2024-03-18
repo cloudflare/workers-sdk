@@ -1,0 +1,20 @@
+{
+	"name": "pages-functions-with-config-file-app",
+	"private": true,
+	"sideEffects": false,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "npx wrangler pages dev",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"undici": "^5.28.3",
+		"wrangler": "workspace:*"
+	},
+	"engines": {
+		"node": ">=16.13"
+	}
+}

@@ -16,6 +16,7 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
+import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute, getZoneIdForPreview } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -28,7 +29,11 @@ import {
 } from "./index";
 import type { ProxyData } from "./api";
 import type { Config, Environment } from "./config";
-import type { Route, Rule } from "./config/environment";
+import type {
+	EnvironmentNonInheritable,
+	Route,
+	Rule,
+} from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
@@ -874,125 +879,160 @@ export function getBindings(
 	local: boolean,
 	args: AdditionalDevProps
 ): CfWorkerInit["bindings"] {
-	const bindings = {
-		kv_namespaces: [
-			...(configParam.kv_namespaces || []).map(
-				({ binding, preview_id, id }) => {
-					// In remote `dev`, we make folks use a separate kv namespace called
-					// `preview_id` instead of `id` so that they don't
-					// break production data. So here we check that a `preview_id`
-					// has actually been configured.
-					// This whole block of code will be obsoleted in the future
-					// when we have copy-on-write for previews on edge workers.
-					if (!preview_id && !local) {
-						// TODO: This error has to be a _lot_ better, ideally just asking
-						// to create a preview namespace for the user automatically
-						throw new UserError(
-							`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
-						); // Ugh, I really don't like this message very much
-					}
-					return {
-						binding,
-						id: preview_id ?? id,
-					};
+	/**
+	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
+	 * args to the `pages dev` command. These args will always take precedence
+	 * over the configuration file, and therefore should override corresponding
+	 * config in `wrangler.toml`.
+	 */
+	// merge KV bindings
+	const kvConfig = (configParam.kv_namespaces || []).map(
+		({ binding, preview_id, id }) => {
+			// In remote `dev`, we make folks use a separate kv namespace called
+			// `preview_id` instead of `id` so that they don't
+			// break production data. So here we check that a `preview_id`
+			// has actually been configured.
+			// This whole block of code will be obsoleted in the future
+			// when we have copy-on-write for previews on edge workers.
+			if (!preview_id && !local) {
+				// TODO: This error has to be a _lot_ better, ideally just asking
+				// to create a preview namespace for the user automatically
+				throw new UserError(
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your wrangler.toml`
+				); // Ugh, I really don't like this message very much
+			}
+			return {
+				binding,
+				id: preview_id ?? id,
+			};
+		}
+	);
+	const kvArgs = args.kv || [];
+	const mergedKVBindings = mergeWithOverride(kvConfig, kvArgs, "binding");
+
+	// merge DO bindings
+	const doConfig = (configParam.durable_objects || { bindings: [] }).bindings;
+	const doArgs = args.durableObjects || [];
+	const mergedDOBindings = mergeWithOverride(doConfig, doArgs, "name");
+
+	// merge D1 bindings
+	const d1Config = (configParam.d1_databases ?? []).map((d1Db) => {
+		const database_id = d1Db.preview_database_id
+			? d1Db.preview_database_id
+			: d1Db.database_id;
+
+		if (local) {
+			return { ...d1Db, database_id };
+		}
+		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
+		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
+			logger.log(
+				`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml\n--------------------\n`
+			);
+		}
+		return { ...d1Db, database_id };
+	});
+	const d1Args = args.d1Databases || [];
+	const mergedD1Bindings = mergeWithOverride(d1Config, d1Args, "binding");
+
+	// merge R2 bindings
+	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
+		configParam.r2_buckets?.map(
+			({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
+				// same idea as kv namespace preview id,
+				// same copy-on-write TODO
+				if (!preview_bucket_name && !local) {
+					throw new UserError(
+						`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
+					);
 				}
-			),
-			...(args.kv || []),
-		],
-		send_email: configParam.send_email,
-		// Use a copy of combinedVars since we're modifying it later
+				return {
+					binding,
+					bucket_name: preview_bucket_name ?? bucket_name,
+					jurisdiction,
+				};
+			}
+		) || [];
+	const r2Args = args.r2 || [];
+	const mergedR2Bindings = mergeWithOverride(r2Config, r2Args, "binding");
+
+	// merge service bindings
+	const servicesConfig = configParam.services || [];
+	const servicesArgs = args.services || [];
+	const mergedServiceBindings = mergeWithOverride(
+		servicesConfig,
+		servicesArgs,
+		"binding"
+	);
+
+	// Hyperdrive bindings
+	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
+		const connectionStringFromEnv =
+			process.env[
+				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
+			];
+		if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
+			throw new UserError(
+				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
+			);
+		}
+
+		// If there is a non-empty connection string specified in the environment,
+		// use that as our local connection string configuration.
+		if (connectionStringFromEnv) {
+			logger.log(
+				`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
+			);
+			hyperdrive.localConnectionString = connectionStringFromEnv;
+		}
+
+		return hyperdrive;
+	});
+
+	// Queues bindings ??
+	const queuesBindings = [
+		...(configParam.queues.producers || []).map((queue) => {
+			return { binding: queue.binding, queue_name: queue.queue };
+		}),
+	];
+
+	const bindings = {
+		// top-level fields
+		wasm_modules: configParam.wasm_modules,
+		text_blobs: configParam.text_blobs,
+		data_blobs: configParam.data_blobs,
+
+		// inheritable fields
+		dispatch_namespaces: configParam.dispatch_namespaces,
+		logfwdr: configParam.logfwdr,
+
+		// non-inheritable fields
 		vars: {
+			// Use a copy of combinedVars since we're modifying it later
 			...getVarsForDev(configParam, env),
 			...args.vars,
 		},
-		wasm_modules: configParam.wasm_modules,
-		text_blobs: configParam.text_blobs,
-		browser: configParam.browser,
-		ai: configParam.ai || args.ai,
-		data_blobs: configParam.data_blobs,
 		durable_objects: {
-			bindings: [
-				...(configParam.durable_objects || { bindings: [] }).bindings,
-				...(args.durableObjects || []),
-			],
+			bindings: mergedDOBindings,
 		},
-		queues: [
-			...(configParam.queues.producers || []).map((queue) => {
-				return { binding: queue.binding, queue_name: queue.queue };
-			}),
-		],
-		r2_buckets: [
-			...(configParam.r2_buckets?.map(
-				({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
-					// same idea as kv namespace preview id,
-					// same copy-on-write TODO
-					if (!preview_bucket_name && !local) {
-						throw new UserError(
-							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
-						);
-					}
-					return {
-						binding,
-						bucket_name: preview_bucket_name ?? bucket_name,
-						jurisdiction,
-					};
-				}
-			) || []),
-			...(args.r2 || []),
-		],
-		dispatch_namespaces: configParam.dispatch_namespaces,
-		mtls_certificates: configParam.mtls_certificates,
-		services: [...(configParam.services || []), ...(args.services || [])],
+		kv_namespaces: mergedKVBindings,
+		queues: queuesBindings,
+		r2_buckets: mergedR2Bindings,
+		d1_databases: mergedD1Bindings,
+		vectorize: configParam.vectorize,
+		constellation: configParam.constellation,
+		hyperdrive: hyperdriveBindings,
+		services: mergedServiceBindings,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
+		browser: configParam.browser,
+		ai: args.ai || configParam.ai,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
 			capnp: configParam.unsafe.capnp,
 		},
-		logfwdr: configParam.logfwdr,
-		d1_databases: [
-			...(configParam.d1_databases ?? []).map((d1Db) => {
-				const database_id = d1Db.preview_database_id
-					? d1Db.preview_database_id
-					: d1Db.database_id;
-
-				if (local) {
-					return { ...d1Db, database_id };
-				}
-				// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
-				if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
-					logger.log(
-						`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml\n--------------------\n`
-					);
-				}
-				return { ...d1Db, database_id };
-			}),
-			...(args.d1Databases || []),
-		],
-		vectorize: configParam.vectorize,
-		constellation: configParam.constellation,
-		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
-			const connectionStringFromEnv =
-				process.env[
-					`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
-				];
-			if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
-				throw new UserError(
-					`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
-				);
-			}
-
-			// If there is a non-empty connection string specified in the environment,
-			// use that as our local connection string configuration.
-			if (connectionStringFromEnv) {
-				logger.log(
-					`Found a non-empty WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING variable for binding. Hyperdrive will connect to this database during local development.`
-				);
-				hyperdrive.localConnectionString = connectionStringFromEnv;
-			}
-
-			return hyperdrive;
-		}),
+		mtls_certificates: configParam.mtls_certificates,
+		send_email: configParam.send_email,
 	};
 
 	if (bindings.constellation && bindings.constellation.length > 0) {
