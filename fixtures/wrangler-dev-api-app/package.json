@@ -6,5 +6,8 @@
 	"author": "",
 	"scripts": {
 		"dev": "node --no-warnings ./src/wrangler-dev.mjs"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

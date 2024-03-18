@@ -4,5 +4,8 @@
 	"sideEffects": false,
 	"exports": {
 		"./multiply.wasm": "./wasm/multiply.wasm"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

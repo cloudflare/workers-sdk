@@ -11,5 +11,8 @@
 		"@octokit/types": "^13.5.0",
 		"@octokit/webhooks-types": "^7.5.1",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

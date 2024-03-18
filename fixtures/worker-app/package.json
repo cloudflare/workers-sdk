@@ -19,5 +19,8 @@
 	"dependencies": {
 		"cookie": "^0.6.0",
 		"isomorphic-random-example": "workspace:^"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }
