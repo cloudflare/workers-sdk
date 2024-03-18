@@ -540,79 +540,141 @@ describe("r2", () => {
 		});
 
 		describe("event-notification", () => {
-			it("follows happy path as expected", async () => {
-				const config: EWCRequestBody = {
-					bucketName: "my-bucket",
-					queue: "deadbeef-0123-4567-8910-abcdefabcdef",
-					rules: [
-						{
-							actions: ["PutObject", "DeleteObject"],
-						},
-					],
-				};
-				msw.use(
-					rest.put(
-						"*/accounts/:accountId/event_notifications/r2/id/:queueUUID/event_notifications/r2/:bucketName/configuration",
-						async (request, response, context) => {
-							const { accountId } = request.params;
-							expect(accountId).toEqual("some-account-id");
-							expect(await request.json()).toEqual({
-								...config,
-								// We fill in `prefix` & `suffix` with empty strings if not
-								// provided
-								rules: [{ ...config.rules[0], prefix: "", suffix: "" }],
-							});
-							expect(request.headers.get("authorization")).toEqual(
-								"Bearer some-api-token"
-							);
-							return response.once(context.json(createFetchResult({})));
-						}
-					)
-				);
-				await expect(
-					runWrangler(
-						`r2 bucket event-notification create ${config.bucketName} --queue ${
-							config.queue
-						} --actions ${config.rules[0].actions.join(" ")}`
-					)
-				).resolves.toBe(undefined);
-				expect(std.out).toMatchInlineSnapshot(`
-			"Sending this configuration to \\"my-bucket\\":
-			{\\"bucketName\\":\\"my-bucket\\",\\"queue\\":\\"deadbeef-0123-4567-8910-abcdefabcdef\\",\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"DeleteObject\\"]}]}
-			Configuration created successfully!"
-		`);
+			describe("create", () => {
+				it("follows happy path as expected", async () => {
+					const config: EWCRequestBody = {
+						bucketName: "my-bucket",
+						queue: "deadbeef-0123-4567-8910-abcdefabcdef",
+						rules: [
+							{
+								actions: ["PutObject", "DeleteObject"],
+							},
+						],
+					};
+					msw.use(
+						rest.put(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async (request, response, context) => {
+								const { accountId } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									...config,
+									// We fill in `prefix` & `suffix` with empty strings if not
+									// provided
+									rules: [{ ...config.rules[0], prefix: "", suffix: "" }],
+								});
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket event-notification create ${
+								config.bucketName
+							} --queue ${
+								config.queue
+							} --actions ${config.rules[0].actions.join(" ")}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+							"Sending this configuration to \\"my-bucket\\":
+							{\\"bucketName\\":\\"my-bucket\\",\\"queue\\":\\"deadbeef-0123-4567-8910-abcdefabcdef\\",\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"DeleteObject\\"]}]}
+							Configuration created successfully!"
+					`);
+				});
+
+				it("errors if required options are not provided", async () => {
+					await expect(
+						runWrangler(
+							"r2 bucket event-notification create event-notification-test-001"
+						)
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Missing required arguments: actions, queue]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+							"
+							wrangler r2 bucket event-notification create <bucket>
+
+							Create new event notification configuration for an R2 bucket
+
+							Positionals:
+							  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+							Flags:
+							  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+							  -c, --config                    Path to .toml configuration file  [string]
+							  -e, --env                       Environment to use for operations and .env files  [string]
+							  -h, --help                      Show help  [boolean]
+							  -v, --version                   Show version number  [boolean]
+
+							Options:
+							      --actions  Specify a list of actions for which to emit notifications. ex. '--actions PutObject DeleteObject'  [array] [required] [choices: \\"PutObject\\", \\"DeleteObject\\", \\"CompleteMultipartUpload\\", \\"AbortMultipartUpload\\", \\"CopyObject\\", \\"LifecycleDeletion\\"]
+							      --prefix   only actions on objects with this prefix will emit notifications  [string]
+							      --suffix   only actions on objects with this suffix will emit notifications  [string]
+							      --queue    The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+					`);
+				});
 			});
 
-			it("errors if required options are not provided", async () => {
-				await expect(
-					runWrangler(
-						"r2 bucket event-notification create event-notification-test-001"
-					)
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Missing required arguments: actions, queue]`
-				);
-				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2 bucket event-notification create <bucket>
+			describe("delete", () => {
+				it("follows happy path as expected", async () => {
+					const bucketName = "my-bucket";
+					const queue = "deadbeef-0123-4567-8910-abcdefabcdef";
+					msw.use(
+						rest.delete(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async (request, response, context) => {
+								const { accountId } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket event-notification delete ${bucketName} --queue ${queue}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Disabling event notifications for \\"my-bucket\\" to queue deadbeef-0123-4567-8910-abcdefabcdef...
+				Configuration deleted successfully!"
+			`);
+				});
 
-			Create new event notification configuration for an R2 bucket
+				it("errors if required options are not provided", async () => {
+					await expect(
+						runWrangler(
+							"r2 bucket event-notification delete event-notification-test-001"
+						)
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Missing required argument: queue]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket event-notification delete <bucket>
 
-			Positionals:
-			  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+				Delete event notification configuration for an R2 bucket and queue
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+				Positionals:
+				  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
 
-			Options:
-			      --actions  Specify a list of actions for which to emit notifications. ex. '--actions PutObject DeleteObject'  [array] [required] [choices: \\"PutObject\\", \\"DeleteObject\\", \\"CompleteMultipartUpload\\", \\"AbortMultipartUpload\\", \\"CopyObject\\", \\"LifecycleDeletion\\"]
-			      --prefix   only actions on objects with this prefix will emit notifications  [string]
-			      --suffix   only actions on objects with this suffix will emit notifications  [string]
-			      --queue    The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
-		`);
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				      --queue  The ID of the queue that is configured to receive notifications. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+			`);
+				});
 			});
 		});
 	});

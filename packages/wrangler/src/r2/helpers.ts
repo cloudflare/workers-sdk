@@ -344,6 +344,19 @@ export type EWCRequestBody = {
 	}>;
 };
 
+function eventNotificationHeaders(apiCredentials: ApiCredentials): HeadersInit {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+
+	if ("apiToken" in apiCredentials) {
+		headers["Authorization"] = `Bearer ${apiCredentials.apiToken}`;
+	} else {
+		headers["X-Auth-Key"] = apiCredentials.authKey;
+		headers["X-Auth-Email"] = apiCredentials.authEmail;
+	}
+	return headers;
+}
 /** Construct & transmit notification configuration to EWC.
  *
  * On success, receive HTTP 200 response with a body like:
@@ -364,17 +377,7 @@ export async function putEventNotificationConfig(
 	prefix?: string,
 	suffix?: string
 ): Promise<{ event_notification_detail_id: string }> {
-	const headers: HeadersInit = {
-		"Content-Type": "application/json",
-	};
-
-	if ("apiToken" in apiCredentials) {
-		headers["Authorization"] = `Bearer ${apiCredentials.apiToken}`;
-	} else {
-		headers["X-Auth-Key"] = apiCredentials.authKey;
-		headers["X-Auth-Email"] = apiCredentials.authEmail;
-	}
-
+	const headers = eventNotificationHeaders(apiCredentials);
 	const body: EWCRequestBody = {
 		bucketName,
 		queue: queueUUID,
@@ -383,9 +386,24 @@ export async function putEventNotificationConfig(
 	logger.log(
 		`Sending this configuration to "${bucketName}":\n${JSON.stringify(body)}`
 	);
-
 	return await fetchResult<{ event_notification_detail_id: string }>(
-		`/accounts/${accountId}/event_notifications/r2/id/${queueUUID}/event_notifications/r2/${bucketName}/configuration`,
+		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queueUUID}`,
 		{ method: "PUT", body: JSON.stringify(body), headers }
+	);
+}
+
+export async function deleteEventNotificationConfig(
+	apiCredentials: ApiCredentials,
+	accountId: string,
+	bucketName: string,
+	queueUUID: string
+): Promise<null> {
+	const headers = eventNotificationHeaders(apiCredentials);
+	logger.log(
+		`Disabling event notifications for "${bucketName}" to queue ${queueUUID}...`
+	);
+	return await fetchResult<null>(
+		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queueUUID}`,
+		{ method: "DELETE", headers }
 	);
 }
