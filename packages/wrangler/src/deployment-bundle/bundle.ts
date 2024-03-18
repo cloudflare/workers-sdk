@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
+import { builtinModules } from "node:module";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import { nodeModulesPolyfillPlugin } from "esbuild-plugins-node-modules-polyfill";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
@@ -84,6 +84,11 @@ function getBuildPlatform(): esbuild.Platform {
 	}
 	return platform as esbuild.Platform;
 }
+
+const modulesToPolyfill: Record<string, boolean | "empty"> = {
+	...Object.fromEntries(builtinModules.map((m) => [m, true])),
+	net: "empty",
+};
 
 /**
  * Information about Wrangler's bundling process that needs passed through
@@ -436,9 +441,10 @@ export async function bundleWorker(
 			...(nodejsCompatMode === "als" ? [asyncLocalStoragePlugin] : []),
 			...(nodejsCompatMode === "legacy"
 				? [
-						NodeGlobalsPolyfills({ buffer: true }),
-						standardURLPlugin(),
-						NodeModulesPolyfills(),
+						nodeModulesPolyfillPlugin({
+							globals: { Buffer: true, process: true },
+							modules: modulesToPolyfill,
+						}),
 					]
 				: []),
 			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
