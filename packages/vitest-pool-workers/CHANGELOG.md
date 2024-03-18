@@ -1,55 +1,29 @@
 # @cloudflare/vitest-pool-workers
 
-## 0.0.8
+## 0.1.2
 
 ### Patch Changes
 
-- Updated dependencies [[`1235d48`](https://github.com/cloudflare/workers-sdk/commit/1235d48fed9f4e348011fd62fce6458006947501), [`2680462`](https://github.com/cloudflare/workers-sdk/commit/268046269394e27654550ad034d286aa0e6aaf4b), [`27fb22b`](https://github.com/cloudflare/workers-sdk/commit/27fb22b7c6b224aecc852915d9fee600d9d86efc), [`046930e`](https://github.com/cloudflare/workers-sdk/commit/046930eb898db6d45a6b26751dede07793435d28)]:
-  - miniflare@3.20240304.1
-  - wrangler@3.33.0
+- Updated dependencies [[`a0768bc`](https://github.com/cloudflare/workers-sdk/commit/a0768bcc9d76be8a88fe3e1aa45f3b3805da3df6)]:
+  - wrangler@3.34.2
 
-## 0.0.7
-
-### Patch Changes
-
-- Updated dependencies [[`5b85dc9`](https://github.com/cloudflare/workers-sdk/commit/5b85dc949b1f7c8d5e8d083b37dd84d38c4ea978), [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f), [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f)]:
-  - wrangler@3.32.0
-  - miniflare@3.20240304.0
-
-## 0.0.6
+## 0.1.1
 
 ### Patch Changes
 
-- Updated dependencies [[`82a3f94`](https://github.com/cloudflare/workers-sdk/commit/82a3f94db091c893b5dfc9496aad6154a54474c5), [`d27e2a7`](https://github.com/cloudflare/workers-sdk/commit/d27e2a70904aab98b4e5c7279661a8d98e7da917), [`b0bd413`](https://github.com/cloudflare/workers-sdk/commit/b0bd4137f8504c1a96c5fa60f25c41028c9ba23e), [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423), [`30694a3`](https://github.com/cloudflare/workers-sdk/commit/30694a31d65016e56e30d14a3b14f2fed6df4370), [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423), [`a5231de`](https://github.com/cloudflare/workers-sdk/commit/a5231decbf18898811749a64f8e36be4aa5fd941), [`3dd9089`](https://github.com/cloudflare/workers-sdk/commit/3dd9089f34d30dcd6f03e63093e86efa9b8c1e1f)]:
-  - wrangler@3.31.0
-  - miniflare@3.20240223.1
+- Updated dependencies [[`2e50d51`](https://github.com/cloudflare/workers-sdk/commit/2e50d51632dfe905bd32de8176231bb256c88dab)]:
+  - miniflare@3.20240304.2
+  - wrangler@3.34.1
 
-## 0.0.5
+## 0.1.0
 
-### Patch Changes
+### Minor Changes
 
-- Updated dependencies [[`2ed7f32`](https://github.com/cloudflare/workers-sdk/commit/2ed7f3209bc6bffa85f409d344d6ed76df8686f9), [`65d0399`](https://github.com/cloudflare/workers-sdk/commit/65d0399c0757881c41582972d14afa02f02fffb4), [`65d0399`](https://github.com/cloudflare/workers-sdk/commit/65d0399c0757881c41582972d14afa02f02fffb4), [`54f6bfc`](https://github.com/cloudflare/workers-sdk/commit/54f6bfcea14b89cae99f3c26b52c28bcd408aba7)]:
-  - wrangler@3.30.1
+- [#5241](https://github.com/cloudflare/workers-sdk/pull/5241) [`ca891e7`](https://github.com/cloudflare/workers-sdk/commit/ca891e783a41053770f278b91f9001c477550743) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: implement Workers Vitest integration
 
-## 0.0.4
-
-### Patch Changes
-
-- Updated dependencies [[`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1), [`c2f3f1e`](https://github.com/cloudflare/workers-sdk/commit/c2f3f1e37c1a8f0958676306f3128cd87265ea5b)]:
-  - miniflare@3.20240223.0
-  - wrangler@3.30.0
-
-## 0.0.3
+  Introducing the new Workers Vitest integration! The `@cloudflare/vitest-pool-workers` package allows you to write unit and integration tests using Vitest that run inside the Workers runtime. Refer to the [documentation](https://developers.cloudflare.com/workers/testing/vitest-integration/) and [examples](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/vitest-pool-workers-examples/) for more information.
 
 ### Patch Changes
 
-- Updated dependencies [[`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23), [`b03db864`](https://github.com/cloudflare/workers-sdk/commit/b03db864a36924c31b8ddd82a027c83df4f68c43), [`1c460287`](https://github.com/cloudflare/workers-sdk/commit/1c460287f8836102b372ce0c7dddec093259692e), [`50f93bd2`](https://github.com/cloudflare/workers-sdk/commit/50f93bd2ce8f14294bee73b844897c5bfa083955), [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23), [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23), [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23), [`5693d076`](https://github.com/cloudflare/workers-sdk/commit/5693d076e2aab99d4736649d5b467689ce25cb23)]:
-  - wrangler@3.29.0
-  - miniflare@3.20240208.0
-
-## 0.0.2
-
-### Patch Changes
-
-- Updated dependencies [[`7723ac17`](https://github.com/cloudflare/workers-sdk/commit/7723ac17906f894afe9af2152437726ac09a6290), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229), [`027f9719`](https://github.com/cloudflare/workers-sdk/commit/027f971975a48a564603275f3583d21e9d053229)]:
-  - miniflare@3.20240130.0
+- Updated dependencies [[`03484c2`](https://github.com/cloudflare/workers-sdk/commit/03484c2d64f42a2820feeec9076dc3f210baf4f9), [`29e8151`](https://github.com/cloudflare/workers-sdk/commit/29e8151bc2235bd13074584df5f90187955123d2), [`4730b6c`](https://github.com/cloudflare/workers-sdk/commit/4730b6c087080d79838d3fd86480d8aff693834a), [`bd935cf`](https://github.com/cloudflare/workers-sdk/commit/bd935cfdf1bebfff53b1817d475b1d36eccec9c0)]:
+  - wrangler@3.34.0

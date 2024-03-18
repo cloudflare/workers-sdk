@@ -1,0 +1,34 @@
+import { randomBytes } from "node:crypto";
+import { env, SELF } from "cloudflare:test";
+import { expect, it } from "vitest";
+import "../src/"; // Currently required to automatically rerun tests when `main` changes
+
+it("consumes queue messages", async () => {
+	// `SELF` here points to the worker running in the current isolate.
+	// This gets its handler from the `main` option in `vitest.config.ts`.
+	// Importantly, it uses the exact `import("../src").default` instance we could
+	// import in this file as its handler. Note the `SELF.queue()` method
+	// is experimental, and requires the `service_binding_extra_handlers`
+	// compatibility flag to be enabled.
+	const messages: ServiceBindingQueueMessage<QueueJob>[] = [
+		{
+			id: randomBytes(16).toString("hex"),
+			timestamp: new Date(1000),
+			body: { key: "/1", value: "one" },
+		},
+		{
+			id: randomBytes(16).toString("hex"),
+			timestamp: new Date(2000),
+			body: { key: "/2", value: "two" },
+		},
+	];
+	const result = await SELF.queue("queue", messages);
+	expect(result.outcome).toBe("ok");
+	expect(result.retryAll).toBe(false); // `true` if `batch.retryAll()` called
+	expect(result.ackAll).toBe(false); // `true` if `batch.ackAll()` called
+	expect(result.explicitRetries).toStrictEqual([]);
+	expect(result.explicitAcks).toStrictEqual([messages[0].id, messages[1].id]);
+
+	expect(await env.QUEUE_RESULTS.get("/1")).toBe("ONE");
+	expect(await env.QUEUE_RESULTS.get("/2")).toBe("TWO");
+});

@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.14.2
+
+### Patch Changes
+
+- [#5249](https://github.com/cloudflare/workers-sdk/pull/5249) [`5315602`](https://github.com/cloudflare/workers-sdk/commit/531560267ce2527fdce6fa3b6685bde1610defdb) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - test: add vitest-pool-workers package and example tests to `hello-world` templates
+
+## 2.14.1
+
+### Patch Changes
+
+- [#5228](https://github.com/cloudflare/workers-sdk/pull/5228) [`a72fccb`](https://github.com/cloudflare/workers-sdk/commit/a72fccb9cfa98669aebf4d485efb5785bb9a112c) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: remove tab_width from all template .editorconfig files
+
 ## 2.14.0
 
 ### Minor Changes

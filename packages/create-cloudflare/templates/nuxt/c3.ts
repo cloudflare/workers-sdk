@@ -1,12 +1,13 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
+import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import { getLatestTypesEntrypoint } from "../../src/workers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 

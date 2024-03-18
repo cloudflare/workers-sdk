@@ -1,7 +1,15 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Mutex, Response } from "miniflare";
+import {
+	CACHE_PLUGIN_NAME,
+	D1_PLUGIN_NAME,
+	DURABLE_OBJECTS_PLUGIN_NAME,
+	KV_PLUGIN_NAME,
+	Mutex,
+	R2_PLUGIN_NAME,
+	Response,
+} from "miniflare";
 import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
 import type { Awaitable, Miniflare, Request, WorkerOptions } from "miniflare";
 
@@ -124,6 +132,9 @@ interface StackedStorageState {
 	mutex: Mutex;
 	// Current size of the stack
 	depth: number;
+	// If we failed to push/pop stacks for any reason, mark the state as broken.
+	// In this case, any future operation will fail.
+	broken: boolean;
 	// All of our persistence paths will be using `Miniflare`'s temporary directory
 	// which is generated once when calling `new Miniflare()`. We never change any
 	// `*Persist` settings in `setOptions()` calls, so persistence paths for a given
@@ -151,6 +162,7 @@ function getState(mf: Miniflare) {
 		state = {
 			mutex: new Mutex(),
 			depth: 0,
+			broken: false,
 			persistPaths: Array.from(new Set(persistPaths.values())),
 			durableObjectPersistPath,
 		};
@@ -266,41 +278,115 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 	await fs.rm(stackFramePath, { recursive: true, force: true });
 }
 
+const PLUGIN_PRODUCT_NAMES: Record<string, string | undefined> = {
+	[CACHE_PLUGIN_NAME]: "Cache",
+	[D1_PLUGIN_NAME]: "D1",
+	[DURABLE_OBJECTS_PLUGIN_NAME]: "Durable Objects",
+	[KV_PLUGIN_NAME]: "KV",
+	[R2_PLUGIN_NAME]: "R2",
+};
+const LIST_FORMAT = new Intl.ListFormat("en-US");
+
+function checkAllStorageOperationsResolved(
+	action: "push" | "pop",
+	source: string,
+	persistPaths: string[],
+	results: PromiseSettledResult<void>[]
+): boolean {
+	const failedProducts: string[] = [];
+	const lines: string[] = [];
+	for (let i = 0; i < results.length; i++) {
+		const result = results[i];
+		if (result.status === "rejected") {
+			const pluginName = path.basename(persistPaths[i]);
+			const productName = PLUGIN_PRODUCT_NAMES[pluginName] ?? pluginName;
+			failedProducts.push(productName);
+			lines.push(`- ${result.reason}`);
+		}
+	}
+	if (failedProducts.length > 0) {
+		const separator = "=".repeat(80);
+		lines.unshift(
+			"",
+			separator,
+			`Failed to ${action} isolated storage stack frame in ${source}.`,
+			"This usually means your Worker tried to access storage outside of a test.",
+			`In particular, we were unable to ${action} ${LIST_FORMAT.format(
+				failedProducts
+			)} storage.`,
+			"Ensure you `await` all `Promise`s that read or write to these services.",
+			"\x1b[2m"
+		);
+		lines.push("\x1b[22m" + separator, "");
+		console.error(lines.join("\n"));
+		return false;
+	}
+	return true;
+}
+
 async function handleStorageRequest(
 	request: Request,
 	mf: Miniflare
 ): Promise<Response> {
 	const state = getState(mf);
+	if (state.broken) {
+		return new Response(
+			"Isolated storage failed. There should be additional logs above.",
+			{ status: 500 }
+		);
+	}
 
 	// Assuming all Durable Objects have been aborted at this point, so we can
 	// copy/delete `.sqlite` files as required
 
+	const source =
+		request.headers.get("MF-Vitest-Source") ?? "an unknown location";
+
+	let success: boolean;
 	if (request.method === "POST" /* push */) {
-		await state.mutex.runWith(async () => {
+		success = await state.mutex.runWith(async () => {
 			state.depth++;
-			await Promise.all(
+			const results = await Promise.allSettled(
 				state.persistPaths.map((persistPath) =>
 					pushStackedStorage(state.depth, persistPath)
 				)
 			);
+			return checkAllStorageOperationsResolved(
+				"push",
+				source,
+				state.persistPaths,
+				results
+			);
 		});
-		return new Response(null, { status: 204 });
-	}
-
-	if (request.method === "DELETE" /* pop */) {
-		await state.mutex.runWith(async () => {
+	} else if (request.method === "DELETE" /* pop */) {
+		success = await state.mutex.runWith(async () => {
 			assert(state.depth > 0, "Stack underflow");
-			await Promise.all(
+			const results = await Promise.allSettled(
 				state.persistPaths.map((persistPath) =>
 					popStackedStorage(state.depth, persistPath)
 				)
 			);
 			state.depth--;
+			return checkAllStorageOperationsResolved(
+				"pop",
+				source,
+				state.persistPaths,
+				results
+			);
 		});
-		return new Response(null, { status: 204 });
+	} else {
+		return new Response(null, { status: 405 });
 	}
 
-	return new Response(null, { status: 405 });
+	if (success) {
+		return new Response(null, { status: 204 });
+	} else {
+		state.broken = true;
+		return new Response(
+			"Isolated storage failed. There should be additional logs above.",
+			{ status: 500 }
+		);
+	}
 }
 
 export async function handleDurableObjectsRequest(

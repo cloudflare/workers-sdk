@@ -9015,6 +9015,34 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
+
+	describe("--dispatch-namespace", () => {
+		it("should upload to dispatch namespace", async () => {
+			writeWranglerToml();
+			const scriptContent = `
+      export default {
+				fetch() {
+					return new Response("Hello, World!");
+				}
+			}
+    `;
+			fs.writeFileSync("index.js", scriptContent);
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+
+			await runWrangler(
+				"deploy --dispatch-namespace test-dispatch-namespace index.js"
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			  Dispatch Namespace: test-dispatch-namespace
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

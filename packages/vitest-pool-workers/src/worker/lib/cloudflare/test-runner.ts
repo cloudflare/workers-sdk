@@ -5,6 +5,7 @@ import {
 	fetchMock,
 	getSerializedOptions,
 	internalEnv,
+	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
@@ -138,8 +139,16 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 	}
 
-	async updateStackedStorage(action: "push" | "pop"): Promise<void> {
+	async updateStackedStorage(
+		action: "push" | "pop",
+		source: Test | Suite
+	): Promise<void> {
 		if (!this.isolatedStorage) return;
+
+		// Ensure all `ctx.waitUntil()` calls complete before aborting all objects.
+		// `ctx.waitUntil()`s may contain storage calls (e.g. caching responses)
+		// that could re-create Durable Objects and interrupt stack operations.
+		await waitForGlobalWaitUntil();
 
 		// Abort all Durable Objects apart from those marked with `preventEviction`
 		// (i.e. the runner object and the proxy server).
@@ -149,9 +158,16 @@ export default class WorkersTestRunner extends VitestTestRunner {
 
 		// Send request to pool loopback service to update `.sqlite` files
 		const url = "http://placeholder/storage";
+		const sourceString = `${source.file?.name ?? "an unknown file"}'s ${
+			source.type
+		} ${JSON.stringify(source.name)}`;
+
 		const res = await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
 			url,
-			{ method: action === "pop" ? "DELETE" : "POST" }
+			{
+				method: action === "pop" ? "DELETE" : "POST",
+				headers: { "MF-Vitest-Source": sourceString },
+			}
 		);
 		assert.strictEqual(res.status, 204, await res.text());
 	}
@@ -175,6 +191,12 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log("onAfterRunFiles");
 			await scheduler.wait(100);
 		}
+
+		// Ensure all `ctx.waitUntil()` calls complete before disposing the runtime
+		// (if using `vitest run`) and aborting all objects. `ctx.waitUntil()`s may
+		// contain storage calls (e.g. caching responses) that could try to access
+		// aborted Durable Objects.
+		await waitForGlobalWaitUntil();
 		// @ts-expect-error `VitestTestRunner` doesn't define `onAfterRunFiles`, but
 		//  could in the future.
 		return super.onAfterRunFiles?.();
@@ -185,7 +207,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(2)}onBeforeRunSuite: ${suite.name}`);
 			await scheduler.wait(100);
 		}
-		await this.updateStackedStorage("push");
+		await this.updateStackedStorage("push", suite);
 
 		return super.onBeforeRunSuite(suite);
 	}
@@ -194,7 +216,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(2)}onAfterRunSuite: ${suite.name}`);
 			await scheduler.wait(100);
 		}
-		await this.updateStackedStorage("pop");
+		await this.updateStackedStorage("pop", suite);
 
 		return super.onAfterRunSuite(suite);
 	}
@@ -209,7 +231,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		if (newActive !== undefined) tries.active = newActive;
 		if (active !== undefined && !tries.popped.has(active)) {
 			tries.popped.add(active);
-			await this.updateStackedStorage("pop");
+			await this.updateStackedStorage("pop", test);
 			return true;
 		}
 		return false;
@@ -271,7 +293,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		const newActive = getTryKey(options);
 		await this.ensurePoppedActiveTryStorage(test, newActive);
 
-		await this.updateStackedStorage("push");
+		await this.updateStackedStorage("push", test);
 		return super.onBeforeTryTask(test);
 	}
 	// @ts-expect-error `VitestRunner` defines an additional `options` parameter

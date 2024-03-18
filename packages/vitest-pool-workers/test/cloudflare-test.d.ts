@@ -87,10 +87,10 @@ declare module "cloudflare:test" {
 	 * Creates an instance of `MessageBatch` for use as the 1st argument to
 	 * modules-format `queue()` exported handlers.
 	 */
-	export function createMessageBatch(
+	export function createMessageBatch<Body = unknown>(
 		queueName: string,
-		messages: ServiceBindingQueueMessage[]
-	): MessageBatch;
+		messages: ServiceBindingQueueMessage<Body>[]
+	): MessageBatch<Body>;
 	/**
 	 * Gets the ack/retry state of messages in the `MessageBatch`, and waits for
 	 * all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only accepts
@@ -101,6 +101,24 @@ declare module "cloudflare:test" {
 		batch: MessageBatch,
 		ctx: ExecutionContext
 	): Promise<FetcherQueueResult>;
+
+	export interface D1Migration {
+		name: string;
+		queries: string[];
+	}
+
+	/**
+	 * Applies all un-applied `migrations` to database `db`, recording migrations
+	 * state in the `migrationsTableName` table. `migrationsTableName` defaults to
+	 * `d1_migrations`. Call the `readD1Migrations()` function from the
+	 * `@cloudflare/vitest-pool-workers/config` package inside Node.js to get the
+	 * `migrations` array.
+	 */
+	export function applyD1Migrations(
+		db: D1Database,
+		migrations: D1Migration[],
+		migrationsTableName?: string
+	): Promise<void>;
 
 	// Taken from `undici` (https://github.com/nodejs/undici/tree/main/types) with
 	// no dependency on `@types/node` and with unusable functions removed

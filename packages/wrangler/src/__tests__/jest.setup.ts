@@ -274,3 +274,15 @@ jest.mock(
 	},
 	{ virtual: true }
 );
+
+jest.mock("@cloudflare/cli/streams", () => {
+	const { PassThrough } = jest.requireActual("node:stream");
+	const stdout = new PassThrough();
+	const stderr = new PassThrough();
+
+	return {
+		__esModule: true,
+		stdout,
+		stderr,
+	};
+});

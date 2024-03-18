@@ -47,3 +47,9 @@ packages/miniflare
 # so let's ignore all the c3 template files, exlcuding the c3.ts ones
 packages/create-cloudflare/templates/**/*.*
 !packages/create-cloudflare/templates/**/c3.ts
+
+# Some of the `@cloudflare/vitest-pool-workers` examples use `satisfies` as it
+# makes typing unit tests much easier. Our current version of Prettier doesn't
+# support this syntax so exclude those files.
+fixtures/vitest-pool-workers-examples/basics-unit-integration-self/src/index.ts
+fixtures/vitest-pool-workers-examples/queues/src/index.ts

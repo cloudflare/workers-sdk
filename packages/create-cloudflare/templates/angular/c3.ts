@@ -2,9 +2,11 @@ import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { runFrameworkGenerator } from "frameworks/index";
+import { compatDateFlag } from "helpers/compatDate";
+import { readFile, readJSON, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 

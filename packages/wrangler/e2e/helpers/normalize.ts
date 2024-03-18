@@ -22,6 +22,7 @@ export function normalizeOutput(
 		stripEmptyNewlines,
 		normalizeDebugLogFilepath,
 		squashLocalNetworkBindings,
+		removeZeroWidthSpaces,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -166,4 +167,8 @@ function removeStandardPricingWarning(stdout: string): string {
 		/🚧 New Workers Standard pricing is now available\. Please visit the dashboard to view details and opt-in to new pricing: https:\/\/dash\.cloudflare\.com\/[^/]+\/workers\/standard\/opt-in\./,
 		""
 	);
+}
+
+function removeZeroWidthSpaces(stdout: string) {
+	return stdout.replaceAll(/\u200a|\u200b/g, " ");
 }

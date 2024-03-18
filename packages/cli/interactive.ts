@@ -8,20 +8,22 @@ import {
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import SelectRefreshablePrompt from "./select-list";
-import { cancel, newline, shapes, space, status } from "./index";
+import { stdout } from "./streams";
+import { cancel, crash, logRaw, newline, shapes, space, status } from "./index";
 import type { OptionWithDetails } from "./select-list";
 import type { Prompt } from "@clack/core";
 
-const logUpdate = createLogUpdate(process.stdout);
+const logUpdate = createLogUpdate(stdout);
 
 export type Arg = string | boolean | string[] | undefined | number;
-const grayBar = gray(shapes.bar);
-const blCorner = gray(shapes.corners.bl);
-const leftT = gray(shapes.leftT);
+export const grayBar = gray(shapes.bar);
+export const blCorner = gray(shapes.corners.bl);
+export const leftT = gray(shapes.leftT);
 
 export type Option = {
-	label: string;
-	value: string;
+	label: string; // user-visible string
+	sublabel?: string; // user-visible string
+	value: string; // underlying key
 	hidden?: boolean;
 };
 
@@ -32,12 +34,16 @@ export type BasePromptConfig = {
 	helpText?: string;
 	// The value to use by default
 	defaultValue?: Arg;
+	// Accept the initialValue/defaultValue as if the user pressed ENTER when prompted
+	acceptDefault?: boolean;
 	// The status label to be shown after submitting
 	label: string;
 	// Pretty-prints the value in the interactive prompt
 	format?: (value: Arg) => string;
 	// Returns a user displayed error if the value is invalid
 	validate?: (value: Arg) => string | void;
+	// Override some/all renderers (can be used for custom renderers before hoisting back into shared code)
+	renderers?: Partial<ReturnType<typeof getRenderers>>;
 };
 
 export type TextPromptConfig = BasePromptConfig & {
@@ -86,8 +92,29 @@ type RenderProps =
 	| Omit<ConfirmPrompt, "prompt">
 	| Omit<SelectRefreshablePrompt, "prompt">;
 
-export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
-	const renderers = getRenderers(promptConfig);
+function acceptDefault<T>(
+	promptConfig: PromptConfig,
+	renderers: Pick<ReturnType<typeof getRenderers>, "submit">,
+	initialValue: T
+): T {
+	const error = promptConfig.validate?.(initialValue as Arg);
+	if (error) {
+		crash(error);
+	}
+
+	const lines = renderers.submit({ value: initialValue as Arg });
+	logRaw(lines.join("\n"));
+
+	return initialValue as T;
+}
+
+export const inputPrompt = async <T = string>(
+	promptConfig: PromptConfig
+): Promise<T> => {
+	const renderers = {
+		...getRenderers(promptConfig),
+		...promptConfig.renderers,
+	};
 
 	let prompt:
 		| SelectPrompt<Option>
@@ -103,18 +130,30 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 	};
 
 	if (promptConfig.type === "select") {
+		const initialValue = String(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new SelectPrompt({
 			...promptConfig,
 			options: promptConfig.options.filter((o) => !o.hidden),
-			initialValue: String(promptConfig.defaultValue),
+			initialValue,
 			render() {
 				return dispatchRender(this, prompt);
 			},
 		});
 	} else if (promptConfig.type === "confirm") {
+		const initialValue = Boolean(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new ConfirmPrompt({
 			...promptConfig,
-			initialValue: Boolean(promptConfig.defaultValue),
+			initialValue,
 			active: promptConfig.activeText || "",
 			inactive: promptConfig.inactiveText || "",
 			render() {
@@ -128,6 +167,11 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 		} else if (promptConfig.defaultValue !== undefined) {
 			initialValues = [String(promptConfig.defaultValue)];
 		}
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValues as T);
+		}
+
 		prompt = new MultiSelectPrompt({
 			...promptConfig,
 			options: promptConfig.options,
@@ -137,20 +181,33 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 			},
 		});
 	} else if (promptConfig.type === "list") {
+		const initialValue = String(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new SelectRefreshablePrompt({
 			...promptConfig,
 			onRefresh:
 				promptConfig.onRefresh ?? (() => Promise.resolve(promptConfig.options)),
-			initialValue: String(promptConfig.defaultValue),
+			initialValue,
 			render() {
 				return dispatchRender(this, prompt);
 			},
 		});
 	} else {
+		const initialValue =
+			promptConfig.initialValue ?? String(promptConfig.defaultValue ?? "");
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
 		prompt = new TextPrompt({
 			...promptConfig,
 			initialValue: promptConfig.initialValue,
-			defaultValue: String(promptConfig.defaultValue),
+			defaultValue: String(promptConfig.defaultValue ?? ""),
 			render() {
 				return dispatchRender(this, prompt);
 			},
@@ -213,14 +270,10 @@ export const getRenderers = (config: PromptConfig) => {
 };
 
 const getTextRenderers = (config: TextPromptConfig) => {
-	const {
-		defaultValue,
-		question,
-		helpText: _helpText,
-		format: _format,
-	} = config;
-	const helpText = _helpText ?? "";
-	const format = _format ?? ((val: Arg) => String(val));
+	const { question } = config;
+	const helpText = config.helpText ?? "";
+	const format = config.format ?? ((val: Arg) => String(val));
+	const defaultValue = config.defaultValue?.toString() ?? "";
 
 	return {
 		initial: () => [
@@ -230,9 +283,7 @@ const getTextRenderers = (config: TextPromptConfig) => {
 		],
 		active: ({ value }: { value: Arg }) => [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
-			`${space(2)}${format(
-				value || dim(typeof defaultValue === "string" ? defaultValue : ``)
-			)}`,
+			`${space(2)}${format(value || dim(defaultValue))}`,
 			``, // extra line for readability
 		],
 		error: ({ value, error }: { value: Arg; error: string }) => [
@@ -242,7 +293,8 @@ const getTextRenderers = (config: TextPromptConfig) => {
 			`${space(2)}${format(value)}`,
 			``, // extra line for readability
 		],
-		submit: ({ value }: { value: Arg }) => renderSubmit(config, format(value)),
+		submit: ({ value }: { value: Arg }) =>
+			renderSubmit(config, format(value ?? "")),
 		cancel: handleCancel,
 	};
 };
@@ -261,15 +313,16 @@ const getSelectRenderers = (
 			const active = i === cursor;
 			const isInListOfValues =
 				Array.isArray(value) && value.includes(optionValue);
-			const color = isInListOfValues || active ? blue : dim;
+			const color = isInListOfValues || active ? blue : white;
 			const text = active ? color.underline(optionLabel) : color(optionLabel);
+			const sublabel = opt.sublabel ? color.grey(opt.sublabel) : "";
 
 			const indicator =
 				isInListOfValues || (active && !Array.isArray(value))
 					? color(shapes.radioActive)
 					: color(shapes.radioInactive);
 
-			return `${space(2)}${indicator} ${text}`;
+			return `${space(2)}${indicator} ${text} ${sublabel}`;
 		};
 
 		const renderOptionCondition = (_: unknown, i: number): boolean => {
@@ -340,7 +393,7 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 	const { question, helpText: _helpText } = config;
 	let options = config.options;
 	const helpText = _helpText ?? "";
-	const { rows } = process.stdout;
+	const { rows } = stdout;
 	const defaultRenderer: Renderer = ({ cursor, value }, prompt: Prompt) => {
 		if (prompt instanceof SelectRefreshablePrompt) {
 			options = prompt.options;
@@ -563,6 +616,30 @@ export const spinner = (
 			}
 		},
 	};
+};
+
+type FactoryOrValue<T> = T | (() => T);
+const unwrapFactory = <T>(input: FactoryOrValue<T>): T => {
+	const output = typeof input === "function" ? (input as () => T)() : input;
+	return output;
+};
+export const spinnerWhile = async <T>(opts: {
+	promise: FactoryOrValue<Promise<T>>;
+	startMessage: FactoryOrValue<string>;
+	endMessage?: FactoryOrValue<string>;
+	spinner?: ReturnType<typeof spinner>;
+}): Promise<T> => {
+	const s = opts.spinner ?? spinner();
+
+	s.start(unwrapFactory(opts.startMessage));
+
+	try {
+		const result = await unwrapFactory(opts.promise);
+
+		return result;
+	} finally {
+		s.stop(unwrapFactory(opts.endMessage));
+	}
 };
 
 export const isInteractive = () => {

@@ -47,7 +47,7 @@ export const ModuleRuleTypeSchema = z.enum([
 	"Data",
 	"CompiledWasm",
 	"PythonModule",
-	"PythonRequirement"
+	"PythonRequirement",
 ]);
 export type ModuleRuleType = z.infer<typeof ModuleRuleTypeSchema>;
 
@@ -109,15 +109,15 @@ const DEFAULT_MODULE_RULES: ModuleRule[] = [
 	{ type: "CommonJS", include: ["**/*.js", "**/*.cjs"] },
 ];
 
-interface CompiledModuleRule {
+export interface CompiledModuleRule {
 	type: ModuleRuleType;
 	include: MatcherRegExps;
 }
 
-function compileModuleRules(rules?: ModuleRule[]) {
+export function compileModuleRules(rules: ModuleRule[]) {
 	const compiledRules: CompiledModuleRule[] = [];
 	const finalisedTypes = new Set<ModuleRuleType>();
-	for (const rule of [...(rules ?? []), ...DEFAULT_MODULE_RULES]) {
+	for (const rule of rules) {
 		// Ignore rule if type didn't enable fallthrough
 		if (finalisedTypes.has(rule.type)) continue;
 		compiledRules.push({
@@ -163,9 +163,11 @@ export class ModuleLocator {
 	constructor(
 		private readonly modulesRoot: string,
 		private readonly additionalModuleNames: string[],
-		rules?: ModuleRule[],
+		rules: ModuleRule[] = [],
 		compatibilityFlags?: string[]
 	) {
+		// Implicit shallow-copy to avoid mutating argument
+		rules = rules.concat(DEFAULT_MODULE_RULES);
 		this.#compiledRules = compileModuleRules(rules);
 		// `nodejs_compat` doesn't have a default-on date, so we know whether it's
 		// enabled just by looking at flags:

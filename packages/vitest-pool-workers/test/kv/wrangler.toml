@@ -6,6 +6,10 @@ kv_namespaces = [
 	{ binding = "TEST_NAMESPACE", id = "test-namespace" }
 ]
 
+[define]
+DEFINED_THING = "\"thing\""
+"NESTED.DEFINED.THING" = "[1,2,3]"
+
 [durable_objects]
 bindings = [
 	{ name = "COUNTER", class_name = "Counter" },

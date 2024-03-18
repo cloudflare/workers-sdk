@@ -1,5 +1,5 @@
 import { existsSync, statSync } from "fs";
-import { spinner } from "@cloudflare/cli/interactive";
+import { mockSpinner } from "helpers/__tests__/mocks";
 import {
 	appendFile,
 	directoryExists,
@@ -16,12 +16,7 @@ vi.mock("helpers/files");
 vi.mock("@cloudflare/cli/interactive");
 
 beforeEach(() => {
-	// we mock `spinner` to remove noisy logs from the test runs
-	vi.mocked(spinner).mockImplementation(() => ({
-		start() {},
-		update() {},
-		stop() {},
-	}));
+	mockSpinner();
 });
 
 describe("addWranglerToGitIgnore", () => {

@@ -1,8 +1,8 @@
 import fs from "node:fs";
+import module from "node:module";
 import path from "node:path";
 import url from "node:url";
 import esbuild from "esbuild";
-import { resolve } from "import-meta-resolve";
 import { builtinModules, exportedHandlers } from "./rtti/query.mjs";
 
 const argv = process.argv.slice(2);
@@ -28,8 +28,9 @@ function* walk(rootPath) {
 // useful helpers exposed. In particular, code for actually sending network
 // requests is removed, and replaced with a hook for providing this
 // functionality at runtime.
+const require = module.createRequire(import.meta.url);
 function map(specifier, target) {
-	const filePath = url.fileURLToPath(resolve(specifier, import.meta.url));
+	const filePath = require.resolve(specifier);
 	const targetPath = path.join(pkgRoot, target);
 	return { [filePath]: targetPath };
 }

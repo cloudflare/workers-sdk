@@ -1,9 +1,9 @@
 import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { retry, runCommand } from "helpers/command";
-import { debug } from "helpers/logging";
-import { detectPackageManager } from "helpers/packages";
-import { getProductionBranch, quoteShellArgs } from "./common";
+import { quoteShellArgs, runCommand } from "helpers/command";
+import { detectPackageManager } from "helpers/packageManagers";
+import { retry } from "helpers/retry";
+import { getProductionBranch } from "./git";
 import type { C3Context } from "types";
 
 /** How many times to retry the create project command before failing. */
@@ -92,8 +92,6 @@ export const createProject = async (ctx: C3Context) => {
 				)}`,
 			})
 		);
-
-		debug(`Validated pages project ${ctx.project.name}`);
 	} catch (error) {
 		crash("Pages project isn't ready yet. Please try deploying again later.");
 	}

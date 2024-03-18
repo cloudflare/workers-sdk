@@ -80,6 +80,7 @@ type Props = {
 	logpush: boolean | undefined;
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
+	dispatchNamespace: string | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -282,7 +283,7 @@ Update them to point to this script instead?`;
 export default async function deploy(props: Props): Promise<void> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
-	if (accountId && name) {
+	if (!props.dispatchNamespace && accountId && name) {
 		try {
 			const serviceMetaData = await fetchResult(
 				`/accounts/${accountId}/workers/services/${name}`
@@ -422,7 +423,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const start = Date.now();
 	const notProd = Boolean(!props.legacyEnv && props.env);
 	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
+	const workerUrl = props.dispatchNamespace
+		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
+		: notProd
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
@@ -787,6 +790,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
+	logger.log("Uploaded", workerName, formatTime(uploadMs));
+
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, deploymentId);
+		return;
+	}
+
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
 		const userSubdomain = await getWorkersDevSubdomain(accountId);
@@ -885,8 +896,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
-	logger.log("Uploaded", workerName, formatTime(uploadMs));
-
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
@@ -944,6 +953,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}
 
+	logger.log("Current Deployment ID:", deploymentId);
+}
+
+function deployWfpUserWorker(
+	dispatchNamespace: string,
+	deploymentId: string | null
+) {
+	// Will go under the "Uploaded" text
+	logger.log("  Dispatch Namespace:", dispatchNamespace);
 	logger.log("Current Deployment ID:", deploymentId);
 }
 
