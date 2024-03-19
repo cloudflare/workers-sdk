@@ -277,6 +277,11 @@ export function devOptions(yargs: CommonYargsArgv) {
 				// Yargs requires this to type log-level properly
 				default: "log" as LoggerLevel,
 			})
+			.option("show-interactive-dev-session", {
+				describe:
+					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
+				type: "boolean",
+			})
 	);
 }
 
@@ -345,6 +350,7 @@ export type AdditionalDevProps = {
 	moduleRoot?: string;
 	rules?: Rule[];
 	constellation?: Environment["constellation"];
+	showInteractiveDevSession?: boolean;
 };
 
 export type StartDevOptions = DevArguments &
@@ -356,7 +362,6 @@ export type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
-		showInteractiveDevSession?: boolean;
 		updateCheck?: boolean;
 	};
 

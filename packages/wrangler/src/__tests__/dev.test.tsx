@@ -1258,7 +1258,8 @@ describe("wrangler dev", () => {
 			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
 			      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
 			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
-			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
+			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
+			      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]",
 			  "warn": "",
 			}
 		`);
@@ -1476,6 +1477,23 @@ describe("wrangler dev", () => {
 			",
 			}
 		`);
+		});
+	});
+
+	describe("--show-interactive-dev-session", () => {
+		it("should show interactive dev session with --show-interactive-dev-session", async () => {
+			fs.writeFileSync("index.js", `export default { }`);
+			await runWrangler("dev index.js --show-interactive-dev-session");
+			expect(
+				(Dev as jest.Mock).mock.calls[0][0].showInteractiveDevSession
+			).toBeTruthy();
+		});
+		it("should not show interactive dev session with --show-interactive-dev-session=false", async () => {
+			fs.writeFileSync("index.js", `export default { }`);
+			await runWrangler("dev index.js --show-interactive-dev-session=false");
+			expect(
+				(Dev as jest.Mock).mock.calls[0][0].showInteractiveDevSession
+			).toBeFalsy();
 		});
 	});
 
