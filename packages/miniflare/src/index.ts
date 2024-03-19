@@ -1375,12 +1375,25 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 		};
-		const maybeSocketPorts = await this.#runtime.updateConfig(
+		const { socketPorts, stderr } = await this.#runtime.updateConfig(
 			configBuffer,
 			runtimeOpts
 		);
 		if (this.#disposeController.signal.aborted) return;
-		if (maybeSocketPorts === undefined) {
+		if (socketPorts === undefined) {
+			// If this is an address-in-use error...
+			// (NOTE: on Windows, `workerd` will happily start two servers on the
+			// same port, with the first receiving all requests, this is being tracked
+			// here: https://github.com/cloudflare/workerd/issues/1664)
+			if (stderr.includes("Address already in use")) {
+				throw new MiniflareCoreError(
+					"ERR_ADDRESS_IN_USE",
+					"The Workers runtime failed to start " +
+						"because a specified address was already in use."
+				);
+			}
+
+			// Otherwise, throw a generic failure message
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
 				"The Workers runtime failed to start. " +
@@ -1390,19 +1403,19 @@ export class Miniflare {
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
-		this.#socketPorts = maybeSocketPorts;
+		this.#socketPorts = socketPorts;
 
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
 		const previousEntryURL = this.#runtimeEntryURL;
 
-		const entryPort = maybeSocketPorts.get(SOCKET_ENTRY);
+		const entryPort = socketPorts.get(SOCKET_ENTRY);
 		assert(entryPort !== undefined);
 
 		const maybeAccessibleHost = maybeGetLocallyAccessibleHost(configuredHost);
 		if (maybeAccessibleHost === undefined) {
 			// If the configured host wasn't locally accessible, we should've configured a 2nd local entry socket that is
-			const localEntryPort = maybeSocketPorts.get(SOCKET_ENTRY_LOCAL);
+			const localEntryPort = socketPorts.get(SOCKET_ENTRY_LOCAL);
 			assert(localEntryPort !== undefined, "Expected local entry socket port");
 			this.#runtimeEntryURL = new URL(`http://127.0.0.1:${localEntryPort}`);
 		} else {
