@@ -37,7 +37,7 @@ const generate = async (ctx: C3Context) => {
 	//       and consistent with that of all the other frameworks
 	//       (instead of making it a special case which needs extra care)
 	newToml.replace(
-		/#\s+\[\[kv_namespaces\]\]\n#\s+binding\s+=\s+"MY_KV_NAMESPACE"\n#\s+id\s+=\s+"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"/,
+		/#\s+\[\[kv_namespaces\]\]\n#\s+binding\s+=\s+"MY_KV_NAMESPACE"\n#\s+id\s+=\s+"[a-zA-Z0-9]+?"/,
 		($1) => `# KV Example:\n${$1}`
 	);
 
