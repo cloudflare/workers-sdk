@@ -218,7 +218,8 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Specify logging level",
 			},
 			"show-interactive-dev-session": {
-				describe: "Show interactive dev session",
+				describe:
+					"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			},
 		});

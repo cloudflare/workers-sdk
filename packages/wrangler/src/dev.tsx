@@ -278,7 +278,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 				default: "log" as LoggerLevel,
 			})
 			.option("show-interactive-dev-session", {
-				describe: "Show interactive dev session (defaults to true)",
+				describe:
+					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			})
 	);
