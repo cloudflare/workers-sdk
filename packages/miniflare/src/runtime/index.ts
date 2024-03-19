@@ -28,7 +28,7 @@ export const kInspectorSocket = Symbol("kInspectorSocket");
 export type SocketIdentifier =
 	| "entry"
 	| "entry:local"
-	| `direct:${number}`
+	| `direct:${number}:${string}`
 	| typeof kInspectorSocket;
 
 const directSocketIdentifierRegexp = /^direct:[0-9]+$/;
