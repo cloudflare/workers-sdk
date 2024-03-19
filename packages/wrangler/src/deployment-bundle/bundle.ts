@@ -1,8 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
+import { polyfillNode } from "esbuild-plugin-polyfill-node";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
@@ -342,7 +341,7 @@ export async function bundleWorker(
 		plugins: [
 			moduleCollector.plugin,
 			...(legacyNodeCompat
-				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+				? [polyfillNode({ globals: { buffer: true } })]
 				: []),
 			nodejsCompatPlugin(!!nodejsCompat),
 			cloudflareInternalPlugin,
