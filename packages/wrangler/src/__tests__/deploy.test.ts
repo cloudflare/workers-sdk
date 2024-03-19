@@ -8947,7 +8947,7 @@ export default{
 			writeWranglerToml();
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ keepVars: true });
+			mockUploadWorkerRequest({ keepVars: true, keepSecrets: true });
 			mockOAuthServerCallback();
 			mockGetMemberships([]);
 
@@ -8999,7 +8999,7 @@ export default{
 			});
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ keepVars: true });
+			mockUploadWorkerRequest({ keepVars: true, keepSecrets: true });
 			mockOAuthServerCallback();
 			mockGetMemberships([]);
 
