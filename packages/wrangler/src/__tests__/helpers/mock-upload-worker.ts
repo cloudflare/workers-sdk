@@ -26,6 +26,7 @@ export function mockUploadWorkerRequest(
 		env?: string;
 		legacyEnv?: boolean;
 		keepVars?: boolean;
+		keepSecrets?: boolean;
 		tag?: string;
 		expectedDispatchNamespace?: string;
 	} = {}
@@ -47,6 +48,7 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema,
 		expectedLimits,
 		keepVars,
+		keepSecrets,
 		expectedDispatchNamespace,
 	} = options;
 	if (env && !legacyEnv) {
@@ -108,7 +110,13 @@ export function mockUploadWorkerRequest(
 		}
 
 		if (keepVars) {
-			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["plain_text", "json"])
+			);
+		} else if (keepSecrets) {
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["secret_text", "secret_key"])
+			);
 		} else {
 			expect(metadata.keep_bindings).toBeFalsy();
 		}

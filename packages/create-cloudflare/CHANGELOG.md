@@ -1,5 +1,30 @@
 # create-cloudflare
 
+## 2.15.0
+
+### Minor Changes
+
+- [#5277](https://github.com/cloudflare/workers-sdk/pull/5277) [`15d9cd5`](https://github.com/cloudflare/workers-sdk/commit/15d9cd5d9b2f0c7e310ba77d535f7bcfecc9eeca) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feature: add `build-cf-types` script to Next.js projects
+
+### Patch Changes
+
+- [#5218](https://github.com/cloudflare/workers-sdk/pull/5218) [`0c535e7`](https://github.com/cloudflare/workers-sdk/commit/0c535e7236cbfc4bf856889454298bb434e48650) Thanks [@jculvey](https://github.com/jculvey)! - refactor: Refactor C3 internal helpers. Includes a few small changes:
+
+  - Drops `--save` from internal `pnpm` and `npm` install invocations
+  - Switches to `git branch --show-current` for detecting current branch
+
+- [#5242](https://github.com/cloudflare/workers-sdk/pull/5242) [`86c5f98`](https://github.com/cloudflare/workers-sdk/commit/86c5f98626464281dfe44b25ec8c95c98a67a3dd) Thanks [@jculvey](https://github.com/jculvey)! - chore: Remove custom `getPlatformProxy` hook from SvelteKit template.
+
+  `sveltejs/adapter-cloudflare@4.2.0` has been [released](https://github.com/sveltejs/kit/releases/tag/%40sveltejs%2Fadapter-cloudflare%404.2.0) which provides direct support for bindings emulation via `getPlatformProxy`, so the custom hook is no longer needed.
+
+- [#5269](https://github.com/cloudflare/workers-sdk/pull/5269) [`d4c23d2`](https://github.com/cloudflare/workers-sdk/commit/d4c23d23aa48064fb09685ef0b8d971ca74d1ad6) Thanks [@jculvey](https://github.com/jculvey)! - feature: Updates the commented out sections of the default `wrangler.toml` in templates to include recent features. Also updates the documentation links to the appropriate section of the bindings docs.
+
+- [#5259](https://github.com/cloudflare/workers-sdk/pull/5259) [`4ce7a5d`](https://github.com/cloudflare/workers-sdk/commit/4ce7a5ded15350aefcf062ea946d2b6267ec6569) Thanks [@jculvey](https://github.com/jculvey)! - fix: Require arguments for flags that expect them
+
+  This fixes an issue where `c3` would didn't require an argument to be passed to certain flags that expect them (ex. `--framework`, `--template`). Using these flags without an argument will now throw an error.
+
+- [#5277](https://github.com/cloudflare/workers-sdk/pull/5277) [`15d9cd5`](https://github.com/cloudflare/workers-sdk/commit/15d9cd5d9b2f0c7e310ba77d535f7bcfecc9eeca) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove timestamps from nuxt, qwik and remix type d.ts files
+
 ## 2.14.2
 
 ### Patch Changes

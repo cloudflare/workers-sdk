@@ -217,6 +217,11 @@ export function Options(yargs: CommonYargsArgv) {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 			},
+			"show-interactive-dev-session": {
+				describe:
+					"Show interactive dev session (defaults to true if the terminal supports interactivity)",
+				type: "boolean",
+			},
 		});
 }
 
@@ -248,6 +253,7 @@ export const Handler = async ({
 	config: config,
 	_: [_pages, _dev, ...remaining],
 	logLevel,
+	showInteractiveDevSession,
 }: StrictYargsOptionsToInterface<typeof Options>) => {
 	if (logLevel) {
 		logger.loggerLevel = logLevel;
@@ -751,7 +757,7 @@ export const Handler = async ({
 			},
 			liveReload,
 			forceLocal: true,
-			showInteractiveDevSession: undefined,
+			showInteractiveDevSession,
 			testMode: false,
 			watch: true,
 		},
