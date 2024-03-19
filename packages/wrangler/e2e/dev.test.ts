@@ -287,7 +287,7 @@ describe("basic dev python tests", () => {
 			`,
 			"index.py": dedent`
 				from js import Response
-				def fetch(request):
+				def on_fetch(request):
 					return Response.new('py hello world')`,
 			"package.json": dedent`
 					{
@@ -313,7 +313,7 @@ describe("basic dev python tests", () => {
 			await worker.seed({
 				"index.py": dedent`
 					from js import Response
-					def fetch(request):
+					def on_fetch(request):
 						return Response.new('Updated Python Worker value')`,
 			});
 
