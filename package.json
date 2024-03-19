@@ -51,10 +51,10 @@
 		"turbo": "^1.10.14"
 	},
 	"engines": {
-		"node": ">=16.17.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
-		"node": "16.17.0"
+		"node": "18.19.1"
 	},
 	"pnpm": {
 		"peerDependencyRules": {

@@ -15,5 +15,8 @@
 	},
 	"devDependencies": {
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

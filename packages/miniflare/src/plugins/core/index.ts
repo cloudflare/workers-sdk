@@ -185,6 +185,8 @@ export const CoreSharedOptionsSchema = z.object({
 	unsafeModuleFallbackService: ServiceFetchSchema.optional(),
 	// Keep blobs when deleting/overwriting keys, required for stacked storage
 	unsafeStickyBlobs: z.boolean().optional(),
+
+	unsafeRetryPortAllocation: z.boolean().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";

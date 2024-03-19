@@ -17,5 +17,8 @@
 	},
 	"engines": {
 		"node": ">=16.13"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

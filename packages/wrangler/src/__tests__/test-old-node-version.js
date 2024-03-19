@@ -11,7 +11,7 @@ const wranglerProcess = spawn(
 	{ stdio: "pipe" }
 );
 
-const messageToMatch = "Wrangler requires at least Node.js v16.13.0";
+const messageToMatch = "Wrangler requires at least Node.js v18.0.0";
 
 wranglerProcess.once("exit", (code) => {
 	try {
@@ -25,7 +25,7 @@ wranglerProcess.once("exit", (code) => {
 	} catch (err) {
 		console.error("Error:", err);
 		throw new Error(
-			"This test has to be run with a version of Node.js under 16.13 to pass"
+			"This test has to be run with a version of Node.js under 18.0 to pass"
 		);
 	}
 });

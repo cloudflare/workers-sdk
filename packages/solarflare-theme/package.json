@@ -42,5 +42,8 @@
 	},
 	"engines": {
 		"vscode": "^1.76.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

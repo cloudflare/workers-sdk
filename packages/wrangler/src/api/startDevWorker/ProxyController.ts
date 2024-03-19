@@ -67,6 +67,10 @@ export class ProxyController extends EventEmitter {
 		const proxyWorkerOptions: MiniflareOptions = {
 			host: this.latestConfig.dev?.server?.hostname,
 			port: this.latestConfig.dev?.server?.port,
+			unsafeRetryPortAllocation: [0, undefined].includes(
+				this.latestConfig.dev?.server?.port
+			),
+
 			https: this.latestConfig.dev?.server?.secure,
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,

@@ -16,5 +16,8 @@
 		"wrangler": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/ai": "^1.0.35"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

@@ -9,7 +9,7 @@ import http from "http";
 import { AddressInfo } from "net";
 import os from "os";
 import path from "path";
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 import { json, text } from "stream/consumers";
 import url from "url";
 import util from "util";
@@ -52,6 +52,10 @@ import {
 	useTmp,
 	utf8Encode,
 } from "./test-shared";
+
+const isWindows = process.platform === "win32";
+const unixTest = isWindows ? test.skip : test.only;
+const unixSerialTest = isWindows ? test.skip : test.serial;
 
 // (base64 encoded module containing a single `add(i32, i32): i32` export)
 const ADD_WASM_MODULE = Buffer.from(
@@ -210,9 +214,11 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 		});
 		t.teardown(() => mf.dispose());
 
+		// Check loopback
 		let res = await mf.dispatchFetch("https://example.com");
 		t.is(await res.text(), "body");
 
+		// Check magic proxy
 		const worker = await mf.getWorker();
 		res = await worker.fetch("https://example.com");
 		t.is(await res.text(), "body");
@@ -231,12 +237,104 @@ test("Miniflare: can use IPv6 loopback as host", async (t) => {
 	});
 	t.teardown(() => mf.dispose());
 
+	// Check loopback
 	let res = await mf.dispatchFetch("https://example.com");
 	t.is(await res.text(), "body");
 
+	// Check magic proxy
 	const worker = await mf.getWorker();
 	res = await worker.fetch("https://example.com");
 	t.is(await res.text(), "body");
+});
+
+test("Miniflare: listens on localhost with random port", async (t) => {
+	const mf = new Miniflare({
+		host: "localhost",
+		port: 0,
+		modules: true,
+		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+		serviceBindings: {
+			SERVICE() {
+				return new Response("body");
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	// Check loopback
+	let res = await mf.dispatchFetch("https://example.com");
+	t.is(await res.text(), "body");
+
+	// Check magic proxy
+	const worker = await mf.getWorker();
+	res = await worker.fetch("https://example.com");
+	t.is(await res.text(), "body");
+
+	// Check access with IPv4 loopback address
+	const port = (await mf.ready).port;
+	res = await fetch(`http://127.0.0.1:${port}`);
+	t.is(await res.text(), "body");
+	// Check access with IPv6 loopback address
+	// noinspection HttpUrlsUsage
+	res = await fetch(`http://[::1]:${port}`);
+	t.is(await res.text(), "body");
+	// Check access with `localhost`
+	res = await fetch(`http://localhost:${port}`);
+	t.is(await res.text(), "body");
+});
+// On Windows, `workerd` will happily start two servers on the same port, so we
+// can't test port collisions (https://github.com/cloudflare/workerd/issues/1664)
+unixTest("Miniflare: retries port allocation on collision", async (t) => {
+	const mf1 = new Miniflare({
+		modules: true,
+		script: `export default { fetch(request, env) { return new Response("one"); } }`,
+	});
+	t.teardown(() => mf1.dispose());
+	const port = parseInt((await mf1.ready).port);
+
+	// Overwrite `handleRuntimeStdio()` below to avoid `workerd` address-in-use
+	// errors being written to the console
+	let stdoutChunks: Uint8Array[] = [];
+	let stderrChunks: Uint8Array[] = [];
+	function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+		stdout.on("data", (chunk) => stdoutChunks.push(chunk));
+		stderr.on("data", (chunk) => stderrChunks.push(chunk));
+	}
+
+	// Check that we get an address-in-use error if we don't enable port retries
+	const mf2 = new Miniflare({
+		port,
+		modules: true,
+		script: `export default { fetch(request, env) { return new Response("two"); } }`,
+		handleRuntimeStdio,
+	});
+	t.teardown(() => mf2.dispose().catch(() => {}));
+	await t.throwsAsync(mf2.ready, {
+		instanceOf: MiniflareCoreError,
+		code: "ERR_ADDRESS_IN_USE",
+		message:
+			"The Workers runtime failed to start because a specified address was already in use.",
+	});
+	t.is(Buffer.concat(stdoutChunks).toString(), "");
+	t.regex(Buffer.concat(stderrChunks).toString(), /Address already in use/);
+	stdoutChunks = [];
+	stderrChunks = [];
+
+	// Check we can bind to a different port with `unsafeRetryPortAllocation`
+	const mf3 = new Miniflare({
+		port,
+		unsafeRetryPortAllocation: true,
+		modules: true,
+		script: `export default { fetch(request, env) { return new Response("three"); } }`,
+		handleRuntimeStdio,
+	});
+	t.teardown(() => mf3.dispose());
+	const res = await mf3.dispatchFetch("http://placeholder");
+	t.is(await res.text(), "three");
+	t.is(Buffer.concat(stdoutChunks).toString(), "");
+	t.regex(Buffer.concat(stderrChunks).toString(), /Address already in use/);
+	stdoutChunks = [];
+	stderrChunks = [];
 });
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
@@ -1363,8 +1461,6 @@ test("Miniflare: allows direct access to workers", async (t) => {
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
-const isWindows = process.platform === "win32";
-const unixSerialTest = isWindows ? test.skip : test.serial;
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
 	async (t) => {

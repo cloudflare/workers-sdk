@@ -33,5 +33,8 @@
 		"log-update": "^5.0.1",
 		"pnpm": "^8.6.11",
 		"undici": "5.28.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

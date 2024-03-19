@@ -64,5 +64,8 @@
 		"undici": "5.28.3",
 		"vite-plugin-rewrite-all": "^1.0.1",
 		"wrangler": "workspace:^"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

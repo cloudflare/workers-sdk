@@ -10,5 +10,8 @@
 	"devDependencies": {
 		"get-port": "^6.1.2",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

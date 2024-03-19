@@ -18,5 +18,8 @@
 		"promjs": "^0.4.2",
 		"toucan-js": "^3.1.0",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

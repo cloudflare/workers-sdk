@@ -16,5 +16,8 @@
 	},
 	"peerDependencies": {
 		"@typescript-eslint/eslint-plugin": "^6.7.2"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

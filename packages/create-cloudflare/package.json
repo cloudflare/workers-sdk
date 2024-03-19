@@ -92,5 +92,8 @@
 	},
 	"workers-sdk": {
 		"prerelease": true
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

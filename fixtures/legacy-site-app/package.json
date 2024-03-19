@@ -5,5 +5,8 @@
 	"keywords": [],
 	"license": "ISC",
 	"author": "",
-	"main": "index.js"
+	"main": "index.js",
+	"volta": {
+		"extends": "../../package.json"
+	}
 }

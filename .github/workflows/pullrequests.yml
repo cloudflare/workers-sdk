@@ -3,7 +3,7 @@ name: Pull Request
 on: pull_request
 
 env:
-  node-version: 16.18
+  node-version: 18.19
 jobs:
   add-to-project:
     concurrency:

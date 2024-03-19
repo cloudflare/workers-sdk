@@ -21,5 +21,8 @@
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"typescript": "^4.5.5",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

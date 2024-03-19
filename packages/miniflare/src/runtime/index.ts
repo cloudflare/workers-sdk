@@ -24,7 +24,21 @@ const ControlMessageSchema = z.discriminatedUnion("event", [
 ]);
 
 export const kInspectorSocket = Symbol("kInspectorSocket");
-export type SocketIdentifier = string | typeof kInspectorSocket;
+
+export type SocketIdentifier =
+	| "entry"
+	| "entry:local"
+	| `direct:${number}`
+	| typeof kInspectorSocket;
+
+const directSocketIdentifierRegexp = /^direct:[0-9]+$/;
+export function isSocketIdentifier(value: unknown): value is SocketIdentifier {
+	if (value === kInspectorSocket) return true;
+	if (typeof value !== "string") return false;
+	if (value === "entry" || value === "entry:local") return true;
+	return directSocketIdentifierRegexp.test(value);
+}
+
 export type SocketPorts = Map<SocketIdentifier, number /* port */>;
 
 export interface RuntimeOptions {
@@ -54,8 +68,9 @@ async function waitForPorts(
 			// If this was an unrecognised control message, ignore it
 			if (!message.success) continue;
 			const data = message.data;
-			const socket: SocketIdentifier =
+			const socket =
 				data.event === "listen-inspector" ? kInspectorSocket : data.socket;
+			assert(isSocketIdentifier(socket));
 			const index = requiredSockets.indexOf(socket);
 			// If this wasn't a required socket, ignore it
 			if (index === -1) continue;
@@ -89,6 +104,24 @@ function pipeOutput(stdout: Readable, stderr: Readable) {
 	// stderr.pipe(process.stderr);
 }
 
+function readingStream(readable: Readable) {
+	const chunks: Uint8Array[] = [];
+	function listener(chunk: Uint8Array | string) {
+		if (chunk instanceof Uint8Array) chunks.push(chunk);
+		else chunks.push(Buffer.from(chunk));
+	}
+
+	readable.on("data", listener);
+	return {
+		[Symbol.dispose]() {
+			readable.off("data", listener);
+		},
+		get text() {
+			return Buffer.concat(chunks).toString();
+		},
+	};
+}
+
 function getRuntimeCommand() {
 	return process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
 }
@@ -119,6 +152,11 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	return args;
 }
 
+export interface RuntimeUpdateResult {
+	socketPorts?: SocketPorts;
+	stderr: string;
+}
+
 export class Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
@@ -126,7 +164,7 @@ export class Runtime {
 	async updateConfig(
 		configBuffer: Buffer,
 		options: Abortable & RuntimeOptions
-	): Promise<SocketPorts | undefined> {
+	): Promise<RuntimeUpdateResult> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?
@@ -146,6 +184,7 @@ export class Runtime {
 
 		const handleRuntimeStdio = options.handleRuntimeStdio ?? pipeOutput;
 		handleRuntimeStdio(runtimeProcess.stdout, runtimeProcess.stderr);
+		using stderr = readingStream(runtimeProcess.stderr);
 
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);
@@ -156,7 +195,8 @@ export class Runtime {
 		await once(runtimeProcess.stdin, "finish");
 
 		// 4. Wait for sockets to start listening
-		return waitForPorts(controlPipe, options);
+		const socketPorts = await waitForPorts(controlPipe, options);
+		return { socketPorts, stderr: stderr.text };
 	}
 
 	dispose(): Awaitable<void> {

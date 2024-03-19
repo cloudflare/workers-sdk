@@ -5,5 +5,8 @@
 	"exports": {
 		"node": "./src/node.js",
 		"workerd": "./src/workerd.mjs"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

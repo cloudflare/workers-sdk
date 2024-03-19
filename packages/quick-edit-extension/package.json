@@ -53,5 +53,8 @@
 		"fileSearchProvider",
 		"textSearchProvider",
 		"ipc"
-	]
+	],
+	"volta": {
+		"extends": "../../package.json"
+	}
 }

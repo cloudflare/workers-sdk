@@ -96,13 +96,12 @@ const embedWorkersPlugin = {
 			let context = workerContexts.get(args.path);
 			if (context === undefined) {
 				context = await esbuild.context({
-					platform: "node", // Marks `node:*` imports as external
 					format: "esm",
-					target: "esnext",
+					target: "es2022",
 					bundle: true,
 					sourcemap: true,
 					sourcesContent: false,
-					external: ["miniflare:shared", "miniflare:zod"],
+					external: ["miniflare:shared", "miniflare:zod", "node:*"],
 					metafile: true,
 					entryPoints: [args.path],
 					minifySyntax: true,
@@ -165,7 +164,7 @@ async function buildPackage() {
 	const context = await esbuild.context({
 		platform: "node",
 		format: "cjs",
-		target: "esnext",
+		target: "es2022",
 		bundle: true,
 		sourcemap: true,
 		sourcesContent: false,
@@ -183,6 +182,11 @@ async function buildPackage() {
 			"ava",
 			"esbuild",
 		],
+		banner: {
+			js:
+				'Symbol.dispose ??= Symbol("Symbol.dispose");' +
+				'Symbol.asyncDispose ??= Symbol("Symbol.asyncDispose");',
+		},
 		plugins: [embedWorkersPlugin],
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,

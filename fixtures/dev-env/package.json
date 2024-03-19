@@ -20,5 +20,8 @@
 		"wrangler": "workspace:*",
 		"ws": "^8.14.2"
 	},
-	"dependencies": {}
+	"dependencies": {},
+	"volta": {
+		"extends": "../../package.json"
+	}
 }
