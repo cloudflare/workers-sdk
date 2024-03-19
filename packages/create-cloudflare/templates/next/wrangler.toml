@@ -52,7 +52,3 @@ compatibility_flags = ["nodejs_compat"]
 # binding = "MY_SERVICE"
 # service = "my-service"
 
-# KV Example:
-# [[kv_namespaces]]
-# binding = "MY_KV"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
