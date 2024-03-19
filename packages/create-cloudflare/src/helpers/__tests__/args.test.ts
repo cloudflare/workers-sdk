@@ -1,9 +1,17 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { parseArgs } from "../args";
+import type { MockInstance } from "vitest";
 
 vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {
+	let consoleErrorMock: MockInstance;
+
+	beforeEach(() => {
+		// mock `console.error` for all tests in order to avoid noise
+		consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {});
+	});
+
 	describe("parseArgs", () => {
 		test("no arguments provide", async () => {
 			const result = await parseArgs([]);
@@ -20,9 +28,6 @@ describe("Cli", () => {
 			const processExitMock = vi
 				.spyOn(process, "exit")
 				.mockImplementation(() => null as never);
-			const consoleErrorMock = vi
-				.spyOn(console, "error")
-				.mockImplementation(() => {});
 
 			await parseArgs(["my-project", "123"]);
 
