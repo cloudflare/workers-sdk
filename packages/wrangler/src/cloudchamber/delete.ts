@@ -32,7 +32,7 @@ export async function deleteCommand(
 			);
 		}
 
-		const deployment = await DeploymentsService.deleteDeployment(
+		const deployment = await DeploymentsService.deleteDeploymentV2(
 			deleteArgs.deploymentId
 		);
 		console.log(JSON.stringify(deployment), null, 4);

@@ -1,10 +1,10 @@
 import { NodeGroup } from "../../cloudchamber/client";
 import type {
-	Deployment,
+	DeploymentV2,
 	PlacementWithEvents,
 } from "../../cloudchamber/client";
 
-export const MOCK_DEPLOYMENTS = [
+export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 	{
 		id: "1",
 		created_at: "123",
@@ -13,9 +13,13 @@ export const MOCK_DEPLOYMENTS = [
 		memory: "400MB",
 		version: 1,
 		image: "hello",
-		location: "sfo06",
-		ipv4: "1.1.1.1",
-		current_placement: null,
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.1",
+		},
 		placements_ref: "http://ref",
 		node_group: NodeGroup.METAL,
 	},
@@ -27,8 +31,13 @@ export const MOCK_DEPLOYMENTS = [
 		memory: "400MB",
 		version: 2,
 		image: "hello",
-		location: "sfo06",
-		ipv4: "1.1.1.2",
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.2",
+		},
 		current_placement: {
 			deployment_version: 2,
 			status: { health: "running" },
@@ -40,9 +49,9 @@ export const MOCK_DEPLOYMENTS = [
 		placements_ref: "http://ref",
 		node_group: NodeGroup.METAL,
 	},
-] as Deployment[];
+];
 
-export const MOCK_DEPLOYMENTS_COMPLEX = [
+export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 	{
 		id: "1",
 		created_at: "123",
@@ -51,9 +60,13 @@ export const MOCK_DEPLOYMENTS_COMPLEX = [
 		memory: "400MB",
 		version: 1,
 		image: "hello",
-		location: "sfo06",
-		ipv4: "1.1.1.1",
-		current_placement: null,
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.1",
+		},
 		placements_ref: "http://ref",
 		node_group: NodeGroup.METAL,
 	},
@@ -65,8 +78,13 @@ export const MOCK_DEPLOYMENTS_COMPLEX = [
 		memory: "400MB",
 		version: 2,
 		image: "hello",
-		location: "sfo06",
-		ipv4: "1.1.1.2",
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.2",
+		},
 		current_placement: {
 			deployment_version: 2,
 			status: { health: "running" },
@@ -86,9 +104,13 @@ export const MOCK_DEPLOYMENTS_COMPLEX = [
 		memory: "400MB",
 		version: 1,
 		image: "hello",
-		location: "sfo06",
-		ipv4: "1.1.1.1",
-		current_placement: null,
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.1",
+		},
 		placements_ref: "http://ref",
 		node_group: NodeGroup.METAL,
 	},
@@ -100,8 +122,13 @@ export const MOCK_DEPLOYMENTS_COMPLEX = [
 		memory: "400MB",
 		version: 2,
 		image: "hello",
-		location: "sfo06",
-		ipv4: "1.1.1.2",
+		location: {
+			name: "sfo06",
+			enabled: true,
+		},
+		network: {
+			ipv4: "1.1.1.2",
+		},
 		current_placement: {
 			deployment_version: 2,
 			status: { health: "running" },
@@ -113,9 +140,9 @@ export const MOCK_DEPLOYMENTS_COMPLEX = [
 		placements_ref: "http://ref",
 		node_group: NodeGroup.METAL,
 	},
-] as Deployment[];
+];
 
-export const MOCK_PLACEMENTS = [
+export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 	{
 		id: "2",
 		created_at: "123",
@@ -143,4 +170,4 @@ export const MOCK_PLACEMENTS = [
 		events: [],
 		status: { health: "running" },
 	},
-] as PlacementWithEvents[];
+];

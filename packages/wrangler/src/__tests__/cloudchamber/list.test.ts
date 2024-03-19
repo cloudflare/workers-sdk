@@ -47,7 +47,8 @@ describe("cloudchamber list", () => {
 		      --location  Filter deployments by location  [string]
 		      --image     Filter deployments by image  [string]
 		      --state     Filter deployments by deployment state  [string]
-		      --ipv4      Filter deployments by ipv4 address  [string]"
+		      --ipv4      Filter deployments by ipv4 address  [string]
+		      --label     Filter deployments by labels  [array]"
 	`);
 	});
 
@@ -74,9 +75,13 @@ describe("cloudchamber list", () => {
 		        \\"memory\\": \\"400MB\\",
 		        \\"version\\": 1,
 		        \\"image\\": \\"hello\\",
-		        \\"location\\": \\"sfo06\\",
-		        \\"ipv4\\": \\"1.1.1.1\\",
-		        \\"current_placement\\": null,
+		        \\"location\\": {
+		            \\"name\\": \\"sfo06\\",
+		            \\"enabled\\": true
+		        },
+		        \\"network\\": {
+		            \\"ipv4\\": \\"1.1.1.1\\"
+		        },
 		        \\"placements_ref\\": \\"http://ref\\",
 		        \\"node_group\\": \\"metal\\"
 		    },
@@ -88,8 +93,13 @@ describe("cloudchamber list", () => {
 		        \\"memory\\": \\"400MB\\",
 		        \\"version\\": 2,
 		        \\"image\\": \\"hello\\",
-		        \\"location\\": \\"sfo06\\",
-		        \\"ipv4\\": \\"1.1.1.2\\",
+		        \\"location\\": {
+		            \\"name\\": \\"sfo06\\",
+		            \\"enabled\\": true
+		        },
+		        \\"network\\": {
+		            \\"ipv4\\": \\"1.1.1.2\\"
+		        },
 		        \\"current_placement\\": {
 		            \\"deployment_version\\": 2,
 		            \\"status\\": {
@@ -111,9 +121,13 @@ describe("cloudchamber list", () => {
 		        \\"memory\\": \\"400MB\\",
 		        \\"version\\": 1,
 		        \\"image\\": \\"hello\\",
-		        \\"location\\": \\"sfo06\\",
-		        \\"ipv4\\": \\"1.1.1.1\\",
-		        \\"current_placement\\": null,
+		        \\"location\\": {
+		            \\"name\\": \\"sfo06\\",
+		            \\"enabled\\": true
+		        },
+		        \\"network\\": {
+		            \\"ipv4\\": \\"1.1.1.1\\"
+		        },
 		        \\"placements_ref\\": \\"http://ref\\",
 		        \\"node_group\\": \\"metal\\"
 		    },
@@ -125,8 +139,13 @@ describe("cloudchamber list", () => {
 		        \\"memory\\": \\"400MB\\",
 		        \\"version\\": 2,
 		        \\"image\\": \\"hello\\",
-		        \\"location\\": \\"sfo06\\",
-		        \\"ipv4\\": \\"1.1.1.2\\",
+		        \\"location\\": {
+		            \\"name\\": \\"sfo06\\",
+		            \\"enabled\\": true
+		        },
+		        \\"network\\": {
+		            \\"ipv4\\": \\"1.1.1.2\\"
+		        },
 		        \\"current_placement\\": {
 		            \\"deployment_version\\": 2,
 		            \\"status\\": {

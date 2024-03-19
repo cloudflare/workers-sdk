@@ -4,7 +4,7 @@ import type { NetworkParameters } from "../client";
 
 export async function getNetworkInput(args: {
 	ipv4?: boolean;
-}): Promise<NetworkParameters> {
+}): Promise<NetworkParameters | undefined> {
 	const ipv4 = await processArgument<boolean>(args, "ipv4", {
 		question: "Add an IPv4 to the deployment?",
 		helpText:
@@ -12,7 +12,5 @@ export async function getNetworkInput(args: {
 		label: "Include IPv4",
 		type: "confirm",
 	});
-	return {
-		assign_ipv4: ipv4 ? AssignIPv4.PREDEFINED : AssignIPv4.NONE,
-	};
+	return ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
 }

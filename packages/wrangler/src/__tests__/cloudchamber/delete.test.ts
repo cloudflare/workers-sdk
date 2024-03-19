@@ -49,16 +49,19 @@ describe("cloudchamber delete", () => {
 	it("should delete deployment (detects no interactivity)", async () => {
 		setIsTTY(false);
 		msw.use(
-			rest.delete("*/deployments/1234", async (_request, response, context) => {
-				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-			})
+			rest.delete(
+				"*/deployments/1234/v2",
+				async (_request, response, context) => {
+					return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
+				}
+			)
 		);
 		await runWrangler("cloudchamber delete 1234");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(
-			`"{\\"id\\":\\"1\\",\\"created_at\\":\\"123\\",\\"account_id\\":\\"123\\",\\"vcpu\\":4,\\"memory\\":\\"400MB\\",\\"version\\":1,\\"image\\":\\"hello\\",\\"location\\":\\"sfo06\\",\\"ipv4\\":\\"1.1.1.1\\",\\"current_placement\\":null,\\"placements_ref\\":\\"http://ref\\",\\"node_group\\":\\"metal\\"} null 4"`
+			`"{\\"id\\":\\"1\\",\\"created_at\\":\\"123\\",\\"account_id\\":\\"123\\",\\"vcpu\\":4,\\"memory\\":\\"400MB\\",\\"version\\":1,\\"image\\":\\"hello\\",\\"location\\":{\\"name\\":\\"sfo06\\",\\"enabled\\":true},\\"network\\":{\\"ipv4\\":\\"1.1.1.1\\"},\\"placements_ref\\":\\"http://ref\\",\\"node_group\\":\\"metal\\"} null 4"`
 		);
 	});
 
