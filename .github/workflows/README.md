@@ -64,10 +64,10 @@ See below for a summary of this repo's Actions
 - Actions
   - Add the issue to a Github project.
 
-### Generate changesets for dependabot PRs (dependabot-versioning-prs.yml)
+### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
 
 - Triggers
-  - Updates to PRs, by the dependabot user, which update any of:
+  - Updates to PRs, by the dependabot user, which update one of:
     - frameworks dependencies in C3,
     - miniflare.
 - Actions

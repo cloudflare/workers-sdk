@@ -1,12 +1,8 @@
-# workflow to update the framework cli versioning PRs we get
-# from dependabot for C3
-
-name: "Generate changesets for dependabot PRs"
+name: "C3 - Generate changesets for dependabot PRs"
 on:
   pull_request_target:
     paths:
       - "packages/create-cloudflare/src/frameworks/package.json"
-      - "packages/miniflare/package.json"
 
 jobs:
   generate-changeset:
@@ -26,5 +22,3 @@ jobs:
           git config --global user.name 'Wrangler automated PR updater'
       - name: Generate C3 changesets
         run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json
-      - name: Generate Miniflare changesets
-        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} miniflare packages/miniflare/package.json
