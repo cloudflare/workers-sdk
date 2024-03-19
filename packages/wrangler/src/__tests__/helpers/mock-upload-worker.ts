@@ -110,9 +110,13 @@ export function mockUploadWorkerRequest(
 		}
 
 		if (keepVars) {
-			expect(metadata.keep_bindings).toContain(["plain_text", "json"]);
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["plain_text", "json"])
+			);
 		} else if (keepSecrets) {
-			expect(metadata.keep_bindings).toContain(["secret_text", "secret_key"]);
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["secret_text", "secret_key"])
+			);
 		} else {
 			expect(metadata.keep_bindings).toBeFalsy();
 		}
