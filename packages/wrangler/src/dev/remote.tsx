@@ -630,6 +630,7 @@ async function createRemoteWorkerInit(props: {
 		compatibility_flags: props.compatibilityFlags,
 		usage_model: props.usageModel,
 		keepVars: true,
+		keepSecrets: true,
 		logpush: false,
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
