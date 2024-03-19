@@ -354,7 +354,9 @@ export type EWCRequestBody = {
 	}>;
 };
 
-function eventNotificationHeaders(apiCredentials: ApiCredentials): HeadersInit {
+export function eventNotificationHeaders(
+	apiCredentials: ApiCredentials
+): HeadersInit {
 	const headers: HeadersInit = {
 		"Content-Type": "application/json",
 	};
