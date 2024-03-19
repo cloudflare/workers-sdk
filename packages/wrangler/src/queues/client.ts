@@ -113,6 +113,23 @@ export async function postTypedConsumer(
 	);
 }
 
+export async function putTypedConsumer(
+	config: Config,
+	queueId: string,
+	consumerId: string,
+	body: PostTypedConsumerBody
+): Promise<TypedConsumerResponse> {
+	const accountId = await requireAuth(config);
+
+	return fetchResult(
+		`/accounts/${accountId}/workers/queues/id/${queueId}/consumers/id/${consumerId}`,
+		{
+			method: "PUT",
+			body: JSON.stringify(body),
+		}
+	);
+}
+
 export interface TypedConsumerResponse extends Consumer {
 	queue_name: string;
 	created_on: string;

@@ -8682,7 +8682,7 @@ export default{
 		`);
 		});
 
-		it("should not error on post queue http consumers when one already exists for queue", async () => {
+		it("should update queue http consumers when one already exists for queue", async () => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -8709,7 +8709,9 @@ export default{
 								result: {
 									queue: "queue1",
 									queue_id: "queue1-queue-id",
-									consumers: [{ type: "http_pull" }],
+									consumers: [
+										{ type: "http_pull", consumer_id: "queue1-consumer-id" },
+									],
 								},
 							})
 						);
@@ -8717,15 +8719,16 @@ export default{
 				)
 			);
 			msw.use(
-				rest.post(
-					`*/accounts/:accountId/workers/queues/id/:queueId/consumers`,
+				rest.put(
+					`*/accounts/:accountId/workers/queues/id/:queueId/consumers/id/:consumerId`,
 					async (req, res, ctx) => {
 						expect(req.params.queueId).toEqual("queue1-queue-id");
+						expect(req.params.consumerId).toEqual("queue1-consumer-id");
 						expect(req.params.accountId).toEqual("some-account-id");
 						return res(
 							ctx.json({
-								success: false,
-								errors: [{ code: 11004 }],
+								success: true,
+								errors: [],
 								messages: [],
 								result: null,
 							})
