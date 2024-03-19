@@ -75,6 +75,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		compatibility_flags: undefined,
 		usage_model: undefined,
 		keepVars: undefined,
+		keepSecrets: undefined,
 		logpush: undefined,
 		placement: undefined,
 		tail_consumers: undefined,
