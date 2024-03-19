@@ -80,6 +80,7 @@ import {
 	Config,
 	Extension,
 	HttpOptions_Style,
+	isSocketIdentifier,
 	kInspectorSocket,
 	Runtime,
 	RuntimeOptions,
@@ -1336,7 +1337,7 @@ export class Miniflare {
 		assert(config.sockets !== undefined);
 		const requiredSockets: SocketIdentifier[] = config.sockets.map(
 			({ name }) => {
-				assert(name !== undefined);
+				assert(isSocketIdentifier(name));
 				return name;
 			}
 		);

@@ -24,7 +24,21 @@ const ControlMessageSchema = z.discriminatedUnion("event", [
 ]);
 
 export const kInspectorSocket = Symbol("kInspectorSocket");
-export type SocketIdentifier = string | typeof kInspectorSocket;
+
+export type SocketIdentifier =
+	| "entry"
+	| "entry:local"
+	| `direct:${number}`
+	| typeof kInspectorSocket;
+
+const directSocketIdentifierRegexp = /^direct:[0-9]+$/;
+export function isSocketIdentifier(value: unknown): value is SocketIdentifier {
+	if (value === kInspectorSocket) return true;
+	if (typeof value !== "string") return false;
+	if (value === "entry" || value === "entry:local") return true;
+	return directSocketIdentifierRegexp.test(value);
+}
+
 export type SocketPorts = Map<SocketIdentifier, number /* port */>;
 
 export interface RuntimeOptions {
@@ -54,8 +68,9 @@ async function waitForPorts(
 			// If this was an unrecognised control message, ignore it
 			if (!message.success) continue;
 			const data = message.data;
-			const socket: SocketIdentifier =
+			const socket =
 				data.event === "listen-inspector" ? kInspectorSocket : data.socket;
+			assert(isSocketIdentifier(socket));
 			const index = requiredSockets.indexOf(socket);
 			// If this wasn't a required socket, ignore it
 			if (index === -1) continue;

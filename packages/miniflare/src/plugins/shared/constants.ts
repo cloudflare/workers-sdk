@@ -11,7 +11,7 @@ export const SOCKET_ENTRY_LOCAL = "entry:local";
 const SOCKET_DIRECT_PREFIX = "direct";
 
 export function getDirectSocketName(workerIndex: number, entrypoint: string) {
-	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}:${entrypoint}`;
+	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}:${entrypoint}` as const;
 }
 
 // Service looping back to Miniflare's Node.js process (for storage, etc)
