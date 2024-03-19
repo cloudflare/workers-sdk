@@ -84,6 +84,9 @@
 	"volta": {
 		"extends": "../../package.json"
 	},
+	"engines": {
+		"node": ">=18"
+	},
 	"workers-sdk": {
 		"prerelease": true
 	},

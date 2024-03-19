@@ -187,7 +187,7 @@
 		"fsevents": "~2.3.2"
 	},
 	"engines": {
-		"node": ">=16.17.0"
+		"node": ">=18"
 	},
 	"volta": {
 		"extends": "../../package.json"
