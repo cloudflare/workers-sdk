@@ -329,6 +329,16 @@ export const R2EventableOperations = [
 	"LifecycleDeletion",
 ] as const;
 export type R2EventableOperation = typeof R2EventableOperations[number];
+
+export const actionsForEventCategories: Record<
+	"object_create" | "object_delete",
+	R2EventableOperation[]
+> = {
+	object_create: ["PutObject", "CompleteMultipartUpload", "CopyObject"],
+	object_delete: ["DeleteObject", "LifecycleDeletion"],
+};
+
+export type R2EventType = keyof typeof actionsForEventCategories;
 // This type captures the shape of the data expected by EWC API.
 export type EWCRequestBody = {
 	bucketName: string;
@@ -373,11 +383,17 @@ export async function putEventNotificationConfig(
 	accountId: string,
 	bucketName: string,
 	queueUUID: string,
-	actions: R2EventableOperation[],
+	eventTypes: R2EventType[],
 	prefix?: string,
 	suffix?: string
 ): Promise<{ event_notification_detail_id: string }> {
 	const headers = eventNotificationHeaders(apiCredentials);
+	let actions: R2EventableOperation[] = [];
+
+	for (const et of eventTypes) {
+		actions = actions.concat(actionsForEventCategories[et]);
+	}
+
 	const body: EWCRequestBody = {
 		bucketName,
 		queue: queueUUID,

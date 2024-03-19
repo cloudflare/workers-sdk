@@ -12,6 +12,7 @@ import * as metrics from "../metrics";
 import { requireApiToken, requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
+	actionsForEventCategories,
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,
 	deleteEventNotificationConfig,
@@ -21,12 +22,11 @@ import {
 	listR2Buckets,
 	putEventNotificationConfig,
 	putR2Object,
-	R2EventableOperations,
 	usingLocalBucket,
 } from "./helpers";
 import * as Sippy from "./sippy";
 import type { CommonYargsArgv } from "../yargs-types";
-import type { R2EventableOperation } from "./helpers";
+import type { R2EventType } from "./helpers";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 const CHUNK_SIZE = 1024;
@@ -560,15 +560,14 @@ export function r2(r2Yargs: CommonYargsArgv) {
 										type: "string",
 										demandOption: true,
 									})
-									.option("actions", {
-										describe: `Specify a list of actions for which to emit notifications. ex. '--actions ${R2EventableOperations.slice(
-											0,
-											2
-										).join(" ")}'`,
+									.option("event-types", {
+										describe:
+											"Specify the kinds of object events to event notifications for. ex. '--event-types object_create object_delete'",
+										alias: "event-type",
+										choices: Object.keys(actionsForEventCategories),
 										demandOption: true,
 										requiresArg: true,
 										type: "array",
-										choices: R2EventableOperations,
 									})
 									.option("prefix", {
 										describe:
@@ -597,7 +596,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								const {
 									bucket,
 									queue,
-									actions,
+									eventTypes,
 									prefix = "",
 									suffix = "",
 								} = args;
@@ -606,7 +605,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									accountId,
 									`${bucket}`,
 									`${queue}`,
-									actions as R2EventableOperation[],
+									eventTypes as R2EventType[],
 									`${prefix}`,
 									`${suffix}`
 								);

@@ -2,13 +2,19 @@ import * as fs from "node:fs";
 import { rest } from "msw";
 import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
+import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EWCRequestBody, R2BucketInfo } from "../r2/helpers";
+import type {
+	EWCRequestBody,
+	R2BucketInfo,
+	R2EventableOperation,
+	R2EventType,
+} from "../r2/helpers";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -542,12 +548,17 @@ describe("r2", () => {
 		describe("event-notification", () => {
 			describe("create", () => {
 				it("follows happy path as expected", async () => {
+					const eventTypes: R2EventType[] = ["object_create", "object_delete"];
+					const actions: R2EventableOperation[] = [];
 					const config: EWCRequestBody = {
 						bucketName: "my-bucket",
 						queue: "deadbeef-0123-4567-8910-abcdefabcdef",
 						rules: [
 							{
-								actions: ["PutObject", "DeleteObject"],
+								actions: eventTypes.reduce(
+									(acc, et) => acc.concat(actionsForEventCategories[et]),
+									actions
+								),
 							},
 						],
 					};
@@ -574,16 +585,14 @@ describe("r2", () => {
 						runWrangler(
 							`r2 bucket event-notification create ${
 								config.bucketName
-							} --queue ${
-								config.queue
-							} --actions ${config.rules[0].actions.join(" ")}`
+							} --queue ${config.queue} --event-types ${eventTypes.join(" ")}`
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-							"Sending this configuration to \\"my-bucket\\":
-							{\\"bucketName\\":\\"my-bucket\\",\\"queue\\":\\"deadbeef-0123-4567-8910-abcdefabcdef\\",\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"DeleteObject\\"]}]}
-							Configuration created successfully!"
-					`);
+				"Sending this configuration to \\"my-bucket\\":
+				{\\"bucketName\\":\\"my-bucket\\",\\"queue\\":\\"deadbeef-0123-4567-8910-abcdefabcdef\\",\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"CompleteMultipartUpload\\",\\"CopyObject\\",\\"DeleteObject\\",\\"LifecycleDeletion\\"]}]}
+				Configuration created successfully!"
+			`);
 				});
 
 				it("errors if required options are not provided", async () => {
@@ -592,30 +601,30 @@ describe("r2", () => {
 							"r2 bucket event-notification create event-notification-test-001"
 						)
 					).rejects.toMatchInlineSnapshot(
-						`[Error: Missing required arguments: actions, queue]`
+						`[Error: Missing required arguments: event-types, queue]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-							"
-							wrangler r2 bucket event-notification create <bucket>
+				"
+				wrangler r2 bucket event-notification create <bucket>
 
-							Create new event notification configuration for an R2 bucket
+				Create new event notification configuration for an R2 bucket
 
-							Positionals:
-							  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+				Positionals:
+				  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
 
-							Flags:
-							  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-							  -c, --config                    Path to .toml configuration file  [string]
-							  -e, --env                       Environment to use for operations and .env files  [string]
-							  -h, --help                      Show help  [boolean]
-							  -v, --version                   Show version number  [boolean]
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
 
-							Options:
-							      --actions  Specify a list of actions for which to emit notifications. ex. '--actions PutObject DeleteObject'  [array] [required] [choices: \\"PutObject\\", \\"DeleteObject\\", \\"CompleteMultipartUpload\\", \\"AbortMultipartUpload\\", \\"CopyObject\\", \\"LifecycleDeletion\\"]
-							      --prefix   only actions on objects with this prefix will emit notifications  [string]
-							      --suffix   only actions on objects with this suffix will emit notifications  [string]
-							      --queue    The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
-					`);
+				Options:
+				      --event-types, --event-type  Specify the kinds of object events to event notifications for. ex. '--event-types object_create object_delete'  [array] [required] [choices: \\"object_create\\", \\"object_delete\\"]
+				      --prefix                     only actions on objects with this prefix will emit notifications  [string]
+				      --suffix                     only actions on objects with this suffix will emit notifications  [string]
+				      --queue                      The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+			`);
 				});
 			});
 
