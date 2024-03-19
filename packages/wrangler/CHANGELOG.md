@@ -1,5 +1,37 @@
 # wrangler
 
+## 3.35.0
+
+### Minor Changes
+
+- [#5166](https://github.com/cloudflare/workers-sdk/pull/5166) [`133a190`](https://github.com/cloudflare/workers-sdk/commit/133a1907087741a4ea3cda7f53ce93919168e8f8) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Implement config file validation for Pages projects
+
+  Wrangler proper has a mechanism in place through which it validates a wrangler.toml file for Workers projects. As part of adding wrangler toml support for Pages, we need to put a similar mechanism in place, to validate a configuration file against Pages specific requirements.
+
+- [#5279](https://github.com/cloudflare/workers-sdk/pull/5279) [`0a86050`](https://github.com/cloudflare/workers-sdk/commit/0a860507e49329d0e140de47830d670397e08c13) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support the hidden command `wrangler pages functions build-env`
+
+- [#5093](https://github.com/cloudflare/workers-sdk/pull/5093) [`a676f55`](https://github.com/cloudflare/workers-sdk/commit/a676f55a457a8b34b1c80f666f615eb258ad58c4) Thanks [@benycodes](https://github.com/benycodes)! - feature: add --dispatch-namespace to wrangler deploy to support uploading Workers directly to a Workers for Platforms dispatch namespace.
+
+### Patch Changes
+
+- [#5275](https://github.com/cloudflare/workers-sdk/pull/5275) [`e1f2576`](https://github.com/cloudflare/workers-sdk/commit/e1f2576e1511a53786cebcde12d8c2cf4b3ce566) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure tail exits when the WebSocket disconnects
+
+  Previously when the tail WebSocket disconnected, e.g. because of an Internet failure,
+  the `wrangler tail` command would just hang and neither exit nor any longer receive tail messages.
+
+  Now the process exits with an exit code of 1, and outputs an error message.
+
+  The error message is formatted appropriately, if the tail format is set to `json`.
+
+  Fixes #3927
+
+- [#5069](https://github.com/cloudflare/workers-sdk/pull/5069) [`8f79981`](https://github.com/cloudflare/workers-sdk/commit/8f799812a3de1c93fb4dcb7a2a89e60c2c0173cd) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: deprecate `wrangler version` command
+
+  `wrangler version` is an undocumented alias for `wrangler --version`. It is being deprecated in favour of the more conventional flag syntax to avoid confusion with a new (upcoming) `wrangler versions` command.
+
+- Updated dependencies [[`1720f0a`](https://github.com/cloudflare/workers-sdk/commit/1720f0a12a6376093b3c5799d74f47c522ae8571)]:
+  - miniflare@3.20240314.0
+
 ## 3.34.2
 
 ### Patch Changes
