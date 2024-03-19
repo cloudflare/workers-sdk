@@ -16,7 +16,6 @@ import {
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
-import MagicString from "magic-string";
 import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Args, C3Context } from "types";
@@ -30,18 +29,14 @@ const generate = async (ctx: C3Context) => {
 
 	const wranglerToml = readFile(join(getTemplatePath(ctx), "wrangler.toml"));
 
-	const newToml = new MagicString(wranglerToml);
-
 	// Note: here we add `# KV Example:` to the toml file for the KV example, we don't actually
 	//       include the comment in the template wrangler.toml file just so to keep it identical
 	//       and consistent with that of all the other frameworks
 	//       (instead of making it a special case which needs extra care)
-	newToml.replace(
+	const newTomlContent = wranglerToml.replace(
 		/#\s+\[\[kv_namespaces\]\]\n#\s+binding\s+=\s+"MY_KV_NAMESPACE"\n#\s+id\s+=\s+"[a-zA-Z0-9]+?"/,
 		($1) => `# KV Example:\n${$1}`
 	);
-
-	const newTomlContent = newToml.toString();
 
 	if (!/# KV Example/.test(newTomlContent)) {
 		// This should never happen to users, it is a check mostly so that
