@@ -52,9 +52,7 @@ export async function handler(
 			visibility_timeout_ms: args.visibilityTimeoutSecs
 				? args.visibilityTimeoutSecs * 1000
 				: undefined,
-			retry_delay_ms: args.retryDelaySecs
-				? args.retryDelaySecs * 1000
-				: undefined,
+			retry_delay: args.retryDelaySecs ? args.retryDelaySecs * 1000 : undefined,
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};

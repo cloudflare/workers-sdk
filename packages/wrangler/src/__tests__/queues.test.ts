@@ -671,7 +671,7 @@ describe("wrangler", () => {
 							batch_size: undefined,
 							max_retries: undefined,
 							visibility_timeout_ms: undefined,
-							retry_delay_ms: undefined,
+							retry_delay: undefined,
 						},
 						dead_letter_queue: undefined,
 					};
@@ -692,7 +692,7 @@ describe("wrangler", () => {
 							batch_size: 20,
 							max_retries: 3,
 							visibility_timeout_ms: 6000,
-							retry_delay_ms: 3000,
+							retry_delay: 3000,
 						},
 						dead_letter_queue: "myDLQ",
 					};
