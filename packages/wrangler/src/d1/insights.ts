@@ -72,9 +72,19 @@ function getDurationDates(durationString: string) {
 			);
 			break;
 		case "m":
+			if (durationValue > 31 * 24 * 60) {
+				throw new Error(
+					`Duration cannot be greater than ${31 * 24 * 60} minutes (31 days)`
+				);
+			}
 			startDate = new Date(endDate.getTime() - durationValue * 60 * 1000);
 			break;
 		case "h":
+			if (durationValue > 31 * 24) {
+				throw new Error(
+					`Duration cannot be greater than ${31 * 24} hours (31 days)`
+				);
+			}
 			startDate = new Date(endDate.getTime() - durationValue * 60 * 60 * 1000);
 			break;
 		default:
