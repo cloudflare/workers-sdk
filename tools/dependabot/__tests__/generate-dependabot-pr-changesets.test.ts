@@ -163,10 +163,10 @@ describe("writeChangeSet()", () => {
 			`".changeset/dependabot-update-1234.md"`
 		);
 		expect((writeFileSync as Mock).mock.lastCall[1]).toMatchInlineSnapshot(`
-			"
-			---
+			"---
 			"package-name": patch
 			---
+
 			chore: update dependencies of "@namespace/package" package
 
 			The following dependency versions have been updated:
