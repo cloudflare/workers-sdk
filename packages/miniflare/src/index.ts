@@ -600,32 +600,30 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	// rejections from aborted request body streams:
 	// https://github.com/nodejs/undici/blob/dfaec78f7a29f07bb043f9006ed0ceb0d5220b55/lib/core/util.js#L369-L392
 	let iterator: AsyncIterator<Uint8Array>;
-	return new ReadableStream<Uint8Array>(
-		{
-			async start() {
-				iterator = iterable[Symbol.asyncIterator]();
-			},
-			// @ts-expect-error `pull` may return anything
-			async pull(controller): Promise<boolean> {
-				try {
-					const { done, value } = await iterator.next();
-					if (done) {
-						queueMicrotask(() => controller.close());
-					} else {
-						const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
-						controller.enqueue(new Uint8Array(buf));
-					}
-				} catch {
+	return new ReadableStream<Uint8Array>({
+		async start() {
+			iterator = iterable[Symbol.asyncIterator]();
+		},
+		// @ts-expect-error `pull` may return anything
+		async pull(controller): Promise<boolean> {
+			try {
+				const { done, value } = await iterator.next();
+				if (done) {
 					queueMicrotask(() => controller.close());
+				} else {
+					const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+					controller.enqueue(new Uint8Array(buf));
 				}
-				// @ts-expect-error `pull` may return anything
-				return controller.desiredSize > 0;
-			},
-			async cancel() {
-				await iterator.return?.();
-			},
-		}
-	);
+			} catch {
+				queueMicrotask(() => controller.close());
+			}
+			// @ts-expect-error `pull` may return anything
+			return controller.desiredSize > 0;
+		},
+		async cancel() {
+			await iterator.return?.();
+		},
+	});
 }
 
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
