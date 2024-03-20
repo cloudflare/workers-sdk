@@ -105,7 +105,7 @@ export async function postTypedConsumer(
 	const accountId = await requireAuth(config);
 	const queue = await getQueue(config, queueName);
 	return fetchResult(
-		`/accounts/${accountId}/workers/queues/id/${queue.queue_id}/consumers`,
+		`/accounts/${accountId}/queues/${queue.queue_id}/consumers`,
 		{
 			method: "POST",
 			body: JSON.stringify(body),
@@ -122,7 +122,7 @@ export async function putTypedConsumer(
 	const accountId = await requireAuth(config);
 
 	return fetchResult(
-		`/accounts/${accountId}/workers/queues/id/${queueId}/consumers/id/${consumerId}`,
+		`/accounts/${accountId}/queues/${queueId}/consumers/${consumerId}`,
 		{
 			method: "PUT",
 			body: JSON.stringify(body),
@@ -177,7 +177,7 @@ export async function deletePullConsumer(
 	if (consumer?.type !== "http_pull") {
 		throw new UserError(`No http_pull consumer exists for queue ${queueName}`);
 	}
-	const resource = `/accounts/${accountId}/workers/queues/id/${queue.queue_id}/consumers/id/${consumer.consumer_id}`;
+	const resource = `/accounts/${accountId}/queues/${queue.queue_id}/consumers/${consumer.consumer_id}`;
 	return fetchResult(resource, {
 		method: "DELETE",
 	});

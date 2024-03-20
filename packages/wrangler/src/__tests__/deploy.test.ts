@@ -8720,7 +8720,7 @@ export default{
 			);
 			msw.use(
 				rest.put(
-					`*/accounts/:accountId/workers/queues/id/:queueId/consumers/id/:consumerId`,
+					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
 					async (req, res, ctx) => {
 						expect(req.params.queueId).toEqual("queue1-queue-id");
 						expect(req.params.consumerId).toEqual("queue1-consumer-id");
@@ -9730,7 +9730,7 @@ function mockPostQueueHTTPConsumer(
 	const requests = { count: 0 };
 	msw.use(
 		rest.post(
-			`*/accounts/:accountId/workers/queues/id/:queueId/consumers`,
+			`*/accounts/:accountId/queues/:queueId/consumers`,
 			async (req, res, ctx) => {
 				const body = await req.json();
 				expect(req.params.queueId).toEqual(expectedQueueId);

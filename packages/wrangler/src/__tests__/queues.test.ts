@@ -617,7 +617,7 @@ describe("wrangler", () => {
 					const requests = { count: 0 };
 					msw.use(
 						rest.post(
-							"*/accounts/:accountId/workers/queues/id/:queueId/consumers",
+							"*/accounts/:accountId/queues/:queueId/consumers",
 							async (request, response, context) => {
 								requests.count += 1;
 								expect(request.params.queueId).toEqual(expectedQueueId);
@@ -739,7 +739,7 @@ describe("wrangler", () => {
 					expectedConsumerId: string
 				) {
 					const requests = { count: 0 };
-					const resource = `accounts/:accountId/workers/queues/id/:expectedQueueId/consumers/id/:expectedConsumerId`;
+					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
 					msw.use(
 						rest.delete(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
