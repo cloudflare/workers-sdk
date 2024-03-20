@@ -550,9 +550,10 @@ describe("r2", () => {
 				it("follows happy path as expected", async () => {
 					const eventTypes: R2EventType[] = ["object_create", "object_delete"];
 					const actions: R2EventableOperation[] = [];
+					const bucketName = "my-bucket";
+					const queue = "deadbeef-0123-4567-8910-abcdefabcdef";
+
 					const config: EWCRequestBody = {
-						bucketName: "my-bucket",
-						queue: "deadbeef-0123-4567-8910-abcdefabcdef",
 						rules: [
 							{
 								actions: eventTypes.reduce(
@@ -583,14 +584,14 @@ describe("r2", () => {
 					);
 					await expect(
 						runWrangler(
-							`r2 bucket event-notification create ${
-								config.bucketName
-							} --queue ${config.queue} --event-types ${eventTypes.join(" ")}`
+							`r2 bucket event-notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+								" "
+							)}`
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Sending this configuration to \\"my-bucket\\":
-				{\\"bucketName\\":\\"my-bucket\\",\\"queue\\":\\"deadbeef-0123-4567-8910-abcdefabcdef\\",\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"CompleteMultipartUpload\\",\\"CopyObject\\",\\"DeleteObject\\",\\"LifecycleDeletion\\"]}]}
+				{\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"CompleteMultipartUpload\\",\\"CopyObject\\",\\"DeleteObject\\",\\"LifecycleDeletion\\"]}]}
 				Configuration created successfully!"
 			`);
 				});
@@ -620,7 +621,7 @@ describe("r2", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				Options:
-				      --event-types, --event-type  Specify the kinds of object events to event notifications for. ex. '--event-types object_create object_delete'  [array] [required] [choices: \\"object_create\\", \\"object_delete\\"]
+				      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'  [array] [required] [choices: \\"object_create\\", \\"object_delete\\"]
 				      --prefix                     only actions on objects with this prefix will emit notifications  [string]
 				      --suffix                     only actions on objects with this suffix will emit notifications  [string]
 				      --queue                      The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"

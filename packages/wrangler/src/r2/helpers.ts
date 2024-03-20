@@ -341,8 +341,6 @@ export const actionsForEventCategories: Record<
 export type R2EventType = keyof typeof actionsForEventCategories;
 // This type captures the shape of the data expected by EWC API.
 export type EWCRequestBody = {
-	bucketName: string;
-	queue: string;
 	// `jurisdiction` is included here for completeness, but until Queues
 	// supports jurisdictions, then this command will not send anything to do
 	// with jurisdictions.
@@ -397,8 +395,6 @@ export async function putEventNotificationConfig(
 	}
 
 	const body: EWCRequestBody = {
-		bucketName,
-		queue: queueUUID,
 		rules: [{ prefix, suffix, actions }],
 	};
 	logger.log(
