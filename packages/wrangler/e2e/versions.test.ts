@@ -20,7 +20,6 @@ describe("versions deploy", () => {
 	let root: string;
 	let workerName: string;
 	let workerPath: string;
-	let workersDev: string | null = null;
 	let runInRoot: typeof shellac;
 	let runInWorker: typeof shellac;
 	let normalize: (str: string) => string;
