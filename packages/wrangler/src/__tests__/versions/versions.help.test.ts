@@ -1,18 +1,6 @@
 import { setImmediate } from "node:timers/promises";
-import { normalizeOutput } from "../../../e2e/helpers/normalize";
-import { collectCLIOutput } from "../helpers/collect-cli-output";
-import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { msw, mswGetVersion } from "../helpers/msw";
-import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
-
-// --help
-// implicit subhelp
-// --experimental-gradual-rollouts
-// --experimental-versions
-// --x-versions
 
 describe("versions --help", () => {
 	const std = mockConsoleMethods();
