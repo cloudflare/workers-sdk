@@ -155,7 +155,7 @@ export function writeChangeSet(
 ): void {
 	writeFileSync(
 		`.changeset/dependabot-update-${prNumber}.md`,
-		"\n" + changesetHeader + "\n" + commitMessage + "\n"
+		changesetHeader + "\n\n" + commitMessage + "\n"
 	);
 }
 
