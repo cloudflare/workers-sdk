@@ -1799,6 +1799,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^5.55.0
         version: 5.62.0(eslint@8.57.0)(typescript@4.9.5)
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
 
 packages:
 

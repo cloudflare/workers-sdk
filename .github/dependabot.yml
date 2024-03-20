@@ -22,3 +22,19 @@ updates:
     labels:
       - "c3"
       - "dependencies"
+  # Check for workerd & workers-types updates for Miniflare
+  - package-ecosystem: "npm"
+    directory: "/packages/miniflare"
+    schedule:
+      interval: "daily"
+    versioning-strategy: increase
+    assignees:
+      - "@cloudflare/wrangler"
+    reviewers:
+      - "@cloudflare/wrangler"
+    labels:
+      - "miniflare"
+      - "dependencies"
+    allow:
+      - dependency-name: "workerd"
+      - dependency-name: "@cloudflare/workers-types"
