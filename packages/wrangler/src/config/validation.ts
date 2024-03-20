@@ -42,6 +42,10 @@ import type { ValidatorFn } from "./validation-helpers";
 
 const ENGLISH = new Intl.ListFormat("en");
 
+export function isPagesConfig(rawConfig: RawConfig): boolean {
+	return rawConfig.pages_build_output_dir !== undefined;
+}
+
 /**
  * Validate the given `rawConfig` object that was loaded from `configPath`.
  *
@@ -152,11 +156,27 @@ export function normalizeAndValidateConfig(
 	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
+
 	if (envName !== undefined) {
 		const envDiagnostics = new Diagnostics(
 			`"env.${envName}" environment configuration`
 		);
 		const rawEnv = rawConfig.env?.[envName];
+
+		/**
+		 * If an environment name was specified, and we found corresponding configuration
+		 * for it in the config file, we will use that corresponding environment. If the
+		 * environment name was specified, but no configuration for it was found, we will:
+		 *
+		 * - default to the top-level environment for Pages. For Pages, Wrangler does not
+		 * require both of supported named environments ("preview" or "production") to be
+		 * explicitly defined in the config file. If either`[env.production]` or
+		 * `[env.preview]` is left unspecified, we will use the top-level environment when
+		 * targeting that named Pages environment.
+		 *
+		 * - create a fake active environment with the specified `envName` for Workers.
+		 * This is done to cover any legacy environment cases, where the `envName` is used.
+		 */
 		if (rawEnv !== undefined) {
 			activeEnv = normalizeAndValidateEnvironment(
 				envDiagnostics,
@@ -169,10 +189,7 @@ export function normalizeAndValidateConfig(
 				rawConfig
 			);
 			diagnostics.addChild(envDiagnostics);
-		} else {
-			// An environment was specified, but no configuration for it was found.
-			// To cover any legacy environment cases, where the `envName` is used,
-			// Let's create a fake active environment with the specified `envName`.
+		} else if (!isPagesConfig(rawConfig)) {
 			activeEnv = normalizeAndValidateEnvironment(
 				envDiagnostics,
 				configPath,
