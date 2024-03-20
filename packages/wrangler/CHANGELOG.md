@@ -1,5 +1,30 @@
 # wrangler
 
+## 3.36.0
+
+### Minor Changes
+
+- [#5234](https://github.com/cloudflare/workers-sdk/pull/5234) [`e739b7f`](https://github.com/cloudflare/workers-sdk/commit/e739b7fecfb6f3f99a50091be4b7bcd44fdbaa71) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Implement environment inheritance for Pages configuration
+
+  For Pages, Wrangler will not require both of the supported named environments ("preview" | "production") to be explicitly defined in the config file. If either `[env.production]` or `[env.preview]` is left unspecified, Wrangler will use the top-level environment when targeting that named Pages environment.
+
+### Patch Changes
+
+- [#5306](https://github.com/cloudflare/workers-sdk/pull/5306) [`c60fed0`](https://github.com/cloudflare/workers-sdk/commit/c60fed09f3ba3260f182f9d2e6c7c6d0bb123eac) Thanks [@taylorlee](https://github.com/taylorlee)! - fix: Remove triggered_by annotation from experimental `versions deploy` command which is now set by the API and cannot be set by the client.
+
+- [#5321](https://github.com/cloudflare/workers-sdk/pull/5321) [`ac93411`](https://github.com/cloudflare/workers-sdk/commit/ac93411fdb124a784736db704d40592cde227535) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: rename `--experimental-gradual-rollouts` to `--experimental-versions` flag
+
+  The `--experimental-gradual-rollouts` flag has been made an alias and will still work.
+
+  And additional shorthand alias `--x-versions` has also been added and will work too.
+
+- [#5324](https://github.com/cloudflare/workers-sdk/pull/5324) [`bfc4282`](https://github.com/cloudflare/workers-sdk/commit/bfc4282de58066d5a9ab07d3e8419ed12b927a96) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ignore OPTIONS requests in Wrangler's oauth server
+
+- [#5099](https://github.com/cloudflare/workers-sdk/pull/5099) [`93150aa`](https://github.com/cloudflare/workers-sdk/commit/93150aa0ee51dc3db0c15b6a7126fca11bc2ba0f) Thanks [@KaiSpencer](https://github.com/KaiSpencer)! - feat: expose `--show-interactive-dev-session` flag
+
+  This flag controls the interactive mode of the dev session, a feature that already exists internally but was not exposed to the user.
+  This is useful for CI/CD environments where the interactive mode is not desired, or running in tools like `turbo` and `nx`.
+
 ## 3.35.0
 
 ### Minor Changes

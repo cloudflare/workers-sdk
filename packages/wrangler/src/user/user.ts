@@ -960,6 +960,7 @@ export async function login(
 
 			assert(req.url, "This request doesn't have a URL"); // This should never happen
 			const { pathname, query } = url.parse(req.url, true);
+			if (req.method !== "GET") return res.end("OK");
 			switch (pathname) {
 				case "/oauth/callback": {
 					let hasAuthCode = false;

@@ -67,6 +67,8 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
 );
 
+const DEFAULT_SCRIPT_PATH = "_worker.js";
+
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
@@ -77,7 +79,7 @@ export function Options(yargs: CommonYargsArgv) {
 		.positional("command", {
 			type: "string",
 			demandOption: undefined,
-			description: "The proxy command to run",
+			description: "The proxy command to run  [deprecated]", // no official way to deprecate a positional argument
 		})
 		.options({
 			local: {
@@ -121,12 +123,14 @@ export function Options(yargs: CommonYargsArgv) {
 			proxy: {
 				type: "number",
 				description: "The port to proxy (where the static assets are served)",
+				deprecated: true,
 			},
 			"script-path": {
 				type: "string",
-				default: "_worker.js",
 				description:
-					"The location of the single Worker script if not using functions",
+					"The location of the single Worker script if not using functions  [default: _worker.js]",
+				// hacking in a fake default message here so we can detect when user is setting this and show a deprecation message
+				deprecated: true,
 			},
 			bundle: {
 				type: "boolean",
@@ -269,6 +273,14 @@ export const Handler = async ({
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
 
+	if (singleWorkerScriptPath !== undefined) {
+		logger.warn(
+			`\`--script-path\` is deprecated and will be removed in a future version of Wrangler.\nThe Worker script should be named \`_worker.js\` and located in the build output directory of your project (specified with \`wrangler pages dev <directory>\`).`
+		);
+	}
+
+	singleWorkerScriptPath ??= DEFAULT_SCRIPT_PATH;
+
 	const command = remaining;
 
 	let proxyPort: number | undefined;
@@ -279,6 +291,10 @@ export const Handler = async ({
 			1
 		);
 	} else if (directory === undefined) {
+		logger.warn(
+			`Specifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.\nBuild your application to a directory and run the \`wrangler pages dev <directory>\` instead.\nThis results in a more faithful emulation of production behavior.`
+		);
+
 		proxyPort = await spawnProxyProcess({
 			port: requestedProxyPort,
 			command,

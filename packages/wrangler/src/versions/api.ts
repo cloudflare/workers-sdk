@@ -115,7 +115,6 @@ export async function createDeployment(
 					([version_id, percentage]) => ({ version_id, percentage })
 				),
 				annotations: {
-					"workers/triggered_by": "deployment",
 					"workers/message": message,
 				},
 			}),
