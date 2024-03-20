@@ -659,8 +659,8 @@ describe("wrangler", () => {
 				      --batch-size               Maximum number of messages per batch  [number]
 				      --message-retries          Maximum number of retries for each message  [number]
 				      --dead-letter-queue        Queue to send messages that failed to be consumed  [string]
-				      --visibility-timeout-secs  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]"
-					  --retry-delay-secs		 The number of seconds to wait before retrying a message  [number]
+				      --visibility-timeout-secs  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]
+				      --retry-delay-secs         The number of seconds to wait before retrying a message  [number]"
 			`);
 				});
 
