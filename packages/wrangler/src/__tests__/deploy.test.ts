@@ -8654,7 +8654,7 @@ export default{
 							max_batch_size: 5,
 							visibility_timeout_ms: 4000,
 							max_retries: 10,
-							retry_delay_ms: 1000,
+							retry_delay: 1,
 						},
 					],
 				},
@@ -8670,7 +8670,7 @@ export default{
 					batch_size: 5,
 					max_retries: 10,
 					visibility_timeout_ms: 4000,
-					retry_delay: 1000,
+					retry_delay: 1,
 				},
 			});
 			await runWrangler("deploy index.js");

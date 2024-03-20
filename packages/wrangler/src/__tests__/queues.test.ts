@@ -692,7 +692,7 @@ describe("wrangler", () => {
 							batch_size: 20,
 							max_retries: 3,
 							visibility_timeout_ms: 6000,
-							retry_delay: 3000,
+							retry_delay: 3,
 						},
 						dead_letter_queue: "myDLQ",
 					};

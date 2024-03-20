@@ -1186,7 +1186,7 @@ async function updateQueueConsumers(
 						batch_size: consumer.max_batch_size,
 						max_retries: consumer.max_retries,
 						visibility_timeout_ms: consumer.visibility_timeout_ms,
-						retry_delay: consumer.retry_delay_ms,
+						retry_delay: consumer.retry_delay,
 					},
 				};
 				updateConsumers.push(
@@ -1207,7 +1207,7 @@ async function updateQueueConsumers(
 					batch_size: consumer.max_batch_size,
 					max_retries: consumer.max_retries,
 					visibility_timeout_ms: consumer.visibility_timeout_ms,
-					retry_delay: consumer.retry_delay_ms,
+					retry_delay: consumer.retry_delay,
 				},
 			};
 			updateConsumers.push(
