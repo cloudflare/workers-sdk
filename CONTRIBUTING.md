@@ -235,6 +235,38 @@ When you open a PR to the `workers-sdk` repo, you should expect several checks t
 
 A summary of this repositories actions can be found [here](.github/workflows/README.md)
 
+## Running e2e tests locally
+
+To run the e2e tests locally, you'll need a Cloudflare API Token and run:
+
+```sh
+$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e
+```
+
+You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
+
+```sh
+$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e [file-pattern] --bail=1
+```
+
+### Creating an API Token
+
+1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
+1. Click "Create API Token"
+1. Use the "Edit Cloudflare Workers" template
+1. Set "Account Resources" to "Include" "DevProd Testing" (you can use any account you have access to)
+1. Set "Zone Resources" to "All zones from an account" and the same account as above
+1. Click "Continue to summary"
+1. Verify your token works by running the curl command provided
+1. Set the environment variables in your terminal or in your profile file (e.g. ~/.zshrc, ~/.bashrc, ~/.profile, etc):
+
+```sh
+export CLOUDFLARE_TESTING_ACCOUNT_ID="<Account ID for the token you just created>"
+export CLOUDFLARE_TESTING_API_TOKEN="<Token you just created>"
+```
+
+Note: Workers created in the e2e tests that fail might not always be cleaned up (deleted). Internal users with access to the "DevProd Testing" account can rely on an automated job to clean up the Workers based on the format of the name. If you use another account, please be aware you may want to manually delete the Workers yourself.
+
 ## Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
