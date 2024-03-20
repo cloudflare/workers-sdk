@@ -106,6 +106,12 @@ const WrappedBindingSchema = z.object({
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
+export const UnsafeDirectSocketSchema = z.object({
+	host: z.ostring(),
+	port: z.onumber(),
+	entrypoint: z.ostring(),
+});
+
 const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
@@ -131,8 +137,7 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		// TODO(soon): remove this in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
-		unsafeDirectHost: z.string().optional(),
-		unsafeDirectPort: z.number().optional(),
+		unsafeDirectSockets: UnsafeDirectSocketSchema.array().optional(),
 
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
