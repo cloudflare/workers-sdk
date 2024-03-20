@@ -1,6 +1,7 @@
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
+import { EXIT_CODE_NO_CONFIG_FOUND } from "./errors";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -19,7 +20,10 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		env: process.env.PAGES_ENVIRONMENT,
 	});
 	if (!config.pages_build_output_dir) {
-		throw new FatalError("No Pages config file found");
+		throw new FatalError(
+			"No Pages config file found",
+			EXIT_CODE_NO_CONFIG_FOUND
+		);
 	}
 
 	// Ensure JSON variables are not included
