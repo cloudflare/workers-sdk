@@ -404,6 +404,20 @@ export declare class Worker_Binding_CryptoKey extends __S {
     toString(): string;
     which(): Worker_Binding_CryptoKey_Which;
 }
+export declare class Worker_Binding_MemoryCacheLimits extends __S {
+    static readonly _capnp: {
+        displayName: string;
+        id: string;
+        size: capnp.ObjectSize;
+    };
+    getMaxKeys(): number;
+    setMaxKeys(value: number): void;
+    getMaxValueSize(): number;
+    setMaxValueSize(value: number): void;
+    getMaxTotalValueSize(): capnp.Uint64;
+    setMaxTotalValueSize(value: capnp.Uint64): void;
+    toString(): string;
+}
 export declare class Worker_Binding_WrappedBinding extends __S {
     static readonly _capnp: {
         displayName: string;
@@ -462,6 +476,22 @@ export declare class Worker_Binding_Hyperdrive extends __S {
     setScheme(value: string): void;
     toString(): string;
 }
+export declare class Worker_Binding_MemoryCache extends __S {
+    static readonly _capnp: {
+        displayName: string;
+        id: string;
+        size: capnp.ObjectSize;
+    };
+    getId(): string;
+    setId(value: string): void;
+    adoptLimits(value: capnp.Orphan<Worker_Binding_MemoryCacheLimits>): void;
+    disownLimits(): capnp.Orphan<Worker_Binding_MemoryCacheLimits>;
+    getLimits(): Worker_Binding_MemoryCacheLimits;
+    hasLimits(): boolean;
+    initLimits(): Worker_Binding_MemoryCacheLimits;
+    setLimits(value: Worker_Binding_MemoryCacheLimits): void;
+    toString(): string;
+}
 export declare enum Worker_Binding_Which {
     UNSPECIFIED = 0,
     PARAMETER = 1,
@@ -480,7 +510,8 @@ export declare enum Worker_Binding_Which {
     FROM_ENVIRONMENT = 14,
     ANALYTICS_ENGINE = 15,
     HYPERDRIVE = 16,
-    UNSAFE_EVAL = 17
+    UNSAFE_EVAL = 17,
+    MEMORY_CACHE = 18
 }
 export declare class Worker_Binding extends __S {
     static readonly UNSPECIFIED = Worker_Binding_Which.UNSPECIFIED;
@@ -501,9 +532,11 @@ export declare class Worker_Binding extends __S {
     static readonly ANALYTICS_ENGINE = Worker_Binding_Which.ANALYTICS_ENGINE;
     static readonly HYPERDRIVE = Worker_Binding_Which.HYPERDRIVE;
     static readonly UNSAFE_EVAL = Worker_Binding_Which.UNSAFE_EVAL;
+    static readonly MEMORY_CACHE = Worker_Binding_Which.MEMORY_CACHE;
     static readonly Type: typeof Worker_Binding_Type;
     static readonly DurableObjectNamespaceDesignator: typeof Worker_Binding_DurableObjectNamespaceDesignator;
     static readonly CryptoKey: typeof Worker_Binding_CryptoKey;
+    static readonly MemoryCacheLimits: typeof Worker_Binding_MemoryCacheLimits;
     static readonly WrappedBinding: typeof Worker_Binding_WrappedBinding;
     static readonly _capnp: {
         displayName: string;
@@ -610,6 +643,10 @@ export declare class Worker_Binding extends __S {
     setHyperdrive(): void;
     isUnsafeEval(): boolean;
     setUnsafeEval(): void;
+    getMemoryCache(): Worker_Binding_MemoryCache;
+    initMemoryCache(): Worker_Binding_MemoryCache;
+    isMemoryCache(): boolean;
+    setMemoryCache(): void;
     toString(): string;
     which(): Worker_Binding_Which;
 }
@@ -896,6 +933,8 @@ export declare class HttpOptions extends __S {
     hasInjectResponseHeaders(): boolean;
     initInjectResponseHeaders(length: number): capnp.List<HttpOptions_Header>;
     setInjectResponseHeaders(value: capnp.List<HttpOptions_Header>): void;
+    getCapnpConnectHost(): string;
+    setCapnpConnectHost(value: string): void;
     toString(): string;
 }
 export declare class TlsOptions_Keypair extends __S {
