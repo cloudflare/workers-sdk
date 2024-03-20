@@ -98,7 +98,6 @@ describe("versions deploy", () => {
 			"╭ Deploy Worker Versions by splitting traffic between multiple versions
 			│
 			├ Fetching latest deployment
-			│ undefined
 			│
 			├ Your current deployment has 1 version(s):
 			│
@@ -108,7 +107,6 @@ describe("versions deploy", () => {
 			│       Message:  -
 			│
 			├ Fetching deployable versions
-			│ undefined
 			│
 			├ Which version(s) do you want to deploy?
 			├ 1 Worker Version(s) selected
@@ -125,7 +123,6 @@ describe("versions deploy", () => {
 			│ Deployment message Deploy via e2e test
 			│
 			├ Deploying 1 version(s)
-			│ undefined
 			│
 			│
 			╰  SUCCESS  Deployed tmp-e2e-wrangler version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
@@ -217,7 +214,6 @@ describe("versions deploy", () => {
 			"╭ Deploy Worker Versions by splitting traffic between multiple versions
 			│
 			├ Fetching latest deployment
-			│ undefined
 			│
 			├ Your current deployment has 1 version(s):
 			│
@@ -227,7 +223,6 @@ describe("versions deploy", () => {
 			│       Message:  Upload via e2e test
 			│
 			├ Fetching deployable versions
-			│ undefined
 			│
 			├ Which version(s) do you want to deploy?
 			├ 1 Worker Version(s) selected
@@ -244,7 +239,6 @@ describe("versions deploy", () => {
 			│ Deployment message Deploy AGAIN via e2e test
 			│
 			├ Deploying 1 version(s)
-			│ undefined
 			│
 			│
 			╰  SUCCESS  Deployed tmp-e2e-wrangler version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
