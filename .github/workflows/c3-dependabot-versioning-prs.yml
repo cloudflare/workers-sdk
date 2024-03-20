@@ -16,9 +16,18 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GH_ACCESS_TOKEN }}
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 16.18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.18
+          cache: "pnpm"
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler automated PR updater'
+
       - name: Generate C3 changesets
         run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json
