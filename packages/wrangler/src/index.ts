@@ -176,9 +176,13 @@ export function demandOneOfOption(...options: string[]) {
 export class CommandLineArgsError extends UserError {}
 
 export function createCLIParser(argv: string[]) {
-	const experimentalGradualRollouts = argv.includes(
-		"--experimental-gradual-rollouts"
-	);
+	const experimentalGradualRollouts =
+		// original flag -- using internal product name (Gradual Rollouts) -- kept for temp back-compat
+		argv.includes("--experimental-gradual-rollouts") ||
+		// new flag -- using external product name (Versions)
+		argv.includes("--experimental-versions") ||
+		// new flag -- shorthand
+		argv.includes("--x-versions");
 
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -223,10 +227,11 @@ export function createCLIParser(argv: string[]) {
 			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
 		})
-		.option("experimental-gradual-rollouts", {
-			describe: `Experimental: Support Gradual Rollouts`,
+		.option("experimental-versions", {
+			describe: `Experimental: Support Worker Versions`,
 			type: "boolean",
 			hidden: true,
+			alias: ["x-versions", "experimental-gradual-rollouts"],
 		})
 		.check((args) => {
 			// Update logger level, before we do any logging
@@ -723,7 +728,9 @@ export function createCLIParser(argv: string[]) {
 
 	// versions
 	if (experimentalGradualRollouts) {
-		wrangler.command("versions", false, registerVersionsSubcommands);
+		wrangler.command("versions", false, (yargs) => {
+			return registerVersionsSubcommands(yargs.command(subHelp));
+		});
 	}
 
 	wrangler.exitProcess(false);
