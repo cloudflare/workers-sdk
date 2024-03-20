@@ -215,12 +215,6 @@ export function devOptions(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			})
-			.option("experimental-local", {
-				describe: "Run on my machine using the Cloudflare Workers runtime",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			})
 			.option("minify", {
 				describe: "Minify the script",
 				type: "boolean",
@@ -376,11 +370,6 @@ export async function startDev(args: StartDevOptions) {
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
-			);
-		}
-		if (args.experimentalLocal) {
-			logger.warn(
-				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
 			);
 		}
 
