@@ -1,12 +1,12 @@
 import MockWebSocket from "jest-websocket-mock";
 import { rest } from "msw";
 import { Headers, Request } from "undici";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { runWrangler } from "./helpers/run-wrangler";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { useMockIsTTY } from "../helpers/mock-istty";
+import { msw } from "../helpers/msw";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
 import type {
 	AlarmEvent,
 	EmailEvent,
@@ -16,7 +16,7 @@ import type {
 	TailEvent,
 	TailEventMessage,
 	TailInfo,
-} from "../tail/createTail";
+} from "../../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
