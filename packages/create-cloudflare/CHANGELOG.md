@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.15.1
+
+### Patch Changes
+
+- [#5204](https://github.com/cloudflare/workers-sdk/pull/5204) [`3aa68c0`](https://github.com/cloudflare/workers-sdk/commit/3aa68c015db308d435e475f77e50a58bf0756855) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-astro` from `4.7.3` to `4.7.4`
+
+- [#5205](https://github.com/cloudflare/workers-sdk/pull/5205) [`1502e41`](https://github.com/cloudflare/workers-sdk/commit/1502e41378a02fedc3ab05a939ee7d634ec2074c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: Bumped `create-remix` from `2.8.0` to `2.8.1`
+
+- [#5312](https://github.com/cloudflare/workers-sdk/pull/5312) [`4126ee0`](https://github.com/cloudflare/workers-sdk/commit/4126ee0865ea846015974c4efc0f2ee684b44b6d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: update the remix template url used (as the old one is no longer valid)
+
 ## 2.15.0
 
 ### Minor Changes
