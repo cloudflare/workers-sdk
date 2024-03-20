@@ -163,7 +163,8 @@ describe("writeChangeSet()", () => {
 			`".changeset/dependabot-update-1234.md"`
 		);
 		expect((writeFileSync as Mock).mock.lastCall[1]).toMatchInlineSnapshot(`
-			"---
+			"
+			---
 			"package-name": patch
 			---
 			chore: update dependencies of "@namespace/package" package
@@ -172,7 +173,8 @@ describe("writeChangeSet()", () => {
 			| Dependency              | From   | To     |
 			| ----------------------- | ------ | ------ |
 			| some-package            | ^0.0.1 | ^0.0.2 |
-			| @namespace/some-package | 1.3.4  | 1.4.5  |"
+			| @namespace/some-package | 1.3.4  | 1.4.5  |
+			"
 		`);
 	});
 });
