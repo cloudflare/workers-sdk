@@ -224,19 +224,29 @@ function getCustomServiceDesignator(
 	service: z.infer<typeof ServiceDesignatorSchema>
 ): ServiceDesignator {
 	let serviceName: string;
+	let entrypoint: string | undefined;
 	if (typeof service === "function") {
 		// Custom `fetch` function
 		serviceName = getCustomServiceName(workerIndex, kind, name);
 	} else if (typeof service === "object") {
-		// Builtin workerd service: network, external, disk
-		serviceName = getBuiltinServiceName(workerIndex, kind, name);
+		if ("name" in service) {
+			if (service.name === kCurrentWorker) {
+				serviceName = getUserServiceName(refererName);
+			} else {
+				serviceName = getUserServiceName(service.name);
+			}
+			entrypoint = service.entrypoint;
+		} else {
+			// Builtin workerd service: network, external, disk
+			serviceName = getBuiltinServiceName(workerIndex, kind, name);
+		}
 	} else if (service === kCurrentWorker) {
 		serviceName = getUserServiceName(refererName);
 	} else {
 		// Regular user worker
 		serviceName = getUserServiceName(service);
 	}
-	return { name: serviceName };
+	return { name: serviceName, entrypoint };
 }
 
 function maybeGetCustomServiceService(
@@ -261,7 +271,7 @@ function maybeGetCustomServiceService(
 				],
 			},
 		};
-	} else if (typeof service === "object") {
+	} else if (typeof service === "object" && !("name" in service)) {
 		// Builtin workerd service: network, external, disk
 		return {
 			name: getBuiltinServiceName(workerIndex, kind, name),

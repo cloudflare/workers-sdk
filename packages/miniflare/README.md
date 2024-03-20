@@ -296,7 +296,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -307,6 +307,12 @@ parameter in module format Workers.
     with that `name`.
   - If the designator is `(await import("miniflare")).kCurrentWorker`, requests
     will be dispatched to the Worker defining the binding.
+  - If the designator is an object of the form `{ name: ..., entrypoint: ... }`,
+    requests will be dispatched to the entrypoint named `entrypoint` in the
+    Worker named `name`. The `entrypoint` defaults to `default`, meaning
+    `{ name: "a" }` is the same as `"a"`. If `name` is
+    `(await import("miniflare")).kCurrentWorker`, requests will be dispatched to
+    the Worker defining the binding.
   - If the designator is an object of the form `{ network: { ... } }`, where
     `network` is a
     [`workerd` `Network` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L555-L598),
@@ -799,4 +805,5 @@ defined at the top-level.
 
 - `getCf(): Promise<Record<string, any>>`
 
-  Returns the same object returned from incoming `Request`'s `cf` property. This object depends on the `cf` property from `SharedOptions`.
+  Returns the same object returned from incoming `Request`'s `cf` property. This
+  object depends on the `cf` property from `SharedOptions`.
