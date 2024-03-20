@@ -3,11 +3,12 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import shellac from "shellac";
+import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { dedent, makeRoot, seed } from "./helpers/setup";
+import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
 type MaybePromise<T = void> = T | Promise<T>;

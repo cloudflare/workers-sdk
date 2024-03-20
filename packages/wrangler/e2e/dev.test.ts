@@ -5,11 +5,12 @@ import * as nodeNet from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import shellac from "shellac";
+import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { dedent, makeRoot, seed } from "./helpers/setup";
+import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
 // Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
@@ -90,7 +91,7 @@ async function runDevSession(
 
 		in ${workerPath} {
 			exits {
-        $ ${WRANGLER} dev ${flags}
+        $$ ${WRANGLER} dev ${flags}
 			}
 		}
 			`;
@@ -323,7 +324,7 @@ describe("basic dev python tests", () => {
 			});
 
 			const { text: text2 } = await retry(
-				(s) => s.status !== 200 || s.text === "py hello world",
+				(s) => s.status !== 200 || s.text === "py hello world 6",
 				async () => {
 					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
