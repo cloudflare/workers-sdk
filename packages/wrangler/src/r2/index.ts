@@ -562,7 +562,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									})
 									.option("event-types", {
 										describe:
-											"Specify the kinds of object events to event notifications for. ex. '--event-types object_create object_delete'",
+											"Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'",
 										alias: "event-type",
 										choices: Object.keys(actionsForEventCategories),
 										demandOption: true,
