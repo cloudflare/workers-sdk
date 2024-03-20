@@ -660,6 +660,7 @@ describe("wrangler", () => {
 				      --message-retries          Maximum number of retries for each message  [number]
 				      --dead-letter-queue        Queue to send messages that failed to be consumed  [string]
 				      --visibility-timeout-secs  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]"
+					  --retry-delay-secs		 The number of seconds to wait before retrying a message  [number]
 			`);
 				});
 
@@ -670,6 +671,7 @@ describe("wrangler", () => {
 							batch_size: undefined,
 							max_retries: undefined,
 							visibility_timeout_ms: undefined,
+							retry_delay_ms: undefined,
 						},
 						dead_letter_queue: undefined,
 					};
@@ -690,6 +692,7 @@ describe("wrangler", () => {
 							batch_size: 20,
 							max_retries: 3,
 							visibility_timeout_ms: 6000,
+							retry_delay_ms: 3000,
 						},
 						dead_letter_queue: "myDLQ",
 					};
@@ -697,7 +700,7 @@ describe("wrangler", () => {
 					mockGetQueueRequest("testQueue");
 
 					await runWrangler(
-						"queues consumer http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout-secs 6 --dead-letter-queue myDLQ"
+						"queues consumer http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout-secs 6 --retry-delay-secs 3 --dead-letter-queue myDLQ"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.

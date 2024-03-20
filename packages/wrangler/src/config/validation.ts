@@ -2909,6 +2909,7 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			"dead_letter_queue",
 			"max_concurrency",
 			"visibility_timeout_ms",
+			"retry_delay_ms",
 		])
 	) {
 		isValid = false;
@@ -2933,6 +2934,7 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		{ key: "dead_letter_queue", type: "string" },
 		{ key: "max_concurrency", type: "number" },
 		{ key: "visibility_timeout_ms", type: "number" },
+		{ key: "retry_delay_ms", type: "number" },
 	];
 	for (const optionalOpt of options) {
 		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {

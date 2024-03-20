@@ -461,6 +461,9 @@ export interface EnvironmentNonInheritable {
 
 			/** The number of milliseconds to wait for pulled messages to become visible again */
 			visibility_timeout_ms?: number;
+
+			/** The number of milliseconds to wait before retrying a message */
+			retry_delay_ms?: number;
 		}[];
 	};
 

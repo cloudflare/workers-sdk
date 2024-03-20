@@ -32,6 +32,10 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"The number of seconds a message will wait for an acknowledgement before being returned to the queue.",
 			},
+			"retry-delay-secs": {
+				type: "number",
+				describe: "The number of seconds to wait before retrying a message",
+			},
 		});
 }
 
@@ -47,6 +51,9 @@ export async function handler(
 			max_retries: args.messageRetries,
 			visibility_timeout_ms: args.visibilityTimeoutSecs
 				? args.visibilityTimeoutSecs * 1000
+				: undefined,
+			retry_delay_ms: args.retryDelaySecs
+				? args.retryDelaySecs * 1000
 				: undefined,
 		},
 		dead_letter_queue: args.deadLetterQueue,
