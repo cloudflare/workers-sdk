@@ -191,7 +191,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
-			.option("source-maps", {
+			.option("upload-source-maps", {
 				type: "boolean",
 				describe: "Include source maps when uploading this worker.",
 			})
@@ -306,7 +306,7 @@ export async function deployHandler(
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
-		sourceMaps: args.sourceMaps,
+		uploadSourceMaps: args.uploadSourceMaps,
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,

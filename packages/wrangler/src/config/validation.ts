@@ -1521,11 +1521,11 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
-		source_maps: inheritable(
+		upload_source_maps: inheritable(
 			diagnostics,
 			topLevelEnv,
 			rawEnv,
-			"source_maps",
+			"upload_source_maps",
 			isBoolean,
 			undefined
 		),

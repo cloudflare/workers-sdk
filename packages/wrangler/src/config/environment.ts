@@ -306,7 +306,7 @@ interface EnvironmentInheritable {
 	 * Include source maps when uploading this worker.
 	 * @inheritable
 	 */
-	source_maps: boolean | undefined;
+	upload_source_maps: boolean | undefined;
 
 	/**
 	 * Specify how the worker should be located to minimize round-trip time.

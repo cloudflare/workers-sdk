@@ -135,6 +135,11 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				describe: "Minify the Worker",
 				type: "boolean",
 			})
+			.option("upload-source-maps", {
+				describe:
+					"Include source maps when uploading this Worker Gradual Rollouts Version.",
+				type: "boolean",
+			})
 			.option("node-compat", {
 				describe: "Enable Node.js compatibility",
 				type: "boolean",
@@ -208,6 +213,7 @@ export async function versionsUploadHandler(
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		minify: args.minify,
+		uploadSourceMaps: args.uploadSourceMaps,
 		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,

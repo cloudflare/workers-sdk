@@ -8874,10 +8874,10 @@ export default{
 	});
 
 	describe("source maps", () => {
-		it("should include source map with bundle when source_maps = true", async () => {
+		it("should include source map with bundle when upload_source_maps = true", async () => {
 			writeWranglerToml({
 				main: "index.ts",
-				source_maps: true,
+				upload_source_maps: true,
 			});
 			writeWorkerSource({ format: "ts" });
 
@@ -8894,10 +8894,10 @@ export default{
 			await runWrangler("deploy");
 		});
 
-		it("should not include source map with bundle when source_maps = false", async () => {
+		it("should not include source map with bundle when upload_source_maps = false", async () => {
 			writeWranglerToml({
 				main: "index.ts",
-				source_maps: false,
+				upload_source_maps: false,
 			});
 			writeWorkerSource({ format: "ts" });
 
@@ -8912,11 +8912,11 @@ export default{
 			await runWrangler("deploy");
 		});
 
-		it("should include source maps emitted by custom build when source_maps = true", async () => {
+		it("should include source maps emitted by custom build when upload_source_maps = true", async () => {
 			writeWranglerToml({
 				no_bundle: true,
 				main: "index.js",
-				source_maps: true,
+				upload_source_maps: true,
 				build: {
 					command: `echo "custom build script"`,
 				},
@@ -8949,11 +8949,11 @@ export default{
 			await runWrangler("deploy");
 		});
 
-		it("should not include source maps emitted by custom build when source_maps = false", async () => {
+		it("should not include source maps emitted by custom build when upload_source_maps = false", async () => {
 			writeWranglerToml({
 				no_bundle: true,
 				main: "index.js",
-				source_maps: false,
+				upload_source_maps: false,
 				build: {
 					command: `echo "custom build script"`,
 				},
