@@ -82,6 +82,10 @@ export const ServiceFetchSchema = z.custom<
 export const ServiceDesignatorSchema = z.union([
 	z.string(),
 	z.literal(kCurrentWorker),
+	z.object({
+		name: z.union([z.string(), z.literal(kCurrentWorker)]),
+		entrypoint: z.ostring(),
+	}),
 	z.object({ network: NetworkSchema }),
 	z.object({ external: ExternalServerSchema }),
 	z.object({ disk: DiskDirectorySchema }),
