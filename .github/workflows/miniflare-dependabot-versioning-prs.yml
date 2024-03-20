@@ -24,6 +24,8 @@ jobs:
         with:
           node-version: 16.18
           cache: "pnpm"
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com
