@@ -1,8 +1,8 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { runWrangler } from "./helpers/run-wrangler";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import writeWranglerToml from "../helpers/write-wrangler-toml";
 
 describe("pages-build-env", () => {
 	const std = mockConsoleMethods();
