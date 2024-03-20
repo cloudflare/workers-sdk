@@ -257,14 +257,6 @@ export class ModuleLocator {
 		referencingType: JavaScriptModuleRuleType,
 		specExpression: estree.Expression | estree.SpreadElement
 	) {
-		if (maybeGetStringScriptPathIndex(referencingName) !== undefined) {
-			const prefix = getResolveErrorPrefix(referencingPath);
-			throw new MiniflareCoreError(
-				"ERR_MODULE_STRING_SCRIPT",
-				`${prefix}: imports are unsupported in string \`script\` without defined \`scriptPath\``
-			);
-		}
-
 		// Ensure spec is a static string literal, and resolve full module identifier
 		if (
 			specExpression.type !== "Literal" ||
@@ -308,6 +300,16 @@ ${dim(modulesConfig)}`;
 			this.additionalModuleNames.includes(spec)
 		) {
 			return;
+		}
+
+		// If this isn't a built-in module, and this is a string script without
+		// a path, we won't be able to resolve it
+		if (maybeGetStringScriptPathIndex(referencingName) !== undefined) {
+			const prefix = getResolveErrorPrefix(referencingPath);
+			throw new MiniflareCoreError(
+				"ERR_MODULE_STRING_SCRIPT",
+				`${prefix}: imports are unsupported in string \`script\` without defined \`scriptPath\``
+			);
 		}
 
 		const identifier = path.resolve(path.dirname(referencingPath), spec);
