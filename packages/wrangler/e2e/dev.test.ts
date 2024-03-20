@@ -285,10 +285,15 @@ describe("basic dev python tests", () => {
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
+			"arith.py": dedent`
+					def mul(a,b):
+						return a*b`,
 			"index.py": dedent`
-				from js import Response
-				def on_fetch(request):
-					return Response.new('py hello world')`,
+					from arith import mul
+
+					from js import Response
+					def on_fetch(request):
+						return Response.new(f"py hello world {mul(2,3)}")`,
 			"package.json": dedent`
 					{
 						"name": "${workerName}",
@@ -299,7 +304,7 @@ describe("basic dev python tests", () => {
 		}));
 	});
 
-	it("can run and modify python worker during dev session (local)", async () => {
+	it("can run and modify python worker entrypoint during dev session (local)", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,
@@ -308,7 +313,7 @@ describe("basic dev python tests", () => {
 					return { text: await r.text(), status: r.status };
 				}
 			);
-			expect(text).toMatchInlineSnapshot('"py hello world"');
+			expect(text).toMatchInlineSnapshot('"py hello world 6"');
 
 			await worker.seed({
 				"index.py": dedent`
@@ -325,6 +330,33 @@ describe("basic dev python tests", () => {
 				}
 			);
 			expect(text2).toMatchInlineSnapshot('"Updated Python Worker value"');
+		});
+	});
+	it("can run and modify python worker imports during dev session (local)", async () => {
+		await worker.runDevSession("", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"py hello world 6"');
+
+			await worker.seed({
+				"arith.py": dedent`
+					def mul(a,b):
+						return a+b`,
+			});
+
+			const { text: text2 } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text2).toMatchInlineSnapshot('"py hello world 5"');
 		});
 	});
 });

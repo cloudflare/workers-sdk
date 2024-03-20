@@ -199,11 +199,23 @@ export function useEsbuild({
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
 			stopWatching = bundleResult?.stop;
 
-			// if "noBundle" is true, then we need to manually watch the entry point and
-			// trigger "builds" when it changes
+			// if "noBundle" is true, then we need to manually watch all modules and
+			// trigger "builds" when any change
 			if (noBundle) {
-				const watcher = watch(entry.file, {
+				const watching = [path.resolve(entry.moduleRoot)];
+				// Should we try and watch a Python reqyurements.txt file?
+				const pythonRequirements =
+					getBundleType(entry.format, entry.file) === "python"
+						? path.resolve(entry.directory, "requirements.txt")
+						: undefined;
+
+				if (pythonRequirements) {
+					watching.push(pythonRequirements);
+				}
+
+				const watcher = watch(watching, {
 					persistent: true,
+					ignored: [".git", "node_modules"],
 				}).on("change", async (_event) => {
 					await updateBundle();
 				});
