@@ -1442,7 +1442,7 @@ test("Miniflare: allows direct access to workers", async (t) => {
 			{
 				name: "a",
 				script: `addEventListener("fetch", (e) => e.respondWith(new Response("a")))`,
-				unsafeDirectPort: 0,
+				unsafeDirectSockets: [{ port: 0 }],
 			},
 			{
 				routes: ["*/*"],
@@ -1451,7 +1451,25 @@ test("Miniflare: allows direct access to workers", async (t) => {
 			{
 				name: "c",
 				script: `addEventListener("fetch", (e) => e.respondWith(new Response("c")))`,
-				unsafeDirectHost: "127.0.0.1",
+				unsafeDirectSockets: [{ host: "127.0.0.1" }],
+			},
+			{
+				name: "d",
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export class One extends WorkerEntrypoint {
+					fetch() { return new Response("d:1"); }				
+				}
+				export const two = {
+					fetch() { return new Response("d:2"); }
+				};
+				export const three = {
+					fetch() { return new Response("d:2"); }
+				};
+				`,
+				unsafeDirectSockets: [{ entrypoint: "One" }, { entrypoint: "two" }],
 			},
 		],
 	});
@@ -1470,15 +1488,63 @@ test("Miniflare: allows direct access to workers", async (t) => {
 	res = await fetch(cURL);
 	t.is(await res.text(), "c");
 
+	// Check can access workers directly with different entrypoints
+	const d1URL = await mf.unsafeGetDirectURL("d", "One");
+	const d2URL = await mf.unsafeGetDirectURL("d", "two");
+	res = await fetch(d1URL);
+	t.is(await res.text(), "d:1");
+	res = await fetch(d2URL);
+	t.is(await res.text(), "d:2");
+
 	// Can can only access configured for direct access
-	await t.throwsAsync(mf.unsafeGetDirectURL("d"), {
+	await t.throwsAsync(mf.unsafeGetDirectURL("z"), {
 		instanceOf: TypeError,
-		message: '"d" worker not found',
+		message: '"z" worker not found',
 	});
 	await t.throwsAsync(mf.unsafeGetDirectURL(""), {
 		instanceOf: TypeError,
-		message: 'Direct access disabled in "" worker',
+		message: 'Direct access disabled in "" worker for default entrypoint',
 	});
+	await t.throwsAsync(mf.unsafeGetDirectURL("d", "three"), {
+		instanceOf: TypeError,
+		message: 'Direct access disabled in "d" worker for "three" entrypoint',
+	});
+});
+test("Miniflare: allows RPC between multiple instances", async (t) => {
+	const mf1 = new Miniflare({
+		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+		import { WorkerEntrypoint } from "cloudflare:workers";
+		export class TestEntrypoint extends WorkerEntrypoint {
+			ping() { return "pong"; }
+		}
+		`,
+	});
+	t.teardown(() => mf1.dispose());
+
+	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
+
+	const mf2 = new Miniflare({
+		serviceBindings: {
+			SERVICE: { external: { address: testEntrypointUrl.host, http: {} } },
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const result = await env.SERVICE.ping();
+				return new Response(result);
+			}
+		}
+		`,
+	});
+	t.teardown(() => mf2.dispose());
+
+	const res = await mf2.dispatchFetch("http://placeholder");
+	t.is(await res.text(), "pong");
 });
 
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
