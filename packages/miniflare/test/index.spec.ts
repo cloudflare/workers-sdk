@@ -512,6 +512,113 @@ test("Miniflare: service binding to current worker", async (t) => {
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "body:callback");
 });
+test("Miniflare: service binding to network", async (t) => {
+	const { http } = await useServer(t, (req, res) => res.end("network"));
+	const mf = new Miniflare({
+		serviceBindings: { NETWORK: { network: { allow: ["private"] } } },
+		modules: true,
+		script: `export default {
+			fetch(request, env) { return env.NETWORK.fetch(request); }
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch(http);
+	t.is(await res.text(), "network");
+});
+test("Miniflare: service binding to external server", async (t) => {
+	const { http } = await useServer(t, (req, res) => res.end("external"));
+	const mf = new Miniflare({
+		serviceBindings: {
+			EXTERNAL: { external: { address: http.host, http: {} } },
+		},
+		modules: true,
+		script: `export default {
+			fetch(request, env) { return env.EXTERNAL.fetch(request); }
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://example.com");
+	t.is(await res.text(), "external");
+});
+test("Miniflare: service binding to disk", async (t) => {
+	const tmp = await useTmp(t);
+	const testPath = path.join(tmp, "test.txt");
+	await fs.writeFile(testPath, "👋");
+	const mf = new Miniflare({
+		serviceBindings: {
+			DISK: { disk: { path: tmp, writable: true } },
+		},
+		modules: true,
+		script: `export default {
+			fetch(request, env) { return env.DISK.fetch(request); }
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("https://example.com/test.txt");
+	t.is(await res.text(), "👋");
+
+	res = await mf.dispatchFetch("https://example.com/test.txt", {
+		method: "PUT",
+		body: "✏️",
+	});
+	t.is(res.status, 204);
+	t.is(await fs.readFile(testPath, "utf8"), "✏️");
+});
+test("Miniflare: service binding to named entrypoint", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				serviceBindings: {
+					A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
+					A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
+					B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
+				},
+				compatibilityFlags: ["rpc"],
+				modules: true,
+				script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export class RpcEntrypoint extends WorkerEntrypoint {
+					ping() { return "a:rpc:pong"; }
+				}
+				
+				export const namedEntrypoint = {
+					fetch(request, env, ctx) { return new Response("a:named:pong"); }
+				};
+				
+				export default {
+					async fetch(request, env) {
+						const aRpc = await env.A_RPC_SERVICE.ping();
+						const aNamed = await (await env.A_NAMED_SERVICE.fetch("http://placeholder")).text();
+						const bNamed = await (await env.B_NAMED_SERVICE.fetch("http://placeholder")).text();
+						return Response.json({ aRpc, aNamed, bNamed });
+					}
+				}
+				`,
+			},
+			{
+				name: "b",
+				modules: true,
+				script: `
+				export const anotherNamedEntrypoint = {
+					fetch(request, env, ctx) { return new Response("b:named:pong"); }
+				};
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	t.deepEqual(await res.json(), {
+		aRpc: "a:rpc:pong",
+		aNamed: "a:named:pong",
+		bNamed: "b:named:pong",
+	});
+});
 
 test("Miniflare: custom outbound service", async (t) => {
 	const mf = new Miniflare({
