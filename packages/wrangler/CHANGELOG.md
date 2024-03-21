@@ -20,6 +20,12 @@
 
 - [#5324](https://github.com/cloudflare/workers-sdk/pull/5324) [`bfc4282`](https://github.com/cloudflare/workers-sdk/commit/bfc4282de58066d5a9ab07d3e8419ed12b927a96) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ignore OPTIONS requests in Wrangler's oauth server
 
+  In Chrome v123, the auth requests from the browser back to wrangler now first include a CORS OPTIONS preflight request before the expected GET request. Wrangler was able to successfully complete the login with the first (OPTIONS) request, and therefore upon the second (GET) request, errored because the token exchange had already occured and could not be repeated.
+
+  Wrangler now stops processing the OPTIONS request before completing the token exchange and only proceeds on the expected GET request.
+
+  If you see a `ErrorInvalidGrant` in a previous wrangler version when running `wrangler login`, please try upgrading to this version or later.
+
 - [#5099](https://github.com/cloudflare/workers-sdk/pull/5099) [`93150aa`](https://github.com/cloudflare/workers-sdk/commit/93150aa0ee51dc3db0c15b6a7126fca11bc2ba0f) Thanks [@KaiSpencer](https://github.com/KaiSpencer)! - feat: expose `--show-interactive-dev-session` flag
 
   This flag controls the interactive mode of the dev session, a feature that already exists internally but was not exposed to the user.
