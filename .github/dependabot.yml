@@ -24,7 +24,15 @@ updates:
       - "dependencies"
   # Check for workerd & workers-types updates for Miniflare
   - package-ecosystem: "npm"
-    directory: "/packages/miniflare"
+    # If you restrict the update to a directory that is not the root
+    # then it will not update the package-lock.json.
+    directory: "/"
+    groups:
+      # We want to keep workerd and workers-types updates in lock-step
+      workerd-and-workers-types:
+        patterns:
+          - "workerd"
+          - "@cloudflare/workers-types"
     schedule:
       interval: "daily"
     versioning-strategy: increase
