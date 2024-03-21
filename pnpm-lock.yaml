@@ -78,8 +78,8 @@ importers:
         specifier: ^2.27.1
         version: 2.27.1
       '@cloudflare/workers-types':
-        specifier: ^4.20230821.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@turbo/gen':
         specifier: ^1.10.13
         version: 1.10.14(@types/node@20.1.7)(typescript@4.9.5)
@@ -102,8 +102,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20230724.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -174,8 +174,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -189,8 +189,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230914.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       concurrently:
         specifier: ^8.2.1
         version: 8.2.1
@@ -207,8 +207,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20231025.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -222,8 +222,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20240208.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -272,8 +272,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/node':
         specifier: ^17.0.33
         version: 17.0.45
@@ -303,8 +303,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -330,8 +330,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20231025.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -345,8 +345,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       pages-plugin-example:
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -375,8 +375,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -396,8 +396,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       pages-plugin-example:
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -429,8 +429,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       undici:
         specifier: ^5.28.3
         version: 5.28.3
@@ -517,7 +517,7 @@ importers:
     dependencies:
       '@remix-run/cloudflare-pages':
         specifier: ^1.17.0
-        version: 1.17.0(@cloudflare/workers-types@3.18.0)
+        version: 1.17.0(@cloudflare/workers-types@3.19.0)
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
@@ -535,11 +535,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^3.18.0
-        version: 3.18.0
+        specifier: ^3.19.0
+        version: 3.19.0
       '@remix-run/cloudflare':
         specifier: ^1.17.0
-        version: 1.17.0(@cloudflare/workers-types@3.18.0)
+        version: 1.17.0(@cloudflare/workers-types@3.19.0)
       '@remix-run/dev':
         specifier: ^1.17.0
         version: 1.17.0(@types/node@20.1.7)
@@ -614,8 +614,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
       '@cloudflare/workers-types':
-        specifier: ^4.20240314.0
-        version: 4.20240314.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/node':
         specifier: 20.8.3
         version: 20.8.3
@@ -659,8 +659,8 @@ importers:
   fixtures/worker-ts:
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: ^4.20230724.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -726,8 +726,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20230419.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@iarna/toml':
         specifier: ^3.0.0
         version: 3.0.0
@@ -843,8 +843,8 @@ importers:
         specifier: '*'
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-        specifier: ^4.20230321.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -897,8 +897,8 @@ importers:
         specifier: '*'
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-        specifier: ^4.20230321.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
@@ -931,8 +931,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       '@cloudflare/workers-types':
-        specifier: ^4.20231218.0
-        version: 4.20240208.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -973,8 +973,8 @@ importers:
         specifier: ^5.28.2
         version: 5.28.3
       workerd:
-        specifier: 1.20240314.0
-        version: 1.20240314.0
+        specifier: 1.20240320.1
+        version: 1.20240320.1
       ws:
         specifier: ^8.11.0
         version: 8.14.2
@@ -992,8 +992,8 @@ importers:
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@cloudflare/workers-types':
-        specifier: ^4.20240314.0
-        version: 4.20240314.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@microsoft/api-extractor':
         specifier: ^7.36.3
         version: 7.38.2(@types/node@18.16.10)
@@ -1098,8 +1098,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20230511.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/service-worker-mock':
         specifier: ^2.0.1
         version: 2.0.1
@@ -1126,8 +1126,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-worker
       '@cloudflare/workers-types':
-        specifier: ^4.20230321.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/cookie':
         specifier: ^0.5.1
         version: 0.5.1
@@ -1163,8 +1163,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20221111.1
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       typescript:
         specifier: ^4.5.5
         version: 4.9.5
@@ -1197,8 +1197,8 @@ importers:
         specifier: workspace:^
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20230404.0
-        version: 4.20230821.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       esbuild:
         specifier: 0.16.3
         version: 0.16.3
@@ -1270,8 +1270,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20240314.0
-        version: 4.20240314.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@types/node':
         specifier: 20.8.3
         version: 20.8.3
@@ -1450,8 +1450,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^3.0.0
-        version: 3.18.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1524,8 +1524,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20230914.0
-        version: 4.20230914.0
+        specifier: ^4.20240320.1
+        version: 4.20240320.1
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -4103,8 +4103,8 @@ packages:
       marked: 0.3.19
     dev: false
 
-  /@cloudflare/workerd-darwin-64@1.20240314.0:
-    resolution: {integrity: sha512-19xW64AmkjGnp9ZSwa5RPMTBJ0eqadY/oLs3RcdC8J+R8vT766U2bgxyuf3VATlOf+T7t28aGYzW/QcBRls9eg==}
+  /@cloudflare/workerd-darwin-64@1.20240320.1:
+    resolution: {integrity: sha512-ioG5k2M17xyiAlK/k3L21NZLMVeSHMjwlmGtZyCyzSLL5/zGINcgZ5yPLV0UuWiysw07/6Jjzm5Sx94hzMVybg==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
@@ -4112,8 +4112,8 @@ packages:
     dev: false
     optional: true
 
-  /@cloudflare/workerd-darwin-arm64@1.20240314.0:
-    resolution: {integrity: sha512-gq78D30GlNSg55YRzCzNHPuLp87L7xmYCYa5hIuIE7xpqhqGN6FV/mRtp2TQ5VoDXiuq1F+VdEZDwQFvrNAvtg==}
+  /@cloudflare/workerd-darwin-arm64@1.20240320.1:
+    resolution: {integrity: sha512-Ga6RDdnFEIsN4WuWsaP9bLGvK9K7pEIVoSIgmw6vweVlD8UK/a2MPGrsF1ogwdeCTCOMY8wUh9poL/Yu48IPpg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -4121,8 +4121,8 @@ packages:
     dev: false
     optional: true
 
-  /@cloudflare/workerd-linux-64@1.20240314.0:
-    resolution: {integrity: sha512-1PYddg+lGGOUkXNt3LEHB0GvIBWjilTNwmbacGyyVRm+zaWGKqt2bS3bW/TY6cHJ1lxFe/fDMrQOgnSBB7jGIw==}
+  /@cloudflare/workerd-linux-64@1.20240320.1:
+    resolution: {integrity: sha512-KFof5H8eU0NXv+pUAU7Lk/OLtOmfsioTJqu0v6kPL7QsTGsgzj5sEQNcQ8DONSze549Yflu5W00qpA2cPz9eWQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
@@ -4130,8 +4130,8 @@ packages:
     dev: false
     optional: true
 
-  /@cloudflare/workerd-linux-arm64@1.20240314.0:
-    resolution: {integrity: sha512-GIyyO+TKYQ7TsM/DgpoHP2uQrJuPEc/cpRaXYeOzHerGAdQRej6iS2+LAnTJgLTXgOC4DE622mKBL3tnZvuKVQ==}
+  /@cloudflare/workerd-linux-arm64@1.20240320.1:
+    resolution: {integrity: sha512-t+kGc6dGdkKvVMGcHCPhlCsUZF5dj8xbAFvLB7DAJ8T79ys30rmY2Lu/C8vKlhjH9TJhbzgKmPaJ0wC/K4euvw==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
@@ -4139,8 +4139,8 @@ packages:
     dev: false
     optional: true
 
-  /@cloudflare/workerd-windows-64@1.20240314.0:
-    resolution: {integrity: sha512-NWZeVXEXJfPuLAXfMTiFusJNOMnsHkBae0C4hlqzwIzYiQ0PYnQ+BEWFS5eWy5dZihhFrsW3VRYqnTbgESIkzw==}
+  /@cloudflare/workerd-windows-64@1.20240320.1:
+    resolution: {integrity: sha512-9xDylCOsuzWqGuANkuUByiJ5RHeMqgw37FiI7rn8I6zdGAc/alOB9B4Bh7B73WC2uEpFL+XCEjcHZ6NmsO4NaQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -4148,27 +4148,11 @@ packages:
     dev: false
     optional: true
 
-  /@cloudflare/workers-types@3.18.0:
-    resolution: {integrity: sha512-ehKOJVLMeR+tZkYhWEaLYQxl0TaIZu/kE86HF3/RidR8Xv5LuQxpbh+XXAoKVqsaphWLhIgBhgnlN5HGdheXSQ==}
+  /@cloudflare/workers-types@3.19.0:
+    resolution: {integrity: sha512-0FRcsz7Ea3jT+gc5gKPIYciykm1bbAaTpygdzpCwGt0RL+V83zWnYN30NWDW4rIHj/FHtz+MIuBKS61C8l7AzQ==}
 
-  /@cloudflare/workers-types@4.20230821.0:
-    resolution: {integrity: sha512-lVQSyr5E4CEkQw7WIdsrMTj+kHjsm28mJ0B5AhNFByKR+16KTFsU/RW/nGLKHHW2jxT5lvYI+HjNQMzC9QR8Ng==}
-    dev: true
-
-  /@cloudflare/workers-types@4.20230914.0:
-    resolution: {integrity: sha512-OVeN4lFVu1O0PJGZ2d0FwpK8lelFcr33qYOgCh77ErEYmEBO4adwnIxcIsdQbFbhF0ffN6joiVcljD4zakdaeQ==}
-    dev: true
-
-  /@cloudflare/workers-types@4.20231025.0:
-    resolution: {integrity: sha512-TkcZkntUTOcvJ4vgmwpNfLTclpMbmbClZCe62B25/VTukmyv91joRa4eKzSjzCZUXTbFHNmVdOpmGaaJU2U3+A==}
-    dev: true
-
-  /@cloudflare/workers-types@4.20240208.0:
-    resolution: {integrity: sha512-MVGTTjZpJu4kJONvai5SdJzWIhOJbuweVZ3goI7FNyG+JdoQH41OoB+nMhLsX626vPLZVWGPIWsiSo/WZHzgQw==}
-    dev: true
-
-  /@cloudflare/workers-types@4.20240314.0:
-    resolution: {integrity: sha512-eg2dK/tYSiFvQu3sexjB32WEGi3GEmY6pLRF4nrV9Rwi2F2965o6f6604jQY8whhrmNdEoWErSjhuuUld6xgKQ==}
+  /@cloudflare/workers-types@4.20240320.1:
+    resolution: {integrity: sha512-CiYtVpQURPgQqtBKkmOAnfPElVZuD7Xyf1IxKtKp2B4aB9gnooapwJhzeY8c4Ls4u17SgMS0MprOkrgYwzZ6xg==}
     dev: true
 
   /@cnakazawa/watch@1.0.4:
@@ -6457,24 +6441,24 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@remix-run/cloudflare-pages@1.17.0(@cloudflare/workers-types@3.18.0):
+  /@remix-run/cloudflare-pages@1.17.0(@cloudflare/workers-types@3.19.0):
     resolution: {integrity: sha512-yPOEoVYcuhN/ERsrvncIEXwKCzO9ELGMcw6inKB7kPhVX6xwjfxP/lKfOwDOghEQMvO9648ktdy78riQsBWGqg==}
     engines: {node: '>=14'}
     peerDependencies:
       '@cloudflare/workers-types': ^3.0.0
     dependencies:
-      '@cloudflare/workers-types': 3.18.0
-      '@remix-run/cloudflare': 1.17.0(@cloudflare/workers-types@3.18.0)
+      '@cloudflare/workers-types': 3.19.0
+      '@remix-run/cloudflare': 1.17.0(@cloudflare/workers-types@3.19.0)
     dev: false
 
-  /@remix-run/cloudflare@1.17.0(@cloudflare/workers-types@3.18.0):
+  /@remix-run/cloudflare@1.17.0(@cloudflare/workers-types@3.19.0):
     resolution: {integrity: sha512-gqQzYXfKF6IKwWnngB2CfbatFeA06bS3iCEvCUBEbI+wPAMBsFb/VzH6R3NRU9yootyD+HKVelOrAXcp09M0Gg==}
     engines: {node: '>=14'}
     peerDependencies:
       '@cloudflare/workers-types': ^2.0.0 || ^3.0.0
     dependencies:
       '@cloudflare/kv-asset-handler': 0.1.3
-      '@cloudflare/workers-types': 3.18.0
+      '@cloudflare/workers-types': 3.19.0
       '@remix-run/server-runtime': 1.17.0
 
   /@remix-run/dev@1.17.0(@types/node@20.1.7):
@@ -17338,13 +17322,13 @@ packages:
       picocolors: 1.0.0
       source-map-js: 1.0.2
 
-  /postcss@8.4.35:
-    resolution: {integrity: sha512-u5U8qYpBCpN13BsiEB0CbR1Hhh4Gc0zLFuedrHJKMctHCHAGrMdG0PRM/KErzAL3CU6/eckEtmHNB3x6e3c0vA==}
+  /postcss@8.4.38:
+    resolution: {integrity: sha512-Wglpdk03BSfXkHoQa3b/oulrotAkwrlLDRSOb9D0bN86FdRyE9lppSp33aHNPgBa0JKCoB+drFLZkQoRRYae5A==}
     engines: {node: ^10 || ^12 || >=14}
     dependencies:
       nanoid: 3.3.7
       picocolors: 1.0.0
-      source-map-js: 1.0.2
+      source-map-js: 1.2.0
     dev: true
 
   /preferred-pm@3.0.3:
@@ -18870,6 +18854,11 @@ packages:
   /source-map-js@1.0.2:
     resolution: {integrity: sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==}
     engines: {node: '>=0.10.0'}
+
+  /source-map-js@1.2.0:
+    resolution: {integrity: sha512-itJW8lvSA0TXEphiRoawsCksnlf8SyvmFzIhltqAHluXd88pkCd+cXJVHTDwdCr0IzwptSm035IHQktUu1QUMg==}
+    engines: {node: '>=0.10.0'}
+    dev: true
 
   /source-map-resolve@0.5.3:
     resolution: {integrity: sha512-Htz+RnsXWk5+P2slx5Jh3Q66vhQj1Cllm0zvnaY98+NFx+Dv2CF/f5O/t8x+KaNdrdIAsruNzoh/KpialbqAnw==}
@@ -20431,7 +20420,7 @@ packages:
     dependencies:
       '@types/node': 20.1.7
       esbuild: 0.18.20
-      postcss: 8.4.35
+      postcss: 8.4.38
       rollup: 3.29.4
     optionalDependencies:
       fsevents: 2.3.3
@@ -20794,17 +20783,17 @@ packages:
     resolution: {integrity: sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==}
     dev: true
 
-  /workerd@1.20240314.0:
-    resolution: {integrity: sha512-5vXqDe6vJTMpfPVW8Vtcy2zcVIBnOIMv0D+Z0gVPMPq++KwEyQWzCIVLpIyc28EUc5bW3gEO49E8BN1PQebgfw==}
+  /workerd@1.20240320.1:
+    resolution: {integrity: sha512-nuavAGGjh0qqM6RF5zxTHyUwEqdLCHchodbrpbh/xlJpFGnJVY5C1YgSi2S9aLkJJoa0/25Ta/+EzXEbApA/3w==}
     engines: {node: '>=16'}
     hasBin: true
     requiresBuild: true
     optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20240314.0
-      '@cloudflare/workerd-darwin-arm64': 1.20240314.0
-      '@cloudflare/workerd-linux-64': 1.20240314.0
-      '@cloudflare/workerd-linux-arm64': 1.20240314.0
-      '@cloudflare/workerd-windows-64': 1.20240314.0
+      '@cloudflare/workerd-darwin-64': 1.20240320.1
+      '@cloudflare/workerd-darwin-arm64': 1.20240320.1
+      '@cloudflare/workerd-linux-64': 1.20240320.1
+      '@cloudflare/workerd-linux-arm64': 1.20240320.1
+      '@cloudflare/workerd-windows-64': 1.20240320.1
     dev: false
 
   /wrap-ansi@6.2.0:
