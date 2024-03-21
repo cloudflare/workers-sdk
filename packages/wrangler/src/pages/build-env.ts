@@ -1,3 +1,4 @@
+import path from "node:path";
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -10,11 +11,17 @@ import type {
 export type PagesBuildEnvArgs = StrictYargsOptionsToInterface<typeof Options>;
 
 export function Options(yargs: CommonYargsArgv) {
-	return yargs;
+	return yargs.positional("projectDir", {
+		type: "string",
+		description: "The location of the Pages project",
+	});
 }
 
 export const Handler = async (args: PagesBuildEnvArgs) => {
-	const config = readConfig(undefined, {
+	if (!args.projectDir) {
+		throw new FatalError("No Pages project location specified");
+	}
+	const config = readConfig(path.join(args.projectDir, "wrangler.toml"), {
 		...args,
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		env: process.env.PAGES_ENVIRONMENT,
