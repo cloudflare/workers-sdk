@@ -512,7 +512,7 @@ describe("wrangler secret", () => {
 		});
 	});
 
-	describe("secret:bulk", () => {
+	describe("secret:bulk [DEPRECATED]", () => {
 		it("should fail secret:bulk w/ no pipe or JSON input", async () => {
 			jest
 				.spyOn(readline, "createInterface")
@@ -523,6 +523,13 @@ describe("wrangler secret", () => {
 			);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Please provide a JSON file or valid JSON pipe[0m
+
+			"
+		`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler secret:bulk\` is deprecated and will be removed in a future major version.[0m
+
+			  Please use \`wrangler secret bulk\` instead, which accepts exactly the same arguments.
 
 			"
 		`);
@@ -569,6 +576,13 @@ describe("wrangler secret", () => {
 			✨ 2 secrets successfully uploaded"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler secret:bulk\` is deprecated and will be removed in a future major version.[0m
+
+			  Please use \`wrangler secret bulk\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
 		});
 
 		it("should create secret:bulk", async () => {
@@ -612,6 +626,13 @@ describe("wrangler secret", () => {
 					✨ 2 secrets successfully uploaded"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler secret:bulk\` is deprecated and will be removed in a future major version.[0m
+
+			  Please use \`wrangler secret bulk\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
 		});
 
 		it("should count success and network failure on secret:bulk", async () => {
@@ -668,6 +689,13 @@ describe("wrangler secret", () => {
 
 			"
 		`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler secret:bulk\` is deprecated and will be removed in a future major version.[0m
+
+			  Please use \`wrangler secret bulk\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
 		});
 
 		it("should handle network failure on secret:bulk", async () => {
@@ -702,6 +730,322 @@ describe("wrangler secret", () => {
 
 			await expect(async () => {
 				await runWrangler("secret:bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"🚨 2 secrets failed to upload"`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+
+			Finished processing secrets JSON file:
+			✨ 0 secrets successfully uploaded
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
+
+			"
+		`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler secret:bulk\` is deprecated and will be removed in a future major version.[0m
+
+			  Please use \`wrangler secret bulk\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
+		});
+
+		it("should merge existing bindings and secrets when patching", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-2": "secret_text",
+					"secret-name-3": "secret_text",
+					"secret-name-4": "",
+				})
+			);
+
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(
+							ctx.json(
+								createFetchResult({
+									bindings: [
+										{
+											type: "plain_text",
+											name: "env_var",
+											text: "the content",
+										},
+										{
+											type: "json",
+											name: "another_var",
+											json: { some: "stuff" },
+										},
+										{ type: "secret_text", name: "secret-name-1" },
+										{ type: "secret_text", name: "secret-name-2" },
+										{ type: "secret_text", name: "secret-name-4" },
+									],
+								})
+							)
+						);
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						const formBody = await (
+							req as MockedRequest as RestRequestWithFormData
+						).formData();
+						const settings = formBody.get("settings");
+						expect(settings).not.toBeNull();
+						const parsedSettings = JSON.parse(settings as string);
+						expect(parsedSettings).toMatchObject({
+							bindings: [
+								{ type: "plain_text", name: "env_var" },
+								{ type: "json", name: "another_var" },
+								{ type: "secret_text", name: "secret-name-1" },
+								{
+									type: "secret_text",
+									name: "secret-name-2",
+									text: "secret_text",
+								},
+								{
+									type: "secret_text",
+									name: "secret-name-3",
+									text: "secret_text",
+								},
+								{ type: "secret_text", name: "secret-name-4", text: "" },
+							],
+						});
+						expect(parsedSettings).not.toHaveProperty(["bindings", 0, "text"]);
+						expect(parsedSettings).not.toHaveProperty(["bindings", 1, "json"]);
+
+						return res(ctx.json(createFetchResult(null)));
+					}
+				)
+			);
+
+			await runWrangler("secret:bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secrets for the Worker \\"script-name\\"
+					✨ Successfully created secret for key: secret-name-2
+					✨ Successfully created secret for key: secret-name-3
+					✨ Successfully created secret for key: secret-name-4
+
+					Finished processing secrets JSON file:
+					✨ 3 secrets successfully uploaded"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler secret:bulk\` is deprecated and will be removed in a future major version.[0m
+
+			  Please use \`wrangler secret bulk\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
+		});
+	});
+
+	describe("bulk", () => {
+		it("should fail secret bulk w/ no pipe or JSON input", async () => {
+			jest
+				.spyOn(readline, "createInterface")
+				.mockImplementation(() => null as unknown as Interface);
+			await runWrangler(`secret bulk --name script-name`);
+			expect(std.out).toMatchInlineSnapshot(
+				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Please provide a JSON file or valid JSON pipe[0m
+
+			"
+		`);
+		});
+
+		it("should use secret bulk w/ pipe input", async () => {
+			jest.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						secret1: "secret-value",
+						password: "hunter2",
+					}) as unknown as Interface
+			);
+
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult(null)));
+					}
+				)
+			);
+
+			await runWrangler(`secret bulk --name script-name`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: secret1
+			✨ Successfully created secret for key: password
+
+			Finished processing secrets JSON file:
+			✨ 2 secrets successfully uploaded"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create secret bulk", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult(null)));
+					}
+				)
+			);
+
+			await runWrangler("secret bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secrets for the Worker \\"script-name\\"
+					✨ Successfully created secret for key: secret-name-1
+					✨ Successfully created secret for key: secret-name-2
+
+					Finished processing secrets JSON file:
+					✨ 2 secrets successfully uploaded"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should count success and network failure on secret bulk", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+					"secret-name-3": "secret_text",
+					"secret-name-4": "secret_text",
+					"secret-name-5": "secret_text",
+					"secret-name-6": "secret_text",
+					"secret-name-7": "secret_text",
+				})
+			);
+
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res.networkError(`Failed to create secret`);
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"🚨 7 secrets failed to upload"`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+
+			Finished processing secrets JSON file:
+			✨ 0 secrets successfully uploaded
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
+
+			"
+		`);
+		});
+
+		it("should handle network failure on secret bulk", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res.networkError(`Failed to create secret`);
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"🚨 2 secrets failed to upload"`
 			);
@@ -799,7 +1143,7 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler("secret:bulk ./secret.json --name script-name");
+			await runWrangler("secret bulk ./secret.json --name script-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
 					"🌀 Creating the secrets for the Worker \\"script-name\\"

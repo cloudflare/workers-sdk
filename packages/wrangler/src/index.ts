@@ -1,5 +1,6 @@
 import module from "node:module";
 import os from "node:os";
+import { brandColor } from "@cloudflare/cli/colors";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -39,7 +40,7 @@ import { JsonFriendlyFatalError, UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
-import { kvBulk, kvKey, kvNamespace } from "./kv";
+import { kvBulk, kvKey, kvNamespace, registerKvSubcommands } from "./kv";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
@@ -72,8 +73,8 @@ import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
-import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
-import type { Arguments, CommandModule } from "yargs";
+import type { CommonYargsArgv, SubHelp } from "./yargs-types";
+import type { Arguments } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -249,7 +250,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
-	const subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions> = {
+	const subHelp: SubHelp = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -387,6 +388,7 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// [DEPRECATED] secret:bulk
 	wrangler.command(
 		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
@@ -394,29 +396,56 @@ export function createCLIParser(argv: string[]) {
 		secretBulkHandler
 	);
 
-	// kv namespace
+	// kv
+	wrangler.command(
+		"kv",
+		`🗂️  Interact with your Workers KV Namespaces`,
+		(kvYargs) => {
+			return registerKvSubcommands(kvYargs, subHelp);
+		}
+	);
+
+	// [DEPRECATED] kv namespace
 	wrangler.command(
 		"kv:namespace",
-		"🗂️  Interact with your Workers KV Namespaces",
+		`🗂️  Interact with your Workers KV Namespaces ${brandColor(
+			"(deprecated)"
+		)}`,
 		(namespaceYargs) => {
+			logger.warn(
+				"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same."
+			);
+
 			return kvNamespace(namespaceYargs.command(subHelp));
 		}
 	);
 
-	// kv key
+	// [DEPRECATED] kv key
 	wrangler.command(
 		"kv:key",
-		"🔑 Individually manage Workers KV key-value pairs",
+		`🔑 Individually manage Workers KV key-value pairs ${brandColor(
+			"(deprecated)"
+		)}`,
 		(keyYargs) => {
+			logger.warn(
+				"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same."
+			);
+
 			return kvKey(keyYargs.command(subHelp));
 		}
 	);
 
-	// kv bulk
+	// [DEPRECATED] kv bulk
 	wrangler.command(
 		"kv:bulk",
-		"💪 Interact with multiple Workers KV key-value pairs at once",
+		`💪 Interact with multiple Workers KV key-value pairs at once ${brandColor(
+			"(deprecated)"
+		)}`,
 		(bulkYargs) => {
+			logger.warn(
+				"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same."
+			);
+
 			return kvBulk(bulkYargs.command(subHelp));
 		}
 	);
@@ -709,14 +738,8 @@ export function createCLIParser(argv: string[]) {
 		false,
 		() => {},
 		async () => {
-			if (process.stdout.isTTY) {
-				await printWranglerBanner();
-			} else {
-				logger.log(wranglerVersion);
-			}
-
-			logger.warn(
-				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
+			throw new UserError(
+				"The `wrangler version` command has been removed. You can run `wrangler --version` to get the Wrangler version or `wrangler versions --help` for Worker Versions subcommands."
 			);
 		}
 	);

@@ -1,5 +1,5 @@
 import type { OnlyCamelCase } from "./config/config";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 
 /**
  * Yargs options included in every wrangler command.
@@ -65,3 +65,5 @@ export function asJson(yargs: CommonYargsArgv): CommonYargsArgvJSON {
 		default: false,
 	});
 }
+
+export type SubHelp = CommandModule<CommonYargsOptions, CommonYargsOptions>;
