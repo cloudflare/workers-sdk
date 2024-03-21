@@ -44,7 +44,7 @@ export function pages(yargs: CommonYargsArgv) {
 						Build.Handler
 					)
 					.command(
-						"build-env",
+						"build-env [projectDir]",
 						"Render a list of environment variables from the config file",
 						BuildEnv.Options,
 						BuildEnv.Handler
