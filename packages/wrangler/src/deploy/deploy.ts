@@ -29,7 +29,12 @@ import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
-import { getQueue, putConsumer } from "../queues/client";
+import {
+	getQueue,
+	postTypedConsumer,
+	putConsumer,
+	putTypedConsumer,
+} from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import {
@@ -48,7 +53,7 @@ import type {
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { PutConsumerBody } from "../queues/client";
+import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
@@ -935,7 +940,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	if (config.queues.consumers && config.queues.consumers.length) {
-		deployments.push(...updateQueueConsumers(config));
+		const updateConsumers = await updateQueueConsumers(config);
+
+		deployments.push(...updateConsumers);
 	}
 
 	const targets = await Promise.all(deployments);
@@ -1162,31 +1169,82 @@ async function ensureQueuesExist(config: Config) {
 	}
 }
 
-function updateQueueConsumers(config: Config): Promise<string[]>[] {
+async function updateQueueConsumers(
+	config: Config
+): Promise<Promise<string[]>[]> {
 	const consumers = config.queues.consumers || [];
-	return consumers.map((consumer) => {
-		const body: PutConsumerBody = {
-			dead_letter_queue: consumer.dead_letter_queue,
-			settings: {
-				batch_size: consumer.max_batch_size,
-				max_retries: consumer.max_retries,
-				max_wait_time_ms: consumer.max_batch_timeout
-					? 1000 * consumer.max_batch_timeout
-					: undefined,
-				max_concurrency: consumer.max_concurrency,
-			},
-		};
+	const updateConsumers: Promise<string[]>[] = [];
+	for (const consumer of consumers) {
+		if (consumer.type === "http_pull") {
+			const queue = await getQueue(config, consumer.queue);
+			const existingConsumer = queue.consumers && queue.consumers[0];
+			if (existingConsumer) {
+				const body: PostTypedConsumerBody = {
+					type: consumer.type,
+					dead_letter_queue: consumer.dead_letter_queue,
+					settings: {
+						batch_size: consumer.max_batch_size,
+						max_retries: consumer.max_retries,
+						visibility_timeout_ms: consumer.visibility_timeout_ms,
+						retry_delay: consumer.retry_delay,
+					},
+				};
+				updateConsumers.push(
+					putTypedConsumer(
+						config,
+						queue.queue_id,
+						existingConsumer.consumer_id,
+						body
+					).then(() => [`Consumer for ${consumer.queue}`])
+				);
+				continue;
+			}
 
-		if (config.name === undefined) {
-			// TODO: how can we reliably get the current script name?
-			throw new UserError("Script name is required to update queue consumers");
+			const body: PostTypedConsumerBody = {
+				type: consumer.type,
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					visibility_timeout_ms: consumer.visibility_timeout_ms,
+					retry_delay: consumer.retry_delay,
+				},
+			};
+			updateConsumers.push(
+				postTypedConsumer(config, consumer.queue, body).then(() => [
+					`Consumer for ${consumer.queue}`,
+				])
+			);
+		} else {
+			const body: PutConsumerBody = {
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					max_wait_time_ms: consumer.max_batch_timeout
+						? 1000 * consumer.max_batch_timeout
+						: undefined,
+					max_concurrency: consumer.max_concurrency,
+				},
+			};
+
+			if (config.name === undefined) {
+				// TODO: how can we reliably get the current script name?
+				throw new UserError(
+					"Script name is required to update queue consumers"
+				);
+			}
+			const scriptName = config.name;
+			const envName = undefined; // TODO: script environment for wrangler deploy?
+			updateConsumers.push(
+				putConsumer(config, consumer.queue, scriptName, envName, body).then(
+					() => [`Consumer for ${consumer.queue}`]
+				)
+			);
 		}
-		const scriptName = config.name;
-		const envName = undefined; // TODO: script environment for wrangler deploy?
-		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
-			() => [`Consumer for ${consumer.queue}`]
-		);
-	});
+	}
+
+	return updateConsumers;
 }
 
 async function noBundleWorker(

@@ -1,11 +1,11 @@
-import { readConfig } from "../../../../config";
-import { logger } from "../../../../logger";
-import { postConsumer } from "../../../client";
+import { readConfig } from "../../../../../config";
+import { logger } from "../../../../../logger";
+import { postConsumer } from "../../../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
-} from "../../../../yargs-types";
-import type { PostConsumerBody } from "../../../client";
+} from "../../../../../yargs-types";
+import type { PostConsumerBody } from "../../../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs

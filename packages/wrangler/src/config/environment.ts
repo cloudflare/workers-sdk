@@ -438,8 +438,11 @@ export interface EnvironmentNonInheritable {
 
 		/** Consumer configuration */
 		consumers?: {
-			/** The name of the queue from which this script should consume. */
+			/** The name of the queue from which this consumer should consume. */
 			queue: string;
+
+			/** The consumer type, e.g., worker, http-pull, r2-bucket, etc. Default is worker. */
+			type?: string;
 
 			/** The maximum number of messages per batch */
 			max_batch_size?: number;
@@ -455,6 +458,12 @@ export interface EnvironmentNonInheritable {
 
 			/** The maximum number of concurrent consumer Worker invocations. Leaving this unset will allow your consumer to scale to the maximum concurrency needed to keep up with the message backlog. */
 			max_concurrency?: number | null;
+
+			/** The number of milliseconds to wait for pulled messages to become visible again */
+			visibility_timeout_ms?: number;
+
+			/** The number of seconds to wait before retrying a message */
+			retry_delay?: number;
 		}[];
 	};
 

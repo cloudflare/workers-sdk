@@ -2902,11 +2902,14 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	if (
 		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"queue",
+			"type",
 			"max_batch_size",
 			"max_batch_timeout",
 			"max_retries",
 			"dead_letter_queue",
 			"max_concurrency",
+			"visibility_timeout_ms",
+			"retry_delay",
 		])
 	) {
 		isValid = false;
@@ -2924,11 +2927,14 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		key: string;
 		type: "number" | "string" | "boolean";
 	}[] = [
+		{ key: "type", type: "string" },
 		{ key: "max_batch_size", type: "number" },
 		{ key: "max_batch_timeout", type: "number" },
 		{ key: "max_retries", type: "number" },
 		{ key: "dead_letter_queue", type: "string" },
 		{ key: "max_concurrency", type: "number" },
+		{ key: "visibility_timeout_ms", type: "number" },
+		{ key: "retry_delay", type: "number" },
 	];
 	for (const optionalOpt of options) {
 		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {
