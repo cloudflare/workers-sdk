@@ -138,6 +138,7 @@ async function getMiniflareOptionsFromConfig(
 			bindings,
 			workerDefinitions,
 			queueConsumers: undefined,
+			services: rawConfig.services,
 			serviceBindings: {},
 		});
 
@@ -237,6 +238,7 @@ export function unstable_getMiniflareWorkerOptions(configPath: string): {
 		bindings,
 		workerDefinitions: undefined,
 		queueConsumers: config.queues.consumers,
+		services: [],
 		serviceBindings: {},
 	});
 
