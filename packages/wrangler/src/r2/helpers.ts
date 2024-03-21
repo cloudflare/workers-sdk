@@ -326,7 +326,6 @@ export const R2EventableOperations = [
 	"CompleteMultipartUpload",
 	"AbortMultipartUpload",
 	"CopyObject",
-	"LifecycleDeletion",
 ] as const;
 export type R2EventableOperation = typeof R2EventableOperations[number];
 
@@ -335,7 +334,7 @@ export const actionsForEventCategories: Record<
 	R2EventableOperation[]
 > = {
 	object_create: ["PutObject", "CompleteMultipartUpload", "CopyObject"],
-	object_delete: ["DeleteObject", "LifecycleDeletion"],
+	object_delete: ["DeleteObject"],
 };
 
 export type R2EventType = keyof typeof actionsForEventCategories;
