@@ -57,7 +57,7 @@
 	"devDependencies": {
 		"@ava/typescript": "^4.0.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240314.0",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"@microsoft/api-extractor": "^7.36.3",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
