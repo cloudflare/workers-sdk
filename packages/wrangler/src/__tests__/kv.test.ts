@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { setImmediate } from "node:timers/promises";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -29,7 +30,7 @@ describe("wrangler", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
-	describe("kv:namespace", () => {
+	describe("kv namespace", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedTitle: string) {
 				msw.use(
@@ -50,13 +51,13 @@ describe("wrangler", () => {
 
 			it("should error if no namespace is given", async () => {
 				await expect(
-					runWrangler("kv:namespace create")
+					runWrangler("kv namespace create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Not enough non-option arguments: got 0, need at least 1"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:namespace create <namespace>
+			wrangler kv namespace create <namespace>
 
 			Create a new namespace
 
@@ -82,13 +83,13 @@ describe("wrangler", () => {
 
 			it("should error if the namespace to create contains spaces", async () => {
 				await expect(
-					runWrangler("kv:namespace create abc def ghi")
+					runWrangler("kv namespace create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Unknown arguments: def, ghi"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:namespace create <namespace>
+			wrangler kv namespace create <namespace>
 
 			Create a new namespace
 
@@ -114,7 +115,7 @@ describe("wrangler", () => {
 
 			it("should create a namespace", async () => {
 				mockCreateRequest("UnitTestNamespace");
-				await runWrangler("kv:namespace create UnitTestNamespace");
+				await runWrangler("kv namespace create UnitTestNamespace");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "🌀 Creating namespace with title \\"UnitTestNamespace\\"
 			          ✨ Success!
@@ -125,7 +126,7 @@ describe("wrangler", () => {
 
 			it("should create a preview namespace if configured to do so", async () => {
 				mockCreateRequest("UnitTestNamespace_preview");
-				await runWrangler("kv:namespace create UnitTestNamespace --preview");
+				await runWrangler("kv namespace create UnitTestNamespace --preview");
 				expect(std.out).toMatchInlineSnapshot(`
 			          "🌀 Creating namespace with title \\"UnitTestNamespace_preview\\"
 			          ✨ Success!
@@ -137,7 +138,7 @@ describe("wrangler", () => {
 			it("should create a namespace using configured worker name", async () => {
 				writeFileSync("./wrangler.toml", 'name = "other"', "utf-8");
 				mockCreateRequest("other-UnitTestNamespace");
-				await runWrangler("kv:namespace create UnitTestNamespace");
+				await runWrangler("kv namespace create UnitTestNamespace");
 				expect(std.out).toMatchInlineSnapshot(`
 			            "🌀 Creating namespace with title \\"other-UnitTestNamespace\\"
 			            ✨ Success!
@@ -149,7 +150,7 @@ describe("wrangler", () => {
 			it("should create a namespace in an environment if configured to do so", async () => {
 				mockCreateRequest("customEnv-UnitTestNamespace");
 				await runWrangler(
-					"kv:namespace create UnitTestNamespace --env customEnv"
+					"kv namespace create UnitTestNamespace --env customEnv"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "🌀 Creating namespace with title \\"customEnv-UnitTestNamespace\\"
@@ -197,7 +198,7 @@ describe("wrangler", () => {
 					{ title: "title-2", id: "id-2" },
 				];
 				mockListRequest(kvNamespaces);
-				await runWrangler("kv:namespace list");
+				await runWrangler("kv namespace list");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
@@ -210,7 +211,7 @@ describe("wrangler", () => {
 					kvNamespaces.push({ title: "title-" + i, id: "id-" + i });
 				}
 				const requests = mockListRequest(kvNamespaces);
-				await runWrangler("kv:namespace list");
+				await runWrangler("kv namespace list");
 
 				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
 				expect(requests.count).toEqual(6);
@@ -237,7 +238,7 @@ describe("wrangler", () => {
 			it("should delete a namespace specified by id", async () => {
 				const requests = mockDeleteRequest("some-namespace-id");
 				await runWrangler(
-					`kv:namespace delete --namespace-id some-namespace-id`
+					`kv namespace delete --namespace-id some-namespace-id`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -246,7 +247,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("bound-id");
 				await runWrangler(
-					`kv:namespace delete --binding someBinding --preview false`
+					`kv namespace delete --binding someBinding --preview false`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -255,14 +256,14 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("preview-bound-id");
 				await runWrangler(
-					`kv:namespace delete --binding someBinding --preview`
+					`kv namespace delete --binding someBinding --preview`
 				);
 				expect(requests.count).toEqual(1);
 			});
 
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerConfig();
-				await expect(runWrangler("kv:namespace delete --binding otherBinding"))
+				await expect(runWrangler("kv namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
 						                "Not able to delete namespace.
 						                A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
@@ -280,7 +281,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("env-bound-id");
 				await runWrangler(
-					"kv:namespace delete --binding someBinding --env some-environment --preview false"
+					"kv namespace delete --binding someBinding --env some-environment --preview false"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -295,14 +296,14 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id");
 				await runWrangler(
-					`kv:namespace delete --binding someBinding --env some-environment --preview`
+					`kv namespace delete --binding someBinding --env some-environment --preview`
 				);
 				expect(requests.count).toEqual(1);
 			});
 		});
 	});
 
-	describe("kv:key", () => {
+	describe("kv key", () => {
 		describe("put", () => {
 			function mockKeyPutRequest(
 				expectedNamespaceId: string,
@@ -357,7 +358,7 @@ describe("wrangler", () => {
 				});
 
 				await runWrangler(
-					"kv:key put my-key my-value --namespace-id some-namespace-id"
+					"kv key put my-key my-value --namespace-id some-namespace-id"
 				);
 
 				expect(requests.count).toEqual(1);
@@ -373,7 +374,7 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 
-				await runWrangler("kv:key put /my-key my-value --namespace-id DS9");
+				await runWrangler("kv key put /my-key my-value --namespace-id DS9");
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -389,7 +390,7 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 				await runWrangler(
-					"kv:key put my-key my-value --binding someBinding --preview false"
+					"kv key put my-key my-value --binding someBinding --preview false"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
@@ -407,7 +408,7 @@ describe("wrangler", () => {
 				});
 
 				await runWrangler(
-					"kv:key put my-key my-value --binding someBinding --preview"
+					"kv key put my-key my-value --binding someBinding --preview"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
@@ -425,7 +426,7 @@ describe("wrangler", () => {
 					expiration_ttl: 20,
 				});
 				await runWrangler(
-					"kv:key put my-key my-value --namespace-id some-namespace-id --expiration 10 --ttl 20"
+					"kv key put my-key my-value --namespace-id some-namespace-id --expiration 10 --ttl 20"
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -441,7 +442,7 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 				await runWrangler(
-					"kv:key put my-key my-value --binding someBinding --env some-environment --preview false"
+					"kv key put my-key my-value --binding someBinding --env some-environment --preview false"
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."`
@@ -458,7 +459,7 @@ describe("wrangler", () => {
 					value: buf,
 				});
 				await runWrangler(
-					"kv:key put my-key --namespace-id some-namespace-id --path foo.txt"
+					"kv key put my-key --namespace-id some-namespace-id --path foo.txt"
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."`
@@ -478,7 +479,7 @@ describe("wrangler", () => {
 					value: buf,
 				});
 				await runWrangler(
-					"kv:key put my-key --namespace-id another-namespace-id --path test.png"
+					"kv key put my-key --namespace-id another-namespace-id --path test.png"
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."`
@@ -496,7 +497,7 @@ describe("wrangler", () => {
 					},
 				});
 				await runWrangler(
-					`kv:key put dKey dVal --namespace-id some-namespace-id --metadata '{"mKey":"mValue"}'`
+					`kv key put dKey dVal --namespace-id some-namespace-id --metadata '{"mKey":"mValue"}'`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -507,14 +508,14 @@ describe("wrangler", () => {
 
 			it("should error if no key is provided", async () => {
 				await expect(
-					runWrangler("kv:key put")
+					runWrangler("kv key put")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Not enough non-option arguments: got 0, need at least 1"`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key put <key> [value]
+			wrangler kv key put <key> [value]
 
 			Writes a single key/value pair to the given namespace.
 
@@ -549,14 +550,14 @@ describe("wrangler", () => {
 
 			it("should error if no binding nor namespace is provided", async () => {
 				await expect(
-					runWrangler("kv:key put foo bar")
+					runWrangler("kv key put foo bar")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Exactly one of the arguments binding and namespace-id is required"`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key put <key> [value]
+			wrangler kv key put <key> [value]
 
 			Writes a single key/value pair to the given namespace.
 
@@ -591,14 +592,14 @@ describe("wrangler", () => {
 
 			it("should error if both binding and namespace is provided", async () => {
 				await expect(
-					runWrangler("kv:key put foo bar --binding x --namespace-id y")
+					runWrangler("kv key put foo bar --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Arguments binding and namespace-id are mutually exclusive"`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key put <key> [value]
+			wrangler kv key put <key> [value]
 
 			Writes a single key/value pair to the given namespace.
 
@@ -633,14 +634,14 @@ describe("wrangler", () => {
 
 			it("should error if no value nor path is provided", async () => {
 				await expect(
-					runWrangler("kv:key put key --namespace-id 12345")
+					runWrangler("kv key put key --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Exactly one of the arguments value and path is required"`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key put <key> [value]
+			wrangler kv key put <key> [value]
 
 			Writes a single key/value pair to the given namespace.
 
@@ -675,14 +676,14 @@ describe("wrangler", () => {
 
 			it("should error if both value and path is provided", async () => {
 				await expect(
-					runWrangler("kv:key put key value --path xyz --namespace-id 12345")
+					runWrangler("kv key put key value --path xyz --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Arguments value and path are mutually exclusive"`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key put <key> [value]
+			wrangler kv key put <key> [value]
 
 			Writes a single key/value pair to the given namespace.
 
@@ -718,7 +719,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerConfig();
 				await expect(
-					runWrangler("kv:key put key value --binding otherBinding")
+					runWrangler("kv key put key value --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
 				);
@@ -738,7 +739,7 @@ describe("wrangler", () => {
 					value: "my-value",
 				});
 				await expect(
-					runWrangler("kv:key put my-key my-value --binding someBinding")
+					runWrangler("kv key put my-key my-value --binding someBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace."`
 				);
@@ -760,7 +761,7 @@ describe("wrangler", () => {
 					{ name: "key-3", expiration_ttl: 666 },
 				];
 				mockKeyListRequest("some-namespace-id", keys);
-				await runWrangler("kv:key list --namespace-id some-namespace-id");
+				await runWrangler("kv key list --namespace-id some-namespace-id");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "[
@@ -784,7 +785,7 @@ describe("wrangler", () => {
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("bound-id", keys);
 
-				await runWrangler("kv:key list --binding someBinding");
+				await runWrangler("kv key list --binding someBinding");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "[
@@ -805,7 +806,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-bound-id", keys);
-				await runWrangler("kv:key list --binding someBinding --preview");
+				await runWrangler("kv key list --binding someBinding --preview");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "[
@@ -827,7 +828,7 @@ describe("wrangler", () => {
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("env-bound-id", keys);
 				await runWrangler(
-					"kv:key list --binding someBinding --env some-environment"
+					"kv key list --binding someBinding --env some-environment"
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -850,7 +851,7 @@ describe("wrangler", () => {
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
 				mockKeyListRequest("preview-env-bound-id", keys);
 				await runWrangler(
-					"kv:key list --binding someBinding --preview --env some-environment"
+					"kv key list --binding someBinding --preview --env some-environment"
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -890,7 +891,7 @@ describe("wrangler", () => {
 							100,
 							blankCursorValue
 						);
-						await runWrangler("kv:key list --namespace-id some-namespace-id");
+						await runWrangler("kv key list --namespace-id some-namespace-id");
 						expect(std.err).toMatchInlineSnapshot(`""`);
 						expect(JSON.parse(std.out)).toEqual(keys);
 						expect(requests.count).toEqual(6);
@@ -901,7 +902,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerConfig();
 				await expect(
-					runWrangler("kv:key list --binding otherBinding")
+					runWrangler("kv key list --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
 				);
@@ -923,7 +924,7 @@ describe("wrangler", () => {
 					"my-value"
 				);
 
-				await runWrangler("kv:key get my-key --namespace-id some-namespace-id");
+				await runWrangler("kv key get my-key --namespace-id some-namespace-id");
 
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -937,7 +938,7 @@ describe("wrangler", () => {
 					"my-value"
 				);
 				await runWrangler(
-					"kv:key get my-key --text --namespace-id some-namespace-id"
+					"kv key get my-key --text --namespace-id some-namespace-id"
 				);
 				expect(proc.write).not.toEqual(Buffer.from("my-value"));
 				expect(std).toMatchInlineSnapshot(`
@@ -963,7 +964,7 @@ describe("wrangler", () => {
 					buf
 				);
 				await runWrangler(
-					"kv:key get my-key --text --namespace-id some-namespace-id"
+					"kv key get my-key --text --namespace-id some-namespace-id"
 				);
 				expect(proc.write).not.toEqual(buf);
 				expect(JSON.stringify(std)).toMatchInlineSnapshot(
@@ -982,7 +983,7 @@ describe("wrangler", () => {
 					"my-key",
 					buf
 				);
-				await runWrangler("kv:key get my-key --namespace-id some-namespace-id");
+				await runWrangler("kv key get my-key --namespace-id some-namespace-id");
 				expect(proc.write).toEqual(buf);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -996,7 +997,7 @@ describe("wrangler", () => {
 					"my-value"
 				);
 				await runWrangler(
-					"kv:key get my-key --binding someBinding --preview false"
+					"kv key get my-key --binding someBinding --preview false"
 				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1010,7 +1011,7 @@ describe("wrangler", () => {
 					"my-key",
 					"my-value"
 				);
-				await runWrangler("kv:key get my-key --binding someBinding --preview");
+				await runWrangler("kv key get my-key --binding someBinding --preview");
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1024,7 +1025,7 @@ describe("wrangler", () => {
 					"my-value"
 				);
 				await runWrangler(
-					"kv:key get my-key --binding someBinding --env some-environment --preview false"
+					"kv key get my-key --binding someBinding --env some-environment --preview false"
 				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1039,7 +1040,7 @@ describe("wrangler", () => {
 				);
 
 				await runWrangler(
-					"kv:key get /my,key --namespace-id some-namespace-id"
+					"kv key get /my,key --namespace-id some-namespace-id"
 				);
 				expect(proc.write).toEqual(Buffer.from("my-value"));
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1047,13 +1048,13 @@ describe("wrangler", () => {
 
 			it("should error if no key is provided", async () => {
 				await expect(
-					runWrangler("kv:key get")
+					runWrangler("kv key get")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Not enough non-option arguments: got 0, need at least 1"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key get <key>
+			wrangler kv key get <key>
 
 			Reads a single value by key from the given namespace.
 
@@ -1084,13 +1085,13 @@ describe("wrangler", () => {
 
 			it("should error if no binding nor namespace is provided", async () => {
 				await expect(
-					runWrangler("kv:key get foo")
+					runWrangler("kv key get foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Exactly one of the arguments binding and namespace-id is required"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key get <key>
+			wrangler kv key get <key>
 
 			Reads a single value by key from the given namespace.
 
@@ -1121,14 +1122,14 @@ describe("wrangler", () => {
 
 			it("should error if both binding and namespace is provided", async () => {
 				await expect(
-					runWrangler("kv:key get foo --binding x --namespace-id y")
+					runWrangler("kv key get foo --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Arguments binding and namespace-id are mutually exclusive"`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"
-			wrangler kv:key get <key>
+			wrangler kv key get <key>
 
 			Reads a single value by key from the given namespace.
 
@@ -1160,7 +1161,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerConfig();
 				await expect(
-					runWrangler("kv:key get key --binding otherBinding")
+					runWrangler("kv key get key --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
 				);
@@ -1181,7 +1182,7 @@ describe("wrangler", () => {
 						{ id: "yyy", account: { id: "2", name: "two" } },
 					]);
 					setIsTTY({ stdin: false, stdout: true });
-					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 				"More than one account available but unable to select one in non-interactive mode.
 				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
@@ -1197,7 +1198,7 @@ describe("wrangler", () => {
 						{ id: "yyy", account: { id: "2", name: "two" } },
 					]);
 					setIsTTY({ stdin: true, stdout: false });
-					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 				"More than one account available but unable to select one in non-interactive mode.
 				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
@@ -1223,7 +1224,7 @@ describe("wrangler", () => {
 							);
 						})
 					);
-					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 							"Failed to automatically retrieve account IDs for the logged in user.
 							You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID\\""
@@ -1236,7 +1237,7 @@ describe("wrangler", () => {
 						{ id: "yyy", account: { id: "2", name: "two" } },
 					]);
 					setIsTTY(false);
-					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
+					await expect(runWrangler("kv key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 				"More than one account available but unable to select one in non-interactive mode.
 				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
@@ -1275,14 +1276,14 @@ describe("wrangler", () => {
 			it("should delete a key in a namespace specified by id", async () => {
 				const requests = mockDeleteRequest("some-namespace-id", "someKey");
 				await runWrangler(
-					`kv:key delete --namespace-id some-namespace-id someKey`
+					`kv key delete --namespace-id some-namespace-id someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
 
 			it("should encode the key in the api request to delete a value", async () => {
 				const requests = mockDeleteRequest("voyager", "/NCC-74656");
-				await runWrangler(`kv:key delete --namespace-id voyager /NCC-74656`);
+				await runWrangler(`kv key delete --namespace-id voyager /NCC-74656`);
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
@@ -1295,7 +1296,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("bound-id", "someKey");
 				await runWrangler(
-					`kv:key delete --binding someBinding --preview false someKey`
+					`kv key delete --binding someBinding --preview false someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -1304,7 +1305,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("preview-bound-id", "someKey");
 				await runWrangler(
-					`kv:key delete --binding someBinding --preview someKey`
+					`kv key delete --binding someBinding --preview someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
@@ -1312,7 +1313,7 @@ describe("wrangler", () => {
 			it("should error if a given binding name is not in the configured kv namespaces", async () => {
 				writeWranglerConfig();
 				await expect(
-					runWrangler(`kv:key delete --binding otherBinding someKey`)
+					runWrangler(`kv key delete --binding otherBinding someKey`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
 				);
@@ -1328,7 +1329,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("env-bound-id", "someKey");
 				await runWrangler(
-					`kv:key delete --binding someBinding --env some-environment --preview false someKey`
+					`kv key delete --binding someBinding --env some-environment --preview false someKey`
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Deleting the key \\"someKey\\" on namespace env-bound-id."`
@@ -1341,14 +1342,14 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id", "someKey");
 				await runWrangler(
-					`kv:key delete --binding someBinding --env some-environment --preview someKey`
+					`kv key delete --binding someBinding --env some-environment --preview someKey`
 				);
 				expect(requests.count).toEqual(1);
 			});
 		});
 	});
 
-	describe("kv:bulk", () => {
+	describe("kv bulk", () => {
 		describe("put", () => {
 			function mockPutRequest(
 				expectedNamespaceId: string,
@@ -1385,7 +1386,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				const requests = mockPutRequest("some-namespace-id", keyValues);
 				await runWrangler(
-					`kv:bulk put --namespace-id some-namespace-id keys.json`
+					`kv bulk put --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1401,7 +1402,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				const requests = mockPutRequest("some-namespace-id", keyValues);
 				await runWrangler(
-					`kv:bulk put --namespace-id some-namespace-id keys.json`
+					`kv bulk put --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(3);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1419,7 +1420,7 @@ describe("wrangler", () => {
 				const keyValues = { key: "someKey1", value: "someValue1" };
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				await expect(
-					runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
+					runWrangler(`kv bulk put --namespace-id some-namespace-id keys.json`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 						                "Unexpected JSON input from \\"keys.json\\".
 						                Expected an array of key-value objects but got type \\"object\\"."
@@ -1456,7 +1457,7 @@ describe("wrangler", () => {
 				];
 				writeFileSync("./keys.json", JSON.stringify(keyValues));
 				await expect(
-					runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
+					runWrangler(`kv bulk put --namespace-id some-namespace-id keys.json`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 						                "Unexpected JSON input from \\"keys.json\\".
 						                Each item in the array should be an object that matches:
@@ -1532,7 +1533,7 @@ describe("wrangler", () => {
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv:bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1549,7 +1550,7 @@ describe("wrangler", () => {
 				});
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv:bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(3);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1571,7 +1572,7 @@ describe("wrangler", () => {
 					result: false,
 				});
 				await runWrangler(
-					`kv:bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --namespace-id some-namespace-id keys.json`
 				);
 				expect(std.out).toMatchInlineSnapshot(
 					`"Not deleting keys read from \\"keys.json\\"."`
@@ -1585,7 +1586,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv:bulk delete --namespace-id some-namespace-id keys.json --force`
+					`kv bulk delete --namespace-id some-namespace-id keys.json --force`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1598,7 +1599,7 @@ describe("wrangler", () => {
 				writeFileSync("./keys.json", JSON.stringify(keys));
 				const requests = mockDeleteRequest("some-namespace-id", keys);
 				await runWrangler(
-					`kv:bulk delete --namespace-id some-namespace-id keys.json -f`
+					`kv bulk delete --namespace-id some-namespace-id keys.json -f`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
@@ -1615,7 +1616,7 @@ describe("wrangler", () => {
 				});
 				await expect(
 					runWrangler(
-						`kv:bulk delete --namespace-id some-namespace-id keys.json`
+						`kv bulk delete --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 						                "Unexpected JSON input from \\"keys.json\\".
@@ -1635,7 +1636,7 @@ describe("wrangler", () => {
 				});
 				await expect(
 					runWrangler(
-						`kv:bulk delete --namespace-id some-namespace-id keys.json`
+						`kv bulk delete --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 						                "Unexpected JSON input from \\"keys.json\\".
@@ -1647,6 +1648,75 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+		});
+	});
+
+	describe("kv:* (deprecated)", () => {
+		test("kv:namespace", async () => {
+			const result = runWrangler("kv:namespace --help");
+
+			await expect(result).resolves.toBeUndefined();
+			expect(std.out).toMatchInlineSnapshot(`
+			"wrangler kv:namespace
+
+			🗂️  Interact with your Workers KV Namespaces (deprecated)
+
+			Commands:
+			  wrangler kv:namespace create <namespace>  Create a new namespace
+			  wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
+			  wrangler kv:namespace delete              Deletes a given namespace.
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
+		});
+		test("kv:key", async () => {
+			const result = runWrangler("kv:key --help");
+
+			await expect(result).resolves.toBeUndefined();
+			expect(std.out).toMatchInlineSnapshot(`
+			"wrangler kv:key
+
+			🔑 Individually manage Workers KV key-value pairs (deprecated)
+
+			Commands:
+			  wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
+			  wrangler kv:key list               Outputs a list of all keys in a given namespace.
+			  wrangler kv:key get <key>          Reads a single value by key from the given namespace.
+			  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
+		});
+		test("kv:bulk", async () => {
+			const result = runWrangler("kv:bulk --help");
+
+			await expect(result).resolves.toBeUndefined();
+			expect(std.out).toMatchInlineSnapshot(`
+			"wrangler kv:bulk
+
+			💪 Interact with multiple Workers KV key-value pairs at once (deprecated)
+
+			Commands:
+			  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
+			  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 		});
 	});
 });
