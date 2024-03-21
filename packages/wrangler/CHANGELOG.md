@@ -1,5 +1,26 @@
 # wrangler
 
+## 3.37.0
+
+### Minor Changes
+
+- [#5294](https://github.com/cloudflare/workers-sdk/pull/5294) [`bdc121d`](https://github.com/cloudflare/workers-sdk/commit/bdc121de0a05aaa4716269e2a96b3c4ae3385d8e) Thanks [@mattdeboard](https://github.com/mattdeboard)! - feature: Add `event-notification` commands in support of event notifications for Cloudflare R2.
+
+  Included are commands for creating and deleting event notification configurations for individual buckets.
+
+- [#5231](https://github.com/cloudflare/workers-sdk/pull/5231) [`e88ad44`](https://github.com/cloudflare/workers-sdk/commit/e88ad444f2dc54bbf4af4ac8d054ab6cd1af6898) Thanks [@w-kuhn](https://github.com/w-kuhn)! - feature: Add support for configuring HTTP Pull consumers for Queues
+
+  HTTP Pull consumers can be used to pull messages from queues via https request.
+
+### Patch Changes
+
+- [#5317](https://github.com/cloudflare/workers-sdk/pull/5317) [`9fd7eba`](https://github.com/cloudflare/workers-sdk/commit/9fd7eba3f2b526530b6934a613174541ba321eca) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Deprecate `-- <command>`, `--proxy` and `--script-path` options from `wrangler pages dev`.
+
+  Build your application to a directory and run the `wrangler pages dev <directory>` instead. This results in a more faithful emulation of production behavior.
+
+- Updated dependencies [[`248a318`](https://github.com/cloudflare/workers-sdk/commit/248a318acac293615327affe35b83018a48dddc9)]:
+  - miniflare@3.20240320.0
+
 ## 3.36.0
 
 ### Minor Changes
