@@ -71,7 +71,8 @@ export type EventNames =
 	| "list worker versions"
 	| "view versioned deployment"
 	| "view latest versioned deployment"
-	| "list versioned deployments";
+	| "list versioned deployments"
+	| "pages download config";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

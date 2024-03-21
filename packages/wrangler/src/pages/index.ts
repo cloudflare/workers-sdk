@@ -6,6 +6,7 @@ import * as Deploy from "./deploy";
 import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
 import * as Dev from "./dev";
+import * as DownloadConfig from "./download-config";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
 import * as Upload from "./upload";
@@ -55,6 +56,14 @@ export function pages(yargs: CommonYargsArgv) {
 						Functions.OptimizeRoutesOptions,
 						Functions.OptimizeRoutesHandler
 					)
+			)
+			.command("download", "⚡️ Download settings from your project", (args) =>
+				args.command(
+					"config [projectName]",
+					"Experimental: Download your Pages project config as a wrangler.toml file",
+					DownloadConfig.Options,
+					DownloadConfig.Handler
+				)
 			)
 			.command("project", "⚡️ Interact with your Pages projects", (args) =>
 				args
