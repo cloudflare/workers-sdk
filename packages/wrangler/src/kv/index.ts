@@ -30,8 +30,36 @@ import {
 	usingLocalNamespace,
 } from "./helpers";
 import type { EventNames } from "../metrics";
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
+
+export function registerKvSubcommands(
+	kvYargs: CommonYargsArgv,
+	subHelp: SubHelp
+) {
+	return kvYargs
+		.command(
+			"namespace",
+			`🗂️  Interact with your Workers KV Namespaces`,
+			(namespaceYargs) => {
+				return kvNamespace(namespaceYargs.command(subHelp));
+			}
+		)
+		.command(
+			"key",
+			`🔑 Individually manage Workers KV key-value pairs`,
+			(keyYargs) => {
+				return kvKey(keyYargs.command(subHelp));
+			}
+		)
+		.command(
+			"bulk",
+			`💪 Interact with multiple Workers KV key-value pairs at once`,
+			(bulkYargs) => {
+				return kvBulk(bulkYargs.command(subHelp));
+			}
+		);
+}
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
