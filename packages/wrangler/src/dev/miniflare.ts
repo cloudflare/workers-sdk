@@ -2,7 +2,15 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
+import {
+	CoreHeaders,
+	Log,
+	LogLevel,
+	Miniflare,
+	Mutex,
+	Response,
+	TypedEventTarget,
+} from "miniflare";
 import {
 	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
@@ -10,6 +18,7 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import { UserError } from "../errors";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
@@ -33,7 +42,6 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
 	Request,
-	Response,
 	SourceOptions,
 	WorkerOptions,
 } from "miniflare";
@@ -121,6 +129,7 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
+	services: Config["services"] | undefined;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
 }
 
@@ -270,6 +279,7 @@ type MiniflareBindingsConfig = Pick<
 	| "workerDefinitions"
 	| "queueConsumers"
 	| "name"
+	| "services"
 	| "serviceBindings"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle">>;
@@ -354,6 +364,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 						// If we couldn't find the target or the class, create a stub object
 						// that just returns `503 Service Unavailable` responses.
 						return `export const ${identifier} = createClass({ className: ${classNameJson} });`;
+					} else if (target.protocol === "https") {
+						throw new UserError(
+							`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+						);
 					} else {
 						// Otherwise, create a stub object that proxies request to the
 						// target session at `${hostname}:${port}`.
@@ -364,6 +378,35 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				})
 				.join("\n"),
 	});
+
+	// Setup service bindings to external services
+	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
+		...config.serviceBindings,
+	};
+	for (const service of config.services ?? []) {
+		const target = config.workerDefinitions?.[service.service];
+		if (target?.host === undefined || target.port === undefined) {
+			serviceBindings[service.binding] = () => {
+				const message = `[wrangler] Couldn't find \`wrangler dev\` session for service "${service.service}" to proxy to`;
+				return new Response(message, { status: 503 });
+			};
+		} else if (target.protocol === "https") {
+			// We can't support this as `workerd` requires us to explicitly configure
+			// allowed self-signed certificates. These aren't stored in the registry.
+			// There's no blanket `rejectUnauthorized: false` option like in Node.
+			serviceBindings[service.binding] = () => {
+				const message = `[wrangler] Cannot proxy to \`wrangler dev\` session for service "${service.service}" as it uses HTTPS, please remove the \`--local-protocol\`/\`dev.local_protocol\` option`;
+				return new Response(message, { status: 503 });
+			};
+		} else {
+			serviceBindings[service.binding] = {
+				external: {
+					address: `${target.host}:${target.port}`,
+					http: { cfBlobHeader: CoreHeaders.CF_BLOB }, // TODO(now): test cf blob/original URL passthrough
+				},
+			};
+		}
+	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
@@ -444,9 +487,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		),
 
 		serviceBindings: config.serviceBindings,
-
 		wrappedBindings: wrappedBindings,
-		// TODO: check multi worker service bindings also supported
 	};
 
 	return {
