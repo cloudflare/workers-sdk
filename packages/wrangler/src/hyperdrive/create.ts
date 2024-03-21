@@ -40,6 +40,7 @@ export function options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				describe:
 					"Whether the provided host is part of your Cloudflare Zero Trust private network",
+				default: false,
 			},
 		})
 		.epilogue(hyperdriveBetaWarning);

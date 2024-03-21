@@ -60,7 +60,8 @@ export function options(yargs: CommonYargsArgv) {
 			},
 			"private-host": {
 				type: "boolean",
-				describe: "Disables the caching of SQL responses",
+				describe:
+					"Whether the provided host is part of your Cloudflare Zero Trust private network",
 				default: false,
 			},
 		})
