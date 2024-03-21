@@ -9,10 +9,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type {
-	VectorizeDistanceMetric,
-	VectorizePreset,
-} from "@cloudflare/workers-types";
+import type { VectorizeDistanceMetric } from "@cloudflare/workers-types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -71,7 +68,7 @@ export async function handler(
 
 	let indexConfig;
 	if (args.preset) {
-		indexConfig = { preset: args.preset as VectorizePreset };
+		indexConfig = { preset: args.preset };
 		logger.log(
 			`Configuring index based for the embedding model ${args.preset}.`
 		);
