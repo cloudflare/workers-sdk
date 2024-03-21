@@ -1,13 +1,12 @@
-import { readConfig } from "../../../../config";
-import { CommandLineArgsError } from "../../../../index";
-import { logger } from "../../../../logger";
-import { postConsumer } from "../../../client";
-import { handleFetchError } from "../../../utils";
+import { readConfig } from "../../../../../config";
+import { CommandLineArgsError } from "../../../../../index";
+import { logger } from "../../../../../logger";
+import { postConsumer } from "../../../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
-} from "../../../../yargs-types";
-import type { PostConsumerBody } from "../../../client";
+} from "../../../../../yargs-types";
+import type { PostConsumerBody } from "../../../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -44,18 +43,24 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"The maximum number of concurrent consumer Worker invocations. Must be a positive integer",
 			},
-			"retry-delay": {
+			"retry-delay-secs": {
 				type: "number",
-				describe:
-					"How long a retried message should be delayed for, in seconds. Must be a positive integer",
-				number: true,
+				describe: "The number of seconds to wait before retrying a message",
 			},
 		});
 }
 
-function createBody(
+export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
-): PostConsumerBody {
+) {
+	const config = readConfig(args.config, args);
+
+	if (Array.isArray(args.retryDelaySecs)) {
+		throw new CommandLineArgsError(
+			`Cannot specify --retry-delay-secs multiple times`
+		);
+	}
+
 	const body: PostConsumerBody = {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
@@ -67,34 +72,12 @@ function createBody(
 				? 1000 * args.batchTimeout
 				: undefined,
 			max_concurrency: args.maxConcurrency,
+			retry_delay: args.retryDelaySecs,
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};
 
-	if (Array.isArray(args.retryDelay)) {
-		throw new CommandLineArgsError(
-			`Cannot specify --retry-delay multiple times`
-		);
-	}
-
-	if (args.retryDelay != undefined) {
-		body.settings.retry_delay = args.retryDelay;
-	}
-
-	return body;
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-	const body = createBody(args);
-
-	try {
-		logger.log(`Adding consumer to queue ${args.queueName}.`);
-		await postConsumer(config, args.queueName, body);
-		logger.log(`Added consumer to queue ${args.queueName}.`);
-	} catch (e) {
-		handleFetchError(e as { code?: number });
-	}
+	logger.log(`Adding consumer to queue ${args.queueName}.`);
+	await postConsumer(config, args.queueName, body);
+	logger.log(`Added consumer to queue ${args.queueName}.`);
 }

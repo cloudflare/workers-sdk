@@ -1,4 +1,5 @@
 import { readConfig } from "../../../../../config";
+import { CommandLineArgsError } from "../../../../../index";
 import { logger } from "../../../../../logger";
 import { postTypedConsumer } from "../../../../client";
 import type {
@@ -43,6 +44,12 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	const config = readConfig(args.config, args);
+
+	if (Array.isArray(args.retryDelaySecs)) {
+		throw new CommandLineArgsError(
+			`Cannot specify --retry-delay-secs multiple times`
+		);
+	}
 
 	const postTypedConsumerBody: PostTypedConsumerBody = {
 		type: "http_pull",

@@ -219,7 +219,7 @@ describe("wrangler", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			Options:
-			      --delivery-delay  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
+			      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
 		`);
 			});
 
@@ -274,7 +274,7 @@ describe("wrangler", () => {
 
 			it("should send queue settings with delivery delay", async () => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
-				await runWrangler("queues create testQueue --delivery-delay=10");
+				await runWrangler("queues create testQueue --delivery-delay-secs=10");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Creating queue testQueue.
 					Created queue testQueue."
@@ -287,10 +287,10 @@ describe("wrangler", () => {
 
 				await expect(
 					runWrangler(
-						"queues create testQueue --delivery-delay=5 --delivery-delay=10"
+						"queues create testQueue --delivery-delay-secs=5 --delivery-delay-secs=10"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Cannot specify --delivery-delay multiple times"`
+					`"Cannot specify --delivery-delay-secs multiple times"`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -430,7 +430,7 @@ describe("wrangler", () => {
 				      --message-retries    Maximum number of retries for each message  [number]
 				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
 				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
-				      --retry-delay        How long a retried message should be delayed for, in seconds. Must be a positive integer  [number]"
+				      --retry-delay-secs   The number of seconds to wait before retrying a message  [number]"
 			`);
 				});
 
@@ -471,7 +471,7 @@ describe("wrangler", () => {
 					mockPostRequest("testQueue", expectedBody);
 
 					await runWrangler(
-						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay=10"
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=10"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
@@ -496,10 +496,10 @@ describe("wrangler", () => {
 
 					await expect(
 						runWrangler(
-							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay=5 --retry-delay=10"
+							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=5 --retry-delay-secs=10"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Cannot specify --retry-delay multiple times"`
+						`"Cannot specify --retry-delay-secs multiple times"`
 					);
 
 					expect(requests.count).toEqual(0);

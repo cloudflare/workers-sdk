@@ -17,7 +17,7 @@ export function options(yargs: CommonYargsArgv) {
 			description: "The name of the queue",
 		})
 		.options({
-			"delivery-delay": {
+			"delivery-delay-secs": {
 				type: "number",
 				describe:
 					"How long a published message should be delayed for, in seconds. Must be a positive integer",
@@ -32,15 +32,15 @@ function createBody(
 		queue_name: args.name,
 	};
 
-	if (Array.isArray(args.deliveryDelay)) {
+	if (Array.isArray(args.deliveryDelaySecs)) {
 		throw new CommandLineArgsError(
-			"Cannot specify --delivery-delay multiple times"
+			"Cannot specify --delivery-delay-secs multiple times"
 		);
 	}
 
-	if (args.deliveryDelay != undefined) {
+	if (args.deliveryDelaySecs != undefined) {
 		body.settings = {
-			delivery_delay: args.deliveryDelay,
+			delivery_delay: args.deliveryDelaySecs,
 		};
 	}
 
