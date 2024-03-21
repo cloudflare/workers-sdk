@@ -471,6 +471,7 @@ function DevSession(props: DevSessionProps) {
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
+			services={props.bindings.services}
 		/>
 	) : (
 		<Remote

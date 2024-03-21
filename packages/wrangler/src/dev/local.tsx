@@ -49,6 +49,7 @@ export interface LocalProps {
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
+	services: Config["services"] | undefined;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -100,6 +101,7 @@ export async function localPropsToConfigBundle(
 		localUpstream: props.localUpstream,
 		upstreamProtocol: props.upstreamProtocol,
 		inspect: props.inspect,
+		services: props.services,
 		serviceBindings,
 	};
 }
