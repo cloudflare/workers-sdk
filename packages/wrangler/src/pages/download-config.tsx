@@ -9,7 +9,7 @@ import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import type { RawConfig } from "../config";
+import type { RawEnvironment } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -17,10 +17,54 @@ import type {
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
 
-export function mapBindings(
-	project: Project["deployment_configs"]["production"]
-): RawConfig {
-	const configObj = {} as RawConfig;
+// TODO: fix the Project definition
+type DeploymentConfig = Project["deployment_configs"]["production"];
+interface PagesDeploymentConfig extends DeploymentConfig {
+	services: Record<
+		string,
+		{
+			service: string;
+			environment?: string;
+		}
+	>;
+	queue_producers: Record<
+		string,
+		{
+			name: string;
+		}
+	>;
+	analytics_engine_datasets: Record<
+		string,
+		{
+			dataset: string;
+		}
+	>;
+	durable_object_namespaces: Record<
+		string,
+		{
+			namespace_id: string;
+		}
+	>;
+	ai_bindings: Record<string, Record<string, never>>;
+}
+
+interface PagesProject extends Project {
+	deployment_configs: {
+		production: PagesDeploymentConfig;
+		preview: PagesDeploymentConfig;
+	};
+}
+
+async function toEnvironment(
+	project: PagesDeploymentConfig,
+	accountId: string
+): Promise<RawEnvironment> {
+	const configObj = {} as RawEnvironment;
+	configObj.compatibility_date =
+		project.compatibility_date ?? new Date().toISOString().substring(0, 10);
+	if (project.compatibility_flags?.length)
+		configObj.compatibility_flags = project.compatibility_flags;
+
 	for (const [name, envVar] of Object.entries(project.env_vars ?? {}).filter(
 		([_, val]) => val && val?.type == "plain_text"
 	)) {
@@ -35,18 +79,24 @@ export function mapBindings(
 		configObj.kv_namespaces.push({ id: namespace.namespace_id, binding: name });
 	}
 
-	// TODO: support Durable Objects
-	// for (const [name, namespace] of Object.entries(
-	// 	project.durable_object_namespaces ?? {}
-	// )) {
-	// 	configObj.durable_objects ??= { bindings: [] };
-	// 	configObj.durable_objects.bindings.push({
-	// 		name: name,
-	// 		class_name: binding.class_name,
-	// 		script_name: binding.script_name,
-	// 		environment: binding.environment,
-	// 	});
-	// }
+	for (const [name, { namespace_id }] of Object.entries(
+		project.durable_object_namespaces ?? {}
+	)) {
+		const namespace = await fetchResult<{
+			script: string;
+			class: string;
+			environment?: string;
+		}>(
+			`/accounts/${accountId}/workers/durable_objects/namespaces/${namespace_id}`
+		);
+		configObj.durable_objects ??= { bindings: [] };
+		configObj.durable_objects.bindings.push({
+			name: name,
+			class_name: namespace.class,
+			script_name: namespace.script,
+			environment: namespace.environment,
+		});
+	}
 
 	for (const [name, namespace] of Object.entries(project.d1_databases ?? {})) {
 		configObj.d1_databases ??= [];
@@ -64,9 +114,8 @@ export function mapBindings(
 			binding: name,
 		});
 	}
-	// @ts-expect-error Types are wrong
+
 	for (const [name, { service, environment }] of Object.entries(
-		// @ts-expect-error Types are wrong
 		project.services ?? {}
 	)) {
 		configObj.services ??= [];
@@ -77,22 +126,15 @@ export function mapBindings(
 		});
 	}
 
-	for (const [name, queue] of Object.entries(
-		// @ts-expect-error Types are wrong
-		project.queue_producers ?? {}
-	)) {
+	for (const [name, queue] of Object.entries(project.queue_producers ?? {})) {
 		configObj.queues ??= { producers: [] };
-		// @ts-expect-error TS is silly
-		configObj.queues.producers.push({
+		configObj.queues?.producers?.push({
 			binding: name,
-			// @ts-expect-error Types are wrong
 			queue: queue.name,
 		});
 	}
 
-	// @ts-expect-error Types are wrong
 	for (const [name, { dataset }] of Object.entries(
-		// @ts-expect-error Types are wrong
 		project.analytics_engine_datasets ?? {}
 	)) {
 		configObj.analytics_engine_datasets ??= [];
@@ -101,15 +143,12 @@ export function mapBindings(
 			dataset,
 		});
 	}
-	for (const [name] of Object.entries(
-		// @ts-expect-error Types are wrong
-		project.ai_bindings ?? {}
-	)) {
+	for (const [name] of Object.entries(project.ai_bindings ?? {})) {
 		configObj.ai = { binding: name };
 	}
 	return configObj;
 }
-async function writeWranglerToml(toml: RawConfig) {
+async function writeWranglerToml(toml: RawEnvironment) {
 	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
 
 	// Pages does not support custom wrangler.toml locations, so always write to ./wrangler.toml
@@ -124,22 +163,19 @@ async function writeWranglerToml(toml: RawConfig) {
 }
 
 async function downloadProject(accountId: string, projectName: string) {
-	const project = await fetchResult<Project>(
+	const project = await fetchResult<PagesProject>(
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
 
 	return {
 		name: project.name,
 		pages_build_output_dir: project.build_config.destination_dir,
-		compatibility_date:
-			project.deployment_configs.production.compatibility_date ??
-			new Date().toISOString().substring(0, 10),
-		compatibility_flags:
-			project.deployment_configs.production.compatibility_flags,
-		...mapBindings(project.deployment_configs.production),
+		...(await toEnvironment(project.deployment_configs.preview, accountId)),
 		env: {
-			production: mapBindings(project.deployment_configs.production),
-			preview: mapBindings(project.deployment_configs.preview),
+			production: await toEnvironment(
+				project.deployment_configs.production,
+				accountId
+			),
 		},
 	};
 }
