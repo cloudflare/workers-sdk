@@ -591,7 +591,7 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Sending this configuration to \\"my-bucket\\":
-				{\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"CompleteMultipartUpload\\",\\"CopyObject\\",\\"DeleteObject\\",\\"LifecycleDeletion\\"]}]}
+				{\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"CompleteMultipartUpload\\",\\"CopyObject\\",\\"DeleteObject\\"]}]}
 				Configuration created successfully!"
 			`);
 				});
