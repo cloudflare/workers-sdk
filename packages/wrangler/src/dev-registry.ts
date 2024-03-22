@@ -17,13 +17,18 @@ let terminator: HttpTerminator;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
+export type WorkerEntrypointsDefinition = Record<
+	/* name */ "default" | string,
+	{ host: string; port: number } | undefined
+>;
+
 export type WorkerDefinition = {
 	port: number | undefined;
 	protocol: "http" | "https" | undefined;
 	host: string | undefined;
 	mode: "local" | "remote";
 	headers?: Record<string, string>;
-	entrypoints?: string[];
+	entrypointAddresses?: WorkerEntrypointsDefinition;
 	durableObjects: { name: string; className: string }[];
 	durableObjectsHost?: string;
 	durableObjectsPort?: number;
@@ -189,9 +194,11 @@ export async function getRegisteredWorkers(): Promise<
  * list of the running workers that we're bound to
  */
 export async function getBoundRegisteredWorkers({
+	name,
 	services,
 	durableObjects,
 }: {
+	name: string | undefined;
 	services: Config["services"] | undefined;
 	durableObjects: Config["durable_objects"] | undefined;
 }) {
@@ -206,7 +213,8 @@ export async function getBoundRegisteredWorkers({
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
 			([key, _value]) =>
-				serviceNames.includes(key) || durableObjectServices.includes(key)
+				key !== name && // Always exclude current worker to avoid infinite loops
+				(serviceNames.includes(key) || durableObjectServices.includes(key))
 		)
 	);
 	return filteredWorkers;
