@@ -65,6 +65,7 @@ import {
 	logout,
 	validateScopeKeys,
 } from "./user";
+import { setEsBuildVersion } from "./utils/esbuild";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
@@ -233,6 +234,36 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: ["x-versions", "experimental-gradual-rollouts"],
 		})
+		.option("experimental-esbuild", {
+			describe: `Experimental: Use newer esbuild version (please use with caution)`,
+			type: "boolean",
+			alias: "x-esbuild",
+			hidden: true,
+		})
+		.option("experimental-esbuild-20", {
+			describe: `Experimental: Use esbuild v0.20 (please use with caution)`,
+			type: "boolean",
+			alias: "x-esbuild-20",
+			hidden: true, // TODO: expose this once we're certain we want to support it
+		})
+		.option("experimental-esbuild-19", {
+			describe: `Experimental: Use esbuild v0.19 (please use with caution)`,
+			type: "boolean",
+			alias: "x-esbuild-19",
+			hidden: true, // TODO: expose this once we're certain we want to support it
+		})
+		.option("experimental-esbuild-18", {
+			describe: `Experimental: Use esbuild v0.18 (please use with caution)`,
+			type: "boolean",
+			alias: "x-esbuild-18",
+			hidden: true, // TODO: expose this once we're certain we want to support it
+		})
+		.option("experimental-esbuild-17", {
+			describe: `Experimental: Use esbuild v0.17 (please use with caution)`,
+			type: "boolean",
+			alias: "x-esbuild-17",
+			hidden: true, // TODO: expose this once we're certain we want to support it
+		})
 		.check((args) => {
 			// Update logger level, before we do any logging
 			if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
@@ -245,6 +276,9 @@ export function createCLIParser(argv: string[]) {
 				if (!(key in process.env)) process.env[key] = value;
 			}
 			return true;
+		})
+		.middleware(async (args) => {
+			await setEsBuildVersion(args);
 		});
 
 	wrangler.group(
