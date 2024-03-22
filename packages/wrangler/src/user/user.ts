@@ -350,6 +350,7 @@ const DefaultScopes = {
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"constellation:write": "Manage Constellation projects/models",
 	"ai:read": "List AI models",
+	"queues:write": "See and change Cloudflare Queues settings and data",
 } as const;
 
 const OptionalScopes = {
