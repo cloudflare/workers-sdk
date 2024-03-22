@@ -60,7 +60,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			const argv = [
 				"foo",
 				"--type",
-				"webFramework",
+				"web-framework",
 				"--no-deploy",
 				"--version",
 			];
