@@ -45,6 +45,10 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				description: "The location for the output config file",
 			},
+			"build-metadata-path": {
+				type: "string",
+				description: "The location for the build metadata file",
+			},
 			"output-routes-path": {
 				type: "string",
 				description: "The location for the output _routes.json file",
