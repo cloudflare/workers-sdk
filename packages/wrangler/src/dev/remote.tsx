@@ -343,6 +343,7 @@ export function useWorker(
 				},
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 				proxyLogsToController: true,
+				entrypointAddresses: undefined,
 			};
 
 			onReady?.(
@@ -464,6 +465,7 @@ export async function startRemoteServer(props: RemoteProps) {
 				},
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 				proxyLogsToController: true,
+				entrypointAddresses: undefined,
 			};
 
 			props.onReady?.(ip, port, proxyData);

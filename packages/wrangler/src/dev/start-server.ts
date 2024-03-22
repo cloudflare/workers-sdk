@@ -67,6 +67,7 @@ export async function startDevServer(
 			await startWorkerRegistry();
 			if (props.local) {
 				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+					name: props.name,
 					services: props.bindings.services,
 					durableObjects: props.bindings.durable_objects,
 				});
@@ -188,7 +189,8 @@ export async function startDevServer(
 				await maybeRegisterLocalWorker(
 					url,
 					props.name,
-					proxyData.internalDurableObjects
+					proxyData.internalDurableObjects,
+					proxyData.entrypointAddresses
 				);
 
 				props.onReady?.(ip, port, proxyData);
@@ -432,6 +434,7 @@ export async function startLocalServer(
 				// workers written in "service-worker" format still need to proxy logs to the ProxyController
 				proxyLogsToController: props.format === "service-worker",
 				internalDurableObjects: event.internalDurableObjects,
+				entrypointAddresses: event.entrypointAddresses,
 			};
 
 			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);
