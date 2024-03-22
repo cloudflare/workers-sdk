@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import * as esmLexer from "es-module-lexer";
 import {
 	CoreHeaders,
 	Log,
@@ -35,7 +36,10 @@ import type {
 	CfUnsafeBinding,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
+import type {
+	WorkerEntrypointsDefinition,
+	WorkerRegistry,
+} from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -55,7 +59,8 @@ import type { Readable } from "node:stream";
 // non-standard protocols, so we store it in a header to restore later.
 const EXTERNAL_DURABLE_OBJECTS_WORKER_NAME =
 	"__WRANGLER_EXTERNAL_DURABLE_OBJECTS_WORKER";
-// noinspection HttpUrlsUsage
+// TODO(someday): could we do some sort of `Proxy`-prototype thing here
+//  for a nice error message if a user tried to call an RPC method?
 const EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT = `
 const HEADER_URL = "X-Miniflare-Durable-Object-URL";
 const HEADER_NAME = "X-Miniflare-Durable-Object-Name";
@@ -189,21 +194,34 @@ function buildLog(): Log {
 	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
+async function getEntrypointNames(entrypointSource: string) {
+	await esmLexer.init;
+	const [_imports, exports] = esmLexer.parse(entrypointSource);
+	// TODO(soon): support `export * from "...";` with `--no-bundle`, `esbuild`
+	//  will bundle these so we don't need to worry about this there
+	return exports.map(({ n }) => n);
+}
+
 async function buildSourceOptions(
 	config: ConfigBundle
-): Promise<SourceOptions> {
+): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
-		const modulesRoot = path.dirname(scriptPath);
-		const { entrypointSource, modules } =
-			config.bundle.type === "python"
-				? {
-						entrypointSource: readFileSync(scriptPath, "utf8"),
-						modules: config.bundle.modules,
-				  }
-				: withSourceURLs(scriptPath, config.bundle.modules);
+		const isPython = config.bundle.type === "python";
 
-		return {
+		const { entrypointSource, modules } = isPython
+			? {
+					entrypointSource: readFileSync(scriptPath, "utf8"),
+					modules: config.bundle.modules,
+			  }
+			: withSourceURLs(scriptPath, config.bundle.modules);
+
+		const entrypointNames = isPython
+			? []
+			: await getEntrypointNames(entrypointSource);
+
+		const modulesRoot = path.dirname(scriptPath);
+		const sourceOptions: SourceOptions = {
 			modulesRoot,
 
 			modules: [
@@ -221,9 +239,10 @@ async function buildSourceOptions(
 				})),
 			],
 		};
+		return { sourceOptions, entrypointNames };
 	} else {
 		// Miniflare will handle adding `//# sourceURL` comments if they're missing
-		return { scriptPath };
+		return { sourceOptions: { scriptPath }, entrypointNames: [] };
 	}
 }
 
@@ -384,24 +403,72 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		...config.serviceBindings,
 	};
 	for (const service of config.services ?? []) {
+		if (service.service === config.name) {
+			// If this is a service binding to the current worker, don't bother using
+			// the dev registry to look up the address, just bind to it directly.
+			serviceBindings[service.binding] = getName(config);
+			continue;
+		}
+
 		const target = config.workerDefinitions?.[service.service];
 		if (target?.host === undefined || target.port === undefined) {
+			// If the target isn't in the registry, always return an error response
+			// TODO(someday): could we do some sort of `Proxy`-prototype thing here
+			//  for a nice error message if a user tried to call an RPC method?
 			serviceBindings[service.binding] = () => {
 				const message = `[wrangler] Couldn't find \`wrangler dev\` session for service "${service.service}" to proxy to`;
 				return new Response(message, { status: 503 });
 			};
-		} else if (target.protocol === "https") {
-			// We can't support this as `workerd` requires us to explicitly configure
-			// allowed self-signed certificates. These aren't stored in the registry.
-			// There's no blanket `rejectUnauthorized: false` option like in Node.
-			serviceBindings[service.binding] = () => {
-				const message = `[wrangler] Cannot proxy to \`wrangler dev\` session for service "${service.service}" as it uses HTTPS, please remove the \`--local-protocol\`/\`dev.local_protocol\` option`;
-				return new Response(message, { status: 503 });
-			};
 		} else {
+			// Otherwise, try to build an `external` service to it. `external`
+			// services support JSRPC over HTTP CONNECT using a special hostname.
+			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
+			let address: `${string}:${number}`;
+			if (service.entrypoint !== undefined) {
+				// If the user has requested a named entrypoint...
+				if (target.entrypointAddresses === undefined) {
+					// ...but the "server" `wrangler` hasn't provided any because it's too
+					// old, throw.
+					throw new UserError(
+						`The \`wrangler dev\` session for service "${service.service}" does not support proxying entrypoints. Please upgrade "${service.service}"'s \`wrangler\` version.`
+					);
+				}
+				const entrypointAddress =
+					target.entrypointAddresses[service.entrypoint];
+				if (entrypointAddress === undefined) {
+					// ...but the named entrypoint doesn't exist, throw
+					throw new UserError(
+						`The \`wrangler dev\` session for service "${service.service}" does export an entrypoint named "${service.entrypoint}"`
+					);
+				}
+				address = `${entrypointAddress.host}:${entrypointAddress.port}`;
+			} else {
+				// Otherwise, if the user hasn't specified a named entrypoint, assume
+				// they meant to bind to the `default` entrypoint.
+				const defaultEntrypointAddress =
+					target.entrypointAddresses?.["default"];
+				if (defaultEntrypointAddress === undefined) {
+					// If the "server" `wrangler` is too old to provide direct entrypoint
+					// addresses, fallback to sending requests directly to the target...
+					if (target.protocol === "https") {
+						// ...unless the target is listening on HTTPS, in which case throw.
+						// We can't support this as `workerd` requires us to explicitly
+						// configure allowed self-signed certificates. These aren't stored
+						// in the registry. There's no blanket `rejectUnauthorized: false`
+						// option like in Node.
+						throw new UserError(
+							`Cannot proxy to \`wrangler dev\` session for service "${service.service}" because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+						);
+					}
+					address = `${target.host}:${target.port}`;
+				} else {
+					address = `${defaultEntrypointAddress.host}:${defaultEntrypointAddress.port}`;
+				}
+			}
+
 			serviceBindings[service.binding] = {
 				external: {
-					address: `${target.host}:${target.port}`,
+					address,
 					http: { cfBlobHeader: CoreHeaders.CF_BLOB }, // TODO(now): test cf blob/original URL passthrough
 				},
 			};
@@ -486,7 +553,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				.map(ratelimitEntry) ?? []
 		),
 
-		serviceBindings: config.serviceBindings,
+		serviceBindings,
 		wrappedBindings: wrappedBindings,
 	};
 
@@ -636,7 +703,11 @@ async function buildMiniflareOptions(
 	log: Log,
 	config: ConfigBundle,
 	proxyToUserWorkerAuthenticationSecret: UUID
-): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
+): Promise<{
+	options: MiniflareOptions;
+	internalObjects: CfDurableObject[];
+	entrypointNames: string[];
+}> {
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
@@ -659,7 +730,7 @@ async function buildMiniflareOptions(
 			? `${config.upstreamProtocol}://${config.localUpstream}`
 			: undefined;
 
-	const sourceOptions = await buildSourceOptions(config);
+	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
 		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
@@ -700,27 +771,38 @@ async function buildMiniflareOptions(
 				...sourceOptions,
 				...bindingOptions,
 				...sitesOptions,
+
+				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
+				unsafeDirectSockets: entrypointNames.map((name) => ({
+					host: "127.0.0.1",
+					port: 0,
+					entrypoint: name,
+					proxy: true,
+				})),
 			},
 			...externalWorkers,
 		],
 	};
-	return { options, internalObjects };
+	return { options, internalObjects, entrypointNames };
 }
 
 export interface ReloadedEventOptions {
 	url: URL;
 	internalDurableObjects: CfDurableObject[];
+	entrypointAddresses: WorkerEntrypointsDefinition;
 	proxyToUserWorkerAuthenticationSecret: UUID;
 }
 export class ReloadedEvent extends Event implements ReloadedEventOptions {
 	readonly url: URL;
 	readonly internalDurableObjects: CfDurableObject[];
+	readonly entrypointAddresses: WorkerEntrypointsDefinition;
 	readonly proxyToUserWorkerAuthenticationSecret: UUID;
 
 	constructor(type: "reloaded", options: ReloadedEventOptions) {
 		super(type);
 		this.url = options.url;
 		this.internalDurableObjects = options.internalDurableObjects;
+		this.entrypointAddresses = options.entrypointAddresses;
 		this.proxyToUserWorkerAuthenticationSecret =
 			options.proxyToUserWorkerAuthenticationSecret;
 	}
@@ -758,11 +840,12 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
 		if (opts?.signal?.aborted) return;
 		try {
-			const { options, internalObjects } = await buildMiniflareOptions(
-				this.#log,
-				config,
-				this.#proxyToUserWorkerAuthenticationSecret
-			);
+			const { options, internalObjects, entrypointNames } =
+				await buildMiniflareOptions(
+					this.#log,
+					config,
+					this.#proxyToUserWorkerAuthenticationSecret
+				);
 			if (opts?.signal?.aborted) return;
 			if (this.#mf === undefined) {
 				this.#mf = new Miniflare(options);
@@ -770,12 +853,23 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 				await this.#mf.setOptions(options);
 			}
 			const url = await this.#mf.ready;
+
+			// Get entrypoint addresses
+			const entrypointAddresses: WorkerEntrypointsDefinition = {};
+			for (const name of entrypointNames) {
+				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
+				const port = parseInt(directUrl.port);
+				entrypointAddresses[name] = { host: directUrl.hostname, port };
+			}
+
 			if (opts?.signal?.aborted) return;
+
 			const event = new ReloadedEvent("reloaded", {
 				url,
 				internalDurableObjects: internalObjects,
 				proxyToUserWorkerAuthenticationSecret:
 					this.#proxyToUserWorkerAuthenticationSecret,
+				entrypointAddresses,
 			});
 			this.dispatchEvent(event);
 		} catch (error: unknown) {
