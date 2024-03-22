@@ -57,14 +57,6 @@ export function pages(yargs: CommonYargsArgv) {
 						Functions.OptimizeRoutesHandler
 					)
 			)
-			.command("download", "⚡️ Download settings from your project", (args) =>
-				args.command(
-					"config [projectName]",
-					"Experimental: Download your Pages project config as a wrangler.toml file",
-					DownloadConfig.Options,
-					DownloadConfig.Handler
-				)
-			)
 			.command("project", "⚡️ Interact with your Pages projects", (args) =>
 				args
 					.command(
@@ -123,6 +115,14 @@ export function pages(yargs: CommonYargsArgv) {
 				"🆙 Deploy a directory of static assets as a Pages deployment",
 				Deploy.Options,
 				Deploy.Handler
+			)
+			.command("download", "⚡️ Download settings from your project", (args) =>
+				args.command(
+					"config [projectName]",
+					"Experimental: Download your Pages project config as a wrangler.toml file",
+					DownloadConfig.Options,
+					DownloadConfig.Handler
+				)
 			)
 	);
 }
