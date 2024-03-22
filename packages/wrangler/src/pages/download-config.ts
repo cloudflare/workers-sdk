@@ -43,6 +43,9 @@ interface PagesDeploymentConfig extends DeploymentConfig {
 		string,
 		{
 			namespace_id: string;
+			class_name: string;
+			service: string;
+			environment: string;
 		}
 	>;
 	ai_bindings: Record<string, Record<string, never>>;
@@ -79,23 +82,32 @@ async function toEnvironment(
 		configObj.kv_namespaces.push({ id: namespace.namespace_id, binding: name });
 	}
 
-	for (const [name, { namespace_id }] of Object.entries(
+	for (const [name, ns] of Object.entries(
 		project.durable_object_namespaces ?? {}
 	)) {
-		const namespace = await fetchResult<{
-			script: string;
-			class: string;
-			environment?: string;
-		}>(
-			`/accounts/${accountId}/workers/durable_objects/namespaces/${namespace_id}`
-		);
 		configObj.durable_objects ??= { bindings: [] };
-		configObj.durable_objects.bindings.push({
-			name: name,
-			class_name: namespace.class,
-			script_name: namespace.script,
-			environment: namespace.environment,
-		});
+		if (ns.class_name && ns.class_name !== "") {
+			configObj.durable_objects.bindings.push({
+				name: name,
+				class_name: ns.class_name,
+				script_name: ns.service,
+				environment: ns.environment,
+			});
+		} else {
+			const namespace = await fetchResult<{
+				script: string;
+				class: string;
+				environment?: string;
+			}>(
+				`/accounts/${accountId}/workers/durable_objects/namespaces/${ns.namespace_id}`
+			);
+			configObj.durable_objects.bindings.push({
+				name: name,
+				class_name: namespace.class,
+				script_name: namespace.script,
+				environment: namespace.environment,
+			});
+		}
 	}
 
 	for (const [name, namespace] of Object.entries(project.d1_databases ?? {})) {
@@ -166,6 +178,7 @@ async function downloadProject(accountId: string, projectName: string) {
 	const project = await fetchResult<PagesProject>(
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
+	console.log(JSON.stringify(project, null, 2));
 
 	return {
 		name: project.name,

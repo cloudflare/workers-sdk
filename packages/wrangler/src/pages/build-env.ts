@@ -1,3 +1,4 @@
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
@@ -21,11 +22,22 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 	if (!args.projectDir) {
 		throw new FatalError("No Pages project location specified");
 	}
-	const config = readConfig(path.join(args.projectDir, "wrangler.toml"), {
+	const configPath = path.resolve(args.projectDir, "wrangler.toml");
+	// Fail early if the config file doesn't exist
+	try {
+		await stat(configPath);
+	} catch {
+		throw new FatalError(
+			"No Pages config file found",
+			EXIT_CODE_NO_CONFIG_FOUND
+		);
+	}
+	const config = readConfig(path.resolve(args.projectDir, "wrangler.toml"), {
 		...args,
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		env: process.env.PAGES_ENVIRONMENT,
 	});
+	// Fail if the config file exists but isn't valid for Pages
 	if (!config.pages_build_output_dir) {
 		throw new FatalError(
 			"No Pages config file found",
