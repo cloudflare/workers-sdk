@@ -19,7 +19,7 @@ import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { BuildResult, Metafile, PluginBuild } from "esbuild";
+import type { BuildResult, Metafile, PluginBuild } from "../utils/esbuild";
 
 export type EsbuildBundle = {
 	id: number;

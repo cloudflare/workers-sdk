@@ -1,6 +1,5 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import { findAdditionalModules } from "../../deployment-bundle/find-additional-modules";
@@ -11,11 +10,12 @@ import {
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
+import { build as esBuild } from "../../utils/esbuild";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { CfModule } from "../../deployment-bundle/worker";
-import type { Plugin } from "esbuild";
+import type { Plugin } from "../../utils/esbuild";
 
 export type Options = {
 	routesModule: string;

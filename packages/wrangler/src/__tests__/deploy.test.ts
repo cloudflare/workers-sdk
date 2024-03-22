@@ -5,7 +5,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import commandExists from "command-exists";
-import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
 import dedent from "ts-dedent";
 import { FormData } from "undici";
@@ -15,6 +14,7 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
+import * as esbuild from "../utils/esbuild";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import {

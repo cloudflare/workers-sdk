@@ -1,7 +1,7 @@
 import { relative } from "path";
 import chalk from "chalk";
 import { logger } from "../../logger";
-import type { Plugin } from "esbuild";
+import type { Plugin } from "../../utils/esbuild";
 
 /**
  * An esbuild plugin that will mark any `node:...` imports as external.

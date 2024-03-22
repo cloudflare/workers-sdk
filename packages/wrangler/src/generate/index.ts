@@ -54,7 +54,12 @@ export async function generateHandler(args: GenerateArgs) {
 			type: undefined,
 			_: args._,
 			$0: args.$0,
-			experimentalJsonConfig: false,
+			experimentalJsonConfig: undefined,
+			experimentalEsbuild: undefined,
+			experimentalEsbuild17: undefined,
+			experimentalEsbuild18: undefined,
+			experimentalEsbuild19: undefined,
+			experimentalEsbuild20: undefined,
 		});
 	}
 

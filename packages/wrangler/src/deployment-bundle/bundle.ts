@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
-import * as esbuild from "esbuild";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
+import * as esbuild from "../utils/esbuild";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,

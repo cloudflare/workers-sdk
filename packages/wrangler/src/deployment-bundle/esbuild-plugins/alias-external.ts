@@ -1,4 +1,4 @@
-import type { Plugin } from "esbuild";
+import type { Plugin } from "../../utils/esbuild";
 
 /**
  * A simple plugin to alias modules and mark them as external
