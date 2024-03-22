@@ -288,7 +288,7 @@ describe("pages-download-config", () => {
 
 		await expect(
 			// Drop the Wrangler generation header
-			(await readFile("wrangler.toml", "utf8")).split("\n").slice(2).join("\n")
+			(await readFile("wrangler.toml", "utf8")).split("\n").slice(1).join("\n")
 		).toMatchInlineSnapshot(`
 		"name = \\"MOCK_PROJECT_NAME\\"
 		pages_build_output_dir = \\"dist-test\\"
