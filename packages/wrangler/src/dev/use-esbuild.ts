@@ -204,13 +204,13 @@ export function useEsbuild({
 			if (noBundle) {
 				const watching = [path.resolve(entry.moduleRoot)];
 				// Check whether we need to watch a Python requirements.txt file.
-				const pythonRequirements =
+				const watchPythonRequirements =
 					getBundleType(entry.format, entry.file) === "python"
 						? path.resolve(entry.directory, "requirements.txt")
 						: undefined;
 
-				if (pythonRequirements) {
-					watching.push(pythonRequirements);
+				if (watchPythonRequirements) {
+					watching.push(watchPythonRequirements);
 				}
 
 				const watcher = watch(watching, {

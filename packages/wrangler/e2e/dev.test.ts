@@ -286,11 +286,11 @@ describe("basic dev python tests", () => {
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
-			"arith.py": dedent`
+			"arithmetic.py": dedent`
 					def mul(a,b):
 						return a*b`,
 			"index.py": dedent`
-					from arith import mul
+					from arithmetic import mul
 
 					from js import Response
 					def on_fetch(request):
@@ -345,7 +345,7 @@ describe("basic dev python tests", () => {
 			expect(text).toMatchInlineSnapshot('"py hello world 6"');
 
 			await worker.seed({
-				"arith.py": dedent`
+				"arithmetic.py": dedent`
 					def mul(a,b):
 						return a+b`,
 			});
