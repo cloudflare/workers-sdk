@@ -157,10 +157,10 @@ describe("writeChangeSet()", () => {
 		| some-package            | ^0.0.1 | ^0.0.2 |
 		| @namespace/some-package | 1.3.4  | 1.4.5  |
 	`;
-		writeChangeSet("1234", header, body);
+		writeChangeSet("some-prefix", "1234", header, body);
 		expect(writeFileSync).toHaveBeenCalledOnce();
 		expect((writeFileSync as Mock).mock.lastCall[0]).toMatchInlineSnapshot(
-			`".changeset/dependabot-update-1234.md"`
+			`".changeset/some-prefix-1234.md"`
 		);
 		expect((writeFileSync as Mock).mock.lastCall[1]).toMatchInlineSnapshot(`
 			"---
