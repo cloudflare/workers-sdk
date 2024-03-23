@@ -798,26 +798,11 @@ describe("middleware", () => {
 			};
 
 
-			var envWrappers = [].filter(Boolean);
-			var facade = {
-			  ...src_default,
-			  envWrappers,
-			  middleware: [
-			    ,
-			    ...src_default.middleware ? src_default.middleware : []
-			  ].filter(Boolean)
-			};
-			var maskDurableObjectDefinition = (cls) => class extends cls {
-			  constructor(state, env) {
-			    let wrappedEnv = env;
-			    for (const wrapFn of envWrappers) {
-			      wrappedEnv = wrapFn(wrappedEnv);
-			    }
-			    super(state, wrappedEnv);
-			  }
-			};
-			var DurableObjectExample2 = maskDurableObjectDefinition(DurableObjectExample);
-			var middleware_insertion_facade_default = facade;
+			src_default.middleware = [
+			  ,
+			  ...src_default.middleware ?? []
+			].filter(Boolean);
+			var middleware_insertion_facade_default = src_default;
 
 
 			var __facade_middleware__ = [];
@@ -856,78 +841,84 @@ describe("middleware", () => {
 			    this.#noRetry();
 			  }
 			};
-			var __facade_modules_fetch__ = function(request, env, ctx) {
-			  if (middleware_insertion_facade_default.fetch === void 0)
-			    throw new Error(\\"Handler does not export a fetch() function.\\");
-			  return middleware_insertion_facade_default.fetch(request, env, ctx);
-			};
-			function getMaskedEnv(rawEnv) {
-			  let env = rawEnv;
-			  if (middleware_insertion_facade_default.envWrappers && middleware_insertion_facade_default.envWrappers.length > 0) {
-			    for (const wrapFn of middleware_insertion_facade_default.envWrappers) {
-			      env = wrapFn(env);
-			    }
+			function wrapExportedHandler(worker) {
+			  if (worker.middleware === void 0 || worker.middleware.length === 0) {
+			    return worker;
 			  }
-			  return env;
-			}
-			var registeredMiddleware = false;
-			var facade2 = {
-			  ...middleware_insertion_facade_default.tail && {
-			    tail: maskHandlerEnv(middleware_insertion_facade_default.tail)
-			  },
-			  ...middleware_insertion_facade_default.trace && {
-			    trace: maskHandlerEnv(middleware_insertion_facade_default.trace)
-			  },
-			  ...middleware_insertion_facade_default.scheduled && {
-			    scheduled: maskHandlerEnv(middleware_insertion_facade_default.scheduled)
-			  },
-			  ...middleware_insertion_facade_default.queue && {
-			    queue: maskHandlerEnv(middleware_insertion_facade_default.queue)
-			  },
-			  ...middleware_insertion_facade_default.test && {
-			    test: maskHandlerEnv(middleware_insertion_facade_default.test)
-			  },
-			  ...middleware_insertion_facade_default.email && {
-			    email: maskHandlerEnv(middleware_insertion_facade_default.email)
-			  },
-			  fetch(request, rawEnv, ctx) {
-			    const env = getMaskedEnv(rawEnv);
-			    if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
-			      if (!registeredMiddleware) {
-			        registeredMiddleware = true;
-			        for (const middleware of middleware_insertion_facade_default.middleware) {
-			          __facade_register__(middleware);
-			        }
-			      }
-			      const __facade_modules_dispatch__ = function(type, init) {
-			        if (type === \\"scheduled\\" && middleware_insertion_facade_default.scheduled !== void 0) {
+			  for (const middleware of worker.middleware) {
+			    __facade_register__(middleware);
+			  }
+			  const fetchDispatcher = function(request, env, ctx) {
+			    if (worker.fetch === void 0) {
+			      throw new Error(\\"Handler does not export a fetch() function.\\");
+			    }
+			    return worker.fetch(request, env, ctx);
+			  };
+			  return {
+			    ...worker,
+			    fetch(request, env, ctx) {
+			      const dispatcher = function(type, init) {
+			        if (type === \\"scheduled\\" && worker.scheduled !== void 0) {
 			          const controller = new __Facade_ScheduledController__(
 			            Date.now(),
 			            init.cron ?? \\"\\",
 			            () => {
 			            }
 			          );
-			          return middleware_insertion_facade_default.scheduled(controller, env, ctx);
+			          return worker.scheduled(controller, env, ctx);
 			        }
 			      };
+			      return __facade_invoke__(request, env, ctx, dispatcher, fetchDispatcher);
+			    }
+			  };
+			}
+			function wrapWorkerEntrypoint(klass) {
+			  if (klass.middleware === void 0 || klass.middleware.length === 0) {
+			    return klass;
+			  }
+			  for (const middleware of klass.middleware) {
+			    __facade_register__(middleware);
+			  }
+			  return class extends klass {
+			    #fetchDispatcher = (request, env, ctx) => {
+			      this.env = env;
+			      this.ctx = ctx;
+			      if (super.fetch === void 0) {
+			        throw new Error(\\"Entrypoint class does not define a fetch() function.\\");
+			      }
+			      return super.fetch(request);
+			    };
+			    #dispatcher = (type, init) => {
+			      if (type === \\"scheduled\\" && super.scheduled !== void 0) {
+			        const controller = new __Facade_ScheduledController__(
+			          Date.now(),
+			          init.cron ?? \\"\\",
+			          () => {
+			          }
+			        );
+			        return super.scheduled(controller);
+			      }
+			    };
+			    fetch(request) {
 			      return __facade_invoke__(
 			        request,
-			        env,
-			        ctx,
-			        __facade_modules_dispatch__,
-			        __facade_modules_fetch__
+			        this.env,
+			        this.ctx,
+			        this.#dispatcher,
+			        this.#fetchDispatcher
 			      );
-			    } else {
-			      return __facade_modules_fetch__(request, env, ctx);
 			    }
-			  }
-			};
-			function maskHandlerEnv(handler) {
-			  return (data, env, ctx) => handler(data, getMaskedEnv(env), ctx);
+			  };
 			}
-			var middleware_loader_entry_default = facade2;
+			var WRAPPED_ENTRY;
+			if (typeof middleware_insertion_facade_default === \\"object\\") {
+			  WRAPPED_ENTRY = wrapExportedHandler(middleware_insertion_facade_default);
+			} else if (typeof middleware_insertion_facade_default === \\"function\\") {
+			  WRAPPED_ENTRY = wrapWorkerEntrypoint(middleware_insertion_facade_default);
+			}
+			var middleware_loader_entry_default = WRAPPED_ENTRY;
 			export {
-			  DurableObjectExample2 as DurableObjectExample,
+			  DurableObjectExample,
 			  middleware_loader_entry_default as default
 			};
 			//# sourceMappingURL=index.js.map"

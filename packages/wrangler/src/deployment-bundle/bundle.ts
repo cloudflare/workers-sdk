@@ -245,8 +245,7 @@ export async function bundleWorker(
 		const result = await applyMiddlewareLoaderFacade(
 			entry,
 			tmpDir.path,
-			middlewareToLoad,
-			doBindings
+			middlewareToLoad
 		);
 		entry = result.entry;
 
