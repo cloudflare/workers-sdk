@@ -1,4 +1,5 @@
 import { getPlatformProxy } from "../platform/index";
+import type { Env } from "../env";
 import type { GetPlatformProxyOptions, PlatformProxy } from "../platform/index";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
@@ -9,7 +10,7 @@ export type GetBindingsProxyOptions = GetPlatformProxyOptions;
  * Result of the `getBindingsProxy` utility
  */
 export type BindingsProxy<
-	Bindings = Record<string, unknown>,
+	Bindings extends Record<string, unknown> = Env,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 > = Omit<PlatformProxy<Bindings, CfProperties>, "env"> & {
 	/**
@@ -28,7 +29,7 @@ export type BindingsProxy<
  * @returns An Object containing the generated proxies alongside other related utilities
  */
 export async function getBindingsProxy<
-	Bindings = Record<string, unknown>,
+	Bindings extends Record<string, unknown> = Env,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 >(
 	options: GetBindingsProxyOptions = {}

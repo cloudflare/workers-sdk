@@ -13,6 +13,7 @@ import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
+import type { Env as WranglerEnv } from "../env";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
@@ -43,13 +44,13 @@ export type GetPlatformProxyOptions = {
  * Result of the `getPlatformProxy` utility
  */
 export type PlatformProxy<
-	Env = Record<string, unknown>,
+	E extends Record<string, unknown> = WranglerEnv,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 > = {
 	/**
 	 * Environment object containing the various Cloudflare bindings
 	 */
-	env: Env;
+	env: E;
 	/**
 	 * Mock of the context object that Workers received in their request handler, all the object's methods are no-op
 	 */
@@ -77,11 +78,11 @@ export type PlatformProxy<
  * @returns An Object containing the generated proxies alongside other related utilities
  */
 export async function getPlatformProxy<
-	Env = Record<string, unknown>,
+	E extends Record<string, unknown> = WranglerEnv,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
 >(
 	options: GetPlatformProxyOptions = {}
-): Promise<PlatformProxy<Env, CfProperties>> {
+): Promise<PlatformProxy<E, CfProperties>> {
 	const rawConfig = readConfig(options.configPath, {
 		experimentalJsonConfig: options.experimentalJsonConfig,
 	});
@@ -101,7 +102,7 @@ export async function getPlatformProxy<
 		...(miniflareOptions as Record<string, unknown>),
 	});
 
-	const bindings: Env = await mf.getBindings();
+	const bindings: E = await mf.getBindings();
 
 	const vars = getVarsForDev(rawConfig, env);
 
