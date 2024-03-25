@@ -17,6 +17,7 @@ export default {
 		console.log("request log");
 
 		const { pathname, origin, hostname, host } = new URL(request.url);
+		if (pathname === "/hello") return new Response("Hello World!");
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");
 		if (pathname === "/redirect") return Response.redirect(`${origin}/foo`);

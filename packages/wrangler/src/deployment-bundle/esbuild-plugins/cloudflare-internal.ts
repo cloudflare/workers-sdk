@@ -1,4 +1,4 @@
-import type { Plugin } from "esbuild";
+import type { Plugin } from "../../utils/esbuild";
 
 /**
  * An esbuild plugin that will mark any `cloudflare:...` imports as external.

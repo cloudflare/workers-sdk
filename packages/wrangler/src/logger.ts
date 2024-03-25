@@ -1,11 +1,11 @@
 import { format } from "node:util";
 import chalk from "chalk";
 import CLITable from "cli-table3";
-import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getSanitizeLogs } from "./environment-variables/misc-variables";
+import { formatMessagesSync } from "./utils/esbuild";
 import { appendToDebugLogFile } from "./utils/log-file";
-import type { Message } from "esbuild";
+import type { Message } from "./utils/esbuild";
 
 export const LOGGER_LEVELS = {
 	none: -1,

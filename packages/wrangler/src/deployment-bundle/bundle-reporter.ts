@@ -2,8 +2,8 @@ import { Blob } from "node:buffer";
 import { gzipSync } from "node:zlib";
 import chalk from "chalk";
 import { logger } from "../logger";
+import type { Metafile } from "../utils/esbuild";
 import type { CfModule } from "./worker";
-import type { Metafile } from "esbuild";
 
 const ONE_KIB_BYTES = 1024;
 const ALLOWED_INITIAL_MAX = ONE_KIB_BYTES * 1024; // Current max is 1 MiB

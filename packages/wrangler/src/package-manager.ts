@@ -4,12 +4,13 @@ import { env } from "node:process";
 import { execa, execaCommandSync } from "execa";
 import { UserError } from "./errors";
 import { logger } from "./logger";
+import type { Options } from "execa";
 
 export interface PackageManager {
 	cwd: string;
 	type: "npm" | "yarn" | "pnpm";
 	addDevDeps(...packages: string[]): Promise<void>;
-	install(): Promise<void>;
+	install(execaOptions?: Options): Promise<void>;
 }
 
 export async function getPackageManager(cwd: string): Promise<PackageManager> {
@@ -115,10 +116,11 @@ const NpmPackageManager: PackageManager = {
 	},
 
 	/** Install all the dependencies in the local package.json. */
-	async install(): Promise<void> {
+	async install(execaOptions?): Promise<void> {
 		await execa("npm", ["install"], {
 			stdio: "inherit",
 			cwd: this.cwd,
+			...execaOptions,
 		});
 	},
 };
@@ -138,10 +140,11 @@ const PnpmPackageManager: PackageManager = {
 	},
 
 	/** Install all the dependencies in the local package.json. */
-	async install(): Promise<void> {
+	async install(execaOptions?): Promise<void> {
 		await execa("pnpm", ["install"], {
 			stdio: "inherit",
 			cwd: this.cwd,
+			...execaOptions,
 		});
 	},
 };
@@ -161,10 +164,11 @@ const YarnPackageManager: PackageManager = {
 	},
 
 	/** Install all the dependencies in the local package.json. */
-	async install(): Promise<void> {
+	async install(execaOptions?): Promise<void> {
 		await execa("yarn", ["install"], {
 			stdio: "inherit",
 			cwd: this.cwd,
+			...execaOptions,
 		});
 	},
 };

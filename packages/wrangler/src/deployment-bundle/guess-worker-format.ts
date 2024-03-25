@@ -1,7 +1,7 @@
 import path from "node:path";
-import * as esbuild from "esbuild";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import * as esbuild from "../utils/esbuild";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import type { CfScriptFormat } from "./worker";

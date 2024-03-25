@@ -9,6 +9,11 @@ export interface CommonYargsOptions {
 	config: string | undefined;
 	env: string | undefined;
 	"experimental-json-config": boolean | undefined;
+	"experimental-esbuild": boolean | undefined;
+	"experimental-esbuild-20": boolean | undefined;
+	"experimental-esbuild-19": boolean | undefined;
+	"experimental-esbuild-18": boolean | undefined;
+	"experimental-esbuild-17": boolean | undefined;
 }
 
 /**

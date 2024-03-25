@@ -74,6 +74,11 @@ export interface UnstableDevOptions {
 		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
+		esbuild?: boolean;
+		esbuild17?: boolean;
+		esbuild18?: boolean;
+		esbuild19?: boolean;
+		esbuild20?: boolean;
 	};
 }
 
@@ -185,7 +190,6 @@ export async function unstable_dev(
 		nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
 		persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
 		persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
-		experimentalJsonConfig: undefined,
 		name: undefined,
 		noBundle: false,
 		format: undefined,
@@ -208,6 +212,12 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		updateCheck: options?.updateCheck ?? false,
+		experimentalJsonConfig: undefined,
+		experimentalEsbuild: experimentalOptions.esbuild,
+		experimentalEsbuild17: experimentalOptions.esbuild17,
+		experimentalEsbuild18: experimentalOptions.esbuild18,
+		experimentalEsbuild19: experimentalOptions.esbuild19,
+		experimentalEsbuild20: experimentalOptions.esbuild20,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { build } from "esbuild";
 import { toUrlPath } from "../../paths";
+import { build } from "../../utils/esbuild";
 import { FunctionsBuildError } from "../errors";
 import type { UrlPath } from "../../paths";
 import type { HTTPMethod, RouteConfig } from "./routes";

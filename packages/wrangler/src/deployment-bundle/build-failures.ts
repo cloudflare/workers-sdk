@@ -1,5 +1,5 @@
 import { builtinModules } from "node:module";
-import type * as esbuild from "esbuild";
+import type * as esbuild from "../utils/esbuild";
 
 /**
  * RegExp matching against esbuild's error text when it is unable to resolve
