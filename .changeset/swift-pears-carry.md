@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-feat: Updates `wrangler pages functions build` to support including values from `wrangler.toml` in the Functions upload. 
+feat: Updates `wrangler pages functions build` to support using configuration from `wrangler.toml` in the generated output. 
