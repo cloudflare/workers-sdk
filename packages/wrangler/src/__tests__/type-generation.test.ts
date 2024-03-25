@@ -3,7 +3,6 @@ import * as TOML from "@iarna/toml";
 import {
 	constructType,
 	constructTypeKey,
-	escapeStringValue,
 	isValidIdentifier,
 } from "../type-generation";
 import { dedent } from "../utils/dedent";
@@ -64,16 +63,11 @@ describe("constructType", () => {
 		expect(constructType("invalid 123", "string")).toBe(
 			'"invalid 123": string;'
 		);
-	});
-});
 
-describe("escapeStringValue", () => {
-	it("should escape the string value", () => {
-		expect(escapeStringValue("a")).toBe("a");
-		expect(escapeStringValue('a"')).toBe('a\\"');
-		expect(escapeStringValue("a\\")).toBe("a\\");
-		expect(escapeStringValue("a\\b")).toBe("a\\b");
-		expect(escapeStringValue('a\\b"')).toBe('a\\b\\"');
+		expect(constructType("valid", 'a"', false)).toBe('valid: "a\\"";');
+		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\"";');
+		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\b";');
+		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\b\\"";');
 	});
 });
 

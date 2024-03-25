@@ -4,7 +4,7 @@
 
 fix: better handle dashes and other invalid JS identifier characters in `wrangler types` generation for vars, bindings, etc.
 
-Previously, with the follwing in your `wrangler.toml`, an invalid types file would be generated:
+Previously, with the following in your `wrangler.toml`, an invalid types file would be generated:
 
 ```toml
 [vars]

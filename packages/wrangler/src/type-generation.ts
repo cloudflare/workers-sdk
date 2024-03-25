@@ -117,14 +117,7 @@ export async function typesHandler(
  * If not, it should be wrapped in quotes
  */
 export function isValidIdentifier(key: string) {
-	return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key);
-}
-
-/**
- * Escape a string value for use in a string in a TypeScript file
- */
-export function escapeStringValue(value: string) {
-	return value.replace(/"/g, '\\"');
+	return /^[a-zA-Z_$][\w$]*$/.test(key);
 }
 
 /**
@@ -152,7 +145,7 @@ export function constructType(
 		if (rawVal) {
 			return `${typeKey}: ${value};`;
 		}
-		return `${typeKey}: "${escapeStringValue(value)}";`;
+		return `${typeKey}: "${value.replace(/"/g, '\\"')}";`;
 	}
 	if (typeof value === "number" || typeof value === "boolean") {
 		return `${typeKey}: ${value};`;
