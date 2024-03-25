@@ -81,6 +81,7 @@ import {
 import {
 	Config,
 	Extension,
+	HttpOptions_Style,
 	Runtime,
 	RuntimeOptions,
 	Service,
@@ -1197,6 +1198,7 @@ export class Miniflare {
 						entrypoint: entrypoint === "default" ? undefined : entrypoint,
 					},
 					http: {
+						style: HttpOptions_Style.PROXY,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
 						capnpConnectHost: HOST_CAPNP_CONNECT,
 					},
