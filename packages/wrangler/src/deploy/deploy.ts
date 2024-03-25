@@ -29,7 +29,12 @@ import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
-import { getQueue, putConsumer } from "../queues/client";
+import {
+	getQueue,
+	postTypedConsumer,
+	putConsumer,
+	putTypedConsumer,
+} from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import {
@@ -48,7 +53,7 @@ import type {
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { PutConsumerBody } from "../queues/client";
+import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
@@ -80,6 +85,7 @@ type Props = {
 	logpush: boolean | undefined;
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
+	dispatchNamespace: string | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -282,7 +288,7 @@ Update them to point to this script instead?`;
 export default async function deploy(props: Props): Promise<void> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
-	if (accountId && name) {
+	if (!props.dispatchNamespace && accountId && name) {
 		try {
 			const serviceMetaData = await fetchResult(
 				`/accounts/${accountId}/workers/services/${name}`
@@ -422,7 +428,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const start = Date.now();
 	const notProd = Boolean(!props.legacyEnv && props.env);
 	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
+	const workerUrl = props.dispatchNamespace
+		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
+		: notProd
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
@@ -647,6 +655,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,
 			keepVars,
+			keepSecrets: keepVars, // keepVars implies keepSecrets
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
@@ -787,6 +796,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
+	logger.log("Uploaded", workerName, formatTime(uploadMs));
+
+	// Early exit for WfP since it doesn't need the below code
+	if (props.dispatchNamespace !== undefined) {
+		deployWfpUserWorker(props.dispatchNamespace, deploymentId);
+		return;
+	}
+
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
 		const userSubdomain = await getWorkersDevSubdomain(accountId);
@@ -885,8 +902,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
-	logger.log("Uploaded", workerName, formatTime(uploadMs));
-
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
@@ -925,7 +940,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	if (config.queues.consumers && config.queues.consumers.length) {
-		deployments.push(...updateQueueConsumers(config));
+		const updateConsumers = await updateQueueConsumers(config);
+
+		deployments.push(...updateConsumers);
 	}
 
 	const targets = await Promise.all(deployments);
@@ -944,6 +961,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}
 
+	logger.log("Current Deployment ID:", deploymentId);
+}
+
+function deployWfpUserWorker(
+	dispatchNamespace: string,
+	deploymentId: string | null
+) {
+	// Will go under the "Uploaded" text
+	logger.log("  Dispatch Namespace:", dispatchNamespace);
 	logger.log("Current Deployment ID:", deploymentId);
 }
 
@@ -1143,31 +1169,82 @@ async function ensureQueuesExist(config: Config) {
 	}
 }
 
-function updateQueueConsumers(config: Config): Promise<string[]>[] {
+async function updateQueueConsumers(
+	config: Config
+): Promise<Promise<string[]>[]> {
 	const consumers = config.queues.consumers || [];
-	return consumers.map((consumer) => {
-		const body: PutConsumerBody = {
-			dead_letter_queue: consumer.dead_letter_queue,
-			settings: {
-				batch_size: consumer.max_batch_size,
-				max_retries: consumer.max_retries,
-				max_wait_time_ms: consumer.max_batch_timeout
-					? 1000 * consumer.max_batch_timeout
-					: undefined,
-				max_concurrency: consumer.max_concurrency,
-			},
-		};
+	const updateConsumers: Promise<string[]>[] = [];
+	for (const consumer of consumers) {
+		if (consumer.type === "http_pull") {
+			const queue = await getQueue(config, consumer.queue);
+			const existingConsumer = queue.consumers && queue.consumers[0];
+			if (existingConsumer) {
+				const body: PostTypedConsumerBody = {
+					type: consumer.type,
+					dead_letter_queue: consumer.dead_letter_queue,
+					settings: {
+						batch_size: consumer.max_batch_size,
+						max_retries: consumer.max_retries,
+						visibility_timeout_ms: consumer.visibility_timeout_ms,
+						retry_delay: consumer.retry_delay,
+					},
+				};
+				updateConsumers.push(
+					putTypedConsumer(
+						config,
+						queue.queue_id,
+						existingConsumer.consumer_id,
+						body
+					).then(() => [`Consumer for ${consumer.queue}`])
+				);
+				continue;
+			}
 
-		if (config.name === undefined) {
-			// TODO: how can we reliably get the current script name?
-			throw new UserError("Script name is required to update queue consumers");
+			const body: PostTypedConsumerBody = {
+				type: consumer.type,
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					visibility_timeout_ms: consumer.visibility_timeout_ms,
+					retry_delay: consumer.retry_delay,
+				},
+			};
+			updateConsumers.push(
+				postTypedConsumer(config, consumer.queue, body).then(() => [
+					`Consumer for ${consumer.queue}`,
+				])
+			);
+		} else {
+			const body: PutConsumerBody = {
+				dead_letter_queue: consumer.dead_letter_queue,
+				settings: {
+					batch_size: consumer.max_batch_size,
+					max_retries: consumer.max_retries,
+					max_wait_time_ms: consumer.max_batch_timeout
+						? 1000 * consumer.max_batch_timeout
+						: undefined,
+					max_concurrency: consumer.max_concurrency,
+				},
+			};
+
+			if (config.name === undefined) {
+				// TODO: how can we reliably get the current script name?
+				throw new UserError(
+					"Script name is required to update queue consumers"
+				);
+			}
+			const scriptName = config.name;
+			const envName = undefined; // TODO: script environment for wrangler deploy?
+			updateConsumers.push(
+				putConsumer(config, consumer.queue, scriptName, envName, body).then(
+					() => [`Consumer for ${consumer.queue}`]
+				)
+			);
 		}
-		const scriptName = config.name;
-		const envName = undefined; // TODO: script environment for wrangler deploy?
-		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
-			() => [`Consumer for ${consumer.queue}`]
-		);
-	});
+	}
+
+	return updateConsumers;
 }
 
 async function noBundleWorker(

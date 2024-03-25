@@ -15,7 +15,7 @@ import {
 } from "./errors";
 import {
 	buildRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type {
@@ -44,6 +44,10 @@ export function Options(yargs: CommonYargsArgv) {
 			"output-config-path": {
 				type: "string",
 				description: "The location for the output config file",
+			},
+			"build-metadata-path": {
+				type: "string",
+				description: "The location for the build metadata file",
 			},
 			"output-routes-path": {
 				type: "string",
@@ -200,8 +204,9 @@ export const Handler = async (args: PagesBuildArgs) => {
 		 */
 		if (workerScriptPath) {
 			if (lstatSync(workerScriptPath).isDirectory()) {
-				bundle = await traverseAndBuildWorkerJSDirectory({
+				bundle = await produceWorkerBundleForWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
+					bundle: true,
 					buildOutputDirectory,
 					nodejsCompat,
 					defineNavigatorUserAgent,

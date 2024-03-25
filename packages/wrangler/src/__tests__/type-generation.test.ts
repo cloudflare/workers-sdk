@@ -4,13 +4,14 @@ import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Config } from "../config";
+import type { EnvironmentNonInheritable } from "../config/environment";
 
-const bindingsConfigMock: Partial<Config> = {
-	kv_namespaces: [
-		{ binding: "TEST_KV_NAMESPACE", id: "1234" },
-		{ binding: "TEST-KV-NAMESPACE2", id: "12345" },
-	],
+const bindingsConfigMock: Omit<
+	EnvironmentNonInheritable,
+	"define" | "tail_consumers" | "constellation" | "cloudchamber"
+> &
+	Record<string, unknown> = {
+	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
 		ANOTHER: "thing",
@@ -88,6 +89,18 @@ const bindingsConfigMock: Partial<Config> = {
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
 		{ binding: "NAMESPACE-BINDING2", namespace: "NAMESPACE_ID2" },
 	],
+	send_email: [{ name: "SEND_EMAIL_BINDING" }],
+	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
+	hyperdrive: [{ binding: "HYPERDRIVE_BINDING", id: "HYPERDRIVE_ID" }],
+	mtls_certificates: [
+		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
+	],
+	browser: {
+		binding: "BROWSER_BINDING",
+	},
+	ai: {
+		binding: "AI_BINDING",
+	},
 	logfwdr: {
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
 	},
@@ -218,36 +231,30 @@ describe("generateTypes()", () => {
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
 		"interface Env {
-			"TEST_KV_NAMESPACE": KVNamespace;
-			"TEST-KV-NAMESPACE2": KVNamespace;
-			"SOMETHING": \\"asdasdfasdf\\";
-			"ANOTHER": \\"thing\\";
-			"some-dash-var": \\"foo\\";
-			"OBJECT_VAR": {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-			"DURABLE_TEST1": DurableObjectNamespace;
-			"DURABLE_TEST2": DurableObjectNamespace;
-			"DURABLE-TEST3": DurableObjectNamespace;
-			"R2_BUCKET_BINDING": R2Bucket;
-			"R2-BUCKET-BINDING": R2Bucket;
-			"D1_TESTING_SOMETHING": D1Database;
-			"D1-TESTING-SOMETHING": D1Database;
-			"SERVICE_BINDING": Fetcher;
-			"SERVICE-BINDING2": Fetcher;
-			"AE_DATASET_BINDING": AnalyticsEngineDataset;
-			"AE-DATASET-BINDING": AnalyticsEngineDataset;
-			"NAMESPACE_BINDING": DispatchNamespace;
-			"NAMESPACE-BINDING2": DispatchNamespace;
-			"LOGFWDR_SCHEMA": any;
-			"SOME_DATA_BLOB1": ArrayBuffer;
-			"SOME_DATA_BLOB2": ArrayBuffer;
-			"SOME-OTHER-DATA-BLOB": ArrayBuffer;
-			"SOME_TEXT_BLOB1": string;
-			"SOME_TEXT_BLOB2": string;
-			"SOME-OTHER-TEXT-BLOB": string;
-			"testing_unsafe": any;
-			"testing_unsafe2": any;
-			"TEST_QUEUE_BINDING": Queue;
-			"TEST-QUEUE-BINDING2": Queue;
+			TEST_KV_NAMESPACE: KVNamespace;
+			SOMETHING: \\"asdasdfasdf\\";
+			ANOTHER: \\"thing\\";
+			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			DURABLE_TEST1: DurableObjectNamespace;
+			DURABLE_TEST2: DurableObjectNamespace;
+			R2_BUCKET_BINDING: R2Bucket;
+			D1_TESTING_SOMETHING: D1Database;
+			SERVICE_BINDING: Fetcher;
+			AE_DATASET_BINDING: AnalyticsEngineDataset;
+			NAMESPACE_BINDING: DispatchNamespace;
+			LOGFWDR_SCHEMA: any;
+			SOME_DATA_BLOB1: ArrayBuffer;
+			SOME_DATA_BLOB2: ArrayBuffer;
+			SOME_TEXT_BLOB1: string;
+			SOME_TEXT_BLOB2: string;
+			testing_unsafe: any;
+			TEST_QUEUE_BINDING: Queue;
+			SEND_EMAIL_BINDING: SendEmail;
+			VECTORIZE_BINDING: VectorizeIndex;
+			HYPERDRIVE_BINDING: Hyperdrive;
+			MTLS_BINDING: Fetcher;
+			BROWSER_BINDING: Fetcher;
+			AI_BINDING: unknown;
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
@@ -281,21 +288,49 @@ describe("generateTypes()", () => {
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
-	it("should not create DTS file if there is nothing in the config to generate types from", async () => {
-		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
-		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
-				compatibility_date: "2022-01-12",
-				name: "test-name",
-				main: "./index.ts",
-			}),
-			"utf-8"
-		);
+	describe("when nothing was found", () => {
+		it("should not create DTS file for service syntax workers", async () => {
+			fs.writeFileSync(
+				"./index.ts",
+				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
+			);
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
 
-		await runWrangler("types");
-		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
-		expect(std.out).toMatchInlineSnapshot(`""`);
+			await runWrangler("types");
+			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
+			fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types");
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toMatch(
+				/interface Env \{\s*\}/
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"interface Env {
+			}
+			"
+		`);
+		});
 	});
 
 	it("should create a DTS file at the location that the command is executed from", async () => {

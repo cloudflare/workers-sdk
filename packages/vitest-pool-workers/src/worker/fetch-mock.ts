@@ -3,18 +3,24 @@ import { Buffer } from "node:buffer";
 import { isMockActive, MockAgent, setDispatcher } from "cloudflare:mock-agent";
 import type { Dispatcher } from "undici";
 
+const DECODER = new TextDecoder();
+
 // See public facing `cloudflare:test` types for docs
 export const fetchMock = new MockAgent({ connections: 1 });
-const requests = new WeakMap<Dispatcher.DispatchOptions, Request>();
+
+interface BufferedRequest {
+	request: Request;
+	body: Uint8Array | null;
+}
+const requests = new WeakMap<Dispatcher.DispatchOptions, BufferedRequest>();
 const responses = new WeakMap<Dispatcher.DispatchOptions, Response>();
 
 const originalFetch = fetch;
 setDispatcher((opts, handler) => {
 	const request = requests.get(opts);
-	assert(opts.body === null || opts.body instanceof Uint8Array);
 	assert(request !== undefined, "Expected dispatch to come from fetch()");
 	originalFetch
-		.call(globalThis, request, { body: opts.body })
+		.call(globalThis, request.request, { body: request.body })
 		.then((response) => {
 			responses.set(opts, response);
 			assert(handler.onComplete !== undefined, "Expected onComplete() handler");
@@ -57,19 +63,25 @@ globalThis.fetch = async (input, init) => {
 		}
 	}
 
-	// Buffer body in case it needs to be matched against
-	const body =
+	// Buffer body in case it needs to be matched against. Note `undici` only
+	// supports matching against `string` bodies. To support binary bodies, we
+	// buffer the body to a `Uint8Array`, then try to decode it. We pass the
+	// decoded body via `DispatchOptions` for matching, then use the `Uint8Array`
+	// body if the request falls-through to an actual `fetch()` call.
+	const bodyArray =
 		request.body === null ? null : new Uint8Array(await request.arrayBuffer());
-
+	// Note `DECODER` doesn't have the `fatal: true` option enabled, so will
+	// substitute invalid data with a replacement character
+	const bodyText = bodyArray === null ? "" : DECODER.decode(bodyArray);
 	const dispatchOptions: Dispatcher.DispatchOptions = {
 		origin: url.origin,
 		path: url.pathname,
 		method: request.method as Dispatcher.HttpMethod,
-		body,
+		body: bodyText,
 		headers: requestHeaders,
 		query: Object.fromEntries(url.searchParams),
 	};
-	requests.set(dispatchOptions, request);
+	requests.set(dispatchOptions, { request, body: bodyArray });
 
 	// If the response was mocked, record data as we receive it
 	let responseStatusCode: number | undefined;

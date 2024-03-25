@@ -1,6 +1,11 @@
 import assert from "node:assert";
-import { getSerializedOptions, internalEnv } from "./env";
-import { importModule, mustGetResolvedMainPath } from "./import";
+import {
+	getResolvedMainPath,
+	getSerializedOptions,
+	internalEnv,
+	stripInternalEnv,
+} from "./env";
+import type { RunnerObject } from "./index";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
 
@@ -88,23 +93,10 @@ function assertSameIsolate(stub: DurableObjectStub) {
 	);
 }
 
-// See public facing `cloudflare:test` types for docs
-export async function runInDurableObject<O extends DurableObject, R>(
-	stub: DurableObjectStub,
+async function runInStub<O extends DurableObject, R>(
+	stub: Fetcher,
 	callback: (instance: O, state: DurableObjectState) => R | Promise<R>
 ): Promise<R> {
-	if (!isDurableObjectStub(stub)) {
-		throw new TypeError(
-			"Failed to execute 'runInDurableObject': parameter 1 is not of type 'DurableObjectStub'."
-		);
-	}
-	if (typeof callback !== "function") {
-		throw new TypeError(
-			"Failed to execute 'runInDurableObject': parameter 2 is not of type 'function'."
-		);
-	}
-
-	assertSameIsolate(stub);
 	const id = nextActionId++;
 	actionResults.set(id, callback);
 
@@ -124,6 +116,27 @@ export async function runInDurableObject<O extends DurableObject, R>(
 	}
 }
 
+// See public facing `cloudflare:test` types for docs
+// (`async` so it throws asynchronously/rejects)
+export async function runInDurableObject<O extends DurableObject, R>(
+	stub: DurableObjectStub,
+	callback: (instance: O, state: DurableObjectState) => R | Promise<R>
+): Promise<R> {
+	if (!isDurableObjectStub(stub)) {
+		throw new TypeError(
+			"Failed to execute 'runInDurableObject': parameter 1 is not of type 'DurableObjectStub'."
+		);
+	}
+	if (typeof callback !== "function") {
+		throw new TypeError(
+			"Failed to execute 'runInDurableObject': parameter 2 is not of type 'function'."
+		);
+	}
+
+	assertSameIsolate(stub);
+	return runInStub(stub, callback);
+}
+
 async function runAlarm(instance: DurableObject, state: DurableObjectState) {
 	const alarm = await state.storage.getAlarm();
 	if (alarm === null) return false;
@@ -132,7 +145,8 @@ async function runAlarm(instance: DurableObject, state: DurableObjectState) {
 	return true;
 }
 // See public facing `cloudflare:test` types for docs
-export function runDurableObjectAlarm(
+// (`async` so it throws asynchronously/rejects)
+export async function runDurableObjectAlarm(
 	stub: DurableObjectStub
 ): Promise<boolean /* ran */> {
 	if (!isDurableObjectStub(stub)) {
@@ -143,7 +157,79 @@ export function runDurableObjectAlarm(
 	return runInDurableObject(stub, runAlarm);
 }
 
-type DurableObjectConstructor = {
+/**
+ * Internal method for running `callback` inside the singleton `RunnerObject`'s
+ * I/O context. Tests run in this context by default. This is required for
+ * performing operations that use Vitest's RPC mechanism as the `RunnerObject`
+ * owns the RPC WebSocket. For example, importing modules or sending logs.
+ * Trying to perform those operations from a different context (e.g. within
+ * a `export default { fetch() {} }` handler or user Durable Object's `fetch()`
+ * handler) without using this function will result in a `Cannot perform I/O on
+ * behalf of a different request` error.
+ */
+export function runInRunnerObject<R>(
+	env: Env,
+	callback: (instance: RunnerObject) => R | Promise<R>
+): Promise<R> {
+	const stub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.get("singleton");
+	return runInStub(stub, callback);
+}
+
+/**
+ * Internal method for importing a module using Vite's transformation and
+ * execution pipeline. Can be called from any I/O context, and will ensure the
+ * request is run from within the `RunnerObject`.
+ */
+export function importModule(
+	env: Env,
+	specifier: string
+): Promise<Record<string, unknown>> {
+	return runInRunnerObject(env, (instance) => {
+		assert(
+			instance.executor !== undefined,
+			"Expected Vitest to start running before importing modules"
+		);
+		// TODO(soon): note this won't re-run dependent tests if `specifier`
+		//  changes, unless `specifier` can be statically analysed as an import
+		//  in a test file, see `pool/index.ts` for potential fixes
+		return instance.executor.executeId(specifier);
+	});
+}
+
+export async function maybeHandleRunRequest(
+	request: Request,
+	instance: unknown,
+	state?: DurableObjectState
+): Promise<Response | undefined> {
+	const actionId = request.cf?.[CF_KEY_ACTION];
+	if (actionId === undefined) return;
+	assert(typeof actionId === "number", `Expected numeric ${CF_KEY_ACTION}`);
+	try {
+		const callback = actionResults.get(actionId);
+		assert(typeof callback === "function", `Expected callback for ${actionId}`);
+		const result = await callback(instance, state);
+		// If the callback returns a `Response`, we can't pass it back to the
+		// caller through `actionResults`. If we did that, we'd get a `Cannot
+		// perform I/O on behalf of a different Durable Object` error if we
+		// tried to use it. Instead, we set a flag in `actionResults` that
+		// instructs the caller to use the `Response` returned by
+		// `DurableObjectStub#fetch()` directly.
+		if (result instanceof Response) {
+			actionResults.set(actionId, kUseResponse);
+			return result;
+		} else {
+			actionResults.set(actionId, result);
+		}
+		return new Response(null, { status: 204 });
+	} catch (e) {
+		actionResults.set(actionId, e);
+		return new Response(null, { status: 500 });
+	}
+}
+
+type DurableObjectConstructor<
+	Env extends Record<string, unknown> = Record<string, unknown>
+> = {
 	new (state: DurableObjectState, env: Env): DurableObject;
 };
 type DurableObjectParameters<K extends keyof DurableObject> = Parameters<
@@ -158,12 +244,12 @@ class DurableObjectWrapper implements DurableObject {
 
 	constructor(
 		readonly state: DurableObjectState,
-		readonly env: Env,
+		readonly env: Record<string, unknown> & Env,
 		readonly className: string
 	) {}
 
 	async ensureInstance(): Promise<DurableObject> {
-		const mainPath = mustGetResolvedMainPath("Durable Object");
+		const mainPath = getResolvedMainPath("Durable Object");
 		// `ensureInstance()` may be called multiple times concurrently.
 		// We're assuming `importModule()` will only import the module once.
 		const mainModule = await importModule(this.env, mainPath);
@@ -190,7 +276,8 @@ class DurableObjectWrapper implements DurableObject {
 			assert.fail("Unreachable");
 		}
 		if (this.instance === undefined) {
-			this.instance = new this.instanceConstructor(this.state, this.env);
+			const userEnv = stripInternalEnv(this.env);
+			this.instance = new this.instanceConstructor(this.state, userEnv);
 			// Wait for any `blockConcurrencyWhile()`s in the constructor to complete
 			await this.state.blockConcurrencyWhile(async () => {});
 		}
@@ -202,33 +289,8 @@ class DurableObjectWrapper implements DurableObject {
 		const instance = await this.ensureInstance();
 
 		// If this is an internal Durable Object action, handle it...
-		const actionId = request.cf?.[CF_KEY_ACTION];
-		if (typeof actionId === "number") {
-			try {
-				const callback = actionResults.get(actionId);
-				assert(
-					typeof callback === "function",
-					`Expected callback for ${actionId}`
-				);
-				const result = await callback(instance, this.state);
-				// If the callback returns a `Response`, we can't pass it back to the
-				// caller through `actionResults`. If we did that, we'd get a `Cannot
-				// perform I/O on behalf of a different Durable Object` error if we
-				// tried to use it. Instead, we set a flag in `actionResults` that
-				// instructs the caller to use the `Response` returned by
-				// `DurableObjectStub#fetch()` directly.
-				if (result instanceof Response) {
-					actionResults.set(actionId, kUseResponse);
-					return result;
-				} else {
-					actionResults.set(actionId, result);
-				}
-				return new Response(null, { status: 204 });
-			} catch (e) {
-				actionResults.set(actionId, e);
-				return new Response(null, { status: 500 });
-			}
-		}
+		const response = await maybeHandleRunRequest(request, instance, this.state);
+		if (response !== undefined) return response;
 
 		// Otherwise, pass through to the user code
 		if (instance.fetch === undefined) {
@@ -257,9 +319,9 @@ class DurableObjectWrapper implements DurableObject {
 
 export function createDurableObjectWrapper(
 	className: string
-): DurableObjectConstructor {
+): DurableObjectConstructor<Record<string, unknown> & Env> {
 	return class extends DurableObjectWrapper {
-		constructor(state: DurableObjectState, env: Env) {
+		constructor(state: DurableObjectState, env: Record<string, unknown> & Env) {
 			super(state, env, className);
 		}
 	};

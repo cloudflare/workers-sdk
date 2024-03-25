@@ -1,10 +1,10 @@
 {
 	"name": "workers.new",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
-		"deploy": "wrangler deploy",
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=$WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler deploy",
 		"dev": "wrangler dev",
 		"test": "vitest run",
 		"test:ci": "vitest run"
@@ -12,7 +12,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^3.0.0",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"wrangler": "workspace:*"
 	}
 }

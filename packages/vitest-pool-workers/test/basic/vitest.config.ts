@@ -1,13 +1,15 @@
-import { defineWorkersPoolOptions } from "@cloudflare/vitest-pool-workers/config";
-import { defineConfig } from "vitest/config";
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
-export default defineConfig({
+export default defineWorkersProject({
 	test: {
 		setupFiles: ["./setup/setup.ts"],
 		globalSetup: ["./setup/global-setup.ts"],
+		// @ts-expect-error `defineWorkersProject()` expects `pool` to be
+		//  `@cloudflare/vitest-pool-workers"` which won't work for us
 		pool: "../..",
 		poolOptions: {
-			workers: defineWorkersPoolOptions(({ inject }) => ({
+			workers: ({ inject }) => ({
+				isolatedStorage: false,
 				singleWorker: true,
 				miniflare: {
 					compatibilityDate: "2024-01-01",
@@ -19,7 +21,7 @@ export default defineConfig({
 						DATABASE: `postgres://user:pass@example.com:${inject("port")}/db`,
 					},
 				},
-			})),
+			}),
 		},
 	},
 });

@@ -261,13 +261,15 @@ export function buildRawWorker({
 	});
 }
 
-export async function traverseAndBuildWorkerJSDirectory({
+export async function produceWorkerBundleForWorkerJSDirectory({
 	workerJSDirectory,
+	bundle,
 	buildOutputDirectory,
 	nodejsCompat,
 	defineNavigatorUserAgent,
 }: {
 	workerJSDirectory: string;
+	bundle: boolean;
 	buildOutputDirectory: string;
 	nodejsCompat?: boolean;
 	defineNavigatorUserAgent: boolean;
@@ -289,6 +291,17 @@ export async function traverseAndBuildWorkerJSDirectory({
 		]
 	);
 
+	if (!bundle) {
+		return {
+			modules: additionalModules,
+			dependencies: {},
+			resolvedEntryPointPath: entrypoint,
+			bundleType: "esm",
+			stop: async () => {},
+			sourceMapPath: undefined,
+		};
+	}
+
 	const outfile = join(
 		getPagesTmpDir(),
 		`./bundledWorker-${Math.random()}.mjs`
@@ -307,7 +320,6 @@ export async function traverseAndBuildWorkerJSDirectory({
 		additionalModules,
 		defineNavigatorUserAgent,
 	});
-
 	return {
 		modules: bundleResult.modules,
 		dependencies: bundleResult.dependencies,

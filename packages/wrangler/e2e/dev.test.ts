@@ -5,11 +5,12 @@ import * as nodeNet from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import shellac from "shellac";
+import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { dedent, makeRoot, seed } from "./helpers/setup";
+import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
 // Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
@@ -283,12 +284,17 @@ describe("basic dev python tests", () => {
 					name = "${workerName}"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
-					compatibility_flags = ["experimental"]
+					compatibility_flags = ["python_workers"]
 			`,
+			"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
 			"index.py": dedent`
-				from js import Response
-				def fetch(request):
-					return Response.new('py hello world')`,
+					from arithmetic import mul
+
+					from js import Response
+					def on_fetch(request):
+						return Response.new(f"py hello world {mul(2,3)}")`,
 			"package.json": dedent`
 					{
 						"name": "${workerName}",
@@ -299,7 +305,7 @@ describe("basic dev python tests", () => {
 		}));
 	});
 
-	it("can run and modify python worker during dev session (local)", async () => {
+	it("can run and modify python worker entrypoint during dev session (local)", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,
@@ -308,23 +314,50 @@ describe("basic dev python tests", () => {
 					return { text: await r.text(), status: r.status };
 				}
 			);
-			expect(text).toMatchInlineSnapshot('"py hello world"');
+			expect(text).toMatchInlineSnapshot('"py hello world 6"');
 
 			await worker.seed({
 				"index.py": dedent`
 					from js import Response
-					def fetch(request):
+					def on_fetch(request):
 						return Response.new('Updated Python Worker value')`,
 			});
 
 			const { text: text2 } = await retry(
-				(s) => s.status !== 200 || s.text === "py hello world",
+				(s) => s.status !== 200 || s.text === "py hello world 6",
 				async () => {
 					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
 			expect(text2).toMatchInlineSnapshot('"Updated Python Worker value"');
+		});
+	});
+	it("can run and modify python worker imports during dev session (local)", async () => {
+		await worker.runDevSession("", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"py hello world 6"');
+
+			await worker.seed({
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a+b`,
+			});
+
+			const { text: text2 } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text2).toMatchInlineSnapshot('"py hello world 5"');
 		});
 	});
 });
@@ -730,6 +763,126 @@ describe("writes debug logs to hidden file", () => {
 					"[ERROR] Address already in use"
 				);
 			});
+		});
+	});
+});
+
+describe("zone selection", () => {
+	let worker: DevWorker;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+			`,
+			"src/index.ts": dedent`
+					export default {
+						fetch(request) {
+							return new Response(request.url)
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
+	});
+
+	it("defaults to a workers.dev preview", async () => {
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toContain(`devprod-testing7928.workers.dev`);
+		});
+	});
+
+	it("respects dev.host setting", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[dev]
+					host = "wrangler-testing.testing.devprod.cloudflare.dev"
+			`,
+		}));
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
+		});
+	});
+	it("infers host from first route", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[[routes]]
+					pattern = "wrangler-testing.testing.devprod.cloudflare.dev/*"
+					zone_name = "testing.devprod.cloudflare.dev"
+			`,
+		}));
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
+		});
+	});
+	it("fails with useful error message if host is not routable", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["nodejs_compat"]
+
+					[[routes]]
+					pattern = "not-a-domain.testing.devprod.cloudflare.dev/*"
+					zone_name = "testing.devprod.cloudflare.dev"
+			`,
+		}));
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
+			const { stderr } = await retry(
+				(s) => !s.stderr.includes("ERROR"),
+				() => {
+					return { stderr: session.stderr };
+				}
+			);
+			expect(normalizeOutput(stderr)).toMatchInlineSnapshot(`
+				"X [ERROR] Could not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.
+				  For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
+			`);
 		});
 	});
 });

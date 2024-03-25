@@ -7,6 +7,7 @@ import { existsSync } from "fs";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
+import os from "os";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
@@ -187,6 +188,55 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 	t.not(state3.url.port, "0");
 	t.not(state1.url.port, state3.url.port);
 	t.is(state2.loopbackPort, state3.loopbackPort);
+});
+
+const interfaces = os.networkInterfaces();
+const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
+	({ family }) => family === "IPv4"
+);
+(localInterface === undefined ? test.skip : test)(
+	"Miniflare: can use local network address as host",
+	async (t) => {
+		assert(localInterface !== undefined);
+		const mf = new Miniflare({
+			host: localInterface.address,
+			modules: true,
+			script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+			serviceBindings: {
+				SERVICE() {
+					return new Response("body");
+				},
+			},
+		});
+		t.teardown(() => mf.dispose());
+
+		let res = await mf.dispatchFetch("https://example.com");
+		t.is(await res.text(), "body");
+
+		const worker = await mf.getWorker();
+		res = await worker.fetch("https://example.com");
+		t.is(await res.text(), "body");
+	}
+);
+test("Miniflare: can use IPv6 loopback as host", async (t) => {
+	const mf = new Miniflare({
+		host: "::1",
+		modules: true,
+		script: `export default { fetch(request, env) { return env.SERVICE.fetch(request); } }`,
+		serviceBindings: {
+			SERVICE() {
+				return new Response("body");
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("https://example.com");
+	t.is(await res.text(), "body");
+
+	const worker = await mf.getWorker();
+	res = await worker.fetch("https://example.com");
+	t.is(await res.text(), "body");
 });
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
@@ -418,10 +468,10 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 
 	// Checking URL (including protocol/host) and body preserved through
 	// `dispatchFetch()` and custom service bindings
-	let res = await mf.dispatchFetch("https://custom1.mf/a");
+	let res = await mf.dispatchFetch("https://custom1.mf/a?key=value");
 	t.deepEqual(await res.json(), {
 		method: "GET",
-		url: "https://custom1.mf/a",
+		url: "https://custom1.mf/a?key=value",
 		body: null,
 	});
 
@@ -453,7 +503,7 @@ test("Miniflare: service binding to current worker", async (t) => {
 				if (pathname === "/callback") return new Response("callback");
 				const response = await env.SELF.fetch("http://placeholder/callback");
 				const text = await response.text();
-				return new Response("body:" + text); 
+				return new Response("body:" + text);
 			}
 		}`,
 	});
@@ -544,6 +594,106 @@ test("Miniflare: can send GET request with body", async (t) => {
 		contentLength: "0",
 		hasBody: true,
 	});
+});
+
+test("Miniflare: handles redirect responses", async (t) => {
+	// https://github.com/cloudflare/workers-sdk/issues/5018
+
+	const { http } = await useServer(t, (req, res) => {
+		// Check no special headers set
+		const headerKeys = Object.keys(req.headers);
+		t.deepEqual(
+			headerKeys.filter((key) => key.toLowerCase().startsWith("mf-")),
+			[]
+		);
+
+		const { pathname } = new URL(req.url ?? "", "http://placeholder");
+		if (pathname === "/ping") {
+			res.end("pong");
+		} else if (pathname === "/redirect-back") {
+			res.writeHead(302, { Location: "https://custom.mf/external-redirected" });
+			res.end();
+		} else {
+			res.writeHead(404);
+			res.end("Not Found");
+		}
+	});
+
+	const mf = new Miniflare({
+		bindings: { EXTERNAL_URL: http.href },
+		compatibilityDate: "2024-01-01",
+		modules: true,
+		script: `export default {
+      async fetch(request, env) {
+        const url = new URL(request.url);
+				const externalUrl = new URL(env.EXTERNAL_URL);
+        if (url.pathname === "/redirect-relative") {
+        	return new Response(null, { status: 302, headers: { Location: "/relative-redirected" } });
+        } else if (url.pathname === "/redirect-absolute") {
+        	url.pathname = "/absolute-redirected";
+        	return Response.redirect(url, 302);
+        } else if (url.pathname === "/redirect-external") {
+        	externalUrl.pathname = "/ping";
+        	return Response.redirect(externalUrl, 302);
+        } else if (url.pathname === "/redirect-external-and-back") {
+					externalUrl.pathname = "/redirect-back";
+        	return Response.redirect(externalUrl, 302);
+        } else {
+        	return new Response("end:" + url.href);
+        }
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+
+	// Check relative redirect
+	let res = await mf.dispatchFetch("https://custom.mf/redirect-relative", {
+		redirect: "manual",
+	});
+	t.is(res.status, 302);
+	t.is(res.headers.get("Location"), "/relative-redirected");
+	await res.arrayBuffer(); // (drain)
+
+	res = await mf.dispatchFetch("https://custom.mf/redirect-relative");
+	t.is(res.status, 200);
+	t.is(await res.text(), "end:https://custom.mf/relative-redirected");
+
+	// Check absolute redirect to same origin
+	res = await mf.dispatchFetch("https://custom.mf/redirect-absolute", {
+		redirect: "manual",
+	});
+	t.is(res.status, 302);
+	t.is(res.headers.get("Location"), "https://custom.mf/absolute-redirected");
+	await res.arrayBuffer(); // (drain)
+
+	res = await mf.dispatchFetch("https://custom.mf/redirect-absolute");
+	t.is(res.status, 200);
+	t.is(await res.text(), "end:https://custom.mf/absolute-redirected");
+
+	// Check absolute redirect to external origin
+	res = await mf.dispatchFetch("https://custom.mf/redirect-external", {
+		redirect: "manual",
+	});
+	t.is(res.status, 302);
+	t.is(res.headers.get("Location"), new URL("/ping", http).href);
+	await res.arrayBuffer(); // (drain)
+
+	res = await mf.dispatchFetch("https://custom.mf/redirect-external");
+	t.is(res.status, 200);
+	t.is(await res.text(), "pong");
+
+	// Check absolute redirect to external origin, then redirect back to initial
+	res = await mf.dispatchFetch("https://custom.mf/redirect-external-and-back", {
+		redirect: "manual",
+	});
+	t.is(res.status, 302);
+	t.is(res.headers.get("Location"), new URL("/redirect-back", http).href);
+	await res.arrayBuffer(); // (drain)
+
+	res = await mf.dispatchFetch("https://custom.mf/redirect-external-and-back");
+	t.is(res.status, 200);
+	// External server redirects back to worker running in `workerd`
+	t.is(await res.text(), "end:https://custom.mf/external-redirected");
 });
 
 test("Miniflare: fetch mocking", async (t) => {
@@ -764,7 +914,7 @@ test("Miniflare: python modules", async (t) => {
 				type: "PythonModule",
 				path: "index.py",
 				contents:
-					"from test_module import add; from js import Response;\ndef fetch(request):\n  return Response.new(add(2,2))",
+					"from test_module import add; from js import Response;\ndef on_fetch(request):\n  return Response.new(add(2,2))",
 			},
 			{
 				type: "PythonModule",
@@ -772,7 +922,7 @@ test("Miniflare: python modules", async (t) => {
 				contents: `def add(a, b):\n  return a + b`,
 			},
 		],
-		compatibilityFlags: ["experimental"],
+		compatibilityFlags: ["python_workers"],
 	});
 	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1030,10 +1180,12 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	]);
 	t.deepEqual(queueResult, {
 		outcome: "ok",
-		retryAll: true,
 		ackAll: false,
-		explicitRetries: [],
+		retryBatch: {
+			retry: true,
+		},
 		explicitAcks: [],
+		retryMessages: [],
 	});
 	queueResult = await fetcher.queue("queue", [
 		{ id: "c", timestamp: new Date(3000), body: new Uint8Array([1, 2, 3]) },
@@ -1041,10 +1193,12 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	]);
 	t.deepEqual(queueResult, {
 		outcome: "ok",
-		retryAll: false,
 		ackAll: false,
-		explicitRetries: [],
+		retryBatch: {
+			retry: false
+		},
 		explicitAcks: ["perfect"],
+		retryMessages: [],
 	});
 
 	res = await fetcher.fetch("http://localhost/queue");

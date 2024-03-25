@@ -1,0 +1,7 @@
+{
+	"extends": "./tsconfig.node.json",
+	"compilerOptions": {
+		"skipLibCheck": false,
+		"types": ["@cloudflare/workers-types/experimental"]
+	}
+}

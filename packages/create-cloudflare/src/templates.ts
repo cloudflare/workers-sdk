@@ -2,14 +2,22 @@ import { existsSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { crash } from "@cloudflare/cli";
+import { crash, warn } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import deepmerge from "deepmerge";
 import degit from "degit";
 import { C3_DEFAULTS } from "helpers/cli";
-import { readJSON, usesTypescript, writeJSON } from "helpers/files";
+import {
+	appendFile,
+	directoryExists,
+	readFile,
+	readJSON,
+	usesTypescript,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
 import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context, PackageJson } from "types";
 
@@ -77,8 +85,6 @@ export type TemplateConfig = {
 		ctx: C3Context
 	) => Promise<Record<string, string | object>>;
 
-	/** An array of flags that will be added to the call to the framework cli during tests.*/
-	testFlags?: string[];
 	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
 	compatibilityFlags?: string[];
 
@@ -138,7 +144,7 @@ export const getTemplateMap = async () => {
 			await import("../templates/hello-world-durable-object/c3")
 		).default,
 		// Dummy record -- actual template config resolved in `selectFramework`
-		webFramework: { displayName: "Website or web app" } as TemplateConfig,
+		"web-framework": { displayName: "Website or web app" } as TemplateConfig,
 		common: (await import("../templates/common/c3")).default,
 		scheduled: (await import("../templates/scheduled/c3")).default,
 		queues: (await import("../templates/queues/c3")).default,
@@ -155,12 +161,20 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 	// If not specified, attempt to infer the `type` argument from other flags
 	if (!args.type) {
 		if (args.framework) {
-			args.type = "webFramework";
+			args.type = "web-framework";
 		} else if (args.existingScript) {
 			args.type = "pre-existing";
 		} else if (args.template) {
 			args.type = "remote-template";
 		}
+	}
+
+	// Add backwards compatibility for the older argument (webFramework)
+	if (args.type && args.type === "webFramework") {
+		warn(
+			"The `webFramework` type is deprecated and will be removed in a future version. Please use `web-framework` instead."
+		);
+		args.type = "web-framework";
 	}
 
 	const templateMap = await getTemplateMap();
@@ -189,7 +203,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 		return crash(`Unknown application type provided: ${type}.`);
 	}
 
-	if (type === "webFramework") {
+	if (type === "web-framework") {
 		return selectFramework(args);
 	}
 
@@ -468,4 +482,59 @@ export const getCopyFilesDestinationDir = (
 	}
 
 	return copyFiles.destinationDir(ctx);
+};
+
+export const addWranglerToGitIgnore = (ctx: C3Context) => {
+	const gitIgnorePath = `${ctx.project.path}/.gitignore`;
+	const gitIgnorePreExisted = existsSync(gitIgnorePath);
+
+	const gitDirExists = directoryExists(`${ctx.project.path}/.git`);
+
+	if (!gitIgnorePreExisted && !gitDirExists) {
+		// if there is no .gitignore file and neither a .git directory
+		// then bail as the project is likely not targeting/using git
+		return;
+	}
+
+	if (!gitIgnorePreExisted) {
+		writeFile(gitIgnorePath, "");
+	}
+
+	const existingGitIgnoreContent = readFile(gitIgnorePath);
+
+	const wranglerGitIgnoreFiles = [".wrangler", ".dev.vars"] as const;
+	const wranglerGitIgnoreFilesToAdd = wranglerGitIgnoreFiles.filter(
+		(file) =>
+			!existingGitIgnoreContent.match(
+				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`)
+			)
+	);
+
+	if (wranglerGitIgnoreFilesToAdd.length === 0) {
+		return;
+	}
+
+	const s = spinner();
+	s.start("Adding Wrangler files to the .gitignore file");
+
+	const linesToAppend = [
+		"",
+		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
+	];
+
+	if (wranglerGitIgnoreFilesToAdd.length === wranglerGitIgnoreFiles.length) {
+		linesToAppend.push("# wrangler files");
+	}
+
+	wranglerGitIgnoreFilesToAdd.forEach((line) => linesToAppend.push(line));
+
+	linesToAppend.push("");
+
+	appendFile(gitIgnorePath, linesToAppend.join("\n"));
+
+	s.stop(
+		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
+			".gitignore file"
+		)}`
+	);
 };

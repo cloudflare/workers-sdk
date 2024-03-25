@@ -44,6 +44,7 @@ type Props = {
 	entry: Entry;
 	rules: Config["rules"];
 	name: string | undefined;
+	legacyEnv: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -114,14 +115,14 @@ export default async function versionsUpload(props: Props): Promise<void> {
 
 			if (default_environment.script.last_deployed_from === "dash") {
 				logger.warn(
-					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
+					`You are about to upload a Worker Version that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
 				}
 			} else if (default_environment.script.last_deployed_from === "api") {
 				logger.warn(
-					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
@@ -143,7 +144,7 @@ export default async function versionsUpload(props: Props): Promise<void> {
 			""
 		).padStart(2, "0")}-${(new Date().getDate() + "").padStart(2, "0")}`;
 
-		throw new UserError(`A compatibility_date is required when publishing. Add the following to your wrangler.toml file:.
+		throw new UserError(`A compatibility_date is required when uploading a Worker Version. Add the following to your wrangler.toml file:.
     \`\`\`
     compatibility_date = "${compatibilityDateStr}"
     \`\`\`
@@ -153,7 +154,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars || config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
@@ -189,7 +189,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const scriptName = props.name;
 	if (!scriptName) {
 		throw new UserError(
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
 		);
 	}
 
@@ -324,7 +324,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					legacyEnv: false,
+					legacyEnv: props.legacyEnv,
 					env: props.env,
 			  })
 			: undefined;
@@ -378,11 +378,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,
-			keepVars,
+			keepVars: false, // the wrangler.toml should be the source-of-truth for vars
+			keepSecrets: true, // until wrangler.toml specifies secret bindings, we need to inherit from the previous Worker Version
 			logpush: undefined,
 			placement,
 			tail_consumers: config.tail_consumers,
 			limits: config.limits,
+			annotations: {
+				"workers/message": props.message,
+				"workers/tag": props.tag,
+			},
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
@@ -420,15 +425,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// We can also now tell whether available_on_subdomain is set
 			try {
 				const body = createWorkerUploadForm(worker);
-
-				body.set(
-					"annotations",
-					JSON.stringify({
-						"workers/message": props.message,
-						"workers/tag": props.tag,
-						"workers/triggered_by": "wrangler",
-					})
-				);
 
 				const result = await fetchResult<{
 					available_on_subdomain: boolean;

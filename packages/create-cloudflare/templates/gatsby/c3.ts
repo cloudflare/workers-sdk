@@ -1,7 +1,6 @@
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { runFrameworkGenerator } from "frameworks/index";
+import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -38,9 +37,12 @@ const config: TemplateConfig = {
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
+			deploy: `${npm} run build && wrangler pages deploy ./public`,
+			preview: `${npm} run build && wrangler pages dev ./public`,
 		},
 	}),
+	devScript: "develop",
+	deployScript: "deploy",
+	previewScript: "preview",
 };
 export default config;

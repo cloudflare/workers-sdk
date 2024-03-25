@@ -1,6 +1,5 @@
 {
 	"name": "additional-modules",
-	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=dist",
@@ -13,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20230724.0",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"undici": "^5.28.3",
 		"wrangler": "workspace:*"
 	}

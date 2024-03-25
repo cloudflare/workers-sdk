@@ -26,7 +26,7 @@ export const getArtifactForWorkflowRun = async ({
 	const cache = caches.default;
 
 	const cachedResponse = await cache.match(cacheKey);
-	if (cachedResponse) return cachedResponse;
+	if (cachedResponse && cachedResponse.status === 200) return cachedResponse;
 
 	try {
 		const artifactsResponse = await gitHubFetch(

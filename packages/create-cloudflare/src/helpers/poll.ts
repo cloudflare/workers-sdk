@@ -2,7 +2,7 @@ import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import dns2 from "dns2";
 import { request } from "undici";
-import { sleep } from "./common";
+import { sleep } from "./sleep";
 import type { DnsAnswer, DnsResponse } from "dns2";
 
 const TIMEOUT = 1000 * 60 * 5;

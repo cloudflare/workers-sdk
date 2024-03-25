@@ -1,5 +1,70 @@
 # miniflare
 
+## 3.20240320.0
+
+### Patch Changes
+
+- [#5341](https://github.com/cloudflare/workers-sdk/pull/5341) [`248a318`](https://github.com/cloudflare/workers-sdk/commit/248a318acac293615327affe35b83018a48dddc9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240314.0  | 1.20240320.1  |
+  | @cloudflare/workers-types | ^4.20240314.0 | ^4.20240320.1 |
+
+## 3.20240314.0
+
+### Minor Changes
+
+- [#5240](https://github.com/cloudflare/workers-sdk/pull/5240) [`1720f0a`](https://github.com/cloudflare/workers-sdk/commit/1720f0a12a6376093b3c5799d74f47c522ae8571) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: bump `workerd` to [`1.20240314.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240314.0)
+
+## 3.20240304.2
+
+### Patch Changes
+
+- [#5247](https://github.com/cloudflare/workers-sdk/pull/5247) [`2e50d51`](https://github.com/cloudflare/workers-sdk/commit/2e50d51632dfe905bd32de8176231bb256c88dab) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Add internal APIs to support the Workers Vitest integration
+
+## 3.20240304.1
+
+### Patch Changes
+
+- [#5201](https://github.com/cloudflare/workers-sdk/pull/5201) [`1235d48`](https://github.com/cloudflare/workers-sdk/commit/1235d48fed9f4e348011fd62fce6458006947501) Thanks [@wydengyre](https://github.com/wydengyre)! - fix: ensure `miniflare` works with Node 21.7.0+
+
+- [#5191](https://github.com/cloudflare/workers-sdk/pull/5191) [`27fb22b`](https://github.com/cloudflare/workers-sdk/commit/27fb22b7c6b224aecc852915d9fee600d9d86efc) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure redirect responses handled correctly with `dispatchFetch()`
+
+  Previously, if your Worker returned a redirect response, calling `dispatchFetch(url)` would send another request to the original `url` rather than the redirect. This change ensures redirects are followed correctly.
+
+  - If your Worker returns a relative redirect or an absolute redirect with the same origin as the original `url`, the request will be sent to the Worker.
+  - If your Worker instead returns an absolute redirect with a different origin, the request will be sent to the Internet.
+  - If a redirected request to a different origin returns an absolute redirect with the same origin as the original `url`, the request will also be sent to the Worker.
+
+## 3.20240304.0
+
+### Minor Changes
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - chore: bump `workerd` to [`1.20240304.0`](https://github.com/cloudflare/workerd/releases/tag/v1.20240304.0)
+
+- [#5148](https://github.com/cloudflare/workers-sdk/pull/5148) [`11951f3`](https://github.com/cloudflare/workers-sdk/commit/11951f344ccac340be5d059bc4dd28ef674fb36f) Thanks [@dom96](https://github.com/dom96)! - fix: use python_workers compat flag for Python
+
+## 3.20240223.1
+
+### Patch Changes
+
+- [#5133](https://github.com/cloudflare/workers-sdk/pull/5133) [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure internals can access `workerd` when starting on non-local `host`
+
+  Previously, if Miniflare was configured to start on a `host` that wasn't `127.0.0.1`, `::1`, `*`, `::`, or `0.0.0.0`, calls to `Miniflare` API methods relying on the magic proxy (e.g. `getKVNamespace()`, `getWorker()`, etc.) would fail. This change ensures `workerd` is always accessible to Miniflare's internals. This also fixes `wrangler dev` when using local network address such as `192.168.0.10` with the `--ip` flag.
+
+- [#5133](https://github.com/cloudflare/workers-sdk/pull/5133) [`42bcc72`](https://github.com/cloudflare/workers-sdk/commit/42bcc7216ab14455c1398d55bc552023726eb423) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure IPv6 addresses can be used as `host`s
+
+  Previously, if Miniflare was configured to start on an IPv6 `host`, it could crash. This change ensures IPv6 addresses are handled correctly. This also fixes `wrangler dev` when using IPv6 addresses such as `::1` with the `--ip` flag.
+
+## 3.20240223.0
+
+### Minor Changes
+
+- [#5081](https://github.com/cloudflare/workers-sdk/pull/5081) [`0c0949d`](https://github.com/cloudflare/workers-sdk/commit/0c0949da60e3287c05a5884bb9f869ce5609a9a1) Thanks [@garrettgu10](https://github.com/garrettgu10)! - chore: bump `workerd` to [`1.20240223.1`](https://github.com/cloudflare/workerd/releases/tag/v1.20240223.0)
+
 ## 3.20240208.0
 
 ### Minor Changes

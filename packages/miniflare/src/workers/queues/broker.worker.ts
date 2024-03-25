@@ -35,9 +35,9 @@ const DEFAULT_RETRIES = 2;
 
 const exceptionQueueResponse: FetcherQueueResult = {
 	outcome: "exception",
-	retryAll: false,
+	retryBatch: { retry: false, },
 	ackAll: false,
-	explicitRetries: [],
+	retryMessages: [],
 	explicitAcks: [],
 };
 
@@ -232,14 +232,14 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 		// Get messages to retry. If dispatching the batch failed for any reason,
 		// retry all messages.
-		const retryAll = response.retryAll || response.outcome !== "ok";
-		const explicitRetries = new Set(response.explicitRetries);
+		const retryAll = response.retryBatch.retry || response.outcome !== "ok";
+		const retryMessagesIds = new Set(response.retryMessages.map(msg => msg.msgId));
 
 		let failedMessages = 0;
 		const toRetry: QueueMessage[] = [];
 		const toDeadLetterQueue: QueueMessage[] = [];
 		for (const message of batch) {
-			if (retryAll || explicitRetries.has(message.id)) {
+			if (retryAll || retryMessagesIds.has(message.id)) {
 				failedMessages++;
 				const failedAttempts = message.incrementFailedAttempts();
 				if (failedAttempts < maxAttempts) {

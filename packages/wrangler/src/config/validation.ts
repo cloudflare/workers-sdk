@@ -42,6 +42,10 @@ import type { ValidatorFn } from "./validation-helpers";
 
 const ENGLISH = new Intl.ListFormat("en");
 
+export function isPagesConfig(rawConfig: RawConfig): boolean {
+	return rawConfig.pages_build_output_dir !== undefined;
+}
+
 /**
  * Validate the given `rawConfig` object that was loaded from `configPath`.
  *
@@ -115,6 +119,14 @@ export function normalizeAndValidateConfig(
 		"boolean"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"",
+		"pages_build_output_dir",
+		rawConfig.pages_build_output_dir,
+		"string"
+	);
+
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
 		typeof args["legacy-env"] === "boolean"
@@ -128,10 +140,15 @@ export function normalizeAndValidateConfig(
 		);
 	}
 
+	const isDispatchNamespace =
+		typeof args["dispatch-namespace"] === "string" &&
+		args["dispatch-namespace"].trim() !== "";
+
 	const topLevelEnv = normalizeAndValidateEnvironment(
 		diagnostics,
 		configPath,
-		rawConfig
+		rawConfig,
+		isDispatchNamespace
 	);
 
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
@@ -139,30 +156,45 @@ export function normalizeAndValidateConfig(
 	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
+
 	if (envName !== undefined) {
 		const envDiagnostics = new Diagnostics(
 			`"env.${envName}" environment configuration`
 		);
 		const rawEnv = rawConfig.env?.[envName];
+
+		/**
+		 * If an environment name was specified, and we found corresponding configuration
+		 * for it in the config file, we will use that corresponding environment. If the
+		 * environment name was specified, but no configuration for it was found, we will:
+		 *
+		 * - default to the top-level environment for Pages. For Pages, Wrangler does not
+		 * require both of supported named environments ("preview" or "production") to be
+		 * explicitly defined in the config file. If either`[env.production]` or
+		 * `[env.preview]` is left unspecified, we will use the top-level environment when
+		 * targeting that named Pages environment.
+		 *
+		 * - create a fake active environment with the specified `envName` for Workers.
+		 * This is done to cover any legacy environment cases, where the `envName` is used.
+		 */
 		if (rawEnv !== undefined) {
 			activeEnv = normalizeAndValidateEnvironment(
 				envDiagnostics,
 				configPath,
 				rawEnv,
+				isDispatchNamespace,
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
 				rawConfig
 			);
 			diagnostics.addChild(envDiagnostics);
-		} else {
-			// An environment was specified, but no configuration for it was found.
-			// To cover any legacy environment cases, where the `envName` is used,
-			// Let's create a fake active environment with the specified `envName`.
+		} else if (!isPagesConfig(rawConfig)) {
 			activeEnv = normalizeAndValidateEnvironment(
 				envDiagnostics,
 				configPath,
 				{},
+				isDispatchNamespace,
 				envName,
 				topLevelEnv,
 				isLegacyEnv,
@@ -194,6 +226,10 @@ export function normalizeAndValidateConfig(
 	// Process the top-level default environment configuration.
 	const config: Config = {
 		configPath,
+		pages_build_output_dir: normalizeAndValidatePagesBuildOutputDir(
+			configPath,
+			rawConfig.pages_build_output_dir
+		),
 		legacy_env: isLegacyEnv,
 		send_metrics: rawConfig.send_metrics,
 		keep_vars: rawConfig.keep_vars,
@@ -378,6 +414,26 @@ function normalizeAndValidateBaseDirField(
 			return path.resolve(directory, rawDir);
 		} else {
 			return rawDir;
+		}
+	} else {
+		return;
+	}
+}
+
+/**
+ * Validate the `pages_build_output_dir` field and return the normalized values.
+ */
+function normalizeAndValidatePagesBuildOutputDir(
+	configPath: string | undefined,
+	rawPagesDir: string | undefined
+): string | undefined {
+	const configDir = path.dirname(configPath ?? "wrangler.toml");
+	if (rawPagesDir !== undefined) {
+		if (typeof rawPagesDir === "string") {
+			const directory = path.resolve(configDir);
+			return path.resolve(directory, rawPagesDir);
+		} else {
+			return rawPagesDir;
 		}
 	} else {
 		return;
@@ -995,7 +1051,8 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
-	topLevelEnv: RawEnvironment
+	topLevelEnv: RawEnvironment,
+	isDispatchNamespace: boolean
 ): Environment;
 /**
  * Validate the named environment configuration and return the normalized values.
@@ -1004,15 +1061,30 @@ function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName: string,
 	topLevelEnv: Environment,
 	isLegacyEnv: boolean,
 	rawConfig: RawConfig
 ): Environment;
+/**
+ * Validate the named environment configuration and return the normalized values.
+ */
 function normalizeAndValidateEnvironment(
 	diagnostics: Diagnostics,
 	configPath: string | undefined,
 	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
+	envName?: string,
+	topLevelEnv?: Environment,
+	isLegacyEnv?: boolean,
+	rawConfig?: RawConfig
+): Environment;
+function normalizeAndValidateEnvironment(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawEnv: RawEnvironment,
+	isDispatchNamespace: boolean,
 	envName = "top level",
 	topLevelEnv?: Environment | undefined,
 	isLegacyEnv?: boolean,
@@ -1130,7 +1202,7 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"name",
-			isValidName,
+			isDispatchNamespace ? isString : isValidName,
 			appendEnvName(envName),
 			undefined
 		),
@@ -2830,11 +2902,14 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 	if (
 		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"queue",
+			"type",
 			"max_batch_size",
 			"max_batch_timeout",
 			"max_retries",
 			"dead_letter_queue",
 			"max_concurrency",
+			"visibility_timeout_ms",
+			"retry_delay",
 		])
 	) {
 		isValid = false;
@@ -2852,11 +2927,14 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		key: string;
 		type: "number" | "string" | "boolean";
 	}[] = [
+		{ key: "type", type: "string" },
 		{ key: "max_batch_size", type: "number" },
 		{ key: "max_batch_timeout", type: "number" },
 		{ key: "max_retries", type: "number" },
 		{ key: "dead_letter_queue", type: "string" },
 		{ key: "max_concurrency", type: "number" },
+		{ key: "visibility_timeout_ms", type: "number" },
+		{ key: "retry_delay", type: "number" },
 	];
 	for (const optionalOpt of options) {
 		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {

@@ -1,13 +1,12 @@
 {
 	"name": "worker-ts",
-	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230724.0",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"wrangler": "workspace:*"
 	}
 }

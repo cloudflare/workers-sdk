@@ -95,7 +95,8 @@ export type WorkerMetadataBinding =
 			destination: string;
 	  };
 
-export interface WorkerMetadata {
+// for PUT /accounts/:accountId/workers/scripts/:scriptName
+export type WorkerMetadataPut = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
 	/** The name of the entry point module. Only exists when the worker is in the service-worker format */
@@ -106,14 +107,25 @@ export interface WorkerMetadata {
 	migrations?: CfDurableObjectMigrations;
 	capnp_schema?: string;
 	bindings: WorkerMetadataBinding[];
-	keep_bindings?: WorkerMetadataBinding["type"][];
+	keep_bindings?: (
+		| WorkerMetadataBinding["type"]
+		| "secret_text"
+		| "secret_key"
+	)[];
 	logpush?: boolean;
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
-}
+};
+
+// for POST /accounts/:accountId/workers/:workerName/versions
+export type WorkerMetadataVersionsPost = WorkerMetadataPut & {
+	annotations?: Record<string, string>;
+};
+
+export type WorkerMetadata = WorkerMetadataPut | WorkerMetadataVersionsPost;
 
 /**
  * Creates a `FormData` upload from a `CfWorkerInit`.
@@ -128,10 +140,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		compatibility_date,
 		compatibility_flags,
 		keepVars,
+		keepSecrets,
 		logpush,
 		placement,
 		tail_consumers,
 		limits,
+		annotations,
 	} = worker;
 
 	let { modules } = worker;
@@ -455,6 +469,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		);
 	}
 
+	let keep_bindings: WorkerMetadata["keep_bindings"] = undefined;
+	if (keepVars) {
+		keep_bindings ??= [];
+		keep_bindings.push("plain_text", "json");
+	}
+	if (keepSecrets) {
+		keep_bindings ??= [];
+		keep_bindings.push("secret_text", "secret_key");
+	}
+
 	const metadata: WorkerMetadata = {
 		...(main.type !== "commonjs"
 			? { main_module: main.name }
@@ -465,11 +489,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: capnpSchemaOutputFile,
-		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
+		...(keep_bindings && { keep_bindings }),
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
 		...(tail_consumers && { tail_consumers }),
 		...(limits && { limits }),
+		...(annotations && { annotations }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

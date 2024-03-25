@@ -9,20 +9,24 @@ import { FatalError, UserError } from "../errors";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { requireAuth } from "../user";
+import { requireApiToken, requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
+	actionsForEventCategories,
 	bucketAndKeyFromObjectPath,
 	createR2Bucket,
+	deleteEventNotificationConfig,
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
 	listR2Buckets,
+	putEventNotificationConfig,
 	putR2Object,
 	usingLocalBucket,
 } from "./helpers";
 import * as Sippy from "./sippy";
 import type { CommonYargsArgv } from "../yargs-types";
+import type { R2EventType } from "./helpers";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 const CHUNK_SIZE = 1024;
@@ -536,6 +540,111 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							"Check the status of Sippy on an R2 bucket",
 							Sippy.GetOptions,
 							Sippy.GetHandler
+						);
+				}
+			);
+
+			r2BucketYargs.command(
+				"event-notification",
+				"Manage event notifications for an R2 bucket",
+				(r2EvNotifyYargs) => {
+					return r2EvNotifyYargs
+						.command(
+							"create <bucket>",
+							"Create new event notification configuration for an R2 bucket",
+							(yargs) => {
+								return yargs
+									.positional("bucket", {
+										describe:
+											"The name of the bucket for which notifications will be emitted",
+										type: "string",
+										demandOption: true,
+									})
+									.option("event-types", {
+										describe:
+											"Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'",
+										alias: "event-type",
+										choices: Object.keys(actionsForEventCategories),
+										demandOption: true,
+										requiresArg: true,
+										type: "array",
+									})
+									.option("prefix", {
+										describe:
+											"only actions on objects with this prefix will emit notifications",
+										requiresArg: false,
+										type: "string",
+									})
+									.option("suffix", {
+										describe:
+											"only actions on objects with this suffix will emit notifications",
+										type: "string",
+									})
+									.option("queue", {
+										describe:
+											"The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'",
+										demandOption: true,
+										requiresArg: true,
+										type: "string",
+									});
+							},
+							async (args) => {
+								await printWranglerBanner();
+								const config = readConfig(args.config, args);
+								const accountId = await requireAuth(config);
+								const apiCreds = requireApiToken();
+								const {
+									bucket,
+									queue,
+									eventTypes,
+									prefix = "",
+									suffix = "",
+								} = args;
+								await putEventNotificationConfig(
+									apiCreds,
+									accountId,
+									`${bucket}`,
+									`${queue}`,
+									eventTypes as R2EventType[],
+									`${prefix}`,
+									`${suffix}`
+								);
+								logger.log("Configuration created successfully!");
+							}
+						)
+						.command(
+							"delete <bucket>",
+							"Delete event notification configuration for an R2 bucket and queue",
+							(yargs) => {
+								return yargs
+									.positional("bucket", {
+										describe:
+											"The name of the bucket for which notifications will be emitted",
+										type: "string",
+										demandOption: true,
+									})
+									.option("queue", {
+										describe:
+											"The ID of the queue that is configured to receive notifications. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'",
+										demandOption: true,
+										requiresArg: true,
+										type: "string",
+									});
+							},
+							async (args) => {
+								await printWranglerBanner();
+								const config = readConfig(args.config, args);
+								const accountId = await requireAuth(config);
+								const apiCreds = requireApiToken();
+								const { bucket, queue } = args;
+								await deleteEventNotificationConfig(
+									apiCreds,
+									accountId,
+									`${bucket}`,
+									`${queue}`
+								);
+								logger.log("Configuration deleted successfully!");
+							}
 						);
 				}
 			);

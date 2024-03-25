@@ -302,10 +302,12 @@ export interface CfWorkerInit {
 	compatibility_flags: string[] | undefined;
 	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
+	keepSecrets: boolean | undefined;
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
+	annotations?: Record<string, string | undefined>;
 }
 
 export interface CfWorkerContext {

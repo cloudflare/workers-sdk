@@ -38,3 +38,20 @@ export class JsonFriendlyFatalError extends FatalError {
 		super(message);
 	}
 }
+
+/**
+ * Create either a FatalError or JsonFriendlyFatalError depending upon `isJson` parameter.
+ *
+ * If `isJson` is true, then the `message` is JSON stringified.
+ */
+export function createFatalError(
+	message: unknown,
+	isJson: boolean,
+	code?: number
+): Error {
+	if (isJson) {
+		return new JsonFriendlyFatalError(JSON.stringify(message), code);
+	} else {
+		return new FatalError(`${message}`, code);
+	}
+}

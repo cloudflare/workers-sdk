@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.29.0",
+	"version": "3.37.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -63,7 +63,7 @@
 		"test": "pnpm run assert-git-version && jest",
 		"test:ci": "pnpm run test --coverage",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
-		"test:e2e": "vitest --test-timeout 240000 --poolOptions.threads.singleThread --dir ./e2e --retry 2 run",
+		"test:e2e": "vitest -c ./e2e/vitest.config.ts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
@@ -93,7 +93,7 @@
 			]
 		},
 		"transformIgnorePatterns": [
-			"node_modules/.pnpm/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
+			"node_modules/.pnpm/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes|strip-ansi|ansi-regex)"
 		],
 		"snapshotFormat": {
 			"escapeString": true,
@@ -123,7 +123,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20230914.0",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
@@ -212,7 +212,7 @@
 		"fsevents": "~2.3.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20230914.0"
+		"@cloudflare/workers-types": "^4.20240320.1"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

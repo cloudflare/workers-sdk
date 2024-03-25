@@ -57,6 +57,6 @@ const printSnippet = () => {
   `;
 
 	const program = parseTs(snippet).program;
-	console.log(program.body[0].consequent);
+	console.log(program.body[0]);
 };
 // printSnippet();

@@ -2,13 +2,19 @@ import * as fs from "node:fs";
 import { rest } from "msw";
 import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
+import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { R2BucketInfo } from "../r2/helpers";
+import type {
+	EWCRequestBody,
+	R2BucketInfo,
+	R2EventableOperation,
+	R2EventType,
+} from "../r2/helpers";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -36,10 +42,11 @@ describe("r2", () => {
 			Manage R2 buckets
 
 			Commands:
-			  wrangler r2 bucket create <name>  Create a new R2 bucket
-			  wrangler r2 bucket list           List R2 buckets
-			  wrangler r2 bucket delete <name>  Delete an R2 bucket
-			  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
+			  wrangler r2 bucket create <name>       Create a new R2 bucket
+			  wrangler r2 bucket list                List R2 buckets
+			  wrangler r2 bucket delete <name>       Delete an R2 bucket
+			  wrangler r2 bucket sippy               Manage Sippy incremental migration on an R2 bucket
+			  wrangler r2 bucket event-notification  Manage event notifications for an R2 bucket
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -535,6 +542,149 @@ describe("r2", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`"Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"`
 				);
+			});
+		});
+
+		describe("event-notification", () => {
+			describe("create", () => {
+				it("follows happy path as expected", async () => {
+					const eventTypes: R2EventType[] = ["object_create", "object_delete"];
+					const actions: R2EventableOperation[] = [];
+					const bucketName = "my-bucket";
+					const queue = "deadbeef-0123-4567-8910-abcdefabcdef";
+
+					const config: EWCRequestBody = {
+						rules: [
+							{
+								actions: eventTypes.reduce(
+									(acc, et) => acc.concat(actionsForEventCategories[et]),
+									actions
+								),
+							},
+						],
+					};
+					msw.use(
+						rest.put(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async (request, response, context) => {
+								const { accountId } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.json()).toEqual({
+									...config,
+									// We fill in `prefix` & `suffix` with empty strings if not
+									// provided
+									rules: [{ ...config.rules[0], prefix: "", suffix: "" }],
+								});
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket event-notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+								" "
+							)}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Sending this configuration to \\"my-bucket\\":
+				{\\"rules\\":[{\\"prefix\\":\\"\\",\\"suffix\\":\\"\\",\\"actions\\":[\\"PutObject\\",\\"CompleteMultipartUpload\\",\\"CopyObject\\",\\"DeleteObject\\"]}]}
+				Configuration created successfully!"
+			`);
+				});
+
+				it("errors if required options are not provided", async () => {
+					await expect(
+						runWrangler(
+							"r2 bucket event-notification create event-notification-test-001"
+						)
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Missing required arguments: event-types, queue]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket event-notification create <bucket>
+
+				Create new event notification configuration for an R2 bucket
+
+				Positionals:
+				  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'  [array] [required] [choices: \\"object_create\\", \\"object_delete\\"]
+				      --prefix                     only actions on objects with this prefix will emit notifications  [string]
+				      --suffix                     only actions on objects with this suffix will emit notifications  [string]
+				      --queue                      The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+			`);
+				});
+			});
+
+			describe("delete", () => {
+				it("follows happy path as expected", async () => {
+					const bucketName = "my-bucket";
+					const queue = "deadbeef-0123-4567-8910-abcdefabcdef";
+					msw.use(
+						rest.delete(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
+							async (request, response, context) => {
+								const { accountId } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(context.json(createFetchResult({})));
+							}
+						)
+					);
+					await expect(
+						runWrangler(
+							`r2 bucket event-notification delete ${bucketName} --queue ${queue}`
+						)
+					).resolves.toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Disabling event notifications for \\"my-bucket\\" to queue deadbeef-0123-4567-8910-abcdefabcdef...
+				Configuration deleted successfully!"
+			`);
+				});
+
+				it("errors if required options are not provided", async () => {
+					await expect(
+						runWrangler(
+							"r2 bucket event-notification delete event-notification-test-001"
+						)
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Missing required argument: queue]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket event-notification delete <bucket>
+
+				Delete event notification configuration for an R2 bucket and queue
+
+				Positionals:
+				  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				      --queue  The ID of the queue that is configured to receive notifications. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+			`);
+				});
 			});
 		});
 	});

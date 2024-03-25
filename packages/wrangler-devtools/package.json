@@ -8,7 +8,7 @@
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"scripts": {
-		"deploy": "make publish"
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 make publish"
 	},
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",

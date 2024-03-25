@@ -3,17 +3,14 @@ name = "worker-rust"
 version = "0.1.0"
 edition = "2021"
 
-# https://github.com/rustwasm/wasm-pack/issues/1247
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-worker = "0.0.17"
+worker = "0.0.18"
 
 [profile.release]
+opt-level = "s" # optimize for size in release builds
 lto = true
 strip = true
 codegen-units = 1

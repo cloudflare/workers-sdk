@@ -1,6 +1,6 @@
 # Stream and playback live video over WebRTC with Cloudflare Stream
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/stream/webrtc)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/stream/webrtc)
 
 Follow [this guide](https://developers.cloudflare.com/stream/webrtc-beta) to get started.
 

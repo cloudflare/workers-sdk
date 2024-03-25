@@ -17,7 +17,9 @@ export function withSourceURLs(
 	modules: CfModule[]
 ): { entrypointSource: string; modules: CfModule[] } {
 	let entrypointSource = fs.readFileSync(entrypointPath, "utf8");
-	entrypointSource = withSourceURL(entrypointSource, entrypointPath);
+	if (!entrypointPath.endsWith(".py")) {
+		entrypointSource = withSourceURL(entrypointSource, entrypointPath);
+	}
 
 	modules = modules.map((module) => {
 		if (

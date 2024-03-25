@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
 import { readConfig } from "../../../config";
+import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getVarsForDev } from "../../../dev/dev-vars";
@@ -13,7 +14,7 @@ import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
 import type { Config } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions, WorkerOptions } from "miniflare";
+import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
 /**
  * Options for the `getPlatformProxy` utility
@@ -211,14 +212,24 @@ function deepFreeze<T extends Record<string | number | symbol, unknown>>(
 
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
-	"script" | "scriptPath" | "modules" | "modulesRoot" | "modulesRule"
->;
+	"script" | "scriptPath" | "modules" | "modulesRoot"
+> & { modulesRules?: ModuleRule[] };
 
 export function unstable_getMiniflareWorkerOptions(configPath: string): {
 	workerOptions: SourcelessWorkerOptions;
+	define: Record<string, string>;
 	main?: string;
 } {
 	const config = readConfig(configPath, { experimentalJsonConfig: true });
+
+	const modulesRules: ModuleRule[] = config.rules
+		.concat(DEFAULT_MODULE_RULES)
+		.map((rule) => ({
+			type: rule.type,
+			include: rule.globs,
+			fallthrough: rule.fallthrough,
+		}));
+
 	const env = undefined;
 	const bindings = getBindings(config, env, true, {});
 	const { bindingOptions } = buildMiniflareBindingOptions({
@@ -259,10 +270,11 @@ export function unstable_getMiniflareWorkerOptions(configPath: string): {
 	const workerOptions: SourcelessWorkerOptions = {
 		compatibilityDate: config.compatibility_date,
 		compatibilityFlags: config.compatibility_flags,
+		modulesRules,
 
 		...bindingOptions,
 		...sitesOptions,
 	};
 
-	return { workerOptions, main: config.main };
+	return { workerOptions, define: config.define, main: config.main };
 }

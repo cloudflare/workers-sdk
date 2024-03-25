@@ -26,7 +26,9 @@ export function mockUploadWorkerRequest(
 		env?: string;
 		legacyEnv?: boolean;
 		keepVars?: boolean;
+		keepSecrets?: boolean;
 		tag?: string;
+		expectedDispatchNamespace?: string;
 	} = {}
 ) {
 	const {
@@ -46,11 +48,20 @@ export function mockUploadWorkerRequest(
 		expectedCapnpSchema,
 		expectedLimits,
 		keepVars,
+		keepSecrets,
+		expectedDispatchNamespace,
 	} = options;
 	if (env && !legacyEnv) {
 		msw.use(
 			rest.put(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				handleUpload
+			)
+		);
+	} else if (expectedDispatchNamespace) {
+		msw.use(
+			rest.put(
+				"*/accounts/:accountId/workers/dispatch/namespaces/:dispatchNamespace/scripts/:scriptName",
 				handleUpload
 			)
 		);
@@ -79,6 +90,9 @@ export function mockUploadWorkerRequest(
 			"true"
 		);
 		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
+		if (expectedDispatchNamespace) {
+			expect(req.params.dispatchNamespace).toEqual(expectedDispatchNamespace);
+		}
 
 		const formBody = await (
 			req as MockedRequest as RestRequestWithFormData
@@ -96,7 +110,13 @@ export function mockUploadWorkerRequest(
 		}
 
 		if (keepVars) {
-			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["plain_text", "json"])
+			);
+		} else if (keepSecrets) {
+			expect(metadata.keep_bindings).toEqual(
+				expect.arrayContaining(["secret_text", "secret_key"])
+			);
 		} else {
 			expect(metadata.keep_bindings).toBeFalsy();
 		}

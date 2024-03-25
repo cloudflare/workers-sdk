@@ -1,12 +1,18 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
 import events from "node:events";
+import process from "node:process";
 import * as vm from "node:vm";
+import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
+	getResolvedMainPath,
 	importModule,
-	maybeHandleImportRequest,
-	mustGetResolvedMainPath,
+	internalEnv,
+	maybeHandleRunRequest,
+	registerGlobalWaitUntil,
+	runInRunnerObject,
 	setEnv,
+	stripInternalEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
 // Using relative path here to ensure `esbuild` bundles it
@@ -14,6 +20,8 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
+import { createChunkingSocket } from "../shared/chunking-socket";
+import type { SocketLike } from "../shared/chunking-socket";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
 
 function structuredSerializableStringify(value: unknown): string {
@@ -24,6 +32,11 @@ function structuredSerializableParse(value: string): unknown {
 }
 
 globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
+
+globalThis.process = process; // Required by `vite-node`
+process.argv = []; // Required by `@vitest/utils`
+Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `vitest`
+
 globalThis.__console = console;
 
 const originalSetTimeout = globalThis.setTimeout;
@@ -50,26 +63,60 @@ globalThis.clearTimeout = (...args: Parameters<typeof clearTimeout>) => {
 	return originalClearTimeout.apply(globalThis, args);
 };
 
+function isDifferentIOContextError(e: unknown) {
+	return (
+		e instanceof Error &&
+		e.message.startsWith("Cannot perform I/O on behalf of a different") // "request" or "Durable Object"
+	);
+}
+
 // Wraps a `WebSocket` with a Node `MessagePort` like interface
 class WebSocketMessagePort extends events.EventEmitter {
+	#chunkingSocket: SocketLike<string>;
+
 	constructor(private readonly socket: WebSocket) {
 		super();
-		socket.addEventListener("message", this.#onMessage);
+		this.#chunkingSocket = createChunkingSocket({
+			post(message) {
+				socket.send(message);
+			},
+			on(listener) {
+				socket.addEventListener("message", (event) => {
+					listener(event.data);
+				});
+			},
+		});
+		this.#chunkingSocket.on((message) => {
+			const parsed = structuredSerializableParse(message);
+			this.emit("message", parsed);
+		});
 		socket.accept();
 	}
 
-	#onMessage = (event: MessageEvent) => {
-		assert(typeof event.data === "string");
-		const parsed = structuredSerializableParse(event.data);
-		this.emit("message", parsed);
-	};
-
 	postMessage(data: unknown) {
+		if (this.socket.readyState !== WebSocket.READY_STATE_OPEN) return;
+
 		const stringified = structuredSerializableStringify(data);
 		try {
-			this.socket.send(stringified);
+			this.#chunkingSocket.post(stringified);
 		} catch (error) {
-			__console.error("Error sending message to pool:", error);
+			// If the user tried to perform a dynamic `import()` or `console.log()`
+			// from inside a `export default { fetch() { ... } }` handler using `SELF`
+			// or from inside their own Durable Object, Vitest will try to send an
+			// RPC message from a non-`RunnerObject` I/O context. There's nothing we
+			// can really do to prevent this: we want to run these things in different
+			// I/O contexts with the behaviour this causes. We'd still like to send
+			// the RPC message though, so if we detect this, we try resend the message
+			// from the runner object.
+			if (isDifferentIOContextError(error)) {
+				void runInRunnerObject(internalEnv, () =>
+					this.#chunkingSocket.post(stringified)
+				).catch((e) => {
+					__console.error("Error sending to pool inside runner:", e, data);
+				});
+			} else {
+				__console.error("Error sending to pool:", error, data);
+			}
 		}
 	}
 }
@@ -105,6 +152,23 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	});
 }
 
+function applyDefines() {
+	// Based off `/@vite/env` implementation:
+	// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/client/env.ts
+	for (const [key, value] of Object.entries(defines)) {
+		const segments = key.split(".");
+		let target = globalThis as Record<string, unknown>;
+		for (let i = 0; i < segments.length; i++) {
+			const segment = segments[i];
+			if (i === segments.length - 1) {
+				target[segment] = value;
+			} else {
+				target = (target[segment] ??= {}) as Record<string, unknown>;
+			}
+		}
+	}
+}
+
 // `RunnerObject` is a singleton and "colo local" ephemeral object. Refer to:
 // https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
 export class RunnerObject implements DurableObject {
@@ -114,6 +178,7 @@ export class RunnerObject implements DurableObject {
 		vm._setUnsafeEval(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		ensurePatchedFunction(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		setEnv(env);
+		applyDefines();
 	}
 
 	async handleVitestRunRequest(request: Request): Promise<Response> {
@@ -175,20 +240,24 @@ export class RunnerObject implements DurableObject {
 	}
 
 	async fetch(request: Request): Promise<Response> {
-		// This will fail if this is an import request, and we haven't called
-		// `handleVitestRunRequest()` yet
-		const response = await maybeHandleImportRequest(this.executor, request);
+		const response = await maybeHandleRunRequest(request, this);
 		if (response !== undefined) return response;
 
 		return this.handleVitestRunRequest(request);
 	}
 }
 
-function createHandlerWrapper<K extends keyof ExportedHandler<Env>>(
+const patchedContexts = new WeakSet<ExecutionContext>();
+
+function createHandlerWrapper<K extends keyof ExportedHandler>(
 	key: K
-): NonNullable<ExportedHandler<Env>[K]> {
-	return async (thing: unknown, env: Env, ctx: ExecutionContext) => {
-		const mainPath = mustGetResolvedMainPath("service");
+): NonNullable<ExportedHandler<Record<string, unknown> & Env>[K]> {
+	return async (
+		thing: unknown,
+		env: Record<string, unknown> & Env,
+		ctx: ExecutionContext
+	) => {
+		const mainPath = getResolvedMainPath("service");
 		const mainModule = await importModule(env, mainPath);
 		const defaultExport =
 			typeof mainModule === "object" &&
@@ -201,7 +270,17 @@ function createHandlerWrapper<K extends keyof ExportedHandler<Env>>(
 			key in defaultExport &&
 			(defaultExport as Record<string, unknown>)[key];
 		if (typeof handlerFunction === "function") {
-			return handlerFunction.call(defaultExport, thing, env, ctx);
+			const userEnv = stripInternalEnv(env);
+			// Ensure calls to `ctx.waitUntil()` registered with global wait-until
+			if (!patchedContexts.has(ctx)) {
+				patchedContexts.add(ctx);
+				const originalWaitUntil = ctx.waitUntil;
+				ctx.waitUntil = (promise: Promise<unknown>) => {
+					registerGlobalWaitUntil(promise);
+					return originalWaitUntil.call(ctx, promise);
+				};
+			}
+			return handlerFunction.call(defaultExport, thing, userEnv, ctx);
 		} else {
 			let message = `Handler does not export a ${key}() function.`;
 			if (!defaultExport) {

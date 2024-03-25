@@ -7,9 +7,18 @@ import { describe, expect, it } from "vitest";
 describe("Pages dev with proxy and a script file", () => {
 	it("should handle requests using a script from the default _worker.js path", async () => {
 		const { port, childProcess } = await startWranglerPagesDevProxy();
+		let stderr = "";
+		childProcess.stderr?.on("data", (chunk) => {
+			stderr += chunk.toString();
+		});
 		const combinedResponse = await waitUntilReady(`http://127.0.0.1:${port}/`);
 		const respText = await combinedResponse.text();
 		expect(respText).toMatchInlineSnapshot('"hello from _worker.js"');
+		expect(
+			stderr.includes(
+				"Specifying a `-- <command>` or `--proxy` is deprecated and will be removed in a future version of Wrangler."
+			)
+		).toBeTruthy();
 		await terminateChildProcess(childProcess);
 	});
 
@@ -37,7 +46,7 @@ async function startWranglerPagesDevProxy(extraArgs: string[] = []): Promise<{
 			{
 				cwd: path.resolve(__dirname, ".."),
 				env: { BROWSER: "none", ...process.env },
-				stdio: ["ignore", "ignore", "ignore", "ipc"],
+				stdio: ["pipe", "pipe", "pipe", "ipc"],
 			}
 		).on("message", (message) => {
 			const parsedMessage = JSON.parse(message.toString());

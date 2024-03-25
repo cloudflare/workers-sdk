@@ -1,6 +1,4 @@
 import path from "node:path";
-import chalk from "chalk";
-import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import { UserError } from "../errors";
@@ -22,48 +20,12 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-async function standardPricingWarning(
-	accountId: string | undefined,
-	config: Config
-) {
-	if (Date.now() >= Date.UTC(2024, 2, 1, 14)) {
-		if (config.usage_model !== undefined) {
-			logger.warn(
-				"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
-			);
-		}
-
-		// TODO: After March 1st 2024 remove the code below
-		return;
+async function standardPricingWarning(config: Config) {
+	if (config.usage_model !== undefined) {
+		logger.warn(
+			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+		);
 	}
-
-	try {
-		const { standard, reason } = await fetchResult<{
-			standard: boolean;
-			reason: string;
-		}>(`/accounts/${accountId}/workers/standard`);
-
-		if (!standard && reason !== "enterprise without override") {
-			logger.log(
-				chalk.blue(
-					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
-				)
-			);
-			if (config.limits?.cpu_ms !== undefined) {
-				logger.warn(
-					"The `limits` defined in wrangler.toml can only be applied to scripts opted into Workers Standard pricing. Agree to the new pricing details to set limits for your script."
-				);
-			}
-			return;
-		}
-		if (standard && config.usage_model !== undefined) {
-			logger.warn(
-				"The `usage_model` defined in wrangler.toml is no longer used because you have opted into Workers Standard pricing. Please remove this setting from your wrangler.toml and use the dashboard to configure the usage model for your script."
-			);
-			return;
-		}
-		// Ignore 404 errors for the enablement check
-	} catch {}
 }
 
 export function deployOptions(yargs: CommonYargsArgv) {
@@ -234,6 +196,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 					"Expire old assets in given seconds rather than immediate deletion.",
 				type: "number",
 			})
+			.option("dispatch-namespace", {
+				describe:
+					"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
+				type: "string",
+			})
 	);
 }
 
@@ -305,7 +272,7 @@ export async function deployHandler(
 					args.siteExclude
 			  );
 
-	if (!args.dryRun) await standardPricingWarning(accountId, config);
+	if (!args.dryRun) await standardPricingWarning(config);
 
 	await deploy({
 		config,
@@ -337,5 +304,6 @@ export async function deployHandler(
 		logpush: args.logpush,
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
+		dispatchNamespace: args.dispatchNamespace,
 	});
 }

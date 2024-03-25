@@ -30,6 +30,8 @@ beforeEach(() => {
 	mf = undefined;
 	res = undefined as any;
 	ws = undefined;
+	// Hide stdout messages from the test logs
+	vi.spyOn(console, "log").mockImplementation(() => {});
 });
 afterEach(async () => {
 	await Promise.allSettled(fireAndForgetPromises);
@@ -330,7 +332,9 @@ describe("startDevWorker: ProxyController", () => {
 	});
 
 	test("User worker exception", async () => {
-		const consoleErrorSpy = vi.spyOn(console, "error");
+		const consoleErrorSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
 
 		const run = await fakeStartUserWorker({
 			script: `
@@ -345,7 +349,7 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		res = await run.worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toBe("Error: Boom!");
+		await expect(res.text()).resolves.toMatch(/^Error: Boom!/);
 
 		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).toBeCalledWith(
@@ -368,7 +372,7 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		res = await run.worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toBe("Error: Boom 2!");
+		await expect(res.text()).resolves.toMatch(/^Error: Boom 2!/);
 
 		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).toBeCalledWith(

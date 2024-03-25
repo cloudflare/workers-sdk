@@ -1,0 +1,75 @@
+name: Deploy (to testing) and Test Playground Preview Worker
+
+# This workflow is designed to deploy a "testing" version of the Playground Preview Worker
+# and test it via integration tests.
+
+# Triggers:
+# - push to `main`, on Cloudflare, where there are changes to the files in this worker's package
+# - update to a PR, on Cloudflare, labelled as `playground-worker`
+#
+# Actions:
+# - deploy to testing environment
+# - run the end-to-end tests against testing deployment
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/playground-preview-worker/**"
+
+  pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+
+jobs:
+  e2e-test:
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || contains(github.event.*.labels.*.name, 'playground-worker'))
+    name: "Deploy Playground Preview Worker (testing)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use pnpm 8.8.0
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+
+      - name: Use Node.js 16.18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.18
+          cache: "pnpm"
+
+      - name: Install workerd dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tools and libraries
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+
+      - name: Build & deploy Worker
+        run: pnpm run deploy:testing
+        env:
+          NODE_ENV: "production"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: packages/playground-preview-worker
+
+      - name: Run tests & collect coverage
+        run: pnpm run test:e2e
+        env:
+          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+        working-directory: packages/playground-preview-worker

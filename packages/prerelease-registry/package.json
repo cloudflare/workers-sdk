@@ -1,14 +1,14 @@
 {
 	"name": "@cloudflare/prerelease-registry",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"private": true,
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
 		"check:lint": "eslint .",
 		"check:type": "tsc",
-		"prepublish": "pnpm run build",
-		"publish": "wrangler deploy dist/index.js",
+		"predeploy": "pnpm run build",
+		"deploy": "wrangler deploy dist/index.js",
 		"prestart": "pnpm run build",
 		"start": "wrangler dev dist/index.js"
 	},
@@ -18,7 +18,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20221111.1",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"typescript": "^4.5.5",
 		"wrangler": "workspace:*"
 	}

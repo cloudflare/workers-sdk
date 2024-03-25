@@ -1,6 +1,5 @@
-import { runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag } from "helpers/files";
-import { detectPackageManager } from "helpers/packages";
+import { runFrameworkGenerator } from "frameworks/index";
+import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -18,10 +17,12 @@ const config: TemplateConfig = {
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-			"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+			deploy: `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && wrangler pages dev ./dist`,
 		},
 	}),
-	testFlags: ["--ts"],
+	devScript: "dev",
+	deployScript: "deploy",
+	previewScript: "preview",
 };
 export default config;

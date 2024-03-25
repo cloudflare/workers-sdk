@@ -14,6 +14,7 @@ import type { CamelCaseKey } from "yargs";
  *
  * - Fields that are only specified in `ConfigFields` and not `Environment` can only appear
  * in the top level config and should not appear in any environments.
+ * - Fields that are specified in `PagesConfigFields` are only relevant for Pages projects
  * - All top level fields in config and environments are optional in the wrangler.toml file.
  *
  * Legend for the annotations:
@@ -21,12 +22,25 @@ import type { CamelCaseKey } from "yargs";
  * - `@breaking`: the deprecation/optionality is a breaking change from Wrangler v1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ConfigFields<DevConfig> & Environment;
+export type Config = ConfigFields<DevConfig> & PagesConfigFields & Environment;
 
 export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
+	PagesConfigFields &
 	RawEnvironment &
 	DeprecatedConfigFields &
 	EnvironmentMap;
+
+// Pages-specific configuration fields
+export interface PagesConfigFields {
+	/**
+	 * The directory of static assets to serve.
+	 *
+	 * The presence of this field in `wrangler.toml` indicates a Pages project,
+	 * and will prompt the handling of the configuration file according to the
+	 * Pages-specific validation rules.
+	 */
+	pages_build_output_dir?: string;
+}
 
 export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
@@ -183,6 +197,18 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	keep_vars?: boolean;
 }
 
+// Pages-specific configuration fields
+export interface PagesConfigFields {
+	/**
+	 * The directory of static assets to serve.
+	 *
+	 * The presence of this field in `wrangler.toml` indicates a Pages project,
+	 * and will prompt the handling of the configuration file according to the
+	 * Pages-specific validation rules.
+	 */
+	pages_build_output_dir?: string;
+}
+
 export interface DevConfig {
 	/**
 	 * IP address for the local dev server to listen on,
@@ -278,4 +304,98 @@ interface EnvironmentMap {
 // only camel-cased keys are used
 export type OnlyCamelCase<T = Record<string, never>> = {
 	[key in keyof T as CamelCaseKey<key>]: T[key];
+};
+
+export const defaultWranglerConfig: Config = {
+	/*====================================================*/
+	/*      Fields supported by both Workers & Pages      */
+	/*====================================================*/
+	/* TOP-LEVEL ONLY FIELDS */
+	pages_build_output_dir: undefined,
+	send_metrics: undefined,
+	dev: {
+		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
+		port: undefined, // the default of 8787 is set at runtime
+		inspector_port: undefined, // the default of 9229 is set at runtime
+		local_protocol: "http",
+		upstream_protocol: "http",
+		host: undefined,
+	},
+
+	/** INHERITABLE ENVIRONMENT FIELDS **/
+	name: undefined,
+	compatibility_date: undefined,
+	compatibility_flags: [],
+	limits: undefined,
+	placement: undefined,
+
+	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
+	vars: {},
+	durable_objects: { bindings: [] },
+	kv_namespaces: [],
+	queues: {
+		producers: [],
+		consumers: [], // WORKERS SUPPORT ONLY!!
+	},
+	r2_buckets: [],
+	d1_databases: [],
+	vectorize: [],
+	hyperdrive: [],
+	services: [],
+	analytics_engine_datasets: [],
+	ai: undefined,
+
+	/*====================================================*/
+	/*           Fields supported by Workers only         */
+	/*====================================================*/
+	/* TOP-LEVEL ONLY FIELDS */
+	configPath: undefined,
+	legacy_env: true,
+	migrations: [],
+	site: undefined,
+	assets: undefined,
+	wasm_modules: undefined,
+	text_blobs: undefined,
+	data_blobs: undefined,
+	keep_vars: undefined,
+
+	/** INHERITABLE ENVIRONMENT FIELDS **/
+	account_id: undefined,
+	main: undefined,
+	find_additional_modules: undefined,
+	preserve_file_names: undefined,
+	base_dir: undefined,
+	workers_dev: undefined,
+	route: undefined,
+	routes: undefined,
+	tsconfig: undefined,
+	jsx_factory: "React.createElement",
+	jsx_fragment: "React.Fragment",
+	triggers: {
+		crons: [],
+	},
+	usage_model: undefined,
+	rules: [],
+	build: { command: undefined, watch_dir: "./src", cwd: undefined },
+	no_bundle: undefined,
+	minify: undefined,
+	node_compat: undefined,
+	dispatch_namespaces: [],
+	first_party_worker: undefined,
+	zone_id: undefined,
+	logfwdr: { bindings: [] },
+	logpush: undefined,
+
+	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
+	define: {},
+	cloudchamber: {},
+	send_email: [],
+	constellation: [],
+	browser: undefined,
+	unsafe: {
+		bindings: undefined,
+		metadata: undefined,
+	},
+	mtls_certificates: [],
+	tail_consumers: undefined,
 };

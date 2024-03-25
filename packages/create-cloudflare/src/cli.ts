@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { dirname } from "path";
+import { mkdirSync } from "fs";
+import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
@@ -7,32 +8,27 @@ import { dim } from "@cloudflare/cli/colors";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
+import { runCommand } from "helpers/command";
 import {
-	installWrangler,
-	npmInstall,
+	detectPackageManager,
 	rectifyPmMismatch,
-	runCommand,
-} from "helpers/command";
-import { detectPackageManager } from "helpers/packages";
+} from "helpers/packageManagers";
+import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
-import {
-	gitCommit,
-	isInsideGitRepo,
-	offerGit,
-	offerToDeploy,
-	printSummary,
-	runDeploy,
-	setupProjectDirectory,
-	validateProjectDirectory,
-} from "./common";
+import { offerToDeploy, runDeploy } from "./deploy";
+import { gitCommit, isInsideGitRepo, offerGit } from "./git";
 import { createProject } from "./pages";
+import { printSummary } from "./summary";
 import {
+	addWranglerToGitIgnore,
 	copyTemplateFiles,
 	selectTemplate,
 	updatePackageName,
 	updatePackageScripts,
 } from "./templates";
-import { installWorkersTypes, updateWranglerToml } from "./workers";
+import { validateProjectDirectory } from "./validators";
+import { installWorkersTypes } from "./workers";
+import { updateWranglerToml } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -107,6 +103,26 @@ export const runCli = async (args: Partial<C3Args>) => {
 	await runTemplate(ctx);
 };
 
+export const setupProjectDirectory = (args: C3Args) => {
+	// Crash if the directory already exists
+	const path = resolve(args.projectName);
+	const err = validateProjectDirectory(path, args);
+	if (err) {
+		crash(err);
+	}
+
+	const directory = dirname(path);
+	const pathBasename = basename(path);
+
+	// If the target is a nested directory, create the parent
+	mkdirSync(directory, { recursive: true });
+
+	// Change to the parent directory
+	chdir(directory);
+
+	return { name: pathBasename, path };
+};
+
 const runTemplate = async (ctx: C3Context) => {
 	await create(ctx);
 	await configure(ctx);
@@ -146,6 +162,8 @@ const configure = async (ctx: C3Context) => {
 	if (template.configure) {
 		await template.configure({ ...ctx });
 	}
+
+	addWranglerToGitIgnore(ctx);
 
 	await updatePackageScripts(ctx);
 

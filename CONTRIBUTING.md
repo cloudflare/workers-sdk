@@ -4,6 +4,12 @@ Wrangler is an open source project and we welcome contributions from you. Thank 
 
 Below you can find some guidance on how to be most effective when contributing to the project.
 
+## Before getting started
+
+We really appreciate your interest in making a contribution, and we want to make sure that the process is as smooth and transparent as possible! To this end, we note that the Workers team is actively doing development in this repository, and while we consistently strive to commnicate status and current thinking around all open issues, there may be times when context surrounding certain items is not up to date. Therefore, **for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.** This will give us opportunity to flag any considerations you should be aware of before you spend time developing. Of course for trivial changes, please feel free to go directly to filing a PR, with the understanding that the PR itself will serve as the place to discuss details of the change.
+
+Thanks so much for helping us improve the [workers-sdk](https://github.com/cloudflare/workers-sdk), and we look forward to your contribution!
+
 ## Getting started
 
 ### Set up your environment
@@ -77,7 +83,7 @@ While each workspace has its own dependencies, you install the dependencies usin
 
 ## Building and running
 
-Each wrangler workspace in this project is written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
+Workspaces in this project are mostly written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
 
 - Run a distributable for a specific workspace (e.g. wrangler)
   ```sh
@@ -197,7 +203,7 @@ Changes should be committed to a new local branch, which then gets pushed to you
 
 ## PR Review
 
-PR review is a critial and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
 
 As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
@@ -227,35 +233,39 @@ If you need to test the interaction of Wrangler with a real Cloudflare account, 
 
 When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped).
 
-See below for a summary of this repo's Actions, including for each:
+A summary of this repositories actions can be found [here](.github/workflows/README.md)
 
-1. expected return status (✔️ means that the check should always pass or be skipped, ⚠️ means that the check is expected to sometimes fail)
-2. when the action is run
-3. intended purpose
+## Running e2e tests locally
 
-- **E2E tests ✔️**
-  This runs on the `changeset-release/main` branch (i.e. on every release PR), and on any PRs with the `e2e` label applied. It runs the E2E tests for Wrangler. If you're making a change that feels particularly risky, make sure you add the `e2e` label to get early warning of E2E test failures.
+To run the e2e tests locally, you'll need a Cloudflare API Token and run:
 
-- **Pull Request ✔️**
-  As the name suggests, this contains checks that run on every PR, including fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
+```sh
+$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e
+```
 
-- **Deploy all Pages sites ✔️**
-  This runs on `main` (where it deploys production versions of `wrangler-devtools`, `quick-edit`, and `workers-playground`). It's usually skipped on PRs, but if you apply the label `preview:wrangler-devtools`, `preview:quick-edit`, or `preview:workers-playground` it will deploy a branch preview of the matching package.
+You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
 
-- **Test old Node.js version ✔️**
-  This runs on all PRs, and makes sure that Wrangler's warning for old Node.js versions works.
+```sh
+$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e [file-pattern] --bail=1
+```
 
-- **Playground Worker tests ✔️**
-  This only runs on the `changeset-release/main` branch (i.e. on every release PR), and is intended to test the behaviour of the Worker powering the Workers Playground.
+### Creating an API Token
 
-- **Create Pull Request Prerelease ✔️**
-  This creates an installable pre-release of Wrangler, C3, and Miniflare on every PR.
+1. Go to ["My Profile" > "User API Tokens"](https://dash.cloudflare.com/profile/api-tokens)
+1. Click "Create API Token"
+1. Use the "Edit Cloudflare Workers" template
+1. Set "Account Resources" to "Include" "DevProd Testing" (you can use any account you have access to)
+1. Set "Zone Resources" to "All zones from an account" and the same account as above
+1. Click "Continue to summary"
+1. Verify your token works by running the curl command provided
+1. Set the environment variables in your terminal or in your profile file (e.g. ~/.zshrc, ~/.bashrc, ~/.profile, etc):
 
-- **C3 E2E Tests ✔️**
-  This runs for all PRs that make changes to C3 (i.e. in the `packages/create-cloudflare` directory), and runs the E2E tests for C3.
+```sh
+export CLOUDFLARE_TESTING_ACCOUNT_ID="<Account ID for the token you just created>"
+export CLOUDFLARE_TESTING_API_TOKEN="<Token you just created>"
+```
 
-- **C3 E2E (Quarantine) ⚠️**
-  This runs for all PRs that make changes to C3 (i.e. in the `packages/create-cloudflare` directory), and runs the _quarantined_ E2E tests for C3. It is expected to sometimes fail.
+Note: Workers created in the e2e tests that fail might not always be cleaned up (deleted). Internal users with access to the "DevProd Testing" account can rely on an automated job to clean up the Workers based on the format of the name. If you use another account, please be aware you may want to manually delete the Workers yourself.
 
 ## Changesets
 

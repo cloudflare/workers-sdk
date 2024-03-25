@@ -1,6 +1,5 @@
 {
 	"name": "pages-functions-app",
-	"version": "0.0.0",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",
@@ -13,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20221111.1",
+		"@cloudflare/workers-types": "^4.20240320.1",
 		"pages-plugin-example": "workspace:*",
 		"undici": "^5.28.3",
 		"wrangler": "workspace:*"

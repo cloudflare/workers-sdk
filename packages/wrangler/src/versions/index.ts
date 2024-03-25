@@ -1,62 +1,32 @@
 import path from "node:path";
-import chalk from "chalk";
-import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
-import { getRules, getScriptName, printWranglerBanner } from "../index";
+import {
+	getRules,
+	getScriptName,
+	isLegacyEnv,
+	printWranglerBanner,
+} from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
+import { versionsListHandler, versionsListOptions } from "./list";
 import versionsUpload from "./upload";
+import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-async function standardPricingWarning(
-	accountId: string | undefined,
-	config: Config
-) {
-	if (Date.now() >= Date.UTC(2024, 2, 1, 14)) {
-		if (config.usage_model !== undefined) {
-			logger.warn(
-				"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
-			);
-		}
-
-		// TODO: After March 1st 2024 remove the code below
-		return;
+async function standardPricingWarning(config: Config) {
+	if (config.usage_model !== undefined) {
+		logger.warn(
+			"The `usage_model` defined in wrangler.toml is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model"
+		);
 	}
-
-	try {
-		const { standard, reason } = await fetchResult<{
-			standard: boolean;
-			reason: string;
-		}>(`/accounts/${accountId}/workers/standard`);
-
-		if (!standard && reason !== "enterprise without override") {
-			logger.log(
-				chalk.blue(
-					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
-				)
-			);
-			if (config.limits?.cpu_ms !== undefined) {
-				logger.warn(
-					"The `limits` defined in wrangler.toml can only be applied to scripts opted into Workers Standard pricing. Agree to the new pricing details to set limits for your script."
-				);
-			}
-			return;
-		}
-		if (standard && config.usage_model !== undefined) {
-			logger.warn(
-				"The `usage_model` defined in wrangler.toml is no longer used because you have opted into Workers Standard pricing. Please remove this setting from your wrangler.toml and use the dashboard to configure the usage model for your script."
-			);
-			return;
-		}
-		// Ignore 404 errors for the enablement check
-	} catch {}
 }
 
 export function versionsUploadOptions(yargs: CommonYargsArgv) {
@@ -173,12 +143,6 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				describe: "Don't actually deploy",
 				type: "boolean",
 			})
-			.option("keep-vars", {
-				describe:
-					"Stop wrangler from deleting vars that are not present in the wrangler.toml\nBy default Wrangler will remove all vars and replace them with those found in the wrangler.toml configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
-				default: false,
-				type: "boolean",
-			})
 			// args only for `versions upload`, not `deploy`
 			.option("tag", {
 				describe: "A tag for this Worker Gradual Rollouts Version",
@@ -225,13 +189,14 @@ export async function versionsUploadHandler(
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-	await standardPricingWarning(accountId, config);
+	await standardPricingWarning(config);
 	await versionsUpload({
 		config,
 		accountId,
 		name: getScriptName(args, config),
 		rules: getRules(config),
 		entry,
+		legacyEnv: isLegacyEnv(config),
 		env: args.env,
 		compatibilityDate: args.latest
 			? new Date().toISOString().substring(0, 10)
@@ -248,10 +213,40 @@ export async function versionsUploadHandler(
 		outDir: args.outdir,
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
-		keepVars: args.keepVars,
+		keepVars: false,
 		projectRoot,
 
 		tag: args.tag,
 		message: args.message,
 	});
+}
+
+export default function registerVersionsSubcommands(
+	versionYargs: CommonYargsArgv
+) {
+	versionYargs
+		.command(
+			"view <version-id>",
+			"View the details of a specific version of your Worker [beta]",
+			versionsViewOptions,
+			versionsViewHandler
+		)
+		.command(
+			"list",
+			"List the 10 most recent Versions of your Worker [beta]",
+			versionsListOptions,
+			versionsListHandler
+		)
+		.command(
+			"upload",
+			"Uploads your Worker code and config as a new Version [beta]",
+			versionsUploadOptions,
+			versionsUploadHandler
+		)
+		.command(
+			"deploy [version-specs..]",
+			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]",
+			versionsDeployOptions,
+			versionsDeployHandler
+		);
 }

@@ -1,6 +1,6 @@
 ## Template: worker-worktop
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-worktop)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-worktop)
 
 This template utilizes the [`worktop`](https://github.com/lukeed/worktop) framework to construct an API endpoint to serve user-specific TODO lists. The endpoint includes:
 

@@ -7,6 +7,8 @@ import { v4 } from "uuid";
 import { getPlaygroundWorker } from "./getPlaygroundWorker";
 import { matchFiles, parseRules, toMimeType } from "./module-collection";
 
+const decoder = new TextDecoder();
+const encoder = new TextEncoder();
 export const DeployPlaygroundWorkerResponse = eg.union([
 	eg.object({
 		inspector: eg.string,
@@ -69,6 +71,40 @@ export function serialiseWorker(service: PartialWorker): FormData {
 	};
 
 	const typedModules = matchFiles(service.modules, parseRules([]));
+
+	const entrypointModule = typedModules.find(
+		(m) => m.name === service.entrypoint
+	);
+	// Try to find a requirements.txt file
+	const isPythonEntrypoint = entrypointModule?.type === "python";
+
+	if (isPythonEntrypoint) {
+		try {
+			const pythonRequirements = service.modules["requirements.txt"];
+			if (pythonRequirements) {
+				const textContent = decoder.decode(pythonRequirements.contents);
+				// This is incredibly naive. However, it supports common syntax for requirements.txt
+				for (const requirement of textContent.split("\n")) {
+					const packageName = requirement.match(/^[^\d\W]\w*/);
+					if (typeof packageName?.[0] === "string") {
+						typedModules.push({
+							type: "python-requirement",
+							name: packageName?.[0],
+							content: {
+								contents: encoder.encode(""),
+								type: "text/x-python-requirement",
+							},
+						});
+					}
+				}
+			}
+			// We don't care if a requirements.txt isn't found
+		} catch (e) {
+			console.debug(
+				"Python entrypoint detected, but no requirements.txt file found."
+			);
+		}
+	}
 	for (const { name, content, type } of typedModules) {
 		formData.set(
 			name,

@@ -95,6 +95,12 @@ export async function typesHandler(
 		rules: config.rules,
 		queues: config.queues,
 		constellation: config.constellation,
+		send_email: config.send_email,
+		vectorize: config.vectorize,
+		hyperdrive: config.hyperdrive,
+		mtls_certificates: config.mtls_certificates,
+		browser: config.browser,
+		ai: config.ai,
 		secrets,
 	};
 
@@ -240,6 +246,41 @@ async function generateTypes(
 		}
 	}
 
+	if (configToDTS.send_email) {
+		for (const sendEmail of configToDTS.send_email) {
+			envTypeStructure.push(`${sendEmail.name}: SendEmail;`);
+		}
+	}
+
+	if (configToDTS.vectorize) {
+		for (const vectorize of configToDTS.vectorize) {
+			envTypeStructure.push(`${vectorize.binding}: VectorizeIndex;`);
+		}
+	}
+
+	if (configToDTS.hyperdrive) {
+		for (const hyperdrive of configToDTS.hyperdrive) {
+			envTypeStructure.push(`${hyperdrive.binding}: Hyperdrive;`);
+		}
+	}
+
+	if (configToDTS.mtls_certificates) {
+		for (const mtlsCertificate of configToDTS.mtls_certificates) {
+			envTypeStructure.push(`${mtlsCertificate.binding}: Fetcher;`);
+		}
+	}
+
+	if (configToDTS.browser) {
+		// The BrowserWorker type in @cloudflare/puppeteer is of type
+		// { fetch: typeof fetch }, but workers-types doesn't include it
+		// and Fetcher is valid for the purposes of handing it to puppeteer
+		envTypeStructure.push(`${configToDTS.browser.binding}: Fetcher;`);
+	}
+
+	if (configToDTS.ai) {
+		envTypeStructure.push(`${configToDTS.ai.binding}: unknown;`);
+	}
+
 	const modulesTypeStructure: string[] = [];
 	if (configToDTS.rules) {
 		const moduleTypeMap = {
@@ -305,9 +346,9 @@ function writeDTSFile({
 
 	let combinedTypeStrings = "";
 	if (formatType === "modules") {
-		combinedTypeStrings += `interface ${envInterface} {\n${envTypeStructure
-			.map((value) => `\t${value}`)
-			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
+		combinedTypeStrings += `interface ${envInterface} {${envTypeStructure
+			.map((value) => `\n\t${value}`)
+			.join("")}\n}\n${modulesTypeStructure.join("\n")}`;
 	} else {
 		combinedTypeStrings += `export {};\ndeclare global {\n${envTypeStructure
 			.map((value) => `\tconst ${value}`)
@@ -316,7 +357,10 @@ function writeDTSFile({
 
 	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
 
-	if (envTypeStructure.length || modulesTypeStructure.length) {
+	const typesHaveBeenFound =
+		envTypeStructure.length || modulesTypeStructure.length;
+
+	if (formatType === "modules" || typesHaveBeenFound) {
 		fs.writeFileSync(
 			path,
 			[

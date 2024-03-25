@@ -1,6 +1,6 @@
 # Forum application built with Pages Functions, Workers KV and Durable Objects
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/pages-example-forum-app)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/pages-example-forum-app)
 
 ## Overview
 

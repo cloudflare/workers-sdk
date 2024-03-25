@@ -1,5 +1,11 @@
 # edge-preview-authenticated-proxy
 
+## 0.1.3
+
+### Patch Changes
+
+- [#5100](https://github.com/cloudflare/workers-sdk/pull/5100) [`2713977`](https://github.com/cloudflare/workers-sdk/commit/27139771cc5463da42df78c7f560a6004aac5db1) Thanks [@penalosa](https://github.com/penalosa)! - fix: Handle multiple set cookie headers
+
 ## 0.1.2
 
 ### Patch Changes

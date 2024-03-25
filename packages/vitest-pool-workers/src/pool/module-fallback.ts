@@ -1,16 +1,16 @@
 import assert from "node:assert";
 import fs from "node:fs";
-import module from "node:module";
+import { createRequire } from "node:module";
 import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
-import { moduleResolve } from "import-meta-resolve";
-import { Response } from "miniflare";
+import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { isFileNotFoundError } from "./helpers";
-import type { Request, Worker_Module } from "miniflare";
+import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
+import type { ViteDevServer } from "vite";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",
@@ -28,33 +28,41 @@ export function ensurePosixLikePath(filePath: string) {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = platformPath.dirname(__filename);
+const require = createRequire(__filename);
+
 const distPath = ensurePosixLikePath(platformPath.resolve(__dirname, ".."));
 const libPath = posixPath.join(distPath, "worker", "lib");
+const emptyLibPath = posixPath.join(libPath, "cloudflare/empty-internal.cjs");
 
 // File path suffix to disable CJS to ESM-with-named-exports shimming
-const disableCjsEsmShimSuffix = ".mf_vitest_no_cjs_esm_shim";
+const disableCjsEsmShimSuffix = "?mf_vitest_no_cjs_esm_shim";
 function trimSuffix(suffix: string, value: string) {
 	assert(value.endsWith(suffix));
 	return value.substring(0, value.length - suffix.length);
 }
 
-// Node.js built-in modules provided by `workerd`
-const workerdBuiltinModules = VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES.filter(
-	// `workerd`'s implementation of "node:process" doesn't support everything we
-	// need, so use our polyfill instead
-	(specifier) => specifier !== "node:process"
+// RegExp for path suffix to force loading module as specific type.
+// (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
+// This suffix will be added by the pool when fetching a module that matches a
+// module rule. In this case, the module will be marked as external with this
+// suffix, causing the fallback service to return a module with the correct
+// type. Note we can't easily implement rules with a Vite plugin, as they:
+// - Depend on `miniflare`/`wrangler` configuration, and we can't modify the
+//   Vite config in the pool
+// - Would require use of an `UnsafeEval` binding to build `WebAssembly.Module`s
+const forceModuleTypeRegexp = new RegExp(
+	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
 );
-const conditions = new Set(["workerd", "worker", "browser", "import"]);
+
+// Node.js built-in modules provided by `workerd`
+export const workerdBuiltinModules = new Set([
+	...VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES,
+	"__STATIC_CONTENT_MANIFEST",
+]);
 
 // `chai` contains circular `require()`s which aren't supported by `workerd`
 // TODO(someday): support circular `require()` in `workerd`
 const bundleDependencies = ["chai"];
-
-function fileURLToPosixPath(url: string | URL) {
-	if (typeof url === "string") url = new URL(url);
-	// Some URLs contain hashes, e.g. if relying on an import map
-	return ensurePosixLikePath(fileURLToPath(url)) + url.hash;
-}
 
 function isFile(filePath: string): boolean {
 	try {
@@ -109,20 +117,27 @@ await cjsModuleLexer.init();
  * This function returns the named-exports we should add to our ESM-CJS shim,
  * using the same package as Node.
  */
-function getCjsNamedExports(
+async function getCjsNamedExports(
+	vite: ViteDevServer,
 	filePath: string,
 	contents: string,
 	seen = new Set()
-): Set<string> {
+): Promise<Set<string>> {
 	const { exports, reexports } = cjsModuleLexer.parse(contents);
 	const result = new Set(exports);
 	for (const reexport of reexports) {
-		const resolved = requireResolve(reexport, filePath);
+		const resolved = await viteResolve(
+			vite,
+			reexport,
+			filePath,
+			/* isRequire */ true
+		);
 		if (seen.has(resolved)) continue;
 		try {
 			const resolvedContents = fs.readFileSync(resolved, "utf8");
 			seen.add(filePath);
-			const resolvedNames = getCjsNamedExports(
+			const resolvedNames = await getCjsNamedExports(
+				vite,
 				resolved,
 				resolvedContents,
 				seen
@@ -212,30 +227,52 @@ function getApproximateSpecifier(target: string, referrerDir: string): string {
 	return posixPath.relative(referrerDir, target);
 }
 
-const requires = new Map<string, NodeRequire>();
-function requireResolve(specifier: string, referrer: string): string {
-	const referrerDir = posixPath.dirname(referrer);
-	const normalisedReferrer = posixPath.join(referrerDir, "_");
-	let require = requires.get(normalisedReferrer);
-	if (require === undefined) {
-		require = module.createRequire(normalisedReferrer);
-		requires.set(normalisedReferrer, require);
+async function viteResolve(
+	vite: ViteDevServer,
+	specifier: string,
+	referrer: string,
+	isRequire: boolean
+): Promise<string> {
+	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
+		ssr: true,
+		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
+		custom: { "node-resolve": { isRequire } },
+	});
+	if (resolved === null) {
+		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
+		// starting with a dot. Unfortunately, the `@prisma/client` package includes
+		// `require(".prisma/client/wasm")` which needs to resolve to something in
+		// `node_modules/.prisma/client`. Since Prisma officially supports Workers,
+		// it's quite likely users will want to use it with the Vitest pool. To fix
+		// this, we fall back to Node's resolution algorithm in this case.
+		if (isRequire && specifier[0] === ".") {
+			return require.resolve(specifier, { paths: [referrer] });
+		}
+		throw new Error("Not found");
 	}
-	return ensurePosixLikePath(require.resolve(specifier));
-}
-
-function importResolve(specifier: string, referrer: string): URL {
-	const referrerUrl = pathToFileURL(referrer);
-	return moduleResolve(specifier, referrerUrl, conditions);
+	// Handle case where `package.json` `browser` field stubs out built-in with an
+	// empty module (e.g. `{ "browser": { "fs": false } }`).
+	if (resolved.id === "__vite-browser-external") return emptyLibPath;
+	if (resolved.external) {
+		// Handle case where `node:*` built-in resolved from import map
+		// (e.g. https://github.com/sindresorhus/p-limit/blob/f53bdb5f464ae112b2859e834fdebedc0745199b/package.json#L20)
+		let { id } = resolved;
+		if (workerdBuiltinModules.has(id)) return `/${id}`;
+		id = `node:${id}`;
+		if (workerdBuiltinModules.has(id)) return `/${id}`;
+		throw new Error("Not found");
+	}
+	return resolved.id;
 }
 
 type ResolveMethod = "import" | "require";
-function mustResolve(
+async function resolve(
+	vite: ViteDevServer,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
 	referrer: string
-): string /* filePath */ {
+): Promise<string /* filePath */> {
 	const referrerDir = posixPath.dirname(referrer);
 
 	let filePath = maybeGetTargetFilePath(target);
@@ -249,7 +286,7 @@ function mustResolve(
 	// *import*ing `node:*`/`cloudflare:*` modules, but not when *require()*ing
 	// them. For the sake of consistency (and a nice return type on this function)
 	// we return a redirect for `import`s too.
-	if (referrerDir !== "/" && workerdBuiltinModules.includes(specifier)) {
+	if (referrerDir !== "/" && workerdBuiltinModules.has(specifier)) {
 		return `/${specifier}`;
 	}
 
@@ -260,26 +297,7 @@ function mustResolve(
 	filePath = maybeGetTargetFilePath(specifierLibPath);
 	if (filePath !== undefined) return filePath;
 
-	if (method === "import") {
-		const resolvedUrl = importResolve(specifier, referrer);
-		if (resolvedUrl.protocol === "node:") {
-			// Handle case where `node:*` built-in resolved from import map
-			// (e.g. https://github.com/sindresorhus/p-limit/blob/f53bdb5f464ae112b2859e834fdebedc0745199b/package.json#L20)
-			filePath = `/${resolvedUrl.href}`;
-		} else {
-			filePath = fileURLToPosixPath(resolvedUrl);
-		}
-	} else {
-		try {
-			filePath = requireResolve(specifier, referrer);
-		} catch {
-			// If `specifier` look something like `chai/utils`,
-			// it could mean the `utils` sub-path export of the `chai` package,
-			// or `./chai/utils/index.js`. If the first failed, try the second.
-			filePath = requireResolve(`./${specifier}`, referrer);
-		}
-	}
-	return filePath;
+	return viteResolve(vite, specifier, referrer, method === "require");
 }
 
 function buildRedirectResponse(filePath: string) {
@@ -291,21 +309,68 @@ function buildRedirectResponse(filePath: string) {
 	return new Response(null, { status: 301, headers: { Location: filePath } });
 }
 
-type ModuleContents = Omit<Worker_Module, "name">;
+// `Omit<Worker_Module, "name">` gives type `{}` which isn't very helpful, so
+// we have to do something like this instead.
+type DistributeWorkerModuleForContents<T> = T extends unknown
+	? { [P in Exclude<keyof T, "name">]: NonNullable<T[P]> }
+	: never;
+type ModuleContents = DistributeWorkerModuleForContents<Worker_Module>;
+
+// Refer to docs on `forceModuleTypeRegexp` for more details
+function maybeGetForceTypeModuleContents(
+	filePath: string
+): ModuleContents | undefined {
+	const match = forceModuleTypeRegexp.exec(filePath);
+	if (match === null) return;
+
+	filePath = trimSuffix(match[0], filePath);
+	const type = match[1] as ModuleRuleType;
+	const contents = fs.readFileSync(filePath);
+	switch (type) {
+		case "ESModule":
+			return { esModule: contents.toString() };
+		case "CommonJS":
+			return { commonJsModule: contents.toString() };
+		case "NodeJsCompatModule":
+			return { nodeJsCompatModule: contents.toString() };
+		case "Text":
+			return { text: contents.toString() };
+		case "Data":
+			return { data: contents };
+		case "CompiledWasm":
+			return { wasm: contents };
+		case "PythonModule":
+			return { pythonModule: contents.toString() };
+		case "PythonRequirement":
+			return { pythonRequirement: contents.toString() };
+		default: {
+			// `type` should've been validated against `ModuleRuleType`
+			const exhaustive: never = type;
+			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
+		}
+	}
+}
 function buildModuleResponse(target: string, contents: ModuleContents) {
 	let name = target;
 	if (!isWindows) name = posixPath.relative("/", target);
 	assert(name[0] !== "/");
-	return new Response(JSON.stringify({ name, ...contents }));
+	const result: Record<string, unknown> = { name };
+	for (const key in contents) {
+		const value = (contents as Record<string, unknown>)[key];
+		// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
+		result[key] = value instanceof Uint8Array ? Array.from(value) : value;
+	}
+	return Response.json(result);
 }
 
-function mustLoad(
+async function load(
+	vite: ViteDevServer,
 	logBase: string,
 	method: ResolveMethod,
 	target: string,
 	specifier: string,
 	filePath: string
-): Response {
+): Promise<Response> {
 	if (target !== filePath) {
 		// We might `import` and `require` the same CommonJS package. In this case,
 		// we want to respond with an ES module shim for the `import`, and the
@@ -316,6 +381,20 @@ function mustLoad(
 		}
 		debuglog(logBase, "redirect:", filePath);
 		return buildRedirectResponse(filePath);
+	}
+
+	// If this is a WebAssembly module, force load it as one. This ensures we
+	// support `.wasm` files inside `node_modules` (e.g. Prisma's client).
+	// It seems unlikely a package would want to do anything else with a `.wasm`
+	// file. Note if a module rule was applied to `.wasm` files, this path will
+	// have a `?mf_vitest_force` suffix already, so this line won't do anything.
+	if (filePath.endsWith(".wasm")) filePath += `?mf_vitest_force=CompiledWasm`;
+
+	// If we're importing with a forced module type, load the file as that type
+	const maybeContents = maybeGetForceTypeModuleContents(filePath);
+	if (maybeContents !== undefined) {
+		debuglog(logBase, "forced:", filePath);
+		return buildModuleResponse(target, maybeContents);
 	}
 
 	// If we're importing from a shim module, don't shim again
@@ -357,7 +436,7 @@ function mustLoad(
 		const disableShimSpecifier = `./${fileName}${disableCjsEsmShimSuffix}`;
 		const quotedDisableShimSpecifier = JSON.stringify(disableShimSpecifier);
 		let esModule = `import mod from ${quotedDisableShimSpecifier}; export default mod;`;
-		for (const name of getCjsNamedExports(filePath, contents)) {
+		for (const name of await getCjsNamedExports(vite, filePath, contents)) {
 			esModule += ` export const ${name} = mod.${name};`;
 		}
 		debuglog(logBase, "cjs-esm-shim:", filePath);
@@ -370,7 +449,10 @@ function mustLoad(
 	return buildModuleResponse(target, { nodeJsCompatModule: contents });
 }
 
-export function handleModuleFallbackRequest(request: Request): Response {
+export async function handleModuleFallbackRequest(
+	vite: ViteDevServer,
+	request: Request
+): Promise<Response> {
 	const method = request.headers.get("X-Resolve-Method");
 	assert(method === "import" || method === "require");
 	const url = new URL(request.url);
@@ -379,7 +461,12 @@ export function handleModuleFallbackRequest(request: Request): Response {
 	assert(target !== null, "Expected specifier search param");
 	assert(referrer !== null, "Expected referrer search param");
 	const referrerDir = posixPath.dirname(referrer);
-	const specifier = getApproximateSpecifier(target, referrerDir);
+	let specifier = getApproximateSpecifier(target, referrerDir);
+
+	// Convert specifiers like `file:/a/index.mjs` to `/a/index.mjs`. `workerd`
+	// currently passes `import("file:///a/index.mjs")` through like this.
+	// TODO(soon): remove this code once the new modules refactor lands
+	if (specifier.startsWith("file:")) specifier = specifier.substring(5);
 
 	if (isWindows) {
 		// Convert paths like `/C:/a/index.mjs` to `C:/a/index.mjs` so they can be
@@ -392,9 +479,9 @@ export function handleModuleFallbackRequest(request: Request): Response {
 	const logBase = `${method}(${quotedTarget}) relative to ${referrer}:`;
 
 	try {
-		const filePath = mustResolve(method, target, specifier, referrer);
+		const filePath = await resolve(vite, method, target, specifier, referrer);
 		if (bundleDependencies.includes(specifier)) bundleDependency(filePath);
-		return mustLoad(logBase, method, target, specifier, filePath);
+		return await load(vite, logBase, method, target, specifier, filePath);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
 	}

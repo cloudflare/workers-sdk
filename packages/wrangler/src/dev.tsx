@@ -16,7 +16,7 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
-import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
+import { getHostFromRoute, getZoneIdForPreview } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -277,6 +277,11 @@ export function devOptions(yargs: CommonYargsArgv) {
 				// Yargs requires this to type log-level properly
 				default: "log" as LoggerLevel,
 			})
+			.option("show-interactive-dev-session", {
+				describe:
+					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
+				type: "boolean",
+			})
 	);
 }
 
@@ -345,6 +350,7 @@ export type AdditionalDevProps = {
 	moduleRoot?: string;
 	rules?: Rule[];
 	constellation?: Environment["constellation"];
+	showInteractiveDevSession?: boolean;
 };
 
 export type StartDevOptions = DevArguments &
@@ -356,7 +362,6 @@ export type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
-		showInteractiveDevSession?: boolean;
 		updateCheck?: boolean;
 	};
 
@@ -404,7 +409,6 @@ export async function startDev(args: StartDevOptions) {
 			legacyNodeCompat,
 			nodejsCompat,
 			upstreamProtocol,
-			zoneId,
 			host,
 			routes,
 			getLocalPort,
@@ -439,7 +443,6 @@ export async function startDev(args: StartDevOptions) {
 					findAdditionalModules={configParam.find_additional_modules}
 					entry={entry}
 					env={args.env}
-					zone={zoneId}
 					host={host}
 					routes={routes}
 					processEntrypoint={processEntrypoint}
@@ -459,7 +462,7 @@ export async function startDev(args: StartDevOptions) {
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
 					httpsKeyPath={args.httpsKeyPath}
 					httpsCertPath={args.httpsCertPath}
-					localUpstream={args.localUpstream ?? host}
+					localUpstream={args.localUpstream ?? host ?? getInferredHost(routes)}
 					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
 					accountId={
@@ -536,7 +539,6 @@ export async function startApiDev(args: StartDevOptions) {
 		legacyNodeCompat,
 		nodejsCompat,
 		upstreamProtocol,
-		zoneId,
 		host,
 		routes,
 		getLocalPort,
@@ -571,7 +573,6 @@ export async function startApiDev(args: StartDevOptions) {
 			findAdditionalModules: configParam.find_additional_modules,
 			entry: entry,
 			env: args.env,
-			zone: zoneId,
 			host: host,
 			routes: routes,
 			processEntrypoint,
@@ -591,7 +592,7 @@ export async function startApiDev(args: StartDevOptions) {
 			localProtocol: args.localProtocol ?? configParam.dev.local_protocol,
 			httpsKeyPath: args.httpsKeyPath,
 			httpsCertPath: args.httpsCertPath,
-			localUpstream: args.localUpstream ?? host,
+			localUpstream: args.localUpstream ?? host ?? getInferredHost(routes),
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,
 			accountId:
@@ -674,48 +675,37 @@ function maskVars(bindings: CfWorkerInit["bindings"], configParam: Config) {
 	return maskedVars;
 }
 
-async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
+async function getHostAndRoutes(args: StartDevOptions, config: Config) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
-	let host = args.host || config.dev.host;
-	let zoneId: string | undefined;
+	const host = args.host || config.dev.host;
 	const routes: Route[] | undefined =
 		args.routes || (config.route && [config.route]) || config.routes;
 
-	if (args.remote) {
-		if (host) {
-			zoneId = await getZoneIdFromHost(host);
-		}
-		if (!zoneId && routes) {
-			const firstRoute = routes[0];
-			const zone = await getZoneForRoute(firstRoute);
-			if (zone) {
-				zoneId = zone.id;
-				host = zone.host;
-			}
-		}
-	} else if (!host) {
-		if (routes) {
-			const firstRoute = routes[0];
-			host = getHostFromRoute(firstRoute);
+	return { host, routes };
+}
 
-			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
-			if (host === undefined) {
-				throw new UserError(
-					`Cannot infer host from first route: ${JSON.stringify(
-						firstRoute
-					)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+export function getInferredHost(routes: Route[] | undefined) {
+	if (routes) {
+		const firstRoute = routes[0];
+		const host = getHostFromRoute(firstRoute);
+
+		// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
+		if (host === undefined) {
+			throw new UserError(
+				`Cannot infer host from first route: ${JSON.stringify(
+					firstRoute
+				)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
 
 	\`\`\`
 	[dev]
 	host = "example.com"
 	\`\`\`
 `
-				);
-			}
+			);
 		}
+		return host;
 	}
-	return { host, routes, zoneId };
 }
 
 async function validateDevServerSettings(
@@ -728,7 +718,15 @@ async function validateDevServerSettings(
 		"dev"
 	);
 
-	const { zoneId, host, routes } = await getZoneIdHostAndRoutes(args, config);
+	const { host, routes } = await getHostAndRoutes(args, config);
+
+	// TODO: Remove this hack
+	// This function throws if the zone ID can't be found given the provided host and routes
+	// However, it's called as part of initialising a preview session, which is nested deep within
+	// React/Ink and useEffect()s, which swallow the error and turn it into a logw. Because it's a non-recoverable user error,
+	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
+	// the error to be thrown where it will correctly exit the Wrangler process
+	if (args.remote) await getZoneIdForPreview(host, routes);
 	const initialIp = args.ip || config.dev.ip;
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
@@ -828,7 +826,6 @@ async function validateDevServerSettings(
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,
-		zoneId,
 		host,
 		routes,
 		cliDefines,

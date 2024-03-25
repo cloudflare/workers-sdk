@@ -1,10 +1,12 @@
 /* eslint-disable no-shadow */
 
 import * as Build from "./build";
+import * as BuildEnv from "./build-env";
 import * as Deploy from "./deploy";
 import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
 import * as Dev from "./dev";
+import * as DownloadConfig from "./download-config";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
 import * as Upload from "./upload";
@@ -41,6 +43,12 @@ export function pages(yargs: CommonYargsArgv) {
 						"Compile a folder of Cloudflare Pages Functions into a single Worker",
 						Build.Options,
 						Build.Handler
+					)
+					.command(
+						"build-env [projectDir]",
+						"Render a list of environment variables from the config file",
+						BuildEnv.Options,
+						BuildEnv.Handler
 					)
 					.command(
 						"optimize-routes [routesPath] [outputRoutesPath]",
@@ -107,6 +115,14 @@ export function pages(yargs: CommonYargsArgv) {
 				"🆙 Deploy a directory of static assets as a Pages deployment",
 				Deploy.Options,
 				Deploy.Handler
+			)
+			.command("download", "⚡️ Download settings from your project", (args) =>
+				args.command(
+					"config [projectName]",
+					"Experimental: Download your Pages project config as a wrangler.toml file",
+					DownloadConfig.Options,
+					DownloadConfig.Handler
+				)
 			)
 	);
 }
