@@ -413,9 +413,12 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 		args.buildOutputDirectory ??= args.outfile ? dirname(args.outfile) : ".";
 	}
 
-	if (args.buildOutputDirectory) {
-		args.buildOutputDirectory = resolvePath(args.buildOutputDirectory);
-	}
+	args.buildOutputDirectory =
+		config?.pages_build_output_dir ??
+		(args.buildOutputDirectory
+			? resolvePath(args.buildOutputDirectory)
+			: undefined);
+
 	if (args.outdir) {
 		args.outdir = resolvePath(args.outdir);
 	}

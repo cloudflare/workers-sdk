@@ -5,6 +5,7 @@ import {
 	readFileSync,
 	writeFileSync,
 } from "node:fs";
+import dedent from "ts-dedent";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -528,6 +529,239 @@ export const cat = "dog";`
 		export const cat = \\"dog\\";
 		------formdata-undici-0.test--"
 	`);
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+});
+
+describe("functions build w/ config", () => {
+	const std = mockConsoleMethods();
+
+	runInTempDir();
+	const originalEnv = process.env;
+
+	afterEach(async () => {
+		process.env = originalEnv;
+		// Force a tick to ensure that all promises resolve
+		await endEventLoop();
+	});
+
+	beforeEach(() => {
+		// Write an example wrangler.toml file with a _lot_ of config
+		writeFileSync(
+			"wrangler.toml",
+			dedent`
+		name = "project-name"
+		pages_build_output_dir = "dist-test"
+		compatibility_date = "2023-02-14"
+		placement = { mode = "smart" }
+		limits = { cpu_ms = 50 }
+
+		[vars]
+		TEST_JSON_PREVIEW = """
+		{
+		json: "value"
+		}"""
+		TEST_PLAINTEXT_PREVIEW = "PLAINTEXT"
+
+		[[kv_namespaces]]
+		id = "kv-id"
+		binding = "KV_PREVIEW"
+
+		[[kv_namespaces]]
+		id = "kv-id"
+		binding = "KV_PREVIEW2"
+
+		[[durable_objects.bindings]]
+		name = "DO_PREVIEW"
+		class_name = "some-class-do-id"
+		script_name = "some-script-do-id"
+		environment = "some-environment-do-id"
+
+		[[durable_objects.bindings]]
+		name = "DO_PREVIEW2"
+		class_name = "some-class-do-id"
+		script_name = "some-script-do-id"
+		environment = "some-environment-do-id"
+
+		[[durable_objects.bindings]]
+		name = "DO_PREVIEW3"
+		class_name = "do-class"
+		script_name = "do-s"
+		environment = "do-e"
+
+		[[d1_databases]]
+		database_id = "d1-id"
+		binding = "D1_PREVIEW"
+		database_name = "D1_PREVIEW"
+
+		[[d1_databases]]
+		database_id = "d1-id"
+		binding = "D1_PREVIEW2"
+		database_name = "D1_PREVIEW2"
+
+		[[r2_buckets]]
+		bucket_name = "r2-name"
+		binding = "R2_PREVIEW"
+
+		[[r2_buckets]]
+		bucket_name = "r2-name"
+		binding = "R2_PREVIEW2"
+
+		[[services]]
+		binding = "SERVICE_PREVIEW"
+		service = "service"
+		environment = "production"
+
+		[[services]]
+		binding = "SERVICE_PREVIEW2"
+		service = "service"
+		environment = "production"
+
+		[[queues.producers]]
+		binding = "QUEUE_PREVIEW"
+		queue = "q-id"
+
+		[[queues.producers]]
+		binding = "QUEUE_PREVIEW2"
+		queue = "q-id"
+
+		[[analytics_engine_datasets]]
+		binding = "AE_PREVIEW"
+		dataset = "data"
+
+		[[analytics_engine_datasets]]
+		binding = "AE_PREVIEW2"
+		dataset = "data"
+
+		[ai]
+		binding = "AI_PREVIEW"
+
+		[env.production]
+		compatibility_date = "2024-02-14"
+
+		  [env.production.vars]
+		  TEST_JSON = """
+		{
+		json: "value"
+		}"""
+		  TEST_PLAINTEXT = "PLAINTEXT"
+
+		  [[env.production.kv_namespaces]]
+		  id = "kv-id"
+		  binding = "KV"
+
+		[[env.production.durable_objects.bindings]]
+		name = "DO"
+		class_name = "some-class-do-id"
+		script_name = "some-script-do-id"
+		environment = "some-environment-do-id"
+
+		  [[env.production.d1_databases]]
+		  database_id = "d1-id"
+		  binding = "D1"
+		  database_name = "D1"
+
+		  [[env.production.r2_buckets]]
+		  bucket_name = "r2-name"
+		  binding = "R2"
+
+		  [[env.production.services]]
+		  binding = "SERVICE"
+		  service = "service"
+		  environment = "production"
+
+		[[env.production.queues.producers]]
+		binding = "QUEUE"
+		queue = "q-id"
+
+		  [[env.production.analytics_engine_datasets]]
+		  binding = "AE"
+		  dataset = "data"
+
+		  [env.production.ai]
+		  binding = "AI"`
+		);
+	});
+
+	it("should include all config in the _worker.bundle metadata", async () => {
+		/* ---------------------------- */
+		/*       Set up js files        */
+		/* ---------------------------- */
+		mkdirSync("utils");
+		writeFileSync(
+			"utils/meaning-of-life.js",
+			`
+export const MEANING_OF_LIFE = 21;
+`
+		);
+
+		/* ---------------------------- */
+		/*       Set up _worker.js      */
+		/* ---------------------------- */
+		mkdirSync("dist-test");
+		writeFileSync(
+			"dist-test/_worker.js",
+			`
+import { MEANING_OF_LIFE } from "./../utils/meaning-of-life.js";
+
+export default {
+  async fetch(request, env) {
+    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
+  },
+};`
+		);
+
+		/* --------------------------------- */
+		/*     Run cmd & make assertions     */
+		/* --------------------------------- */
+		// --build-output-directory is included here to validate that it's value is ignored
+		await runWrangler(
+			`pages functions build --build-output-directory public --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
+		);
+		expect(existsSync("_worker.bundle")).toBe(true);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+
+		// some values in workerBundleContents, such as the undici form boundary
+		// or the file hashes, are randomly generated. Let's replace them
+		// with static values so we can test the file contents
+		const workerBundleContents = readFileSync("_worker.bundle", "utf-8");
+		const workerBundleWithConstantData = replaceRandomWithConstantData(
+			workerBundleContents,
+			[
+				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+			]
+		);
+
+		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+		"------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"metadata\\"
+
+		{\\"main_module\\":\\"functionsWorker-0.test.js\\",\\"bindings\\":[{\\"name\\":\\"TEST_JSON_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"{\\\\njson: \\\\\\"value\\\\\\"\\\\n}\\"},{\\"name\\":\\"TEST_PLAINTEXT_PREVIEW\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"PLAINTEXT\\"},{\\"name\\":\\"KV_PREVIEW\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"KV_PREVIEW2\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-id\\"},{\\"name\\":\\"DO_PREVIEW\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW2\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"some-class-do-id\\",\\"script_name\\":\\"some-script-do-id\\",\\"environment\\":\\"some-environment-do-id\\"},{\\"name\\":\\"DO_PREVIEW3\\",\\"type\\":\\"durable_object_namespace\\",\\"class_name\\":\\"do-class\\",\\"script_name\\":\\"do-s\\",\\"environment\\":\\"do-e\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW\\",\\"queue_name\\":\\"q-id\\"},{\\"type\\":\\"queue\\",\\"name\\":\\"QUEUE_PREVIEW2\\",\\"queue_name\\":\\"q-id\\"},{\\"name\\":\\"R2_PREVIEW\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"R2_PREVIEW2\\",\\"type\\":\\"r2_bucket\\",\\"bucket_name\\":\\"r2-name\\"},{\\"name\\":\\"D1_PREVIEW\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"D1_PREVIEW2\\",\\"type\\":\\"d1\\",\\"id\\":\\"d1-id\\"},{\\"name\\":\\"SERVICE_PREVIEW\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"SERVICE_PREVIEW2\\",\\"type\\":\\"service\\",\\"service\\":\\"service\\",\\"environment\\":\\"production\\"},{\\"name\\":\\"AE_PREVIEW\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AE_PREVIEW2\\",\\"type\\":\\"analytics_engine\\",\\"dataset\\":\\"data\\"},{\\"name\\":\\"AI_PREVIEW\\",\\"type\\":\\"ai\\"}],\\"compatibility_date\\":\\"2023-02-14\\",\\"compatibility_flags\\":[],\\"placement\\":{\\"mode\\":\\"smart\\"},\\"limits\\":{\\"cpu_ms\\":50}}
+		------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+		Content-Type: application/javascript+module
+
+		// ../utils/meaning-of-life.js
+		var MEANING_OF_LIFE = 21;
+
+		// _worker.js
+		var worker_default = {
+		  async fetch(request, env) {
+		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+		  }
+		};
+		export {
+		  worker_default as default
+		};
+
+		------formdata-undici-0.test--"
+	`);
+		const buildMetadataContents = readFileSync("build-metadata.json", "utf-8");
+		expect(buildMetadataContents).toMatchInlineSnapshot(
+			`"{\\"wrangler_config_hash\\":\\"49290f05177579eac4442a3cfd403a84429c189fc57e75697605eca07eb49d26\\",\\"build_output_directory\\":\\"dist-test\\"}"`
+		);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
