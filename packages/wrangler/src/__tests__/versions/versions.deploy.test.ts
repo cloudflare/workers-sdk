@@ -14,6 +14,7 @@ import {
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
+	mswPatchNonVersionedScriptSettings,
 	mswPostNewDeployment,
 } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -52,7 +53,8 @@ describe("versions deploy", () => {
 			mswListNewDeployments,
 			mswListVersions,
 			mswGetVersion,
-			mswPostNewDeployment
+			mswPostNewDeployment,
+			mswPatchNonVersionedScriptSettings
 		);
 	});
 
