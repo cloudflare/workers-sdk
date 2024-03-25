@@ -20,6 +20,8 @@ describe("isValidIdentifier", () => {
 		expect(isValidIdentifier("valid_123_")).toBe(true);
 		expect(isValidIdentifier("_valid_123_")).toBe(true);
 		expect(isValidIdentifier("_valid_123_")).toBe(true);
+		expect(isValidIdentifier("$valid")).toBe(true);
+		expect(isValidIdentifier("$valid$")).toBe(true);
 	});
 
 	it("should return false for invalid identifiers", () => {
@@ -37,6 +39,8 @@ describe("constructTypeKey", () => {
 		expect(constructTypeKey("valid_123_")).toBe("valid_123_");
 		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
 		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+		expect(constructTypeKey("$valid")).toBe("$valid");
+		expect(constructTypeKey("$valid$")).toBe("$valid$");
 
 		expect(constructTypeKey("123invalid")).toBe('"123invalid"');
 		expect(constructTypeKey("invalid-123")).toBe('"invalid-123"');

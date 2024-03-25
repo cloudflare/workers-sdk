@@ -117,7 +117,7 @@ export async function typesHandler(
  * If not, it should be wrapped in quotes
  */
 export function isValidIdentifier(key: string) {
-	return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key);
+	return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key);
 }
 
 /**
