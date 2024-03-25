@@ -1,12 +1,13 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import shellac from "shellac";
+import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { dedent, makeRoot, seed } from "./helpers/setup";
+import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
 function matchWorkersDev(stdout: string): string {

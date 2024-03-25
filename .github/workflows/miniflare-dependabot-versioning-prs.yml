@@ -31,4 +31,4 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler automated PR updater'
       - name: Generate Miniflare changesets
-        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} miniflare packages/miniflare/package.json
+        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} miniflare packages/miniflare/package.json dependabot-update

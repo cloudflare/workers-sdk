@@ -26,6 +26,7 @@ type Args = {
 	prNumber: string;
 	packageName: string;
 	packageJSONPath: string;
+	changesetPrefix: string;
 };
 
 function processArgs(): Args {
@@ -36,21 +37,29 @@ function processArgs(): Args {
 	if (args[0] === __filename) {
 		args.shift();
 	}
-	if (args.length !== 3) {
+	if (args.length !== 4) {
 		throw new Error(dedent`
 			Incorrect arguments, please provide three arguments:
 			- PR: The number of the current Dependabot PR
 			- Package: The name of the workers-sdk package whose dependencies are being updated
-			- PackageJSON: The path to the package JSON being updated by Dependabot`);
+			- PackageJSON: The path to the package JSON being updated by Dependabot
+			- Changeset prefix: The prefix to go on the front of the filename of the generated changeset.
+		`);
 	}
 	return {
 		prNumber: args[0],
 		packageName: args[1],
 		packageJSONPath: args[2],
+		changesetPrefix: args[3],
 	};
 }
 
-function main({ prNumber, packageName, packageJSONPath }: Args): void {
+function main({
+	prNumber,
+	packageName,
+	packageJSONPath,
+	changesetPrefix,
+}: Args): void {
 	const diffLines = getPackageJsonDiff(resolve(packageJSONPath));
 	const changes = parseDiffForChanges(diffLines);
 	if (changes.size === 0) {
@@ -64,7 +73,7 @@ function main({ prNumber, packageName, packageJSONPath }: Args): void {
 	console.log(dedent`
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
-	writeChangeSet(prNumber, changesetHeader, commitMessage);
+	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
 	commitAndPush(commitMessage);
 }
 
@@ -149,12 +158,13 @@ export function generateCommitMessage(
 }
 
 export function writeChangeSet(
+	changesetPrefix: string,
 	prNumber: string,
 	changesetHeader: string,
 	commitMessage: string
 ): void {
 	writeFileSync(
-		`.changeset/dependabot-update-${prNumber}.md`,
+		`.changeset/${changesetPrefix}-${prNumber}.md`,
 		changesetHeader + "\n\n" + commitMessage + "\n"
 	);
 }

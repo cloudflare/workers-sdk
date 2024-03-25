@@ -121,7 +121,7 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
-	wrappedBindings: Record<string, object>;
+	wrappedBindings?: Record<string, object>;
 }
 
 export class WranglerLog extends Log {

@@ -16,7 +16,7 @@ import {
 import {
 	buildRawWorker,
 	checkRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
@@ -256,8 +256,9 @@ export async function deploy({
 	 * – this includes its routing and middleware characteristics.
 	 */
 	if (_workerJSIsDirectory) {
-		workerBundle = await traverseAndBuildWorkerJSDirectory({
+		workerBundle = await produceWorkerBundleForWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
+			bundle,
 			buildOutputDirectory: directory,
 			nodejsCompat,
 			defineNavigatorUserAgent,
@@ -294,7 +295,8 @@ export async function deploy({
 
 	if (_workerJS || _workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
-			workerBundle as BundleResult
+			workerBundle as BundleResult,
+			undefined
 		);
 
 		formData.append(
@@ -328,7 +330,8 @@ export async function deploy({
 	 */
 	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
-			workerBundle as BundleResult
+			workerBundle as BundleResult,
+			undefined
 		);
 
 		formData.append(

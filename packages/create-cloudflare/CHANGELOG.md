@@ -1,5 +1,35 @@
 # create-cloudflare
 
+## 2.15.2
+
+### Patch Changes
+
+- [#5219](https://github.com/cloudflare/workers-sdk/pull/5219) [`4fdd898`](https://github.com/cloudflare/workers-sdk/commit/4fdd8987772d914cf50725e9fa8cb91a82a6870d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.5.3 | 0.5.5 |
+
+- [#5334](https://github.com/cloudflare/workers-sdk/pull/5334) [`a9b8f4a`](https://github.com/cloudflare/workers-sdk/commit/a9b8f4a9a067b32c9d966595c1b09508f261bd2f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To     |
+  | ------------- | ----- | ------ |
+  | create-svelte | 6.0.9 | 6.0.10 |
+
+- [#5335](https://github.com/cloudflare/workers-sdk/pull/5335) [`4c9a8d2`](https://github.com/cloudflare/workers-sdk/commit/4c9a8d283c49a855dc77d5dc50f5fa171a130709) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.10.1 | 3.11.1 |
+
+- [#5301](https://github.com/cloudflare/workers-sdk/pull/5301) [`0abafdb`](https://github.com/cloudflare/workers-sdk/commit/0abafdb84f9ba095ba6b87beb95b936a153b16d7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: in the Next.js scaffold example, reuse existing `MY_KV_NAMESPACE` commented out binding instead of adding a new `MY_KV` one
+
 ## 2.15.1
 
 ### Patch Changes

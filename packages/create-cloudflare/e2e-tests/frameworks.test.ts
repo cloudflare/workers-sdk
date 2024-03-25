@@ -440,7 +440,7 @@ const runCli = async (
 	const args = [
 		projectPath,
 		"--type",
-		"webFramework",
+		"web-framework",
 		"--framework",
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",

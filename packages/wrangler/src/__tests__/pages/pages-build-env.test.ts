@@ -18,7 +18,7 @@ describe("pages-build-env", () => {
 			pages_build_output_dir: "./dist",
 			vars: {},
 		});
-		await runWrangler("pages functions build-env");
+		await runWrangler("pages functions build-env .");
 		expect(std).toMatchInlineSnapshot(`
 		Object {
 		  "debug": "",
@@ -32,7 +32,7 @@ describe("pages-build-env", () => {
 
 	it("should fail with no config file", async () => {
 		await expect(
-			runWrangler("pages functions build-env")
+			runWrangler("pages functions build-env .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`"No Pages config file found"`
 		);
@@ -65,7 +65,7 @@ describe("pages-build-env", () => {
 				},
 			},
 		});
-		await runWrangler("pages functions build-env");
+		await runWrangler("pages functions build-env .");
 		expect(std).toMatchInlineSnapshot(`
 		Object {
 		  "debug": "",
@@ -104,7 +104,7 @@ describe("pages-build-env", () => {
 				},
 			},
 		});
-		await runWrangler("pages functions build-env");
+		await runWrangler("pages functions build-env .");
 		expect(std).toMatchInlineSnapshot(`
 		Object {
 		  "debug": "",
@@ -144,7 +144,7 @@ describe("pages-build-env", () => {
 				},
 			},
 		});
-		await runWrangler("pages functions build-env");
+		await runWrangler("pages functions build-env .");
 		expect(std).toMatchInlineSnapshot(`
 		Object {
 		  "debug": "",

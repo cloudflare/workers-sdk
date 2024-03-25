@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Response } from "undici";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import type { CfPlacement, CfWorkerInit } from "../../deployment-bundle/worker";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 
@@ -12,20 +13,16 @@ import type { FormData } from "undici";
  * contents
  */
 export async function createUploadWorkerBundleContents(
-	workerBundle: BundleResult
+	workerBundle: BundleResult,
+	config: Config | undefined
 ): Promise<Blob> {
-	const workerBundleFormData = createWorkerBundleFormData(workerBundle);
+	const workerBundleFormData = createWorkerBundleFormData(workerBundle, config);
 	const metadata = JSON.parse(workerBundleFormData.get("metadata") as string);
-
-	/**
-	 * Pages doesn't need the metadata bindings returned by
-	 * `createWorkerBundleFormData`. Let's strip them out and return only
-	 * the contents we need
-	 */
-	workerBundleFormData.set(
-		"metadata",
-		JSON.stringify({ main_module: metadata.main_module })
-	);
+	// Remove the empty bindings array if no Pages config has been found
+	if (config === undefined) {
+		delete metadata.bindings;
+	}
+	workerBundleFormData.set("metadata", JSON.stringify(metadata));
 
 	return await new Response(workerBundleFormData).blob();
 }
@@ -33,7 +30,10 @@ export async function createUploadWorkerBundleContents(
 /**
  * Creates a `FormData` upload from a `BundleResult`
  */
-function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
+function createWorkerBundleFormData(
+	workerBundle: BundleResult,
+	config: Config | undefined
+): FormData {
 	const mainModule = {
 		name: path.basename(workerBundle.resolvedEntryPointPath),
 		filePath: workerBundle.resolvedEntryPointPath,
@@ -43,43 +43,51 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		type: workerBundle.bundleType || "esm",
 	};
 
+	const bindings: CfWorkerInit["bindings"] = {
+		kv_namespaces: config?.kv_namespaces,
+		vars: config?.vars,
+		browser: config?.browser,
+		ai: config?.ai,
+		durable_objects: config?.durable_objects,
+		queues: config?.queues.producers?.map((producer) => {
+			return { binding: producer.binding, queue_name: producer.queue };
+		}),
+		r2_buckets: config?.r2_buckets,
+		d1_databases: config?.d1_databases,
+		vectorize: config?.vectorize,
+		hyperdrive: config?.hyperdrive,
+		services: config?.services,
+		analytics_engine_datasets: config?.analytics_engine_datasets,
+		mtls_certificates: config?.mtls_certificates,
+		send_email: undefined,
+		wasm_modules: undefined,
+		text_blobs: undefined,
+		data_blobs: undefined,
+		constellation: undefined,
+		dispatch_namespaces: undefined,
+		logfwdr: undefined,
+		unsafe: undefined,
+	};
+
+	// The upload API only accepts an empty string or no specified placement for the "off" mode.
+	const placement: CfPlacement | undefined =
+		config?.placement?.mode === "smart" ? { mode: "smart" } : undefined;
+
 	const worker: CfWorkerInit = {
 		name: mainModule.name,
 		main: mainModule,
 		modules: workerBundle.modules,
-		bindings: {
-			vars: undefined,
-			kv_namespaces: undefined,
-			send_email: undefined,
-			wasm_modules: undefined,
-			text_blobs: undefined,
-			browser: undefined,
-			ai: undefined,
-			data_blobs: undefined,
-			durable_objects: undefined,
-			queues: undefined,
-			r2_buckets: undefined,
-			d1_databases: undefined,
-			vectorize: undefined,
-			constellation: undefined,
-			hyperdrive: undefined,
-			services: undefined,
-			analytics_engine_datasets: undefined,
-			dispatch_namespaces: undefined,
-			mtls_certificates: undefined,
-			logfwdr: undefined,
-			unsafe: undefined,
-		},
+		bindings,
 		migrations: undefined,
-		compatibility_date: undefined,
-		compatibility_flags: undefined,
+		compatibility_date: config?.compatibility_date,
+		compatibility_flags: config?.compatibility_flags,
 		usage_model: undefined,
 		keepVars: undefined,
 		keepSecrets: undefined,
 		logpush: undefined,
-		placement: undefined,
+		placement: placement,
 		tail_consumers: undefined,
-		limits: undefined,
+		limits: config?.limits,
 	};
 
 	return createWorkerUploadForm(worker);
