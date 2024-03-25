@@ -295,7 +295,8 @@ export async function deploy({
 
 	if (_workerJS || _workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
-			workerBundle as BundleResult
+			workerBundle as BundleResult,
+			undefined
 		);
 
 		formData.append(
@@ -329,7 +330,8 @@ export async function deploy({
 	 */
 	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
-			workerBundle as BundleResult
+			workerBundle as BundleResult,
+			undefined
 		);
 
 		formData.append(
