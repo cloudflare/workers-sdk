@@ -203,7 +203,6 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			},
 		],
 		testCommitMessage: true,
-		quarantine: true,
 		verifyBuildCfTypes: {
 			outputFile: "env.d.ts",
 			envInterfaceName: "CloudflareEnv",
