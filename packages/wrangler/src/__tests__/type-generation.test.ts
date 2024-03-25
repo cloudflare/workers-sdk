@@ -46,19 +46,19 @@ describe("constructTypeKey", () => {
 
 describe("constructType", () => {
 	it("should return a valid type", () => {
-		expect(constructType("valid", "string")).toBe("valid: string");
-		expect(constructType("valid123", "string")).toBe("valid123: string");
-		expect(constructType("valid_123", "string")).toBe("valid_123: string");
-		expect(constructType("valid_123_", "string")).toBe("valid_123_: string");
-		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string");
-		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string");
+		expect(constructType("valid", "string")).toBe("valid: string;");
+		expect(constructType("valid123", "string")).toBe("valid123: string;");
+		expect(constructType("valid_123", "string")).toBe("valid_123: string;");
+		expect(constructType("valid_123_", "string")).toBe("valid_123_: string;");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
 
-		expect(constructType("123invalid", "string")).toBe('"123invalid": string');
+		expect(constructType("123invalid", "string")).toBe('"123invalid": string;');
 		expect(constructType("invalid-123", "string")).toBe(
-			'"invalid-123": string'
+			'"invalid-123": string;'
 		);
 		expect(constructType("invalid 123", "string")).toBe(
-			'"invalid 123": string'
+			'"invalid 123": string;'
 		);
 	});
 });

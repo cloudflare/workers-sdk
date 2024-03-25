@@ -138,37 +138,25 @@ export function constructTypeKey(key: string) {
 }
 
 /**
- * Gets type of value for use in TypeScript type definitionos
- * This doesn't handle all types, just the most common ones in wrangler.toml
- */
-function getTypeFromValue(value: string | number | boolean) {
-	if (typeof value === "string") {
-		return "string";
-	}
-	if (typeof value === "number") {
-		return "number";
-	}
-	if (typeof value === "boolean") {
-		return "boolean";
-	}
-	return "unknown";
-}
-/**
  *
  * Construct a type key, if it's not a valid identifier, wrap it in quotes
- * If useValue is true, we'll use the value as the type, otherwise we'll use the type of the value
+ * If rawVal is true, we'll use the value as the type, otherwise we'll format it for a string definition
  */
-export function constructType(
-	key: string,
-	value: string | number | boolean,
-	useValue: boolean = false
-) {
-	const typeValue = getTypeFromValue(value);
+export function constructType(key: string, value: string | number | boolean, rawVal = true) {
 	const typeKey = constructTypeKey(key);
-	if (useValue) {
-		return `${typeKey}: ${typeValue};`;
+	if (typeof value === "string") {
+		if (rawVal) {
+			return `${typeKey}: ${value};`;
+		}
+		return `${typeKey}: "${escapeStringValue(value)}";`;
 	}
-	return `${typeKey}: ${typeValue};`;
+	if (typeof value === "number") {
+		return `${typeKey}: ${value};`;
+	}
+	if (typeof value === "boolean") {
+		return `${typeKey}: ${value};`;
+	}
+	return `${typeKey}: unknown;`;
 }
 
 type Secrets = Record<string, string>;
@@ -219,16 +207,18 @@ async function generateTypes(
 				typeof varValue === "number" ||
 				typeof varValue === "boolean"
 			) {
-				envTypeStructure.push(constructType(varName, varValue));
+				envTypeStructure.push(constructType(varName, varValue, false));
 			}
 			if (typeof varValue === "object" && varValue !== null) {
-				envTypeStructure.push(constructType(varName, JSON.stringify(varValue)));
+				envTypeStructure.push(
+					constructType(varName, JSON.stringify(varValue), true)
+				);
 			}
 		}
 	}
 
 	for (const secretName in configToDTS.secrets) {
-		envTypeStructure.push(constructType(secretName, "string"));
+		envTypeStructure.push(constructType(secretName, "string", true));
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
