@@ -5,11 +5,12 @@ import * as nodeNet from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import shellac from "shellac";
+import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { dedent, makeRoot, seed } from "./helpers/setup";
+import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
 // Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
@@ -285,10 +286,15 @@ describe("basic dev python tests", () => {
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
+			"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
 			"index.py": dedent`
-				from js import Response
-				def on_fetch(request):
-					return Response.new('py hello world')`,
+					from arithmetic import mul
+
+					from js import Response
+					def on_fetch(request):
+						return Response.new(f"py hello world {mul(2,3)}")`,
 			"package.json": dedent`
 					{
 						"name": "${workerName}",
@@ -299,7 +305,7 @@ describe("basic dev python tests", () => {
 		}));
 	});
 
-	it("can run and modify python worker during dev session (local)", async () => {
+	it("can run and modify python worker entrypoint during dev session (local)", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,
@@ -308,7 +314,7 @@ describe("basic dev python tests", () => {
 					return { text: await r.text(), status: r.status };
 				}
 			);
-			expect(text).toMatchInlineSnapshot('"py hello world"');
+			expect(text).toMatchInlineSnapshot('"py hello world 6"');
 
 			await worker.seed({
 				"index.py": dedent`
@@ -318,13 +324,40 @@ describe("basic dev python tests", () => {
 			});
 
 			const { text: text2 } = await retry(
-				(s) => s.status !== 200 || s.text === "py hello world",
+				(s) => s.status !== 200 || s.text === "py hello world 6",
 				async () => {
 					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
 			expect(text2).toMatchInlineSnapshot('"Updated Python Worker value"');
+		});
+	});
+	it("can run and modify python worker imports during dev session (local)", async () => {
+		await worker.runDevSession("", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot('"py hello world 6"');
+
+			await worker.seed({
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a+b`,
+			});
+
+			const { text: text2 } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text2).toMatchInlineSnapshot('"py hello world 5"');
 		});
 	});
 });
