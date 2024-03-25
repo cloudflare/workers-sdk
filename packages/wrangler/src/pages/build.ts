@@ -19,7 +19,6 @@ import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
-	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
@@ -350,10 +349,8 @@ async function maybeReadPagesConfig(
 	});
 	// Fail if the config file exists but isn't valid for Pages
 	if (!isPagesConfig(config)) {
-		throw new FatalError(
-			"Your wrangler.toml is not a valid Pages config file",
-			EXIT_CODE_INVALID_PAGES_CONFIG
-		);
+		logger.warn("Your wrangler.toml is not a valid Pages config file");
+		return undefined;
 	}
 
 	return {
