@@ -16,7 +16,7 @@ import {
 import {
 	buildRawWorker,
 	checkRawWorker,
-	produceWorkerBundleForWorkerJSDirectory,
+	traverseAndBuildWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
@@ -256,9 +256,8 @@ export async function deploy({
 	 * – this includes its routing and middleware characteristics.
 	 */
 	if (_workerJSIsDirectory) {
-		workerBundle = await produceWorkerBundleForWorkerJSDirectory({
+		workerBundle = await traverseAndBuildWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
-			bundle,
 			buildOutputDirectory: directory,
 			nodejsCompat,
 			defineNavigatorUserAgent,
