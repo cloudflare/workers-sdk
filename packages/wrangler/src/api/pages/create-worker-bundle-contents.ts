@@ -16,10 +16,12 @@ export async function createUploadWorkerBundleContents(
 	workerBundle: BundleResult,
 	config: Config | undefined
 ): Promise<Blob> {
-	console.log(config);
 	const workerBundleFormData = createWorkerBundleFormData(workerBundle, config);
 	const metadata = JSON.parse(workerBundleFormData.get("metadata") as string);
-
+	// Remove the empty bindings array if no Pages config has been found
+	if (config === undefined) {
+		delete metadata.bindings;
+	}
 	workerBundleFormData.set("metadata", JSON.stringify(metadata));
 
 	return await new Response(workerBundleFormData).blob();
@@ -75,7 +77,7 @@ function createWorkerBundleFormData(
 		name: mainModule.name,
 		main: mainModule,
 		modules: workerBundle.modules,
-		bindings: bindings,
+		bindings,
 		migrations: undefined,
 		compatibility_date: config?.compatibility_date,
 		compatibility_flags: config?.compatibility_flags,
