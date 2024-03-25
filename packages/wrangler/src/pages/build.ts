@@ -359,7 +359,7 @@ async function maybeReadPagesConfig(
 	return {
 		...config,
 		hash: createHash("sha256")
-			.update(await readFile(configPath, "utf8"))
+			.update(await readFile(configPath))
 			.digest("hex"),
 	};
 }
