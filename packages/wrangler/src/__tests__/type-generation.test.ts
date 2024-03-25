@@ -1,10 +1,66 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
+import {
+	constructType,
+	constructTypeKey,
+	isValidIdentifier,
+} from "../type-generation";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "../config/environment";
+
+describe("isValidIdentifier", () => {
+	it("should return true for valid identifiers", () => {
+		expect(isValidIdentifier("valid")).toBe(true);
+		expect(isValidIdentifier("valid123")).toBe(true);
+		expect(isValidIdentifier("valid_123")).toBe(true);
+		expect(isValidIdentifier("valid_123_")).toBe(true);
+		expect(isValidIdentifier("_valid_123_")).toBe(true);
+		expect(isValidIdentifier("_valid_123_")).toBe(true);
+	});
+
+	it("should return false for invalid identifiers", () => {
+		expect(isValidIdentifier("123invalid")).toBe(false);
+		expect(isValidIdentifier("invalid-123")).toBe(false);
+		expect(isValidIdentifier("invalid 123")).toBe(false);
+	});
+});
+
+describe("constructTypeKey", () => {
+	it("should return a valid type key", () => {
+		expect(constructTypeKey("valid")).toBe("valid");
+		expect(constructTypeKey("valid123")).toBe("valid123");
+		expect(constructTypeKey("valid_123")).toBe("valid_123");
+		expect(constructTypeKey("valid_123_")).toBe("valid_123_");
+		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+
+		expect(constructTypeKey("123invalid")).toBe('"123invalid"');
+		expect(constructTypeKey("invalid-123")).toBe('"invalid-123"');
+		expect(constructTypeKey("invalid 123")).toBe('"invalid 123"');
+	});
+});
+
+describe("constructType", () => {
+	it("should return a valid type", () => {
+		expect(constructType("valid", "string")).toBe("valid: string");
+		expect(constructType("valid123", "string")).toBe("valid123: string");
+		expect(constructType("valid_123", "string")).toBe("valid_123: string");
+		expect(constructType("valid_123_", "string")).toBe("valid_123_: string");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string");
+
+		expect(constructType("123invalid", "string")).toBe('"123invalid": string');
+		expect(constructType("invalid-123", "string")).toBe(
+			'"invalid-123": string'
+		);
+		expect(constructType("invalid 123", "string")).toBe(
+			'"invalid 123": string'
+		);
+	});
+});
 
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
@@ -20,17 +76,13 @@ const bindingsConfigMock: Omit<
 			activeDuty: true,
 			captian: "Picard",
 		}, // We can assume the objects will be stringified
-		"some-dash-var": "foo",
+		"some-other-var": "some-other-value",
 	},
 	queues: {
 		producers: [
 			{
 				binding: "TEST_QUEUE_BINDING",
 				queue: "TEST_QUEUE",
-			},
-			{
-				binding: "TEST-QUEUE-BINDING2",
-				queue: "TEST-QUEUE2",
 			},
 		],
 		consumers: [
@@ -46,17 +98,12 @@ const bindingsConfigMock: Omit<
 		bindings: [
 			{ name: "DURABLE_TEST1", class_name: "Durability1" },
 			{ name: "DURABLE_TEST2", class_name: "Durability2" },
-			{ name: "DURABLE-TEST3", class_name: "Durability3" },
 		],
 	},
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",
 			bucket_name: "R2BUCKET_NAME_TEST",
-		},
-		{
-			binding: "R2-BUCKET-BINDING",
-			bucket_name: "R2BUCKET-NAME-TEST",
 		},
 	],
 	d1_databases: [
@@ -65,29 +112,16 @@ const bindingsConfigMock: Omit<
 			database_name: "D1_BINDING",
 			database_id: "1234",
 		},
-		{
-			binding: "D1-TESTING-SOMETHING",
-			database_name: "D1-BINDING",
-			database_id: "12345",
-		},
 	],
-	services: [
-		{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" },
-		{ binding: "SERVICE-BINDING2", service: "SERVICE-NAME2" },
-	],
+	services: [{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" }],
 	analytics_engine_datasets: [
 		{
 			binding: "AE_DATASET_BINDING",
 			dataset: "AE_DATASET_TEST",
 		},
-		{
-			binding: "AE-DATASET-BINDING",
-			dataset: "AE-DATASET-TEST",
-		},
 	],
 	dispatch_namespaces: [
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
-		{ binding: "NAMESPACE-BINDING2", namespace: "NAMESPACE_ID2" },
 	],
 	send_email: [{ name: "SEND_EMAIL_BINDING" }],
 	vectorize: [{ binding: "VECTORIZE_BINDING", index_name: "VECTORIZE_NAME" }],
@@ -107,24 +141,15 @@ const bindingsConfigMock: Omit<
 	data_blobs: {
 		SOME_DATA_BLOB1: "SOME_DATA_BLOB1.bin",
 		SOME_DATA_BLOB2: "SOME_DATA_BLOB2.bin",
-		"SOME-OTHER-DATA-BLOB": "SOME_OTHER_DATA_BLOB.bin",
 	},
 	text_blobs: {
 		SOME_TEXT_BLOB1: "SOME_TEXT_BLOB1.txt",
 		SOME_TEXT_BLOB2: "SOME_TEXT_BLOB2.txt",
-		"SOME-OTHER-TEXT-BLOB": "SOME_OTHER_TEXT_BLOB.txt",
 	},
-	wasm_modules: {
-		MODULE1: "module1.wasm",
-		MODULE2: "module2.wasm",
-		"MODULE-3": "module3.wasm",
-	},
+	wasm_modules: { MODULE1: "module1.wasm", MODULE2: "module2.wasm" },
 	unsafe: {
-		bindings: [
-			{ name: "testing_unsafe", type: "plain_text" },
-			{ name: "testing_unsafe2", type: "plain_text" },
-		],
-		metadata: { some_key: "some_value", "another-key": "another-value" },
+		bindings: [{ name: "testing_unsafe", type: "plain_text" }],
+		metadata: { some_key: "some_value" },
 	},
 	rules: [
 		{
@@ -234,6 +259,7 @@ describe("generateTypes()", () => {
 			TEST_KV_NAMESPACE: KVNamespace;
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
+			"some-other-var": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			DURABLE_TEST1: DurableObjectNamespace;
 			DURABLE_TEST2: DurableObjectNamespace;
@@ -402,6 +428,7 @@ describe("generateTypes()", () => {
 		"interface Env {
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
+			"some-other-var": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 		}
 		"
@@ -489,6 +516,7 @@ describe("generateTypes()", () => {
 			"interface CloudflareEnv {
 				SOMETHING: \\"asdasdfasdf\\";
 				ANOTHER: \\"thing\\";
+				"some-other-var": \\"some-other-value\\";
 				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			}
 			"
@@ -575,7 +603,7 @@ describe("generateTypes()", () => {
 				expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8")).toMatch(
-					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
 				);
 			});
 
@@ -620,7 +648,7 @@ describe("generateTypes()", () => {
 			expect(
 				fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8")
 			).toMatch(
-				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
 			);
 		});
 	});

@@ -112,6 +112,34 @@ export async function typesHandler(
 	);
 }
 
+/**
+ *
+ * naive check to see if a string is a valid identifier. If not, we'll wrap it in quotes
+ */
+export function isValidIdentifier(key: string) {
+	return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key);
+}
+
+export function constructTypeKey(key: string) {
+	if (isValidIdentifier(key)) {
+		return `${key}`;
+	}
+	return `"${key}"`;
+}
+
+export function constructType(key: string, value: string | number | boolean) {
+	if (typeof value === "string") {
+		return `${constructTypeKey(key)}: string;`;
+	}
+	if (typeof value === "number") {
+		return `${constructTypeKey(key)}: number;`;
+	}
+	if (typeof value === "boolean") {
+		return `${constructTypeKey(key)}: boolean;`;
+	}
+	return `${constructTypeKey(key)}: unknown;`;
+}
+
 type Secrets = Record<string, string>;
 
 async function generateTypes(
@@ -145,7 +173,7 @@ async function generateTypes(
 
 	if (configToDTS.kv_namespaces) {
 		for (const kvNamespace of configToDTS.kv_namespaces) {
-			envTypeStructure.push(`"${kvNamespace.binding}": KVNamespace;`);
+			envTypeStructure.push(constructType(kvNamespace.binding, "KVNamespace"));
 		}
 	}
 
@@ -160,113 +188,117 @@ async function generateTypes(
 				typeof varValue === "number" ||
 				typeof varValue === "boolean"
 			) {
-				envTypeStructure.push(`"${varName}": "${varValue}";`);
+				envTypeStructure.push(constructType(varName, varValue));
 			}
 			if (typeof varValue === "object" && varValue !== null) {
-				envTypeStructure.push(`"${varName}": ${JSON.stringify(varValue)};`);
+				envTypeStructure.push(constructType(varName, JSON.stringify(varValue)));
 			}
 		}
 	}
 
 	for (const secretName in configToDTS.secrets) {
-		envTypeStructure.push(`"${secretName}": string;`);
+		envTypeStructure.push(constructType(secretName, "string"));
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			envTypeStructure.push(`"${durableObject.name}": DurableObjectNamespace;`);
+			envTypeStructure.push(
+				constructType(durableObject.name, "DurableObjectNamespace")
+			);
 		}
 	}
 
 	if (configToDTS.r2_buckets) {
 		for (const R2Bucket of configToDTS.r2_buckets) {
-			envTypeStructure.push(`"${R2Bucket.binding}": R2Bucket;`);
+			envTypeStructure.push(constructType(R2Bucket.binding, "R2Bucket"));
 		}
 	}
 
 	if (configToDTS.d1_databases) {
 		for (const d1 of configToDTS.d1_databases) {
-			envTypeStructure.push(`"${d1.binding}": D1Database;`);
+			envTypeStructure.push(constructType(d1.binding, "D1Database"));
 		}
 	}
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			envTypeStructure.push(`"${service.binding}": Fetcher;`);
+			envTypeStructure.push(constructType(service.binding, "Fetcher"));
 		}
 	}
 
 	if (configToDTS.constellation) {
 		for (const service of configToDTS.constellation) {
-			envTypeStructure.push(`"${service.binding}": Fetcher;`);
+			envTypeStructure.push(constructType(service.binding, "Fetcher"));
 		}
 	}
 
 	if (configToDTS.analytics_engine_datasets) {
 		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
 			envTypeStructure.push(
-				`"${analyticsEngine.binding}": AnalyticsEngineDataset;`
+				constructType(analyticsEngine.binding, "AnalyticsEngineDataset")
 			);
 		}
 	}
 
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push(`"${namespace.binding}": DispatchNamespace;`);
+			envTypeStructure.push(
+				constructType(namespace.binding, "DispatchNamespace")
+			);
 		}
 	}
 
 	if (configToDTS.logfwdr?.bindings?.length) {
-		envTypeStructure.push(`"LOGFWDR_SCHEMA": any;`);
+		envTypeStructure.push(constructType("LOGFWDR_SCHEMA", "any"));
 	}
 
 	if (configToDTS.data_blobs) {
 		for (const dataBlobs in configToDTS.data_blobs) {
-			envTypeStructure.push(`"${dataBlobs}": ArrayBuffer;`);
+			envTypeStructure.push(constructType(dataBlobs, "ArrayBuffer"));
 		}
 	}
 
 	if (configToDTS.text_blobs) {
 		for (const textBlobs in configToDTS.text_blobs) {
-			envTypeStructure.push(`"${textBlobs}": string;`);
+			envTypeStructure.push(constructType(textBlobs, "string"));
 		}
 	}
 
 	if (configToDTS.unsafe?.bindings) {
 		for (const unsafe of configToDTS.unsafe.bindings) {
-			envTypeStructure.push(`"${unsafe.name}": any;`);
+			envTypeStructure.push(constructType(unsafe.name, "any"));
 		}
 	}
 
 	if (configToDTS.queues) {
 		if (configToDTS.queues.producers) {
 			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push(`"${queue.binding}": Queue;`);
+				envTypeStructure.push(constructType(queue.binding, "Queue"));
 			}
 		}
 	}
 
 	if (configToDTS.send_email) {
 		for (const sendEmail of configToDTS.send_email) {
-			envTypeStructure.push(`${sendEmail.name}: SendEmail;`);
+			envTypeStructure.push(constructType(sendEmail.name, "SendEmail"));
 		}
 	}
 
 	if (configToDTS.vectorize) {
 		for (const vectorize of configToDTS.vectorize) {
-			envTypeStructure.push(`${vectorize.binding}: VectorizeIndex;`);
+			envTypeStructure.push(constructType(vectorize.binding, "VectorizeIndex"));
 		}
 	}
 
 	if (configToDTS.hyperdrive) {
 		for (const hyperdrive of configToDTS.hyperdrive) {
-			envTypeStructure.push(`${hyperdrive.binding}: Hyperdrive;`);
+			envTypeStructure.push(constructType(hyperdrive.binding, "Hyperdrive"));
 		}
 	}
 
 	if (configToDTS.mtls_certificates) {
 		for (const mtlsCertificate of configToDTS.mtls_certificates) {
-			envTypeStructure.push(`${mtlsCertificate.binding}: Fetcher;`);
+			envTypeStructure.push(constructType(mtlsCertificate.binding, "Fetcher"));
 		}
 	}
 
@@ -274,11 +306,13 @@ async function generateTypes(
 		// The BrowserWorker type in @cloudflare/puppeteer is of type
 		// { fetch: typeof fetch }, but workers-types doesn't include it
 		// and Fetcher is valid for the purposes of handing it to puppeteer
-		envTypeStructure.push(`${configToDTS.browser.binding}: Fetcher;`);
+		envTypeStructure.push(
+			constructType(configToDTS.browser.binding, "Fetcher")
+		);
 	}
 
 	if (configToDTS.ai) {
-		envTypeStructure.push(`${configToDTS.ai.binding}: unknown;`);
+		envTypeStructure.push(constructType(configToDTS.ai.binding, "unknown"));
 	}
 
 	const modulesTypeStructure: string[] = [];
