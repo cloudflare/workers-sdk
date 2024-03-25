@@ -113,13 +113,23 @@ export async function typesHandler(
 }
 
 /**
- *
- * naive check to see if a string is a valid identifier. If not, we'll wrap it in quotes
+ * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
+ * If not, it should be wrapped in quotes
  */
 export function isValidIdentifier(key: string) {
 	return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key);
 }
 
+/**
+ * Escape a string value for use in a string in a TypeScript file
+ */
+export function escapeStringValue(value: string) {
+	return value.replace(/"/g, '\\"');
+}
+
+/**
+ * Construct a type key, if it's not a valid identifier, wrap it in quotes
+ */
 export function constructTypeKey(key: string) {
 	if (isValidIdentifier(key)) {
 		return `${key}`;
@@ -127,17 +137,38 @@ export function constructTypeKey(key: string) {
 	return `"${key}"`;
 }
 
-export function constructType(key: string, value: string | number | boolean) {
+/**
+ * Gets type of value for use in TypeScript type definitionos
+ * This doesn't handle all types, just the most common ones in wrangler.toml
+ */
+function getTypeFromValue(value: string | number | boolean) {
 	if (typeof value === "string") {
-		return `${constructTypeKey(key)}: string;`;
+		return "string";
 	}
 	if (typeof value === "number") {
-		return `${constructTypeKey(key)}: number;`;
+		return "number";
 	}
 	if (typeof value === "boolean") {
-		return `${constructTypeKey(key)}: boolean;`;
+		return "boolean";
 	}
-	return `${constructTypeKey(key)}: unknown;`;
+	return "unknown";
+}
+/**
+ *
+ * Construct a type key, if it's not a valid identifier, wrap it in quotes
+ * If useValue is true, we'll use the value as the type, otherwise we'll use the type of the value
+ */
+export function constructType(
+	key: string,
+	value: string | number | boolean,
+	useValue: boolean = false
+) {
+	const typeValue = getTypeFromValue(value);
+	const typeKey = constructTypeKey(key);
+	if (useValue) {
+		return `${typeKey}: ${typeValue};`;
+	}
+	return `${typeKey}: ${typeValue};`;
 }
 
 type Secrets = Record<string, string>;
