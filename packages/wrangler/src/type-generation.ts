@@ -142,7 +142,11 @@ export function constructTypeKey(key: string) {
  * Construct a type key, if it's not a valid identifier, wrap it in quotes
  * If rawVal is true, we'll use the value as the type, otherwise we'll format it for a string definition
  */
-export function constructType(key: string, value: string | number | boolean, rawVal = true) {
+export function constructType(
+	key: string,
+	value: string | number | boolean,
+	rawVal = true
+) {
 	const typeKey = constructTypeKey(key);
 	if (typeof value === "string") {
 		if (rawVal) {
@@ -150,10 +154,7 @@ export function constructType(key: string, value: string | number | boolean, raw
 		}
 		return `${typeKey}: "${escapeStringValue(value)}";`;
 	}
-	if (typeof value === "number") {
-		return `${typeKey}: ${value};`;
-	}
-	if (typeof value === "boolean") {
+	if (typeof value === "number" || typeof value === "boolean") {
 		return `${typeKey}: ${value};`;
 	}
 	return `${typeKey}: unknown;`;
