@@ -8,4 +8,4 @@ async def on_fetch(request, env):
   chain = prompt | llm
 
   res = await chain.ainvoke({"profession": "electrician"})
-  print(res)
+  return Response.new(res.split(".")[0].strip())
