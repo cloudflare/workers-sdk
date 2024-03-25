@@ -16,6 +16,9 @@ function matchWhoamiEmail(stdout: string): string {
 function matchVersionId(stdout: string): string {
 	return stdout.match(/Version ID:\s+([a-f\d-]+)/)?.[1] as string;
 }
+function countOccurences(stdout: string, substring: string) {
+	return stdout.split(substring).length - 1;
+}
 
 describe("versions deploy", () => {
 	let root: string;
@@ -46,7 +49,7 @@ describe("versions deploy", () => {
 
 	it("init worker", async () => {
 		const init =
-			await runInRoot`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
+			await runInRoot`$ ${WRANGLER} init ${workerName} --yes --no-delegate-c3`;
 
 		expect(normalize(init.stdout)).toContain(
 			"To publish your Worker to the Internet, run `npm run deploy`"
@@ -282,7 +285,116 @@ describe("versions deploy", () => {
 		expect(list.stdout).toContain(versionId2);
 	});
 
-	// TODO: rollback, when supported for --x-versions
+	it("rollback to first worker version", async () => {
+		const rollback =
+			await runInWorker`$ ${WRANGLER} rollback --message "Rollback via e2e test" --yes  --x-versions`;
+
+		expect(normalize(rollback.stdout)).toMatchInlineSnapshot(`
+			"├ Fetching latest deployment
+			│
+			├ Your current deployment has 1 version(s):
+			│
+			│ (100%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  e2e-upload-AGAIN
+			│       Message:  Upload AGAIN via e2e test
+			│
+			├ Finding latest stable Worker Version to rollback to
+			│
+			│
+			├ Please provide a message for this rollback (120 characters max, optional)?
+			│ Message Rollback via e2e test
+			│
+			│
+			╰  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000:
+			│
+			│ (100%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  e2e-upload
+			│       Message:  Upload via e2e test
+			│
+			├ Are you sure you want to deploy this Worker Version to 100% of traffic?
+			│ yes Rollback
+			│
+			├ Performing rollback
+			│
+			│
+			│
+			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic."
+		`);
+
+		expect(rollback.stdout).toContain(
+			`Worker Version ${versionId1} has been deployed to 100% of traffic`
+		);
+	});
+
+	it("list same versions as before rollback (no new versions)", async () => {
+		const list = await runInWorker`$ ${WRANGLER} versions list  --x-versions`;
+
+		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
+			"Version ID:  00000000-0000-0000-0000-000000000000
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (version_upload)
+			Tag:         e2e-upload-AGAIN
+			Message:     Upload AGAIN via e2e test
+			Version ID:  00000000-0000-0000-0000-000000000000
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (version_upload)
+			Tag:         e2e-upload
+			Message:     Upload via e2e test
+			Version ID:  00000000-0000-0000-0000-000000000000
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Upload
+			Tag:         -
+			Message:     -"
+		`);
+	});
+
+	it("list deployments with new rollback deployment of first version (1 new deployment)", async () => {
+		const list =
+			await runInWorker`$ ${WRANGLER} deployments list  --x-versions`;
+
+		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
+			"Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     Rollback via e2e test
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  e2e-upload
+			                 Message:  Upload via e2e test
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     Deploy AGAIN via e2e test
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  e2e-upload-AGAIN
+			                 Message:  Upload AGAIN via e2e test
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Unknown (deployment)
+			Message:     Deploy via e2e test
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  e2e-upload
+			                 Message:  Upload via e2e test
+			Created:     TIMESTAMP
+			Author:      person@example.com
+			Source:      Upload
+			Message:     Automatic deployment on upload.
+			Version(s):  (100%) 00000000-0000-0000-0000-000000000000
+			                 Created:  TIMESTAMP
+			                     Tag:  -
+			                 Message:  -"
+		`);
+
+		expect(countOccurences(list.stdout, versionId1)).toBe(2); // once for deploy, once for rollback
+		expect(countOccurences(list.stdout, versionId2)).toBe(1); // once for deploy, only
+	});
 
 	it("delete worker", async () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
