@@ -1,5 +1,6 @@
-import net from "net";
+import events from "node:events";
 import { createServer } from "node:http";
+import net from "node:net";
 import bodyParser from "body-parser";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
@@ -9,11 +10,14 @@ import type { Config } from "./config";
 import type { HttpTerminator } from "http-terminator";
 import type { Server } from "node:http";
 
-const DEV_REGISTRY_PORT = 6284;
+// Safety of `!`: `parseInt(undefined)` is NaN
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+let DEV_REGISTRY_PORT = parseInt(process.env.WRANGLER_WORKER_REGISTRY_PORT!);
+if (Number.isNaN(DEV_REGISTRY_PORT)) DEV_REGISTRY_PORT = 6284;
 const DEV_REGISTRY_HOST = `http://127.0.0.1:${DEV_REGISTRY_PORT}`;
 
-let server: Server | null;
-let terminator: HttpTerminator;
+let globalServer: Server | null;
+let globalTerminator: HttpTerminator;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
@@ -59,42 +63,54 @@ async function isPortAvailable() {
 
 const jsonBodyParser = bodyParser.json();
 
+export async function startWorkerRegistryServer(port: number) {
+	const app = express();
+
+	let workers: WorkerRegistry = {};
+	app
+		.get("/workers", async (req, res) => {
+			res.json(workers);
+		})
+		.post("/workers/:workerId", jsonBodyParser, async (req, res) => {
+			workers[req.params.workerId] = req.body;
+			res.json(null);
+		})
+		.delete(`/workers/:workerId`, async (req, res) => {
+			delete workers[req.params.workerId];
+			res.json(null);
+		})
+		.delete("/workers", async (req, res) => {
+			workers = {};
+			res.json(null);
+		});
+
+	const appServer = createServer(app);
+	const appTerminator = createHttpTerminator({ server: appServer });
+
+	const listeningPromise = events.once(appServer, "listening");
+	appServer.listen(port, "127.0.0.1");
+	await listeningPromise;
+
+	return { server: appServer, terminator: appTerminator };
+}
+
 /**
  * Start the service registry. It's a simple server
  * that exposes endpoints for registering and unregistering
  * services, as well as getting the state of the registry.
  */
 export async function startWorkerRegistry() {
-	if ((await isPortAvailable()) && !server) {
-		const app = express();
-
-		let workers: WorkerRegistry = {};
-		app
-			.get("/workers", async (req, res) => {
-				res.json(workers);
-			})
-			.post("/workers/:workerId", jsonBodyParser, async (req, res) => {
-				workers[req.params.workerId] = req.body;
-				res.json(null);
-			})
-			.delete(`/workers/:workerId`, async (req, res) => {
-				delete workers[req.params.workerId];
-				res.json(null);
-			})
-			.delete("/workers", async (req, res) => {
-				workers = {};
-				res.json(null);
-			});
-		server = createServer(app);
-		terminator = createHttpTerminator({ server });
-		server.listen(DEV_REGISTRY_PORT, "127.0.0.1");
+	if ((await isPortAvailable()) && !globalServer) {
+		const result = await startWorkerRegistryServer(DEV_REGISTRY_PORT);
+		globalServer = result.server;
+		globalTerminator = result.terminator;
 
 		/**
 		 * The registry server may have already been started by another wrangler process.
 		 * If wrangler processes are run in parallel, isPortAvailable() can return true
 		 * while another process spins up the server
 		 */
-		server.once("error", (err) => {
+		globalServer.once("error", (err) => {
 			if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
 				throw err;
 			}
@@ -103,8 +119,8 @@ export async function startWorkerRegistry() {
 		/**
 		 * The registry server may close. Reset the server to null for restart.
 		 */
-		server.on("close", () => {
-			server = null;
+		globalServer.on("close", () => {
+			globalServer = null;
 		});
 	}
 }
@@ -113,8 +129,8 @@ export async function startWorkerRegistry() {
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	await terminator?.terminate();
-	server = null;
+	await globalTerminator?.terminate();
+	globalServer = null;
 }
 
 /**
