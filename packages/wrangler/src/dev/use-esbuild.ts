@@ -55,7 +55,6 @@ export function useEsbuild({
 	local,
 	targetConsumer,
 	testScheduled,
-	experimentalLocal,
 	projectRoot,
 	onBundleStart,
 	defineNavigatorUserAgent,
@@ -82,7 +81,6 @@ export function useEsbuild({
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
-	experimentalLocal: boolean | undefined;
 	projectRoot: string | undefined;
 	onBundleStart: () => void;
 	defineNavigatorUserAgent: boolean;
@@ -271,7 +269,6 @@ export function useEsbuild({
 		local,
 		targetConsumer,
 		testScheduled,
-		experimentalLocal,
 		projectRoot,
 		onBundleStart,
 		defineNavigatorUserAgent,

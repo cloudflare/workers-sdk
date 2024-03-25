@@ -89,7 +89,7 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			start: `${npm} run build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
+			start: `${npm} run build && wrangler pages dev dist/cloudflare ${await compatDateFlag()}`,
 			build: `ng build && ${npm} run process`,
 			process:
 				"node ./tools/copy-files.mjs && node ./tools/alter-polyfills.mjs",

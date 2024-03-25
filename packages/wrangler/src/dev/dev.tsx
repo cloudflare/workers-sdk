@@ -265,7 +265,6 @@ function InteractiveDevSession(props: DevProps) {
 
 type DevSessionProps = DevProps & {
 	local: boolean;
-	experimentalLocal?: boolean;
 };
 
 function DevSession(props: DevSessionProps) {
@@ -370,7 +369,6 @@ function DevSession(props: DevSessionProps) {
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
-		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onBundleStart,
 		defineNavigatorUserAgent: isNavigatorDefined(

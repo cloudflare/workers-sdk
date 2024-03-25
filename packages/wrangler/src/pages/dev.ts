@@ -206,12 +206,6 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				hidden: true,
 			},
-			"experimental-local": {
-				describe: "Run on my machine using the Cloudflare Workers runtime",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -253,7 +247,6 @@ export const Handler = async ({
 	httpsCertPath,
 	persistTo,
 	nodeCompat: legacyNodeCompat,
-	experimentalLocal,
 	config: config,
 	_: [_pages, _dev, ...remaining],
 	logLevel,
@@ -261,12 +254,6 @@ export const Handler = async ({
 }: StrictYargsOptionsToInterface<typeof Options>) => {
 	if (logLevel) {
 		logger.loggerLevel = logLevel;
-	}
-
-	if (experimentalLocal) {
-		logger.warn(
-			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
-		);
 	}
 
 	if (config) {
