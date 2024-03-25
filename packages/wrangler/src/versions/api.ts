@@ -1,4 +1,5 @@
 import { fetchResult } from "../cfetch";
+import type { TailConsumer } from "../config/environment";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -122,6 +123,42 @@ export async function createDeployment(
 	);
 
 	// TODO: handle specific errors
+
+	return res;
+}
+
+type NonVersionedScriptSettings = {
+	logpush: boolean;
+	tail_consumers: TailConsumer[];
+};
+
+export async function patchNonVersionedScriptSettings(
+	accountId: string,
+	workerName: string,
+	settings: Partial<NonVersionedScriptSettings>
+) {
+	const res = await fetchResult(
+		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
+		{
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(settings),
+		}
+	);
+
+	// TODO: handle specific errors
+
+	return res;
+}
+
+export async function fetchNonVersionedScriptSettings(
+	accountId: string,
+	workerName: string
+): Promise<NonVersionedScriptSettings> {
+	const res = await fetchResult<NonVersionedScriptSettings>(
+		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
+		{ method: "GET" }
+	);
 
 	return res;
 }

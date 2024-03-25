@@ -18,6 +18,7 @@ import {
 	fetchLatestDeploymentVersions,
 	fetchLatestUploadedVersions,
 	fetchVersions,
+	patchNonVersionedScriptSettings,
 } from "./api";
 import type {
 	CommonYargsArgv,
@@ -171,6 +172,11 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 				confirmedVersionTraffic,
 				message
 			);
+
+			await patchNonVersionedScriptSettings(accountId, workerName, {
+				logpush: config.logpush,
+				tail_consumers: config.tail_consumers,
+			});
 		},
 	});
 
