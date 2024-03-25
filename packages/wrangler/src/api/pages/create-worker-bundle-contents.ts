@@ -20,11 +20,6 @@ export async function createUploadWorkerBundleContents(
 	const workerBundleFormData = createWorkerBundleFormData(workerBundle, config);
 	const metadata = JSON.parse(workerBundleFormData.get("metadata") as string);
 
-	/**
-	 * Pages doesn't need the metadata bindings returned by
-	 * `createWorkerBundleFormData`. Let's strip them out and return only
-	 * the contents we need
-	 */
 	workerBundleFormData.set("metadata", JSON.stringify(metadata));
 
 	return await new Response(workerBundleFormData).blob();

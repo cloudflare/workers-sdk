@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path, {
 	basename,
 	dirname,
@@ -9,6 +9,7 @@ import path, {
 } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readConfig } from "../config";
+import { isPagesConfig } from "../config/validation";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -18,6 +19,7 @@ import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
+	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
@@ -336,9 +338,7 @@ async function maybeReadPagesConfig(
 	if (args.projectDirectory && args.buildMetadataPath) {
 		const configPath = path.resolve(args.projectDirectory, "wrangler.toml");
 		// Fail early if the config file doesn't exist
-		try {
-			await stat(configPath);
-		} catch {
+		if (!existsSync(configPath)) {
 			return undefined;
 		}
 		const config = readConfig(configPath, {
@@ -347,8 +347,11 @@ async function maybeReadPagesConfig(
 			env: process.env.PAGES_ENVIRONMENT,
 		});
 		// Fail if the config file exists but isn't valid for Pages
-		if (!config.pages_build_output_dir) {
-			throw new FatalError("Invalid Pages config file", 1);
+		if (!isPagesConfig(config)) {
+			throw new FatalError(
+				"Your wrangler.toml is not a valid Pages config file",
+				EXIT_CODE_INVALID_PAGES_CONFIG
+			);
 		}
 
 		return {
