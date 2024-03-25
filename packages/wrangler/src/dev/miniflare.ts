@@ -5,6 +5,7 @@ import path from "node:path";
 import * as esmLexer from "es-module-lexer";
 import {
 	CoreHeaders,
+	HttpOptions_Style,
 	Log,
 	LogLevel,
 	Miniflare,
@@ -65,6 +66,7 @@ const EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT = `
 const HEADER_URL = "X-Miniflare-Durable-Object-URL";
 const HEADER_NAME = "X-Miniflare-Durable-Object-Name";
 const HEADER_ID = "X-Miniflare-Durable-Object-Id";
+const HEADER_CF_BLOB = "X-Miniflare-Durable-Object-Cf-Blob";
 
 function createClass({ className, proxyUrl }) {
 	return class {
@@ -79,6 +81,7 @@ function createClass({ className, proxyUrl }) {
 			proxyRequest.headers.set(HEADER_URL, request.url);
 			proxyRequest.headers.set(HEADER_NAME, className);
 			proxyRequest.headers.set(HEADER_ID, this.id);
+			proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf));
 			return fetch(proxyRequest);
 		}
 	}
@@ -89,6 +92,7 @@ export default {
 		const originalUrl = request.headers.get(HEADER_URL);
 		const className = request.headers.get(HEADER_NAME);
 		const idString = request.headers.get(HEADER_ID);
+		const cfBlobString = request.headers.get(HEADER_CF_BLOB);
 		if (originalUrl === null || className === null || idString === null) {
 			return new Response("[wrangler] Received Durable Object proxy request with missing headers", { status: 400 });
 		}
@@ -96,10 +100,11 @@ export default {
 		request.headers.delete(HEADER_URL);
 		request.headers.delete(HEADER_NAME);
 		request.headers.delete(HEADER_ID);
+		request.headers.delete(HEADER_CF_BLOB);
 		const ns = env[className];
 		const id = ns.idFromString(idString);
 		const stub = ns.get(id);
-		return stub.fetch(request);
+		return stub.fetch(request, { cf: JSON.parse(cfBlobString ?? "{}") });
 	}
 }
 `;
@@ -361,6 +366,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		// script. They don't need to persist anything, and would end up using the
 		// incorrect unsafe unique key.
 		unsafeEphemeralDurableObjects: true,
+		compatibilityDate: "2024-01-01",
 		modules: true,
 		script:
 			EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT +
@@ -469,7 +475,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			serviceBindings[service.binding] = {
 				external: {
 					address,
-					http: { cfBlobHeader: CoreHeaders.CF_BLOB }, // TODO(now): test cf blob/original URL passthrough
+					http: {
+						style: HttpOptions_Style.PROXY,
+						cfBlobHeader: CoreHeaders.CF_BLOB,
+					},
 				},
 			};
 		}

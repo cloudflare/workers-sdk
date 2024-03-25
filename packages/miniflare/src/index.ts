@@ -81,6 +81,7 @@ import {
 import {
 	Config,
 	Extension,
+	HttpOptions_Style,
 	Runtime,
 	RuntimeOptions,
 	Service,
