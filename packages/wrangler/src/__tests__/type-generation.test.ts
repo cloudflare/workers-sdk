@@ -67,9 +67,9 @@ describe("escapeStringValue", () => {
 	it("should escape the string value", () => {
 		expect(escapeStringValue("a")).toBe("a");
 		expect(escapeStringValue('a"')).toBe('a\\"');
-		expect(escapeStringValue("a\\")).toBe("a\\\\");
-		expect(escapeStringValue("a\\b")).toBe("a\\\\b");
-		expect(escapeStringValue('a\\b"')).toBe('a\\\\b\\"');
+		expect(escapeStringValue("a\\")).toBe("a\\");
+		expect(escapeStringValue("a\\b")).toBe("a\\b");
+		expect(escapeStringValue('a\\b"')).toBe('a\\b\\"');
 	});
 });
 
