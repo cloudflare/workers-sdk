@@ -1,14 +1,13 @@
 import assert from "assert";
-import path from "path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
-import { findWranglerToml, readConfig } from "../../config";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { fetchLatestDeployment, fetchVersions } from "../api";
+import { getConfig } from "../list";
 import { getDeploymentSource } from "./list";
 import type {
 	CommonYargsArgv,
@@ -95,17 +94,4 @@ export async function versionsDeploymentsStatusHandler(
 	});
 
 	logRaw(formattedDeployment);
-}
-
-function getConfig(
-	args: Pick<
-		VersionsDeploymentsStatusArgs,
-		"config" | "name" | "experimentalJsonConfig"
-	>
-) {
-	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
-	const config = readConfig(configPath, args);
-
-	return config;
 }

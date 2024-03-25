@@ -611,7 +611,7 @@ export const spinner = (
 				}
 				clearLoop();
 			} else {
-				if (msg) {
+				if (msg !== undefined) {
 					logUpdate(`\n${grayBar} ${msg}`);
 				}
 				newline();

@@ -68,12 +68,13 @@ import {
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
+import registerVersionsRollbackCommand from "./versions/rollback";
 import { whoami } from "./whoami";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
-import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
-import type { Arguments, CommandModule } from "yargs";
+import type { CommonYargsArgv, SubHelp } from "./yargs-types";
+import type { Arguments } from "yargs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -254,7 +255,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
-	const subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions> = {
+	const subHelp: SubHelp = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -667,43 +668,45 @@ export function createCLIParser(argv: string[]) {
 
 	const rollbackWarning =
 		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	wrangler.command(
-		"rollback [deployment-id]",
-		"🔙 Rollback a deployment",
-		(rollbackYargs) =>
-			rollbackYargs
-				.positional("deployment-id", {
-					describe: "The ID of the deployment to rollback to",
-					type: "string",
-					demandOption: false,
-				})
-				.option("message", {
-					alias: "m",
-					describe:
-						"Skip confirmation and message prompts, uses provided argument as message",
-					type: "string",
-					default: undefined,
-				})
-				.option("name", {
-					describe: "The name of your worker",
-					type: "string",
-				})
-				.epilogue(rollbackWarning),
-		async (rollbackYargs) => {
-			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
-				rollbackYargs,
-				rollbackWarning
-			);
+	if (experimentalGradualRollouts) {
+		registerVersionsRollbackCommand(wrangler, rollbackWarning, subHelp);
+	} else {
+		wrangler.command(
+			"rollback [deployment-id]",
+			"🔙 Rollback a deployment",
+			(rollbackYargs) =>
+				rollbackYargs
+					.positional("deployment-id", {
+						describe: "The ID of the deployment to rollback to",
+						type: "string",
+						demandOption: false,
+					})
+					.option("message", {
+						alias: "m",
+						describe:
+							"Skip confirmation and message prompts, uses provided argument as message",
+						type: "string",
+						default: undefined,
+					})
+					.option("name", {
+						describe: "The name of your worker",
+						type: "string",
+					})
+					.epilogue(rollbackWarning),
+			async (rollbackYargs) => {
+				const { accountId, scriptName, config } =
+					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
 
-			await rollbackDeployment(
-				accountId,
-				scriptName,
-				config,
-				rollbackYargs.deploymentId,
-				rollbackYargs.message
-			);
-		}
-	);
+				await rollbackDeployment(
+					accountId,
+					scriptName,
+					config,
+					rollbackYargs.deploymentId,
+					rollbackYargs.message
+				);
+			}
+		);
+	}
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
