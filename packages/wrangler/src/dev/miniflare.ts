@@ -367,6 +367,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			name: EXTERNAL_AI_WORKER_NAME,
 			modules: true,
 			script: EXTERNAL_AI_WORKER_SCRIPT,
+			scriptPath: "src/ai/fetcher.ts",
 			serviceBindings: {
 				FETCHER: AIFetcher,
 			},
