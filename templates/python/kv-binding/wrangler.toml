@@ -1,0 +1,8 @@
+name = "hello-python-worker-test-fds"
+main = "entry.py"
+compatibility_flags = ["python_workers"]
+compatibility_date = "2024-03-18"
+
+kv_namespaces = [
+    { binding = "FOO", id = "<YOUR_KV_NAMESPACE_ID>" }
+]
