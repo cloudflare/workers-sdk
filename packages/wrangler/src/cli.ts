@@ -29,3 +29,4 @@ export type { UnstableDevWorker, UnstableDevOptions };
 
 export * from "./api/integrations";
 export { default as unstable_splitSqlQuery } from "./d1/splitter";
+export { startWorkerRegistryServer as unstable_startWorkerRegistryServer } from "./dev-registry";
