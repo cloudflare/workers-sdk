@@ -335,32 +335,33 @@ type PluginArgs = Omit<
 async function maybeReadPagesConfig(
 	args: PagesBuildArgs
 ): Promise<(Config & { hash: string }) | undefined> {
-	if (args.projectDirectory && args.buildMetadataPath) {
-		const configPath = path.resolve(args.projectDirectory, "wrangler.toml");
-		// Fail early if the config file doesn't exist
-		if (!existsSync(configPath)) {
-			return undefined;
-		}
-		const config = readConfig(configPath, {
-			...args,
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			env: process.env.PAGES_ENVIRONMENT,
-		});
-		// Fail if the config file exists but isn't valid for Pages
-		if (!isPagesConfig(config)) {
-			throw new FatalError(
-				"Your wrangler.toml is not a valid Pages config file",
-				EXIT_CODE_INVALID_PAGES_CONFIG
-			);
-		}
-
-		return {
-			...config,
-			hash: createHash("sha256")
-				.update(await readFile(configPath, "utf8"))
-				.digest("hex"),
-		};
+	if (!args.projectDirectory || !args.buildMetadataPath) {
+		return;
 	}
+	const configPath = path.resolve(args.projectDirectory, "wrangler.toml");
+	// Fail early if the config file doesn't exist
+	if (!existsSync(configPath)) {
+		return undefined;
+	}
+	const config = readConfig(configPath, {
+		...args,
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		env: process.env.PAGES_ENVIRONMENT,
+	});
+	// Fail if the config file exists but isn't valid for Pages
+	if (!isPagesConfig(config)) {
+		throw new FatalError(
+			"Your wrangler.toml is not a valid Pages config file",
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
+
+	return {
+		...config,
+		hash: createHash("sha256")
+			.update(await readFile(configPath, "utf8"))
+			.digest("hex"),
+	};
 }
 type ValidatedArgs = WorkerBundleArgs | PluginArgs;
 
