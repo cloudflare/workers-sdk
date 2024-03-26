@@ -6,7 +6,7 @@ import type { Request } from "miniflare";
 export const EXTERNAL_AI_WORKER_NAME = "__WRANGLER_EXTERNAL_AI_WORKER";
 
 export const EXTERNAL_AI_WORKER_SCRIPT = `
-import { Ai } from 'cloudflare:ai:module'
+import { Ai } from 'cloudflare:ai'
 
 export default function (env) {
     return new Ai(env.FETCHER);
