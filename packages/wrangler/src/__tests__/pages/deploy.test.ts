@@ -20,7 +20,7 @@ import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
-describe("deployment create", () => {
+describe("pages deploy", () => {
 	const std = mockConsoleMethods();
 	const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
 	let actualProcessEnvCI: string | undefined;
@@ -74,6 +74,22 @@ describe("deployment create", () => {
 	`);
 	});
 
+	it("should throw an error if no `[<directory>]` arg is specified in the `pages deploy` command", async () => {
+		await expect(
+			runWrangler("pages deploy")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your \`wrangler.toml\` configuration file."`
+		);
+	});
+
+	it("should throw an error if no `[--project-name]` is specified", async () => {
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Must specify a project name."`
+		);
+	});
+
 	it("should upload a directory of files", async () => {
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
@@ -82,6 +98,7 @@ describe("deployment create", () => {
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = await req.json();
@@ -128,15 +145,15 @@ describe("deployment create", () => {
 					expect(req.params.accountId).toEqual("some-account-id");
 					expect(await (req as RestRequestWithFormData).formData())
 						.toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
-				          },
-				        ],
-				      }
-			    `);
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+				    },
+				  ],
+				}
+			`);
 					return res.once(
 						ctx.status(200),
 						ctx.json({
@@ -153,9 +170,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -170,6 +189,7 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		expect(getProjectRequestCount).toBe(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -187,7 +207,9 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: RestRequest[] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = await req.json();
@@ -210,7 +232,7 @@ describe("deployment create", () => {
 				);
 			}),
 			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+				uploadRequests.push(req);
 				expect(req.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
@@ -225,7 +247,7 @@ describe("deployment create", () => {
 					},
 				]);
 
-				if (requests.length < 2) {
+				if (uploadRequests.length < 2) {
 					return res(
 						ctx.status(200),
 						ctx.json({
@@ -258,15 +280,15 @@ describe("deployment create", () => {
 					expect(req.params.accountId).toEqual("some-account-id");
 					expect(await (req as RestRequestWithFormData).formData())
 						.toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+				    },
+				  ],
+				}
+			`);
 
 					return res.once(
 						ctx.status(200),
@@ -282,9 +304,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -300,7 +324,8 @@ describe("deployment create", () => {
 		await runWrangler("pages deploy . --project-name=foo");
 
 		// Should be 2 attempts to upload
-		expect(requests.length).toBe(2);
+		expect(uploadRequests.length).toBe(2);
+		expect(getProjectRequestCount).toBe(2);
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -444,7 +469,7 @@ describe("deployment create", () => {
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -477,7 +502,9 @@ describe("deployment create", () => {
 			"foo"
 		);
 
-		const requests: RestRequest[] = [];
+		const uploadRequests: RestRequest[] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as { hashes: string[] };
@@ -500,7 +527,7 @@ describe("deployment create", () => {
 				);
 			}),
 			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+				uploadRequests.push(req);
 				expect(await req.json()).toMatchObject([
 					{
 						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
@@ -512,7 +539,7 @@ describe("deployment create", () => {
 					},
 				]);
 				// Fail just the first request
-				if (requests.length < 2) {
+				if (uploadRequests.length < 2) {
 					mockGetUploadTokenRequest(
 						"<<funfetti-auth-jwt2>>",
 						"some-account-id",
@@ -574,9 +601,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -591,14 +620,13 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
-		expect(requests[0].headers.get("Authorization")).toBe(
+		expect(getProjectRequestCount).toEqual(2);
+		expect(uploadRequests[0].headers.get("Authorization")).toBe(
 			"Bearer <<funfetti-auth-jwt>>"
 		);
-
-		expect(requests[1].headers.get("Authorization")).toBe(
+		expect(uploadRequests[1].headers.get("Authorization")).toBe(
 			"Bearer <<funfetti-auth-jwt2>>"
 		);
-
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -619,8 +647,10 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: RestRequest[] = [];
 		const bodies: UploadPayloadFile[][] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -650,7 +680,7 @@ describe("deployment create", () => {
 				);
 			}),
 			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+				uploadRequests.push(req);
 
 				expect(req.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
@@ -700,9 +730,10 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -719,8 +750,10 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
+
 		// We have 3 buckets, so expect 3 uploads
-		expect(requests.length).toBe(3);
+		expect(uploadRequests.length).toBe(3);
 
 		// One bucket should end up with 2 files
 		expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
@@ -776,8 +809,10 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: RestRequest[] = [];
 		const bodies: UploadPayloadFile[][] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -807,7 +842,7 @@ describe("deployment create", () => {
 				);
 			}),
 			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+				uploadRequests.push(req);
 
 				expect(req.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
@@ -853,9 +888,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -872,8 +909,10 @@ describe("deployment create", () => {
 
 		await runWrangler(`pages publish public --project-name=foo`);
 
+		expect(getProjectRequestCount).toEqual(2);
+
 		// We have 3 buckets, so expect 3 uploads
-		expect(requests.length).toBe(3);
+		expect(uploadRequests.length).toBe(3);
 		// One bucket should end up with 2 files
 		expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 		// But we don't know the order, so flatten and test without ordering
@@ -928,8 +967,10 @@ describe("deployment create", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const uploadRequests: RestRequest[] = [];
 		const bodies: UploadPayloadFile[][] = [];
+		let getProjectRequestCount = 0;
+
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -959,7 +1000,7 @@ describe("deployment create", () => {
 				);
 			}),
 			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+				uploadRequests.push(req);
 
 				expect(req.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
@@ -1006,9 +1047,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1025,8 +1068,11 @@ describe("deployment create", () => {
 
 		chdir("public");
 		await runWrangler(`pages publish . --project-name=foo`);
+
+		expect(getProjectRequestCount).toEqual(2);
+
 		// We have 3 buckets, so expect 3 uploads
-		expect(requests.length).toBe(3);
+		expect(uploadRequests.length).toBe(3);
 		// One bucket should end up with 2 files
 		expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 		// But we don't know the order, so flatten and test without ordering
@@ -1077,6 +1123,8 @@ describe("deployment create", () => {
 			"some-account-id",
 			"foo"
 		);
+
+		let getProjectRequestCount = 0;
 
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
@@ -1146,9 +1194,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1165,20 +1215,8 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	it("should throw an error if user attempts to use config with pages", async () => {
-		await expect(
-			runWrangler("pages dev --config foo.toml")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
-		);
-		await expect(
-			runWrangler("pages deploy --config foo.toml")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support wrangler.toml"`
-		);
 	});
 
 	it("should upload a Functions project", async () => {
@@ -1202,6 +1240,8 @@ describe("deployment create", () => {
 			"some-account-id",
 			"foo"
 		);
+
+		let getProjectRequestCount = 0;
 
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
@@ -1354,9 +1394,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1373,6 +1415,7 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
 		✨ Success! Uploaded 1 files (TIMINGS)
@@ -1409,6 +1452,7 @@ describe("deployment create", () => {
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -1497,9 +1541,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1523,6 +1569,7 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -1577,6 +1624,8 @@ describe("deployment create", () => {
 			"some-account-id",
 			"foo"
 		);
+
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -1726,9 +1775,11 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1745,6 +1796,7 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
 		✨ Success! Uploaded 1 files (TIMINGS)
@@ -1791,6 +1843,8 @@ describe("deployment create", () => {
 			"some-account-id",
 			"foo"
 		);
+
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -1843,9 +1897,10 @@ describe("deployment create", () => {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1870,6 +1925,7 @@ Please make sure the JSON object has the following format:
 }
 and that at least one include rule is provided.
 		`);
+		expect(getProjectRequestCount).toEqual(2);
 	});
 
 	it("should upload _routes.json for Advanced Mode projects, if provided", async () => {
@@ -1909,6 +1965,7 @@ and that at least one include rule is provided.
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -2063,9 +2120,11 @@ and that at least one include rule is provided.
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -2082,6 +2141,7 @@ and that at least one include rule is provided.
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2131,6 +2191,7 @@ and that at least one include rule is provided.
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -2184,8 +2245,10 @@ and that at least one include rule is provided.
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -2210,6 +2273,7 @@ Please make sure the JSON object has the following format:
 }
 and that at least one include rule is provided.
 		`);
+		expect(getProjectRequestCount).toEqual(2);
 	});
 
 	it("should ignore the entire /functions directory if _worker.js is provided", async () => {
@@ -2247,6 +2311,7 @@ and that at least one include rule is provided.
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 				const body = (await req.json()) as {
@@ -2372,9 +2437,10 @@ and that at least one include rule is provided.
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -2391,6 +2457,7 @@ and that at least one include rule is provided.
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2433,6 +2500,7 @@ and that at least one include rule is provided.
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			// /pages/assets/check-missing
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
@@ -2587,9 +2655,11 @@ async function onRequest() {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -2606,6 +2676,7 @@ async function onRequest() {
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
 		✨ Success! Uploaded 1 files (TIMINGS)
@@ -2660,6 +2731,7 @@ async function onRequest() {
 			"foo"
 		);
 
+		let getProjectRequestCount = 0;
 		msw.use(
 			// /pages/assets/check-missing
 			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
@@ -2818,9 +2890,11 @@ async function onRequest() {
 			rest.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -2837,6 +2911,7 @@ async function onRequest() {
 
 		await runWrangler("pages deploy public --project-name=foo");
 
+		expect(getProjectRequestCount).toEqual(2);
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2846,6 +2921,413 @@ async function onRequest() {
 	`);
 
 		// make sure there were no errors
+		expect(std.err).toMatchInlineSnapshot('""');
+	});
+
+	it("should support `wrangler.toml`", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up _worker.js
+		writeFileSync(
+			"public/_worker.js",
+			`
+      export default {
+        async fetch(request, env) {
+          const url = new URL(request.url);
+          console.log("PAGES SUPPORTS WRANGLER.TOML!!");
+          return url.pathname.startsWith('/pages-toml') ? new Response('Ok') : env.ASSETS.fetch(request);
+        }
+      };
+    `
+		);
+
+		// set up wrangler.toml
+		writeFileSync(
+			"wrangler.toml",
+			`
+		pages_build_output_dir = "public"
+		name = "pages-is-awesome"
+		compatibility_date = "2024-01-01"
+		`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"pages-is-awesome"
+		);
+
+		let getProjectRequestCount = 0;
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/pages-is-awesome/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle");
+					const buildOutputDir = body.get("pages_build_output_dir");
+					const configHash = body.get("wrangler_config_hash");
+
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						[
+							"_worker.bundle",
+							"manifest",
+							"pages_build_output_dir",
+							"wrangler_config_hash",
+						].sort()
+					);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+					expect(workerBundle).toContain(
+						`console.log("PAGES SUPPORTS WRANGLER.TOML!!");`
+					);
+					expect(buildOutputDir).toEqual("public");
+					expect(configHash).toEqual(
+						"2aaa829852393fe967ba0f3a954453242d74905c3dda28a147ec4dd7cbbbb957"
+					);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								url: "https://abcxyz.pages-is-awesome.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/pages-is-awesome",
+				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: {
+									production: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+									preview: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+								},
+							} as Partial<Project>,
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy");
+
+		expect(getProjectRequestCount).toEqual(2);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
+	`);
+
+		expect(std.err).toMatchInlineSnapshot('""');
+	});
+
+	it("should throw an error if user attempts to specify a custom `wrangler.toml` file path", async () => {
+		await expect(
+			runWrangler("pages deploy --config foo.toml")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
+		);
+	});
+
+	it("should warn and ignore the `wrangler.toml` file, if it doesn't specify the `pages_build_output_dir` field", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/index.html", "Greetings from Pages");
+
+		// set up /functions
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello-world.js",
+			`
+    export async function onRequest() {
+      return new Response("Pages supports wrangler.toml!");
+    }
+    `
+		);
+
+		// set up wrangler.toml
+		writeFileSync(
+			"wrangler.toml",
+			`
+		name = "pages-is-awesome"
+		compatibility_date = "2024-01-01"
+		`
+		);
+
+		// `pages deploy` should fail because, even though the project name is specififed in the
+		// `wrangler.toml` file, the `pages_build_output_dir` field is missing from the config,
+		// so the file gets ignored
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Must specify a project name."`
+		);
+
+		expect(
+			std.warn.replace(/\S*\.toml/g, "wrangler.toml").replace(/\s/g, "")
+		).toContain(
+			`
+			We detected a configuration file at wrangler.toml but it is missing the "pages_build_output_dir" field, required by Pages.
+		  If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.
+		  Ignoring configuration file for now, and proceeding with project deploy.
+			`.replace(/\s/g, "")
+		);
+	});
+
+	it("should always deploy to the Pages project specified by the top-level `name` configuration field, regardless of the corresponding env-level configuration", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up _worker.js
+		writeFileSync(
+			"public/_worker.js",
+			`
+			export default {
+        async fetch(request, env) {
+          const url = new URL(request.url);
+          console.log("PAGES SUPPORTS WRANGLER.TOML!!");
+          return url.pathname.startsWith('/pages-toml') ? new Response('Ok') : env.ASSETS.fetch(request);
+        }
+      };
+    `
+		);
+
+		// set up wrangler.toml
+		writeFileSync(
+			"wrangler.toml",
+			`
+			pages_build_output_dir = "public"
+			name = "pages-project"
+			compatibility_date = "2024-01-01"
+
+			[env.production]
+			name = "pages-project-production"
+			`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"pages-project"
+		);
+
+		let getProjectRequestCount = 0;
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/pages-project/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle");
+					const branch = body.get("branch");
+					const buildOutputDir = body.get("pages_build_output_dir");
+					const configHash = body.get("wrangler_config_hash");
+
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						[
+							"_worker.bundle",
+							"branch",
+							"manifest",
+							"pages_build_output_dir",
+							"wrangler_config_hash",
+						].sort()
+					);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				                                      Object {
+				                                        "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                                      }
+			                                `);
+
+					expect(workerHasD1Shim(workerBundle as string)).toBeFalsy();
+					expect(workerBundle).toContain(
+						`console.log("PAGES SUPPORTS WRANGLER.TOML!!");`
+					);
+					expect(branch).toEqual("main");
+					expect(buildOutputDir).toEqual("public");
+					expect(configHash).toEqual(
+						"2b74c3dec6ec98805beaad4cee51531925541d5a1caf1991d1d44cf19255bf17"
+					);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								url: "https://abcxyz.pages-project.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/pages-project",
+				async (req, res, ctx) => {
+					getProjectRequestCount++;
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								production_branch: "main",
+								deployment_configs: {
+									production: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+									preview: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+								},
+							} as Partial<Project>,
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy --branch main");
+
+		expect(getProjectRequestCount).toEqual(2);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
+	`);
+
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
 
@@ -2876,6 +3358,7 @@ async function onRequest() {
 				"some-account-id",
 				"foo"
 			);
+
 			msw.use(
 				rest.post("*/pages/assets/check-missing", async (req, res, ctx) =>
 					res.once(
@@ -2920,24 +3403,10 @@ async function onRequest() {
 						);
 					}
 				),
-				rest.get(
-					"*/accounts/:accountId/pages/projects/foo",
-					async (_req, res, ctx) =>
-						res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									deployment_configs: {
-										production: { compatibility_flags },
-										preview: { compatibility_flags },
-									},
-								},
-							})
-						)
-				)
+				// we're expecting two API calls to `/projects/<name>`, so we need
+				// to mock both of them
+				mockGetProjectHandler("foo", compatibility_flags),
+				mockGetProjectHandler("foo", compatibility_flags)
 			);
 		};
 
@@ -3088,6 +3557,30 @@ async function onRequest() {
 		});
 	});
 });
+
+function mockGetProjectHandler(
+	projectName: string,
+	compatibility_flags: string[] | undefined
+) {
+	return rest.get(
+		`*/accounts/:accountId/pages/projects/${projectName}`,
+		async (_req, res, ctx) =>
+			res.once(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						deployment_configs: {
+							production: { compatibility_flags },
+							preview: { compatibility_flags },
+						},
+					},
+				})
+			)
+	);
+}
 
 function mockFormDataToString(this: FormData) {
 	const entries = [];

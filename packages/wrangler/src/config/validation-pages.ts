@@ -39,11 +39,12 @@ const supportedPagesConfigFields = [
 
 export function validatePagesConfig(
 	config: Config,
-	envNames: string[]
+	envNames: string[],
+	projectName?: string
 ): Diagnostics {
 	// exhaustive check
 	if (!config.pages_build_output_dir) {
-		throw new FatalError(`Attempting to validate Pages configuration file, but no "pages_build_output_dir" configuration key was found.
+		throw new FatalError(`Attempting to validate Pages configuration file, but "pages_build_output_dir" field was not found.
 		"pages_build_output_dir" is required for Pages projects.`);
 	}
 
@@ -52,6 +53,7 @@ export function validatePagesConfig(
 	);
 
 	validateMainField(config, diagnostics);
+	validateProjectName(projectName, diagnostics);
 	validatePagesEnvironmentNames(envNames, diagnostics);
 	validateUnsupportedFields(config, diagnostics);
 
@@ -59,7 +61,7 @@ export function validatePagesConfig(
 }
 
 /**
- * Validate that configuration file doesn't declare "main", if
+ * Validate that configuration file doesn't specify "main", if
  * "pages_build_output_dir" is present
  */
 function validateMainField(config: Config, diagnostics: Diagnostics) {
@@ -72,8 +74,23 @@ function validateMainField(config: Config, diagnostics: Diagnostics) {
 }
 
 /**
+ * Validate that "name" field is specified at the top-level
+ */
+function validateProjectName(
+	name: string | undefined,
+	diagnostics: Diagnostics
+) {
+	if (name === undefined || name.trim() === "") {
+		diagnostics.errors.push(
+			`Missing top-level field "name" in configuration file.\n` +
+				`Pages requires the name of your project to be configured at the top-level of your \`wrangler.toml\` file. This is because, in Pages, environments target the same project.`
+		);
+	}
+}
+
+/**
  * Validate that no named-environments other than "preview" and "production"
- * were declared in the configuration file for Pages
+ * were specififed in the configuration file for Pages
  */
 function validatePagesEnvironmentNames(
 	envNames: string[],

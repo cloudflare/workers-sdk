@@ -12,7 +12,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import type { UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
-describe("project upload", () => {
+describe("pages project upload", () => {
 	const ENV_COPY = process.env;
 	const std = mockConsoleMethods();
 

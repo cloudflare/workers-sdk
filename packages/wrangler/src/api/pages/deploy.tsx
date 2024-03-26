@@ -1,8 +1,11 @@
+import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join, resolve as resolvePath } from "node:path";
+import { readFile } from "node:fs/promises";
+import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
+import { findPagesWranglerToml, readConfig } from "../../config";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -23,6 +26,7 @@ import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
+import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Deployment, Project } from "@cloudflare/types";
 
@@ -67,12 +71,15 @@ interface PagesDeployOptions {
 	 * typically called in a CLI
 	 */
 	functionsDirectory?: string;
-
 	/**
 	 * Whether to run bundling on `_worker.js` before deploying.
 	 * Default: true
 	 */
 	bundle?: boolean;
+	/**
+	 * Command line args passed to the `pages deploy` cmd
+	 */
+	args?: Record<string, unknown>;
 
 	// TODO: Allow passing in the API key and plumb it through
 	// to the API calls so that the deploy function does not
@@ -95,6 +102,7 @@ export async function deploy({
 	commitDirty,
 	functionsDirectory: customFunctionsDirectory,
 	bundle,
+	args,
 }: PagesDeployOptions) {
 	let _headers: string | undefined,
 		_redirects: string | undefined,
@@ -139,8 +147,8 @@ export async function deploy({
 		isProduction = project.production_branch === branch;
 	}
 
-	const deploymentConfig =
-		project.deployment_configs[isProduction ? "production" : "preview"];
+	const env = isProduction ? "production" : "preview";
+	const deploymentConfig = project.deployment_configs[env];
 	const nodejsCompat =
 		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ?? false;
 
@@ -148,6 +156,17 @@ export async function deploy({
 		deploymentConfig.compatibility_date,
 		deploymentConfig.compatibility_flags
 	);
+
+	let config: Config | undefined;
+	const configPath = findPagesWranglerToml();
+	if (configPath) {
+		config = readConfig(configPath, {
+			...args,
+			experimentalJsonConfig: false,
+			env,
+		});
+	}
+
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -248,6 +267,23 @@ export async function deploy({
 		);
 	}
 
+	if (
+		config !== undefined &&
+		config.configPath !== undefined &&
+		config.pages_build_output_dir
+	) {
+		const configHash = createHash("sha256")
+			.update(await readFile(config.configPath))
+			.digest("hex");
+		const outputDir = path.relative(
+			process.cwd(),
+			config.pages_build_output_dir
+		);
+
+		formData.append("wrangler_config_hash", configHash);
+		formData.append("pages_build_output_dir", outputDir);
+	}
+
 	/**
 	 * Advanced Mode
 	 * https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
@@ -295,7 +331,7 @@ export async function deploy({
 	if (_workerJS || _workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult,
-			undefined
+			config
 		);
 
 		formData.append(
@@ -330,7 +366,7 @@ export async function deploy({
 	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult,
-			undefined
+			config
 		);
 
 		formData.append(

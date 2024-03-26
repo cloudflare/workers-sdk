@@ -267,6 +267,8 @@ export const Handler = async (args: PagesDevArguments) => {
 		);
 	}
 
+	// for `dev` we always use the top-level config, which means we need
+	// to read the config file with `env` set to `undefined`
 	const config = readConfig(undefined, args);
 	const resolvedDirectory = args.directory ?? config.pages_build_output_dir;
 	const [_pages, _dev, ...remaining] = args._;
