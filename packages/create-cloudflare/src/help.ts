@@ -25,8 +25,8 @@ export const showHelp = ({
 	indent(`${intro.trim()}\n`, 1);
 
 	logRaw(bold("USAGE\n"));
-	const latest = pm === "yarn" ? "" : `@latest`;
-	const opts = pm === "npm" ? "-- options" : `options`;
+	const latest = pm === "yarn" ? "" : "@latest";
+	const opts = pm === "npm" ? "-- options" : "options";
 	indent(`${pm} create cloudflare${latest} [directory] [${opts}]\n`, 1);
 
 	logRaw(bold("OPTIONS\n"));
@@ -73,9 +73,9 @@ const renderOptions = (options?: OptionDefinition[]) => {
 		}
 
 		let heading =
-			type === "string"
-				? `${bold(`--${name}`)}=<value>`
-				: bold(`--${name}, --no-${name}`);
+			type === "boolean"
+				? bold(`--${name}, --no-${name}`)
+				: `${bold(`--${name}`)}=<value>`;
 
 		heading = alias ? `${heading}, ${bold(`-${alias}`)}` : heading;
 

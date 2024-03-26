@@ -98,11 +98,10 @@ const cliDefinition: ArgumentsDefinition = {
 
       When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
 
-      You may specify additional arguments to be passed directly to these underlying tools by adding them after "--" in the argument string, like so:
+      You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
       npm create cloudflare -- --framework next -- --ts
-
-      Note that there are 2 occurrences of "--" in the above arg string. The first "--" is required by "npm create" when passing --flags. The second "--" signals to C3 that the remaining arguments should be passed to "create-next-app".
+      pnpm create clouldfare --framework next -- --ts
       `,
 			values: [
 				{ name: "angular" },
@@ -193,6 +192,7 @@ const cliDefinition: ArgumentsDefinition = {
 		},
 		{
 			name: "help",
+			alias: "h",
 			description: "Show help and exit",
 			type: "boolean",
 			hidden: true,
@@ -215,7 +215,6 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.version(version)
 		.alias("v", "version")
 		.help(false)
-		.positional("potato", { type: "string" })
 		// note: we use strictOptions since `strict()` seems not to handle `positional`s correctly
 		.strictOptions() as unknown as Argv<C3Args>;
 
