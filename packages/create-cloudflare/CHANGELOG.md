@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.16.0
+
+### Minor Changes
+
+- [#5350](https://github.com/cloudflare/workers-sdk/pull/5350) [`7fd7fe3`](https://github.com/cloudflare/workers-sdk/commit/7fd7fe31b2ba9a4209f096e9ea85d85cff6a70b0) Thanks [@jculvey](https://github.com/jculvey)! - feat: Rename 'webFramework' --type argument to 'web-framework' and show deprecation warning when used.
+
 ## 2.15.2
 
 ### Patch Changes
