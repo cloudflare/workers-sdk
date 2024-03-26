@@ -114,7 +114,6 @@ export async function typesHandler(
 
 /**
  * Check if a string is a valid TypeScript identifier. This is a naive check and doesn't cover all cases
- * If not, it should be wrapped in quotes
  */
 export function isValidIdentifier(key: string) {
 	return /^[a-zA-Z_$][\w$]*$/.test(key);
@@ -131,18 +130,17 @@ export function constructTypeKey(key: string) {
 }
 
 /**
- *
- * Construct a type key, if it's not a valid identifier, wrap it in quotes
- * If rawVal is true, we'll use the value as the type, otherwise we'll format it for a string definition
+ * Construct a full type definition for a key-value pair
+ * If useRawVal is true, we'll use the value as the type, otherwise we'll format it for a string definition
  */
 export function constructType(
 	key: string,
 	value: string | number | boolean,
-	rawVal = true
+	useRawVal = true
 ) {
 	const typeKey = constructTypeKey(key);
 	if (typeof value === "string") {
-		if (rawVal) {
+		if (useRawVal) {
 			return `${typeKey}: ${value};`;
 		}
 		return `${typeKey}: "${value.replace(/"/g, '\\"')}";`;
