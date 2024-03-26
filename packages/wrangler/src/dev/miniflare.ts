@@ -365,9 +365,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	if (bindings.ai?.binding) {
 		externalWorkers.push({
 			name: EXTERNAL_AI_WORKER_NAME,
-			modules: true,
-			script: EXTERNAL_AI_WORKER_SCRIPT,
-			scriptPath: "src/ai/fetcher.ts",
+		  modules: [
+				{ type: "ESModule", path: "index.mjs", contents: EXTERNAL_AI_WORKER_SCRIPT }
+			  ],
 			serviceBindings: {
 				FETCHER: AIFetcher,
 			},
