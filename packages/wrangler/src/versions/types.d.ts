@@ -1,4 +1,3 @@
-
 export type Percentage = number;
 export type UUID = string;
 export type VersionId = UUID;

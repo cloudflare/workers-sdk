@@ -33,6 +33,7 @@ import {
 	getQueue,
 	postTypedConsumer,
 	putConsumer,
+	putQueue,
 	putTypedConsumer,
 } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
@@ -54,7 +55,11 @@ import type {
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
-import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
+import type {
+	PostQueueBody,
+	PostTypedConsumerBody,
+	PutConsumerBody,
+} from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
@@ -940,6 +945,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	if (config.queues.producers && config.queues.producers.length) {
+		const updateProducers = await updateQueueProducers(config);
+		deployments.push(...updateProducers);
+	}
+
 	if (config.queues.consumers && config.queues.consumers.length) {
 		const updateConsumers = await updateQueueConsumers(config);
 
@@ -1174,6 +1184,30 @@ async function ensureQueuesExist(config: Config) {
 	}
 }
 
+async function updateQueueProducers(
+	config: Config
+): Promise<Promise<string[]>[]> {
+	const producers = config.queues.producers || [];
+	const updateProducers: Promise<string[]>[] = [];
+	for (const producer of producers) {
+		const queue = await getQueue(config, producer.queue);
+		const body: PostQueueBody = {
+			queue_name: queue.queue_name,
+			settings: {
+				delivery_delay: producer.delivery_delay,
+			},
+		};
+
+		updateProducers.push(
+			putQueue(config, queue.queue_id, body).then(() => [
+				`Producer for ${producer.queue}`,
+			])
+		);
+	}
+
+	return updateProducers;
+}
+
 async function updateQueueConsumers(
 	config: Config
 ): Promise<Promise<string[]>[]> {
@@ -1230,6 +1264,7 @@ async function updateQueueConsumers(
 						? 1000 * consumer.max_batch_timeout
 						: undefined,
 					max_concurrency: consumer.max_concurrency,
+					retry_delay: consumer.retry_delay,
 				},
 			};
 

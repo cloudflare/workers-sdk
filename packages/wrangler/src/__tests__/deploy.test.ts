@@ -51,7 +51,11 @@ import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { KVNamespaceInfo } from "../kv/helpers";
-import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
+import type {
+	PostQueueBody,
+	PostTypedConsumerBody,
+	PutConsumerBody,
+} from "../queues/client";
 import type { RestRequest } from "msw";
 
 describe("deploy", () => {
@@ -8985,6 +8989,8 @@ export default{
 	});
 
 	describe("queues", () => {
+		const queueId = "queue-id";
+		const queueName = "queue1";
 		it("should upload producer bindings", async () => {
 			writeWranglerToml({
 				queues: {
@@ -8998,11 +9004,15 @@ export default{
 					{
 						type: "queue",
 						name: "QUEUE_ONE",
-						queue_name: "queue1",
+						queue_name: queueName,
 					},
 				],
 			});
-			mockGetQueue("queue1");
+			mockGetQueue(queueName, queueId);
+			mockPutQueue(queueId, {
+				queue_name: queueName,
+				settings: {},
+			});
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -9013,6 +9023,46 @@ export default{
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
+			  Producer for queue1
+			Current Deployment ID: Galaxy-Class
+
+
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		});
+
+		it("should update queue producers on deploy", async () => {
+			writeWranglerToml({
+				queues: {
+					producers: [
+						{
+							queue: queueName,
+							binding: "MY_QUEUE",
+							delivery_delay: 10,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetQueue("queue1", queueId);
+			mockPutQueue(queueId, {
+				queue_name: queueName,
+				settings: {
+					delivery_delay: 10,
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Queues:
+			  - MY_QUEUE: queue1
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Producer for queue1
 			Current Deployment ID: Galaxy-Class
 
 
@@ -9025,11 +9075,12 @@ export default{
 				queues: {
 					consumers: [
 						{
-							queue: "queue1",
+							queue: queueName,
 							dead_letter_queue: "myDLQ",
 							max_batch_size: 5,
 							max_batch_timeout: 3,
 							max_retries: 10,
+							retry_delay: 5,
 						},
 					],
 				},
@@ -9037,13 +9088,14 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue("queue1");
-			mockPutQueueConsumer("queue1", "test-name", {
+			mockGetQueue(queueName);
+			mockPutQueueConsumer(queueName, "test-name", {
 				dead_letter_queue: "myDLQ",
 				settings: {
 					batch_size: 5,
 					max_retries: 10,
 					max_wait_time_ms: 3000,
+					retry_delay: 5,
 				},
 			});
 			await runWrangler("deploy index.js");
@@ -9065,7 +9117,7 @@ export default{
 				queues: {
 					consumers: [
 						{
-							queue: "queue1",
+							queue: queueName,
 							type: "http_pull",
 							dead_letter_queue: "myDLQ",
 							max_batch_size: 5,
@@ -9079,8 +9131,8 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue("queue1", "queue1-queue-id");
-			mockPostQueueHTTPConsumer("queue1-queue-id", {
+			mockGetQueue(queueName, queueId);
+			mockPostQueueHTTPConsumer(queueId, {
 				type: "http_pull",
 				dead_letter_queue: "myDLQ",
 				settings: {
@@ -9109,7 +9161,7 @@ export default{
 				queues: {
 					consumers: [
 						{
-							queue: "queue1",
+							queue: queueName,
 							type: "http_pull",
 						},
 					],
@@ -9129,8 +9181,8 @@ export default{
 								errors: [],
 								messages: [],
 								result: {
-									queue: "queue1",
-									queue_id: "queue1-queue-id",
+									queue: queueName,
+									queue_id: queueId,
 									consumers: [
 										{ type: "http_pull", consumer_id: "queue1-consumer-id" },
 									],
@@ -9144,7 +9196,7 @@ export default{
 				rest.put(
 					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
 					async (req, res, ctx) => {
-						expect(req.params.queueId).toEqual("queue1-queue-id");
+						expect(req.params.queueId).toEqual(queueId);
 						expect(req.params.consumerId).toEqual("queue1-consumer-id");
 						expect(req.params.accountId).toEqual("some-account-id");
 						return res(
@@ -9177,7 +9229,7 @@ export default{
 				queues: {
 					consumers: [
 						{
-							queue: "queue1",
+							queue: queueName,
 							dead_letter_queue: "myDLQ",
 							max_batch_size: 5,
 							max_batch_timeout: 3,
@@ -9190,8 +9242,8 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue("queue1");
-			mockPutQueueConsumer("queue1", "test-name", {
+			mockGetQueue(queueName);
+			mockPutQueueConsumer(queueName, "test-name", {
 				dead_letter_queue: "myDLQ",
 				settings: {
 					batch_size: 5,
@@ -9219,7 +9271,7 @@ export default{
 				queues: {
 					consumers: [
 						{
-							queue: "queue1",
+							queue: queueName,
 							dead_letter_queue: "myDLQ",
 							max_batch_size: 5,
 							max_batch_timeout: 3,
@@ -9232,8 +9284,8 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue("queue1");
-			mockPutQueueConsumer("queue1", "test-name", {
+			mockGetQueue(queueName);
+			mockPutQueueConsumer(queueName, "test-name", {
 				dead_letter_queue: "myDLQ",
 				settings: {
 					batch_size: 5,
@@ -9261,7 +9313,7 @@ export default{
 					producers: [],
 					consumers: [
 						{
-							queue: "queue1",
+							queue: queueName,
 							dead_letter_queue: "myDLQ",
 							max_batch_size: 5,
 							max_batch_timeout: 3,
@@ -9285,14 +9337,14 @@ export default{
 		it("producer should error when a queue doesn't exist", async () => {
 			writeWranglerToml({
 				queues: {
-					producers: [{ queue: "queue1", binding: "QUEUE_ONE" }],
+					producers: [{ queue: queueName, binding: "QUEUE_ONE" }],
 					consumers: [],
 				},
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueueMissing("queue1");
+			mockGetQueueMissing(queueName);
 
 			await expect(
 				runWrangler("deploy index.js")
@@ -10116,7 +10168,10 @@ function mockGetQueue(expectedQueueName: string, expectedQueueId?: string) {
 						success: true,
 						errors: [],
 						messages: [],
-						result: { queue: expectedQueueName, queue_id: expectedQueueId },
+						result: {
+							queue_name: expectedQueueName,
+							queue_id: expectedQueueId,
+						},
 					})
 				);
 			}
@@ -10177,6 +10232,33 @@ function mockPutQueueConsumer(
 				);
 			}
 		)
+	);
+	return requests;
+}
+
+function mockPutQueue(expectedQueueId: string, expectedBody: PostQueueBody) {
+	const requests = { count: 0 };
+	msw.use(
+		rest.put(`*/accounts/:accountId/queues/:queueId`, async (req, res, ctx) => {
+			const body = await req.json();
+			expect(req.params.queueId).toEqual(expectedQueueId);
+			expect(req.params.accountId).toEqual("some-account-id");
+			expect(body).toEqual(expectedBody);
+			requests.count += 1;
+			return res(
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						queue: expectedBody.queue_name,
+						settings: {
+							delivery_delay: expectedBody.settings?.delivery_delay || 0,
+						},
+					},
+				})
+			);
+		})
 	);
 	return requests;
 }
