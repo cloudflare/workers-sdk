@@ -29,7 +29,7 @@ export type AllowedValueDefinition = {
 export type ArgumentsDefinition = {
 	intro: string;
 	positionals?: ArgDefinition[];
-	options?: OptionDefinition[];
+	options: OptionDefinition[];
 };
 
 const cliDefinition: ArgumentsDefinition = {
@@ -216,9 +216,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.usage("$0 [args]")
 		.version(version)
 		.alias("v", "version")
-		.help(false)
-		// note: we use strictOptions since `strict()` seems not to handle `positional`s correctly
-		.strictOptions() as unknown as Argv<C3Args>;
+		.help(false) as unknown as Argv<C3Args>;
 
 	const { positionals, options } = cliDefinition;
 	if (positionals) {
@@ -258,11 +256,18 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 
 	const positionalArgs = args._;
 
+	for (const opt in args) {
+		if (!validOption(opt)) {
+			showHelp(cliDefinition);
+			console.error(`\nUnrecognized option: ${opt}`);
+			process.exit(1);
+		}
+	}
+
 	// since `yargs.strict()` can't check the `positional`s for us we need to do it manually ourselves
 	if (positionalArgs.length > 1) {
 		showHelp(cliDefinition);
 		console.error("\nToo many positional arguments provided");
-		showHelp(cliDefinition);
 		process.exit(1);
 	}
 
@@ -274,3 +279,28 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		projectName: positionalArgs[0] as string | undefined,
 	};
 };
+
+let optionKeys: string[];
+const validOption = (opt: string) => {
+	// Skip positionals
+	if (opt === "_" || opt === "$0") {
+		return true;
+	}
+
+	if (!optionKeys) {
+		optionKeys = cliDefinition.options.reduce<string[]>((acc, val) => {
+			return [
+				...acc,
+				val.name,
+				// Camel cased version of the key
+				camelize(val.name),
+				// Alias, if it exists
+				...(val.alias ? [val.alias] : []),
+			];
+		}, []);
+	}
+
+	return optionKeys.includes(opt);
+};
+
+const camelize = (str: string) => str.replace(/-./g, (x) => x[1].toUpperCase());
