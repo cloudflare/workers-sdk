@@ -1,7 +1,15 @@
 import { rest } from "msw";
 import { createFetchResult } from "../index";
 
-export const mswSuccessR2handlers = [
+type StorageClass = "Standard" | "InfrequentAccess";
+
+function isValidStorageClass(
+	storageClass: string
+): storageClass is StorageClass {
+	return storageClass === "Standard" || storageClass === "InfrequentAccess";
+}
+
+export const mswR2handlers = [
 	// List endpoint r2Buckets
 	rest.get("*/accounts/:accountId/r2/buckets", (_, response, context) =>
 		response.once(
@@ -15,8 +23,32 @@ export const mswSuccessR2handlers = [
 			)
 		)
 	),
-	rest.post("*/accounts/:accountId/r2/buckets", (_, response, context) =>
-		response.once(context.json(createFetchResult({})))
+	rest.post(
+		"*/accounts/:accountId/r2/buckets",
+		(request, response, context) => {
+			const storageClassValue = request.headers.get("cf-r2-storage-class");
+			if (
+				storageClassValue !== null &&
+				!isValidStorageClass(storageClassValue)
+			) {
+				return response.once(
+					context.status(400),
+					context.json({
+						success: false,
+						errors: [
+							{
+								code: 10062,
+								message: "The storage class specified is not valid.",
+							},
+						],
+						messages: [],
+						result: null,
+					})
+				);
+			}
+
+			return response.once(context.json(createFetchResult({})));
+		}
 	),
 	rest.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
@@ -56,5 +88,32 @@ export const mswSuccessR2handlers = [
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) =>
 			response.once(context.json(createFetchResult(null)))
+	),
+	rest.patch(
+		"*/accounts/:accountId/r2/buckets/:bucketName",
+		(request, response, context) => {
+			const storageClassValue = request.headers.get("cf-r2-storage-class");
+			if (
+				storageClassValue === null ||
+				!isValidStorageClass(storageClassValue)
+			) {
+				return response.once(
+					context.status(400),
+					context.json({
+						success: false,
+						errors: [
+							{
+								code: 10062,
+								message: "The storage class specified is not valid.",
+							},
+						],
+						messages: [],
+						result: null,
+					})
+				);
+			}
+
+			return response.once(context.json(createFetchResult(null)));
+		}
 	),
 ];

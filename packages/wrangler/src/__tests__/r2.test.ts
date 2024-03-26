@@ -6,7 +6,7 @@ import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
+import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -18,7 +18,7 @@ import type {
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
-	beforeEach(() => msw.use(...mswSuccessR2handlers));
+	beforeEach(() => msw.use(...mswR2handlers));
 
 	runInTempDir();
 
@@ -43,6 +43,7 @@ describe("r2", () => {
 
 			Commands:
 			  wrangler r2 bucket create <name>  Create a new R2 bucket
+			  wrangler r2 bucket update         Update bucket state
 			  wrangler r2 bucket list           List R2 buckets
 			  wrangler r2 bucket delete <name>  Delete an R2 bucket
 			  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
@@ -121,7 +122,8 @@ describe("r2", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			Options:
-			  -J, --jurisdiction  The jurisdiction where the new bucket will be created  [string]"
+			  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+			  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -153,7 +155,8 @@ describe("r2", () => {
 			  -v, --version                   Show version number  [boolean]
 
 			Options:
-			  -J, --jurisdiction  The jurisdiction where the new bucket will be created  [string]"
+			  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
+			  -s, --storage-class  The default storage class for objects uploaded to this bucket  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
@@ -176,8 +179,8 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket.
-				            Created bucket testBucket."
+				            "Creating bucket testBucket with default storage class set to Standard.
+				            Created bucket testBucket with default storage class set to Standard."
 			          `);
 			});
 
@@ -196,9 +199,131 @@ describe("r2", () => {
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
 				expect(std.out).toMatchInlineSnapshot(`
-				            "Creating bucket testBucket (eu).
-				            Created bucket testBucket (eu)."
+				            "Creating bucket testBucket (eu) with default storage class set to Standard.
+				            Created bucket testBucket (eu) with default storage class set to Standard."
 			          `);
+			});
+
+			it("should create a bucket with the expected default storage class", async () => {
+				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
+				expect(std.out).toMatchInlineSnapshot(`
+				            "Creating bucket testBucket with default storage class set to InfrequentAccess.
+				            Created bucket testBucket with default storage class set to InfrequentAccess."
+			          `);
+			});
+
+			it("should error if storage class is invalid", async () => {
+				await expect(
+					runWrangler("r2 bucket create testBucket -s Foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed."`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+				"Creating bucket testBucket with default storage class set to Foo.
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
+
+				  The storage class specified is not valid. [code: 10062]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+		`);
+			});
+		});
+
+		describe("update", () => {
+			it("should error if invalid command is passed", async () => {
+				await expect(
+					runWrangler("r2 bucket update foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler r2 bucket update
+
+			Update bucket state
+
+			Commands:
+			  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`
+				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+				            "
+			          `);
+			});
+
+			describe("storage-class", () => {
+				it("should error if storage class is missing", async () => {
+					await expect(
+						runWrangler("r2 bucket update storage-class testBucket")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Missing required argument: storage-class"`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler r2 bucket update storage-class <name>
+
+			Update the default storage class of an existing R2 bucket
+
+			Positionals:
+			  name  The name of the existing bucket  [string] [required]
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
+
+			Options:
+			  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
+			  -s, --storage-class  The new default storage class for this bucket  [string] [required]"
+		`);
+					expect(std.err).toMatchInlineSnapshot(`
+				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing required argument: storage-class[0m
+
+				            "
+			          `);
+				});
+
+				it("should error if storage class is invalid", async () => {
+					await expect(
+						runWrangler("r2 bucket update storage-class testBucket -s Foo")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed."`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Updating bucket testBucket to Foo default storage class.
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.[0m
+
+				  The storage class specified is not valid. [code: 10062]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+		`);
+				});
+
+				it("should update the default storage class", async () => {
+					await runWrangler(
+						"r2 bucket update storage-class testBucket -s InfrequentAccess"
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				            "Updating bucket testBucket to InfrequentAccess default storage class.
+				            Updated bucket testBucket to InfrequentAccess default storage class."
+			          `);
+				});
 			});
 		});
 
@@ -846,6 +971,18 @@ describe("r2", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+			Upload complete."
+		`);
+			});
+
+			it("should upload R2 object with storage class to bucket", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
 			Upload complete."
 		`);
 			});
