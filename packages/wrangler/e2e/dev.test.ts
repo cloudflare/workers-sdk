@@ -376,7 +376,7 @@ describe("python dependency tests", () => {
 			`,
 			"requirements.txt": dedent`
 			# comment
-			numpy`,
+			numpy # comment 2`,
 			"index.py": dedent`
 					import numpy as np
 
@@ -405,7 +405,7 @@ describe("python dependency tests", () => {
 			expect(text).toMatchInlineSnapshot('"[1 2 3]"');
 		});
 	});
-})
+});
 
 describe("dev registry", () => {
 	let a: DevWorker;
