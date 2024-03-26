@@ -96,6 +96,9 @@ describe("wrangler", () => {
 						producers_total_count: 0,
 						consumers: [],
 						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0,
+						},
 					},
 					{
 						queue_id: "def19fa3787741579c9088eb850474af",
@@ -106,6 +109,9 @@ describe("wrangler", () => {
 						producers_total_count: 0,
 						consumers: [],
 						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0,
+						},
 					},
 				];
 				const expectedPage = 1;
@@ -135,6 +141,9 @@ describe("wrangler", () => {
 						producers_total_count: 0,
 						consumers: [],
 						consumers_total_count: 0,
+						settings: {
+							delivery_delay: 0,
+						},
 					},
 				];
 				const expectedPage = 2;
@@ -153,7 +162,10 @@ describe("wrangler", () => {
 		});
 
 		describe("create", () => {
-			function mockCreateRequest(expectedQueueName: string) {
+			function mockCreateRequest(
+				expectedQueueName: string,
+				queueSettings: { delivery_delay?: number } | undefined = undefined
+			) {
 				const requests = { count: 0 };
 
 				msw.use(
@@ -161,10 +173,15 @@ describe("wrangler", () => {
 						"*/accounts/:accountId/workers/queues",
 						async (request, response, context) => {
 							requests.count += 1;
+
 							const body = (await request.json()) as {
 								queue_name: string;
+								settings: {
+									delivery_delay: number;
+								};
 							};
 							expect(body.queue_name).toEqual(expectedQueueName);
+							expect(body.settings).toEqual(queueSettings);
 							return response.once(
 								context.json({
 									success: true,
@@ -199,7 +216,10 @@ describe("wrangler", () => {
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			Options:
+			      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
 		`);
 			});
 
@@ -250,6 +270,30 @@ describe("wrangler", () => {
 
 			"
 		`);
+			});
+
+			it("should send queue settings with delivery delay", async () => {
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
+				await runWrangler("queues create testQueue --delivery-delay-secs=10");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Creating queue testQueue.
+					Created queue testQueue."
+			  `);
+				expect(requests.count).toEqual(1);
+			});
+
+			it("should show an error when two delivery delays are set", async () => {
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
+
+				await expect(
+					runWrangler(
+						"queues create testQueue --delivery-delay-secs=5 --delivery-delay-secs=10"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"Cannot specify --delivery-delay-secs multiple times"`
+				);
+
+				expect(requests.count).toEqual(0);
 			});
 		});
 
@@ -385,7 +429,8 @@ describe("wrangler", () => {
 				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
 				      --message-retries    Maximum number of retries for each message  [number]
 				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
-				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]"
+				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
+				      --retry-delay-secs   The number of seconds to wait before retrying a message  [number]"
 			`);
 				});
 
@@ -398,6 +443,7 @@ describe("wrangler", () => {
 							max_retries: undefined,
 							max_wait_time_ms: undefined,
 							max_concurrency: undefined,
+							retry_delay: undefined,
 						},
 						dead_letter_queue: undefined,
 					};
@@ -418,18 +464,45 @@ describe("wrangler", () => {
 							max_retries: 3,
 							max_wait_time_ms: 10 * 1000,
 							max_concurrency: 3,
+							retry_delay: 10,
 						},
 						dead_letter_queue: "myDLQ",
 					};
 					mockPostRequest("testQueue", expectedBody);
 
 					await runWrangler(
-						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=10"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
+				});
+
+				it("should show an error when two retry delays are set", async () => {
+					const expectedBody: PostConsumerBody = {
+						script_name: "testScript",
+						environment_name: "myEnv",
+						settings: {
+							batch_size: 20,
+							max_retries: 3,
+							max_wait_time_ms: 10 * 1000,
+							max_concurrency: 3,
+							retry_delay: 0,
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					const requests = mockPostRequest("testQueue", expectedBody);
+
+					await expect(
+						runWrangler(
+							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=5 --retry-delay-secs=10"
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Cannot specify --retry-delay-secs multiple times"`
+					);
+
+					expect(requests.count).toEqual(0);
 				});
 
 				it("should show link to dash when not enabled", async () => {

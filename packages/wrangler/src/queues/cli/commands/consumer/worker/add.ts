@@ -1,4 +1,5 @@
 import { readConfig } from "../../../../../config";
+import { CommandLineArgsError } from "../../../../../index";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";
 import type {
@@ -42,6 +43,10 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"The maximum number of concurrent consumer Worker invocations. Must be a positive integer",
 			},
+			"retry-delay-secs": {
+				type: "number",
+				describe: "The number of seconds to wait before retrying a message",
+			},
 		});
 }
 
@@ -49,6 +54,12 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	const config = readConfig(args.config, args);
+
+	if (Array.isArray(args.retryDelaySecs)) {
+		throw new CommandLineArgsError(
+			`Cannot specify --retry-delay-secs multiple times`
+		);
+	}
 
 	const body: PostConsumerBody = {
 		script_name: args.scriptName,
@@ -61,6 +72,7 @@ export async function handler(
 				? 1000 * args.batchTimeout
 				: undefined,
 			max_concurrency: args.maxConcurrency,
+			retry_delay: args.retryDelaySecs,
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};

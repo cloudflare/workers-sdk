@@ -16,6 +16,11 @@ export async function createQueue(
 
 export interface CreateQueueBody {
 	queue_name: string;
+	settings?: QueueSettings;
+}
+
+export interface QueueSettings {
+	delivery_delay: number;
 }
 
 export interface ScriptReference {
@@ -42,6 +47,7 @@ export interface QueueResponse {
 	producers_total_count: number;
 	consumers: Consumer[];
 	consumers_total_count: number;
+	settings?: QueueSettings;
 }
 
 export async function deleteQueue(
