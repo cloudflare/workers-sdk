@@ -134,6 +134,7 @@ describe("versions deploy", () => {
 			│
 			├ Deploying 1 version(s)
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed tmp-e2e-wrangler version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
@@ -252,6 +253,7 @@ describe("versions deploy", () => {
 			│
 			├ Deploying 1 version(s)
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed tmp-e2e-wrangler version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
