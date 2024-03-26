@@ -2335,6 +2335,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
 			"queue",
+			"delivery_delay",
 		])
 	) {
 		return false;
@@ -2350,6 +2351,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
 	if (
 		!isRequiredProperty(value, "queue", "string") ||
 		(value as { queue: string }).queue.length === 0
@@ -2361,6 +2363,22 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	const options: {
+		key: string;
+		type: "number" | "string" | "boolean";
+	}[] = [{ key: "delivery_delay", type: "number" }];
+	for (const optionalOpt of options) {
+		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {
+			diagnostics.errors.push(
+				`"${field}" should, optionally, have a ${optionalOpt.type} "${
+					optionalOpt.key
+				}" field but got ${JSON.stringify(value)}.`
+			);
+			isValid = false;
+		}
+	}
+
 	return isValid;
 };
 

@@ -7,7 +7,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
-import type { CreateQueueBody } from "../../client";
+import type { PostQueueBody } from "../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -27,8 +27,8 @@ export function options(yargs: CommonYargsArgv) {
 
 function createBody(
 	args: StrictYargsOptionsToInterface<typeof options>
-): CreateQueueBody {
-	const body: CreateQueueBody = {
+): PostQueueBody {
+	const body: PostQueueBody = {
 		queue_name: args.name,
 	};
 
