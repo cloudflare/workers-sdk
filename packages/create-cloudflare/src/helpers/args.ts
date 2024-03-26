@@ -50,6 +50,7 @@ const cliDefinition: ArgumentsDefinition = {
 			name: "type",
 			alias: "t",
 			type: "string",
+			requiresArg: true,
 			description: `
         When using a built-in template, specifies the type of application that should be created.
 
@@ -94,6 +95,7 @@ const cliDefinition: ArgumentsDefinition = {
 			name: "framework",
 			alias: "f",
 			type: "string",
+			requiresArg: true,
 			description: `The type of framework to use to create a web application (when using this option "--type" is coerced to "web-framework")
 
       When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
