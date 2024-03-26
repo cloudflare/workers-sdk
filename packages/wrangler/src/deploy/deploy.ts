@@ -41,6 +41,7 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import { logVersionIdChange } from "../utils/deployment-id-version-id-change";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
@@ -962,6 +963,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	logger.log("Current Deployment ID:", deploymentId);
+
+	logVersionIdChange();
 }
 
 function deployWfpUserWorker(
@@ -971,6 +974,8 @@ function deployWfpUserWorker(
 	// Will go under the "Uploaded" text
 	logger.log("  Dispatch Namespace:", dispatchNamespace);
 	logger.log("Current Deployment ID:", deploymentId);
+
+	logVersionIdChange();
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(

@@ -10,6 +10,7 @@ import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
+import { logVersionIdChange } from "./utils/deployment-id-version-id-change";
 import { getScriptName, printWranglerBanner } from ".";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
@@ -102,6 +103,8 @@ Source:        ${triggerStr}`;
 
 	versionMessages[versionMessages.length - 1] += "🟩 Active";
 	logger.log(...versionMessages);
+
+	logVersionIdChange();
 }
 
 function formatSource(source: string): string {
@@ -210,6 +213,8 @@ export async function rollbackDeployment(
 
 	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
 	logger.log("Current Deployment ID:", deployment_id);
+
+	logVersionIdChange();
 }
 
 async function rollbackRequest(
@@ -318,8 +323,7 @@ ${
 
 	logger.log(version);
 
-	// early return to skip the deployments listings
-	return;
+	logVersionIdChange();
 }
 
 export async function commonDeploymentCMDSetup(
