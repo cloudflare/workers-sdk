@@ -214,8 +214,8 @@ export const mswPostNewDeployment = rest.post(
 
 export const mswPatchNonVersionedScriptSettings = rest.patch(
 	"*/accounts/:accountId/workers/scripts/:workerName/script-settings",
-	(request, response, context) => {
-		return response(context.json(createFetchResult(request.json())));
+	async (request, response, context) => {
+		return response(context.json(createFetchResult(await request.json())));
 	}
 );
 export const mswGetNonVersionedScriptSettings = rest.patch(

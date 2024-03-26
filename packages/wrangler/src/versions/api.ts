@@ -137,7 +137,7 @@ export async function patchNonVersionedScriptSettings(
 	workerName: string,
 	settings: Partial<NonVersionedScriptSettings>
 ) {
-	const res = await fetchResult(
+	const res = await fetchResult<typeof settings>(
 		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
 		{
 			method: "PATCH",

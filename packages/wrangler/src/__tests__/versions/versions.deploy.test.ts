@@ -97,9 +97,14 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed named-worker version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
+
+			expect(normalizeOutput(std.out)).toContain(
+				"No non-versioned settings to sync. Skipping..."
+			);
 		});
 
 		test("fails without --name arg", async () => {
@@ -186,6 +191,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
@@ -229,6 +235,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
@@ -280,6 +287,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 50% and version 00000000-0000-0000-0000-000000000000 at 50% (TIMINGS)"
 		`);
@@ -323,6 +331,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
@@ -374,6 +383,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 30% and version 00000000-0000-0000-0000-000000000000 at 70% (TIMINGS)"
 		`);
@@ -425,6 +435,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
 		`);
@@ -532,6 +543,7 @@ describe("versions deploy", () => {
 			├ Add a deployment message (skipped)
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
 		`);
@@ -579,6 +591,118 @@ describe("versions deploy", () => {
 			│ Deployment message My versioned deployment message
 			│
 			│
+			│ No non-versioned settings to sync. Skipping...
+			│
+			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+		`);
+		});
+
+		test("with logpush in wrangler.toml", async () => {
+			writeWranglerToml({
+				logpush: true,
+			});
+
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (10%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (90%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  -
+			│       Message:  -
+			│
+			│
+			├ Which version(s) do you want to deploy?
+			├ 1 Worker Version(s) selected
+			│
+			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+			│              Created:  TIMESTAMP
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├ What percentage of traffic should Worker Version 1 receive?
+			├ 100% of traffic
+			├
+			├ Add a deployment message (skipped)
+			│
+			│
+			│
+			│ Synced non-versioned settings:
+			│            logpush:  true
+			│     tail_consumers:  <skipped>
+			│
+			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+		`);
+
+			expect(normalizeOutput(std.out)).toContain("logpush:  true");
+		});
+
+		test("with logpush and tail_consumers in wrangler.toml", async () => {
+			writeWranglerToml({
+				logpush: false,
+				tail_consumers: [
+					{ service: "worker-1" },
+					{ service: "worker-2", environment: "preview" },
+					{ service: "worker-3", environment: "staging" },
+				],
+			});
+
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+			"╭ Deploy Worker Versions by splitting traffic between multiple versions
+			│
+			│
+			├ Your current deployment has 2 version(s):
+			│
+			│ (10%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  -
+			│       Message:  -
+			│
+			│ (90%) 00000000-0000-0000-0000-000000000000
+			│       Created:  TIMESTAMP
+			│           Tag:  -
+			│       Message:  -
+			│
+			│
+			├ Which version(s) do you want to deploy?
+			├ 1 Worker Version(s) selected
+			│
+			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+			│              Created:  TIMESTAMP
+			│                  Tag:  -
+			│              Message:  -
+			│
+			├ What percentage of traffic should Worker Version 1 receive?
+			├ 100% of traffic
+			├
+			├ Add a deployment message (skipped)
+			│
+			│
+			│
+			│ Synced non-versioned settings:
+			│            logpush:  false
+			│     tail_consumers:  worker-1
+			│                      worker-2 (preview)
+			│                      worker-3 (staging)
 			│
 			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 		`);
