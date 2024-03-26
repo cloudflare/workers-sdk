@@ -49,6 +49,7 @@ packages/miniflare
 packages/create-cloudflare/templates/**/*.*
 !packages/create-cloudflare/templates/**/c3.ts
 !packages/create-cloudflare/templates/**/test/**/*.ts
+!packages/create-cloudflare/templates/**/test/**/*.js
 
 
 # Some of the `@cloudflare/vitest-pool-workers` examples use `satisfies` as it
