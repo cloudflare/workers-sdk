@@ -270,7 +270,7 @@ function mockSupportingDashRequests(
 		)
 	);
 }
-describe("pages-download-config", () => {
+describe("pages download config", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 

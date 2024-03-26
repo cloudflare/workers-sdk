@@ -20,7 +20,7 @@ import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
-describe("deployment create", () => {
+describe("pages deploy", () => {
 	const std = mockConsoleMethods();
 	const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
 	let actualProcessEnvCI: string | undefined;
@@ -72,6 +72,22 @@ describe("deployment create", () => {
 		      --skip-caching    Skip asset caching which speeds up builds  [boolean]
 		      --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]"
 	`);
+	});
+
+	it("should throw an error if no `[<directory>]` arg is specified in the `pages deploy` command", async () => {
+		await expect(
+			runWrangler("pages deploy")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your \`wrangler.toml\` configuration file."`
+		);
+	});
+
+	it("should throw an error if no `[--project-name]` is specified", async () => {
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Must specify a project name."`
+		);
 	});
 
 	it("should upload a directory of files", async () => {
@@ -1168,16 +1184,11 @@ describe("deployment create", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should throw an error if user attempts to use config with pages", async () => {
-		await expect(
-			runWrangler("pages dev --config foo.toml")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
-		);
+	it("should throw an error if user attempts to specify a custom `wrangler.toml` file path", async () => {
 		await expect(
 			runWrangler("pages deploy --config foo.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support wrangler.toml"`
+			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
 		);
 	});
 
@@ -2846,6 +2857,364 @@ async function onRequest() {
 	`);
 
 		// make sure there were no errors
+		expect(std.err).toMatchInlineSnapshot('""');
+	});
+
+	it("should support `wrangler.toml`", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up _worker.js
+		writeFileSync(
+			"public/_worker.js",
+			`
+      export default {
+        async fetch(request, env) {
+          const url = new URL(request.url);
+          console.log("PAGES SUPPORTS WRANGLER.TOML!!");
+          return url.pathname.startsWith('/pages-toml') ? new Response('Ok') : env.ASSETS.fetch(request);
+        }
+      };
+    `
+		);
+
+		// set up wrangler.toml
+		writeFileSync(
+			"wrangler.toml",
+			`
+		pages_build_output_dir = "public"
+		name = "pages-is-awesome"
+		compatibility_date = "2024-01-01"
+		`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"pages-is-awesome"
+		);
+
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/pages-is-awesome/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle");
+
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						["manifest", "_worker.bundle"].sort()
+					);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				                                      Object {
+				                                        "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                                      }
+			                                `);
+					expect(workerBundle).toContain(
+						`console.log("PAGES SUPPORTS WRANGLER.TOML!!");`
+					);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								url: "https://abcxyz.pages-is-awesome.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/pages-is-awesome",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: {
+									production: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+									preview: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+								},
+							} as Partial<Project>,
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy");
+
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
+	`);
+
+		expect(std.err).toMatchInlineSnapshot('""');
+	});
+
+	it("should ignore the `wrangler.toml` file, if it doesn't specify the `pages_build_output_dir` field", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/index.html", "Greetings from Pages");
+
+		// set up /functions
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello-world.js",
+			`
+    export async function onRequest() {
+      return new Response("Pages supports wrangler.toml!");
+    }
+    `
+		);
+
+		// set up wrangler.toml
+		writeFileSync(
+			"wrangler.toml",
+			`
+		name = "pages-is-awesome"
+		compatibility_date = "2024-01-01"
+		`
+		);
+
+		// `pages deploy` should fail because, even though the project name is specififed in the
+		// `wrangler.toml` file, the `pages_build_output_dir` field is missing from the config
+		await expect(
+			runWrangler("pages deploy public")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Must specify a project name."`
+		);
+	});
+
+	it("should always deploy to the Pages project specified by the top-level `name` configuration field, regardless of the corresponding env-level configuration", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up _worker.js
+		writeFileSync(
+			"public/_worker.js",
+			`
+			export default {
+        async fetch(request, env) {
+          const url = new URL(request.url);
+          console.log("PAGES SUPPORTS WRANGLER.TOML!!");
+          return url.pathname.startsWith('/pages-toml') ? new Response('Ok') : env.ASSETS.fetch(request);
+        }
+      };
+    `
+		);
+
+		// set up wrangler.toml
+		writeFileSync(
+			"wrangler.toml",
+			`
+			pages_build_output_dir = "public"
+			name = "pages-project"
+			compatibility_date = "2024-01-01"
+
+			[env.production]
+			name = "pages-project-production"
+			`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"pages-project"
+		);
+
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/pages-project/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle");
+					const branch = body.get("branch");
+
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						["manifest", "_worker.bundle", "branch"].sort()
+					);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				                                      Object {
+				                                        "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                                      }
+			                                `);
+
+					expect(workerHasD1Shim(workerBundle as string)).toBeFalsy();
+					expect(workerBundle).toContain(
+						`console.log("PAGES SUPPORTS WRANGLER.TOML!!");`
+					);
+					expect(branch).toEqual("main");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								url: "https://abcxyz.pages-project.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/pages-project",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								production_branch: "main",
+								deployment_configs: {
+									production: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+									preview: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+								},
+							} as Partial<Project>,
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy --branch main");
+
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
+	`);
+
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
 
