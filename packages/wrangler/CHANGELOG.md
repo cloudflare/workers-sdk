@@ -1,5 +1,27 @@
 # wrangler
 
+## 3.38.0
+
+### Minor Changes
+
+- [#5310](https://github.com/cloudflare/workers-sdk/pull/5310) [`528c011`](https://github.com/cloudflare/workers-sdk/commit/528c011617243d1a290950e76bb88d0986a20f6a) Thanks [@penalosa](https://github.com/penalosa)! - feat: Watch the entire module root for changes in `--no-bundle` mode, rather than just the entrypoint file.
+
+- [#5327](https://github.com/cloudflare/workers-sdk/pull/5327) [`7d160c7`](https://github.com/cloudflare/workers-sdk/commit/7d160c7fcaa8097aa3bd8b80b866ec80233be1e9) Thanks [@penalosa](https://github.com/penalosa)! - feat: Add `wrangler pages download config`
+
+- [#5284](https://github.com/cloudflare/workers-sdk/pull/5284) [`f5e2367`](https://github.com/cloudflare/workers-sdk/commit/f5e2367288e7f57365ef8a1373bbc404bb50a662) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add `wrangler.toml` support in `wrangler pages dev`
+
+  As we are adding `wrangler.toml` support for Pages, we want to ensure that `wrangler pages dev` works with a configuration file.
+
+- [#5353](https://github.com/cloudflare/workers-sdk/pull/5353) [`3be826f`](https://github.com/cloudflare/workers-sdk/commit/3be826f8411ef8d517d572f25a6be38cb8c12cc1) Thanks [@penalosa](https://github.com/penalosa)! - feat: Updates `wrangler pages functions build` to support using configuration from `wrangler.toml` in the generated output.
+
+- [#5102](https://github.com/cloudflare/workers-sdk/pull/5102) [`ba52208`](https://github.com/cloudflare/workers-sdk/commit/ba52208147307608a1233157423e5887203e4547) Thanks [@pmiguel](https://github.com/pmiguel)! - feature: add support for queue delivery controls on `wrangler queues create`
+
+### Patch Changes
+
+- [#5327](https://github.com/cloudflare/workers-sdk/pull/5327) [`7d160c7`](https://github.com/cloudflare/workers-sdk/commit/7d160c7fcaa8097aa3bd8b80b866ec80233be1e9) Thanks [@penalosa](https://github.com/penalosa)! - fix: Use specific error code to signal a wrangler.toml file not being found in build-env
+
+- [#5310](https://github.com/cloudflare/workers-sdk/pull/5310) [`528c011`](https://github.com/cloudflare/workers-sdk/commit/528c011617243d1a290950e76bb88d0986a20f6a) Thanks [@penalosa](https://github.com/penalosa)! - fix: Reload Python workers when the `requirements.txt` file changes
+
 ## 3.37.0
 
 ### Minor Changes
