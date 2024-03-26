@@ -26,7 +26,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Percentage, VersionCache, VersionId } from "./types";
+import type { ApiVersion, Percentage, VersionCache, VersionId } from "./types";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
@@ -203,7 +203,7 @@ function getConfig(
 	return config;
 }
 
-async function printLatestDeployment(
+export async function printLatestDeployment(
 	accountId: string,
 	workerName: string,
 	versionCache: VersionCache
@@ -219,6 +219,13 @@ async function printLatestDeployment(
 		`${leftT} Your current deployment has ${versions.length} version(s):`
 	);
 
+	printVersions(versions, traffic);
+}
+
+export function printVersions(
+	versions: ApiVersion[],
+	traffic: Map<VersionId, Percentage>
+) {
 	for (const version of versions) {
 		const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
 		const versionIdString = white(version.id);

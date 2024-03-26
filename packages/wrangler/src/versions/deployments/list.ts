@@ -1,15 +1,13 @@
 import assert from "assert";
-import path from "path";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, gray } from "@cloudflare/cli/colors";
-import { findWranglerToml, readConfig } from "../../config";
 import { UserError } from "../../errors";
 import * as metrics from "../../metrics";
 import { printWranglerBanner } from "../../update-check";
 import { requireAuth } from "../../user";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { fetchLatestDeployments, fetchVersions } from "../api";
-import { getVersionSource } from "../list";
+import { getConfig, getVersionSource } from "../list";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -94,19 +92,6 @@ export async function versionsDeploymentsListHandler(
 	});
 
 	logRaw(formattedDeployments.join("\n\n"));
-}
-
-function getConfig(
-	args: Pick<
-		VersionsDeloymentsListArgs,
-		"config" | "name" | "experimentalJsonConfig"
-	>
-) {
-	const configPath =
-		args.config || (args.name && findWranglerToml(path.dirname(args.name)));
-	const config = readConfig(configPath, args);
-
-	return config;
 }
 
 export function getDeploymentSource(deployment: ApiDeployment) {
