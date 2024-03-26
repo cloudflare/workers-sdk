@@ -1172,7 +1172,7 @@ describe("deployment create", () => {
 		await expect(
 			runWrangler("pages dev --config foo.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support wrangler.toml"`
+			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
 		);
 		await expect(
 			runWrangler("pages deploy --config foo.toml")

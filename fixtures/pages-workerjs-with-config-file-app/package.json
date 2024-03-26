@@ -1,0 +1,20 @@
+{
+	"name": "pages-workerjs-with-config-file-app",
+	"private": true,
+	"sideEffects": false,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "npx wrangler pages dev",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"undici": "^5.28.3",
+		"wrangler": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*"
+	},
+	"engines": {
+		"node": ">=16.13"
+	}
+}

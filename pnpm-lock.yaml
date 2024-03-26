@@ -369,6 +369,18 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/pages-functions-with-config-file-app:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: ^5.28.3
+        version: 5.28.3
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/pages-functions-with-routes-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -475,6 +487,18 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-wasm-app:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: ^5.28.3
+        version: 5.28.3
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
+  fixtures/pages-workerjs-with-config-file-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*

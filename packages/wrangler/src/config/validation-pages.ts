@@ -64,8 +64,8 @@ export function validatePagesConfig(
 function validateMainField(config: Config, diagnostics: Diagnostics) {
 	if (config.main !== undefined) {
 		diagnostics.errors.push(
-			`Configuration file cannot contain both both "main" and "pages_build_output_dir" configuration keys.
-			Please use "main" if you are deploying a Worker, or "pages_build_output_dir" if you are deploying a Pages project.`
+			`Configuration file cannot contain both both "main" and "pages_build_output_dir" configuration keys.\n` +
+				`Please use "main" if you are deploying a Worker, or "pages_build_output_dir" if you are deploying a Pages project.`
 		);
 	}
 }
@@ -86,9 +86,9 @@ function validatePagesEnvironmentNames(
 
 	if (unsupportedPagesEnvNames.length > 0) {
 		diagnostics.errors.push(
-			`Configuration file contains environment names that are not supported by Pages projects:
-			${unsupportedPagesEnvNames.join()}.
-			The supported named-environments for Pages are "preview" and "production".`
+			`Configuration file contains the following environment names that are not supported by Pages projects:\n` +
+				`${unsupportedPagesEnvNames.map((name) => `"${name}"`).join()}.\n` +
+				`The supported named-environments for Pages are "preview" and "production".`
 		);
 	}
 }

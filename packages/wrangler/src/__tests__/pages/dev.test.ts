@@ -12,7 +12,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Must specify a directory of static assets to serve or a command to run or a proxy port."`
+			`"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`."`
 		);
 	});
 
@@ -28,7 +28,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support wrangler.toml"`
+			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
 		);
 	});
 });
