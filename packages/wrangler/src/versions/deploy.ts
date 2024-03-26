@@ -13,12 +13,15 @@ import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
+import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	createDeployment,
 	fetchLatestDeploymentVersions,
 	fetchLatestUploadedVersions,
 	fetchVersions,
+	patchNonVersionedScriptSettings,
 } from "./api";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -173,6 +176,8 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 			);
 		},
 	});
+
+	await maybePatchSettings(accountId, workerName, config);
 
 	const elapsedMilliseconds = Date.now() - start;
 	const elapsedSeconds = elapsedMilliseconds / 1000;
@@ -431,6 +436,57 @@ async function promptPercentages(
 	}
 
 	return confirmedVersionTraffic;
+}
+
+async function maybePatchSettings(
+	accountId: string,
+	workerName: string,
+	config: Pick<Config, "logpush" | "tail_consumers">
+) {
+	const maybeUndefinedSettings = {
+		logpush: config.logpush,
+		tail_consumers: config.tail_consumers,
+	};
+	const definedSettings = Object.fromEntries(
+		Object.entries(maybeUndefinedSettings).filter(
+			([, value]) => value !== undefined
+		)
+	);
+
+	const hasZeroSettingsToSync = Object.keys(definedSettings).length === 0;
+	if (hasZeroSettingsToSync) {
+		cli.log("No non-versioned settings to sync. Skipping...");
+		return;
+	}
+
+	const patchedSettings = await spinnerWhile({
+		startMessage: `Syncing non-versioned settings`,
+		async promise() {
+			return await patchNonVersionedScriptSettings(
+				accountId,
+				workerName,
+				definedSettings
+			);
+		},
+	});
+
+	const formattedSettings = formatLabelledValues(
+		{
+			logpush: String(patchedSettings.logpush ?? "<skipped>"),
+			tail_consumers:
+				patchedSettings.tail_consumers
+					?.map((tc) =>
+						tc.environment ? `${tc.service} (${tc.environment})` : tc.service
+					)
+					.join("\n") ?? "<skipped>",
+		},
+		{
+			labelJustification: "right",
+			indentationCount: 4,
+		}
+	);
+
+	cli.log("Synced non-versioned settings:\n" + formattedSettings);
 }
 
 // ***********

@@ -12,9 +12,11 @@ import { mswSuccessR2handlers } from "./handlers/r2";
 import { default as mswSucessScriptHandlers } from "./handlers/script";
 import { mswSuccessUserHandlers } from "./handlers/user";
 import {
+	mswGetNonVersionedScriptSettings,
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
+	mswPatchNonVersionedScriptSettings,
 	mswPostNewDeployment,
 } from "./handlers/versions";
 import { default as mswZoneHandlers } from "./handlers/zones";
@@ -61,4 +63,6 @@ export {
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
+	mswGetNonVersionedScriptSettings,
+	mswPatchNonVersionedScriptSettings,
 };

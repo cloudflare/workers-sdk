@@ -55,7 +55,7 @@ export default function formatLabelledValues(
 								spacerCount -
 								labelLengthsWithoutANSI[i] -
 								labelAlignment.length
-						: valuesAlignment + spacerCount
+						: valuesAlignment + spacerCount + indentationCount
 				);
 
 				return prefixSpacing + line;
