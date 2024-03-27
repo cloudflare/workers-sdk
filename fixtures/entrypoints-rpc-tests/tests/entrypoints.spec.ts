@@ -494,6 +494,12 @@ test("should support binding to Durable Object in another worker", async ({
 				fetch(request) {
 					return new Response(\`\${request.method} \${request.url} \${JSON.stringify(request.cf)}\`);
 				}
+				get property() {
+					return "property:ping";
+				}
+				method() {
+					return "method:ping";
+				}
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
@@ -503,6 +509,7 @@ test("should support binding to Durable Object in another worker", async ({
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
+			compatibility_flags = ["rpc"]
 
 			[durable_objects]
 			bindings = [
@@ -514,6 +521,15 @@ test("should support binding to Durable Object in another worker", async ({
 				async fetch(request, env, ctx) {
 					const id = env.OBJECT.newUniqueId();
 					const stub = env.OBJECT.get(id);
+				
+					const { pathname } = new URL(request.url);
+					if (pathname === "/rpc") {
+						const errors = [];
+						try { await stub.property; } catch (e) { errors.push(e); }
+						try { await stub.method(); } catch (e) { errors.push(e); }
+						return Response.json(errors.map(String));
+					}
+				
 					return stub.fetch("https://placeholder:9999/", {
 						method: "POST",
 						cf: { thing: true },
@@ -529,6 +545,15 @@ test("should support binding to Durable Object in another worker", async ({
 		// Check protocol, host, and cf preserved
 		expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
 	});
+
+	const rpcResponse = await fetch(new URL("/rpc", url));
+	const errors = await rpcResponse.json();
+	expect(errors).toMatchInlineSnapshot(`
+		[
+		  "Error: Cannot access "property" as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
+		  "Error: Cannot access "method" as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
+		]
+	`);
 });
 
 test("should support binding to Durable Object in same worker", async ({
