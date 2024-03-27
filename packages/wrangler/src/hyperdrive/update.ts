@@ -1,13 +1,13 @@
 import { readConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { patchConfig } from "./client";
+import { hyperdriveBetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { PatchHyperdriveBody } from "./client";
-import { patchConfig } from "./client";
-import { hyperdriveBetaWarning } from "./utils";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
