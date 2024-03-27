@@ -60,31 +60,60 @@ import type { Readable } from "node:stream";
 // non-standard protocols, so we store it in a header to restore later.
 const EXTERNAL_DURABLE_OBJECTS_WORKER_NAME =
 	"__WRANGLER_EXTERNAL_DURABLE_OBJECTS_WORKER";
-// TODO(someday): could we do some sort of `Proxy`-prototype thing here
-//  for a nice error message if a user tried to call an RPC method?
 const EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT = `
+import { DurableObject } from "cloudflare:workers";
+
 const HEADER_URL = "X-Miniflare-Durable-Object-URL";
 const HEADER_NAME = "X-Miniflare-Durable-Object-Name";
 const HEADER_ID = "X-Miniflare-Durable-Object-Id";
 const HEADER_CF_BLOB = "X-Miniflare-Durable-Object-Cf-Blob";
 
+const DURABLE_OBJECT_BUILT_IN_KEYS = new Set([
+	"tail",
+	"trace",
+	"scheduled",
+	"alarm",
+	"test",
+	"webSocketMessage",
+	"webSocketClose",
+	"webSocketError",
+	"self",
+]);
+
 function createClass({ className, proxyUrl }) {
-	return class {
-		constructor(state) {
-			this.id = state.id.toString();
-		}
-		fetch(request) {
-			if (proxyUrl === undefined) {
-				return new Response(\`[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
-			}
-			const proxyRequest = new Request(proxyUrl, request);
-			proxyRequest.headers.set(HEADER_URL, request.url);
-			proxyRequest.headers.set(HEADER_NAME, className);
-			proxyRequest.headers.set(HEADER_ID, this.id);
-			proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf));
-			return fetch(proxyRequest);
-		}
+	// Build a class with a "Proxy"-prototype, so we can intercept RPC calls and
+	// throw an exception stating multi-session RPC is unsupported :see_no_evil:
+	function klass(state, env) {
+		const that = Reflect.construct(DurableObject, [state, env], klass);
+		that.id = state.id.toString();
+		return that;
 	}
+	Reflect.setPrototypeOf(klass.prototype, DurableObject.prototype);
+	Reflect.setPrototypeOf(klass, DurableObject);
+
+	klass.prototype = new Proxy(klass.prototype, {
+		get(target, key, receiver) {
+			const value = Reflect.get(target, key, receiver);
+			if (value !== undefined) return value;
+			if (DURABLE_OBJECT_BUILT_IN_KEYS.has(key)) return;
+			throw new Error(\`Cannot access \${JSON.stringify(key)} as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \\\`WorkerEntrypoint\\\` to expose an RPC interface between Workers.\`);
+		}
+	});
+
+	// Forward regular HTTP requests to the other "wrangler dev" session
+	klass.prototype.fetch = function(request) {
+		if (proxyUrl === undefined) {
+			return new Response(\`[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
+		}
+		const proxyRequest = new Request(proxyUrl, request);
+		proxyRequest.headers.set(HEADER_URL, request.url);
+		proxyRequest.headers.set(HEADER_NAME, className);
+		proxyRequest.headers.set(HEADER_ID, this.id);
+		proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf));
+		return fetch(proxyRequest);
+	};
+
+	return klass;
 }
 
 export default {
