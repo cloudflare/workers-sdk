@@ -2,7 +2,7 @@ import assert from "assert";
 import { Blob } from "buffer";
 import http from "http";
 import { text } from "stream/consumers";
-import { ReadableStream } from "stream/web";
+import { ReadableStream, WritableStream } from "stream/web";
 import util from "util";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import test, { ThrowsExpectation } from "ava";
@@ -243,6 +243,50 @@ test("ProxyClient: returns empty ReadableStream synchronously", async (t) => {
 	const objectBody = await bucket.get("key");
 	assert(objectBody != null);
 	t.is(await text(objectBody.body), ""); // Synchronous empty stream access
+});
+test("ProxyClient: returns multiple ReadableStreams in parallel", async (t) => {
+	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+	t.teardown(() => mf.dispose());
+
+	const logs: string[] = [];
+
+	const bucket = await mf.getR2Bucket("BUCKET");
+
+	const str = new Array(300000)
+	  .fill(null)
+	  .map(() => "test")
+	  .join("");
+
+	await bucket.put("obj-1", str);
+	await bucket.put("obj-2", str);
+
+	await Promise.all([
+		bucket.get("obj-1").then((obj) => readStream("obj-1", obj?.body)),
+		bucket.get("obj-2").then((obj) => readStream("obj-2", obj?.body)),
+	]);
+
+	async function readStream(objId: string, stream?: ReadableStream) {
+	  logs.push(`[${objId}] reading stream... `);
+	  if(!stream) return;
+	  await stream.pipeTo(
+		new WritableStream({
+		  write(_chunk) { console.log('...'); },
+		  close() {
+			console.log(`[${objId}] stream close`);
+			logs.push(`[${objId}] stream close`);
+		  },
+		})
+	  );
+	  console.log(`[${objId}] stream read!`);
+	  logs.push(`[${objId}] stream read!`);
+	}
+	t.is(logs.includes('[obj-1] reading stream... '), true);
+	t.is(logs.includes('[obj-2] reading stream... '), true);
+	t.is(logs.includes('[obj-1] stream close'), true);
+	t.is(logs.includes('[obj-2] stream close'), true);
+	t.is(logs.includes('[obj-1] stream read!'), true);
+	t.is(logs.includes('[obj-2] stream read!'), true);
+
 });
 test("ProxyClient: can `JSON.stringify()` proxies", async (t) => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
