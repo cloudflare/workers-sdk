@@ -68,6 +68,7 @@ describe("normalizeAndValidateConfig()", () => {
 			text_blobs: undefined,
 			browser: undefined,
 			ai: undefined,
+			version_metadata: undefined,
 			triggers: {
 				crons: [],
 			},
@@ -1780,6 +1781,65 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - The field \\"ai\\" should be an object but got null."
+		`);
+			});
+		});
+
+		// Worker Version Metadata
+		describe("[version_metadata]", () => {
+			it("should error if version_metadata is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ version_metadata: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"version_metadata\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if version_metadata is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ version_metadata: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"version_metadata\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if version_metadata is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ version_metadata: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"version_metadata\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if version_metadata is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ version_metadata: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"version_metadata\\" should be an object but got null."
 		`);
 			});
 		});

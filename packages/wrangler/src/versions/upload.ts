@@ -336,6 +336,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
 			ai: config.ai,
+			version_metadata: config.version_metadata,
 			text_blobs: config.text_blobs,
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
@@ -389,6 +390,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				"workers/tag": props.tag,
 			},
 		};
+
+		console.log(worker.bindings);
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
 		// We do not care about the timing outside of testing
