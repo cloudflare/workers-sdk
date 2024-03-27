@@ -365,74 +365,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			}
 		}
 	}
-
-	// Partition Durable Objects based on whether they're internal (defined by
-	// this session's worker), or external (defined by another session's worker
-	// registered in the dev registry)
-	const internalObjects: CfDurableObject[] = [];
-	const externalObjects: CfDurableObject[] = [];
-	const externalWorkers: WorkerOptions[] = [];
-	for (const binding of bindings.durable_objects?.bindings ?? []) {
-		const internal =
-			binding.script_name === undefined || binding.script_name === config.name;
-		(internal ? internalObjects : externalObjects).push(binding);
-	}
-	// Setup Durable Object bindings and proxy worker
-	externalWorkers.push({
-		name: EXTERNAL_DURABLE_OBJECTS_WORKER_NAME,
-		// Bind all internal objects, so they're accessible by all other sessions
-		// that proxy requests for our objects to this worker
-		durableObjects: Object.fromEntries(
-			internalObjects.map(({ class_name }) => [
-				class_name,
-				{ className: class_name, scriptName: getName(config) },
-			])
-		),
-		// Use this worker instead of the user worker if the pathname is
-		// `/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`
-		routes: [`*/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`],
-		// Use in-memory storage for the stub object classes *declared* by this
-		// script. They don't need to persist anything, and would end up using the
-		// incorrect unsafe unique key.
-		unsafeEphemeralDurableObjects: true,
-		compatibilityDate: "2024-01-01",
-		modules: true,
-		script:
-			EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT +
-			// Add stub object classes that proxy requests to the correct session
-			externalObjects
-				.map(({ class_name, script_name }) => {
-					assert(script_name !== undefined);
-					const target = config.workerDefinitions?.[script_name];
-					const targetHasClass = target?.durableObjects.some(
-						({ className }) => className === class_name
-					);
-
-					const identifier = getIdentifier(`${script_name}_${class_name}`);
-					const classNameJson = JSON.stringify(class_name);
-					if (
-						target?.host === undefined ||
-						target.port === undefined ||
-						!targetHasClass
-					) {
-						// If we couldn't find the target or the class, create a stub object
-						// that just returns `503 Service Unavailable` responses.
-						return `export const ${identifier} = createClass({ className: ${classNameJson} });`;
-					} else if (target.protocol === "https") {
-						throw new UserError(
-							`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
-						);
-					} else {
-						// Otherwise, create a stub object that proxies request to the
-						// target session at `${hostname}:${port}`.
-						const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`;
-						const proxyUrlJson = JSON.stringify(proxyUrl);
-						return `export const ${identifier} = createClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
-					}
-				})
-				.join("\n"),
-	});
-
+	
 	// Setup service bindings to external services
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
 		...config.serviceBindings,
@@ -513,6 +446,73 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 	}
 
+	// Partition Durable Objects based on whether they're internal (defined by
+	// this session's worker), or external (defined by another session's worker
+	// registered in the dev registry)
+	const internalObjects: CfDurableObject[] = [];
+	const externalObjects: CfDurableObject[] = [];
+	const externalWorkers: WorkerOptions[] = [];
+	for (const binding of bindings.durable_objects?.bindings ?? []) {
+		const internal =
+			binding.script_name === undefined || binding.script_name === config.name;
+		(internal ? internalObjects : externalObjects).push(binding);
+	}
+	// Setup Durable Object bindings and proxy worker
+	externalWorkers.push({
+		name: EXTERNAL_DURABLE_OBJECTS_WORKER_NAME,
+		// Bind all internal objects, so they're accessible by all other sessions
+		// that proxy requests for our objects to this worker
+		durableObjects: Object.fromEntries(
+			internalObjects.map(({ class_name }) => [
+				class_name,
+				{ className: class_name, scriptName: getName(config) },
+			])
+		),
+		// Use this worker instead of the user worker if the pathname is
+		// `/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`
+		routes: [`*/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`],
+		// Use in-memory storage for the stub object classes *declared* by this
+		// script. They don't need to persist anything, and would end up using the
+		// incorrect unsafe unique key.
+		unsafeEphemeralDurableObjects: true,
+		compatibilityDate: "2024-01-01",
+		modules: true,
+		script:
+			EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT +
+			// Add stub object classes that proxy requests to the correct session
+			externalObjects
+				.map(({ class_name, script_name }) => {
+					assert(script_name !== undefined);
+					const target = config.workerDefinitions?.[script_name];
+					const targetHasClass = target?.durableObjects.some(
+						({ className }) => className === class_name
+					);
+
+					const identifier = getIdentifier(`${script_name}_${class_name}`);
+					const classNameJson = JSON.stringify(class_name);
+					if (
+						target?.host === undefined ||
+						target.port === undefined ||
+						!targetHasClass
+					) {
+						// If we couldn't find the target or the class, create a stub object
+						// that just returns `503 Service Unavailable` responses.
+						return `export const ${identifier} = createClass({ className: ${classNameJson} });`;
+					} else if (target.protocol === "https") {
+						throw new UserError(
+							`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+						);
+					} else {
+						// Otherwise, create a stub object that proxies request to the
+						// target session at `${hostname}:${port}`.
+						const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`;
+						const proxyUrlJson = JSON.stringify(proxyUrl);
+						return `export const ${identifier} = createClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
+					}
+				})
+				.join("\n"),
+	});
+
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
 		externalWorkers.push({
@@ -533,7 +533,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
 		};
 	}
-
+	
 	const bindingOptions = {
 		bindings: {
 			...bindings.vars,
