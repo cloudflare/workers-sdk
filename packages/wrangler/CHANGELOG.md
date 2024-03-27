@@ -1,5 +1,21 @@
 # wrangler
 
+## 3.39.0
+
+### Minor Changes
+
+- [#5373](https://github.com/cloudflare/workers-sdk/pull/5373) [`5bd8db8`](https://github.com/cloudflare/workers-sdk/commit/5bd8db82a64f2c4ffab1b059b240ba6e6eaafde1) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: Implement versioned rollbacks via `wrangler rollback [version-id] --experimental-versions`.
+
+  Please note, the `experimental-versions` flag is required to use the new behaviour. The original `wrangler rollback` command is unchanged if run without this flag.
+
+### Patch Changes
+
+- [#5366](https://github.com/cloudflare/workers-sdk/pull/5366) [`e11e169`](https://github.com/cloudflare/workers-sdk/commit/e11e1691a0748c5d6520dc6c2d3d796886ea931f) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: save non-versioned script-settings (logpush, tail_consumers) on `wrangler versions deploy`. This command still requires `--experimental-versions`.
+
+- [#5405](https://github.com/cloudflare/workers-sdk/pull/5405) [`7c701bf`](https://github.com/cloudflare/workers-sdk/commit/7c701bf75731646860be10f2515d9944c7e32361) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: add `wrangler deployments view [deployment-id] --experimental-versions` command
+
+  This command will display an error message which points the user to run either `wrangler deployments status --experimental-versions` or `wrangler versions view <version-id> --experimental-versions` instead.
+
 ## 3.38.0
 
 ### Minor Changes
