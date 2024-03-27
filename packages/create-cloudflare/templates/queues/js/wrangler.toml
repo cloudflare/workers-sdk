@@ -72,6 +72,8 @@ compatibility_date = "<TBD>"
 [[queues.producers]]
 binding = "MY_QUEUE"
 queue = "my-queue"
+# Optional: Configure delay control: https://developers.cloudflare.com/queues/reference/batching-retries/#delay-messages
+# delivery_delay = 5
 
 # Bind a Queue consumer. Queue Consumers can retrieve tasks scheduled by Producers to act on them.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#queues
@@ -82,6 +84,8 @@ queue = "my-queue"
 # max_batch_timeout = 30
 # max_retries = 10
 # dead_letter_queue = "my-queue-dlq"
+# Optional: Configure delay control: https://developers.cloudflare.com/queues/reference/batching-retries/#delay-messages
+# retry_delay = 5
 
 # Bind an R2 Bucket. Use R2 to store arbitrarily large blobs of data, such as files.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#r2-buckets
