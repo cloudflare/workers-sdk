@@ -23,6 +23,7 @@ import {
 	putEventNotificationConfig,
 	putR2Object,
 	usingLocalBucket,
+	isValidR2BucketName,
 } from "./helpers";
 import * as Sippy from "./sippy";
 import type { CommonYargsArgv } from "../yargs-types";
@@ -433,6 +434,12 @@ export function r2(r2Yargs: CommonYargsArgv) {
 				},
 				async (args) => {
 					await printWranglerBanner();
+
+					if (!isValidR2BucketName(args.name)) {
+						throw new CommandLineArgsError(
+							`The bucket name "${args.name}" is invalid. Bucket names can only have alphanumeric and - characters.`
+						);
+					}
 
 					const config = readConfig(args.config, args);
 
