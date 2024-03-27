@@ -349,6 +349,9 @@ export type AdditionalDevProps = {
 	ai?: {
 		binding: string;
 	};
+	version_metadata?: {
+		binding: string;
+	};
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
 	additionalModules?: CfModule[];
@@ -852,6 +855,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 		services: args.services,
 		d1Databases: args.d1Databases,
 		ai: args.ai,
+		version_metadata: args.version_metadata,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
@@ -1026,6 +1030,7 @@ export function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
+		version_metadata: args.version_metadata || configParam.version_metadata,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,

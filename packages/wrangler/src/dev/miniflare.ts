@@ -360,7 +360,13 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	}
 
 	const bindingOptions = {
-		bindings: bindings.vars,
+		bindings: {
+			...bindings.vars,
+			// emulate version_metadata binding via a JSON var
+			...(bindings.version_metadata
+				? { [bindings.version_metadata.binding]: { id: randomUUID(), tag: "" } }
+				: undefined),
+		},
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
