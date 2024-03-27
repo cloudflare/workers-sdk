@@ -89,8 +89,6 @@ async function renameWorkerNamespace(
 	oldName: string,
 	newName: string
 ) {
-	void printWranglerBanner();
-
 	await fetchResult(
 		`/accounts/${accountId}/workers/dispatch/namespaces/${oldName}`,
 		{
