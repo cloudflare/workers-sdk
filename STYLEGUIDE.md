@@ -21,7 +21,7 @@ wrangler <command> <subcommand> <arg> --<option>`
 ```
 
 
-## Wrangler \<command\> -help
+## Wrangler \<command\> --help
 
 ```sh
 🧮 *Brief description of the product, the value it offers and how Wrangler can interact with it*
