@@ -31,11 +31,11 @@ export async function versionsDeploymentsViewHandler(
 
 	if (args.deploymentId === undefined) {
 		throw new UserError(
-			"`wrangler deployments view` is deprecated and will be removed in a future major version. Please use `wrangler deployments status --x-versions` instead."
+			"`wrangler deployments view` has been renamed `wrangler deployments status --x-versions`. Please use that command instead."
 		);
 	} else {
 		throw new UserError(
-			"`wrangler deployments view <deployment-id>` is deprecated and will be removed in a future major version. Deployment ID is now referred to as Version ID. Please use `wrangler versions view [version-id] --x-versions` instead."
+			"`wrangler deployments view <deployment-id>` has been renamed `wrangler versions view [version-id] --x-versions`. Please use that command instead."
 		);
 	}
 }
