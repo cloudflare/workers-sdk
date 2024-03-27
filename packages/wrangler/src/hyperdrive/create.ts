@@ -88,9 +88,9 @@ export async function handler(
 				host: url.hostname,
 				port: parseInt(url.port),
 				scheme: url.protocol.replace(":", ""),
-				database: url.pathname.replace("/", ""),
-				user: url.username,
-				password: url.password,
+				database: decodeURIComponent(url.pathname.replace("/", "")),
+				user: decodeURIComponent(url.username),
+				password: decodeURIComponent(url.password),
 			},
 			caching: {
 				disabled: args.cachingDisabled,

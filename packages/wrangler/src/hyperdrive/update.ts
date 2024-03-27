@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { patchConfig } from "./client";
 import { hyperdriveBetaWarning } from "./utils";
@@ -62,12 +63,17 @@ export function options(yargs: CommonYargsArgv) {
 }
 
 const requiredOriginOptions = [
-	"origin-host",
-	"origin-port",
+	"originHost",
+	"originPort",
 	"database",
-	"origin-user",
-	"origin-password",
-];
+	"originUser",
+	"originPassword",
+] as const;
+
+// utility for displaying the yargs options to the user when displaying the "all or nothing" error message
+function camelToKebab(str: string): string {
+	return str.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+}
 
 function isOptionSet<T extends object>(args: T, key: keyof T): boolean {
 	return key in args && args[key] !== undefined;
@@ -78,17 +84,17 @@ export async function handler(
 ) {
 	// check if all or none of the required origin fields are set, since we don't allow partial updates of the origin
 	const allOriginFieldsSet = requiredOriginOptions.every((field) =>
-		isOptionSet(args, field as keyof typeof options)
+		isOptionSet(args, field)
 	);
 	const noOriginFieldSet = requiredOriginOptions.every(
-		(field) => !isOptionSet(args, field as keyof typeof options)
+		(field) => !isOptionSet(args, field)
 	);
 
 	if (!allOriginFieldsSet && !noOriginFieldSet) {
-		throw new Error(
-			`When updating the origin, all of the following must be set: ${requiredOriginOptions.join(
-				", "
-			)}`
+		throw new UserError(
+			`When updating the origin, all of the following must be set: ${requiredOriginOptions
+				.map((option) => camelToKebab(option))
+				.join(", ")}`
 		);
 	}
 
@@ -104,26 +110,20 @@ export async function handler(
 
 	if (allOriginFieldsSet) {
 		database.origin = {
+			scheme: args.originScheme ?? "postgresql",
 			host: args.originHost,
 			port: args.originPort,
 			database: args.database,
 			user: args.originUser,
 			password: args.originPassword,
 		};
-		if (args.originScheme !== undefined) {
-			database.origin.scheme = args.originScheme;
-		} else {
-			database.origin.scheme = "postgresql"; // setting default if not passed
-		}
 	}
 
-	if (args.cachingDisabled || args.maxAge || args.swr) {
-		database.caching = {
-			disabled: args.cachingDisabled,
-			maxAge: args.maxAge,
-			staleWhileRevalidate: args.swr,
-		};
-	}
+	database.caching = {
+		disabled: args.cachingDisabled,
+		maxAge: args.maxAge,
+		staleWhileRevalidate: args.swr,
+	};
 
 	const updated = await patchConfig(config, args.id, database);
 	logger.log(

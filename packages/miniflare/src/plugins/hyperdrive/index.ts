@@ -81,9 +81,9 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 						designator: {
 							name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 						},
-						database,
-						user: url.username,
-						password: url.password,
+						database: decodeURIComponent(database),
+						user: decodeURIComponent(url.username),
+						password: decodeURIComponent(url.password),
 						scheme,
 					},
 				};
