@@ -148,4 +148,13 @@ describe("'wrangler dev' correctly renders pages", () => {
 			`hello2=world2; Domain=${ip}; Secure`,
 		]);
 	});
+
+	it("has access to version_metadata binding", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/version_metadata`);
+
+		await expect(response.json()).resolves.toMatchObject({
+			id: expect.any(String),
+			tag: expect.any(String),
+		});
+	});
 });

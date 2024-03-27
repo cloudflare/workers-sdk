@@ -13,10 +13,11 @@ function hexEncode(array) {
 }
 
 export default {
-	async fetch(request) {
+	async fetch(request, env) {
 		console.log("request log");
 
 		const { pathname, origin, hostname, host } = new URL(request.url);
+		if (pathname === "/version_metadata") return Response.json(env.METADATA);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");
 		if (pathname === "/redirect") return Response.redirect(`${origin}/foo`);
