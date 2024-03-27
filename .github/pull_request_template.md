@@ -14,7 +14,7 @@ Fixes #[insert GH or internal issue number(s)].
   - [ ] Not necessary because:
 - Public documentation
   - [ ] TODO (before merge)
-  - [ ] Cloudflare docs PR(s): <https://github.com/cloudflare/cloudflare-docs/pull/>...
+  - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [ ] Not necessary because:
 
 <!--
