@@ -5,6 +5,8 @@ import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { getQueue } from "../queues/client";
+import type { Config } from "../config";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -378,14 +380,16 @@ export function eventNotificationHeaders(
  * - 409 Conflict - A configuration between the bucket and queue already exists
  * */
 export async function putEventNotificationConfig(
+	config: Config,
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
-	queueUUID: string,
+	queueName: string,
 	eventTypes: R2EventType[],
 	prefix?: string,
 	suffix?: string
 ): Promise<{ event_notification_detail_id: string }> {
+	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials);
 	let actions: R2EventableOperation[] = [];
 
@@ -400,23 +404,25 @@ export async function putEventNotificationConfig(
 		`Sending this configuration to "${bucketName}":\n${JSON.stringify(body)}`
 	);
 	return await fetchResult<{ event_notification_detail_id: string }>(
-		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queueUUID}`,
+		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 		{ method: "PUT", body: JSON.stringify(body), headers }
 	);
 }
 
 export async function deleteEventNotificationConfig(
+	config: Config,
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
-	queueUUID: string
+	queueName: string
 ): Promise<null> {
+	const queue = await getQueue(config, queueName);
 	const headers = eventNotificationHeaders(apiCredentials);
 	logger.log(
-		`Disabling event notifications for "${bucketName}" to queue ${queueUUID}...`
+		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
 	);
 	return await fetchResult<null>(
-		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queueUUID}`,
+		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 		{ method: "DELETE", headers }
 	);
 }

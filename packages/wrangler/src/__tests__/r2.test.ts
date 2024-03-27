@@ -551,7 +551,7 @@ describe("r2", () => {
 					const eventTypes: R2EventType[] = ["object_create", "object_delete"];
 					const actions: R2EventableOperation[] = [];
 					const bucketName = "my-bucket";
-					const queue = "deadbeef-0123-4567-8910-abcdefabcdef";
+					const queue = "my-queue";
 
 					const config: EWCRequestBody = {
 						rules: [
@@ -579,6 +579,25 @@ describe("r2", () => {
 									"Bearer some-api-token"
 								);
 								return response.once(context.json(createFetchResult({})));
+							}
+						),
+						rest.get(
+							"*/accounts/:accountId/workers/queues/:queueName",
+							async (request, response, context) => {
+								const { accountId, queueName } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(queueName).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									})
+								);
 							}
 						)
 					);
@@ -624,7 +643,7 @@ describe("r2", () => {
 				      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'  [array] [required] [choices: \\"object_create\\", \\"object_delete\\"]
 				      --prefix                     only actions on objects with this prefix will emit notifications  [string]
 				      --suffix                     only actions on objects with this suffix will emit notifications  [string]
-				      --queue                      The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+				      --queue                      The name of the queue to which event notifications will be sent. ex '--queue my-queue'  [string] [required]"
 			`);
 				});
 			});
@@ -632,7 +651,7 @@ describe("r2", () => {
 			describe("delete", () => {
 				it("follows happy path as expected", async () => {
 					const bucketName = "my-bucket";
-					const queue = "deadbeef-0123-4567-8910-abcdefabcdef";
+					const queue = "my-queue";
 					msw.use(
 						rest.delete(
 							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
@@ -644,6 +663,25 @@ describe("r2", () => {
 								);
 								return response.once(context.json(createFetchResult({})));
 							}
+						),
+						rest.get(
+							"*/accounts/:accountId/workers/queues/:queueName",
+							async (request, response, context) => {
+								const { accountId, queueName } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(queueName).toEqual(queue);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(
+									context.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									})
+								);
+							}
 						)
 					);
 					await expect(
@@ -652,7 +690,7 @@ describe("r2", () => {
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
-				"Disabling event notifications for \\"my-bucket\\" to queue deadbeef-0123-4567-8910-abcdefabcdef...
+				"Disabling event notifications for \\"my-bucket\\" to queue my-queue...
 				Configuration deleted successfully!"
 			`);
 				});
@@ -682,7 +720,7 @@ describe("r2", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				Options:
-				      --queue  The ID of the queue that is configured to receive notifications. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'  [string] [required]"
+				      --queue  The name of the queue that is configured to receive notifications. ex '--queue my-queue'  [string] [required]"
 			`);
 				});
 			});

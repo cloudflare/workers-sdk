@@ -582,7 +582,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									})
 									.option("queue", {
 										describe:
-											"The ID of the queue to which event notifications will be sent. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'",
+											"The name of the queue to which event notifications will be sent. ex '--queue my-queue'",
 										demandOption: true,
 										requiresArg: true,
 										type: "string",
@@ -601,6 +601,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									suffix = "",
 								} = args;
 								await putEventNotificationConfig(
+									config,
 									apiCreds,
 									accountId,
 									`${bucket}`,
@@ -625,7 +626,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									})
 									.option("queue", {
 										describe:
-											"The ID of the queue that is configured to receive notifications. ex '--queue deadbeef-0123-4567-8910-abcdefgabcde'",
+											"The name of the queue that is configured to receive notifications. ex '--queue my-queue'",
 										demandOption: true,
 										requiresArg: true,
 										type: "string",
@@ -638,6 +639,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								const apiCreds = requireApiToken();
 								const { bucket, queue } = args;
 								await deleteEventNotificationConfig(
+									config,
 									apiCreds,
 									accountId,
 									`${bucket}`,
