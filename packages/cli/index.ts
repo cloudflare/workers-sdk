@@ -40,6 +40,7 @@ export const status = {
 	warning: bgYellow(` WARNING `),
 	info: bgBlue(` INFO `),
 	success: bgGreen(` SUCCESS `),
+	cancel: white.bgRed(` X `),
 };
 
 // Returns a string containing n non-trimmable spaces
@@ -66,18 +67,38 @@ export const newline = () => {
 	log("");
 };
 
+export const format = (
+	msg: string,
+	{
+		linePrefix = gray(shapes.bar),
+		firstLinePrefix = gray(shapes.bar),
+		newlineBefore = false,
+		newlineAfter = false,
+		formatLine = (line: string) => white(line),
+		multiline = true,
+	}
+) => {
+	const lines = multiline ? msg.split("\n") : [msg];
+	const formattedLines = lines.map(
+		(line, i) =>
+			(i === 0 ? firstLinePrefix : linePrefix) + space() + formatLine(line)
+	);
+
+	if (newlineBefore) formattedLines.unshift(linePrefix);
+	if (newlineAfter) formattedLines.push(linePrefix);
+
+	return formattedLines.join("\n");
+};
+
 // Log a simple status update with a style similar to the clack spinner
 export const updateStatus = (msg: string, printNewLine = true) => {
-	const lines = msg.split("\n");
-	const restLines = lines
-		.slice(1)
-		.map((ln) => `${gray(shapes.bar)} ${white(ln)}`);
-	logRaw(`${gray(shapes.leftT)} ${lines[0]}`);
-	if (restLines.length) {
-		logRaw(restLines.join("\n"));
-	}
-
-	if (printNewLine) newline();
+	logRaw(
+		format(msg, {
+			firstLinePrefix: gray(shapes.leftT),
+			linePrefix: gray(shapes.bar),
+			newlineAfter: printNewLine,
+		})
+	);
 };
 
 export const startSection = (
@@ -101,19 +122,64 @@ export const endSection = (heading: string, subheading?: string) => {
 	);
 };
 
-export const cancel = (msg: string) => {
-	newline();
-	logRaw(`${gray(shapes.corners.bl)} ${white.bgRed(` X `)} ${dim(msg)}`);
+export const cancel = (
+	msg: string,
+	{
+		// current default is backcompat and makes sense going forward too
+		shape = shapes.corners.bl,
+		// current default for backcompat -- TODO: change default to true once all callees have been updated
+		multiline = false,
+	} = {}
+) => {
+	logRaw(
+		format(msg, {
+			firstLinePrefix: `${gray(shape)} ${status.cancel}`,
+			linePrefix: gray(shapes.bar),
+			newlineBefore: true,
+			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
+			multiline,
+		})
+	);
 };
 
-export const warn = (msg: string) => {
-	newline();
-	logRaw(`${gray(shapes.corners.bl)} ${status.warning} ${dim(msg)}`);
+export const warn = (
+	msg: string,
+	{
+		// current default for backcompat -- TODO: change default to shapes.bar once all callees have been updated
+		shape = shapes.corners.bl,
+		// current default for backcompat -- TODO: change default to true once all callees have been updated
+		multiline = false,
+	} = {}
+) => {
+	logRaw(
+		format(msg, {
+			firstLinePrefix: gray(shape) + space() + status.warning,
+			linePrefix: gray(shapes.bar),
+			newlineBefore: true,
+			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
+			multiline,
+		})
+	);
 };
 
-export const success = (msg: string) => {
-	newline();
-	logRaw(`${gray(shapes.corners.bl)} ${status.success} ${dim(msg)}`);
+export const success = (
+	msg: string,
+	{
+		// current default for backcompat -- TODO: change default to shapes.bar once all callees have been updated
+		shape = shapes.corners.bl,
+		// current default for backcompat -- TODO: change default to true once all callees have been updated
+		multiline = false,
+	} = {}
+) => {
+	logRaw(
+		format(msg, {
+			firstLinePrefix: gray(shape) + space() + status.success,
+			linePrefix: gray(shapes.bar),
+			newlineBefore: true,
+			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
+			multiline,
+		})
+	);
 };
 
 // Strip the ansi color characters out of the line when calculating
