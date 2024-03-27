@@ -545,7 +545,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 			);
 
 			r2BucketYargs.command(
-				"event-notification",
+				"notification",
 				"Manage event notifications for an R2 bucket",
 				(r2EvNotifyYargs) => {
 					return r2EvNotifyYargs
@@ -562,7 +562,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									})
 									.option("event-types", {
 										describe:
-											"Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'",
+											"Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'",
 										alias: "event-type",
 										choices: Object.keys(actionsForEventCategories),
 										demandOption: true,
