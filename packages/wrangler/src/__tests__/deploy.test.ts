@@ -10253,7 +10253,7 @@ function mockPutQueue(expectedQueueId: string, expectedBody: PostQueueBody) {
 					result: {
 						queue: expectedBody.queue_name,
 						settings: {
-							delivery_delay: expectedBody.settings?.delivery_delay || 0,
+							delivery_delay: expectedBody.settings?.delivery_delay,
 						},
 					},
 				})
