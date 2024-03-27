@@ -7,7 +7,6 @@ import * as Insights from "./insights";
 import * as List from "./list";
 import * as Migrations from "./migrations";
 import * as TimeTravel from "./timeTravel";
-import { d1BetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function d1(yargs: CommonYargsArgv) {
@@ -65,7 +64,6 @@ export function d1(yargs: CommonYargsArgv) {
 						Backups.DownloadOptions,
 						Backups.DownloadHandler
 					)
-					.epilogue(d1BetaWarning)
 			)
 			// .command(
 			//   "console <name>",
@@ -127,8 +125,6 @@ export function d1(yargs: CommonYargsArgv) {
 						Migrations.ApplyOptions,
 						Migrations.ApplyHandler
 					)
-					.epilogue(d1BetaWarning)
 			)
-			.epilogue(d1BetaWarning)
 	);
 }

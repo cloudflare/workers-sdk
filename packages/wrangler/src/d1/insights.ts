@@ -3,11 +3,7 @@ import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import {
-	d1BetaWarning,
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromId,
-} from "./utils";
+import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -50,8 +46,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 const cliOptionToGraphQLOption = {

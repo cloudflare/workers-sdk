@@ -8,7 +8,6 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
-import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -26,8 +25,7 @@ export function Options(yargs: CommonYargsArgv) {
 			describe:
 				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
