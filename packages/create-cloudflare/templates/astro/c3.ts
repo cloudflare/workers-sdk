@@ -48,7 +48,7 @@ const updateAstroConfig = () => {
 					b.objectProperty(
 						b.identifier("platformProxy"),
 						b.objectExpression([
-							b.objectProperty(b.identifier("enable"), b.booleanLiteral(true)),
+							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
 						])
 					),
 				]),
