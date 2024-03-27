@@ -11,7 +11,12 @@ export const chooseAccount = async (ctx: C3Context) => {
 
 	let accountId: string;
 
-	if (Object.keys(accounts).length == 1) {
+	const numAccounts = Object.keys(accounts).length;
+	if (numAccounts === 0) {
+		throw new Error(
+			"Unable to find any accounts to deploy to! Please ensure you're logged in as a user that can deploy Workers."
+		);
+	} else if (numAccounts === 1) {
 		const accountName = Object.keys(accounts)[0];
 		accountId = accounts[accountName];
 		s.stop(`${brandColor("account")} ${dim(accountName)}`);
