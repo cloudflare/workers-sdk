@@ -46,9 +46,9 @@ const updateAstroConfig = () => {
 			n.node.arguments = [
 				b.objectExpression([
 					b.objectProperty(
-						b.identifier("runtime"),
+						b.identifier("platformProxy"),
 						b.objectExpression([
-							b.objectProperty(b.identifier("mode"), b.stringLiteral("local")),
+							b.objectProperty(b.identifier("enable"), b.booleanLiteral(true)),
 						])
 					),
 				]),
