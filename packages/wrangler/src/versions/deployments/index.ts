@@ -6,6 +6,10 @@ import {
 	versionsDeploymentsStatusHandler,
 	versionsDeploymentsStatusOptions,
 } from "./status";
+import {
+	versionsDeploymentsViewHandler,
+	versionsDeploymentsViewOptions,
+} from "./view";
 import type { CommonYargsArgv } from "../../yargs-types";
 
 export default function registerVersionsDeploymentsSubcommands(
@@ -23,5 +27,11 @@ export default function registerVersionsDeploymentsSubcommands(
 			"See the current state of your production [beta]",
 			versionsDeploymentsStatusOptions,
 			versionsDeploymentsStatusHandler
+		)
+		.command(
+			"view [deployment-id]",
+			false,
+			versionsDeploymentsViewOptions,
+			versionsDeploymentsViewHandler
 		);
 }
