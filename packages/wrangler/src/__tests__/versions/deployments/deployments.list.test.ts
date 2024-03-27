@@ -47,7 +47,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (90%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -61,7 +61,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (80%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -75,7 +75,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (70%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -89,7 +89,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (60%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -120,7 +120,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (90%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -134,7 +134,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (80%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -148,7 +148,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (70%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
@@ -162,7 +162,7 @@ describe("deployments list", () => {
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
 			                 Message:  -
-			             
+
 			             (60%) 20000000-0000-0000-0000-000000000000
 			                 Created:  2021-01-01T00:00:00.000Z
 			                     Tag:  -
