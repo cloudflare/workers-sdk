@@ -319,7 +319,10 @@ describe("versions deploy", () => {
 			│ Message Rollback via e2e test
 			│
 			│
-			╰  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000:
+			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
+			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
+			│ However, your local development environment will not be affected by this rollback.
+			│ Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
 			│
 			│ (100%) 00000000-0000-0000-0000-000000000000
 			│       Created:  TIMESTAMP
@@ -427,7 +430,10 @@ describe("versions deploy", () => {
 			│ Message Rollback to old version
 			│
 			│
-			╰  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000:
+			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
+			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
+			│ However, your local development environment will not be affected by this rollback.
+			│ Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
 			│
 			│ (100%) 00000000-0000-0000-0000-000000000000
 			│       Created:  TIMESTAMP
