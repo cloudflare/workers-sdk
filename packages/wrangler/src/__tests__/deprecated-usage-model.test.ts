@@ -60,7 +60,7 @@ describe("deprecated-usage-model", () => {
 		Current Deployment ID: Galaxy-Class
 
 
-		NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+		NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 		  "warn": "",
 		}
 	`);

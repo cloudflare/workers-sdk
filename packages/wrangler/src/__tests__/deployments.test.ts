@@ -110,7 +110,7 @@ describe("deployments", () => {
 			🟩 Active
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 
@@ -145,7 +145,7 @@ describe("deployments", () => {
 			🟩 Active
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 
@@ -180,7 +180,7 @@ describe("deployments", () => {
 
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 
@@ -209,7 +209,7 @@ describe("deployments", () => {
 
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 			it("should automatically log latest deployment details", async () => {
@@ -234,7 +234,7 @@ describe("deployments", () => {
 
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 		});
@@ -305,7 +305,7 @@ describe("deployments", () => {
 			Current Deployment ID: galactic_mission_alpha
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -344,7 +344,7 @@ describe("deployments", () => {
 			Current Deployment ID: galactic_mission_alpha
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -363,7 +363,7 @@ describe("deployments", () => {
 			Current Deployment ID: galactic_mission_alpha
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -382,7 +382,7 @@ describe("deployments", () => {
 			Current Deployment ID: galactic_mission_alpha
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -409,7 +409,7 @@ describe("deployments", () => {
 			Current Deployment ID: galactic_mission_alpha
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -443,7 +443,7 @@ describe("deployments", () => {
 			Current Deployment ID: galactic_mission_alpha
 
 
-			NOTE: Deployment ID is now referred to as Version ID. The output of this command will be changing in a future version of Wrangler to reflect this. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
