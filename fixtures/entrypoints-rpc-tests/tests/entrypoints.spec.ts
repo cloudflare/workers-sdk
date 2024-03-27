@@ -711,7 +711,7 @@ test("should throw if wrangler session doesn't export expected entrypoint", asyn
 	await waitFor(() => {
 		const output = session.getOutput();
 		expect(output).toMatch(
-			'The `wrangler dev` session for service "bound" does export an entrypoint named "ThingEntrypoint"'
+			'The `wrangler dev` session for service "bound" does not export an entrypoint named "ThingEntrypoint"'
 		);
 	});
 });
@@ -819,7 +819,7 @@ test("should throw if binding to version of wrangler without entrypoints support
 	await waitFor(() => {
 		const output = session.getOutput();
 		expect(output).toMatch(
-			'Cannot proxy to `wrangler dev` session for service "bound" because it uses HTTPS. Please remove the `--local-protocol`/`dev.local_protocol` option.'
+			'Cannot proxy to `wrangler dev` session for service "bound" because it uses HTTPS. Please upgrade "bound"\'s `wrangler` version, or remove the `--local-protocol`/`dev.local_protocol` option.'
 		);
 	});
 });

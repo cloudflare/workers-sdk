@@ -202,8 +202,8 @@ function buildLog(): Log {
 async function getEntrypointNames(entrypointSource: string) {
 	await esmLexer.init;
 	const [_imports, exports] = esmLexer.parse(entrypointSource);
-	// TODO(soon): support `export * from "...";` with `--no-bundle`, `esbuild`
-	//  will bundle these so we don't need to worry about this there
+	// TODO(soon): support `export * from "...";` with `--no-bundle`. Without
+	//  `--no-bundle`, `esbuild` will bundle these, so they'll be picked up here.
 	return exports.map(({ n }) => n);
 }
 
@@ -444,7 +444,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				if (entrypointAddress === undefined) {
 					// ...but the named entrypoint doesn't exist, throw
 					throw new UserError(
-						`The \`wrangler dev\` session for service "${service.service}" does export an entrypoint named "${service.entrypoint}"`
+						`The \`wrangler dev\` session for service "${service.service}" does not export an entrypoint named "${service.entrypoint}"`
 					);
 				}
 				address = `${entrypointAddress.host}:${entrypointAddress.port}`;
@@ -463,7 +463,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 						// in the registry. There's no blanket `rejectUnauthorized: false`
 						// option like in Node.
 						throw new UserError(
-							`Cannot proxy to \`wrangler dev\` session for service "${service.service}" because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+							`Cannot proxy to \`wrangler dev\` session for service "${service.service}" because it uses HTTPS. Please upgrade "${service.service}"'s \`wrangler\` version, or remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
 						);
 					}
 					address = `${target.host}:${target.port}`;
