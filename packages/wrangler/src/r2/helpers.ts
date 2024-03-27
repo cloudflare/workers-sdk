@@ -332,11 +332,11 @@ export const R2EventableOperations = [
 export type R2EventableOperation = typeof R2EventableOperations[number];
 
 export const actionsForEventCategories: Record<
-	"object_create" | "object_delete",
+	"object-create" | "object-delete",
 	R2EventableOperation[]
 > = {
-	object_create: ["PutObject", "CompleteMultipartUpload", "CopyObject"],
-	object_delete: ["DeleteObject"],
+	"object-create": ["PutObject", "CompleteMultipartUpload", "CopyObject"],
+	"object-delete": ["DeleteObject"],
 };
 
 export type R2EventType = keyof typeof actionsForEventCategories;

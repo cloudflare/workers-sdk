@@ -42,11 +42,11 @@ describe("r2", () => {
 			Manage R2 buckets
 
 			Commands:
-			  wrangler r2 bucket create <name>       Create a new R2 bucket
-			  wrangler r2 bucket list                List R2 buckets
-			  wrangler r2 bucket delete <name>       Delete an R2 bucket
-			  wrangler r2 bucket sippy               Manage Sippy incremental migration on an R2 bucket
-			  wrangler r2 bucket event-notification  Manage event notifications for an R2 bucket
+			  wrangler r2 bucket create <name>  Create a new R2 bucket
+			  wrangler r2 bucket list           List R2 buckets
+			  wrangler r2 bucket delete <name>  Delete an R2 bucket
+			  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
+			  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -545,10 +545,10 @@ describe("r2", () => {
 			});
 		});
 
-		describe("event-notification", () => {
+		describe("notification", () => {
 			describe("create", () => {
 				it("follows happy path as expected", async () => {
-					const eventTypes: R2EventType[] = ["object_create", "object_delete"];
+					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
 					const actions: R2EventableOperation[] = [];
 					const bucketName = "my-bucket";
 					const queue = "my-queue";
@@ -603,7 +603,7 @@ describe("r2", () => {
 					);
 					await expect(
 						runWrangler(
-							`r2 bucket event-notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
+							`r2 bucket notification create ${bucketName} --queue ${queue} --event-types ${eventTypes.join(
 								" "
 							)}`
 						)
@@ -617,15 +617,13 @@ describe("r2", () => {
 
 				it("errors if required options are not provided", async () => {
 					await expect(
-						runWrangler(
-							"r2 bucket event-notification create event-notification-test-001"
-						)
+						runWrangler("r2 bucket notification create notification-test-001")
 					).rejects.toMatchInlineSnapshot(
 						`[Error: Missing required arguments: event-types, queue]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
-				wrangler r2 bucket event-notification create <bucket>
+				wrangler r2 bucket notification create <bucket>
 
 				Create new event notification configuration for an R2 bucket
 
@@ -640,7 +638,7 @@ describe("r2", () => {
 				  -v, --version                   Show version number  [boolean]
 
 				Options:
-				      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object_create object_delete'  [array] [required] [choices: \\"object_create\\", \\"object_delete\\"]
+				      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
 				      --prefix                     only actions on objects with this prefix will emit notifications  [string]
 				      --suffix                     only actions on objects with this suffix will emit notifications  [string]
 				      --queue                      The name of the queue to which event notifications will be sent. ex '--queue my-queue'  [string] [required]"
@@ -686,7 +684,7 @@ describe("r2", () => {
 					);
 					await expect(
 						runWrangler(
-							`r2 bucket event-notification delete ${bucketName} --queue ${queue}`
+							`r2 bucket notification delete ${bucketName} --queue ${queue}`
 						)
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -697,15 +695,13 @@ describe("r2", () => {
 
 				it("errors if required options are not provided", async () => {
 					await expect(
-						runWrangler(
-							"r2 bucket event-notification delete event-notification-test-001"
-						)
+						runWrangler("r2 bucket notification delete notification-test-001")
 					).rejects.toMatchInlineSnapshot(
 						`[Error: Missing required argument: queue]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
-				wrangler r2 bucket event-notification delete <bucket>
+				wrangler r2 bucket notification delete <bucket>
 
 				Delete event notification configuration for an R2 bucket and queue
 
