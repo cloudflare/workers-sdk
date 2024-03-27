@@ -78,6 +78,32 @@ describe("versions view", () => {
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
+
+		test("prints version to stdout as --json", async () => {
+			const result = runWrangler(
+				"versions view 10000000-0000-0000-0000-000000000000 --name test-name --json  --experimental-versions"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
+			  \\"number\\": \\"1701-E\\",
+			  \\"annotations\\": {
+			    \\"workers/triggered_by\\": \\"upload\\"
+			  },
+			  \\"metadata\\": {
+			    \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+			    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+			    \\"source\\": \\"wrangler\\",
+			    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+			    \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+			  }
+			}
+			"
+		`);
+		});
 	});
 
 	describe("with wrangler.toml", () => {
@@ -129,6 +155,32 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
 
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
+		});
+
+		test("prints version to stdout as --json", async () => {
+			const result = runWrangler(
+				"versions view 10000000-0000-0000-0000-000000000000 --json  --experimental-versions"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"id\\": \\"10000000-0000-0000-0000-000000000000\\",
+			  \\"number\\": \\"1701-E\\",
+			  \\"annotations\\": {
+			    \\"workers/triggered_by\\": \\"upload\\"
+			  },
+			  \\"metadata\\": {
+			    \\"author_id\\": \\"Picard-Gamma-6-0-7-3\\",
+			    \\"author_email\\": \\"Jean-Luc-Picard@federation.org\\",
+			    \\"source\\": \\"wrangler\\",
+			    \\"created_on\\": \\"2021-01-01T00:00:00.000000Z\\",
+			    \\"modified_on\\": \\"2021-01-01T00:00:00.000000Z\\"
+			  }
+			}
+			"
+		`);
 		});
 	});
 });

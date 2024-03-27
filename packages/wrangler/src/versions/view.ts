@@ -29,11 +29,18 @@ export function versionsViewOptions(yargs: CommonYargsArgv) {
 			describe: "Name of the worker",
 			type: "string",
 			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Display output as clean JSON",
+			type: "boolean",
+			default: false,
 		});
 }
 
 export async function versionsViewHandler(args: VersionsViewArgs) {
-	await printWranglerBanner();
+	if (!args.json) {
+		await printWranglerBanner();
+	}
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
@@ -54,6 +61,11 @@ export async function versionsViewHandler(args: VersionsViewArgs) {
 	}
 
 	const version = await fetchVersion(accountId, workerName, args.versionId);
+
+	if (args.json) {
+		logRaw(JSON.stringify(version, null, 2));
+		return;
+	}
 
 	const formattedVersion = formatLabelledValues({
 		"Version ID": version.id,

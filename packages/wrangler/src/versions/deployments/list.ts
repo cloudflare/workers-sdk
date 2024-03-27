@@ -21,22 +21,30 @@ export type VersionsDeloymentsListArgs = StrictYargsOptionsToInterface<
 >;
 
 export function versionsDeploymentsListOptions(yargs: CommonYargsArgv) {
-	return yargs.option("name", {
-		describe: "Name of the worker",
-		type: "string",
-		requiresArg: true,
-	});
+	return yargs
+		.option("name", {
+			describe: "Name of the worker",
+			type: "string",
+			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Display output as clean JSON",
+			type: "boolean",
+			default: false,
+		});
 }
 
 export async function versionsDeploymentsListHandler(
 	args: VersionsDeloymentsListArgs
 ) {
-	await printWranglerBanner();
+	if (!args.json) {
+		await printWranglerBanner();
+	}
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
 		"list versioned deployments",
-		{},
+		{ json: args.json },
 		{
 			sendMetrics: config.send_metrics,
 		}
@@ -52,6 +60,12 @@ export async function versionsDeploymentsListHandler(
 	}
 
 	const deployments = await fetchLatestDeployments(accountId, workerName);
+
+	if (args.json) {
+		logRaw(JSON.stringify(deployments, null, 2));
+		return;
+	}
+
 	const versionCache: VersionCache = new Map();
 	const versionIds = deployments.flatMap((d) =>
 		d.versions.map((v) => v.version_id)

@@ -22,17 +22,25 @@ export type VersionsDeploymentsStatusArgs = StrictYargsOptionsToInterface<
 >;
 
 export function versionsDeploymentsStatusOptions(yargs: CommonYargsArgv) {
-	return yargs.option("name", {
-		describe: "Name of the worker",
-		type: "string",
-		requiresArg: true,
-	});
+	return yargs
+		.option("name", {
+			describe: "Name of the worker",
+			type: "string",
+			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Display output as clean JSON",
+			type: "boolean",
+			default: false,
+		});
 }
 
 export async function versionsDeploymentsStatusHandler(
 	args: VersionsDeploymentsStatusArgs
 ) {
-	await printWranglerBanner();
+	if (!args.json) {
+		await printWranglerBanner();
+	}
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
@@ -56,6 +64,11 @@ export async function versionsDeploymentsStatusHandler(
 
 	if (!latestDeployment) {
 		throw new UserError(`The worker ${workerName} has no deployments.`);
+	}
+
+	if (args.json) {
+		logRaw(JSON.stringify(latestDeployment, null, 2));
+		return;
 	}
 
 	const versionCache: VersionCache = new Map();
