@@ -550,8 +550,8 @@ test("should support binding to Durable Object in another worker", async ({
 	const errors = await rpcResponse.json();
 	expect(errors).toMatchInlineSnapshot(`
 		[
-		  "Error: Cannot access "property" as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
-		  "Error: Cannot access "method" as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
+		  "Error: Cannot access \`ThingObject#property\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
+		  "Error: Cannot access \`ThingObject#method\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
 		]
 	`);
 });
@@ -653,6 +653,7 @@ test("should throw if binding to named entrypoint exported by version of wrangle
 		`,
 	});
 	let response = await fetch(url);
+	expect(response.status).toBe(503);
 	expect(await response.text()).toBe(
 		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
 	);
@@ -847,4 +848,40 @@ test("should throw if binding to version of wrangler without entrypoints support
 			'Cannot proxy to `wrangler dev` session for service "bound" because it uses HTTPS. Please upgrade "bound"\'s `wrangler` version, or remove the `--local-protocol`/`dev.local_protocol` option.'
 		);
 	});
+});
+
+test("should throw if performing RPC with session that hasn't started", async ({
+	dev,
+}) => {
+	const { url } = await dev({
+		"wrangler.toml": dedent`
+			name = "entry"
+			main = "index.ts"
+			compatibility_flags = ["rpc"]
+
+			[[services]]
+			binding = "SERVICE"
+			service = "bound"
+			entrypoint = "ThingEntrypoint"
+		`,
+		"index.ts": dedent`
+			export default {
+				async fetch(request, env, ctx) {
+					const errors = [];
+					try { await env.SERVICE.property; } catch (e) { errors.push(e); }
+					try { await env.SERVICE.method(); } catch (e) { errors.push(e); }
+					return Response.json(errors.map(String));
+				}
+			}
+		`,
+	});
+
+	const response = await fetch(url);
+	const errors = await response.json();
+	expect(errors).toMatchInlineSnapshot(`
+		[
+		  "Error: Cannot access \`property\` as we couldn't find a \`wrangler dev\` session for service "bound" to proxy to.",
+		  "Error: Cannot access \`method\` as we couldn't find a \`wrangler dev\` session for service "bound" to proxy to.",
+		]
+	`);
 });
