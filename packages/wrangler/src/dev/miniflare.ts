@@ -10,7 +10,6 @@ import {
 	LogLevel,
 	Miniflare,
 	Mutex,
-	Response,
 	TypedEventTarget,
 } from "miniflare";
 import { AIFetcher } from "../ai/fetcher";
@@ -42,6 +41,7 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
 	Request,
+	Response,
 	SourceOptions,
 	WorkerOptions,
 } from "miniflare";
@@ -53,17 +53,19 @@ import type { Readable } from "node:stream";
 // where they're defined, and receives all requests from other Wrangler sessions
 // for this session's Durable Objects. Note the original request URL may contain
 // non-standard protocols, so we store it in a header to restore later.
-const EXTERNAL_DURABLE_OBJECTS_WORKER_NAME =
+// It also provides stub classes for services that couldn't be found, for
+// improved error messages when trying to call RPC methods.
+const EXTERNAL_SERVICE_WORKER_NAME =
 	"__WRANGLER_EXTERNAL_DURABLE_OBJECTS_WORKER";
-const EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT = `
-import { DurableObject } from "cloudflare:workers";
+const EXTERNAL_SERVICE_WORKER_SCRIPT = `
+import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
 const HEADER_URL = "X-Miniflare-Durable-Object-URL";
 const HEADER_NAME = "X-Miniflare-Durable-Object-Name";
 const HEADER_ID = "X-Miniflare-Durable-Object-Id";
 const HEADER_CF_BLOB = "X-Miniflare-Durable-Object-Cf-Blob";
 
-const DURABLE_OBJECT_BUILT_IN_KEYS = new Set([
+const HANDLER_RESERVED_KEYS = new Set([
 	"tail",
 	"trace",
 	"scheduled",
@@ -75,26 +77,36 @@ const DURABLE_OBJECT_BUILT_IN_KEYS = new Set([
 	"self",
 ]);
 
-function createClass({ className, proxyUrl }) {
+function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
 	// Build a class with a "Proxy"-prototype, so we can intercept RPC calls and
-	// throw an exception stating multi-session RPC is unsupported :see_no_evil:
-	function klass(state, env) {
-		const that = Reflect.construct(DurableObject, [state, env], klass);
-		that.id = state.id.toString();
-		return that;
+	// throw unsupported exceptions :see_no_evil:
+	function klass(ctx, env) {
+		// Delay proxying prototype until construction, so workerd sees this as a
+		// regular class when introspecting it. This check fails if we don't do this:
+		// https://github.com/cloudflare/workerd/blob/9e915ed637d65adb3c57522607d2cd8b8d692b6b/src/workerd/io/worker.c%2B%2B#L1920-L1921
+		klass.prototype = new Proxy(klass.prototype, {
+			get(target, key, receiver) {
+				const value = Reflect.get(target, key, receiver);
+				if (value !== undefined) return value;
+				if (HANDLER_RESERVED_KEYS.has(key)) return;
+				return getUnknownPrototypeKey(key);
+			}
+		});
+	
+		return Reflect.construct(handlerSuperKlass, [ctx, env], klass);
 	}
-	Reflect.setPrototypeOf(klass.prototype, DurableObject.prototype);
-	Reflect.setPrototypeOf(klass, DurableObject);
+		
+	Reflect.setPrototypeOf(klass.prototype, handlerSuperKlass.prototype);
+	Reflect.setPrototypeOf(klass, handlerSuperKlass);
 
-	klass.prototype = new Proxy(klass.prototype, {
-		get(target, key, receiver) {
-			const value = Reflect.get(target, key, receiver);
-			if (value !== undefined) return value;
-			if (DURABLE_OBJECT_BUILT_IN_KEYS.has(key)) return;
-			throw new Error(\`Cannot access \${JSON.stringify(key)} as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \\\`WorkerEntrypoint\\\` to expose an RPC interface between Workers.\`);
-		}
+	return klass;
+}
+
+function createDurableObjectClass({ className, proxyUrl }) {
+	const klass = createProxyPrototypeClass(DurableObject, (key) => {
+		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \\\`WorkerEntrypoint\\\` to expose an RPC interface between Workers.\`);
 	});
-
+	
 	// Forward regular HTTP requests to the other "wrangler dev" session
 	klass.prototype.fetch = function(request) {
 		if (proxyUrl === undefined) {
@@ -103,9 +115,23 @@ function createClass({ className, proxyUrl }) {
 		const proxyRequest = new Request(proxyUrl, request);
 		proxyRequest.headers.set(HEADER_URL, request.url);
 		proxyRequest.headers.set(HEADER_NAME, className);
-		proxyRequest.headers.set(HEADER_ID, this.id);
+		proxyRequest.headers.set(HEADER_ID, this.ctx.id.toString());
 		proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf));
 		return fetch(proxyRequest);
+	};
+
+	return klass;
+}
+
+function createNotFoundWorkerEntrypointClass({ service }) {
+	const klass = createProxyPrototypeClass(WorkerEntrypoint, (key) => {
+		throw new Error(\`Cannot access \\\`\${key}\\\` as we couldn't find a \\\`wrangler dev\\\` session for service "\${service}" to proxy to.\`);
+	});
+
+	// Return regular HTTP response for HTTP requests
+	klass.prototype.fetch = function(request) {
+		const message = \`[wrangler] Couldn't find \\\`wrangler dev\\\` session for service "\${service}" to proxy to\`;
+		return new Response(message, { status: 503 });
 	};
 
 	return klass;
@@ -172,7 +198,7 @@ export class WranglerLog extends Log {
 
 	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
-		if (message.includes(EXTERNAL_DURABLE_OBJECTS_WORKER_NAME)) return;
+		if (message.includes(EXTERNAL_SERVICE_WORKER_NAME)) return;
 		super.log(message);
 	}
 
@@ -361,6 +387,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
 		...config.serviceBindings,
 	};
+	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
 		if (service.service === config.name) {
 			// If this is a service binding to the current worker, don't bother using
@@ -372,11 +399,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		const target = config.workerDefinitions?.[service.service];
 		if (target?.host === undefined || target.port === undefined) {
 			// If the target isn't in the registry, always return an error response
-			// TODO(someday): could we do some sort of `Proxy`-prototype thing here
-			//  for a nice error message if a user tried to call an RPC method?
-			serviceBindings[service.binding] = () => {
-				const message = `[wrangler] Couldn't find \`wrangler dev\` session for service "${service.service}" to proxy to`;
-				return new Response(message, { status: 503 });
+			notFoundServices.add(service.service);
+			serviceBindings[service.binding] = {
+				name: EXTERNAL_SERVICE_WORKER_NAME,
+				entrypoint: getIdentifier(`service_${service.service}`),
 			};
 		} else {
 			// Otherwise, try to build an `external` service to it. `external`
@@ -453,7 +479,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	}
 	// Setup Durable Object bindings and proxy worker
 	const externalDurableObjectWorker: WorkerOptions = {
-		name: EXTERNAL_DURABLE_OBJECTS_WORKER_NAME,
+		name: EXTERNAL_SERVICE_WORKER_NAME,
 		// Bind all internal objects, so they're accessible by all other sessions
 		// that proxy requests for our objects to this worker
 		durableObjects: Object.fromEntries(
@@ -463,8 +489,8 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			])
 		),
 		// Use this worker instead of the user worker if the pathname is
-		// `/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`
-		routes: [`*/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`],
+		// `/${EXTERNAL_SERVICE_WORKER_NAME}`
+		routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
 		// Use in-memory storage for the stub object classes *declared* by this
 		// script. They don't need to persist anything, and would end up using the
 		// incorrect unsafe unique key.
@@ -472,7 +498,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		compatibilityDate: "2024-01-01",
 		modules: true,
 		script:
-			EXTERNAL_DURABLE_OBJECTS_WORKER_SCRIPT +
+			EXTERNAL_SERVICE_WORKER_SCRIPT +
 			// Add stub object classes that proxy requests to the correct session
 			externalObjects
 				.map(({ class_name, script_name }) => {
@@ -482,7 +508,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 						({ className }) => className === class_name
 					);
 
-					const identifier = getIdentifier(`${script_name}_${class_name}`);
+					const identifier = getIdentifier(`do_${script_name}_${class_name}`);
 					const classNameJson = JSON.stringify(class_name);
 					if (
 						target?.host === undefined ||
@@ -491,7 +517,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					) {
 						// If we couldn't find the target or the class, create a stub object
 						// that just returns `503 Service Unavailable` responses.
-						return `export const ${identifier} = createClass({ className: ${classNameJson} });`;
+						return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson} });`;
 					} else if (target.protocol === "https") {
 						throw new UserError(
 							`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
@@ -499,10 +525,17 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					} else {
 						// Otherwise, create a stub object that proxies request to the
 						// target session at `${hostname}:${port}`.
-						const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_DURABLE_OBJECTS_WORKER_NAME}`;
+						const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_SERVICE_WORKER_NAME}`;
 						const proxyUrlJson = JSON.stringify(proxyUrl);
-						return `export const ${identifier} = createClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
+						return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
 					}
+				})
+				.join("\n") +
+			Array.from(notFoundServices)
+				.map((service) => {
+					const identifier = getIdentifier(`service_${service}`);
+					const serviceJson = JSON.stringify(service);
+					return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
 				})
 				.join("\n"),
 	};
@@ -535,12 +568,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => [name, class_name]),
 			...externalObjects.map(({ name, class_name, script_name }) => {
-				const identifier = getIdentifier(`${script_name}_${class_name}`);
+				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
 				return [
 					name,
 					{
 						className: identifier,
-						scriptName: EXTERNAL_DURABLE_OBJECTS_WORKER_NAME,
+						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
 						// Matches the unique key Miniflare will generate for this object in
 						// the target session. We need to do this so workerd generates the
 						// same IDs it would if this were part of the same process. workerd
