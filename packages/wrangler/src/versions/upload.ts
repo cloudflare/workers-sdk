@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import { blue, gray } from "@cloudflare/cli/colors";
 import { fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -499,6 +500,22 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const uploadMs = Date.now() - start;
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
+
+	const cmdVersionsDeploy = blue(
+		"wrangler versions deploy --experimental-versions"
+	);
+	const cmdTriggersDeploy = blue(
+		"wrangler triggers deploy --experimental-versions"
+	);
+	logger.info(
+		gray(`
+To deploy this version to production traffic use the command ${cmdVersionsDeploy}
+
+NOTE: Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment. Use the command ${cmdVersionsDeploy} to deploy these changes
+
+NOTE: Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command ${cmdTriggersDeploy}
+`)
+	);
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(
