@@ -124,6 +124,13 @@ describe("Pages Functions", () => {
 			expect(response.status).toBe(502);
 		});
 
+		it("should work with peer externals", async ({ expect }) => {
+			const response = await fetch(`http://${ip}:${port}/mounted-plugin/ext`);
+			const text = await response.text();
+			expect(text).toMatchInlineSnapshot(`"42 is even"`);
+			expect(response.status).toBe(200);
+		});
+
 		it("should mount a Plugin even if in a parameterized route", async ({
 			expect,
 		}) => {
