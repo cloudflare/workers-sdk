@@ -1,0 +1,10 @@
+name = "ratelimit-app"
+compatibility_date = "2024-02-23"
+
+main = "src/index.js"
+
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 2, period = 60 }

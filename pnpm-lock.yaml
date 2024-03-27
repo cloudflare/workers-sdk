@@ -537,6 +537,18 @@ importers:
         specifier: ^8.8.0
         version: 8.11.0
 
+  fixtures/ratelimit-app:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: ^5.28.3
+        version: 5.28.3
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/remix-pages-app:
     dependencies:
       '@remix-run/cloudflare-pages':
