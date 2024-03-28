@@ -75,7 +75,9 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	let available_on_subdomain: boolean; // we'll set this later
+	const { enabled: available_on_subdomain } = await fetchResult<{
+		enabled: boolean;
+	}>(`${workerUrl}/subdomain`);
 
 	if (!props.dryRun) {
 		await ensureQueuesExist(config);
