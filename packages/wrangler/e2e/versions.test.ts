@@ -76,8 +76,8 @@ describe("versions deploy", () => {
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Uploaded tmp-e2e-wrangler (TIMINGS)
 			To deploy this version to production traffic use the command wrangler versions deploy --experimental-versions
-			NOTE: Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment. Use the command wrangler versions deploy --experimental-versions to deploy these changes
-			NOTE: Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
+			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy --experimental-versions
+			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
 		`);
 	});
 
@@ -190,8 +190,8 @@ describe("versions deploy", () => {
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Uploaded tmp-e2e-wrangler (TIMINGS)
 			To deploy this version to production traffic use the command wrangler versions deploy --experimental-versions
-			NOTE: Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment. Use the command wrangler versions deploy --experimental-versions to deploy these changes
-			NOTE: Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
+			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy --experimental-versions
+			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
 		`);
 
 		const versionsList =
