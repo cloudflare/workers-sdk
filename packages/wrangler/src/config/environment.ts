@@ -580,6 +580,8 @@ export interface EnvironmentNonInheritable {
 				service: string;
 				/** The environment of the service (e.g. production, staging, etc). */
 				environment?: string;
+				/** Optionally, the entrypoint (named export) of the service to bind to. */
+				entrypoint?: string;
 		  }[]
 		| undefined;
 

@@ -173,6 +173,7 @@ interface CfService {
 	binding: string;
 	service: string;
 	environment?: string;
+	entrypoint?: string;
 }
 
 interface CfAnalyticsEngineDataset {

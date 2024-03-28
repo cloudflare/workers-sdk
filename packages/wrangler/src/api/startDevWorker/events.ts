@@ -1,4 +1,5 @@
 import type { CfDurableObject } from "../../deployment-bundle/worker";
+import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DevToolsEvent } from "./devtools";
 import type { StartDevWorkerOptions } from "./types";
@@ -149,4 +150,5 @@ export type ProxyData = {
 	liveReload?: boolean;
 	proxyLogsToController?: boolean;
 	internalDurableObjects?: CfDurableObject[];
+	entrypointAddresses: WorkerEntrypointsDefinition | undefined;
 };

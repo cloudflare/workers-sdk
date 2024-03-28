@@ -39,7 +39,6 @@
 # 2. added to `tryImportBulitin` in workerd.c++ (grep for '"/workerd/workerd.capnp"').
 using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("workerd::server::config");
-$Cxx.allowCancellation;
 
 struct Config {
   # Top-level configuration for a workerd instance.
@@ -386,6 +385,17 @@ struct Worker {
       unsafeEval @23 :Void;
       # A simple binding that enables access to the UnsafeEval API.
 
+      memoryCache :group {
+        # A binding representing access to an in-memory cache.
+
+        id @24 :Text;
+        # The identifier associated with this cache. Any number of isolates
+        # can access the same in-memory cache (within the same process), and
+        # each worker may use any number of in-memory caches.
+
+        limits @25 :MemoryCacheLimits;
+      }
+
       # TODO(someday): dispatch, other new features
     }
 
@@ -483,6 +493,12 @@ struct Worker {
       }
     }
 
+    struct MemoryCacheLimits {
+      maxKeys @0 :UInt32;
+      maxValueSize @1 :UInt32;
+      maxTotalValueSize @2 :UInt64;
+    }
+
     struct WrappedBinding {
       # A binding that wraps a group of (lower-level) bindings in a common API.
 
@@ -504,7 +520,7 @@ struct Worker {
     }
   }
 
-  globalOutbound @6 :ServiceDesignator = "internet";
+  globalOutbound @6 :ServiceDesignator = ( name = "internet" );
   # Where should the global "fetch" go to? The default is the service called "internet", which
   # should usually be configured to talk to the public internet.
 
@@ -803,6 +819,12 @@ struct HttpOptions {
     value @1 :Text;
     # If null, the header will be removed.
   }
+
+  capnpConnectHost @5 :Text;
+  # A CONNECT request for this host+port will be treated as a request to form a Cap'n Proto RPC
+  # connection. The server will expose a WorkerdBootstrap as the bootstrap interface, allowing
+  # events to be delivered to the target worker via capnp. Clients will use capnp for non-HTTP
+  # event types (especially JSRPC).
 
   # TODO(someday): When we support TCP, include an option to deliver CONNECT requests to the
   #   TCP handler.

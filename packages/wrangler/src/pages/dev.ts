@@ -67,11 +67,13 @@ const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 /* SERVICE_BINDING_REGEXP matches strings like:
  * - "binding=service"
  * - "binding=service@environment"
+ * - "binding=service#entrypoint"
  * This is used to capture both the binding name (how the binding is used in JS) alongside the name of the service it needs to bind to.
  * Additionally it can also accept an environment which indicates what environment the service has to be running for.
+ * Additionally it can also accept an entrypoint which indicates what named entrypoint of the service to use, if not the default.
  */
 const SERVICE_BINDING_REGEXP = new RegExp(
-	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
+	/^(?<binding>[^=]+)=(?<service>[^@#\s]+)(@(?<environment>.*)$)?(#(?<entrypoint>.*))?$/
 );
 
 const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
@@ -510,7 +512,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		);
 	}
 
-	let entrypoint = scriptPath;
+	let scriptEntrypoint = scriptPath;
 
 	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
 	if (
@@ -555,11 +557,11 @@ export const Handler = async (args: PagesDevArguments) => {
 				routesJSONContents = readFileSync(routesJSONPath, "utf-8");
 				validateRoutes(JSON.parse(routesJSONContents), directory);
 
-				entrypoint = join(
+				scriptEntrypoint = join(
 					getPagesTmpDir(),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
-				await runBuild(scriptPath, entrypoint, routesJSONContents);
+				await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
@@ -585,7 +587,7 @@ export const Handler = async (args: PagesDevArguments) => {
 					 */
 					routesJSONContents = readFileSync(routesJSONPath, "utf-8");
 					validateRoutes(JSON.parse(routesJSONContents), directory as string);
-					await runBuild(scriptPath, entrypoint, routesJSONContents);
+					await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 				} catch (err) {
 					/**
 					 * If _routes.json is invalid, don't exit but instead fallback to a sensible default
@@ -614,13 +616,13 @@ export const Handler = async (args: PagesDevArguments) => {
 					);
 
 					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
-					await runBuild(scriptPath, entrypoint, routesJSONContents);
+					await runBuild(scriptPath, scriptEntrypoint, routesJSONContents);
 				}
 			});
 		}
 	}
 
-	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
+	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
 		env: undefined,
 		ip,
 		port,
@@ -972,7 +974,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 	if (args.service?.length) {
 		services = args.service
 			.map((serviceBinding) => {
-				const { binding, service, environment } =
+				const { binding, service, environment, entrypoint } =
 					SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
 
 				if (!binding || !service) {
@@ -993,6 +995,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 					binding,
 					service: serviceName,
 					environment,
+					entrypoint,
 				};
 			})
 			.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;

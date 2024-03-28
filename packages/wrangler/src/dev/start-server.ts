@@ -67,6 +67,7 @@ export async function startDevServer(
 			await startWorkerRegistry();
 			if (props.local) {
 				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+					name: props.name,
 					services: props.bindings.services,
 					durableObjects: props.bindings.durable_objects,
 				});
@@ -136,8 +137,6 @@ export async function startDevServer(
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		workerDefinitions,
-		services: props.bindings.services,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
@@ -190,7 +189,8 @@ export async function startDevServer(
 				await maybeRegisterLocalWorker(
 					url,
 					props.name,
-					proxyData.internalDurableObjects
+					proxyData.internalDurableObjects,
+					proxyData.entrypointAddresses
 				);
 
 				props.onReady?.(ip, port, proxyData);
@@ -207,6 +207,7 @@ export async function startDevServer(
 			usageModel: props.usageModel,
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
+			services: props.bindings.services,
 		});
 
 		return {
@@ -294,8 +295,6 @@ async function runEsbuild({
 	define,
 	noBundle,
 	findAdditionalModules,
-	workerDefinitions,
-	services,
 	testScheduled,
 	local,
 	doBindings,
@@ -311,7 +310,6 @@ async function runEsbuild({
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
-	services: Config["services"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
@@ -319,7 +317,6 @@ async function runEsbuild({
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
-	workerDefinitions: WorkerRegistry;
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
@@ -364,8 +361,6 @@ async function runEsbuild({
 					assets,
 					// disable the cache in dev
 					bypassAssetCache: true,
-					workerDefinitions,
-					services,
 					targetConsumer: "dev", // We are starting a dev server
 					local,
 					testScheduled,
@@ -439,6 +434,7 @@ export async function startLocalServer(
 				// workers written in "service-worker" format still need to proxy logs to the ProxyController
 				proxyLogsToController: props.format === "service-worker",
 				internalDurableObjects: event.internalDurableObjects,
+				entrypointAddresses: event.entrypointAddresses,
 			};
 
 			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);

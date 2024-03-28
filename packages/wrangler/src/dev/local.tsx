@@ -12,7 +12,10 @@ import type {
 	CfScriptFormat,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
+import type {
+	WorkerEntrypointsDefinition,
+	WorkerRegistry,
+} from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { ConfigBundle } from "./miniflare";
@@ -49,6 +52,7 @@ export interface LocalProps {
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
+	services: Config["services"] | undefined;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -100,14 +104,16 @@ export async function localPropsToConfigBundle(
 		localUpstream: props.localUpstream,
 		upstreamProtocol: props.upstreamProtocol,
 		inspect: props.inspect,
+		services: props.services,
 		serviceBindings,
 	};
 }
 
 export function maybeRegisterLocalWorker(
 	url: URL,
-	name?: string,
-	internalDurableObjects?: CfDurableObject[]
+	name: string | undefined,
+	internalDurableObjects: CfDurableObject[] | undefined,
+	entrypointAddresses: WorkerEntrypointsDefinition | undefined
 ) {
 	if (name === undefined) return;
 
@@ -127,6 +133,7 @@ export function maybeRegisterLocalWorker(
 		})),
 		durableObjectsHost: url.hostname,
 		durableObjectsPort: port,
+		entrypointAddresses: entrypointAddresses,
 	});
 }
 
@@ -197,6 +204,7 @@ function useLocalWorker(props: LocalProps) {
 					// workers written in "service-worker" format still need to proxy logs to the ProxyController
 					proxyLogsToController: props.format === "service-worker",
 					internalDurableObjects: event.internalDurableObjects,
+					entrypointAddresses: event.entrypointAddresses,
 				};
 
 				props.onReady?.(

@@ -128,6 +128,7 @@ async function getMiniflareOptionsFromConfig(
 	const bindings = getBindings(rawConfig, env, true, {});
 
 	const workerDefinitions = await getBoundRegisteredWorkers({
+		name: rawConfig.name,
 		services: bindings.services,
 		durableObjects: rawConfig["durable_objects"],
 	});
@@ -138,6 +139,7 @@ async function getMiniflareOptionsFromConfig(
 			bindings,
 			workerDefinitions,
 			queueConsumers: undefined,
+			services: rawConfig.services,
 			serviceBindings: {},
 		});
 
@@ -237,6 +239,7 @@ export function unstable_getMiniflareWorkerOptions(configPath: string): {
 		bindings,
 		workerDefinitions: undefined,
 		queueConsumers: config.queues.consumers,
+		services: [],
 		serviceBindings: {},
 	});
 
