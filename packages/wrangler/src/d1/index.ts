@@ -7,6 +7,7 @@ import * as Insights from "./insights";
 import * as List from "./list";
 import * as Migrations from "./migrations";
 import * as TimeTravel from "./timeTravel";
+import * as Export from "./export";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function d1(yargs: CommonYargsArgv) {
@@ -84,6 +85,12 @@ export function d1(yargs: CommonYargsArgv) {
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
+			)
+			.command(
+				"export <name>",
+				"Export the contents or schema of your database as a .sql file",
+				Export.Options,
+				Export.Handler
 			)
 			.command(
 				"time-travel",
