@@ -2,6 +2,7 @@ import * as Backups from "./backups";
 import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
+import * as Export from "./export";
 import * as Info from "./info";
 import * as Insights from "./insights";
 import * as List from "./list";
@@ -84,6 +85,12 @@ export function d1(yargs: CommonYargsArgv) {
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
+			)
+			.command(
+				"export <name>",
+				"Export the contents or schema of your database as a .sql file",
+				Export.Options,
+				Export.Handler
 			)
 			.command(
 				"time-travel",
