@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { Log, LogLevel, Miniflare, Mutex, TypedEventTarget } from "miniflare";
-import { AIFetcher } from "../ai/fetcher";
+import {
+	AIFetcher,
+	EXTERNAL_AI_WORKER_NAME,
+	EXTERNAL_AI_WORKER_SCRIPT,
+} from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
@@ -117,6 +121,7 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
+	wrappedBindings?: Record<string, object>;
 }
 
 export class WranglerLog extends Log {
@@ -262,6 +267,7 @@ type MiniflareBindingsConfig = Pick<
 	| "queueConsumers"
 	| "name"
 	| "serviceBindings"
+	| "wrappedBindings"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle">>;
 
@@ -270,7 +276,7 @@ type MiniflareBindingsConfig = Pick<
 export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
-	externalDurableObjectWorker: WorkerOptions;
+	externalWorkers: WorkerOptions[];
 } {
 	const bindings = config.bindings;
 
@@ -299,13 +305,14 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	// registered in the dev registry)
 	const internalObjects: CfDurableObject[] = [];
 	const externalObjects: CfDurableObject[] = [];
+	const externalWorkers: WorkerOptions[] = [];
 	for (const binding of bindings.durable_objects?.bindings ?? []) {
 		const internal =
 			binding.script_name === undefined || binding.script_name === config.name;
 		(internal ? internalObjects : externalObjects).push(binding);
 	}
 	// Setup Durable Object bindings and proxy worker
-	const externalDurableObjectWorker: WorkerOptions = {
+	externalWorkers.push({
 		name: EXTERNAL_DURABLE_OBJECTS_WORKER_NAME,
 		// Bind all internal objects, so they're accessible by all other sessions
 		// that proxy requests for our objects to this worker
@@ -353,10 +360,26 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					}
 				})
 				.join("\n"),
-	};
+	});
 
 	if (bindings.ai?.binding) {
-		config.serviceBindings[bindings.ai.binding] = AIFetcher;
+		externalWorkers.push({
+			name: EXTERNAL_AI_WORKER_NAME,
+		  modules: [
+				{ type: "ESModule", path: "index.mjs", contents: EXTERNAL_AI_WORKER_SCRIPT }
+			  ],
+			serviceBindings: {
+				FETCHER: AIFetcher,
+			},
+		});
+
+		if (!config.wrappedBindings) {
+			config.wrappedBindings = {};
+		}
+
+		config.wrappedBindings[bindings.ai.binding] = {
+			scriptName: EXTERNAL_AI_WORKER_NAME,
+		};
 	}
 
 	const bindingOptions = {
@@ -405,13 +428,15 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		]),
 
 		serviceBindings: config.serviceBindings,
+
+		wrappedBindings: config.wrappedBindings,
 		// TODO: check multi worker service bindings also supported
 	};
 
 	return {
 		bindingOptions,
 		internalObjects,
-		externalDurableObjectWorker,
+		externalWorkers,
 	};
 }
 
@@ -578,7 +603,7 @@ async function buildMiniflareOptions(
 			: undefined;
 
 	const sourceOptions = await buildSourceOptions(config);
-	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
+	const { bindingOptions, internalObjects, externalWorkers } =
 		buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
@@ -619,7 +644,7 @@ async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 			},
-			externalDurableObjectWorker,
+			...externalWorkers,
 		],
 	};
 	return { options, internalObjects };

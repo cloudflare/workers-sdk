@@ -3,7 +3,17 @@ import { performApiFetch } from "../cfetch/internal";
 import { getAccountId } from "../user";
 import type { Request } from "miniflare";
 
-export async function AIFetcher(request: Request) {
+export const EXTERNAL_AI_WORKER_NAME = "__WRANGLER_EXTERNAL_AI_WORKER";
+
+export const EXTERNAL_AI_WORKER_SCRIPT = `
+import { Ai } from 'cloudflare-internal:ai-api'
+
+export default function (env) {
+    return new Ai(env.FETCHER);
+}
+`;
+
+export async function AIFetcher(request: Request): Promise<Response> {
 	const accountId = await getAccountId();
 
 	request.headers.delete("Host");

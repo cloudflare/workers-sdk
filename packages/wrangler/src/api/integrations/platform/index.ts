@@ -132,14 +132,13 @@ async function getMiniflareOptionsFromConfig(
 		durableObjects: rawConfig["durable_objects"],
 	});
 
-	const { bindingOptions, externalDurableObjectWorker } =
-		buildMiniflareBindingOptions({
-			name: undefined,
-			bindings,
-			workerDefinitions,
-			queueConsumers: undefined,
-			serviceBindings: {},
-		});
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
+		name: undefined,
+		bindings,
+		workerDefinitions,
+		queueConsumers: undefined,
+		serviceBindings: {},
+	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
 
@@ -156,7 +155,7 @@ async function getMiniflareOptionsFromConfig(
 					...bindingOptions.serviceBindings,
 				},
 			},
-			externalDurableObjectWorker,
+			...externalWorkers,
 		],
 		...persistOptions,
 	};
