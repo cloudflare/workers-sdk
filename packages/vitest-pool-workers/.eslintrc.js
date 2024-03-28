@@ -16,12 +16,11 @@ module.exports = {
 			},
 		},
 		{
-			files: "test/**/*.ts",
-			excludedFiles: "test/*/vitest.config.ts",
+			files: "types/**/*.ts",
 			parserOptions: {
 				ecmaVersion: 2022,
 				sourceType: "module",
-				project: "test/tsconfig.json",
+				project: "types/tsconfig.json",
 			},
 		},
 	],
