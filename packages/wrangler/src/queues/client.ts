@@ -5,7 +5,7 @@ import { requireAuth } from "../user";
 
 export async function createQueue(
 	config: Config,
-	body: CreateQueueBody
+	body: PostQueueBody
 ): Promise<QueueResponse> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(`/accounts/${accountId}/workers/queues`, {
@@ -14,13 +14,21 @@ export async function createQueue(
 	});
 }
 
-export interface CreateQueueBody {
+export interface PostQueueBody {
 	queue_name: string;
 	settings?: QueueSettings;
 }
 
 export interface QueueSettings {
-	delivery_delay: number;
+	delivery_delay?: number;
+}
+
+export interface PostQueueResponse {
+	queue_id: string;
+	queue_name: string;
+	settings?: QueueSettings;
+	created_on: string;
+	modified_on: string;
 }
 
 export interface ScriptReference {
@@ -134,6 +142,18 @@ export async function putTypedConsumer(
 			body: JSON.stringify(body),
 		}
 	);
+}
+
+export async function putQueue(
+	config: Config,
+	queueId: string,
+	body: PostQueueBody
+): Promise<PostQueueResponse> {
+	const accountId = await requireAuth(config);
+	return fetchResult(`/accounts/${accountId}/queues/${queueId}/`, {
+		method: "PUT",
+		body: JSON.stringify(body),
+	});
 }
 
 export interface TypedConsumerResponse extends Consumer {

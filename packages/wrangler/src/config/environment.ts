@@ -434,6 +434,9 @@ export interface EnvironmentNonInheritable {
 
 			/** The name of this Queue. */
 			queue: string;
+
+			/** The number of seconds to wait before delivering a message */
+			delivery_delay?: number;
 		}[];
 
 		/** Consumer configuration */

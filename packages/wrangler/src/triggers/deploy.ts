@@ -8,6 +8,7 @@ import {
 	renderRoute,
 	sleep,
 	updateQueueConsumers,
+	updateQueueProducers,
 } from "../deploy/deploy";
 import { UserError } from "../errors";
 import { logger } from "../logger";
@@ -226,6 +227,11 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 				},
 			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
 		);
+	}
+
+	if (config.queues.producers && config.queues.producers.length) {
+		const updateProducers = await updateQueueProducers(config);
+		deployments.push(...updateProducers);
 	}
 
 	if (config.queues.consumers && config.queues.consumers.length) {
