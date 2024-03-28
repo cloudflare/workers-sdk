@@ -181,7 +181,7 @@ export async function rollbackDeployment(
 					firstHash
 				)} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
 					"Note:"
-				)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).`
+				)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
 			))
 		) {
 			return;
