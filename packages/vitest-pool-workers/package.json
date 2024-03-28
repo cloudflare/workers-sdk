@@ -26,11 +26,11 @@
 	},
 	"license": "MIT",
 	"main": "dist/pool/index.mjs",
-	"types": "test/cloudflare-test.d.ts",
+	"types": "types/cloudflare-test.d.ts",
 	"exports": {
 		".": {
 			"import": "./dist/pool/index.mjs",
-			"types": "./test/cloudflare-test.d.ts"
+			"types": "./types/cloudflare-test.d.ts"
 		},
 		"./config": {
 			"import": "./dist/config/index.cjs",
@@ -40,15 +40,13 @@
 	},
 	"files": [
 		"dist",
-		"test/cloudflare-test.d.ts"
+		"types/cloudflare-test.d.ts"
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
 		"dev": "node scripts/bundle.mjs watch",
 		"check:lint": "eslint .",
-		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p test/tsconfig.json",
-		"test": "vitest --config vitest.workers.config.ts --reporter=basic",
-		"test:ci": "vitest run --config vitest.workers.config.ts --reporter=basic",
+		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp"
 	},
 	"devDependencies": {
