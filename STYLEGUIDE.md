@@ -5,21 +5,22 @@ The aim of this guideline is to help Wrangler contributors maintain consistent p
 ## Styleguide legend
 
 - \*Text in between stars designates placeholder text that should be replaced.\*
-- \<Text contained within angle brackets are placeholder commands, args or  or filepaths.\>
+- \<Text contained within angle brackets are placeholder commands, args or or filepaths.\>
 - #Text in between hashtags designates the user's input that must occur before the next line can display.#
 
 ## Wrangler syntax
 
 - Commands should follow an object verb order, such as ‘d1 create’.
+
 ```sh
 wrangler <object / noun> <verb>
 ```
 
 - Subcommands should follow the main command with a space
+
 ```sh
 wrangler <command> <subcommand> <arg> --<option>`
 ```
-
 
 ## Wrangler \<command\> --help
 
@@ -57,8 +58,8 @@ name = "___"
 id = "___"
 ```
 
-
 ## General success state
+
 ```sh
 🌀 *Action verb* *Object*. *details of what is currently happening if necessary*
 🚧 *Updated additional details of the current status if necessary*
@@ -69,6 +70,7 @@ id = "___"
 ```
 
 ## Command related error
+
 ```sh
 ✘  ERROR  *API error code if applicable*: *Concise description of what the error is*:
 
@@ -94,8 +96,8 @@ If you think this is a bug then please create an issue at https://github.com/clo
 
 ```
 
-
 ## General error
+
 ```sh
 ✘  ERROR  *Error code if applicable*: *Concise description of what the error is*
 
@@ -120,6 +122,7 @@ If you think this is a bug then please create an issue at https://github.com/clo
 ```
 
 ## Y/N choice
+
 ```sh
 *choice description* <y/n>
 #User inputs y or n#
@@ -129,6 +132,7 @@ If you think this is a bug then please create an issue at https://github.com/clo
 ## Wrangler prompts
 
 ### Written value prompt
+
 ```sh
 wrangler <command>
 <prompt request>
@@ -140,6 +144,7 @@ wrangler <command>
 ```
 
 ### Multiple choice prompt
+
 ```sh
 Wrangler <command>
 <prompt request>
