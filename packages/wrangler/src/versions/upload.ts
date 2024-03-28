@@ -511,9 +511,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		gray(`
 To deploy this version to production traffic use the command ${cmdVersionsDeploy}
 
-NOTE: Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment. Use the command ${cmdVersionsDeploy} to deploy these changes
+Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command ${cmdVersionsDeploy}
 
-NOTE: Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command ${cmdTriggersDeploy}
+Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command ${cmdTriggersDeploy}
 `)
 	);
 }
