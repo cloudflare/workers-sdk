@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240320.1
+
+### Minor Changes
+
+- [#5258](https://github.com/cloudflare/workers-sdk/pull/5258) [`fbdca7d`](https://github.com/cloudflare/workers-sdk/commit/fbdca7d93156f9db2a1513573e45f10fac7e57d1) Thanks [@OilyLime](https://github.com/OilyLime)! - feature: URL decode components of the Hyperdrive config connection string
+
 ## 3.20240320.0
 
 ### Patch Changes
