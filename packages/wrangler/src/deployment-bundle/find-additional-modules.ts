@@ -80,6 +80,8 @@ export async function findAdditionalModules(
 
 		for (const requirement of pythonRequirements.split("\n")) {
 			if (requirement === "") continue;
+			if (requirement.startsWith("#")) continue;
+
 			if (!isValidPythonPackageName(requirement)) {
 				throw new UserError(
 					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
