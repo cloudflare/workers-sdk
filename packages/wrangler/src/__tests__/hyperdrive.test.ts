@@ -119,7 +119,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 12345,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\"
+		    \\"user\\": \\"test\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -143,7 +144,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\"
+		    \\"user\\": \\"test\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -167,7 +169,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 12345,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\"
+		    \\"user\\": \\"test\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
@@ -193,7 +196,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"private.example.com\\",
 		    \\"port\\": 12345,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\"
+		    \\"user\\": \\"test\\",
+		    \\"private_host\\": true
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -217,7 +221,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"user:name\\"
+		    \\"user\\": \\"user:name\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -241,7 +246,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\"
+		    \\"user\\": \\"test\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -265,7 +271,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"/\\"weird/\\" dbname\\",
-		    \\"user\\": \\"test\\"
+		    \\"user\\": \\"test\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -334,7 +341,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 1234,
 		    \\"database\\": \\"mydb\\",
-		    \\"user\\": \\"newuser\\"
+		    \\"user\\": \\"newuser\\",
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -358,7 +366,8 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"private.example.com\\",
 		    \\"port\\": 1234,
 		    \\"database\\": \\"mydb\\",
-		    \\"user\\": \\"newuser\\"
+		    \\"user\\": \\"newuser\\",
+		    \\"private_host\\": true
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -500,7 +509,7 @@ function mockHyperdriveRequest() {
 									database: reqBody.origin.database,
 									scheme: reqBody.origin.protocol,
 									user: reqBody.origin.user,
-									privateHost: reqBody.origin.privateHost,
+									private_host: reqBody.origin.private_host,
 								},
 								caching: reqBody.caching,
 							},
@@ -527,7 +536,7 @@ function mockHyperdriveRequest() {
 												port: reqBody.origin.port,
 												database: reqBody.origin.database,
 												user: reqBody.origin.user,
-												privateHost: reqBody.origin.privateHost,
+												private_host: reqBody.origin.private_host,
 										  }
 										: defaultConfig.origin,
 								caching: reqBody.caching ?? defaultConfig.caching,
@@ -558,7 +567,7 @@ function mockHyperdriveRequest() {
 									port: 3211,
 									database: "mydb",
 									user: "dbuser",
-									privateHost: false,
+									private_host: false,
 								},
 								caching: {
 									disabled: false,
