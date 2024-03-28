@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Added Queue delivery controls support in wrangler.toml
+feature: Added Queue delivery controls support in wrangler.toml
