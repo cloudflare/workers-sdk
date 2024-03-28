@@ -55,7 +55,7 @@ describe("deprecated-usage-model", () => {
 		  "info": "",
 		  "out": "Total Upload: xx KiB / gzip: xx KiB
 		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
+		Deployed test-name triggers (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
 		Current Deployment ID: Galaxy-Class
 
