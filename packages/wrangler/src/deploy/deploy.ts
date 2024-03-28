@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
-import chalk from "chalk";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -35,12 +34,12 @@ import {
 	putConsumer,
 	putTypedConsumer,
 } from "../queues/client";
-import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
+import triggersDeploy from "../triggers/deploy";
 import { logVersionIdChange } from "../utils/deployment-id-version-id-change";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
@@ -87,9 +86,10 @@ type Props = {
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
+	experimentalVersions: boolean | undefined;
 };
 
-type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
+export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
 
 export type CustomDomain = {
 	id: string;
@@ -112,7 +112,7 @@ export type CustomDomainChangeset = {
 	conflicting: ConflictingCustomDomain[];
 };
 
-function sleep(ms: number) {
+export function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -149,7 +149,7 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-function renderRoute(route: Route): string {
+export function renderRoute(route: Route): string {
 	let result = "";
 	if (typeof route === "string") {
 		result = route;
@@ -191,7 +191,7 @@ function renderRoute(route: Route): string {
 // if a user does not confirm that they want to override, we skip publishing
 // to these custom domains, but continue on through the rest of the
 // deploy stage
-async function publishCustomDomains(
+export async function publishCustomDomains(
 	workerUrl: string,
 	accountId: string,
 	domains: Array<RouteObject>
@@ -339,7 +339,6 @@ export default async function deploy(props: Props): Promise<void> {
 See https://developers.cloudflare.com/workers/platform/compatibility-dates for more information.`);
 	}
 
-	const triggers = props.triggers || config.triggers?.crons;
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
@@ -361,9 +360,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			routesOnly.push(route);
 		}
 	}
-
-	// deployToWorkersDev defaults to true only if there aren't any routes defined
-	const deployToWorkersDev = config.workers_dev ?? routes.length === 0;
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
@@ -435,7 +431,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
 	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
@@ -720,7 +715,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					})
 				);
 
-				available_on_subdomain = result.available_on_subdomain;
 				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
 				if (config.first_party_worker) {
@@ -796,7 +790,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	assert(accountId, "Missing accountId");
 
 	const uploadMs = Date.now() - start;
-	const deployments: Promise<string[]>[] = [];
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
@@ -806,162 +799,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return;
 	}
 
-	if (deployToWorkersDev) {
-		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(accountId);
-		const scriptURL =
-			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}.workers.dev`
-				: `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
-		if (!available_on_subdomain) {
-			// Enable the `workers.dev` subdomain.
-			deployments.push(
-				fetchResult(`${workerUrl}/subdomain`, {
-					method: "POST",
-					body: JSON.stringify({ enabled: true }),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				})
-					.then(() => [scriptURL])
-					// Add a delay when the subdomain is first created.
-					// This is to prevent an issue where a negative cache-hit
-					// causes the subdomain to be unavailable for 30 seconds.
-					// This is a temporary measure until we fix this on the edge.
-					.then(async (url) => {
-						await sleep(3000);
-						return url;
-					})
-			);
-		} else {
-			deployments.push(Promise.resolve([scriptURL]));
-		}
-	} else {
-		if (available_on_subdomain) {
-			// Disable the workers.dev deployment
-			await fetchResult(`${workerUrl}/subdomain`, {
-				method: "POST",
-				body: JSON.stringify({ enabled: false }),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-		} else if (routes.length !== 0) {
-			// if you get to this point it's because
-			// you're trying to deploy a worker to a custom
-			// domain that's already bound to another worker.
-			// so this thing is about finding workers that have
-			// bindings to the routes you're trying to deploy to.
-			//
-			// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
-			// except here we know we have a good API token or whatever so we don't need
-			// to bother with all the error handling tomfoolery.
-			const routesWithOtherBindings: Record<string, string[]> = {};
-			for (const route of routes) {
-				const zone = await getZoneForRoute(route);
-				if (!zone) {
-					continue;
-				}
-
-				const routePattern = typeof route === "string" ? route : route.pattern;
-				const routesInZone = await fetchListResult<{
-					pattern: string;
-					script: string;
-				}>(`/zones/${zone.id}/workers/routes`);
-
-				routesInZone.forEach(({ script, pattern }) => {
-					if (pattern === routePattern && script !== scriptName) {
-						if (!(script in routesWithOtherBindings)) {
-							routesWithOtherBindings[script] = [];
-						}
-
-						routesWithOtherBindings[script].push(pattern);
-					}
-				});
-			}
-
-			if (Object.keys(routesWithOtherBindings).length > 0) {
-				let errorMessage =
-					"Can't deploy a worker to routes that are assigned to another worker.\n";
-
-				for (const worker in routesWithOtherBindings) {
-					const assignedRoutes = routesWithOtherBindings[worker];
-					errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-						(r) => `  - ${chalk.underline(r)}\n`
-					)}`;
-				}
-
-				const resolution =
-					"Unassign other workers from the routes you want to deploy to, and then try again.";
-				const dashLink = `Visit ${chalk.blue(
-					chalk.underline(
-						`https://dash.cloudflare.com/${accountId}/workers/overview`
-					)
-				)} to unassign a worker from a route.`;
-
-				throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
-			}
-		}
-	}
-
-	// Update routing table for the script.
-	if (routesOnly.length > 0) {
-		deployments.push(
-			publishRoutes(routesOnly, { workerUrl, scriptName, notProd }).then(() => {
-				if (routesOnly.length > 10) {
-					return routesOnly
-						.slice(0, 9)
-						.map((route) => renderRoute(route))
-						.concat([`...and ${routesOnly.length - 10} more routes`]);
-				}
-				return routesOnly.map((route) => renderRoute(route));
-			})
-		);
-	}
-
-	// Update custom domains for the script
-	if (customDomainsOnly.length > 0) {
-		deployments.push(
-			publishCustomDomains(workerUrl, accountId, customDomainsOnly)
-		);
-	}
-
-	// Configure any schedules for the script.
-	// TODO: rename this to `schedules`?
-	if (triggers && triggers.length) {
-		deployments.push(
-			fetchResult(`${workerUrl}/schedules`, {
-				// Note: PUT will override previous schedules on this script.
-				method: "PUT",
-				body: JSON.stringify(triggers.map((cron) => ({ cron }))),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
-		);
-	}
-
-	if (config.queues.consumers && config.queues.consumers.length) {
-		const updateConsumers = await updateQueueConsumers(config);
-
-		deployments.push(...updateConsumers);
-	}
-
-	const targets = await Promise.all(deployments);
-	const deployMs = Date.now() - start - uploadMs;
-
-	if (deployments.length > 0) {
-		logger.log("Published", workerName, formatTime(deployMs));
-		for (const target of targets.flat()) {
-			// Append protocol only on workers.dev domains
-			logger.log(
-				" ",
-				(target.endsWith("workers.dev") ? "https://" : "") + target
-			);
-		}
-	} else {
-		logger.log("No deploy targets for", workerName, formatTime(deployMs));
-	}
+	// deploy triggers
+	await triggersDeploy(props);
 
 	logger.log("Current Deployment ID:", deploymentId);
 
@@ -1000,14 +839,14 @@ export function helpIfErrorIsSizeOrScriptStartup(
 	}
 }
 
-function formatTime(duration: number) {
+export function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
 
 /**
  * Associate the newly deployed Worker with the given routes.
  */
-async function publishRoutes(
+export async function publishRoutes(
 	routes: Route[],
 	{
 		workerUrl,
@@ -1150,7 +989,7 @@ export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
-async function ensureQueuesExist(config: Config) {
+export async function ensureQueuesExist(config: Config) {
 	const producers = (config.queues.producers || []).map(
 		(producer) => producer.queue
 	);
@@ -1175,7 +1014,7 @@ async function ensureQueuesExist(config: Config) {
 	}
 }
 
-async function updateQueueConsumers(
+export async function updateQueueConsumers(
 	config: Config
 ): Promise<Promise<string[]>[]> {
 	const consumers = config.queues.consumers || [];
