@@ -74,7 +74,10 @@ describe("versions deploy", () => {
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			Uploaded tmp-e2e-wrangler (TIMINGS)"
+			Uploaded tmp-e2e-wrangler (TIMINGS)
+			To deploy this version to production traffic use the command wrangler versions deploy --experimental-versions
+			NOTE: Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment. Use the command wrangler versions deploy --experimental-versions to deploy these changes
+			NOTE: Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
 		`);
 	});
 
@@ -185,7 +188,10 @@ describe("versions deploy", () => {
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
-			Uploaded tmp-e2e-wrangler (TIMINGS)"
+			Uploaded tmp-e2e-wrangler (TIMINGS)
+			To deploy this version to production traffic use the command wrangler versions deploy --experimental-versions
+			NOTE: Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment. Use the command wrangler versions deploy --experimental-versions to deploy these changes
+			NOTE: Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
 		`);
 
 		const versionsList =
@@ -319,7 +325,10 @@ describe("versions deploy", () => {
 			│ Message Rollback via e2e test
 			│
 			│
-			╰  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000:
+			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
+			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
+			│ However, your local development environment will not be affected by this rollback.
+			│ Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
 			│
 			│ (100%) 00000000-0000-0000-0000-000000000000
 			│       Created:  TIMESTAMP
@@ -427,7 +436,10 @@ describe("versions deploy", () => {
 			│ Message Rollback to old version
 			│
 			│
-			╰  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000:
+			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
+			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
+			│ However, your local development environment will not be affected by this rollback.
+			│ Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).
 			│
 			│ (100%) 00000000-0000-0000-0000-000000000000
 			│       Created:  TIMESTAMP

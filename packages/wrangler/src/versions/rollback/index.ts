@@ -88,7 +88,10 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 	});
 
 	const version = await fetchVersion(accountId, workerName, versionId);
-	cli.warn(`You are about to rollback to Worker Version ${versionId}:`);
+	cli.warn(
+		`You are about to rollback to Worker Version ${versionId}.\nThis will immediately replace the current deployment and become the active deployment across all your deployed triggers.\nHowever, your local development environment will not be affected by this rollback.\nRolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).`,
+		{ multiline: true, shape: cli.shapes.leftT }
+	);
 	const rollbackTraffic = new Map([[versionId, 100]]);
 	printVersions([version], rollbackTraffic);
 
@@ -102,7 +105,7 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 	});
 
 	if (!confirm) {
-		cli.log("Aborting rollback...");
+		cli.cancel("Aborting rollback...");
 		return;
 	}
 
