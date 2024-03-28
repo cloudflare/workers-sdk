@@ -112,7 +112,7 @@ describe("deploy", () => {
 			Worker PipelineHash:  hash9999
 			Worker Mutable PipelineID (Development ONLY!): mutableId
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -153,7 +153,7 @@ describe("deploy", () => {
 			Successfully logged in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -196,7 +196,7 @@ describe("deploy", () => {
 			Successfully logged in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -222,7 +222,7 @@ describe("deploy", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -266,7 +266,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -294,7 +294,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -425,7 +425,7 @@ describe("deploy", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
-			Deployed test-name-some-env triggers (TIMINGS)
+			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -449,7 +449,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -473,7 +473,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
-			Deployed test-name-some-env triggers (TIMINGS)
+			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -497,7 +497,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
-			Deployed test-name-some-env triggers (TIMINGS)
+			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -572,7 +572,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -603,7 +603,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (some-env) (TIMINGS)
-			Deployed test-name (some-env) triggers (TIMINGS)
+			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -653,7 +653,7 @@ describe("deploy", () => {
 		- Vars:
 		  - xyz: 123
 		Uploaded test-name (TIMINGS)
-		Deployed test-name triggers (TIMINGS)
+		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
 		Current Deployment ID: Galaxy-Class
 
@@ -692,7 +692,7 @@ describe("deploy", () => {
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -743,7 +743,7 @@ describe("deploy", () => {
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  some-example.com/some-route/*
 			  *a-boring-website.com (zone id: 54sdf7fsda)
 			  *another-boring-website.com (zone name: some-zone.com)
@@ -789,7 +789,7 @@ describe("deploy", () => {
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  partner.com/* (zone name: owned-zone.com)
 			Current Deployment ID: Galaxy-Class
 
@@ -831,7 +831,7 @@ describe("deploy", () => {
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  subdomain.partner.com/* (zone name: owned-zone.com)
 			Current Deployment ID: Galaxy-Class
 
@@ -893,7 +893,7 @@ describe("deploy", () => {
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (staging) (TIMINGS)
-			Deployed test-name (staging) triggers (TIMINGS)
+			Published test-name (staging) (TIMINGS)
 			  some-example.com/some-route/*
 			  *a-boring-website.com (zone id: 54sdf7fsda)
 			  *another-boring-website.com (zone name: some-zone.com)
@@ -1003,7 +1003,7 @@ describe("deploy", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  example.com/some-route/*
 			Current Deployment ID: Galaxy-Class
 
@@ -1289,7 +1289,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1310,7 +1310,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1331,7 +1331,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1354,7 +1354,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1375,7 +1375,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1415,7 +1415,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1469,7 +1469,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1492,7 +1492,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1527,7 +1527,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1556,7 +1556,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1577,7 +1577,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1677,7 +1677,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1762,7 +1762,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1822,7 +1822,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -1914,7 +1914,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2083,7 +2083,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2129,7 +2129,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2319,7 +2319,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2371,7 +2371,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2435,7 +2435,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2500,7 +2500,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2598,7 +2598,7 @@ addEventListener('fetch', event => {});`
 			↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2655,7 +2655,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (some-env) (TIMINGS)
-			Deployed test-name (some-env) triggers (TIMINGS)
+			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2713,7 +2713,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
-			Deployed test-name-some-env triggers (TIMINGS)
+			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2756,7 +2756,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2805,7 +2805,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2854,7 +2854,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2904,7 +2904,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -2954,7 +2954,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3004,7 +3004,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3054,7 +3054,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3106,7 +3106,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3162,7 +3162,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3274,7 +3274,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3415,7 +3415,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3477,7 +3477,7 @@ addEventListener('fetch', event => {});`
 			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3524,7 +3524,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3572,7 +3572,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3793,7 +3793,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3947,7 +3947,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3971,7 +3971,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -3994,7 +3994,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4127,7 +4127,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			Deployed test-name (dev) triggers (TIMINGS)
+			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4158,7 +4158,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			Deployed test-name (dev) triggers (TIMINGS)
+			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4190,7 +4190,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			Deployed test-name (dev) triggers (TIMINGS)
+			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4225,7 +4225,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			Deployed test-name (dev) triggers (TIMINGS)
+			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4262,7 +4262,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			Deployed test-name (dev) triggers (TIMINGS)
+			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4326,7 +4326,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4348,7 +4348,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4428,7 +4428,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  http://example.com/*
 			Current Deployment ID: Galaxy-Class
 
@@ -4466,7 +4466,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-production (TIMINGS)
-			Deployed test-name-production triggers (TIMINGS)
+			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
 
@@ -4503,7 +4503,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-production (TIMINGS)
-			Deployed test-name-production triggers (TIMINGS)
+			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
 
@@ -4533,7 +4533,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  http://example.com/*
 			Current Deployment ID: Galaxy-Class
@@ -4572,7 +4572,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-production (TIMINGS)
-			Deployed test-name-production triggers (TIMINGS)
+			Published test-name-production (TIMINGS)
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
@@ -4611,7 +4611,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-production (TIMINGS)
-			Deployed test-name-production triggers (TIMINGS)
+			Published test-name-production (TIMINGS)
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
@@ -4650,7 +4650,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-production (TIMINGS)
-			Deployed test-name-production triggers (TIMINGS)
+			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
 
@@ -4688,7 +4688,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-production (TIMINGS)
-			Deployed test-name-production triggers (TIMINGS)
+			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
 
@@ -4843,7 +4843,7 @@ addEventListener('fetch', event => {});`
 			"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4872,7 +4872,7 @@ addEventListener('fetch', event => {});`
 			"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -4980,7 +4980,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5023,7 +5023,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (testEnv) (TIMINGS)
-			Deployed test-name (testEnv) triggers (TIMINGS)
+			Published test-name (testEnv) (TIMINGS)
 			  https://testEnv.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5054,7 +5054,7 @@ addEventListener('fetch', event => {});`
 			- Durable Objects:
 			  - SOMENAME: SomeClass
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5108,7 +5108,7 @@ addEventListener('fetch', event => {});`
 			- Durable Objects:
 			  - SOMENAME: SomeClass (defined in some-script)
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5156,7 +5156,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5212,7 +5212,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5261,7 +5261,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5311,7 +5311,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5378,7 +5378,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (xyz) (TIMINGS)
-			Deployed test-name (xyz) triggers (TIMINGS)
+			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5444,7 +5444,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5518,7 +5518,7 @@ addEventListener('fetch', event => {});`
 			  - SOMENAME: SomeClass
 			  - SOMEOTHERNAME: SomeOtherClass
 			Uploaded test-name (xyz) (TIMINGS)
-			Deployed test-name (xyz) triggers (TIMINGS)
+			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5557,7 +5557,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5583,7 +5583,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -5846,7 +5846,7 @@ addEventListener('fetch', event => {});`
 			  - extra_data: \\"interesting value\\"
 			  - more_data: \\"dubious value\\"
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6264,7 +6264,7 @@ addEventListener('fetch', event => {});`
 			- Wasm Modules:
 			  - TESTWASMNAME: path/to/test.wasm
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6335,7 +6335,7 @@ addEventListener('fetch', event => {});`
 			- Wasm Modules:
 			  - TESTWASMNAME: path/to/and/the/path/to/test.wasm
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6372,7 +6372,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6413,7 +6413,7 @@ addEventListener('fetch', event => {});`
 			- Text Blobs:
 			  - TESTTEXTBLOBNAME: path/to/text.file
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6488,7 +6488,7 @@ addEventListener('fetch', event => {});`
 			- Text Blobs:
 			  - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6529,7 +6529,7 @@ addEventListener('fetch', event => {});`
 			- Data Blobs:
 			  - TESTDATABLOBNAME: path/to/data.bin
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6604,7 +6604,7 @@ addEventListener('fetch', event => {});`
 			- Data Blobs:
 			  - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6651,7 +6651,7 @@ addEventListener('fetch', event => {});`
 			 \\"id\\": 123
 			}
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6679,7 +6679,7 @@ addEventListener('fetch', event => {});`
 			  - TEXT: \\"(hidden)\\"
 			  - COUNT: \\"(hidden)\\"
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6711,7 +6711,7 @@ addEventListener('fetch', event => {});`
 			- R2 Buckets:
 			  - FOO: foo-bucket
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6764,7 +6764,7 @@ addEventListener('fetch', event => {});`
 			  - httplogs: httplogs
 			  - trace: trace
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6839,7 +6839,7 @@ addEventListener('fetch', event => {});`
 			- Durable Objects:
 			  - EXAMPLE_DO_BINDING: ExampleDurableObject
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6883,7 +6883,7 @@ addEventListener('fetch', event => {});`
 			- Durable Objects:
 			  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -6932,7 +6932,7 @@ addEventListener('fetch', event => {});`
 			- Durable Objects:
 			  - EXAMPLE_DO_BINDING: ExampleDurableObject
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7057,7 +7057,7 @@ addEventListener('fetch', event => {});`
 			- Services:
 			  - FOO: foo-service - production
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7091,7 +7091,7 @@ addEventListener('fetch', event => {});`
 			- Analytics Engine Datasets:
 			  - FOO: foo-dataset
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7131,7 +7131,7 @@ addEventListener('fetch', event => {});`
 			- dispatch namespaces:
 			  - foo: Foo
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7192,7 +7192,7 @@ addEventListener('fetch', event => {});`
 			  - foo: Foo (outbound -> foo_outbound)
 			  - bar: Bar (outbound -> bar_outbound)
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7250,7 +7250,7 @@ addEventListener('fetch', event => {});`
 			- dispatch namespaces:
 			  - foo: Foo (outbound -> foo_outbound)
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7304,7 +7304,7 @@ addEventListener('fetch', event => {});`
 				  - something: \\"else\\"
 				  - nested: {\\"stuff\\":\\"here\\"}
 				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
+				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
 
@@ -7345,7 +7345,7 @@ addEventListener('fetch', event => {});`
 				- Unsafe:
 				  - binding-type: my-binding
 				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
+				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
 
@@ -7394,7 +7394,7 @@ addEventListener('fetch', event => {});`
 				- Unsafe:
 				  - plain_text: my-binding
 				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
+				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
 
@@ -7436,7 +7436,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
+				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
 
@@ -7544,7 +7544,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
+				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
 
@@ -7590,7 +7590,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7623,7 +7623,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7660,7 +7660,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7713,7 +7713,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7815,7 +7815,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7848,7 +7848,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7886,7 +7886,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7920,7 +7920,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7953,7 +7953,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -7988,7 +7988,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8021,7 +8021,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8067,7 +8067,7 @@ addEventListener('fetch', event => {});`
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8121,7 +8121,7 @@ addEventListener('fetch', event => {});`
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8149,7 +8149,7 @@ addEventListener('fetch', event => {});`
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8193,7 +8193,7 @@ addEventListener('fetch', event => {});`
 			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8254,7 +8254,7 @@ export default{
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -8491,7 +8491,7 @@ export default{
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9011,7 +9011,7 @@ export default{
 			- Queues:
 			  - QUEUE_ONE: queue1
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9050,7 +9050,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
@@ -9094,7 +9094,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
@@ -9162,7 +9162,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
@@ -9204,7 +9204,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
@@ -9245,7 +9245,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
@@ -9332,7 +9332,7 @@ export default{
 			- AI:
 			  - Name: AI_BIND
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9370,7 +9370,7 @@ export default{
 			└──────────────────────────────────────┴────────┴──────────┘
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9404,7 +9404,7 @@ export default{
 			└──────────────────────────────────────┴────────┴──────────┘
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9443,7 +9443,7 @@ export default{
 			- Hyperdrive Configs:
 			  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9477,7 +9477,7 @@ export default{
 			- mTLS Certificates:
 			  - CERT_ONE: 1234
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9506,7 +9506,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9534,7 +9534,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
@@ -9564,7 +9564,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
+			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
 
