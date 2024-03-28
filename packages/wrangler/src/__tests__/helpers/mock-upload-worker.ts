@@ -74,6 +74,27 @@ export function mockUploadWorkerRequest(
 		);
 	}
 
+	msw.use(
+		rest.get(
+			env && !legacyEnv
+				? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
+				: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
+			(req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(req.params.envName).toEqual(env);
+				}
+
+				return res(
+					ctx.json(createFetchResult({ enabled: available_on_subdomain }))
+				);
+			}
+		)
+	);
+
 	async function handleUpload(
 		req: RestRequest,
 		res: ResponseComposition,

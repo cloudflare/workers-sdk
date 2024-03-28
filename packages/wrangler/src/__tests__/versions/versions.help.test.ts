@@ -60,6 +60,8 @@ describe("versions --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler versions
 
+		List, view, upload and deploy Versions of your Worker to Cloudflare [beta]
+
 		Commands:
 		  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
 		  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
@@ -96,6 +98,8 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler versions
 
+		List, view, upload and deploy Versions of your Worker to Cloudflare [beta]
+
 		Commands:
 		  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
 		  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
@@ -120,6 +124,8 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler versions
 
+		List, view, upload and deploy Versions of your Worker to Cloudflare [beta]
+
 		Commands:
 		  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
 		  wrangler versions list                      List the 10 most recent Versions of your Worker [beta]
@@ -143,6 +149,8 @@ describe("versions subhelp", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler versions
+
+		List, view, upload and deploy Versions of your Worker to Cloudflare [beta]
 
 		Commands:
 		  wrangler versions view <version-id>         View the details of a specific version of your Worker [beta]
