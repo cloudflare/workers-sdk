@@ -20,20 +20,28 @@ export type VersionsListArgs = StrictYargsOptionsToInterface<
 >;
 
 export function versionsListOptions(yargs: CommonYargsArgv) {
-	return yargs.option("name", {
-		describe: "Name of the worker",
-		type: "string",
-		requiresArg: true,
-	});
+	return yargs
+		.option("name", {
+			describe: "Name of the worker",
+			type: "string",
+			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Display output as clean JSON",
+			type: "boolean",
+			default: false,
+		});
 }
 
 export async function versionsListHandler(args: VersionsListArgs) {
-	await printWranglerBanner();
+	if (!args.json) {
+		await printWranglerBanner();
+	}
 
 	const config = getConfig(args);
 	await metrics.sendMetricsEvent(
 		"list worker versions",
-		{},
+		{ json: args.json },
 		{
 			sendMetrics: config.send_metrics,
 		}
@@ -54,6 +62,11 @@ export async function versionsListHandler(args: VersionsListArgs) {
 		workerName,
 		versionCache
 	);
+
+	if (args.json) {
+		logRaw(JSON.stringify(versions, null, 2));
+		return;
+	}
 
 	for (const version of versions) {
 		const formattedVersion = formatLabelledValues({

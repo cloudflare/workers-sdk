@@ -67,5 +67,15 @@ export default function formatLabelledValues(
 		);
 	});
 
-	return formattedLines.join(lineSeparator);
+	const output = formattedLines.join(lineSeparator);
+
+	return collapseWhiteSpaceLines(output);
+}
+
+/**
+ * Return the input as-is except with lines of only whitespace characters replaced with blank lines.
+ * This won't be noticeable to users. It's mainly to prevent prettier from causing snapshot diffs.
+ */
+function collapseWhiteSpaceLines(input: string) {
+	return input.replaceAll(/^\s+$/gm, "");
 }
