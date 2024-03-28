@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { parseArgs } from "../args";
 import type { MockInstance } from "vitest";
 
+vi.mock("@cloudflare/cli");
 vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {

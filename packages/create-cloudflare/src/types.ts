@@ -13,8 +13,10 @@ export type C3Args = {
 	ts?: boolean;
 	existingScript?: string;
 	template?: string;
+	acceptDefaults?: boolean;
 	wranglerDefaults?: boolean;
 	additionalArgs?: string[];
+	help?: boolean;
 };
 export type C3Arg = C3Args[keyof C3Args];
 
