@@ -140,6 +140,8 @@ export const getFrameworkMap = async () => ({
 export const getTemplateMap = async () => {
 	return {
 		"hello-world": (await import("../templates/hello-world/c3")).default,
+		"hello-world-python": (await import("../templates/hello-world-python/c3"))
+			.default,
 		"hello-world-durable-object": (
 			await import("../templates/hello-world-durable-object/c3")
 		).default,
