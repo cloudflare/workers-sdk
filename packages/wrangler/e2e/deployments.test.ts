@@ -61,7 +61,8 @@ describe("deployments", () => {
 			Uploaded tmp-e2e-wrangler (TIMINGS)
 			Published tmp-e2e-wrangler (TIMINGS)
 			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
-			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
+			Current Deployment ID: 00000000-0000-0000-0000-000000000000
+			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		workersDev = matchWorkersDev(stdout);
 
@@ -85,7 +86,8 @@ describe("deployments", () => {
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
-			🟩 Active"
+			🟩 Active
+			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
@@ -105,7 +107,8 @@ describe("deployments", () => {
 			Uploaded tmp-e2e-wrangler (TIMINGS)
 			Published tmp-e2e-wrangler (TIMINGS)
 			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
-			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
+			Current Deployment ID: 00000000-0000-0000-0000-000000000000
+			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
@@ -133,7 +136,8 @@ describe("deployments", () => {
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
-			🟩 Active"
+			🟩 Active
+			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
@@ -144,7 +148,8 @@ describe("deployments", () => {
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Successfully rolled back to Deployment ID: 00000000-0000-0000-0000-000000000000
-			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
+			Current Deployment ID: 00000000-0000-0000-0000-000000000000
+			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
@@ -168,7 +173,8 @@ describe("deployments", () => {
 			Source:        Rollback from Wrangler 🤠
 			Rollback from: 00000000-0000-0000-0000-000000000000
 			Message:       A test message
-			🟩 Active"
+			🟩 Active
+			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
