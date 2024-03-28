@@ -15,7 +15,7 @@ export function mockUploadWorkerRequest(
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw";
 		expectedBindings?: unknown;
-		expectedModules?: Record<string, string>;
+		expectedModules?: Record<string, string | null>;
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];

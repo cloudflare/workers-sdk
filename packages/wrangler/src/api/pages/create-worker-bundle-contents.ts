@@ -85,6 +85,7 @@ function createWorkerBundleFormData(
 		keepVars: undefined,
 		keepSecrets: undefined,
 		logpush: undefined,
+		sourceMaps: undefined,
 		placement: placement,
 		tail_consumers: undefined,
 		limits: config?.limits,

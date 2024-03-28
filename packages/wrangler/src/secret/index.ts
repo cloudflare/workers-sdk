@@ -104,6 +104,7 @@ async function createDraftWorker({
 				keepVars: false, // this doesn't matter since it's a new script anyway
 				keepSecrets: false, // this doesn't matter since it's a new script anyway
 				logpush: false,
+				sourceMaps: undefined,
 				placement: undefined,
 				tail_consumers: undefined,
 				limits: undefined,

@@ -20,6 +20,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -53,7 +54,11 @@ import type {
 	ZoneNameRoute,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
+import type {
+	CfModule,
+	CfPlacement,
+	CfWorkerInit,
+} from "../deployment-bundle/worker";
 import type { PostTypedConsumerBody, PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -84,6 +89,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	uploadSourceMaps: boolean | undefined;
 	oldAssetTtl: number | undefined;
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
@@ -492,47 +498,55 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			rules: props.rules,
 			preserveFileNames: config.preserve_file_names ?? false,
 		});
+		const uploadSourceMaps =
+			props.uploadSourceMaps ?? config.upload_source_maps;
 
-		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
-			props.noBundle
-				? await noBundleWorker(props.entry, props.rules, props.outDir)
-				: await bundleWorker(
-						props.entry,
-						typeof destination === "string" ? destination : destination.path,
-						{
-							bundle: true,
-							additionalModules: [],
-							moduleCollector,
-							serveAssetsFromWorker:
-								!props.isWorkersSite && Boolean(props.assetPaths),
-							doBindings: config.durable_objects.bindings,
-							jsxFactory,
-							jsxFragment,
-							tsconfig: props.tsconfig ?? config.tsconfig,
-							minify,
-							legacyNodeCompat,
-							nodejsCompat,
-							define: { ...config.define, ...props.defines },
-							checkFetch: false,
-							assets: config.assets,
-							// enable the cache when publishing
-							bypassAssetCache: false,
-							services: config.services,
-							// We don't set workerDefinitions here,
-							// because we don't want to apply the dev-time
-							// facades on top of it
-							workerDefinitions: undefined,
-							// We want to know if the build is for development or publishing
-							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-							targetConsumer: "deploy",
-							local: false,
-							projectRoot: props.projectRoot,
-							defineNavigatorUserAgent: isNavigatorDefined(
-								props.compatibilityDate ?? config.compatibility_date,
-								props.compatibilityFlags ?? config.compatibility_flags
-							),
-						}
-				  );
+		const {
+			modules,
+			dependencies,
+			resolvedEntryPointPath,
+			bundleType,
+			...bundle
+		} = props.noBundle
+			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			: await bundleWorker(
+					props.entry,
+					typeof destination === "string" ? destination : destination.path,
+					{
+						bundle: true,
+						additionalModules: [],
+						moduleCollector,
+						serveAssetsFromWorker:
+							!props.isWorkersSite && Boolean(props.assetPaths),
+						doBindings: config.durable_objects.bindings,
+						jsxFactory,
+						jsxFragment,
+						tsconfig: props.tsconfig ?? config.tsconfig,
+						minify,
+						sourcemap: uploadSourceMaps,
+						legacyNodeCompat,
+						nodejsCompat,
+						define: { ...config.define, ...props.defines },
+						checkFetch: false,
+						assets: config.assets,
+						// enable the cache when publishing
+						bypassAssetCache: false,
+						services: config.services,
+						// We don't set workerDefinitions here,
+						// because we don't want to apply the dev-time
+						// facades on top of it
+						workerDefinitions: undefined,
+						// We want to know if the build is for development or publishing
+						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+						targetConsumer: "deploy",
+						local: false,
+						projectRoot: props.projectRoot,
+						defineNavigatorUserAgent: isNavigatorDefined(
+							props.compatibilityDate ?? config.compatibility_date,
+							props.compatibilityFlags ?? config.compatibility_flags
+						),
+					}
+			  );
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -641,17 +655,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
+		const main: CfModule = {
+			name: entryPointName,
+			filePath: resolvedEntryPointPath,
+			content: content,
+			type: bundleType,
+		};
 		const worker: CfWorkerInit = {
 			name: scriptName,
-			main: {
-				name: entryPointName,
-				filePath: resolvedEntryPointPath,
-				content: content,
-				type: bundleType,
-			},
+			main,
 			bindings,
 			migrations,
 			modules,
+			sourceMaps: uploadSourceMaps
+				? loadSourceMaps(main, modules, bundle)
+				: undefined,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,

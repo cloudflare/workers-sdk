@@ -134,6 +134,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	const formData = new FormData();
 	const {
 		main,
+		sourceMaps,
 		bindings,
 		migrations,
 		usage_model,
@@ -516,6 +517,15 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			module.name,
 			new File([module.content], module.name, {
 				type: toMimeType(module.type ?? main.type ?? "esm"),
+			})
+		);
+	}
+
+	for (const sourceMap of sourceMaps || []) {
+		formData.set(
+			sourceMap.name,
+			new File([sourceMap.content], sourceMap.name, {
+				type: "application/source-map",
 			})
 		);
 	}
