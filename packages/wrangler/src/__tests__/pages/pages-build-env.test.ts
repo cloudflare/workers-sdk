@@ -4,7 +4,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 
-describe("pages-build-env", () => {
+describe("pages build env", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 	const originalEnv = process.env;

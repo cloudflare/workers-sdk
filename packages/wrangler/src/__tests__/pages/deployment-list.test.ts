@@ -7,7 +7,7 @@ import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Deployment } from "./../../pages/types";
 
-describe("deployment list", () => {
+describe("pages deployment list", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();

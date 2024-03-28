@@ -4,6 +4,7 @@ import SelectInput from "ink-select-input";
 import React from "react";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
+import { findWranglerToml, readConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
@@ -13,6 +14,7 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -20,7 +22,7 @@ import type {
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
 
-type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;
+type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -73,38 +75,65 @@ export function Options(yargs: CommonYargsArgv) {
 		});
 }
 
-export const Handler = async ({
-	_,
-	directory,
-	projectName,
-	branch,
-	commitHash,
-	commitMessage,
-	commitDirty,
-	skipCaching,
-	bundle,
-	noBundle,
-	config: wranglerConfig,
-}: PublishArgs) => {
+export const Handler = async (args: PagesDeployArgs) => {
+	let { branch, commitHash, commitMessage, commitDirty } = args;
+
 	// Check for deprecated `wrangler pages publish` command
-	if (_[1] === "publish") {
+	if (args._[1] === "publish") {
 		logger.warn(
 			"`wrangler pages publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler pages deploy` instead, which accepts exactly the same arguments."
 		);
 	}
 
-	if (wranglerConfig) {
-		throw new FatalError("Pages does not support wrangler.toml", 1);
+	if (args.config) {
+		throw new FatalError(
+			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			1
+		);
 	}
 
+	/*
+	 * Check whether project contains a valid Pages `wrangler.toml` file. If it
+	 * does, we want to pick up the configuration specified in it. If it doesn't
+	 * we'll ignore the file, but inform users that we did find one, just not
+	 * valid for Pages.
+	 */
+	let config: Config | undefined;
+	const configPath = findWranglerToml(process.cwd(), false);
+	if (configPath) {
+		// this reads the config file with `env` set to `undefined`, which will
+		// return the top-level config. This contains all the information we
+		// need from now. We will perform a second config file read later
+		// in `/api/pages/deploy`, that will get the environment specififc config
+		config = readConfig(configPath, { ...args, env: undefined });
+		if (config.pages_build_output_dir === undefined) {
+			logger.warn(
+				`Pages now has \`wrangler.toml\` support.\n` +
+					`We detected a configuration file at ${config.configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
+					`If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
+					`Otherwise, ignoring configuration file for now, and proceeding with project deploy.`
+			);
+
+			// set to `undefined` so we can ignore it from here on
+			config = undefined;
+		}
+	}
+
+	const directory = args.directory ?? config?.pages_build_output_dir;
 	if (!directory) {
-		throw new FatalError("Must specify a directory.", 1);
+		throw new FatalError(
+			"Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the `pages deploy` command, or configure `pages_build_output_dir` in your `wrangler.toml` configuration file.",
+			1
+		);
 	}
 
-	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
-	const accountId = await requireAuth(config);
+	const configCache = getConfigCache<PagesConfigCache>(
+		PAGES_CONFIG_CACHE_FILENAME
+	);
+	const accountId = await requireAuth(configCache);
 
-	projectName ??= config.project_name;
+	let projectName =
+		args.projectName ?? config?.name ?? configCache.project_name;
 
 	const isInteractive = process.stdin.isTTY;
 	if (!projectName && isInteractive) {
@@ -252,13 +281,14 @@ export const Handler = async ({
 		accountId,
 		projectName,
 		branch,
-		skipCaching,
 		commitMessage,
 		commitHash,
 		commitDirty,
+		skipCaching: args.skipCaching,
 		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 		// There is no sane way to get the true value out of yargs, so here we are.
-		bundle: bundle ?? !noBundle,
+		bundle: args.bundle ?? !args.noBundle,
+		args,
 	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {

@@ -12,7 +12,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { replaceRandomWithConstantData } from "../helpers/string-dynamic-values-matcher";
 
-describe("functions build", () => {
+describe("pages functions build", () => {
 	const std = mockConsoleMethods();
 
 	runInTempDir();
