@@ -289,6 +289,7 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 		initialStream.end();
 	});
 	const mf = new Miniflare({
+		compatibilityFlags: ["brotli_content_encoding"],
 		script: `addEventListener("fetch", (event) => {
       event.respondWith(CUSTOM.fetch(event.request));
     })`,
@@ -304,7 +305,6 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 		const res = await mf.dispatchFetch("http://localhost", {
 			headers: { "X-Test-Encoding": encoding },
 		});
-		t.is(res.headers.get("Content-Encoding"), encoding);
 		t.is(await res.text(), testBody, encoding);
 	};
 
@@ -316,6 +316,135 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	// released, we can re-enable this test.
 	// TODO(soon): re-enable this test
 	// await test("deflate, gzip");
+});
+
+test("Miniflare: negotiates acceptable encoding", async (t) => {
+	const testBody = "x".repeat(100);
+	const mf = new Miniflare({
+		bindings: { TEST_BODY: testBody },
+		compatibilityFlags: ["brotli_content_encoding"],
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const { pathname } = new URL(request.url);
+				if (pathname === "/") {
+					return Response.json({
+						AcceptEncoding: request.headers.get("Accept-Encoding"),
+						clientAcceptEncoding: request.cf.clientAcceptEncoding,
+					});
+				} else if (pathname === "/gzip") {
+					return new Response(env.TEST_BODY, { headers: { "Content-Encoding": "gzip" } });
+				} else if (pathname === "/br") {
+					return new Response(env.TEST_BODY, { headers: { "Content-Encoding": "br" } });
+				} else if (pathname === "/deflate") {
+					// workerd doesn't automatically encode "deflate"
+					const response = new Response(env.TEST_BODY);
+					const compressionStream = new CompressionStream("deflate");
+					const compressedBody = response.body.pipeThrough(compressionStream);
+					return new Response(compressedBody, {
+						headers: { "Content-Encoding": "deflate" },
+						encodeBody: "manual",
+					});
+				} else {
+					return new Response(null, { status: 404 });
+				}
+			},
+		};
+		`,
+	});
+	t.teardown(() => mf.dispose());
+
+	// Using `fetch()` directly to simulate eyeball
+	const url = await mf.ready;
+	const gzipUrl = new URL("/gzip", url);
+	const brUrl = new URL("/br", url);
+	const deflateUrl = new URL("/deflate", url);
+
+	// https://github.com/cloudflare/workers-sdk/issues/5246
+	let res = await fetch(url, {
+		headers: { "Accept-Encoding": "hello" },
+	});
+	t.deepEqual(await res.json(), {
+		AcceptEncoding: "br, gzip",
+		clientAcceptEncoding: "hello",
+	});
+
+	// Check all encodings supported
+	res = await fetch(gzipUrl);
+	t.is(await res.text(), testBody);
+	res = await fetch(brUrl);
+	t.is(await res.text(), testBody);
+	res = await fetch(deflateUrl);
+	t.is(await res.text(), testBody);
+
+	// Check with `Accept-Encoding: gzip`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip" } });
+	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(await res.text(), testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "gzip" } });
+	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(await res.text(), testBody);
+	// "deflate" isn't an accepted encoding inside Workers, so returned as is
+	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "gzip" } });
+	t.is(res.headers.get("Content-Encoding"), "deflate");
+	t.is(await res.text(), testBody);
+
+	// Check with `Accept-Encoding: br`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br" } });
+	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(await res.text(), testBody);
+	res = await fetch(brUrl, { headers: { "Accept-Encoding": "br" } });
+	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(await res.text(), testBody);
+	// "deflate" isn't an accepted encoding inside Workers, so returned as is
+	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "br" } });
+	t.is(res.headers.get("Content-Encoding"), "deflate");
+	t.is(await res.text(), testBody);
+
+	// Check with mixed `Accept-Encoding`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip, br" } });
+	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br, gzip" } });
+	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, {
+		headers: { "Accept-Encoding": "br;q=0.5, gzip" },
+	});
+	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(await res.text(), testBody);
+
+	// Check empty `Accept-Encoding`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "" } });
+	t.is(res.headers.get("Content-Encoding"), "gzip");
+	t.is(await res.text(), testBody);
+
+	// Check identity encoding
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "identity" } });
+	t.is(res.headers.get("Content-Encoding"), null);
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "*" } });
+	t.is(res.headers.get("Content-Encoding"), null);
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *" } });
+	t.is(res.headers.get("Content-Encoding"), null);
+	t.is(await res.text(), testBody);
+	res = await fetch(gzipUrl, {
+		headers: { "Accept-Encoding": "zstd, identity;q=0" },
+	});
+	t.is(res.status, 415);
+	t.is(res.headers.get("Accept-Encoding"), "br, gzip");
+	t.is(await res.text(), "Unsupported Media Type");
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *;q=0" } });
+	t.is(res.status, 415);
+	t.is(res.headers.get("Accept-Encoding"), "br, gzip");
+	t.is(await res.text(), "Unsupported Media Type");
+
+	// Check malformed `Accept-Encoding`
+	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": ",(,br,,,q=," } });
+	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(await res.text(), testBody);
 });
 
 test("Miniflare: custom service using Set-Cookie header", async (t) => {
@@ -583,14 +712,14 @@ test("Miniflare: can send GET request with body", async (t) => {
 
 	let res = await get();
 	t.deepEqual(await json(res), {
-		cf: { key: "value" },
+		cf: { key: "value", clientAcceptEncoding: "" },
 		contentLength: null,
 		hasBody: false,
 	});
 
 	res = await get({ headers: { "content-length": "0" } });
 	t.deepEqual(await json(res), {
-		cf: { key: "value" },
+		cf: { key: "value", clientAcceptEncoding: "" },
 		contentLength: "0",
 		hasBody: true,
 	});
@@ -1195,7 +1324,7 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 		outcome: "ok",
 		ackAll: false,
 		retryBatch: {
-			retry: false
+			retry: false,
 		},
 		explicitAcks: ["perfect"],
 		retryMessages: [],

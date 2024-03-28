@@ -39,6 +39,18 @@ export default {
 				],
 			});
 
+		if (pathname === "/content-encoding") {
+			return Response.json({
+				AcceptEncoding: request.headers.get("Accept-Encoding"),
+				clientAcceptEncoding: request.cf.clientAcceptEncoding,
+			});
+		}
+		if (pathname === "/content-encoding/gzip") {
+			return new Response("x".repeat(100), {
+				headers: { "Content-Encoding": "gzip" },
+			});
+		}
+
 		if (request.headers.get("X-Test-URL") !== null) {
 			return new Response(request.url);
 		}

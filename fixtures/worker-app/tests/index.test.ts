@@ -148,4 +148,22 @@ describe("'wrangler dev' correctly renders pages", () => {
 			`hello2=world2; Domain=${ip}; Secure`,
 		]);
 	});
+
+	it("passes through client content encoding", async ({ expect }) => {
+		// https://github.com/cloudflare/workers-sdk/issues/5246
+		const response = await fetch(`http://${ip}:${port}/content-encoding`, {
+			headers: { "Accept-Encoding": "hello" },
+		});
+		expect(await response.json()).toStrictEqual({
+			AcceptEncoding: "br, gzip",
+			clientAcceptEncoding: "hello",
+		});
+	});
+
+	it("supports encoded responses", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/content-encoding/gzip`, {
+			headers: { "Accept-Encoding": "gzip" },
+		});
+		expect(await response.text()).toEqual("x".repeat(100));
+	});
 });

@@ -36,6 +36,9 @@ class Fetcher {
 		}
 
 		const request = new Request(url.toString(), reqFromArgs);
+		// `workerd` only transparently decodes `gzip` responses, unless the
+		// `brotli_content_encoding` compatibility flag is enabled.
+		request.headers.set("Accept-Encoding", "gzip");
 		return fetch(request);
 	}
 }

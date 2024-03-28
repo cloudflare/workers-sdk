@@ -722,7 +722,11 @@ export function getGlobalServices({
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2023-04-04",
-				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				compatibilityFlags: [
+					"nodejs_compat",
+					"service_binding_extra_handlers",
+					"brotli_content_encoding",
+				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [
 					{
