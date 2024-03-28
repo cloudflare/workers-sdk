@@ -122,7 +122,7 @@ export async function handler(
 			database: args.database,
 			user: args.originUser,
 			password: args.originPassword,
-			privateHost: args.privateHost,
+			private_host: args.privateHost,
 		};
 	}
 

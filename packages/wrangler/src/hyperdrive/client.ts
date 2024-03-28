@@ -18,7 +18,7 @@ export type PublicOrigin = Origin & {
 	scheme?: string;
 	database?: string;
 	user?: string;
-	privateHost?: boolean;
+	private_host?: boolean;
 };
 
 export type OriginWithPassword = PublicOrigin & {

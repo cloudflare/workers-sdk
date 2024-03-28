@@ -119,8 +119,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 12345,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -144,8 +143,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -169,8 +167,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 12345,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
@@ -196,8 +193,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"private.example.com\\",
 		    \\"port\\": 12345,
 		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": true
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -221,8 +217,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"user:name\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"user:name\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -246,8 +241,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -271,8 +265,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"/\\"weird/\\" dbname\\",
-		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -308,7 +301,7 @@ describe("hyperdrive commands", () => {
 		    \\"port\\": 5432,
 		    \\"database\\": \\"database\\",
 		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -341,8 +334,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 1234,
 		    \\"database\\": \\"mydb\\",
-		    \\"user\\": \\"newuser\\",
-		    \\"privateHost\\": false
+		    \\"user\\": \\"newuser\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -366,8 +358,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"private.example.com\\",
 		    \\"port\\": 1234,
 		    \\"database\\": \\"mydb\\",
-		    \\"user\\": \\"newuser\\",
-		    \\"privateHost\\": true
+		    \\"user\\": \\"newuser\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -407,7 +398,7 @@ describe("hyperdrive commands", () => {
 		    \\"port\\": 5432,
 		    \\"database\\": \\"database\\",
 		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
@@ -434,7 +425,7 @@ describe("hyperdrive commands", () => {
 		    \\"port\\": 5432,
 		    \\"database\\": \\"database\\",
 		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": true
@@ -459,7 +450,7 @@ describe("hyperdrive commands", () => {
 		    \\"port\\": 5432,
 		    \\"database\\": \\"database\\",
 		    \\"user\\": \\"test\\",
-		    \\"privateHost\\": false
+		    \\"private_host\\": false
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -477,7 +468,7 @@ const defaultConfig: HyperdriveConfig = {
 		port: 5432,
 		database: "database",
 		user: "test",
-		privateHost: false,
+		private_host: false,
 	},
 	caching: {
 		disabled: false,

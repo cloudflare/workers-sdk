@@ -97,7 +97,7 @@ export async function handler(
 				database: decodeURIComponent(url.pathname.replace("/", "")),
 				user: decodeURIComponent(url.username),
 				password: decodeURIComponent(url.password),
-				privateHost: args.privateHost ?? false,
+				private_host: args.privateHost ?? false,
 			},
 			caching: {
 				disabled: args.cachingDisabled,
