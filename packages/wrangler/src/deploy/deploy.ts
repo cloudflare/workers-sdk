@@ -346,8 +346,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
-	const routesOnly: Array<Route> = [];
-	const customDomainsOnly: Array<RouteObject> = [];
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
 			if (route.pattern.includes("*")) {
@@ -360,9 +358,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
 				);
 			}
-			customDomainsOnly.push(route);
-		} else {
-			routesOnly.push(route);
 		}
 	}
 
