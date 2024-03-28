@@ -6,7 +6,6 @@ import {
 	publishCustomDomains,
 	publishRoutes,
 	renderRoute,
-	RouteObject,
 	sleep,
 	updateQueueConsumers,
 } from "../deploy/deploy";
@@ -16,6 +15,7 @@ import { getWorkersDevSubdomain } from "../routes";
 import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
+import type { RouteObject } from "../deploy/deploy";
 
 type Props = {
 	config: Config;
