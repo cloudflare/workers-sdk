@@ -89,7 +89,7 @@ type Props = {
 	dispatchNamespace: string | undefined;
 };
 
-type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
+export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
 
 export type CustomDomain = {
 	id: string;
@@ -112,7 +112,7 @@ export type CustomDomainChangeset = {
 	conflicting: ConflictingCustomDomain[];
 };
 
-function sleep(ms: number) {
+export function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -149,7 +149,7 @@ function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
 	return false;
 }
 
-function renderRoute(route: Route): string {
+export function renderRoute(route: Route): string {
 	let result = "";
 	if (typeof route === "string") {
 		result = route;
@@ -191,7 +191,7 @@ function renderRoute(route: Route): string {
 // if a user does not confirm that they want to override, we skip publishing
 // to these custom domains, but continue on through the rest of the
 // deploy stage
-async function publishCustomDomains(
+export async function publishCustomDomains(
 	workerUrl: string,
 	accountId: string,
 	domains: Array<RouteObject>
@@ -999,14 +999,14 @@ export function helpIfErrorIsSizeOrScriptStartup(
 	}
 }
 
-function formatTime(duration: number) {
+export function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
 
 /**
  * Associate the newly deployed Worker with the given routes.
  */
-async function publishRoutes(
+export async function publishRoutes(
 	routes: Route[],
 	{
 		workerUrl,
@@ -1149,7 +1149,7 @@ export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
-async function ensureQueuesExist(config: Config) {
+export async function ensureQueuesExist(config: Config) {
 	const producers = (config.queues.producers || []).map(
 		(producer) => producer.queue
 	);
@@ -1174,7 +1174,7 @@ async function ensureQueuesExist(config: Config) {
 	}
 }
 
-async function updateQueueConsumers(
+export async function updateQueueConsumers(
 	config: Config
 ): Promise<Promise<string[]>[]> {
 	const consumers = config.queues.consumers || [];
