@@ -48,11 +48,6 @@ export function triggersDeployOptions(yargs: CommonYargsArgv) {
 			type: "boolean",
 			describe: "Use legacy environments",
 			hidden: true,
-		})
-		.option("dispatch-namespace", {
-			describe:
-				"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
-			type: "string",
 		});
 }
 
@@ -61,8 +56,7 @@ export async function triggersDeployHandler(
 ) {
 	await printWranglerBanner();
 
-	const configPath = args.config || findWranglerToml();
-	const config = readConfig(configPath, args);
+	const config = readConfig(undefined, args);
 	await metrics.sendMetricsEvent(
 		"deploy worker triggers",
 		{},
@@ -82,7 +76,6 @@ export async function triggersDeployHandler(
 		routes: args.routes,
 		legacyEnv: isLegacyEnv(config),
 		dryRun: args.dryRun,
-		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalJsonConfig,
 	});
 }

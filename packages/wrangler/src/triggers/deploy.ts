@@ -27,7 +27,6 @@ type Props = {
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
-	dispatchNamespace: string | undefined;
 	experimentalVersions: boolean | undefined;
 };
 
@@ -71,9 +70,7 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	const start = Date.now();
 	const notProd = Boolean(!props.legacyEnv && props.env);
 	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = props.dispatchNamespace
-		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
-		: notProd
+	const workerUrl = notProd
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
