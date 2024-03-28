@@ -391,8 +391,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 		};
 
-		console.log(worker.bindings);
-
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
 		// We do not care about the timing outside of testing
 		const bundleSizePromise = printBundleSize(
