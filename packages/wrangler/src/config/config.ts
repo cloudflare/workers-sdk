@@ -344,6 +344,7 @@ export const defaultWranglerConfig: Config = {
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
+	version_metadata: undefined,
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */

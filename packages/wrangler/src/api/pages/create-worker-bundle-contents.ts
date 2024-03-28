@@ -48,6 +48,7 @@ function createWorkerBundleFormData(
 		vars: config?.vars,
 		browser: config?.browser,
 		ai: config?.ai,
+		version_metadata: config?.version_metadata,
 		durable_objects: config?.durable_objects,
 		queues: config?.queues.producers?.map((producer) => {
 			return { binding: producer.binding, queue_name: producer.queue };

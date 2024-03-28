@@ -1470,6 +1470,16 @@ function normalizeAndValidateEnvironment(
 			validateAIBinding(envName),
 			undefined
 		),
+		version_metadata: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"version_metadata",
+			validateVersionMetadataBinding(envName),
+			undefined
+		),
 		zone_id: rawEnv.zone_id,
 		logfwdr: inheritable(
 			diagnostics,
@@ -2050,6 +2060,30 @@ const validateBrowserBinding =
 	};
 
 const validateAIBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		if (!isRequiredProperty(value, "binding", "string")) {
+			diagnostics.errors.push(`binding should have a string "binding" field.`);
+			isValid = false;
+		}
+
+		return isValid;
+	};
+
+const validateVersionMetadataBinding =
 	(envName: string): ValidatorFn =>
 	(diagnostics, field, value, config) => {
 		const fieldPath =

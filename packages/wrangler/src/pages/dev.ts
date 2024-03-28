@@ -176,6 +176,11 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				description: "AI to bind (--ai AI_BINDING)",
 			},
+			"version-metadata": {
+				type: "string",
+				description:
+					"Worker Version metadata (--version-metadata VERSION_METADATA_BINDING)",
+			},
 			service: {
 				type: "array",
 				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
@@ -865,7 +870,13 @@ function resolvePagesDevServerSettings(
 function getBindingsFromArgs(args: PagesDevArguments): Partial<
 	Pick<
 		EnvironmentNonInheritable,
-		"vars" | "kv_namespaces" | "r2_buckets" | "d1_databases" | "services" | "ai"
+		| "vars"
+		| "kv_namespaces"
+		| "r2_buckets"
+		| "d1_databases"
+		| "services"
+		| "ai"
+		| "version_metadata"
 	>
 > & {
 	do_bindings?: DurableObjectBindings;
@@ -1011,6 +1022,14 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 		ai = { binding: args.ai.toString() };
 	}
 
+	// get version_metadata binding from the [--version_metadata] arg
+	let version_metadata:
+		| EnvironmentNonInheritable["version_metadata"]
+		| undefined;
+	if (args.versionMetadata) {
+		version_metadata = { binding: args.versionMetadata.toString() };
+	}
+
 	/*
 	 * all these bindings will be merged with their corresponding configuration file counterparts
 	 * in `startDev()` -> `getBindingsAndAssetPaths()` -> `getBindings()`, so no need to address
@@ -1023,6 +1042,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 		r2_buckets: r2Buckets,
 		services,
 		ai,
+		version_metadata,
 
 		// don't construct the full `EnvironmentNonInheritable["durable_objects"]` shape here.
 		// `startDev()` will do that for us in its `getBindings()` function

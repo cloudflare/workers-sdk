@@ -31,6 +31,7 @@ const supportedPagesConfigFields = [
 	"services",
 	"analytics_engine_datasets",
 	"ai",
+	"version_metadata",
 	"dev",
 	// normalizeAndValidateConfig() sets this value
 	"configPath",

@@ -101,6 +101,7 @@ export async function typesHandler(
 		mtls_certificates: config.mtls_certificates,
 		browser: config.browser,
 		ai: config.ai,
+		version_metadata: config.version_metadata,
 		secrets,
 	};
 
@@ -279,6 +280,12 @@ async function generateTypes(
 
 	if (configToDTS.ai) {
 		envTypeStructure.push(`${configToDTS.ai.binding}: unknown;`);
+	}
+
+	if (configToDTS.version_metadata) {
+		envTypeStructure.push(
+			`${configToDTS.version_metadata.binding}: { id: string; tag: string };`
+		);
 	}
 
 	const modulesTypeStructure: string[] = [];
