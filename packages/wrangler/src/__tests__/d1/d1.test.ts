@@ -24,6 +24,7 @@ describe("d1", () => {
 		  wrangler d1 delete <name>       Delete D1 database
 		  wrangler d1 backup              Interact with D1 Backups
 		  wrangler d1 execute <database>  Executed command or SQL file
+		  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
 		  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time.
 		  wrangler d1 migrations          Interact with D1 Migrations
 
@@ -60,6 +61,7 @@ describe("d1", () => {
 		  wrangler d1 delete <name>       Delete D1 database
 		  wrangler d1 backup              Interact with D1 Backups
 		  wrangler d1 execute <database>  Executed command or SQL file
+		  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
 		  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time.
 		  wrangler d1 migrations          Interact with D1 Migrations
 

@@ -20,7 +20,6 @@ export function Options(yargs: CommonYargsArgv) {
 		.option("local", {
 			type: "boolean",
 			describe: "Export from your local DB you use with wrangler dev",
-			default: true,
 			conflicts: "remote",
 		})
 		.option("remote", {
