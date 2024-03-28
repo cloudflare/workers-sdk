@@ -2,12 +2,12 @@ import * as Backups from "./backups";
 import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
+import * as Export from "./export";
 import * as Info from "./info";
 import * as Insights from "./insights";
 import * as List from "./list";
 import * as Migrations from "./migrations";
 import * as TimeTravel from "./timeTravel";
-import * as Export from "./export";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function d1(yargs: CommonYargsArgv) {
