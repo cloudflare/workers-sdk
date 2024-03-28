@@ -2,6 +2,10 @@ export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
 
+		if (url.pathname === "/version_metadata") {
+			return Response.json(env.METADATA);
+		}
+
 		if (url.pathname === "/holiday") {
 			return new Response(
 				`[/holiday]:\n` +

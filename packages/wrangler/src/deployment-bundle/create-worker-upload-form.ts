@@ -43,6 +43,7 @@ export type WorkerMetadataBinding =
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
 	| { type: "ai"; name: string }
+	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
 	| {
@@ -319,6 +320,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: bindings.ai.binding,
 			type: "ai",
+		});
+	}
+
+	if (bindings.version_metadata !== undefined) {
+		metadataBindings.push({
+			name: bindings.version_metadata.binding,
+			type: "version_metadata",
 		});
 	}
 

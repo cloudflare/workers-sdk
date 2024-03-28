@@ -5,3 +5,6 @@ main = "src/index.js"
 
 [triggers]
 crons = ["1 * * * *"]
+
+[version_metadata]
+binding = "METADATA"

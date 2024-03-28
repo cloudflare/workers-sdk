@@ -164,6 +164,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		text_blobs,
 		browser,
 		ai,
+		version_metadata,
 		unsafe,
 		vars,
 		wasm_modules,
@@ -382,6 +383,13 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		output.push({
 			type: "AI",
 			entries: [{ key: "Name", value: ai.binding }],
+		});
+	}
+
+	if (version_metadata !== undefined) {
+		output.push({
+			type: "Worker Version Metadata",
+			entries: [{ key: "Name", value: version_metadata.binding }],
 		});
 	}
 

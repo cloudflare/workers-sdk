@@ -78,6 +78,9 @@ const bindingsConfigMock: Omit<
 	ai: {
 		binding: "AI_BINDING",
 	},
+	version_metadata: {
+		binding: "VERSION_METADATA_BINDING",
+	},
 	logfwdr: {
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
 	},
@@ -223,6 +226,7 @@ describe("generateTypes()", () => {
 			MTLS_BINDING: Fetcher;
 			BROWSER_BINDING: Fetcher;
 			AI_BINDING: unknown;
+			VERSION_METADATA_BINDING: { id: string; tag: string };
 		}
 		declare module \\"*.txt\\" {
 			const value: string;
