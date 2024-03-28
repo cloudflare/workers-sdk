@@ -56,7 +56,6 @@ import {
 	setupSentry,
 } from "./sentry";
 import { tailHandler, tailOptions } from "./tail";
-import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
 import {
@@ -732,24 +731,9 @@ export function createCLIParser(argv: string[]) {
 
 	// versions
 	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"versions",
-			"List, view, upload and deploy Versions of your Worker to Cloudflare [beta]",
-			(yargs) => {
-				return registerVersionsSubcommands(yargs.command(subHelp));
-			}
-		);
-	}
-
-	// triggers
-	if (experimentalGradualRollouts) {
-		wrangler.command(
-			"triggers",
-			"Updates the triggers of your current deployment [beta]",
-			(yargs) => {
-				return registerTriggersSubcommands(yargs.command(subHelp));
-			}
-		);
+		wrangler.command("versions", false, (yargs) => {
+			return registerVersionsSubcommands(yargs.command(subHelp));
+		});
 	}
 
 	wrangler.exitProcess(false);

@@ -305,6 +305,5 @@ export async function deployHandler(
 		oldAssetTtl: args.oldAssetTtl,
 		projectRoot,
 		dispatchNamespace: args.dispatchNamespace,
-		experimentalVersions: args.experimentalVersions,
 	});
 }
