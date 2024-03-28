@@ -46,10 +46,6 @@ export const getDatabaseByNameOrBinding = async (
 	return matchingDB;
 };
 
-export const d1BetaWarning = process.env.NO_D1_WARNING
-	? ""
-	: "--------------------\n🚧 D1 is currently in open beta\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n--------------------\n";
-
 export const getDatabaseInfoFromId = async (
 	accountId: string,
 	databaseId: string
