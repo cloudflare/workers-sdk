@@ -67,16 +67,24 @@ export const newline = () => {
 	log("");
 };
 
+type FormatOptions = {
+	linePrefix?: string;
+	firstLinePrefix?: string;
+	newlineBefore?: boolean;
+	newlineAfter?: boolean;
+	formatLine?: (line: string) => string;
+	multiline?: boolean;
+};
 export const format = (
 	msg: string,
 	{
 		linePrefix = gray(shapes.bar),
-		firstLinePrefix = gray(shapes.bar),
+		firstLinePrefix = linePrefix,
 		newlineBefore = false,
 		newlineAfter = false,
 		formatLine = (line: string) => white(line),
 		multiline = true,
-	}
+	}: FormatOptions = {}
 ) => {
 	const lines = multiline ? msg.split("\n") : [msg];
 	const formattedLines = lines.map(
