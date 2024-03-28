@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import { fetch } from "undici";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { readConfig, withConfig } from "../config";
+import { readConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -50,37 +50,35 @@ export function Options(yargs: CommonYargsArgv) {
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async (args): Promise<void> => {
-		const { local, remote, name, output, noSchema, noData, table } = args;
-		await printWranglerBanner();
-		const config = readConfig(args.config, args);
+export const Handler = async (args: HandlerOptions): Promise<void> => {
+	const { local, remote, name, output, noSchema, noData, table } = args;
+	await printWranglerBanner();
+	const config = readConfig(args.config, args);
 
-		if (local)
-			throw new UserError(
-				`Local imports/exports will be coming in a future version of Wrangler.`
-			);
-		if (!remote)
-			throw new UserError(`You must specify either --local or --remote`);
-
-		// Allow multiple --table x --table y flags or none
-		const tables: string[] = table
-			? Array.isArray(table)
-				? table
-				: [table]
-			: [];
-
-		const result = await exportRemotely(
-			config,
-			name,
-			output,
-			tables,
-			noSchema,
-			noData
+	if (local)
+		throw new UserError(
+			`Local imports/exports will be coming in a future version of Wrangler.`
 		);
-		return result;
-	}
-);
+	if (!remote)
+		throw new UserError(`You must specify either --local or --remote`);
+
+	// Allow multiple --table x --table y flags or none
+	const tables: string[] = table
+		? Array.isArray(table)
+			? table
+			: [table]
+		: [];
+
+	const result = await exportRemotely(
+		config,
+		name,
+		output,
+		tables,
+		noSchema,
+		noData
+	);
+	return result;
+};
 
 type ExportMetadata = {
 	signedUrl: string;
