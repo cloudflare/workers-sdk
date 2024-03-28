@@ -27,6 +27,7 @@ type Props = {
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
 	dispatchNamespace: string | undefined;
+	experimentalVersions: boolean | undefined;
 };
 
 export default async function triggersDeploy(props: Props): Promise<void> {
@@ -237,7 +238,11 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	const deployMs = Date.now() - start - uploadMs;
 
 	if (deployments.length > 0) {
-		logger.log("Deployed", workerName, "triggers", formatTime(deployMs));
+		const msg = props.experimentalVersions
+			? `Deployed ${workerName} triggers`
+			: `Published ${workerName}`;
+		logger.log(msg, formatTime(deployMs));
+
 		for (const target of targets.flat()) {
 			// Append protocol only on workers.dev domains
 			logger.log(

@@ -83,5 +83,6 @@ export async function triggersDeployHandler(
 		legacyEnv: isLegacyEnv(config),
 		dryRun: args.dryRun,
 		dispatchNamespace: args.dispatchNamespace,
+		experimentalVersions: args.experimentalJsonConfig,
 	});
 }
