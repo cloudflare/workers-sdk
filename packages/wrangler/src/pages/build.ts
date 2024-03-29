@@ -9,7 +9,6 @@ import path, {
 } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readConfig } from "../config";
-import { isPagesConfig } from "../config/validation";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -19,6 +18,7 @@ import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
+	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
@@ -341,23 +341,29 @@ async function maybeReadPagesConfig(
 	if (!existsSync(configPath)) {
 		return undefined;
 	}
-	const config = readConfig(configPath, {
-		...args,
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		env: process.env.PAGES_ENVIRONMENT,
-	});
-	// Fail if the config file exists but isn't valid for Pages
-	if (!isPagesConfig(config)) {
-		logger.warn("Your wrangler.toml is not a valid Pages config file");
-		return undefined;
-	}
+	try {
+		const config = readConfig(
+			configPath,
+			{
+				...args,
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				env: process.env.PAGES_ENVIRONMENT,
+			},
+			true
+		);
 
-	return {
-		...config,
-		hash: createHash("sha256")
-			.update(await readFile(configPath))
-			.digest("hex"),
-	};
+		return {
+			...config,
+			hash: createHash("sha256")
+				.update(await readFile(configPath))
+				.digest("hex"),
+		};
+	} catch (e) {
+		if (e instanceof FatalError && e.code === EXIT_CODE_INVALID_PAGES_CONFIG) {
+			return undefined;
+		}
+		throw e;
+	}
 }
 type ValidatedArgs = WorkerBundleArgs | PluginArgs;
 

@@ -547,144 +547,101 @@ describe("functions build w/ config", () => {
 	});
 
 	beforeEach(() => {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		process.env.PAGES_ENVIRONMENT = "production";
+	});
+
+	it("should include all config in the _worker.bundle metadata", async () => {
 		// Write an example wrangler.toml file with a _lot_ of config
 		writeFileSync(
 			"wrangler.toml",
 			dedent`
-		name = "project-name"
-		pages_build_output_dir = "dist-test"
-		compatibility_date = "2023-02-14"
-		placement = { mode = "smart" }
-		limits = { cpu_ms = 50 }
+				name = "project-name"
+				pages_build_output_dir = "dist-test"
+				compatibility_date = "2023-02-14"
+				placement = { mode = "smart" }
+				limits = { cpu_ms = 50 }
 
-		[vars]
-		TEST_JSON_PREVIEW = """
-		{
-		json: "value"
-		}"""
-		TEST_PLAINTEXT_PREVIEW = "PLAINTEXT"
+				[env.production.vars]
+				TEST_JSON_PREVIEW = """
+				{
+				json: "value"
+				}"""
+				TEST_PLAINTEXT_PREVIEW = "PLAINTEXT"
 
-		[[kv_namespaces]]
-		id = "kv-id"
-		binding = "KV_PREVIEW"
+				[[env.production.kv_namespaces]]
+				id = "kv-id"
+				binding = "KV_PREVIEW"
 
-		[[kv_namespaces]]
-		id = "kv-id"
-		binding = "KV_PREVIEW2"
+				[[env.production.kv_namespaces]]
+				id = "kv-id"
+				binding = "KV_PREVIEW2"
 
-		[[durable_objects.bindings]]
-		name = "DO_PREVIEW"
-		class_name = "some-class-do-id"
-		script_name = "some-script-do-id"
-		environment = "some-environment-do-id"
+				[[env.production.durable_objects.bindings]]
+				name = "DO_PREVIEW"
+				class_name = "some-class-do-id"
+				script_name = "some-script-do-id"
+				environment = "some-environment-do-id"
 
-		[[durable_objects.bindings]]
-		name = "DO_PREVIEW2"
-		class_name = "some-class-do-id"
-		script_name = "some-script-do-id"
-		environment = "some-environment-do-id"
+				[[env.production.durable_objects.bindings]]
+				name = "DO_PREVIEW2"
+				class_name = "some-class-do-id"
+				script_name = "some-script-do-id"
+				environment = "some-environment-do-id"
 
-		[[durable_objects.bindings]]
-		name = "DO_PREVIEW3"
-		class_name = "do-class"
-		script_name = "do-s"
-		environment = "do-e"
+				[[env.production.durable_objects.bindings]]
+				name = "DO_PREVIEW3"
+				class_name = "do-class"
+				script_name = "do-s"
+				environment = "do-e"
 
-		[[d1_databases]]
-		database_id = "d1-id"
-		binding = "D1_PREVIEW"
-		database_name = "D1_PREVIEW"
+				[[env.production.d1_databases]]
+				database_id = "d1-id"
+				binding = "D1_PREVIEW"
+				database_name = "D1_PREVIEW"
 
-		[[d1_databases]]
-		database_id = "d1-id"
-		binding = "D1_PREVIEW2"
-		database_name = "D1_PREVIEW2"
+				[[env.production.d1_databases]]
+				database_id = "d1-id"
+				binding = "D1_PREVIEW2"
+				database_name = "D1_PREVIEW2"
 
-		[[r2_buckets]]
-		bucket_name = "r2-name"
-		binding = "R2_PREVIEW"
+				[[env.production.r2_buckets]]
+				bucket_name = "r2-name"
+				binding = "R2_PREVIEW"
 
-		[[r2_buckets]]
-		bucket_name = "r2-name"
-		binding = "R2_PREVIEW2"
+				[[env.production.r2_buckets]]
+				bucket_name = "r2-name"
+				binding = "R2_PREVIEW2"
 
-		[[services]]
-		binding = "SERVICE_PREVIEW"
-		service = "service"
-		environment = "production"
+				[[env.production.services]]
+				binding = "SERVICE_PREVIEW"
+				service = "service"
+				environment = "production"
 
-		[[services]]
-		binding = "SERVICE_PREVIEW2"
-		service = "service"
-		environment = "production"
+				[[env.production.services]]
+				binding = "SERVICE_PREVIEW2"
+				service = "service"
+				environment = "production"
 
-		[[queues.producers]]
-		binding = "QUEUE_PREVIEW"
-		queue = "q-id"
+				[[env.production.queues.producers]]
+				binding = "QUEUE_PREVIEW"
+				queue = "q-id"
 
-		[[queues.producers]]
-		binding = "QUEUE_PREVIEW2"
-		queue = "q-id"
+				[[env.production.queues.producers]]
+				binding = "QUEUE_PREVIEW2"
+				queue = "q-id"
 
-		[[analytics_engine_datasets]]
-		binding = "AE_PREVIEW"
-		dataset = "data"
+				[[env.production.analytics_engine_datasets]]
+				binding = "AE_PREVIEW"
+				dataset = "data"
 
-		[[analytics_engine_datasets]]
-		binding = "AE_PREVIEW2"
-		dataset = "data"
+				[[env.production.analytics_engine_datasets]]
+				binding = "AE_PREVIEW2"
+				dataset = "data"
 
-		[ai]
-		binding = "AI_PREVIEW"
-
-		[env.production]
-		compatibility_date = "2024-02-14"
-
-		  [env.production.vars]
-		  TEST_JSON = """
-		{
-		json: "value"
-		}"""
-		  TEST_PLAINTEXT = "PLAINTEXT"
-
-		  [[env.production.kv_namespaces]]
-		  id = "kv-id"
-		  binding = "KV"
-
-		[[env.production.durable_objects.bindings]]
-		name = "DO"
-		class_name = "some-class-do-id"
-		script_name = "some-script-do-id"
-		environment = "some-environment-do-id"
-
-		  [[env.production.d1_databases]]
-		  database_id = "d1-id"
-		  binding = "D1"
-		  database_name = "D1"
-
-		  [[env.production.r2_buckets]]
-		  bucket_name = "r2-name"
-		  binding = "R2"
-
-		  [[env.production.services]]
-		  binding = "SERVICE"
-		  service = "service"
-		  environment = "production"
-
-		[[env.production.queues.producers]]
-		binding = "QUEUE"
-		queue = "q-id"
-
-		  [[env.production.analytics_engine_datasets]]
-		  binding = "AE"
-		  dataset = "data"
-
-		  [env.production.ai]
-		  binding = "AI"`
+				[env.production.ai]
+				binding = "AI_PREVIEW"`
 		);
-	});
-
-	it("should include all config in the _worker.bundle metadata", async () => {
 		/* ---------------------------- */
 		/*       Set up js files        */
 		/* ---------------------------- */
@@ -760,8 +717,343 @@ export default {
 	`);
 		const buildMetadataContents = readFileSync("build-metadata.json", "utf-8");
 		expect(buildMetadataContents).toMatchInlineSnapshot(
-			`"{\\"wrangler_config_hash\\":\\"49290f05177579eac4442a3cfd403a84429c189fc57e75697605eca07eb49d26\\",\\"build_output_directory\\":\\"dist-test\\"}"`
+			`"{\\"wrangler_config_hash\\":\\"75b267c678474945699c162b6d75e5e4a88fb8b491fc0650a390e097186031ab\\",\\"build_output_directory\\":\\"dist-test\\"}"`
 		);
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should ignore config with a non-pages config file", async () => {
+		writeFileSync(
+			"wrangler.toml",
+			dedent`
+				name = "project-name"
+				compatibility_date = "2023-02-14"
+				placement = { mode = "smart" }
+				limits = { cpu_ms = 50 }
+
+				[env.production.vars]
+				TEST_JSON_PREVIEW = """
+				{
+				json: "value"
+				}"""
+				TEST_PLAINTEXT_PREVIEW = "PLAINTEXT"
+
+				[[env.production.kv_namespaces]]
+				id = "kv-id"
+				binding = "KV_PREVIEW"
+
+				[[env.production.kv_namespaces]]
+				id = "kv-id"
+				binding = "KV_PREVIEW2"
+
+				[[env.production.durable_objects.bindings]]
+				name = "DO_PREVIEW"
+				class_name = "some-class-do-id"
+				script_name = "some-script-do-id"
+				environment = "some-environment-do-id"
+
+				[[env.production.durable_objects.bindings]]
+				name = "DO_PREVIEW2"
+				class_name = "some-class-do-id"
+				script_name = "some-script-do-id"
+				environment = "some-environment-do-id"
+
+				[[env.production.durable_objects.bindings]]
+				name = "DO_PREVIEW3"
+				class_name = "do-class"
+				script_name = "do-s"
+				environment = "do-e"
+
+				[[env.production.d1_databases]]
+				database_id = "d1-id"
+				binding = "D1_PREVIEW"
+				database_name = "D1_PREVIEW"
+
+				[[env.production.d1_databases]]
+				database_id = "d1-id"
+				binding = "D1_PREVIEW2"
+				database_name = "D1_PREVIEW2"
+
+				[[env.production.r2_buckets]]
+				bucket_name = "r2-name"
+				binding = "R2_PREVIEW"
+
+				[[env.production.r2_buckets]]
+				bucket_name = "r2-name"
+				binding = "R2_PREVIEW2"
+
+				[[env.production.services]]
+				binding = "SERVICE_PREVIEW"
+				service = "service"
+				environment = "production"
+
+				[[env.production.services]]
+				binding = "SERVICE_PREVIEW2"
+				service = "service"
+				environment = "production"
+
+				[[env.production.queues.producers]]
+				binding = "QUEUE_PREVIEW"
+				queue = "q-id"
+
+				[[env.production.queues.producers]]
+				binding = "QUEUE_PREVIEW2"
+				queue = "q-id"
+
+				[[env.production.analytics_engine_datasets]]
+				binding = "AE_PREVIEW"
+				dataset = "data"
+
+				[[env.production.analytics_engine_datasets]]
+				binding = "AE_PREVIEW2"
+				dataset = "data"
+
+				[env.production.ai]
+				binding = "AI_PREVIEW"`
+		);
+		/* ---------------------------- */
+		/*       Set up js files        */
+		/* ---------------------------- */
+		mkdirSync("utils");
+		writeFileSync(
+			"utils/meaning-of-life.js",
+			`
+export const MEANING_OF_LIFE = 21;
+`
+		);
+
+		/* ---------------------------- */
+		/*       Set up _worker.js      */
+		/* ---------------------------- */
+		mkdirSync("dist-test");
+		writeFileSync(
+			"dist-test/_worker.js",
+			`
+import { MEANING_OF_LIFE } from "./../utils/meaning-of-life.js";
+
+export default {
+  async fetch(request, env) {
+    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
+  },
+};`
+		);
+
+		/* --------------------------------- */
+		/*     Run cmd & make assertions     */
+		/* --------------------------------- */
+		await runWrangler(
+			`pages functions build --build-output-directory dist-test --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
+		);
+		expect(existsSync("_worker.bundle")).toBe(true);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+
+		// some values in workerBundleContents, such as the undici form boundary
+		// or the file hashes, are randomly generated. Let's replace them
+		// with static values so we can test the file contents
+		const workerBundleContents = readFileSync("_worker.bundle", "utf-8");
+		const workerBundleWithConstantData = replaceRandomWithConstantData(
+			workerBundleContents,
+			[
+				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+			]
+		);
+
+		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+		"------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"metadata\\"
+
+		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+		------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+		Content-Type: application/javascript+module
+
+		// ../utils/meaning-of-life.js
+		var MEANING_OF_LIFE = 21;
+
+		// _worker.js
+		var worker_default = {
+		  async fetch(request, env) {
+		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+		  }
+		};
+		export {
+		  worker_default as default
+		};
+
+		------formdata-undici-0.test--"
+	`);
+		const buildMetadataExists = existsSync("build-metadata.json");
+		// build-metadata should not exist
+		expect(buildMetadataExists).toBeFalsy();
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+	it("should ignore config with a non-pages config file w/ invalid environment", async () => {
+		writeFileSync(
+			"wrangler.toml",
+			dedent`
+				name = "project-name"
+				compatibility_date = "2023-02-14"
+				placement = { mode = "smart" }
+				limits = { cpu_ms = 50 }
+
+				[env.staging.vars]
+				TEST_JSON_PREVIEW = """
+				{
+				json: "value"
+				}"""
+				TEST_PLAINTEXT_PREVIEW = "PLAINTEXT"
+
+				[[env.staging.kv_namespaces]]
+				id = "kv-id"
+				binding = "KV_PREVIEW"
+
+				[[env.staging.kv_namespaces]]
+				id = "kv-id"
+				binding = "KV_PREVIEW2"
+
+				[[env.staging.durable_objects.bindings]]
+				name = "DO_PREVIEW"
+				class_name = "some-class-do-id"
+				script_name = "some-script-do-id"
+				environment = "some-environment-do-id"
+
+				[[env.staging.durable_objects.bindings]]
+				name = "DO_PREVIEW2"
+				class_name = "some-class-do-id"
+				script_name = "some-script-do-id"
+				environment = "some-environment-do-id"
+
+				[[env.staging.durable_objects.bindings]]
+				name = "DO_PREVIEW3"
+				class_name = "do-class"
+				script_name = "do-s"
+				environment = "do-e"
+
+				[[env.staging.d1_databases]]
+				database_id = "d1-id"
+				binding = "D1_PREVIEW"
+				database_name = "D1_PREVIEW"
+
+				[[env.staging.d1_databases]]
+				database_id = "d1-id"
+				binding = "D1_PREVIEW2"
+				database_name = "D1_PREVIEW2"
+
+				[[env.staging.r2_buckets]]
+				bucket_name = "r2-name"
+				binding = "R2_PREVIEW"
+
+				[[env.staging.r2_buckets]]
+				bucket_name = "r2-name"
+				binding = "R2_PREVIEW2"
+
+				[[env.staging.services]]
+				binding = "SERVICE_PREVIEW"
+				service = "service"
+				environment = "production"
+
+				[[env.staging.services]]
+				binding = "SERVICE_PREVIEW2"
+				service = "service"
+				environment = "production"
+
+				[[env.staging.queues.producers]]
+				binding = "QUEUE_PREVIEW"
+				queue = "q-id"
+
+				[[env.staging.queues.producers]]
+				binding = "QUEUE_PREVIEW2"
+				queue = "q-id"
+
+				[[env.staging.analytics_engine_datasets]]
+				binding = "AE_PREVIEW"
+				dataset = "data"
+
+				[[env.staging.analytics_engine_datasets]]
+				binding = "AE_PREVIEW2"
+				dataset = "data"
+
+				[env.staging.ai]
+				binding = "AI_PREVIEW"`
+		);
+		/* ---------------------------- */
+		/*       Set up js files        */
+		/* ---------------------------- */
+		mkdirSync("utils");
+		writeFileSync(
+			"utils/meaning-of-life.js",
+			`
+export const MEANING_OF_LIFE = 21;
+`
+		);
+
+		/* ---------------------------- */
+		/*       Set up _worker.js      */
+		/* ---------------------------- */
+		mkdirSync("dist-test");
+		writeFileSync(
+			"dist-test/_worker.js",
+			`
+import { MEANING_OF_LIFE } from "./../utils/meaning-of-life.js";
+
+export default {
+  async fetch(request, env) {
+    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
+  },
+};`
+		);
+
+		/* --------------------------------- */
+		/*     Run cmd & make assertions     */
+		/* --------------------------------- */
+		await runWrangler(
+			`pages functions build --build-output-directory dist-test --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
+		);
+		expect(existsSync("_worker.bundle")).toBe(true);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+
+		// some values in workerBundleContents, such as the undici form boundary
+		// or the file hashes, are randomly generated. Let's replace them
+		// with static values so we can test the file contents
+		const workerBundleContents = readFileSync("_worker.bundle", "utf-8");
+		const workerBundleWithConstantData = replaceRandomWithConstantData(
+			workerBundleContents,
+			[
+				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+			]
+		);
+
+		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+		"------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"metadata\\"
+
+		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+		------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+		Content-Type: application/javascript+module
+
+		// ../utils/meaning-of-life.js
+		var MEANING_OF_LIFE = 21;
+
+		// _worker.js
+		var worker_default = {
+		  async fetch(request, env) {
+		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+		  }
+		};
+		export {
+		  worker_default as default
+		};
+
+		------formdata-undici-0.test--"
+	`);
+		const buildMetadataExists = existsSync("build-metadata.json");
+		// build-metadata should not exist
+		expect(buildMetadataExists).toBeFalsy();
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
