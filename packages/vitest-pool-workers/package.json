@@ -47,6 +47,8 @@
 		"dev": "node scripts/bundle.mjs watch",
 		"check:lint": "eslint .",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
+		"test": "vitest run",
+		"test:ci": "vitest run",
 		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp"
 	},
 	"devDependencies": {
@@ -56,6 +58,7 @@
 		"@types/node": "20.8.3",
 		"capnp-ts": "^0.7.0",
 		"capnpc-ts": "^0.7.0",
+		"ts-dedent": "^2.2.0",
 		"undici": "5.28.3"
 	},
 	"dependencies": {
