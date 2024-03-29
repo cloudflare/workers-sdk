@@ -21,4 +21,8 @@ export type AccountLimit = {
 	 * Network modes that will be included in this customer's vm
 	 */
 	network_modes: Array<NetworkMode>;
+	/**
+	 * Number of ipv4s available to the account
+	 */
+	ipv4s: number;
 };

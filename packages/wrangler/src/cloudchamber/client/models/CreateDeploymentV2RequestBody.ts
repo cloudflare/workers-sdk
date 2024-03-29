@@ -2,10 +2,14 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { Command } from "./Command";
+import type { DNSConfiguration } from "./DNSConfiguration";
+import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { NetworkParameters } from "./NetworkParameters";
+import type { Port } from "./Port";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -41,8 +45,8 @@ export type CreateDeploymentV2RequestBody = {
 	 */
 	labels?: Array<Label>;
 	network?: NetworkParameters;
-	/**
-	 * Specify the GPU memory to be used for the deployment. (Mandatory for GPU deployments)
-	 */
-	gpu_memory?: MemorySizeWithUnit;
+	command?: Command;
+	entrypoint?: Entrypoint;
+	dns?: DNSConfiguration;
+	ports?: Array<Port>;
 };
