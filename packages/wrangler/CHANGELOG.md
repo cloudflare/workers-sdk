@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.41.0
+
+### Minor Changes
+
+- [#5425](https://github.com/cloudflare/workers-sdk/pull/5425) [`b7a6d9d`](https://github.com/cloudflare/workers-sdk/commit/b7a6d9d422dbe1f09f35b5105a9a58dd425604a7) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: implement `wrangler d1 export`
+
 ## 3.40.0
 
 ### Minor Changes
