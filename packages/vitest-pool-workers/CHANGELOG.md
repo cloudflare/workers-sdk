@@ -1,5 +1,13 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [[`daac6a2`](https://github.com/cloudflare/workers-sdk/commit/daac6a2282c362a79990794dc00baca56ccc3e6e), [`9343714`](https://github.com/cloudflare/workers-sdk/commit/9343714155d5fa71c7415457dd35ab343d047d0f), [`dc0c1dc`](https://github.com/cloudflare/workers-sdk/commit/dc0c1dc527c3ed2f79196f3b0ef44b337833a07a), [`7115568`](https://github.com/cloudflare/workers-sdk/commit/71155680d3675acd6f522e8b312aa63846a076a4), [`c90dd6b`](https://github.com/cloudflare/workers-sdk/commit/c90dd6b8a86238003ac953bd97566f92a206817d), [`b341614`](https://github.com/cloudflare/workers-sdk/commit/b3416145f3fc220aa833e24cbaa1c8612062e2de), [`976adec`](https://github.com/cloudflare/workers-sdk/commit/976adec23e3d993b190faf65f4f06b0508c5a22d), [`3e5a932`](https://github.com/cloudflare/workers-sdk/commit/3e5a932eca2e3e26d135e005967ca36801f27d97), [`fbdca7d`](https://github.com/cloudflare/workers-sdk/commit/fbdca7d93156f9db2a1513573e45f10fac7e57d1), [`47b325a`](https://github.com/cloudflare/workers-sdk/commit/47b325af0df87bcf20d922ff385ae9cd21726863)]:
+  - wrangler@3.40.0
+  - miniflare@3.20240320.1
+
 ## 0.1.7
 
 ### Patch Changes

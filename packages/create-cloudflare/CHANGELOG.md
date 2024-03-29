@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.16.1
+
+### Patch Changes
+
+- [#5410](https://github.com/cloudflare/workers-sdk/pull/5410) [`e89ee2a`](https://github.com/cloudflare/workers-sdk/commit/e89ee2a5745a0e19055d885970d3be8043f15ec9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update Astro c3 logic for their new v10 Cloudflare adapter
+
 ## 2.16.0
 
 ### Minor Changes

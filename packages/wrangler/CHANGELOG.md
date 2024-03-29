@@ -1,5 +1,51 @@
 # wrangler
 
+## 3.40.0
+
+### Minor Changes
+
+- [#5426](https://github.com/cloudflare/workers-sdk/pull/5426) [`9343714`](https://github.com/cloudflare/workers-sdk/commit/9343714155d5fa71c7415457dd35ab343d047d0f) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: added a new `wrangler triggers deploy` command
+
+  This command currently requires the `--experimental-versions` flag.
+
+  This command extracts the trigger deployment logic from `wrangler deploy` and allows users to update their currently deployed Worker's triggers without doing another deployment. This is primarily useful for users of `wrangler versions upload` and `wrangler versions deploy` who can then run `wrangler triggers deploy` to apply trigger changes to their currently deployed Worker Versions.
+
+  The command can also be used even if not using the `wrangler versions ...` commands. And, in fact, users are already using it implicitly when running `wrangler deploy`.
+
+- [#4932](https://github.com/cloudflare/workers-sdk/pull/4932) [`dc0c1dc`](https://github.com/cloudflare/workers-sdk/commit/dc0c1dc527c3ed2f79196f3b0ef44b337833a07a) Thanks [@xortive](https://github.com/xortive)! - feature: Add support for private networking in Hyperdrive configs
+
+- [#5369](https://github.com/cloudflare/workers-sdk/pull/5369) [`7115568`](https://github.com/cloudflare/workers-sdk/commit/71155680d3675acd6f522e8b312aa63846a076a4) Thanks [@mattdeboard](https://github.com/mattdeboard)! - fix: Use queue name, not ID, for `r2 bucket event-notification` subcommands
+
+  Since the original command was not yet operational, this update does not constitute a breaking change.
+
+  Instead of providing the queue ID as the parameter to `--queue`, users must provide the queue _name_. Under the hood, we will query the Queues API for the queue ID given the queue name.
+
+- [#5413](https://github.com/cloudflare/workers-sdk/pull/5413) [`976adec`](https://github.com/cloudflare/workers-sdk/commit/976adec23e3d993b190faf65f4f06b0508c5a22d) Thanks [@pmiguel](https://github.com/pmiguel)! - feature: Added Queue delivery controls support in wrangler.toml
+
+- [#5412](https://github.com/cloudflare/workers-sdk/pull/5412) [`3e5a932`](https://github.com/cloudflare/workers-sdk/commit/3e5a932eca2e3e26d135e005967ca36801f27d97) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: adds the `--json` option to `wrangler deployments list --experimental-versions`, `wrangler deployments status --experimental-versions`, `wrangler versions list --experimental-versions` and `wrangler versions view --experimental-versions` which will format the output as clean JSON. The ` --experimental-versions` flag is still required for these commands.
+
+- [#5258](https://github.com/cloudflare/workers-sdk/pull/5258) [`fbdca7d`](https://github.com/cloudflare/workers-sdk/commit/fbdca7d93156f9db2a1513573e45f10fac7e57d1) Thanks [@OilyLime](https://github.com/OilyLime)! - feature: URL decode components of the Hyperdrive config connection string
+
+- [#5416](https://github.com/cloudflare/workers-sdk/pull/5416) [`47b325a`](https://github.com/cloudflare/workers-sdk/commit/47b325af0df87bcf20d922ff385ae9cd21726863) Thanks [@mattdeboard](https://github.com/mattdeboard)! - fix: minor improvements to R2 notification subcommand
+
+  1. `r2 bucket event-notification <subcommand>` becomes `r2 bucket notification <subcommand>`
+  2. Parameters to `--event-type` use `-` instead of `_` (e.g. `object_create` -> `object-create`)
+
+  Since the original command was not yet operational, this update does not constitute a breaking change.
+
+### Patch Changes
+
+- [#5419](https://github.com/cloudflare/workers-sdk/pull/5419) [`daac6a2`](https://github.com/cloudflare/workers-sdk/commit/daac6a2282c362a79990794dc00baca56ccc3e6e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: add helpful logging to --experimental-versions commands
+
+- [#5400](https://github.com/cloudflare/workers-sdk/pull/5400) [`c90dd6b`](https://github.com/cloudflare/workers-sdk/commit/c90dd6b8a86238003ac953bd97566f92a206817d) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: log of impending change of "Deployment ID" to "Version ID" in `wrangler deploy`, `wrangler deployments list`, `wrangler deployments view` and `wrangler rollback`. This is a warning of a future change for anyone depending on the output text format, for example by grepping the output in automated flows.
+
+- [#5422](https://github.com/cloudflare/workers-sdk/pull/5422) [`b341614`](https://github.com/cloudflare/workers-sdk/commit/b3416145f3fc220aa833e24cbaa1c8612062e2de) Thanks [@geelen](https://github.com/geelen)! - fix: remove d1BetaWarning and all usages
+
+  This PR removes the warning that D1 is in beta for all D1 commands.
+
+- Updated dependencies [[`fbdca7d`](https://github.com/cloudflare/workers-sdk/commit/fbdca7d93156f9db2a1513573e45f10fac7e57d1)]:
+  - miniflare@3.20240320.1
+
 ## 3.39.0
 
 ### Minor Changes
