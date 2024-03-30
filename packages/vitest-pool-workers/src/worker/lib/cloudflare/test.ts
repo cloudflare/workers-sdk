@@ -11,4 +11,5 @@ export {
 	createMessageBatch,
 	getQueueResult,
 	applyD1Migrations,
+	createPagesEventContext,
 } from "cloudflare:test-internal";

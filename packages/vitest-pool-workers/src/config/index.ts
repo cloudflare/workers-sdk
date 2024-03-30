@@ -130,3 +130,4 @@ export function defineWorkersProject(
 }
 
 export * from "./d1";
+export * from "./pages";
