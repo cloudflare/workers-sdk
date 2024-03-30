@@ -9,8 +9,9 @@ import {
 	importModule,
 	internalEnv,
 	maybeHandleRunRequest,
-	registerGlobalWaitUntil,
+	registerHandlerAndGlobalWaitUntil,
 	runInRunnerObject,
+	runWithHandlerContext,
 	setEnv,
 	stripInternalEnv,
 } from "cloudflare:test-internal";
@@ -44,27 +45,79 @@ Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `v
 
 globalThis.__console = console;
 
+// eslint-disable-next-line @typescript-eslint/ban-types
+function getCallerFileName(of: Function) {
+	const originalStackTraceLimit = Error.stackTraceLimit;
+	const originalPrepareStackTrace = Error.prepareStackTrace;
+	try {
+		let fileName: string | undefined;
+		Error.stackTraceLimit = 1;
+		Error.prepareStackTrace = (_error, callSites) => {
+			fileName = callSites[0]?.getFileName();
+			return "";
+		};
+		const error: { stack?: string } = {};
+		Error.captureStackTrace(error, of);
+		void error.stack; // Access to generate stack trace
+		return fileName;
+	} finally {
+		Error.stackTraceLimit = originalStackTraceLimit;
+		Error.prepareStackTrace = originalPrepareStackTrace;
+	}
+}
+
 const originalSetTimeout = globalThis.setTimeout;
 const originalClearTimeout = globalThis.clearTimeout;
 
-// HACK: `vitest/dist/vendor/vi.js` attempts to call `setTimeout` when setting
-// up global mocks. Unfortunately, the runner Durable Object's IO context isn't
-// preserved through `import()` so this fails. To get around this, look for
-// the `setTimeout()` call and return a recognisable timeout value that's still
-// `number` typed.
-// @ts-expect-error __promisify__ types only required for Node.js
-globalThis.setTimeout = (...args: Parameters<typeof setTimeout>) => {
-	if (
-		args[1] === 0 &&
-		args[0].toString().replace(/\s/g, "") === "function(){returnundefined;}"
-	) {
-		return -0.5;
-	}
-	return originalSetTimeout.apply(globalThis, args);
+const timeoutPromiseResolves = new Map<unknown, () => void>();
+const monkeypatchedSetTimeout = (...args: Parameters<typeof setTimeout>) => {
+	const [callback, delay, ...restArgs] = args;
+	const callbackName = args[0]?.name ?? "";
+	const callerFileName = getCallerFileName(monkeypatchedSetTimeout);
+	const fromVitest = callerFileName?.includes("/node_modules/vitest/");
+
+	// If this `setTimeout()` isn't from Vitest, or has a non-zero delay,
+	// just call the original function
+	if (!fromVitest || delay) return originalSetTimeout.apply(globalThis, args);
+
+	// HACK: `vitest/dist/vendor/vi.js` attempts to call `setTimeout` when setting
+	// up global mocks. Unfortunately, the runner Durable Object's IO context
+	// isn't preserved through `import()` so this fails. To get around this, look
+	// for the `setTimeout()` call and return a recognisable timeout value that's
+	// still `number` typed
+	// (https://github.com/sinonjs/fake-timers/blob/c85ef142837afdbc732b0f73fdba30c3bd037965/src/fake-timers-src.js#L154)
+	if (callbackName === "NOOP") return -0.5;
+
+	// Make sure `setTimeout()`s from Vitest without delays are `waitUntil()`ed
+	// if we're running within an `export default` handler. This ensures all
+	// `console.log()`s are displayed, as Vitest uses `setTimeout()` for grouping.
+	let promiseResolve: (() => void) | undefined;
+	const promise = new Promise<void>((resolve) => {
+		promiseResolve = resolve;
+	});
+	assert(promiseResolve !== undefined);
+	registerHandlerAndGlobalWaitUntil(promise);
+	const id = originalSetTimeout.call(globalThis, () => {
+		promiseResolve?.();
+		callback?.(...restArgs);
+	});
+	timeoutPromiseResolves.set(id, promiseResolve);
+	return id;
 };
+// @ts-expect-error __promisify__ types only required for Node.js
+globalThis.setTimeout = monkeypatchedSetTimeout;
 // @ts-expect-error overload types not compatible
 globalThis.clearTimeout = (...args: Parameters<typeof clearTimeout>) => {
-	if (args[0] === -0.5) return;
+	const id = args[0];
+	if (id === -0.5) return;
+
+	// Make sure we resolve any timeout promises we're clearing
+	// (e.g. `console.log()`ing twice, the 2nd will clear the timeout set by the
+	// first, but we'll still be `waitUntil()`ing on the original `Promise`)
+	const maybePromiseResolve = timeoutPromiseResolves.get(id);
+	timeoutPromiseResolves.delete(id);
+	maybePromiseResolve?.();
+
 	return originalClearTimeout.apply(globalThis, args);
 };
 
@@ -99,11 +152,12 @@ class WebSocketMessagePort extends events.EventEmitter {
 	}
 
 	postMessage(data: unknown) {
-		if (this.socket.readyState !== WebSocket.READY_STATE_OPEN) return;
-
 		const stringified = structuredSerializableStringify(data);
 		try {
-			this.#chunkingSocket.post(stringified);
+			// Accessing `readyState` may also throw different I/O context error
+			if (this.socket.readyState === WebSocket.READY_STATE_OPEN) {
+				this.#chunkingSocket.post(stringified);
+			}
 		} catch (error) {
 			// If the user tried to perform a dynamic `import()` or `console.log()`
 			// from inside a `export default { fetch() { ... } }` handler using `SELF`
@@ -114,11 +168,12 @@ class WebSocketMessagePort extends events.EventEmitter {
 			// the RPC message though, so if we detect this, we try resend the message
 			// from the runner object.
 			if (isDifferentIOContextError(error)) {
-				void runInRunnerObject(internalEnv, () =>
-					this.#chunkingSocket.post(stringified)
-				).catch((e) => {
+				const promise = runInRunnerObject(internalEnv, () => {
+					this.#chunkingSocket.post(stringified);
+				}).catch((e) => {
 					__console.error("Error sending to pool inside runner:", e, data);
 				});
+				registerHandlerAndGlobalWaitUntil(promise);
 			} else {
 				__console.error("Error sending to pool:", error, data);
 			}
@@ -254,8 +309,6 @@ export class RunnerObject implements DurableObject {
 	}
 }
 
-const patchedContexts = new WeakSet<ExecutionContext>();
-
 function createHandlerWrapper<K extends keyof ExportedHandler>(
 	key: K
 ): NonNullable<ExportedHandler<Record<string, unknown> & Env>[K]> {
@@ -278,16 +331,9 @@ function createHandlerWrapper<K extends keyof ExportedHandler>(
 			(defaultExport as Record<string, unknown>)[key];
 		if (typeof handlerFunction === "function") {
 			const userEnv = stripInternalEnv(env);
-			// Ensure calls to `ctx.waitUntil()` registered with global wait-until
-			if (!patchedContexts.has(ctx)) {
-				patchedContexts.add(ctx);
-				const originalWaitUntil = ctx.waitUntil;
-				ctx.waitUntil = (promise: Promise<unknown>) => {
-					registerGlobalWaitUntil(promise);
-					return originalWaitUntil.call(ctx, promise);
-				};
-			}
-			return handlerFunction.call(defaultExport, thing, userEnv, ctx);
+			return runWithHandlerContext(ctx, () =>
+				handlerFunction.call(defaultExport, thing, userEnv, ctx)
+			);
 		} else {
 			let message = `Handler does not export a ${key}() function.`;
 			if (!defaultExport) {

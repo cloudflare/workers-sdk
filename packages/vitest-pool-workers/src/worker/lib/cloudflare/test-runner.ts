@@ -5,6 +5,7 @@ import {
 	fetchMock,
 	getSerializedOptions,
 	internalEnv,
+	registerHandlerAndGlobalWaitUntil,
 	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
 import { VitestTestRunner } from "vitest/runners";
@@ -85,6 +86,26 @@ interface TryState {
 }
 const tryStates = new WeakMap<Test, TryState>();
 
+// Wrap RPC calls to register all RPC promises with handler `waitUntil()`s.
+// This ensures all messages created in an `export default` request context are
+// sent, rather than being silently discarded.
+const waitUntilPatchedRpc = new WeakSet<WorkerRPC>();
+export function createWaitUntilRpc(rpc: WorkerRPC): WorkerRPC {
+	return new Proxy(rpc, {
+		get(target, key, handler) {
+			if (key === "then") return;
+			const sendCall = Reflect.get(target, key, handler);
+			const waitUntilSendCall = async (...args: unknown[]) => {
+				const promise = sendCall(...args);
+				registerHandlerAndGlobalWaitUntil(promise);
+				return promise;
+			};
+			waitUntilSendCall.asEvent = sendCall.asEvent;
+			return waitUntilSendCall;
+		},
+	});
+}
+
 export default class WorkersTestRunner extends VitestTestRunner {
 	readonly state: WorkerGlobalState;
 	readonly isolatedStorage: boolean;
@@ -103,6 +124,11 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		const opts = state.config.snapshotOptions;
 		if (!(opts.snapshotEnvironment instanceof WorkersSnapshotEnvironment)) {
 			opts.snapshotEnvironment = new WorkersSnapshotEnvironment(state.rpc);
+		}
+
+		if (!waitUntilPatchedRpc.has(state.rpc)) {
+			waitUntilPatchedRpc.add(state.rpc);
+			state.rpc = createWaitUntilRpc(state.rpc);
 		}
 
 		// If this is the first run in this isolate, store a reference to the state.

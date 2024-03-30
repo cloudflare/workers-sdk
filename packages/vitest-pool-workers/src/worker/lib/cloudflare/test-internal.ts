@@ -5,3 +5,4 @@ export * from "../../durable-objects";
 export * from "../../env";
 export * from "../../events";
 export * from "../../fetch-mock";
+export * from "../../wait-until";

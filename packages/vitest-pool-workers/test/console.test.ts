@@ -51,3 +51,50 @@ test("console.log()s include correct source-mapped locations", async ({
 		);
 	});
 });
+
+test("console.logs() inside `export default`ed handlers with SELF", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.ts": dedent`
+			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+			export default defineWorkersConfig({
+				test: {
+					poolOptions: {
+						workers: {
+							main: "./index.ts",
+							singleWorker: true,
+							miniflare: {
+								compatibilityDate: "2024-01-01",
+								compatibilityFlags: ["nodejs_compat"],
+							},
+						},
+					},
+				}
+			});
+		`,
+		"index.ts": dedent`
+			export default {
+				fetch() {
+					console.log("one");
+					console.log("two");
+					return new Response();
+				}
+			}
+		`,
+		"index.test.ts": dedent`
+			import { SELF } from "cloudflare:test";
+			import { expect, it } from "vitest";
+			it("sends request", async () => {
+				const response = await SELF.fetch("https://example.com");
+				expect(response.ok).toBe(true);
+			});
+		`,
+	});
+	const result = await vitestRun();
+	expect(result.stdout).toMatch(
+		"stdout | index.test.ts > sends request\none\ntwo\n"
+	);
+});
