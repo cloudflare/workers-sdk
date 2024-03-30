@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "cloudflare:test" {
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
 	interface ProvidedEnv {}
@@ -72,10 +73,12 @@ declare module "cloudflare:test" {
 	export function createExecutionContext(): ExecutionContext;
 	/**
 	 * Waits for all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only
-	 * accepts instances of `ExecutionContext` returned by
-	 * `createExecutionContext()`.
+	 * accepts `ExecutionContext`s returned by `createExecutionContext()` or
+	 * `EventContext`s return by `createPagesEventContext()`.
 	 */
-	export function waitOnExecutionContext(ctx: ExecutionContext): Promise<void>;
+	export function waitOnExecutionContext(
+		ctx: ExecutionContext | EventContext<ProvidedEnv, string, any>
+	): Promise<void>;
 	/**
 	 * Creates an instance of `ScheduledController` for use as the 1st argument to
 	 * modules-format `scheduled()` exported handlers.
@@ -119,6 +122,33 @@ declare module "cloudflare:test" {
 		migrations: D1Migration[],
 		migrationsTableName?: string
 	): Promise<void>;
+
+	// Only require `params` and `data` to be specified if they're non-empty
+	interface EventContextInitBase {
+		request: Request<unknown, IncomingRequestCfProperties>;
+		functionPath?: string;
+		next?(request: Request): Response | Promise<Response>;
+	}
+	type EventContextInitParams<Params extends string> = [Params] extends [never]
+		? { params?: Record<string, never> }
+		: { params: Record<Params, string | string[]> };
+	type EventContextInitData<Data> = Data extends Record<string, never>
+		? { data?: Data }
+		: { data: Data };
+	type EventContextInit<E extends EventContext<any, any, any>> =
+		E extends EventContext<any, infer Params, infer Data>
+			? EventContextInitBase &
+					EventContextInitParams<Params> &
+					EventContextInitData<Data>
+			: never;
+
+	/**
+	 * Creates an instance of `EventContext` for use as the argument to Pages
+	 * Functions.
+	 */
+	export function createPagesEventContext<
+		F extends PagesFunction<ProvidedEnv, string, any>
+	>(init: EventContextInit<Parameters<F>[0]>): Parameters<F>[0];
 
 	// Taken from `undici` (https://github.com/nodejs/undici/tree/main/types) with
 	// no dependency on `@types/node` and with unusable functions removed
