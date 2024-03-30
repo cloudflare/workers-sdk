@@ -1,6 +1,5 @@
 import { fetchMock, SELF } from "cloudflare:test";
 import { afterEach, beforeAll, expect, it } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 beforeAll(() => {
 	// Enable outbound request mocking...

@@ -42,6 +42,7 @@ import {
 } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
+	WorkersConfigPluginAPI,
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
@@ -616,6 +617,14 @@ async function runTests(
 		providedContext: project.project.getProvidedContext(),
 	};
 
+	const configPlugin = project.project.server.config.plugins.find(
+		({ name }) => name === "@cloudflare/vitest-pool-workers:config"
+	);
+	if (configPlugin !== undefined) {
+		const api = configPlugin.api as WorkersConfigPluginAPI;
+		api.setMain(project.options.main);
+	}
+
 	// We reset storage at the end of tests when the user is presumably looking at
 	// results. We don't need to reset storage on the first run as instances were
 	// just created.
@@ -662,11 +671,17 @@ async function runTests(
 		async fetch(...args) {
 			const specifier = args[0];
 
-			// Mark built-in modules and any virtual modules (e.g. `cloudflare:test`)
-			// as external
+			// Mark built-in modules (e.g. `cloudflare:test-runner`) as external.
+			// Note we explicitly don't mark `cloudflare:test` as external here, as
+			// this is handled by a Vite plugin injected by `defineWorkersConfig()`.
+			// The virtual `cloudflare:test` module will define a dependency on the
+			// specific `main` entrypoint, ensuring tests reload when it changes.
+			// Note Vite's module graph is constructed using static analysis, so the
+			// dynamic import of `main` won't add an imported-by edge to the graph.
 			if (
-				/^(cloudflare|workerd):/.test(specifier) ||
-				workerdBuiltinModules.has(specifier)
+				specifier !== "cloudflare:test" &&
+				(/^(cloudflare|workerd):/.test(specifier) ||
+					workerdBuiltinModules.has(specifier))
 			) {
 				return { externalize: specifier };
 			}

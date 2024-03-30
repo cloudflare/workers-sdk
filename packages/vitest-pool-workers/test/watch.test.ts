@@ -53,7 +53,6 @@ test("automatically re-runs integration tests", async ({
 	seed,
 	vitestDev,
 }) => {
-	// TODO(soon): remove requirement for `import "./index";`
 	await seed({
 		"vitest.config.ts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
@@ -82,7 +81,6 @@ test("automatically re-runs integration tests", async ({
 		"index.test.ts": dedent`
 			import { SELF } from "cloudflare:test";
 			import { it, expect } from "vitest";
-			import "./index";
 			it("sends request", async () => {
 				const response = await SELF.fetch("https://example.com");
 				expect(await response.text()).toBe("correct");

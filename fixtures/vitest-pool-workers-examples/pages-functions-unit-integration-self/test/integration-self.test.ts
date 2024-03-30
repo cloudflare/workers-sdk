@@ -1,6 +1,5 @@
 import { SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import "../dist-functions/index.js"; // Currently required to automatically rerun tests when `main` changes
 
 describe("functions", () => {
 	it("calls function", async () => {

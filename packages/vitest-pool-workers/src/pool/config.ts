@@ -13,6 +13,10 @@ import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
 
+export interface WorkersConfigPluginAPI {
+	setMain(newMain?: string): void;
+}
+
 const PLUGIN_VALUES = Object.values(PLUGINS);
 
 const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];

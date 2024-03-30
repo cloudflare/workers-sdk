@@ -2,7 +2,6 @@ import assert from "node:assert";
 import events from "node:events";
 import { SELF } from "cloudflare:test";
 import { afterEach, expect, it, vi } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 afterEach(() => {
 	vi.restoreAllMocks();

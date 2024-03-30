@@ -1,6 +1,5 @@
 import { SELF } from "cloudflare:test";
 import { expect, it } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 it("dispatches fetch event", async () => {
 	// `SELF` here points to the worker running in the current isolate.
