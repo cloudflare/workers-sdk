@@ -35,6 +35,11 @@ globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
 
 globalThis.process = process; // Required by `vite-node`
 process.argv = []; // Required by `@vitest/utils`
+let cwd: string | undefined;
+process.cwd = () => {
+	assert(cwd !== undefined, "Expected cwd to be set");
+	return cwd;
+};
 Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `vitest`
 
 globalThis.__console = console;
@@ -192,6 +197,8 @@ export class RunnerObject implements DurableObject {
 		assert("filePath" in wd && typeof wd.filePath === "string");
 		assert("name" in wd && typeof wd.name === "string");
 		assert("data" in wd && typeof wd.data === "object" && wd.data !== null);
+		assert("cwd" in wd && typeof wd.cwd === "string");
+		cwd = wd.cwd;
 
 		const port = new WebSocketMessagePort(poolSocket);
 		try {
