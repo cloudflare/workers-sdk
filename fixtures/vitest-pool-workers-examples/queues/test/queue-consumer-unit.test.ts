@@ -15,11 +15,13 @@ it("consumes queue messages", async () => {
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(1000),
 			body: { key: "/1", value: "one" },
+			attempts: 0,
 		},
 		{
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(2000),
 			body: { key: "/2", value: "two" },
+			attempts: 0,
 		},
 	];
 	const batch = createMessageBatch("queue", messages);
