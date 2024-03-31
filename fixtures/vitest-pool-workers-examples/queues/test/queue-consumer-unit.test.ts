@@ -15,11 +15,15 @@ it("consumes queue messages", async () => {
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(1000),
 			body: { key: "/1", value: "one" },
+			// @ts-expect-error attempts is not yet available in workers-types
+			attempts: 0,
 		},
 		{
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(2000),
 			body: { key: "/2", value: "two" },
+			// @ts-expect-error attempts is not yet available in workers-types
+			attempts: 0,
 		},
 	];
 	const batch = createMessageBatch("queue", messages);
