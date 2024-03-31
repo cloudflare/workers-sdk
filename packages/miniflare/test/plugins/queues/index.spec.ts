@@ -16,7 +16,12 @@ import {
 
 const StringArraySchema = z.string().array();
 const MessageArraySchema = z
-	.object({ queue: z.string(), id: z.string(), body: z.string() })
+	.object({
+		queue: z.string(),
+		id: z.string(),
+		body: z.string(),
+		attempts: z.number(),
+	})
 	.array();
 
 async function getControlStub(
@@ -294,7 +299,10 @@ function stripTimings(entries: LogEntry[]) {
 
 test("retries messages", async (t) => {
 	let batches: z.infer<typeof MessageArraySchema>[] = [];
-	const bodies = () => batches.map((batch) => batch.map(({ body }) => body));
+	const bodiesAttempts = () =>
+		batches.map((batch) =>
+			batch.map(({ body, attempts }) => ({ body, attempts }))
+		);
 
 	let retryAll = false;
 	let errorAll = false;
@@ -326,7 +334,7 @@ test("retries messages", async (t) => {
       async queue(batch, env, ctx) {
         const res = await env.RETRY_FILTER.fetch("http://localhost", {
           method: "POST",
-          body: JSON.stringify(batch.messages.map(({ id, body }) => ({ queue: batch.queue, id, body }))),
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
         });
         const { retryAll, errorAll, retryMessages } = await res.json();
         if (retryAll) {
@@ -379,7 +387,14 @@ test("retries messages", async (t) => {
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	t.is(batches.length, 2);
-	t.deepEqual(bodies(), [["msg1", "msg2", "msg3"], ["msg2"]]);
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[{ body: "msg2", attempts: 2 }],
+	]);
 	batches = [];
 
 	// Check with explicit retry all
@@ -412,9 +427,17 @@ test("retries messages", async (t) => {
 	t.deepEqual(stripTimings(log.logs), [
 		[LogLevel.INFO, "QUEUE queue 3/3 (Xms)"],
 	]);
-	t.deepEqual(bodies(), [
-		["msg1", "msg2", "msg3"],
-		["msg1", "msg2", "msg3"],
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[
+			{ body: "msg1", attempts: 2 },
+			{ body: "msg2", attempts: 2 },
+			{ body: "msg3", attempts: 2 },
+		],
 	]);
 	batches = [];
 
@@ -448,9 +471,17 @@ test("retries messages", async (t) => {
 	t.deepEqual(stripTimings(log.logs), [
 		[LogLevel.INFO, "QUEUE queue 3/3 (Xms)"],
 	]);
-	t.deepEqual(bodies(), [
-		["msg1", "msg2", "msg3"],
-		["msg1", "msg2", "msg3"],
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[
+			{ body: "msg1", attempts: 2 },
+			{ body: "msg2", attempts: 2 },
+			{ body: "msg3", attempts: 2 },
+		],
 	]);
 	batches = [];
 
@@ -504,10 +535,18 @@ test("retries messages", async (t) => {
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	t.is(batches.length, 3);
-	t.deepEqual(bodies(), [
-		["msg1", "msg2", "msg3"],
-		["msg1", "msg2", "msg3"],
-		["msg3"],
+	t.deepEqual(bodiesAttempts(), [
+		[
+			{ body: "msg1", attempts: 1 },
+			{ body: "msg2", attempts: 1 },
+			{ body: "msg3", attempts: 1 },
+		],
+		[
+			{ body: "msg1", attempts: 2 },
+			{ body: "msg2", attempts: 2 },
+			{ body: "msg3", attempts: 2 },
+		],
+		[{ body: "msg3", attempts: 3 }],
 	]);
 	batches = [];
 });
@@ -555,7 +594,7 @@ test("moves to dead letter queue", async (t) => {
       async queue(batch, env, ctx) {
         const res = await env.RETRY_FILTER.fetch("http://localhost", {
           method: "POST",
-          body: JSON.stringify(batch.messages.map(({ id, body }) => ({ queue: batch.queue, id, body }))),
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
         });
         const { retryMessages } = await res.json();
         for (const message of batch.messages) {
@@ -616,15 +655,15 @@ test("moves to dead letter queue", async (t) => {
 	log.logs = [];
 	t.deepEqual(batches, [
 		[
-			{ queue: "bad", id: batches[0][0].id, body: "msg1" },
-			{ queue: "bad", id: batches[0][1].id, body: "msg2" },
-			{ queue: "bad", id: batches[0][2].id, body: "msg3" },
+			{ queue: "bad", id: batches[0][0].id, body: "msg1", attempts: 1 },
+			{ queue: "bad", id: batches[0][1].id, body: "msg2", attempts: 1 },
+			{ queue: "bad", id: batches[0][2].id, body: "msg3", attempts: 1 },
 		],
 		[
-			{ queue: "dlq", id: batches[0][1].id, body: "msg2" },
-			{ queue: "dlq", id: batches[0][2].id, body: "msg3" },
+			{ queue: "dlq", id: batches[0][1].id, body: "msg2", attempts: 1 },
+			{ queue: "dlq", id: batches[0][2].id, body: "msg3", attempts: 1 },
 		],
-		[{ queue: "bad", id: batches[0][1].id, body: "msg2" }],
+		[{ queue: "bad", id: batches[0][1].id, body: "msg2", attempts: 1 }],
 	]);
 
 	// Check rejects queue as own dead letter queue
@@ -663,7 +702,7 @@ test("operations permit strange queue names", async (t) => {
       async queue(batch, env, ctx) {
         await env.REPORTER.fetch("http://localhost", {
           method: "POST",
-          body: JSON.stringify(batch.messages.map(({ id, body }) => ({ queue: batch.queue, id, body }))),
+          body: JSON.stringify(batch.messages.map(({ id, body, attempts }) => ({ queue: batch.queue, id, body, attempts }))),
         });
       }
     }`,
@@ -676,8 +715,8 @@ test("operations permit strange queue names", async (t) => {
 	await object.waitForFakeTasks();
 	const batch = await promise;
 	t.deepEqual(batch, [
-		{ queue: id, id: batch[0].id, body: "msg1" },
-		{ queue: id, id: batch[1].id, body: "msg2" },
+		{ queue: id, id: batch[0].id, body: "msg1", attempts: 1 },
+		{ queue: id, id: batch[1].id, body: "msg2", attempts: 1 },
 	]);
 });
 

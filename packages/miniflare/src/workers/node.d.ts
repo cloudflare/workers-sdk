@@ -152,3 +152,7 @@ declare module "node:crypto" {
 
 	export function createHash(algorithm: string): Hash;
 }
+
+interface SymbolConstructor {
+	readonly dispose: unique symbol;
+}
