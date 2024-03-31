@@ -21,10 +21,13 @@ function importModule(
 	specifier: string
 ): Promise<Record<string, unknown>> {
 	return runInRunnerObject(env, (instance) => {
-		assert(
-			instance.executor !== undefined,
-			"Expected Vitest to start running before importing modules"
-		);
+		if (instance.executor === undefined) {
+			const message =
+				"Expected Vitest to start running before importing modules.\n" +
+				"This usually means you have multiple `vitest` versions installed.\n" +
+				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
+			throw new Error(message);
+		}
 		return instance.executor.executeId(specifier);
 	});
 }
