@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import events from "node:events";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
@@ -647,7 +647,7 @@ async function runTests(
 	ctx.state.clearFiles(project.project, files);
 	const data: WorkerContext = {
 		pool: "threads",
-		worker: threadsWorkerPath,
+		worker: pathToFileURL(threadsWorkerPath).href,
 		port: undefined as unknown as MessagePort,
 		config,
 		files,

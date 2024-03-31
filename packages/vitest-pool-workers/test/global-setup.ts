@@ -23,9 +23,10 @@ function packPackage(packDestinationPath: string, packagePath: string) {
 export default async function ({ provide }: GlobalSetupContext) {
 	console.log("Installing packages to temporary directory...");
 
-	// Create temporary directory
+	// Create temporary directory containing space to avoid regressing on
+	// https://github.com/cloudflare/workers-sdk/issues/5268
 	const tmpPath = await fs.realpath(
-		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers"))
+		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers temp"))
 	);
 
 	// Pack `miniflare`, `wrangler` and `vitest-pool-workers` into tarballs

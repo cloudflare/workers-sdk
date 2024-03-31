@@ -469,7 +469,7 @@ export async function handleModuleFallbackRequest(
 	// Convert specifiers like `file:/a/index.mjs` to `/a/index.mjs`. `workerd`
 	// currently passes `import("file:///a/index.mjs")` through like this.
 	// TODO(soon): remove this code once the new modules refactor lands
-	if (specifier.startsWith("file:")) specifier = specifier.substring(5);
+	if (specifier.startsWith("file:")) specifier = fileURLToPath(specifier);
 
 	if (isWindows) {
 		// Convert paths like `/C:/a/index.mjs` to `C:/a/index.mjs` so they can be
