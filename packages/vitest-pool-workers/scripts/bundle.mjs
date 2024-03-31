@@ -3,7 +3,7 @@ import module from "node:module";
 import path from "node:path";
 import url from "node:url";
 import esbuild from "esbuild";
-import { builtinModules, exportedHandlers } from "./rtti/query.mjs";
+import { builtinModules } from "./rtti/query.mjs";
 
 const argv = process.argv.slice(2);
 const watch = argv[0] === "watch";
@@ -94,8 +94,6 @@ const commonOptions = {
 	outbase: path.join(pkgRoot, "src"),
 	define: {
 		VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES: JSON.stringify(builtinModules),
-		VITEST_POOL_WORKERS_DEFINE_EXPORTED_HANDLERS:
-			JSON.stringify(exportedHandlers),
 	},
 };
 

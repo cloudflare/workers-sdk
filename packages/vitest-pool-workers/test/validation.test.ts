@@ -174,7 +174,9 @@ test(
 
 test(
 	"requires modules entrypoint to use SELF",
-	async ({ expect, seed, vitestRun }) => {
+	async ({ expect, seed, vitestRun, tmpPath }) => {
+		const tmpPathName = path.basename(tmpPath);
+
 		// Check with no entrypoint
 		await seed({
 			"vitest.config.ts": dedent`
@@ -237,9 +239,8 @@ test(
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		Error: Handler does not export a fetch() function.
-		It looks like your main module is missing a \`default\` export. \`@cloudflare/vitest-pool-workers\` does not support service workers.
-		Please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.
+		${path.join(tmpPathName, "index.ts")} does not export a default entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.
+		If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.
 	`;
 		expect(result.stderr).toMatch(expected);
 	},

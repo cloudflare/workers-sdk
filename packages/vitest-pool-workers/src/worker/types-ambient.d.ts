@@ -18,6 +18,7 @@ interface Env {
 	__VITEST_POOL_WORKERS_RUNNER_OBJECT: EphemeralObjectNamespace<"singleton">;
 	__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
 }
+type InternalUserEnv = Env & Record<string, unknown>;
 
 interface DurableObjectDesignator {
 	className: string;

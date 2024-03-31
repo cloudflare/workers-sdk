@@ -1,4 +1,4 @@
-import { Miniflare } from "miniflare";
+import { kCurrentWorker, Miniflare } from "miniflare";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -261,7 +261,9 @@ export function unstable_getMiniflareWorkerOptions(
 	if (bindings.services !== undefined) {
 		bindingOptions.serviceBindings = Object.fromEntries(
 			bindings.services.map((binding) => {
-				return [binding.binding, binding.service];
+				const name =
+					binding.service === config.name ? kCurrentWorker : binding.service;
+				return [binding.binding, { name, entrypoint: binding.entrypoint }];
 			})
 		);
 	}
