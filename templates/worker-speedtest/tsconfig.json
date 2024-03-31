@@ -3,7 +3,7 @@
 		"noEmit": true,
 		"module": "esnext",
 		"target": "es2020",
-		"lib": ["es2020"],
+		"lib": ["esnext"],
 		"strict": true,
 		"moduleResolution": "node",
 		"types": ["@cloudflare/workers-types", "@types/jest"]
