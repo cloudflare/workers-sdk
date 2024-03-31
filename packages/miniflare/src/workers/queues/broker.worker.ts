@@ -120,7 +120,7 @@ function serialise(msg: QueueMessage): QueueOutgoingMessage {
 	}
 	return {
 		id: msg.id,
-		timestamp: msg.timestamp,
+		timestamp: msg.timestamp.getTime(),
 		contentType: msg.body.contentType,
 		body: body.toString("base64"),
 	};
@@ -131,12 +131,16 @@ class QueueMessage {
 
 	constructor(
 		readonly id: string,
-		readonly timestamp: number,
+		readonly timestamp: Date,
 		readonly body: QueueBody
 	) {}
 
 	incrementFailedAttempts(): number {
 		return ++this.#failedAttempts;
+	}
+
+	get failedAttempts() {
+		return this.#failedAttempts;
 	}
 }
 
@@ -195,16 +199,14 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			maybeService !== undefined,
 			`Expected ${bindingName} service binding`
 		);
-		const messages = batch.map(({ id, timestamp, body }) => {
+		const messages = batch.map(({ id, timestamp, body, failedAttempts }) => {
+			const attempts = failedAttempts + 1;
 			if (body.contentType === "v8") {
-				return { id, timestamp, serializedBody: body.body };
+				return { id, timestamp, serializedBody: body.body, attempts };
 			} else {
-				return { id, timestamp, body: body.body };
+				return { id, timestamp, body: body.body, attempts };
 			}
 		});
-		// @ts-expect-error `Fetcher#queue()` types haven't been updated for
-		//  `serializedBody` yet, and don't allow `number` for `timestamp`, even
-		//  though that's permitted at runtime
 		return maybeService.queue(this.name, messages);
 	}
 
@@ -322,7 +324,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		for (const message of messages) {
 			const randomness = crypto.getRandomValues(new Uint8Array(16));
 			const id = message.id ?? Buffer.from(randomness).toString("hex");
-			const timestamp = message.timestamp ?? this.timers.now();
+			const timestamp = new Date(message.timestamp ?? this.timers.now());
 			const body = deserialise(message);
 			this.#messages.push(new QueueMessage(id, timestamp, body));
 		}
