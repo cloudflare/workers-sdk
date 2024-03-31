@@ -59,6 +59,7 @@
 		"capnp-ts": "^0.7.0",
 		"capnpc-ts": "^0.7.0",
 		"ts-dedent": "^2.2.0",
+		"typescript": "^5.4.3",
 		"undici": "5.28.3"
 	},
 	"dependencies": {

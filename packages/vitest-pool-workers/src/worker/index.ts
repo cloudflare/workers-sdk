@@ -5,15 +5,12 @@ import process from "node:process";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
-	getResolvedMainPath,
-	importModule,
+	createWorkerEntrypointWrapper,
 	internalEnv,
 	maybeHandleRunRequest,
 	registerHandlerAndGlobalWaitUntil,
 	runInRunnerObject,
-	runWithHandlerContext,
 	setEnv,
-	stripInternalEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
 // Using relative path here to ensure `esbuild` bundles it
@@ -309,49 +306,7 @@ export class RunnerObject implements DurableObject {
 	}
 }
 
-function createHandlerWrapper<K extends keyof ExportedHandler>(
-	key: K
-): NonNullable<ExportedHandler<Record<string, unknown> & Env>[K]> {
-	return async (
-		thing: unknown,
-		env: Record<string, unknown> & Env,
-		ctx: ExecutionContext
-	) => {
-		const mainPath = getResolvedMainPath("service");
-		const mainModule = await importModule(env, mainPath);
-		const defaultExport =
-			typeof mainModule === "object" &&
-			mainModule !== null &&
-			"default" in mainModule &&
-			mainModule.default;
-		const handlerFunction =
-			typeof defaultExport === "object" &&
-			defaultExport !== null &&
-			key in defaultExport &&
-			(defaultExport as Record<string, unknown>)[key];
-		if (typeof handlerFunction === "function") {
-			const userEnv = stripInternalEnv(env);
-			return runWithHandlerContext(ctx, () =>
-				handlerFunction.call(defaultExport, thing, userEnv, ctx)
-			);
-		} else {
-			let message = `Handler does not export a ${key}() function.`;
-			if (!defaultExport) {
-				message +=
-					"\nIt looks like your main module is missing a `default` export. `@cloudflare/vitest-pool-workers` does not support service workers." +
-					"\nPlease migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.";
-			}
-			throw new Error(message);
-		}
-	};
-}
-const handler = Object.fromEntries(
-	VITEST_POOL_WORKERS_DEFINE_EXPORTED_HANDLERS.map((key) => [
-		key,
-		createHandlerWrapper(key),
-	])
-) as Required<ExportedHandler<Env>>;
-export default handler;
+export default createWorkerEntrypointWrapper("default");
 
 // Re-export user Durable Object wrappers
 export * from "__VITEST_POOL_WORKERS_USER_OBJECT";

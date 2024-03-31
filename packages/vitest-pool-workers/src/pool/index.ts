@@ -46,7 +46,12 @@ import type {
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
-import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
+import type {
+	CloseEvent,
+	MiniflareOptions,
+	SharedOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
 import type {
@@ -206,6 +211,33 @@ const DEFINES_MODULE_PATH = path.join(
 );
 
 /**
+ * Prefix all service binding named entrypoints, so they don't clash with other
+ * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
+ * names of non-default entrypoints defined in this worker.
+ */
+function fixupServiceBindingsToSelf(
+	worker: SourcelessWorkerOptions
+): Set<string> {
+	const result = new Set<string>();
+	if (worker.serviceBindings === undefined) return result;
+	for (const value of Object.values(worker.serviceBindings)) {
+		// Assume user cannot guess name of current worker, so can only bind to self
+		// if `name` is `kCurrentWorker`
+		if (
+			typeof value === "object" &&
+			"name" in value &&
+			value.name === kCurrentWorker &&
+			value.entrypoint !== undefined &&
+			value.entrypoint !== "default"
+		) {
+			result.add(value.entrypoint);
+			value.entrypoint = USER_OBJECT_MODULE_NAME + value.entrypoint;
+		}
+	}
+	return result;
+}
+
+/**
  * Prefix all Durable Object class names, so they don't clash with other
  * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
  * names of Durable Object classes defined in this worker.
@@ -363,19 +395,28 @@ function buildProjectWorkerOptions(
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
 		handleLoopbackRequest;
 
-	// Build wrappers for Durable Objects defined in this worker
+	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};
-	const durableObjectClassNames =
-		fixupDurableObjectBindingsToSelf(runnerWorker);
-	const durableObjectWrappers = Array.from(durableObjectClassNames)
-		.sort() // Sort for deterministic output to minimise `Miniflare` restarts
-		.map((className) => {
-			const quotedClassName = JSON.stringify(className);
-			return `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
-		});
-	durableObjectWrappers.unshift(
-		'import { createDurableObjectWrapper } from "cloudflare:test-internal";'
-	);
+	// Sort for deterministic output to minimise `Miniflare` restarts
+	const serviceBindingEntrypointNames = Array.from(
+		fixupServiceBindingsToSelf(runnerWorker)
+	).sort();
+	const durableObjectClassNames = Array.from(
+		fixupDurableObjectBindingsToSelf(runnerWorker)
+	).sort();
+	const wrappers = [
+		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from "cloudflare:test-internal";',
+	];
+	for (const entrypointName of serviceBindingEntrypointNames) {
+		const quotedEntrypointName = JSON.stringify(entrypointName);
+		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${entrypointName} = createWorkerEntrypointWrapper(${quotedEntrypointName});`;
+		wrappers.push(wrapper);
+	}
+	for (const className of durableObjectClassNames) {
+		const quotedClassName = JSON.stringify(className);
+		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
+		wrappers.push(wrapper);
+	}
 
 	// Make sure we define the `RunnerObject` Durable Object
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
@@ -421,7 +462,7 @@ function buildProjectWorkerOptions(
 		{
 			type: "ESModule",
 			path: path.join(modulesRoot, USER_OBJECT_MODULE_PATH),
-			contents: durableObjectWrappers.join("\n"),
+			contents: wrappers.join("\n"),
 		},
 		{
 			type: "ESModule",
@@ -464,7 +505,7 @@ function buildProjectWorkerOptions(
 	return workers;
 }
 
-const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
+const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
 	verbose: true,
 	handleRuntimeStdio,

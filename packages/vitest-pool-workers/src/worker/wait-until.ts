@@ -45,8 +45,8 @@ export function waitForGlobalWaitUntil(): Promise<void> {
 
 const handlerContextStore = new AsyncLocalStorage<ExecutionContext>();
 const patchedHandlerContexts = new WeakSet<ExecutionContext>();
-export function runWithHandlerContext<T>(
-	ctx: ExecutionContext,
+export function patchAndRunWithHandlerContext<T>(
+	/* mut */ ctx: ExecutionContext,
 	callback: () => T
 ): T {
 	// Ensure calls to `ctx.waitUntil()` registered with global wait-until
@@ -65,7 +65,7 @@ export function registerHandlerAndGlobalWaitUntil(promise: Promise<unknown>) {
 	if (handlerContext === undefined) {
 		registerGlobalWaitUntil(promise);
 	} else {
-		// `runWithHandlerContext()` ensures handler `waitUntil()` calls
+		// `patchAndRunWithHandlerContext()` ensures handler `waitUntil()` calls
 		// `registerGlobalWaitUntil()` too
 		handlerContext.waitUntil(promise);
 	}

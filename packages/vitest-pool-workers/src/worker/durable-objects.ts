@@ -1,10 +1,5 @@
 import assert from "node:assert";
-import {
-	getResolvedMainPath,
-	getSerializedOptions,
-	internalEnv,
-	stripInternalEnv,
-} from "./env";
+import { getSerializedOptions, internalEnv } from "./env";
 import type { RunnerObject } from "./index";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
@@ -175,27 +170,6 @@ export function runInRunnerObject<R>(
 	return runInStub(stub, callback);
 }
 
-/**
- * Internal method for importing a module using Vite's transformation and
- * execution pipeline. Can be called from any I/O context, and will ensure the
- * request is run from within the `RunnerObject`.
- */
-export function importModule(
-	env: Env,
-	specifier: string
-): Promise<Record<string, unknown>> {
-	return runInRunnerObject(env, (instance) => {
-		assert(
-			instance.executor !== undefined,
-			"Expected Vitest to start running before importing modules"
-		);
-		// TODO(soon): note this won't re-run dependent tests if `specifier`
-		//  changes, unless `specifier` can be statically analysed as an import
-		//  in a test file, see `pool/index.ts` for potential fixes
-		return instance.executor.executeId(specifier);
-	});
-}
-
 export async function maybeHandleRunRequest(
 	request: Request,
 	instance: unknown,
@@ -225,106 +199,6 @@ export async function maybeHandleRunRequest(
 		actionResults.set(actionId, e);
 		return new Response(null, { status: 500 });
 	}
-}
-
-type DurableObjectConstructor<
-	Env extends Record<string, unknown> = Record<string, unknown>
-> = {
-	new (state: DurableObjectState, env: Env): DurableObject;
-};
-type DurableObjectParameters<K extends keyof DurableObject> = Parameters<
-	NonNullable<DurableObject[K]>
->;
-
-// Wrapper for user Durable Object classes defined in this worker,
-// intercepts and handles action requests
-class DurableObjectWrapper implements DurableObject {
-	instanceConstructor?: DurableObjectConstructor;
-	instance?: DurableObject;
-
-	constructor(
-		readonly state: DurableObjectState,
-		readonly env: Record<string, unknown> & Env,
-		readonly className: string
-	) {}
-
-	async ensureInstance(): Promise<DurableObject> {
-		const mainPath = getResolvedMainPath("Durable Object");
-		// `ensureInstance()` may be called multiple times concurrently.
-		// We're assuming `importModule()` will only import the module once.
-		const mainModule = await importModule(this.env, mainPath);
-		const constructor = mainModule[this.className];
-		if (typeof constructor !== "function") {
-			throw new Error(
-				`${mainPath} does not export a ${this.className} Durable Object`
-			);
-		}
-		this.instanceConstructor ??= constructor as DurableObjectConstructor;
-		if (this.instanceConstructor !== constructor) {
-			// This would be if the module was invalidated
-			// (i.e. source file changed), then the Durable Object was `fetch()`ed
-			// again. We reset all Durable Object instances between each test, so it's
-			// unlikely multiple constructors would be used by the same instance,
-			// unless the user did something funky with Durable Objects outside tests.
-			await this.state.blockConcurrencyWhile<never>(() => {
-				// Throw inside `blockConcurrencyWhile()` to abort this object
-				throw new Error(
-					`${mainPath} changed, invalidating this Durable Object. ` +
-						"Please retry the `DurableObjectStub#fetch()` call."
-				);
-			});
-			assert.fail("Unreachable");
-		}
-		if (this.instance === undefined) {
-			const userEnv = stripInternalEnv(this.env);
-			this.instance = new this.instanceConstructor(this.state, userEnv);
-			// Wait for any `blockConcurrencyWhile()`s in the constructor to complete
-			await this.state.blockConcurrencyWhile(async () => {});
-		}
-		return this.instance;
-	}
-
-	async fetch(request: Request): Promise<Response> {
-		// Make sure we've initialised user code
-		const instance = await this.ensureInstance();
-
-		// If this is an internal Durable Object action, handle it...
-		const response = await maybeHandleRunRequest(request, instance, this.state);
-		if (response !== undefined) return response;
-
-		// Otherwise, pass through to the user code
-		if (instance.fetch === undefined) {
-			throw new Error("Handler does not export a fetch() function.");
-		}
-		return instance.fetch(request);
-	}
-
-	async alarm(...args: DurableObjectParameters<"alarm">) {
-		const instance = await this.ensureInstance();
-		return instance.alarm?.(...args);
-	}
-	async webSocketMessage(...args: DurableObjectParameters<"webSocketMessage">) {
-		const instance = await this.ensureInstance();
-		return instance.webSocketMessage?.(...args);
-	}
-	async webSocketClose(...args: DurableObjectParameters<"webSocketClose">) {
-		const instance = await this.ensureInstance();
-		return instance.webSocketClose?.(...args);
-	}
-	async webSocketError(...args: DurableObjectParameters<"webSocketError">) {
-		const instance = await this.ensureInstance();
-		return instance.webSocketError?.(...args);
-	}
-}
-
-export function createDurableObjectWrapper(
-	className: string
-): DurableObjectConstructor<Record<string, unknown> & Env> {
-	return class extends DurableObjectWrapper {
-		constructor(state: DurableObjectState, env: Record<string, unknown> & Env) {
-			super(state, env, className);
-		}
-	};
 }
 
 export async function listDurableObjectIds(
