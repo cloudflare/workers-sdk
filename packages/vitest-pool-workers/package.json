@@ -70,9 +70,9 @@
 		"zod": "^3.20.6"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "1.3.0",
-		"@vitest/snapshot": "1.3.0",
-		"vitest": "1.3.0"
+		"@vitest/runner": "1.4.0",
+		"@vitest/snapshot": "1.4.0",
+		"vitest": "1.4.0"
 	},
 	"workers-sdk": {
 		"prerelease": true

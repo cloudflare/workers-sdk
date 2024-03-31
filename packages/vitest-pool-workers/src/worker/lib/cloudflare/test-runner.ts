@@ -197,8 +197,6 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		// contain storage calls (e.g. caching responses) that could try to access
 		// aborted Durable Objects.
 		await waitForGlobalWaitUntil();
-		// @ts-expect-error `VitestTestRunner` doesn't define `onAfterRunFiles`, but
-		//  could in the future.
 		return super.onAfterRunFiles?.();
 	}
 

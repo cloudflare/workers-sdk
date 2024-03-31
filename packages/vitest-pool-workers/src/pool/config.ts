@@ -235,7 +235,7 @@ export async function parseProjectOptions(
 	let workersPoolOptions = poolOptions?.workers ?? {};
 	try {
 		if (typeof workersPoolOptions === "function") {
-			// https://github.com/vitest-dev/vitest/blob/v1.0.0/packages/vitest/src/integrations/inject.ts
+			// https://github.com/vitest-dev/vitest/blob/v1.4.0/packages/vitest/src/integrations/inject.ts
 			const inject = <K extends keyof ProvidedContext>(
 				key: K
 			): ProvidedContext[K] => {
