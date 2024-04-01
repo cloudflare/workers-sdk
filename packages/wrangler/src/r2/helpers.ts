@@ -7,6 +7,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getQueue } from "../queues/client";
 import type { Config } from "../config";
+import type { getQueueByID } from "../queues/client";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -326,7 +327,6 @@ export const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",
 	"CompleteMultipartUpload",
-	"AbortMultipartUpload",
 	"CopyObject",
 ] as const;
 export type R2EventableOperation = typeof R2EventableOperations[number];
@@ -338,19 +338,37 @@ export const actionsForEventCategories: Record<
 	"object-create": ["PutObject", "CompleteMultipartUpload", "CopyObject"],
 	"object-delete": ["DeleteObject"],
 };
-
 export type R2EventType = keyof typeof actionsForEventCategories;
+export const eventCategoryByAction: Record<R2EventableOperation, R2EventType> =
+	{
+		PutObject: "object-create",
+		CompleteMultipartUpload: "object-create",
+		CopyObject: "object-create",
+		DeleteObject: "object-delete",
+	};
+type NotificationRule = {
+	prefix?: string;
+	suffix?: string;
+	actions: R2EventableOperation[];
+};
+export type DetailID = string;
+type QueueID = string;
+type BucketName = string;
+export type NotificationDetail = Record<
+	DetailID, // This is the detail ID that identifies this config
+	{ queue: QueueID; rules: NotificationRule[] }
+>;
+export type GetNotificationConfigResponse = Record<
+	BucketName,
+	NotificationDetail
+>;
 // This type captures the shape of the data expected by EWC API.
-export type EWCRequestBody = {
+export type PutNotificationRequestBody = {
 	// `jurisdiction` is included here for completeness, but until Queues
 	// supports jurisdictions, then this command will not send anything to do
 	// with jurisdictions.
 	jurisdiction?: string;
-	rules: Array<{
-		prefix?: string;
-		suffix?: string;
-		actions: R2EventableOperation[];
-	}>;
+	rules: NotificationRule[];
 };
 
 export function eventNotificationHeaders(
@@ -368,6 +386,71 @@ export function eventNotificationHeaders(
 	}
 	return headers;
 }
+
+// Reformat the per-bucket get-notification response into a format
+// suitable for `logger.table()`
+export async function tableFromNotificationGetResponse(
+	config: Pick<Config, "account_id">,
+	response: GetNotificationConfigResponse[BucketName],
+	// We're injecting this parameter because it makes testing easier,
+	// relative to mocking.
+	queueIdentifier: typeof getQueueByID
+): Promise<
+	{
+		queue_name: string;
+		prefix: string;
+		suffix: string;
+		event_type: string;
+	}[]
+> {
+	const reducer = async ([_, { queue, rules }]: [
+		DetailID,
+		NotificationDetail[DetailID]
+	]) => {
+		const queueResp = await queueIdentifier(config, queue);
+		const rows = [];
+		for (const { prefix = "", suffix = "", actions } of rules) {
+			rows.push({
+				queue_name: queueResp.queue_name,
+				prefix,
+				suffix,
+				event_type: Array.from(
+					actions.reduce((acc, action) => {
+						acc.add(eventCategoryByAction[action]);
+						return acc;
+					}, new Set<R2EventType>())
+				).join(","),
+			});
+		}
+		return rows;
+	};
+
+	let tableOutput: {
+		queue_name: string;
+		prefix: string;
+		suffix: string;
+		event_type: string;
+	}[] = [];
+	for (const entry of Object.entries(response)) {
+		const result = await reducer(entry);
+		tableOutput = tableOutput.concat(...result);
+	}
+	return tableOutput;
+}
+
+export async function getEventNotificationConfig(
+	apiCredentials: ApiCredentials,
+	accountId: string,
+	bucketName: string
+): Promise<GetNotificationConfigResponse> {
+	const headers = eventNotificationHeaders(apiCredentials);
+	logger.log(`Fetching notification configuration for bucket ${bucketName}...`);
+	return await fetchResult<GetNotificationConfigResponse>(
+		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
+		{ method: "GET", headers }
+	);
+}
+
 /** Construct & transmit notification configuration to EWC.
  *
  * On success, receive HTTP 200 response with a body like:
@@ -397,7 +480,7 @@ export async function putEventNotificationConfig(
 		actions = actions.concat(actionsForEventCategories[et]);
 	}
 
-	const body: EWCRequestBody = {
+	const body: PutNotificationRequestBody = {
 		rules: [{ prefix, suffix, actions }],
 	};
 	logger.log(

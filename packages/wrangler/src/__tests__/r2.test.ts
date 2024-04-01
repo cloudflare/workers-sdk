@@ -10,7 +10,7 @@ import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
-	EWCRequestBody,
+	PutNotificationRequestBody,
 	R2BucketInfo,
 	R2EventableOperation,
 	R2EventType,
@@ -546,6 +546,96 @@ describe("r2", () => {
 		});
 
 		describe("notification", () => {
+			describe("get", () => {
+				it("follows happy path as expected", async () => {
+					const bucketName = "my-bucket";
+					const queueId = "471537e8-6e5a-4163-a4d4-9478087c32c3";
+					const queueName = "my-queue";
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration",
+							async (request, response, context) => {
+								const { accountId, bucketName: bucketParam } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								const getResponse = {
+									[bucketName]: {
+										"9d738cb7-be18-433a-957f-a9b88793de2c": {
+											queue: queueId,
+											rules: [
+												{
+													prefix: "",
+													suffix: "",
+													actions: [
+														"PutObject",
+														"CompleteMultipartUpload",
+														"CopyObject",
+													],
+												},
+											],
+										},
+									},
+								};
+								return response.once(
+									context.json(createFetchResult(getResponse))
+								);
+							}
+						),
+						rest.get(
+							"*/accounts/:accountId/queues/:queueId",
+							async (request, response, context) => {
+								const { accountId, queueId: queueParam } = request.params;
+								expect(accountId).toEqual("some-account-id");
+								expect(queueParam).toEqual(queueId);
+								expect(request.headers.get("authorization")).toEqual(
+									"Bearer some-api-token"
+								);
+								return response.once(
+									context.json(createFetchResult({ queue_name: queueName }))
+								);
+							}
+						)
+					);
+					await expect(
+						await runWrangler(`r2 bucket notification get ${bucketName}`)
+					).toBe(undefined);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Fetching notification configuration for bucket my-bucket...
+				┌────────────┬────────┬────────┬───────────────┐
+				│ queue_name │ prefix │ suffix │ event_type    │
+				├────────────┼────────┼────────┼───────────────┤
+				│ my-queue   │        │        │ object-create │
+				└────────────┴────────┴────────┴───────────────┘"
+			`);
+				});
+
+				it("shows correct output on error", async () => {
+					await expect(
+						runWrangler(`r2 bucket notification get`)
+					).rejects.toMatchInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket notification get <bucket>
+
+				Get event notification configuration for a bucket
+
+				Positionals:
+				  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
+				});
+			});
 			describe("create", () => {
 				it("follows happy path as expected", async () => {
 					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
@@ -553,7 +643,7 @@ describe("r2", () => {
 					const bucketName = "my-bucket";
 					const queue = "my-queue";
 
-					const config: EWCRequestBody = {
+					const config: PutNotificationRequestBody = {
 						rules: [
 							{
 								actions: eventTypes.reduce(

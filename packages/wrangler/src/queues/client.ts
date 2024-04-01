@@ -96,6 +96,14 @@ export async function getQueue(
 	);
 }
 
+export async function getQueueByID(
+	config: Pick<Config, "account_id">,
+	queueID: string
+): Promise<QueueResponse> {
+	const accountId = await requireAuth(config);
+	return await fetchResult(`/accounts/${accountId}/queues/${queueID}`, {});
+}
+
 export async function postConsumer(
 	config: Config,
 	queueName: string,

@@ -9,6 +9,7 @@ import { FatalError, UserError } from "../errors";
 import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { getQueueByID } from "../queues/client";
 import { requireApiToken, requireAuth } from "../user";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
@@ -18,10 +19,12 @@ import {
 	deleteEventNotificationConfig,
 	deleteR2Bucket,
 	deleteR2Object,
+	getEventNotificationConfig,
 	getR2Object,
 	listR2Buckets,
 	putEventNotificationConfig,
 	putR2Object,
+	tableFromNotificationGetResponse,
 	usingLocalBucket,
 } from "./helpers";
 import * as Sippy from "./sippy";
@@ -549,6 +552,35 @@ export function r2(r2Yargs: CommonYargsArgv) {
 				"Manage event notifications for an R2 bucket",
 				(r2EvNotifyYargs) => {
 					return r2EvNotifyYargs
+						.command(
+							"get <bucket>",
+							"Get event notification configuration for a bucket",
+							(yargs) => {
+								return yargs.positional("bucket", {
+									describe:
+										"The name of the bucket for which notifications will be emitted",
+									type: "string",
+									demandOption: true,
+								});
+							},
+							async (args) => {
+								await printWranglerBanner();
+								const config = readConfig(args.config, args);
+								const accountId = await requireAuth(config);
+								const apiCreds = requireApiToken();
+								const resp = await getEventNotificationConfig(
+									apiCreds,
+									accountId,
+									`${args.bucket}`
+								);
+								const tableOutput = await tableFromNotificationGetResponse(
+									config,
+									resp[args.bucket],
+									getQueueByID
+								);
+								logger.table(tableOutput);
+							}
+						)
 						.command(
 							"create <bucket>",
 							"Create new event notification configuration for an R2 bucket",
