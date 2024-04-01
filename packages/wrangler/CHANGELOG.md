@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.42.0
+
+### Minor Changes
+
+- [#5371](https://github.com/cloudflare/workers-sdk/pull/5371) [`77152f3`](https://github.com/cloudflare/workers-sdk/commit/77152f355340d3aac492164fe912a7c5d7a3daeb) Thanks [@G4brym](https://github.com/G4brym)! - feature: remove requirement for `@cloudflare/ai` package to use Workers AI
+
+  Previously, to get the correct Workers AI API, you needed to wrap your `env.AI` binding with `new Ai()` from `@cloudflare/ai`. This change moves the contents of `@cloudflare/ai` into the Workers runtime itself, meaning `env.AI` is now an instance of `Ai`, without the need for wrapping.
+
+### Patch Changes
+
+- Updated dependencies [[`d994066`](https://github.com/cloudflare/workers-sdk/commit/d994066f255f6851759a055eac3b52a4aa4b83c3)]:
+  - miniflare@3.20240329.0
+
 ## 3.41.0
 
 ### Minor Changes
