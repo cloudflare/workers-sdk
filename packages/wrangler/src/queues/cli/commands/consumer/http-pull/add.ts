@@ -1,7 +1,7 @@
 import { readConfig } from "../../../../../config";
 import { CommandLineArgsError } from "../../../../../index";
 import { logger } from "../../../../../logger";
-import { postTypedConsumer } from "../../../../client";
+import { postConsumer } from "../../../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -40,18 +40,10 @@ export function options(yargs: CommonYargsArgv) {
 		});
 }
 
-export async function handler(
+function createBody(
 	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-
-	if (Array.isArray(args.retryDelaySecs)) {
-		throw new CommandLineArgsError(
-			`Cannot specify --retry-delay-secs multiple times`
-		);
-	}
-
-	const postTypedConsumerBody: PostTypedConsumerBody = {
+): PostTypedConsumerBody {
+	return {
 		type: "http_pull",
 		settings: {
 			batch_size: args.batchSize,
@@ -63,8 +55,22 @@ export async function handler(
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};
-	logger.log(`Adding consumer to queue ${args.queueName}.`);
+}
 
-	await postTypedConsumer(config, args.queueName, postTypedConsumerBody);
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
+	const config = readConfig(args.config, args);
+
+	if (Array.isArray(args.retryDelaySecs)) {
+		throw new CommandLineArgsError(
+			`Cannot specify --retry-delay-secs multiple times`
+		);
+	}
+
+	const body = createBody(args);
+
+	logger.log(`Adding consumer to queue ${args.queueName}.`);
+	await postConsumer(config, args.queueName, body);
 	logger.log(`Added consumer to queue ${args.queueName}.`);
 }

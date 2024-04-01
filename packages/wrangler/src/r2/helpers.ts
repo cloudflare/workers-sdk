@@ -7,7 +7,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getQueue } from "../queues/client";
 import type { Config } from "../config";
-import type { getQueueByID } from "../queues/client";
+import type { getQueueById } from "../queues/client";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
@@ -427,7 +427,7 @@ export async function tableFromNotificationGetResponse(
 	response: GetNotificationConfigResponse[BucketName],
 	// We're injecting this parameter because it makes testing easier,
 	// relative to mocking.
-	queueIdentifier: typeof getQueueByID
+	queueIdentifier: typeof getQueueById
 ): Promise<
 	{
 		queue_name: string;

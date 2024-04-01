@@ -1,6 +1,6 @@
 import { readConfig } from "../../../../../config";
 import { logger } from "../../../../../logger";
-import { deleteConsumer } from "../../../../client";
+import { deleteWorkerConsumer } from "../../../../client";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -26,6 +26,6 @@ export async function handler(
 	const config = readConfig(args.config, args);
 
 	logger.log(`Removing consumer from queue ${args.queueName}.`);
-	await deleteConsumer(config, args.queueName, args.scriptName, args.env);
+	await deleteWorkerConsumer(config, args.queueName, args.scriptName, args.env);
 	logger.log(`Removed consumer from queue ${args.queueName}.`);
 }

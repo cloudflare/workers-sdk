@@ -797,11 +797,13 @@ describe("r2", () => {
 							}
 						),
 						rest.get(
-							"*/accounts/:accountId/workers/queues/:queueName",
+							"*/accounts/:accountId/queues?*",
 							async (request, response, context) => {
-								const { accountId, queueName } = request.params;
+								const { accountId } = request.params;
+								const nameParams = request.url.searchParams.getAll("name");
+
 								expect(accountId).toEqual("some-account-id");
-								expect(queueName).toEqual(queue);
+								expect(nameParams[0]).toEqual(queue);
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
@@ -810,7 +812,18 @@ describe("r2", () => {
 										success: true,
 										errors: [],
 										messages: [],
-										result: {},
+										result: [
+											{
+												queue_id: "queue-id",
+												queue_name: queue,
+												created_on: "",
+												producers: [],
+												consumers: [],
+												producers_total_count: 1,
+												consumers_total_count: 0,
+												modified_on: "",
+											},
+										],
 									})
 								);
 							}
@@ -877,11 +890,13 @@ describe("r2", () => {
 							}
 						),
 						rest.get(
-							"*/accounts/:accountId/workers/queues/:queueName",
+							"*/accounts/:accountId/queues?*",
 							async (request, response, context) => {
-								const { accountId, queueName } = request.params;
+								const { accountId } = request.params;
+								const nameParams = request.url.searchParams.getAll("name");
+
 								expect(accountId).toEqual("some-account-id");
-								expect(queueName).toEqual(queue);
+								expect(nameParams[0]).toEqual(queue);
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
@@ -890,7 +905,18 @@ describe("r2", () => {
 										success: true,
 										errors: [],
 										messages: [],
-										result: {},
+										result: [
+											{
+												queue_id: "queue-id",
+												queue_name: queue,
+												created_on: "",
+												producers: [],
+												consumers: [],
+												producers_total_count: 1,
+												consumers_total_count: 0,
+												modified_on: "",
+											},
+										],
 									})
 								);
 							}

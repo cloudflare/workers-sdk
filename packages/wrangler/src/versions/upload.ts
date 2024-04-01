@@ -28,12 +28,11 @@ import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
-import { getQueue } from "../queues/client";
+import { ensureQueuesExistByConfig } from "../queues/client";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
-import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -430,7 +429,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 		if (!props.dryRun) {
-			await ensureQueuesExist(config);
+			await ensureQueuesExistByConfig(config);
 
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
@@ -555,31 +554,6 @@ function formatTime(duration: number) {
 
 export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
-}
-
-async function ensureQueuesExist(config: Config) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
-	);
-	const consumers = (config.queues.consumers || []).map(
-		(consumer) => consumer.queue
-	);
-
-	const queueNames = producers.concat(consumers);
-	for (const queue of queueNames) {
-		try {
-			await getQueue(config, queue);
-		} catch (err) {
-			const queueErr = err as FetchError;
-			if (queueErr.code === 11000) {
-				// queue_not_found
-				throw new UserError(
-					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
-				);
-			}
-			throw err;
-		}
-	}
 }
 
 async function noBundleWorker(
