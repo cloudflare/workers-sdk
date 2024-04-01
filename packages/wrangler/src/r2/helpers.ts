@@ -483,8 +483,13 @@ export async function putEventNotificationConfig(
 	const body: PutNotificationRequestBody = {
 		rules: [{ prefix, suffix, actions }],
 	};
+	const ruleFor = eventTypes.map((et) =>
+		et === "object-create" ? "creation" : "deletion"
+	);
 	logger.log(
-		`Sending this configuration to "${bucketName}":\n${JSON.stringify(body)}`
+		`Creating event notification rule for object ${ruleFor.join(
+			" and "
+		)} (${actions.join(",")})`
 	);
 	return await fetchResult<{ event_notification_detail_id: string }>(
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
