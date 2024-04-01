@@ -62,5 +62,3 @@ export const WRANGLER_DEFAULTS = {
 	type: "hello-world",
 	deploy: false,
 };
-
-process.stdout.columns = 300;
