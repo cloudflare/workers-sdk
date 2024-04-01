@@ -6,7 +6,8 @@ export default {
 
 		return Response.json({
 			binding: env.AI,
-			fetcher: env.AI.fetch.toString(),
+			run: typeof env.AI.run,
+			fetch: typeof env.AI.fetch,
 		});
 	},
 };
