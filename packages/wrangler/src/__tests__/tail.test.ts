@@ -332,6 +332,16 @@ describe("tail", () => {
 			});
 		});
 
+		it("sends version id filters", async () => {
+			const api = mockWebsocketAPIs();
+			const versionId = "87501bef-3ef2-4464-a3d6-35e548695742";
+
+			await runWrangler(`tail test-worker --version-id ${versionId}`);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ scriptVersion: versionId }],
+			});
+		});
+
 		it("sends everything but the kitchen sink", async () => {
 			const api = mockWebsocketAPIs();
 			const sampling_rate = 0.69;
@@ -340,6 +350,7 @@ describe("tail", () => {
 			const header = "X-HELLO:world";
 			const client_ip = ["192.0.2.1", "self"];
 			const query = "onlyTheseMessagesPlease";
+			const versionId = "87501bef-3ef2-4464-a3d6-35e548695742";
 
 			const cliFilters =
 				`--sampling-rate ${sampling_rate} ` +
@@ -348,6 +359,7 @@ describe("tail", () => {
 				`--header ${header} ` +
 				client_ip.map((c) => `--ip ${c} `).join("") +
 				`--search ${query} ` +
+				`--version-id ${versionId} ` +
 				`--debug`;
 
 			const expectedWebsocketMessage = {
@@ -366,6 +378,7 @@ describe("tail", () => {
 					{ header: { key: "X-HELLO", query: "world" } },
 					{ client_ip: ["192.0.2.1", "self"] },
 					{ query: "onlyTheseMessagesPlease" },
+					{ scriptVersion: versionId },
 				],
 			};
 
