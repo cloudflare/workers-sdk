@@ -33,6 +33,14 @@ const workerTemplates: WorkerTestConfig[] = [
 		},
 	},
 	{
+		template: "hello-world-python",
+		promptHandlers: [],
+		verifyDeploy: {
+			route: "/",
+			expectedText: "Hello World!",
+		},
+	},
+	{
 		template: "common",
 		verifyDeploy: {
 			route: "/",
