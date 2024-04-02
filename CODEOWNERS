@@ -10,6 +10,7 @@
 # D1 ownership
 /packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
 /packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler
+/packages/wrangler/src/__tests__/d1/ @cloudflare/d1 @cloudflare/wrangler
 
 # Cloudchamber ownership
 /packages/wrangler/src/cloudchamber/ @cloudflare/cloudchamber @cloudflare/wrangler
