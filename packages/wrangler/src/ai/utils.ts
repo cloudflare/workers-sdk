@@ -1,7 +1,35 @@
 import { fetchResult } from "../cfetch";
-import type { Model } from "./types";
+import type { Message } from "../parse";
+import type { Finetune, Model } from "./types";
 
-export async function aiList<ResponseType>(
+export function getErrorMessage(error: Message): string {
+	return `${error.text || error.toString()}${
+		error.notes
+			? ` ${error.notes.map((note: Message) => note.text).join(", ")}`
+			: ""
+	}`;
+}
+
+export function truncate(str: string, maxLen: number) {
+	return str.slice(0, maxLen) + (str.length > maxLen ? "..." : "");
+}
+
+export function truncateDescription(
+	description: string | undefined,
+	alreadyUsed: number
+): string {
+	if (description === undefined || description === null) {
+		return "";
+	}
+
+	if (process.stdout.columns === undefined) {
+		return truncate(description, 100);
+	}
+
+	return truncate(description, process.stdout.columns - alreadyUsed);
+}
+
+export async function aiCatalogList<ResponseType>(
 	accountId: string,
 	partialUrl: string
 ): Promise<Array<ResponseType>> {
@@ -26,12 +54,25 @@ export async function aiList<ResponseType>(
 	return results;
 }
 
+export async function aiFinetuneList<ResponseType>(
+	accountId: string
+): Promise<Array<ResponseType>> {
+	const results: Array<ResponseType> = await fetchResult(
+		`/accounts/${accountId}/ai/finetunes`,
+		{},
+		new URLSearchParams({})
+	);
+	return results;
+}
+
 export const listCatalogEntries = async (
 	accountId: string
 ): Promise<Array<Model>> => {
-	return await aiList(accountId, "models/search");
+	return await aiCatalogList(accountId, "models/search");
 };
 
-export function truncate(str: string, maxLen: number) {
-	return str.slice(0, maxLen) + (str.length > maxLen ? "..." : "");
-}
+export const listFinetuneEntries = async (
+	accountId: string
+): Promise<Array<Finetune>> => {
+	return await aiFinetuneList(accountId);
+};
