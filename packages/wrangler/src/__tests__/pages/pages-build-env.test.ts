@@ -27,7 +27,7 @@ describe("pages-build-env", () => {
 		  "debug": "",
 		  "err": "",
 		  "info": "",
-		  "out": "{}",
+		  "out": "{\\"vars\\":{},\\"pages_build_output_dir\\":\\"dist\\"}",
 		  "warn": "",
 		}
 	`);
@@ -141,7 +141,7 @@ describe("pages-build-env", () => {
 		  "debug": "",
 		  "err": "",
 		  "info": "",
-		  "out": "{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"}",
+		  "out": "{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}",
 		  "warn": "",
 		}
 	`);
@@ -180,7 +180,7 @@ describe("pages-build-env", () => {
 		  "debug": "",
 		  "err": "",
 		  "info": "",
-		  "out": "{\\"VAR1\\":\\"PROD_VALUE1\\",\\"VAR2\\":\\"PROD_VALUE2\\",\\"PROD_VAR3\\":\\"PROD_VALUE3\\"}",
+		  "out": "{\\"vars\\":{\\"VAR1\\":\\"PROD_VALUE1\\",\\"VAR2\\":\\"PROD_VALUE2\\",\\"PROD_VAR3\\":\\"PROD_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}",
 		  "warn": "",
 		}
 	`);
@@ -220,7 +220,7 @@ describe("pages-build-env", () => {
 		  "debug": "",
 		  "err": "",
 		  "info": "",
-		  "out": "{\\"VAR1\\":\\"PREVIEW_VALUE1\\",\\"VAR2\\":\\"PREVIEW_VALUE2\\",\\"PREVIEW_VAR3\\":\\"PREVIEW_VALUE3\\"}",
+		  "out": "{\\"vars\\":{\\"VAR1\\":\\"PREVIEW_VALUE1\\",\\"VAR2\\":\\"PREVIEW_VALUE2\\",\\"PREVIEW_VAR3\\":\\"PREVIEW_VALUE3\\"},\\"pages_build_output_dir\\":\\"dist\\"}",
 		  "warn": "",
 		}
 	`);
