@@ -92,7 +92,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		✅ Successfully created Project \\"new_project3\\"!"
@@ -106,7 +106,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌──────────────────────────────────────┬──────────────┬─────────┬─────────────────────────────┐
@@ -129,7 +129,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		About to delete Project 'new_project3' (4806cdcf-9aa7-4fa2-b6a1-77fe9e196680).
@@ -145,7 +145,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌──────────────────────────────────────┬──────────────────────┬─────────────────┬───────────────┐
@@ -163,7 +163,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌─────────┐
@@ -186,7 +186,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		✅ Successfully uploaded Model \\"model2\\"!"
@@ -200,7 +200,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		┌──────────────────────────────────────┬──────────────────────────────────────┬────────┬─────────────┬─────────────────────────────┐
@@ -225,7 +225,7 @@ describe("constellation commands", () => {
 		"--------------------
 		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
+		🚧 To give feedback, visit https://discord.cloudflare.com
 		--------------------
 
 		About to delete Model 'model2' (2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02).

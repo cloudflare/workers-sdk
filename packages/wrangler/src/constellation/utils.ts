@@ -11,7 +11,7 @@ export const getConstellationWarningFromEnv = getEnvironmentVariableFactory({
 export const constellationBetaWarning =
 	getConstellationWarningFromEnv() !== undefined
 		? ""
-		: "--------------------\n🚧 Constellation is currently in open alpha and is not recommended for production data and traffic\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n🚧 To give feedback, visit https://discord.gg/cloudflaredev\n--------------------\n";
+		: "--------------------\n🚧 Constellation is currently in open alpha and is not recommended for production data and traffic\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n🚧 To give feedback, visit https://discord.cloudflare.com\n--------------------\n";
 
 export const getProjectByName = async (
 	config: Config,
