@@ -22,7 +22,8 @@ describe("ai help", () => {
 		🤖 Interact with AI models
 
 		Commands:
-		  wrangler ai models  List catalog models
+		  wrangler ai models    List catalog models
+		  wrangler ai finetune  Interact with finetune files
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -50,7 +51,8 @@ describe("ai help", () => {
 		🤖 Interact with AI models
 
 		Commands:
-		  wrangler ai models  List catalog models
+		  wrangler ai models    List catalog models
+		  wrangler ai finetune  Interact with finetune files
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -78,8 +80,30 @@ describe("ai commands", () => {
 		clearDialogs();
 	});
 
+	it("should handle finetune list", async () => {
+		mockAIListFinetuneRequest();
+		await runWrangler("ai finetune list");
+		expect(std.out).toMatchInlineSnapshot(`
+		"┌──────────────────────────────────────┬────────────────┬─────────────┐
+		│ finetune_id                          │ name           │ description │
+		├──────────────────────────────────────┼────────────────┼─────────────┤
+		│ 4d73459a-0000-4688-0000-b19fbb0e0fa5 │ instruct-demo1 │             │
+		├──────────────────────────────────────┼────────────────┼─────────────┤
+		│ 55fc22b4-0000-4420-0000-25263a283b6a │ instruct-demo2 │             │
+		├──────────────────────────────────────┼────────────────┼─────────────┤
+		│ 8901ff50-0000-408f-0000-8e9ea1d4eb39 │ instruct-demo3 │             │
+		├──────────────────────────────────────┼────────────────┼─────────────┤
+		│ a18b81d0-0000-4891-0000-6fb8c8268142 │ instruct-demo4 │             │
+		├──────────────────────────────────────┼────────────────┼─────────────┤
+		│ c4651c92-0000-49a4-0000-e26e57d108ca │ instruct-demo5 │             │
+		├──────────────────────────────────────┼────────────────┼─────────────┤
+		│ f70cece8-0000-40e6-0000-81b97273d745 │ instruct-demo6 │             │
+		└──────────────────────────────────────┴────────────────┴─────────────┘"
+	`);
+	});
+
 	it("should handle model list", async () => {
-		mockAIRequest();
+		mockAISearchRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
 		"┌──────────────────────────────────────┬─────────────────────────────────────┬─────────────┬──────────────────────┐
@@ -222,7 +246,53 @@ describe("ai commands", () => {
 });
 
 /** Create a mock handler for AI API */
-function mockAIRequest() {
+function mockAIListFinetuneRequest() {
+	msw.use(
+		rest.get("*/accounts/:accountId/ai/finetunes", (req, res, ctx) => {
+			return res.once(
+				ctx.json(
+					createFetchResult(
+						[
+							{
+								id: "4d73459a-0000-4688-0000-b19fbb0e0fa5",
+								name: "instruct-demo1",
+								description: "",
+							},
+							{
+								id: "55fc22b4-0000-4420-0000-25263a283b6a",
+								name: "instruct-demo2",
+								description: "",
+							},
+							{
+								id: "8901ff50-0000-408f-0000-8e9ea1d4eb39",
+								name: "instruct-demo3",
+								description: "",
+							},
+							{
+								id: "a18b81d0-0000-4891-0000-6fb8c8268142",
+								name: "instruct-demo4",
+								description: "",
+							},
+							{
+								id: "c4651c92-0000-49a4-0000-e26e57d108ca",
+								name: "instruct-demo5",
+								description: "",
+							},
+							{
+								id: "f70cece8-0000-40e6-0000-81b97273d745",
+								name: "instruct-demo6",
+								description: "",
+							},
+						],
+						true
+					)
+				)
+			);
+		})
+	);
+}
+
+function mockAISearchRequest() {
 	msw.use(
 		rest.get("*/accounts/:accountId/ai/models/search", (req, res, ctx) => {
 			return res.once(

@@ -1,3 +1,9 @@
+export type Finetune = {
+	id: string;
+	name: string;
+	description: string;
+};
+
 export type Task = {
 	id: string;
 	name: string;
