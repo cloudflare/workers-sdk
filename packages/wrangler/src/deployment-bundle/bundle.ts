@@ -15,6 +15,7 @@ import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
+import { standardURLPlugin } from "./esbuild-plugins/standard-url";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
@@ -342,7 +343,11 @@ export async function bundleWorker(
 		plugins: [
 			moduleCollector.plugin,
 			...(legacyNodeCompat
-				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+				? [
+						NodeGlobalsPolyfills({ buffer: true }),
+						standardURLPlugin(),
+						NodeModulesPolyfills(),
+				  ]
 				: []),
 			nodejsCompatPlugin(!!nodejsCompat),
 			cloudflareInternalPlugin,
