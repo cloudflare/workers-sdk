@@ -112,6 +112,7 @@ export class DeploymentsService {
 	 * @param image Filter deployments by image
 	 * @param state Filter deployments by deployment state
 	 * @param ipv4 Filter deployments by ipv4 address
+	 * @param label Filter deployments by label
 	 * @returns ListDeploymentsV2 List of deployments with their corresponding placements
 	 * @throws ApiError
 	 */
@@ -119,7 +120,8 @@ export class DeploymentsService {
 		location?: LocationID,
 		image?: Image,
 		state?: State,
-		ipv4?: IPV4
+		ipv4?: IPV4,
+		label?: Array<string>
 	): CancelablePromise<ListDeploymentsV2> {
 		return __request(OpenAPI, {
 			method: "GET",
@@ -129,6 +131,7 @@ export class DeploymentsService {
 				image: image,
 				state: state,
 				ipv4: ipv4,
+				label: label,
 			},
 			errors: {
 				400: `Unknown account`,

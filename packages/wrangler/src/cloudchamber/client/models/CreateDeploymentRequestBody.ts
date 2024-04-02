@@ -34,8 +34,4 @@ export type CreateDeploymentRequestBody = {
 	 * Container environment variables
 	 */
 	environment_variables?: Array<EnvironmentVariable>;
-	/**
-	 * Specify the GPU memory to be used for the deployment. (Mandatory for GPU deployments)
-	 */
-	gpu_memory?: MemorySizeWithUnit;
 };
