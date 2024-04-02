@@ -1,5 +1,15 @@
 # wrangler
 
+## 3.43.0
+
+### Minor Changes
+
+- [#5466](https://github.com/cloudflare/workers-sdk/pull/5466) [`ef9fbba`](https://github.com/cloudflare/workers-sdk/commit/ef9fbba36444fac665b95bedb2acd1fda494871b) Thanks [@celso](https://github.com/celso)! - feature: add Workers AI finetune commands
+
+### Patch Changes
+
+- [#5449](https://github.com/cloudflare/workers-sdk/pull/5449) [`91a2150`](https://github.com/cloudflare/workers-sdk/commit/91a2150b9e565d1d6519f635e19f36fc2dec0886) Thanks [@penalosa](https://github.com/penalosa)! - fix: Improve messaging for invalid Pages `wrangler.toml` files
+
 ## 3.42.0
 
 ### Minor Changes
