@@ -22,7 +22,7 @@ export function ai(yargs: CommonYargsArgv) {
 				)
 				.command(
 					"create <model_name> <finetune_name> <folder_path>",
-					"Upload a finetune file",
+					"Create finetune and upload assets",
 					CreateFinetune.options,
 					CreateFinetune.handler
 				)
