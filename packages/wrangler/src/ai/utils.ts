@@ -1,5 +1,5 @@
 import { fetchResult } from "../cfetch";
-import type { Model, Finetune } from "./types";
+import type { Finetune, Model } from "./types";
 
 export function getErrorMessage(error: any): string {
 	return `${error.text || error.toString()}${
