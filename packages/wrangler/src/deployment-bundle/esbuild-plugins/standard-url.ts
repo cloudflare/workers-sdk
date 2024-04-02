@@ -6,7 +6,7 @@ import type { Plugin } from "esbuild";
 export const standardURLPlugin: () => Plugin = () => ({
 	name: "standard URL plugin",
 	setup(pluginBuild) {
-		pluginBuild.onResolve({ filter: /^url$/ }, ({ importer }) => {
+		pluginBuild.onResolve({ filter: /^node:url$|^url$/ }, ({ importer }) => {
 			if (importer === "standard-url-plugin") return;
 			return {
 				path: "wrangler-url-polyfill",

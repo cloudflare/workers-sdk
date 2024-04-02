@@ -183,6 +183,39 @@ describe("basic dev tests", () => {
 					`,
 		}));
 	});
+	it("can import URL from 'url' in node_compat mode", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+					node_compat = true
+			`,
+			"src/index.ts": dedent`
+					const { URL } = require('url');
+					const { URL: nURL } = require('node:url');
+
+					export default {
+						fetch(request) {
+							const url = new URL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
+							const nUrl = new nURL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
+							return new Response(url + nUrl)
+						}
+					}`,
+		}));
+		await worker.runDevSession("", async (session) => {
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot(
+				`"postgresql://user:password@example.com:12345/dbname?sslmode=disablepostgresql://user:password@example.com:12345/dbname?sslmode=disable"`
+			);
+		});
+	});
 
 	it("can modify worker during dev session (local)", async () => {
 		await worker.runDevSession("", async (session) => {
