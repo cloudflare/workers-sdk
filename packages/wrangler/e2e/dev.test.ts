@@ -91,7 +91,7 @@ async function runDevSession(
 
 		in ${workerPath} {
 			exits {
-        $$ ${WRANGLER} dev ${flags}
+        $ ${WRANGLER} dev ${flags}
 			}
 		}
 			`;
