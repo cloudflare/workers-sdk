@@ -180,7 +180,7 @@ const runCli = async (
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(workers)\.dev)/;
 
-	const match = output.match(deployedUrlRe);
+	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return;

@@ -824,6 +824,9 @@ importers:
       haikunator:
         specifier: ^2.1.2
         version: 2.1.2
+      indent-string:
+        specifier: ^5.0.0
+        version: 5.0.0
       magic-string:
         specifier: ^0.30.5
         version: 0.30.5
@@ -854,6 +857,9 @@ importers:
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
+      wrap-ansi:
+        specifier: ^9.0.0
+        version: 9.0.0
       yargs:
         specifier: ^17.7.1
         version: 17.7.1
@@ -20853,6 +20859,15 @@ packages:
       ansi-styles: 6.2.1
       string-width: 5.1.2
       strip-ansi: 7.1.0
+
+  /wrap-ansi@9.0.0:
+    resolution: {integrity: sha512-G8ura3S+3Z2G+mkgNRq8dqaFZAuxfsxpBB8OCTGRTCtp+l/v9nbFNmCUP1BZMts3G1142MsZfn6eeUKrr4PD1Q==}
+    engines: {node: '>=18'}
+    dependencies:
+      ansi-styles: 6.2.1
+      string-width: 7.1.0
+      strip-ansi: 7.1.0
+    dev: true
 
   /wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
