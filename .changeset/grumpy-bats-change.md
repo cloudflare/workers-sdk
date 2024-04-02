@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
-Adds Workers AI finetune commands
+feature: add Workers AI finetune commands
