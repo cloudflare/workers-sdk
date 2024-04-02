@@ -1,5 +1,11 @@
 # workers-playground
 
+## 0.0.3
+
+### Patch Changes
+
+- [#5473](https://github.com/cloudflare/workers-sdk/pull/5473) [`5212154`](https://github.com/cloudflare/workers-sdk/commit/52121544698d1ffb395e0984a63ab5eb91e6f05e) Thanks [@penalosa](https://github.com/penalosa)! - fix: Rename `fetch` to `on_fetch`
+
 ## 0.0.2
 
 ### Patch Changes

@@ -1,5 +1,21 @@
 # wrangler
 
+## 3.44.0
+
+### Minor Changes
+
+- [#5461](https://github.com/cloudflare/workers-sdk/pull/5461) [`f69e562`](https://github.com/cloudflare/workers-sdk/commit/f69e5629f8155186e7e890aa38509bb3fbfa704f) Thanks [@mattdeboard](https://github.com/mattdeboard)! - feature: Add command for fetching R2 Event Notification configurations for a given bucket
+
+  This allows users to see the entire event notification configuration -- i.e. every rule for every configured queue -- for a single bucket with a single request.
+
+  This change also improves messaging of console output when creating a new bucket notification.
+
+### Patch Changes
+
+- [#5480](https://github.com/cloudflare/workers-sdk/pull/5480) [`0cce21f`](https://github.com/cloudflare/workers-sdk/commit/0cce21ff5b27cc4c227e102eb470b0e0cae455bb) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensure url & node:url export URL (aliased to globalThis.URL) in node_compat mode
+
+- [#5472](https://github.com/cloudflare/workers-sdk/pull/5472) [`02a1091`](https://github.com/cloudflare/workers-sdk/commit/02a109172e60446a8c8e79a2804fdd387c4525a5) Thanks [@penalosa](https://github.com/penalosa)! - fix: Expose more info from `wrangler pages functions build-env`
+
 ## 3.43.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.17.0
+
+### Minor Changes
+
+- [#5475](https://github.com/cloudflare/workers-sdk/pull/5475) [`80b8fcb`](https://github.com/cloudflare/workers-sdk/commit/80b8fcb96be30c18560fc038a0ea1d127096312b) Thanks [@garrettgu10](https://github.com/garrettgu10)! - feature: add Hello World Python template
+
 ## 2.16.1
 
 ### Patch Changes
