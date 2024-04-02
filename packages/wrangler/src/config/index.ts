@@ -32,6 +32,20 @@ export function readConfig<CommandArgs>(
 	// Include command specific args as well as the wrangler global flags
 	args: CommandArgs &
 		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
+	requirePagesConfig: true
+): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
+export function readConfig<CommandArgs>(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: CommandArgs &
+		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
+	requirePagesConfig?: boolean
+): Config;
+export function readConfig<CommandArgs>(
+	configPath: string | undefined,
+	// Include command specific args as well as the wrangler global flags
+	args: CommandArgs &
+		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
 	requirePagesConfig?: boolean
 ): Config {
 	let rawConfig: RawConfig = {};

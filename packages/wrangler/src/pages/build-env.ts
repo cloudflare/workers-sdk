@@ -46,5 +46,13 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		Object.entries(config.vars).filter(([_, v]) => typeof v === "string")
 	);
 
-	logger.log(JSON.stringify(textVars));
+	logger.log(
+		JSON.stringify({
+			vars: textVars,
+			pages_build_output_dir: path.relative(
+				args.projectDir,
+				config.pages_build_output_dir
+			),
+		})
+	);
 };
