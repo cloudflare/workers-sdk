@@ -59,7 +59,7 @@ export const printSummary = async (ctx: C3Context) => {
 	}
 
 	newline();
-	nextSteps.forEach((entry) => {
+	nextSteps.filter(entry => entry.length > 0).forEach((entry) => {
 		log(`${dim(entry[0])} ${blue(entry[1])}`);
 	});
 	newline();
