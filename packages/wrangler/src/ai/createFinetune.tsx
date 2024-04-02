@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
@@ -38,9 +39,7 @@ export const handler = withConfig<HandlerOptions>(
 		const accountId = await requireAuth((args as any).config);
 
 		logger.log(
-			`🌀 Creating new finetune "${args.finetune_name}" for model "${
-				args.model_name
-			}"...`
+			`🌀 Creating new finetune "${args.finetune_name}" for model "${args.model_name}"...`
 		);
 
 		try {
@@ -71,9 +70,7 @@ export const handler = withConfig<HandlerOptions>(
 						if (requiredAssets.includes(file.name)) {
 							const filePath = path.join(args.folder_path, file.name);
 							logger.log(
-								`🌀 Uploading file "${filePath}" to "${
-									args.finetune_name
-								}"...`
+								`🌀 Uploading file "${filePath}" to "${args.finetune_name}"...`
 							);
 							try {
 								const formdata = new FormData();
@@ -95,9 +92,7 @@ export const handler = withConfig<HandlerOptions>(
 						}
 					}
 					logger.log(
-						`✅ Assets uploaded, finetune "${
-							args.finetune_name
-						}" is ready to use.`
+						`✅ Assets uploaded, finetune "${args.finetune_name}" is ready to use.`
 					);
 				} catch (e: any) {
 					logger.error(
