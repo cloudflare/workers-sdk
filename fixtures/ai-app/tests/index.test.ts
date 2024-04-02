@@ -24,8 +24,14 @@ describe("'wrangler dev' correctly renders pages", () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const content = await response.json();
 		expect(content).toEqual({
-			binding: {},
-			fetcher: "function fetch() { [native code] }",
+			binding: {
+				fetcher: {},
+				lastRequestId: null,
+				logs: [],
+				options: {},
+			},
+			fetch: "function",
+			run: "function",
 		});
 	});
 });

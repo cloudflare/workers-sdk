@@ -1175,8 +1175,8 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 
 	// Check `Fetcher#queue()`
 	let queueResult = await fetcher.queue("needy", [
-		{ id: "a", timestamp: new Date(1000), body: "a" },
-		{ id: "b", timestamp: new Date(2000), body: { b: 1 } },
+		{ id: "a", timestamp: new Date(1000), body: "a", attempts: 1 },
+		{ id: "b", timestamp: new Date(2000), body: { b: 1 }, attempts: 1 },
 	]);
 	t.deepEqual(queueResult, {
 		outcome: "ok",
@@ -1188,14 +1188,24 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 		retryMessages: [],
 	});
 	queueResult = await fetcher.queue("queue", [
-		{ id: "c", timestamp: new Date(3000), body: new Uint8Array([1, 2, 3]) },
-		{ id: "perfect", timestamp: new Date(4000), body: new Date(5000) },
+		{
+			id: "c",
+			timestamp: new Date(3000),
+			body: new Uint8Array([1, 2, 3]),
+			attempts: 1,
+		},
+		{
+			id: "perfect",
+			timestamp: new Date(4000),
+			body: new Date(5000),
+			attempts: 1,
+		},
 	]);
 	t.deepEqual(queueResult, {
 		outcome: "ok",
 		ackAll: false,
 		retryBatch: {
-			retry: false
+			retry: false,
 		},
 		explicitAcks: ["perfect"],
 		retryMessages: [],

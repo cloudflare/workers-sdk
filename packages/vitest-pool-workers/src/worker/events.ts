@@ -146,6 +146,7 @@ class QueueMessage<Body = unknown> /* Message */ {
 	readonly id!: string;
 	readonly timestamp!: Date;
 	readonly body!: Body;
+	readonly attempts!: number;
 	[kRetry] = false;
 	[kAck] = false;
 
@@ -171,6 +172,16 @@ class QueueMessage<Body = unknown> /* Message */ {
 			);
 		}
 
+		let attempts: number;
+		// noinspection SuspiciousTypeOfGuard
+		if (typeof message.attempts === "number") {
+			attempts = message.attempts;
+		} else {
+			throw new TypeError(
+				"Incorrect type for the 'attempts' field on 'ServiceBindingQueueMessage': the provided value is not of type 'number'."
+			);
+		}
+
 		if ("serializedBody" in message) {
 			throw new TypeError(
 				"Cannot use `serializedBody` with `createMessageBatch()`"
@@ -193,6 +204,11 @@ class QueueMessage<Body = unknown> /* Message */ {
 			body: {
 				get() {
 					return body;
+				},
+			},
+			attempts: {
+				get() {
+					return attempts;
 				},
 			},
 		});

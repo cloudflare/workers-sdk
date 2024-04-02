@@ -14,11 +14,13 @@ it("consumes queue messages", async () => {
 		{
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(1000),
+			attempts: 1,
 			body: { key: "/1", value: "one" },
 		},
 		{
 			id: randomBytes(16).toString("hex"),
 			timestamp: new Date(2000),
+			attempts: 1,
 			body: { key: "/2", value: "two" },
 		},
 	];
