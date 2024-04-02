@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
+import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { normalizeAndValidateConfig } from "./validation";
+import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
@@ -30,7 +31,8 @@ export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: CommandArgs &
-		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">
+		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
+	requirePagesConfig?: boolean
 ): Config {
 	let rawConfig: RawConfig = {};
 
@@ -54,9 +56,15 @@ export function readConfig<CommandArgs>(
 	 * Pages projects currently have support for `wrangler.toml` only,
 	 * so we should error if `wrangler.json` is detected in a Pages project
 	 */
-	const isPagesConfig = rawConfig.pages_build_output_dir !== undefined;
+	const isPagesConfigFile = isPagesConfig(rawConfig);
+	if (!isPagesConfigFile && requirePagesConfig) {
+		throw new FatalError(
+			"Your wrangler.toml is not a valid Pages config file",
+			EXIT_CODE_INVALID_PAGES_CONFIG
+		);
+	}
 	if (
-		isPagesConfig &&
+		isPagesConfigFile &&
 		(configPath?.endsWith("json") || args.experimentalJsonConfig)
 	) {
 		throw new UserError(
@@ -83,7 +91,7 @@ export function readConfig<CommandArgs>(
 
 	// If we detected a Pages project, run config file validation against
 	// Pages specific validation rules
-	if (isPagesConfig) {
+	if (isPagesConfigFile) {
 		logger.debug(
 			`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
 		);

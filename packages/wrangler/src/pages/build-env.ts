@@ -1,13 +1,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { readConfig } from "../config";
-import { isPagesConfig } from "../config/validation";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import {
-	EXIT_CODE_INVALID_PAGES_CONFIG,
-	EXIT_CODE_NO_CONFIG_FOUND,
-} from "./errors";
+import { EXIT_CODE_NO_CONFIG_FOUND } from "./errors";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -35,17 +31,15 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		);
 	}
 
-	const config = readConfig(path.resolve(args.projectDir, "wrangler.toml"), {
-		...args,
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		env: process.env.PAGES_ENVIRONMENT,
-	});
-	if (!isPagesConfig(config)) {
-		throw new FatalError(
-			"Your wrangler.toml is not a valid Pages config file",
-			EXIT_CODE_INVALID_PAGES_CONFIG
-		);
-	}
+	const config = readConfig(
+		path.resolve(args.projectDir, "wrangler.toml"),
+		{
+			...args,
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			env: process.env.PAGES_ENVIRONMENT,
+		},
+		true
+	);
 
 	// Ensure JSON variables are not included
 	const textVars = Object.fromEntries(
