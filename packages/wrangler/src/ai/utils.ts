@@ -1,10 +1,11 @@
 import { fetchResult } from "../cfetch";
+import type { Message } from "../parse";
 import type { Finetune, Model } from "./types";
 
-export function getErrorMessage(error: any): string {
+export function getErrorMessage(error: Message): string {
 	return `${error.text || error.toString()}${
 		error.notes
-			? ` ${error.notes.map((note: any) => note.text).join(", ")}`
+			? ` ${error.notes.map((note: Message) => note.text).join(", ")}`
 			: ""
 	}`;
 }

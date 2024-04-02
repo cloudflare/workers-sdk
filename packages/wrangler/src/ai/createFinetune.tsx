@@ -35,15 +35,15 @@ export function options(yargs: CommonYargsArgv) {
 }
 
 export const handler = withConfig<HandlerOptions>(
-	async (args: HandlerOptions): Promise<void> => {
-		const accountId = await requireAuth((args as any).config);
+	async ({ finetune_name, model_name, folder_path, config }): Promise<void> => {
+		const accountId = await requireAuth(config);
 
 		logger.log(
-			`🌀 Creating new finetune "${args.finetune_name}" for model "${args.model_name}"...`
+			`🌀 Creating new finetune "${finetune_name}" for model "${model_name}"...`
 		);
 
 		try {
-			const files = fs.readdirSync(args.folder_path, {
+			const files = fs.readdirSync(folder_path, {
 				withFileTypes: true,
 			});
 
@@ -58,8 +58,8 @@ export const handler = withConfig<HandlerOptions>(
 						{
 							method: "POST",
 							body: JSON.stringify({
-								model: args.model_name,
-								name: args.finetune_name,
+								model: model_name,
+								name: finetune_name,
 								description: "",
 							}),
 						}
@@ -68,9 +68,9 @@ export const handler = withConfig<HandlerOptions>(
 					for (let i = 0; i < files.length; i++) {
 						const file = files[i];
 						if (requiredAssets.includes(file.name)) {
-							const filePath = path.join(args.folder_path, file.name);
+							const filePath = path.join(folder_path, file.name);
 							logger.log(
-								`🌀 Uploading file "${filePath}" to "${args.finetune_name}"...`
+								`🌀 Uploading file "${filePath}" to "${finetune_name}"...`
 							);
 							try {
 								const formdata = new FormData();
@@ -92,7 +92,7 @@ export const handler = withConfig<HandlerOptions>(
 						}
 					}
 					logger.log(
-						`✅ Assets uploaded, finetune "${args.finetune_name}" is ready to use.`
+						`✅ Assets uploaded, finetune "${finetune_name}" is ready to use.`
 					);
 				} catch (e: any) {
 					logger.error(
