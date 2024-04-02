@@ -13,6 +13,13 @@ export const standardURLPlugin: () => Plugin = () => ({
 				namespace: "wrangler-url",
 			};
 		});
+		pluginBuild.onResolve({ filter: /^node:url$/ }, ({ importer }) => {
+			if (importer === "standard-url-plugin") return;
+			return {
+				path: "wrangler-url-polyfill",
+				namespace: "wrangler-url",
+			};
+		});
 		pluginBuild.onResolve(
 			{ filter: /^wrangler:url$/ },
 			async ({ kind, resolveDir }) => {
