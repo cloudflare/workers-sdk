@@ -21,7 +21,7 @@ export function ai(yargs: CommonYargsArgv) {
 					ListFinetune.handler
 				)
 				.command(
-					"create <model_name> <finetune_name> <file_path>",
+					"create <model_name> <finetune_name> <folder_path>",
 					"Upload a finetune file",
 					CreateFinetune.options,
 					CreateFinetune.handler

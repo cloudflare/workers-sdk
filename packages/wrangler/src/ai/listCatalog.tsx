@@ -21,20 +21,24 @@ export const handler = withConfig<HandlerOptions>(
 		if (json) {
 			logger.log(JSON.stringify(entries, null, 2));
 		} else {
-			logger.table(
-				entries.map((entry) => ({
-					model: entry.id,
-					name: entry.name,
-					description: truncateDescription(
-						entry.description,
-						entry.id.length +
-							entry.name.length +
-							(entry.task ? entry.task.name.length : 0) +
-							10
-					),
-					task: entry.task ? entry.task.name : "",
-				}))
-			);
+			if (entries.length === 0) {
+				logger.log(`No models found.`);
+			} else {
+				logger.table(
+					entries.map((entry) => ({
+						model: entry.id,
+						name: entry.name,
+						description: truncateDescription(
+							entry.description,
+							entry.id.length +
+								entry.name.length +
+								(entry.task ? entry.task.name.length : 0) +
+								10
+						),
+						task: entry.task ? entry.task.name : "",
+					}))
+				);
+			}
 		}
 	}
 );

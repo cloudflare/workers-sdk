@@ -31,7 +31,7 @@ export const handler = withConfig<HandlerOptions>(
 		);
 
 		try {
-			const files = fs.readdirSync((args as any).file_path, {
+			const files = fs.readdirSync((args as any).folder_path, {
 				withFileTypes: true,
 			});
 
@@ -56,7 +56,7 @@ export const handler = withConfig<HandlerOptions>(
 					for (let i = 0; i < files.length; i++) {
 						const file = files[i];
 						if (requiredAssets.includes(file.name)) {
-							const filePath = path.join((args as any).file_path, file.name);
+							const filePath = path.join((args as any).folder_path, file.name);
 							logger.log(
 								`🌀 Uploading file "${filePath}" to "${
 									(args as any).finetune_name
