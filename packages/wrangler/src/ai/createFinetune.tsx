@@ -6,10 +6,12 @@ import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { getErrorMessage } from "./utils";
+import type { Message } from "../parse";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Finetune } from "./types";
 
 const requiredAssets = ["adapter_config.json", "adapter_model.safetensors"];
 
@@ -53,7 +55,7 @@ export const handler = withConfig<HandlerOptions>(
 				)
 			) {
 				try {
-					const finetune: any = await fetchResult<void>(
+					const finetune = await fetchResult<Finetune>(
 						`/accounts/${accountId}/ai/finetunes`,
 						{
 							method: "POST",
@@ -80,12 +82,14 @@ export const handler = withConfig<HandlerOptions>(
 									`/accounts/${accountId}/ai/finetunes/${finetune.id}/finetune-assets`,
 									{
 										method: "POST",
-										body: formdata as any,
+										body: formdata,
 									}
 								);
-							} catch (e: any) {
+							} catch (e) {
 								logger.error(
-									`🚨 Couldn't upload file: ${getErrorMessage(e)}, quiting...`
+									`🚨 Couldn't upload file: ${getErrorMessage(
+										e as Message
+									)}, quiting...`
 								);
 								return;
 							}
@@ -94,9 +98,9 @@ export const handler = withConfig<HandlerOptions>(
 					logger.log(
 						`✅ Assets uploaded, finetune "${finetune_name}" is ready to use.`
 					);
-				} catch (e: any) {
+				} catch (e) {
 					logger.error(
-						`🚨 Finetune couldn't be created: ${getErrorMessage(e)}`
+						`🚨 Finetune couldn't be created: ${getErrorMessage(e as Message)}`
 					);
 				}
 			} else {
@@ -104,8 +108,10 @@ export const handler = withConfig<HandlerOptions>(
 					`🚨 Asset missing. Required assets: ${requiredAssets.join(", ")}`
 				);
 			}
-		} catch (e: any) {
-			logger.error(`🚨 Folder does not exist: ${getErrorMessage(e)}`);
+		} catch (e) {
+			logger.error(
+				`🚨 Folder does not exist: ${getErrorMessage(e as Message)}`
+			);
 		}
 	}
 );
