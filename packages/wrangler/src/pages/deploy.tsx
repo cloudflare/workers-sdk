@@ -4,7 +4,7 @@ import SelectInput from "ink-select-input";
 import React from "react";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { findWranglerToml, isPagesWranglerToml, readConfig } from "../config";
+import { findWranglerToml, readConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
 import { FatalError } from "../errors";
@@ -12,6 +12,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import type { Config } from "../config";
@@ -94,30 +95,39 @@ export const Handler = async (args: PagesDeployArgs) => {
 
 	let config: Config | undefined;
 	const configPath = findWranglerToml(process.cwd(), false);
-	const isPagesConfig = isPagesWranglerToml(configPath);
 
-	/*
-	 * If we found a `wrangler.toml` config file that doesn't specify
-	 * `pages_build_output_dir`, we'll ignore the file, but inform users
-	 * that we did find one, just not valid for Pages.
-	 */
-	if (configPath && isPagesConfig === false) {
-		logger.warn(
-			`Pages now has wrangler.toml support.\n` +
-				`We detected a configuration file at ${configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
-				`If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
-				`Ignoring configuration file for now, and proceeding with project deploy.`
-		);
-	}
-
-	if (isPagesConfig) {
+	try {
 		/*
 		 * this reads the config file with `env` set to `undefined`, which will
 		 * return the top-level config. This contains all the information we
 		 * need from now. We will perform a second config file read later
 		 * in `/api/pages/deploy`, that will get the environment specififc config
 		 */
-		config = readConfig(configPath, { ...args, env: undefined });
+		config = readConfig(configPath, { ...args, env: undefined }, true);
+	} catch (err) {
+		if (
+			!(
+				err instanceof FatalError && err.code === EXIT_CODE_INVALID_PAGES_CONFIG
+			)
+		) {
+			throw err;
+		}
+	}
+
+	// const isPagesConfig = isPagesWranglerToml(configPath);
+
+	/*
+	 * If we found a `wrangler.toml` config file that doesn't specify
+	 * `pages_build_output_dir`, we'll ignore the file, but inform users
+	 * that we did find one, just not valid for Pages.
+	 */
+	if (configPath && config === undefined) {
+		logger.warn(
+			`Pages now has wrangler.toml support.\n` +
+				`We detected a configuration file at ${configPath} but it is missing the "pages_build_output_dir" field, required by Pages.\n` +
+				`If you would like to use this configuration file to deploy your project, please use "pages_build_output_dir" to specify the directory of static files to upload.\n` +
+				`Ignoring configuration file for now, and proceeding with project deploy.`
+		);
 	}
 
 	const directory = args.directory ?? config?.pages_build_output_dir;

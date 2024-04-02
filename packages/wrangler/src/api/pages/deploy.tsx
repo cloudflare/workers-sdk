@@ -5,7 +5,7 @@ import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
-import { findPagesWranglerToml, readConfig } from "../../config";
+import { readConfig } from "../../config";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -13,6 +13,7 @@ import { buildFunctions } from "../../pages/buildFunctions";
 import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
 	ApiErrorCodes,
+	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "../../pages/errors";
@@ -149,23 +150,32 @@ export async function deploy({
 
 	const env = isProduction ? "production" : "preview";
 	const deploymentConfig = project.deployment_configs[env];
-	const nodejsCompat =
-		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ?? false;
-
-	const defineNavigatorUserAgent = isNavigatorDefined(
-		deploymentConfig.compatibility_date,
-		deploymentConfig.compatibility_flags
-	);
-
 	let config: Config | undefined;
-	const configPath = findPagesWranglerToml();
-	if (configPath) {
-		config = readConfig(configPath, {
-			...args,
-			experimentalJsonConfig: false,
-			env,
-		});
+
+	try {
+		config = readConfig(
+			undefined,
+			{ ...args, experimentalJsonConfig: false, env },
+			true
+		);
+	} catch (err) {
+		if (
+			!(
+				err instanceof FatalError && err.code === EXIT_CODE_INVALID_PAGES_CONFIG
+			)
+		) {
+			throw err;
+		}
 	}
+
+	const nodejsCompat =
+		config?.compatibility_flags?.includes("nodejs_compat") ??
+		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ??
+		false;
+	const defineNavigatorUserAgent = isNavigatorDefined(
+		config?.compatibility_date ?? deploymentConfig.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
+	);
 
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
