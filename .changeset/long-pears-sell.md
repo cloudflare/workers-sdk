@@ -2,4 +2,4 @@
 "create-cloudflare": minor
 ---
 
-Add Hello World Python Template
+feature: add Hello World Python template
