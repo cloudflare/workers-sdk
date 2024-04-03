@@ -174,8 +174,8 @@ describe("hyperdrive commands", () => {
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
-		    \\"maxAge\\": 30,
-		    \\"staleWhileRevalidate\\": 15
+		    \\"max_age\\": 30,
+		    \\"stale_while_revalidate\\": 15
 		  }
 		}"
 	`);
@@ -411,8 +411,8 @@ describe("hyperdrive commands", () => {
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
-		    \\"maxAge\\": 30,
-		    \\"staleWhileRevalidate\\": 15
+		    \\"max_age\\": 30,
+		    \\"stale_while_revalidate\\": 15
 		  }
 		}"
 	`);

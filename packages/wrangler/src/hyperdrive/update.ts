@@ -128,8 +128,8 @@ export async function handler(
 
 	database.caching = {
 		disabled: args.cachingDisabled,
-		maxAge: args.maxAge,
-		staleWhileRevalidate: args.swr,
+		max_age: args.maxAge,
+		stale_while_revalidate: args.swr,
 	};
 
 	const updated = await patchConfig(config, args.id, database);
