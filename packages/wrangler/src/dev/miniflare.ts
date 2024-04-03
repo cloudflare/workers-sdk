@@ -23,6 +23,7 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
+	CfUnsafeBinding,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
@@ -232,6 +233,9 @@ function queueProducerEntry(queue: CfQueue): [string, string] {
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
+function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, object] {
+	return [ratelimit.name, ratelimit];
+}
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
@@ -432,6 +436,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				];
 			}),
 		]),
+
+		ratelimits: Object.fromEntries(
+			bindings.unsafe?.bindings
+				?.filter((b) => b.type == "ratelimit")
+				.map(ratelimitEntry) ?? []
+		),
 
 		serviceBindings: config.serviceBindings,
 

@@ -212,7 +212,7 @@ interface CfLogfwdrBinding {
 	destination: string;
 }
 
-interface CfUnsafeBinding {
+export interface CfUnsafeBinding {
 	name: string;
 	type: string;
 }
@@ -231,7 +231,7 @@ export type CfCapnp =
 			compiled_schema?: never;
 	  };
 
-interface CfUnsafe {
+export interface CfUnsafe {
 	bindings: CfUnsafeBinding[] | undefined;
 	metadata: CfUnsafeMetadata | undefined;
 	capnp: CfCapnp | undefined;
