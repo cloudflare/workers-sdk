@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20240329.1
+
+### Patch Changes
+
+- [#5491](https://github.com/cloudflare/workers-sdk/pull/5491) [`940ad89`](https://github.com/cloudflare/workers-sdk/commit/940ad89713fa086f23d394570c328716bfb1bd59) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure the magic proxy can handle multiple parallel r2 stream reads
+
+  Currently trying to read multiple R2 streams in parallel (via `Promise.all` for example) leads to deadlock which prevents any of the target streams from being read. This is caused by the underlying implementation only allowing a single HTTP connection to the Workers runtime at a time. This change fixes the issue by allowing multiple parallel HTTP connections.
+
 ## 3.20240329.0
 
 ### Minor Changes
