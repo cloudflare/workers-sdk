@@ -1,16 +1,3 @@
-// TODO(soon): remove once https://github.com/cloudflare/workerd/pull/1870 lands
-declare module "cloudflare:workers" {
-	export class WorkerEntrypoint {
-		constructor(
-			protected ctx: ExecutionContext,
-			protected env: Record<string, unknown>
-		);
-
-		fetch?(request: Request): Response | Promise<Response>;
-		scheduled?(controller: ScheduledController): void | Promise<void>;
-	}
-}
-
 declare module "__ENTRY_POINT__" {
 	import { Middleware } from "./middleware/common";
 	import { WorkerEntrypoint } from "cloudflare:workers";
