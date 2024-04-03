@@ -1057,4 +1057,93 @@ export default {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
+	it("should ignore unparseable config file", async () => {
+		writeFileSync(
+			"wrangler.toml",
+			dedent`
+				name = "project-name"
+				compatibility_date = "2023-02-14"
+				pages_build_output_dir = "dist-test"
+				placement = { mode = "smart" }
+				limits = { cpu_ms = 50 }"`
+		);
+		/* ---------------------------- */
+		/*       Set up js files        */
+		/* ---------------------------- */
+		mkdirSync("utils");
+		writeFileSync(
+			"utils/meaning-of-life.js",
+			`
+export const MEANING_OF_LIFE = 21;
+`
+		);
+
+		/* ---------------------------- */
+		/*       Set up _worker.js      */
+		/* ---------------------------- */
+		mkdirSync("dist-test");
+		writeFileSync(
+			"dist-test/_worker.js",
+			`
+import { MEANING_OF_LIFE } from "./../utils/meaning-of-life.js";
+
+export default {
+  async fetch(request, env) {
+    return new Response("Hello from _worker.js. The meaning of life is " + MEANING_OF_LIFE);
+  },
+};`
+		);
+
+		/* --------------------------------- */
+		/*     Run cmd & make assertions     */
+		/* --------------------------------- */
+		await runWrangler(
+			`pages functions build --build-output-directory dist-test --outfile=_worker.bundle --build-metadata-path build-metadata.json --project-directory .`
+		);
+		expect(existsSync("_worker.bundle")).toBe(true);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+
+		// some values in workerBundleContents, such as the undici form boundary
+		// or the file hashes, are randomly generated. Let's replace them
+		// with static values so we can test the file contents
+		const workerBundleContents = readFileSync("_worker.bundle", "utf-8");
+		const workerBundleWithConstantData = replaceRandomWithConstantData(
+			workerBundleContents,
+			[
+				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+			]
+		);
+
+		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+		"------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"metadata\\"
+
+		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
+		------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+		Content-Type: application/javascript+module
+
+		// ../utils/meaning-of-life.js
+		var MEANING_OF_LIFE = 21;
+
+		// _worker.js
+		var worker_default = {
+		  async fetch(request, env) {
+		    return new Response(\\"Hello from _worker.js. The meaning of life is \\" + MEANING_OF_LIFE);
+		  }
+		};
+		export {
+		  worker_default as default
+		};
+
+		------formdata-undici-0.test--"
+	`);
+		const buildMetadataExists = existsSync("build-metadata.json");
+		// build-metadata should not exist
+		expect(buildMetadataExists).toBeFalsy();
+
+		// This logs a parsing error, but continues anyway
+		expect(std.err).toContain("ParseError");
+	});
 });
