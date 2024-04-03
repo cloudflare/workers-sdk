@@ -70,6 +70,11 @@ export function tailOptions(yargs: CommonYargsArgv) {
 				'Filter by the IP address the request originates from. Use "self" to filter for your own IP',
 			array: true,
 		})
+		.option("version-id", {
+			type: "string",
+			requiresArg: true,
+			describe: "Filter by Worker version",
+		})
 		.option("debug", {
 			type: "boolean",
 			hidden: true,
@@ -122,6 +127,7 @@ export async function tailHandler(args: TailArgs) {
 		samplingRate: args.samplingRate,
 		search: args.search,
 		clientIp: args.ip,
+		versionId: args.versionId,
 	};
 	const scriptContent: string = await fetchScriptContent(
 		(!isLegacyEnv(config) ? args.env : undefined)
