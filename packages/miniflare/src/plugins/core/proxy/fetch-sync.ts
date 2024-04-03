@@ -39,23 +39,23 @@ const { notifyHandle, port, filename } = workerData;
 // with "Error: Cannot find module 'undici'". Instead we need to create a
 // 'require' using the '__filename' of the host... :(
 const actualRequire = createRequire(filename);
-const { Client, fetch } = actualRequire("undici");
+const { Pool, fetch } = actualRequire("undici");
 
-let clientUrl;
-let client;
+let dispatcherUrl;
+let dispatcher;
 
 port.addEventListener("message", async (event) => {
   const { id, method, url, headers, body } = event.data;
-  if (clientUrl !== url) {
-    clientUrl = url;
-    client = new Client(url, {
+  if (dispatcherUrl !== url) {
+    dispatcherUrl = url;
+    dispatcher = new Pool(url, {
       connect: { rejectUnauthorized: false },
     });
   }
   headers["${CoreHeaders.OP_SYNC}"] = "true";
   try {
     // body cannot be a ReadableStream, so no need to specify duplex
-    const response = await fetch(url, { method, headers, body, dispatcher: client });
+    const response = await fetch(url, { method, headers, body, dispatcher });
     const responseBody = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}") === "ReadableStream"
       ? response.body
       : await response.arrayBuffer();
