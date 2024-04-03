@@ -109,7 +109,7 @@ function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
 
 function createDurableObjectClass({ className, proxyUrl }) {
 	const klass = createProxyPrototypeClass(DurableObject, (key) => {
-		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \\\`WorkerEntrypoint\\\` to expose an RPC interface between Workers.\`);
+		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions.\`);
 	});
 	
 	// Forward regular HTTP requests to the other "wrangler dev" session

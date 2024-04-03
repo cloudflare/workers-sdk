@@ -591,8 +591,8 @@ test("should support binding to Durable Object in another worker", async ({
 	const errors = await rpcResponse.json();
 	expect(errors).toMatchInlineSnapshot(`
 		[
-		  "Error: Cannot access \`ThingObject#property\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
-		  "Error: Cannot access \`ThingObject#method\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions. We recommend you only bind to Durable Objects defined in the same Worker. You can define an entrypoint sub-classing \`WorkerEntrypoint\` to expose an RPC interface between Workers.",
+		  "Error: Cannot access \`ThingObject#property\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
+		  "Error: Cannot access \`ThingObject#method\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
 		]
 	`);
 });
