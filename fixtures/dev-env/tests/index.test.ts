@@ -186,6 +186,7 @@ function fakeReloadComplete(
 		},
 		headers: {},
 		liveReload: config.dev?.liveReload,
+		entrypointAddresses: undefined,
 	};
 
 	const timeoutPromise = timers.setTimeout(delay).then(() => {
