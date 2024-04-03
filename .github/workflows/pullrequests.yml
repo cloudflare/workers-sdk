@@ -112,6 +112,15 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
+      - name: [TEMP] Try reproduce piping failure
+        run: |
+          cd fixtures/worker-app
+          npx wrangler versions list --json --x-versions | jq '.[0].id'
+          npx wrangler versions list --json --x-versions | head
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Run tests & collect coverage
         run: pnpm run test:ci
         env:
