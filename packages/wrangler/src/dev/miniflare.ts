@@ -401,7 +401,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		if (service.service === config.name) {
 			// If this is a service binding to the current worker, don't bother using
 			// the dev registry to look up the address, just bind to it directly.
-			serviceBindings[service.binding] = getName(config);
+			serviceBindings[service.binding] = {
+				name: getName(config),
+				entrypoint: service.entrypoint,
+			};
 			continue;
 		}
 
