@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.17.1
+
+### Patch Changes
+
+- [#5376](https://github.com/cloudflare/workers-sdk/pull/5376) [`bd00dc8`](https://github.com/cloudflare/workers-sdk/commit/bd00dc827769145df8d42a677393173bd751e643) Thanks [@jculvey](https://github.com/jculvey)! - feat: Improve the output of `--help`.
+
 ## 2.17.0
 
 ### Minor Changes

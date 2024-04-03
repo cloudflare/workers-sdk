@@ -1,5 +1,34 @@
 # wrangler
 
+## 3.45.0
+
+### Minor Changes
+
+- [#5377](https://github.com/cloudflare/workers-sdk/pull/5377) [`5d68744`](https://github.com/cloudflare/workers-sdk/commit/5d6874499049641c1d3d3f47161e7ebf3bc57650) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add `wrangler.toml` support in `wrangler pages deploy`
+
+  As we are adding `wrangler.toml` support for Pages, we want to ensure that `wrangler pages deploy` works with a configuration file.
+
+- [#5471](https://github.com/cloudflare/workers-sdk/pull/5471) [`489b9c5`](https://github.com/cloudflare/workers-sdk/commit/489b9c51550d583d50e262f5905393501c2d6419) Thanks [@zebp](https://github.com/zebp)! - feature: Add version-id filter for Worker tailing to filter logs by scriptVersion in a gradual deployment
+
+  This allows users to only get logs in a gradual deployment if you are troubleshooting issues
+  specific to one deployment. Example:
+  `npx wrangler tail --version-id 72d3f357-4e52-47c5-8805-90be978c403f`
+
+### Patch Changes
+
+- [#5462](https://github.com/cloudflare/workers-sdk/pull/5462) [`68faf67`](https://github.com/cloudflare/workers-sdk/commit/68faf67f0499927d7bded1342ccc9c8c9e76037a) Thanks [@OilyLime](https://github.com/OilyLime)! - revert: Removes support for private networking Hyperdrive configs, pending more work to support the feature. Non-breaking change since the feature wasn't yet supported.
+
+- [#5494](https://github.com/cloudflare/workers-sdk/pull/5494) [`a232ccf`](https://github.com/cloudflare/workers-sdk/commit/a232ccffe6a2994df5181b6252965a7ba4a0c17a) Thanks [@penalosa](https://github.com/penalosa)! - fix: Swallow parsing errors when a pages config file is required.
+
+- [#5484](https://github.com/cloudflare/workers-sdk/pull/5484) [`e7f8dc3`](https://github.com/cloudflare/workers-sdk/commit/e7f8dc32465921e0a9a38e8e3deeaf17c04c010a) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - feature: support Cloudchamber deployment labels
+
+- [#5434](https://github.com/cloudflare/workers-sdk/pull/5434) [`bf9dca8`](https://github.com/cloudflare/workers-sdk/commit/bf9dca85a16c4133d2d200a9e2fc52dcf8917550) Thanks [@OilyLime](https://github.com/OilyLime)! - bugfix: Fix passing Hyperdrive caching options to backend
+
+- [#5403](https://github.com/cloudflare/workers-sdk/pull/5403) [`5d6d521`](https://github.com/cloudflare/workers-sdk/commit/5d6d5218ba0686279e6b67d86592ece16949bf25) Thanks [@oliy](https://github.com/oliy)! - fix: wrangler dev --local support for ratelimits
+
+- Updated dependencies [[`940ad89`](https://github.com/cloudflare/workers-sdk/commit/940ad89713fa086f23d394570c328716bfb1bd59)]:
+  - miniflare@3.20240329.1
+
 ## 3.44.0
 
 ### Minor Changes
