@@ -517,7 +517,7 @@ describe("hyperdrive dev tests", () => {
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
 					id = "hyperdrive_id"
-					localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db"
+					localConnectionString = "postgresql://user%3Aname:%21pass@127.0.0.1:${port}/some_db"
 			`,
 			"src/index.ts": dedent`
 					export default {
@@ -549,7 +549,7 @@ describe("hyperdrive dev tests", () => {
 			);
 			const url = new URL(text);
 			expect(url.pathname).toBe("/some_db");
-			expect(url.username).toBe("user");
+			expect(url.username).toBe("user:name");
 			expect(url.password).toBe("!pass");
 			expect(url.host).not.toBe("localhost");
 		});

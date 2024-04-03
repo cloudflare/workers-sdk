@@ -58,12 +58,6 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
 			},
-			"private-host": {
-				type: "boolean",
-				describe:
-					"Whether the provided host is part of your Cloudflare Zero Trust private network",
-				default: false,
-			},
 		})
 		.epilogue(hyperdriveBetaWarning);
 }
@@ -122,7 +116,6 @@ export async function handler(
 			database: args.database,
 			user: args.originUser,
 			password: args.originPassword,
-			private_host: args.privateHost,
 		};
 	}
 

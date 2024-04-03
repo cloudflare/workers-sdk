@@ -107,7 +107,7 @@ describe("hyperdrive commands", () => {
 	it("should handle creating a hyperdrive config", async () => {
 		mockHyperdriveRequest();
 		await runWrangler(
-			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/database'"
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 Creating 'test123'
@@ -118,9 +118,8 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 12345,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -132,7 +131,7 @@ describe("hyperdrive commands", () => {
 	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
 		mockHyperdriveRequest();
 		await runWrangler(
-			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/database'"
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 Creating 'test123'
@@ -143,9 +142,8 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -157,7 +155,7 @@ describe("hyperdrive commands", () => {
 	it("should handle creating a hyperdrive config with caching options", async () => {
 		mockHyperdriveRequest();
 		await runWrangler(
-			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/database' --max-age=30 --swr=15"
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --max-age=30 --swr=15"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 Creating 'test123'
@@ -168,39 +166,13 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 12345,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
 		    \\"max_age\\": 30,
 		    \\"stale_while_revalidate\\": 15
-		  }
-		}"
-	`);
-	});
-
-	it("should handle creating a hyperdrive with a private host", async () => {
-		mockHyperdriveRequest();
-		await runWrangler(
-			"hyperdrive create test123 --connection-string='postgresql://test:password@private.example.com:12345/database' --private-host=true"
-		);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating 'test123'
-		✅ Created new Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"private.example.com\\",
-		    \\"port\\": 12345,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": true
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
 		  }
 		}"
 	`);
@@ -221,8 +193,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"user:name\\",
-		    \\"private_host\\": false
+		    \\"user\\": \\"user:name\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -246,8 +217,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"neondb\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -271,8 +241,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
 		    \\"database\\": \\"/\\"weird/\\" dbname\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -289,7 +258,7 @@ describe("hyperdrive commands", () => {
 		┌──────────────────────────────────────┬─────────┬────────┬────────────────┬──────┬──────────┬────────────────────┐
 		│ id                                   │ name    │ user   │ host           │ port │ database │ caching            │
 		├──────────────────────────────────────┼─────────┼────────┼────────────────┼──────┼──────────┼────────────────────┤
-		│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123 │ test   │ example.com    │ 5432 │ database │ {\\"disabled\\":false} │
+		│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123 │ test   │ example.com    │ 5432 │ neondb   │ {\\"disabled\\":false} │
 		├──────────────────────────────────────┼─────────┼────────┼────────────────┼──────┼──────────┼────────────────────┤
 		│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db  │ dbuser │ www.google.com │ 3211 │ mydb     │ {\\"disabled\\":false} │
 		└──────────────────────────────────────┴─────────┴────────┴────────────────┴──────┴──────────┴────────────────────┘"
@@ -306,9 +275,8 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -341,33 +309,7 @@ describe("hyperdrive commands", () => {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 1234,
 		    \\"database\\": \\"mydb\\",
-		    \\"user\\": \\"newuser\\",
-		    \\"private_host\\": false
-		  },
-		  \\"caching\\": {
-		    \\"disabled\\": false
-		  }
-		}"
-	`);
-	});
-
-	it("should handle updating a hyperdrive config's origin with private host", async () => {
-		mockHyperdriveRequest();
-		await runWrangler(
-			`hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=private.example.com --origin-port=1234 --database=mydb --origin-user=newuser --origin-password='passw0rd!' --private-host=true`
-		);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-		✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
-		 {
-		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
-		  \\"name\\": \\"test123\\",
-		  \\"origin\\": {
-		    \\"host\\": \\"private.example.com\\",
-		    \\"port\\": 1234,
-		    \\"database\\": \\"mydb\\",
-		    \\"user\\": \\"newuser\\",
-		    \\"private_host\\": true
+		    \\"user\\": \\"newuser\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -405,9 +347,8 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false,
@@ -432,9 +373,8 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": true
@@ -457,9 +397,8 @@ describe("hyperdrive commands", () => {
 		  \\"origin\\": {
 		    \\"host\\": \\"example.com\\",
 		    \\"port\\": 5432,
-		    \\"database\\": \\"database\\",
-		    \\"user\\": \\"test\\",
-		    \\"private_host\\": false
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
 		  },
 		  \\"caching\\": {
 		    \\"disabled\\": false
@@ -475,9 +414,8 @@ const defaultConfig: HyperdriveConfig = {
 	origin: {
 		host: "example.com",
 		port: 5432,
-		database: "database",
+		database: "neondb",
 		user: "test",
-		private_host: false,
 	},
 	caching: {
 		disabled: false,
@@ -509,7 +447,6 @@ function mockHyperdriveRequest() {
 									database: reqBody.origin.database,
 									scheme: reqBody.origin.protocol,
 									user: reqBody.origin.user,
-									private_host: reqBody.origin.private_host,
 								},
 								caching: reqBody.caching,
 							},
@@ -536,7 +473,6 @@ function mockHyperdriveRequest() {
 												port: reqBody.origin.port,
 												database: reqBody.origin.database,
 												user: reqBody.origin.user,
-												private_host: reqBody.origin.private_host,
 										  }
 										: defaultConfig.origin,
 								caching: reqBody.caching ?? defaultConfig.caching,
@@ -567,7 +503,6 @@ function mockHyperdriveRequest() {
 									port: 3211,
 									database: "mydb",
 									user: "dbuser",
-									private_host: false,
 								},
 								caching: {
 									disabled: false,
