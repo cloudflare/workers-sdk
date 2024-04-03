@@ -7,7 +7,7 @@ import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Project } from "./../../pages/types";
 
-describe("project list", () => {
+describe("pages project list", () => {
 	runInTempDir();
 	mockConsoleMethods();
 	mockAccountId();

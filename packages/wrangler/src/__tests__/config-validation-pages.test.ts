@@ -8,8 +8,9 @@ describe("validatePagesConfig()", () => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 			config.main = "./src/index.js";
+			config.name = "pages-project";
 
-			const diagnostics = validatePagesConfig(config, []);
+			const diagnostics = validatePagesConfig(config, [], "pages-project");
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -21,12 +22,29 @@ describe("validatePagesConfig()", () => {
 		});
 	});
 
+	describe("`name` field validation", () => {
+		it('should error if "name" field is not specififed at the top-level', () => {
+			const config = generateConfigurationWithDefaults();
+			config.pages_build_output_dir = "./public";
+
+			const diagnostics = validatePagesConfig(config, [], undefined);
+			expect(diagnostics.hasWarnings()).toBeFalsy();
+			expect(diagnostics.hasErrors()).toBeTruthy();
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Running configuration file validation for Pages:
+			  - Missing top-level field \\"name\\" in configuration file.
+			    Pages requires the name of your project to be configured at the top-level of your \`wrangler.toml\` file. This is because, in Pages, environments target the same project."
+		`);
+		});
+	});
+
 	describe("named environments validation", () => {
 		it("should pass if no named environments are defined", () => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
+			config.name = "pages-project";
 
-			const diagnostics = validatePagesConfig(config, []);
+			const diagnostics = validatePagesConfig(config, [], "pages-project");
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
@@ -34,16 +52,29 @@ describe("validatePagesConfig()", () => {
 		it("should pass for environments named 'preview' and/or 'production'", () => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
+			config.name = "pages-project";
 
-			let diagnostics = validatePagesConfig(config, ["preview"]);
+			let diagnostics = validatePagesConfig(
+				config,
+				["preview"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeFalsy();
 
-			diagnostics = validatePagesConfig(config, ["production"]);
+			diagnostics = validatePagesConfig(
+				config,
+				["production"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeFalsy();
 
-			diagnostics = validatePagesConfig(config, ["preview", "production"]);
+			diagnostics = validatePagesConfig(
+				config,
+				["preview", "production"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
@@ -51,11 +82,13 @@ describe("validatePagesConfig()", () => {
 		it("should error for any other named environments", () => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./assets";
+			config.name = "pages-project";
 
-			let diagnostics = validatePagesConfig(config, [
-				"unsupported-env-name-1",
-				"unsupported-env-name-2",
-			]);
+			let diagnostics = validatePagesConfig(
+				config,
+				["unsupported-env-name-1", "unsupported-env-name-2"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -65,10 +98,11 @@ describe("validatePagesConfig()", () => {
 			    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
 		`);
 
-			diagnostics = validatePagesConfig(config, [
-				"production",
-				"unsupported-env-name",
-			]);
+			diagnostics = validatePagesConfig(
+				config,
+				["production", "unsupported-env-name"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -84,15 +118,19 @@ describe("validatePagesConfig()", () => {
 		it("should pass if configuration contains only Pages-supported configuration fields", () => {
 			let config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./dist";
+			config.name = "pages-project";
 
-			let diagnostics = validatePagesConfig(config, ["preview"]);
+			let diagnostics = validatePagesConfig(
+				config,
+				["preview"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeFalsy();
 
 			config = {
 				...config,
 				...{
-					name: "test-pages-project",
 					compatibility_date: "2024-01-01",
 					compatibility_flags: ["FLAG1", "FLAG2"],
 					send_metrics: true,
@@ -140,7 +178,11 @@ describe("validatePagesConfig()", () => {
 				},
 			};
 
-			diagnostics = validatePagesConfig(config, ["production"]);
+			diagnostics = validatePagesConfig(
+				config,
+				["production"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
@@ -148,6 +190,7 @@ describe("validatePagesConfig()", () => {
 		it("should fail if configuration contains any fields that are not supported by Pages projects", () => {
 			const defaultConfig = generateConfigurationWithDefaults();
 			defaultConfig.pages_build_output_dir = "./public";
+			defaultConfig.name = "pages-project";
 
 			// test with top-level only config fields
 			let config: Config = {
@@ -161,7 +204,11 @@ describe("validatePagesConfig()", () => {
 					},
 				},
 			};
-			let diagnostics = validatePagesConfig(config, ["preview"]);
+			let diagnostics = validatePagesConfig(
+				config,
+				["preview"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -182,7 +229,11 @@ describe("validatePagesConfig()", () => {
 					node_compat: true,
 				},
 			};
-			diagnostics = validatePagesConfig(config, ["production"]);
+			diagnostics = validatePagesConfig(
+				config,
+				["production"],
+				"pages-project"
+			);
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -207,7 +258,7 @@ describe("validatePagesConfig()", () => {
 					cloudchamber: { vcpu: 100, memory: "2GB" },
 				},
 			};
-			diagnostics = validatePagesConfig(config, ["preview"]);
+			diagnostics = validatePagesConfig(config, ["preview"], "pages-project");
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`

@@ -11,7 +11,7 @@ jest.mock("../../pages/constants", () => ({
 	MAX_ASSET_COUNT: 10,
 }));
 
-describe("project validate", () => {
+describe("pages project validate", () => {
 	const std = mockConsoleMethods();
 
 	runInTempDir();

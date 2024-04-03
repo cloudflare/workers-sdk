@@ -111,7 +111,8 @@ export function readConfig<CommandArgs>(
 		);
 
 		const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
-		const pagesDiagnostics = validatePagesConfig(config, envNames);
+		const projectName = rawConfig?.name;
+		const pagesDiagnostics = validatePagesConfig(config, envNames, projectName);
 
 		if (pagesDiagnostics.hasWarnings()) {
 			logger.warn(pagesDiagnostics.renderWarnings());
