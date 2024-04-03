@@ -5,7 +5,7 @@ The aim of this guideline is to help Wrangler contributors maintain consistent p
 ## Styleguide legend
 
 - \*Text in between stars designates placeholder text that should be replaced.\*
-- \<Text contained within angle brackets are placeholder commands, args or or filepaths.\>
+- \<Text contained within angle brackets are placeholder commands, args or filepaths.\>
 - #Text in between hashtags designates the user's input that must occur before the next line can display.#
 
 ## Wrangler syntax
