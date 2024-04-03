@@ -10,13 +10,15 @@ import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
-import { DeploymentsService } from "./client";
+import { AssignIPv4, DeploymentsService } from "./client";
 import {
 	checkEverythingIsSet,
 	collectEnvironmentVariables,
+	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
 	promptForEnvironmentVariables,
+	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
 } from "./common";
@@ -29,7 +31,7 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { EnvironmentVariable, SSHPublicKeyID } from "./client";
+import type { EnvironmentVariable, Label, SSHPublicKeyID } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
@@ -53,6 +55,13 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			array: true,
 			demandOption: false,
 			describe: "Container environment variables",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		})
+		.option("label", {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Deployment labels",
 			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
 		})
 		.option("all-ssh-keys", {
@@ -101,24 +110,30 @@ export async function createCommand(
 		config,
 		args.var
 	);
+	const labels = collectLabels(args.label);
+
 	if (!interactWithUser(args)) {
 		const body = checkEverythingIsSet(args, ["image", "location"]);
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
 			: [];
+		const network =
+			args.ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,
 			ssh_public_key_ids: keysToAdd,
 			environment_variables: environmentVariables,
+			labels: labels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
 			memory: args.memory ?? config.cloudchamber.memory,
+			network: network,
 		});
 		console.log(JSON.stringify(deployment, null, 4));
 		return;
 	}
 
-	await handleCreateCommand(args, config, environmentVariables);
+	await handleCreateCommand(args, config, environmentVariables, labels);
 }
 
 async function askWhichSSHKeysDoTheyWantToAdd(
@@ -201,7 +216,8 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 export async function handleCreateCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
 	config: Config,
-	environmentVariables: EnvironmentVariable[] | undefined
+	environmentVariables: EnvironmentVariable[] | undefined,
+	labels: Label[] | undefined
 ) {
 	startSection("Create a Cloudflare container", "Step 1 of 2");
 	const sshKeyID = await promptForSSHKeyAndGetAddedSSHKey(args);
@@ -228,6 +244,7 @@ export async function handleCreateCommand(
 		[],
 		false
 	);
+	const selectedLabels = await promptForLabels(labels, [], false);
 
 	const account = await loadAccount();
 	renderDeploymentConfiguration("create", {
@@ -238,6 +255,7 @@ export async function handleCreateCommand(
 		memory:
 			args.memory ?? config.cloudchamber.memory ?? account.defaults.memory,
 		environmentVariables: selectedEnvironmentVariables,
+		labels: selectedLabels,
 		env: args.env,
 	});
 
@@ -259,6 +277,7 @@ export async function handleCreateCommand(
 			location: location,
 			ssh_public_key_ids: keys,
 			environment_variables: environmentVariables,
+			labels: labels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
 			memory: args.memory ?? config.cloudchamber.memory,
 			network,

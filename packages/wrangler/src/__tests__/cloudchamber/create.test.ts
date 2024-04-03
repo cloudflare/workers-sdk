@@ -43,6 +43,7 @@ describe("cloudchamber create", () => {
 		      --image         Image to use for your deployment  [string]
 		      --location      Location on Cloudflare's network where your deployment will run  [string]
 		      --var           Container environment variables  [array]
+		      --label         Deployment labels  [array]
 		      --all-ssh-keys  To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 		      --ssh-key-id    ID of the SSH key to add to the deployment  [array]
 		      --vcpu          Number of vCPUs to allocate to this deployment.  [number]
@@ -65,14 +66,14 @@ describe("cloudchamber create", () => {
 		msw.use(
 			rest.post("*/deployments/v2", async (request, response, context) => {
 				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\"}"`
+					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
 				);
 				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
 			})
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(
-			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 400GB"
+			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 400GB --ipv4 true"
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
@@ -85,9 +86,13 @@ describe("cloudchamber create", () => {
 		    \\"memory\\": \\"400MB\\",
 		    \\"version\\": 1,
 		    \\"image\\": \\"hello\\",
-		    \\"location\\": \\"sfo06\\",
-		    \\"ipv4\\": \\"1.1.1.1\\",
-		    \\"current_placement\\": null,
+		    \\"location\\": {
+		        \\"name\\": \\"sfo06\\",
+		        \\"enabled\\": true
+		    },
+		    \\"network\\": {
+		        \\"ipv4\\": \\"1.1.1.1\\"
+		    },
 		    \\"placements_ref\\": \\"http://ref\\",
 		    \\"node_group\\": \\"metal\\"
 		}"
@@ -111,13 +116,13 @@ describe("cloudchamber create", () => {
 		msw.use(
 			rest.post("*/deployments/v2", async (request, response, context) => {
 				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\"}"`
+					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
 				);
 				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
 			})
 		);
 		await runWrangler(
-			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --all-ssh-keys"
+			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --all-ssh-keys --ipv4"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"{
@@ -128,9 +133,13 @@ describe("cloudchamber create", () => {
 		    \\"memory\\": \\"400MB\\",
 		    \\"version\\": 1,
 		    \\"image\\": \\"hello\\",
-		    \\"location\\": \\"sfo06\\",
-		    \\"ipv4\\": \\"1.1.1.1\\",
-		    \\"current_placement\\": null,
+		    \\"location\\": {
+		        \\"name\\": \\"sfo06\\",
+		        \\"enabled\\": true
+		    },
+		    \\"network\\": {
+		        \\"ipv4\\": \\"1.1.1.1\\"
+		    },
 		    \\"placements_ref\\": \\"http://ref\\",
 		    \\"node_group\\": \\"metal\\"
 		}"

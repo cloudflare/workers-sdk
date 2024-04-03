@@ -43,6 +43,7 @@ describe("cloudchamber modify", () => {
 		Options:
 		      --json               Return output as clean JSON  [boolean] [default: false]
 		      --var                Container environment variables  [array]
+		      --label              Deployment labels  [array]
 		      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
 		      --image              The new image that the deployment will have from now on  [string]
 		      --location           The new location that the deployment will have from now on  [string]
@@ -55,12 +56,15 @@ describe("cloudchamber modify", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.patch("*/deployments/1234", async (request, response, context) => {
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:modify\\",\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"40MB\\"}"`
-				);
-				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-			})
+			rest.patch(
+				"*/deployments/1234/v2",
+				async (request, response, context) => {
+					expect(await request.text()).toMatchInlineSnapshot(
+						`"{\\"image\\":\\"hello:modify\\",\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"40MB\\"}"`
+					);
+					return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
+				}
+			)
 		);
 		await runWrangler(
 			"cloudchamber modify 1234 --image hello:modify --var HELLO:WORLD --var YOU:CONQUERED --vcpu 3 --memory 40MB"
@@ -77,9 +81,13 @@ describe("cloudchamber modify", () => {
 		    \\"memory\\": \\"400MB\\",
 		    \\"version\\": 1,
 		    \\"image\\": \\"hello\\",
-		    \\"location\\": \\"sfo06\\",
-		    \\"ipv4\\": \\"1.1.1.1\\",
-		    \\"current_placement\\": null,
+		    \\"location\\": {
+		        \\"name\\": \\"sfo06\\",
+		        \\"enabled\\": true
+		    },
+		    \\"network\\": {
+		        \\"ipv4\\": \\"1.1.1.1\\"
+		    },
 		    \\"placements_ref\\": \\"http://ref\\",
 		    \\"node_group\\": \\"metal\\"
 		}"

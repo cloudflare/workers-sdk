@@ -49,6 +49,13 @@ export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
 			demandOption: false,
 			describe: "Filter deployments by ipv4 address",
 		})
+		.option("label", {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Filter deployments by labels",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		})
 		.positional("deploymentIdPrefix", {
 			describe:
 				"Optional deploymentId to filter deployments\nThis means that 'list' will only showcase deployments that contain this ID prefix",
@@ -70,7 +77,8 @@ export async function listCommand(
 				deploymentArgs.location,
 				deploymentArgs.image,
 				deploymentArgs.state as State,
-				deploymentArgs.ipv4
+				deploymentArgs.ipv4,
+				deploymentArgs.label
 			)
 		).filter((deployment) => deployment.id.startsWith(prefix));
 		if (deployments.length === 1) {

@@ -32,6 +32,7 @@ import type {
 import type {
 	CompleteAccountCustomer,
 	EnvironmentVariable,
+	Label,
 	NetworkParameters,
 } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
@@ -257,6 +258,7 @@ export function renderDeploymentConfiguration(
 		vcpu,
 		memory,
 		environmentVariables,
+		labels,
 		env,
 		network,
 	}: {
@@ -265,6 +267,7 @@ export function renderDeploymentConfiguration(
 		vcpu: number;
 		memory: string;
 		environmentVariables: EnvironmentVariable[] | undefined;
+		labels: Label[] | undefined;
 		env?: string;
 		network?: NetworkParameters;
 	}
@@ -285,12 +288,23 @@ export function renderDeploymentConfiguration(
 		}vars] and via command line`;
 	}
 
+	let labelsText = "[]";
+	if (labels !== undefined && labels.length !== 0) {
+		labelsText =
+			"\n" +
+			labels
+				.map((ev) => "- " + dim(ev.name + ":" + ev.value))
+				.join("\n")
+				.trim();
+	}
+
 	const containerInformation = [
 		["Image", image],
 		["Location", idToLocationName(location)],
 		["VCPU", `${vcpu}`],
 		["Memory", memory],
 		["Environment variables", environmentVariablesText],
+		["Labels", labelsText],
 		...(network === undefined
 			? []
 			: [
@@ -475,6 +489,100 @@ export async function promptForEnvironmentVariables(
 		}
 
 		return selectedEnvironmentVariables;
+	}
+
+	return [];
+}
+
+export function sortLabels(labels: Label[]) {
+	labels.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function collectLabels(
+	labelArgs: string[] | undefined
+): EnvironmentVariable[] | undefined {
+	const labelMap: Map<string, string> = new Map();
+
+	// environment variables passed as command-line arguments are of
+	// highest precedence
+	if (labelArgs !== undefined) {
+		labelArgs.forEach((v) => {
+			const [name, ...value] = v.split(":");
+			labelMap.set(name, value.join(":"));
+		});
+	}
+
+	if (labelMap.size === 0) {
+		return undefined;
+	}
+
+	const labels: Label[] = Array.from(labelMap).map(([name, value]) => ({
+		name: name,
+		value: value,
+	}));
+	sortLabels(labels);
+
+	return labels;
+}
+
+export async function promptForLabels(
+	labels: Label[] | undefined,
+	initiallySelected: string[],
+	allowSkipping: boolean
+): Promise<Label[] | undefined> {
+	if (labels === undefined || labels.length == 0) {
+		return undefined;
+	}
+
+	let options = [
+		{ label: "Use all of them", value: "all" },
+		{ label: "Use some", value: "select" },
+		{ label: "Do not use any", value: "none" },
+	];
+	if (allowSkipping) {
+		options = [{ label: "Do not modify", value: "skip" }].concat(options);
+	}
+	const action = await inputPrompt({
+		question:
+			"You have labels defined, what do you want to do for this deployment?",
+		label: "",
+		defaultValue: false,
+		helpText: "",
+		type: "select",
+		options,
+	});
+
+	if (action === "skip") {
+		return undefined;
+	}
+	if (action === "all") {
+		return labels;
+	}
+
+	if (action === "select") {
+		const selectedNames = await inputPrompt<string[]>({
+			question: "Select the labels you want to use",
+			label: "",
+			defaultValue: initiallySelected,
+			helpText: "Use the 'space' key to select. Submit with 'enter'",
+			type: "multiselect",
+			options: labels.map((label) => ({
+				label: label.name,
+				value: label.name,
+			})),
+			validate: (values: Arg) => {
+				if (!Array.isArray(values)) return "unknown error";
+			},
+		});
+
+		const selectedNamesSet = new Set(selectedNames);
+		const selectedLabels = [];
+
+		for (const ev of labels) {
+			if (selectedNamesSet.has(ev.name)) selectedLabels.push(ev);
+		}
+
+		return selectedLabels;
 	}
 
 	return [];
