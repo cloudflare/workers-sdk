@@ -1,4 +1,5 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
+import { writeFileSync } from "node:fs";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -72,6 +73,16 @@ describe("pages build env", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`"Your wrangler.toml is not a valid Pages config file"`
 		);
+	});
+	it("should fail correctly with an unparseable config file", async () => {
+		writeFileSync("./wrangler.toml", 'INVALID "FILE');
+		// This error is specifically handled by the caller of build-env
+		await expect(
+			runWrangler("pages functions build-env .")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Your wrangler.toml is not a valid Pages config file"`
+		);
+		expect(std.err).toContain("ParseError");
 	});
 	it("should fail correctly with a non-pages config file w/ invalid environment", async () => {
 		writeWranglerToml({

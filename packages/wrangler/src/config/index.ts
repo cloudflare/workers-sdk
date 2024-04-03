@@ -54,11 +54,26 @@ export function readConfig<CommandArgs>(
 		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
 	}
 
-	// Load the configuration from disk if available
-	if (configPath?.endsWith("toml")) {
-		rawConfig = parseTOML(readFileSync(configPath), configPath);
-	} else if (configPath?.endsWith("json")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+	try {
+		// Load the configuration from disk if available
+		if (configPath?.endsWith("toml")) {
+			rawConfig = parseTOML(readFileSync(configPath), configPath);
+		} else if (configPath?.endsWith("json")) {
+			rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		}
+	} catch (e) {
+		// Swallow parsing errors if we require a pages config file.
+		// At this point, we can't tell if the user intended to provide a Pages config file (and so should see the parsing error) or not (and so shouldn't).
+		// We err on the side of swallowing the error so as to not break existing projects
+		if (requirePagesConfig) {
+			logger.error(e);
+			throw new FatalError(
+				"Your wrangler.toml is not a valid Pages config file",
+				EXIT_CODE_INVALID_PAGES_CONFIG
+			);
+		} else {
+			throw e;
+		}
 	}
 
 	/**
