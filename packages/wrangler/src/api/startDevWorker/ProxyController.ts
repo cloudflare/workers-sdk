@@ -126,8 +126,12 @@ export class ProxyController extends EventEmitter {
 						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
 					},
 
-					unsafeDirectHost: this.latestConfig.dev?.inspector?.hostname,
-					unsafeDirectPort: this.latestConfig.dev?.inspector?.port ?? 0,
+					unsafeDirectSockets: [
+						{
+							host: this.latestConfig.dev?.inspector?.hostname,
+							port: this.latestConfig.dev?.inspector?.port ?? 0,
+						},
+					],
 
 					// no need to use file-system, so don't
 					cache: false,

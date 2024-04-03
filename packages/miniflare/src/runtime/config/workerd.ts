@@ -160,6 +160,17 @@ export interface Worker_Binding_Hyperdrive {
 	scheme?: string;
 }
 
+export interface Worker_Binding_MemoryCache {
+	id?: string;
+	limits?: Worker_Binding_MemoryCacheLimits;
+}
+
+export interface Worker_Binding_MemoryCacheLimits {
+	maxKeys?: number;
+	maxValueSize?: number;
+	maxTotalValueSize?: number;
+}
+
 export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
@@ -199,6 +210,7 @@ export interface HttpOptions {
 	cfBlobHeader?: string;
 	injectRequestHeaders?: HttpOptions_Header[];
 	injectResponseHeaders?: HttpOptions_Header[];
+	capnpConnectHost?: string;
 }
 
 export interface HttpOptions_Header {

@@ -45,6 +45,7 @@ export interface UnstableDevOptions {
 		binding: string;
 		service: string;
 		environment?: string | undefined;
+		entrypoint?: string | undefined;
 	}[];
 	r2?: {
 		binding: string;

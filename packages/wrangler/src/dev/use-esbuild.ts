@@ -185,8 +185,6 @@ export function useEsbuild({
 							assets,
 							// disable the cache in dev
 							bypassAssetCache: true,
-							workerDefinitions,
-							services,
 							targetConsumer,
 							testScheduled,
 							plugins: [onEnd],

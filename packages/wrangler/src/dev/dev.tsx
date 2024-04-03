@@ -72,6 +72,7 @@ function useDevRegistry(
 			mode === "local"
 				? setInterval(() => {
 						getBoundRegisteredWorkers({
+							name,
 							services,
 							durableObjects,
 						}).then(
@@ -414,7 +415,8 @@ function DevSession(props: DevSessionProps) {
 			await maybeRegisterLocalWorker(
 				url,
 				props.name,
-				proxyData.internalDurableObjects
+				proxyData.internalDurableObjects,
+				proxyData.entrypointAddresses
 			);
 		}
 
@@ -471,6 +473,7 @@ function DevSession(props: DevSessionProps) {
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
+			services={props.bindings.services}
 		/>
 	) : (
 		<Remote

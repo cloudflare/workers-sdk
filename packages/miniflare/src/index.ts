@@ -45,6 +45,7 @@ import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
+	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
 	PLUGIN_ENTRIES,
 	PluginServicesOptions,
@@ -80,6 +81,7 @@ import {
 import {
 	Config,
 	Extension,
+	HttpOptions_Style,
 	Runtime,
 	RuntimeOptions,
 	Service,
@@ -600,32 +602,30 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	// rejections from aborted request body streams:
 	// https://github.com/nodejs/undici/blob/dfaec78f7a29f07bb043f9006ed0ceb0d5220b55/lib/core/util.js#L369-L392
 	let iterator: AsyncIterator<Uint8Array>;
-	return new ReadableStream<Uint8Array>(
-		{
-			async start() {
-				iterator = iterable[Symbol.asyncIterator]();
-			},
-			// @ts-expect-error `pull` may return anything
-			async pull(controller): Promise<boolean> {
-				try {
-					const { done, value } = await iterator.next();
-					if (done) {
-						queueMicrotask(() => controller.close());
-					} else {
-						const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
-						controller.enqueue(new Uint8Array(buf));
-					}
-				} catch {
+	return new ReadableStream<Uint8Array>({
+		async start() {
+			iterator = iterable[Symbol.asyncIterator]();
+		},
+		// @ts-expect-error `pull` may return anything
+		async pull(controller): Promise<boolean> {
+			try {
+				const { done, value } = await iterator.next();
+				if (done) {
 					queueMicrotask(() => controller.close());
+				} else {
+					const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+					controller.enqueue(new Uint8Array(buf));
 				}
-				// @ts-expect-error `pull` may return anything
-				return controller.desiredSize > 0;
-			},
-			async cancel() {
-				await iterator.return?.();
-			},
-		}
-	);
+			} catch {
+				queueMicrotask(() => controller.close());
+			}
+			// @ts-expect-error `pull` may return anything
+			return controller.desiredSize > 0;
+		},
+		async cancel() {
+			await iterator.return?.();
+		},
+	});
 }
 
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
@@ -639,6 +639,7 @@ export function _initialiseInstanceRegistry() {
 
 export class Miniflare {
 	#previousSharedOpts?: PluginSharedOptions;
+	#previousWorkerOpts?: PluginWorkerOptions[];
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
@@ -1002,6 +1003,7 @@ export class Miniflare {
 	}
 
 	async #assembleConfig(loopbackPort: number): Promise<Config> {
+		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
@@ -1057,6 +1059,7 @@ export class Miniflare {
 		}[] = [];
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
+			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
 			const workerName = workerOpts.core.name ?? "";
 			const isModulesWorker = Boolean(workerOpts.core.modules);
@@ -1173,26 +1176,32 @@ export class Miniflare {
 
 			// Allow additional sockets to be opened directly to specific workers,
 			// bypassing Miniflare's entry worker.
-			const { unsafeDirectHost, unsafeDirectPort } = workerOpts.core;
-			if (unsafeDirectHost !== undefined || unsafeDirectPort !== undefined) {
-				const name = getDirectSocketName(i);
+			const previousDirectSockets =
+				previousWorkerOpts?.core.unsafeDirectSockets ?? [];
+			const directSockets = workerOpts.core.unsafeDirectSockets ?? [];
+			for (let j = 0; j < directSockets.length; j++) {
+				const previousDirectSocket = previousDirectSockets[j];
+				const directSocket = directSockets[j];
+				const entrypoint = directSocket.entrypoint ?? "default";
+				const name = getDirectSocketName(i, entrypoint);
 				const address = this.#getSocketAddress(
 					name,
-					// We don't attempt to reuse allocated ports for `unsafeDirectPort: 0`
-					// as there's not always a clear mapping between current/previous
-					// worker options. We could do it by index, names, script, etc.
-					// This is an unsafe option primarily intended for Wrangler's
-					// inspector proxy, which will usually set this value to `9229`.
-					// We could consider changing this in the future.
-					/* previousRequestedPort */ undefined,
-					unsafeDirectHost,
-					unsafeDirectPort
+					previousDirectSocket?.port,
+					directSocket.host,
+					directSocket.port
 				);
 				sockets.push({
 					name,
 					address,
-					service: { name: getUserServiceName(workerName) },
-					http: {},
+					service: {
+						name: getUserServiceName(workerName),
+						entrypoint: entrypoint === "default" ? undefined : entrypoint,
+					},
+					http: {
+						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
+						cfBlobHeader: CoreHeaders.CF_BLOB,
+						capnpConnectHost: HOST_CAPNP_CONNECT,
+					},
 				});
 			}
 		}
@@ -1433,7 +1442,10 @@ export class Miniflare {
 		return new URL(`ws://127.0.0.1:${maybePort}`);
 	}
 
-	async unsafeGetDirectURL(workerName?: string): Promise<URL> {
+	async unsafeGetDirectURL(
+		workerName?: string,
+		entrypoint = "default"
+	): Promise<URL> {
 		this.#checkDisposed();
 		await this.ready;
 
@@ -1442,7 +1454,7 @@ export class Miniflare {
 		const workerOpts = this.#workerOpts[workerIndex];
 
 		// Try to get direct access port for worker
-		const socketName = getDirectSocketName(workerIndex);
+		const socketName = getDirectSocketName(workerIndex, entrypoint);
 		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns.
 		assert(this.#socketPorts !== undefined);
@@ -1450,13 +1462,20 @@ export class Miniflare {
 		if (maybePort === undefined) {
 			const friendlyWorkerName =
 				workerName === undefined ? "entrypoint" : JSON.stringify(workerName);
+			const friendlyEntrypointName =
+				entrypoint === "default" ? entrypoint : JSON.stringify(entrypoint);
 			throw new TypeError(
-				`Direct access disabled in ${friendlyWorkerName} worker`
+				`Direct access disabled in ${friendlyWorkerName} worker for ${friendlyEntrypointName} entrypoint`
 			);
 		}
 
 		// Construct accessible URL from configured host and port
-		const host = workerOpts.core.unsafeDirectHost ?? DEFAULT_HOST;
+		const directSocket = workerOpts.core.unsafeDirectSockets?.find(
+			(socket) => (socket.entrypoint ?? "default") === entrypoint
+		);
+		// Should be able to find socket with correct entrypoint if port assigned
+		assert(directSocket !== undefined);
+		const host = directSocket.host ?? DEFAULT_HOST;
 		const accessibleHost =
 			maybeGetLocallyAccessibleHost(host) ?? getURLSafeHost(host);
 		// noinspection HttpUrlsUsage
@@ -1478,6 +1497,7 @@ export class Miniflare {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#previousSharedOpts = this.#sharedOpts;
+		this.#previousWorkerOpts = this.#workerOpts;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;

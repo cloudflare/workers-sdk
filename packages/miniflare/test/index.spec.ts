@@ -512,6 +512,113 @@ test("Miniflare: service binding to current worker", async (t) => {
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "body:callback");
 });
+test("Miniflare: service binding to network", async (t) => {
+	const { http } = await useServer(t, (req, res) => res.end("network"));
+	const mf = new Miniflare({
+		serviceBindings: { NETWORK: { network: { allow: ["private"] } } },
+		modules: true,
+		script: `export default {
+			fetch(request, env) { return env.NETWORK.fetch(request); }
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch(http);
+	t.is(await res.text(), "network");
+});
+test("Miniflare: service binding to external server", async (t) => {
+	const { http } = await useServer(t, (req, res) => res.end("external"));
+	const mf = new Miniflare({
+		serviceBindings: {
+			EXTERNAL: { external: { address: http.host, http: {} } },
+		},
+		modules: true,
+		script: `export default {
+			fetch(request, env) { return env.EXTERNAL.fetch(request); }
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://example.com");
+	t.is(await res.text(), "external");
+});
+test("Miniflare: service binding to disk", async (t) => {
+	const tmp = await useTmp(t);
+	const testPath = path.join(tmp, "test.txt");
+	await fs.writeFile(testPath, "👋");
+	const mf = new Miniflare({
+		serviceBindings: {
+			DISK: { disk: { path: tmp, writable: true } },
+		},
+		modules: true,
+		script: `export default {
+			fetch(request, env) { return env.DISK.fetch(request); }
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("https://example.com/test.txt");
+	t.is(await res.text(), "👋");
+
+	res = await mf.dispatchFetch("https://example.com/test.txt", {
+		method: "PUT",
+		body: "✏️",
+	});
+	t.is(res.status, 204);
+	t.is(await fs.readFile(testPath, "utf8"), "✏️");
+});
+test("Miniflare: service binding to named entrypoint", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				serviceBindings: {
+					A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
+					A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
+					B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
+				},
+				compatibilityFlags: ["rpc"],
+				modules: true,
+				script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export class RpcEntrypoint extends WorkerEntrypoint {
+					ping() { return "a:rpc:pong"; }
+				}
+				
+				export const namedEntrypoint = {
+					fetch(request, env, ctx) { return new Response("a:named:pong"); }
+				};
+				
+				export default {
+					async fetch(request, env) {
+						const aRpc = await env.A_RPC_SERVICE.ping();
+						const aNamed = await (await env.A_NAMED_SERVICE.fetch("http://placeholder")).text();
+						const bNamed = await (await env.B_NAMED_SERVICE.fetch("http://placeholder")).text();
+						return Response.json({ aRpc, aNamed, bNamed });
+					}
+				}
+				`,
+			},
+			{
+				name: "b",
+				modules: true,
+				script: `
+				export const anotherNamedEntrypoint = {
+					fetch(request, env, ctx) { return new Response("b:named:pong"); }
+				};
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	t.deepEqual(await res.json(), {
+		aRpc: "a:rpc:pong",
+		aNamed: "a:named:pong",
+		bNamed: "b:named:pong",
+	});
+});
 
 test("Miniflare: custom outbound service", async (t) => {
 	const mf = new Miniflare({
@@ -1335,7 +1442,7 @@ test("Miniflare: allows direct access to workers", async (t) => {
 			{
 				name: "a",
 				script: `addEventListener("fetch", (e) => e.respondWith(new Response("a")))`,
-				unsafeDirectPort: 0,
+				unsafeDirectSockets: [{ port: 0 }],
 			},
 			{
 				routes: ["*/*"],
@@ -1344,7 +1451,25 @@ test("Miniflare: allows direct access to workers", async (t) => {
 			{
 				name: "c",
 				script: `addEventListener("fetch", (e) => e.respondWith(new Response("c")))`,
-				unsafeDirectHost: "127.0.0.1",
+				unsafeDirectSockets: [{ host: "127.0.0.1" }],
+			},
+			{
+				name: "d",
+				compatibilityFlags: ["experimental"],
+				modules: true,
+				script: `
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				export class One extends WorkerEntrypoint {
+					fetch() { return new Response("d:1"); }				
+				}
+				export const two = {
+					fetch() { return new Response("d:2"); }
+				};
+				export const three = {
+					fetch() { return new Response("d:2"); }
+				};
+				`,
+				unsafeDirectSockets: [{ entrypoint: "One" }, { entrypoint: "two" }],
 			},
 		],
 	});
@@ -1363,15 +1488,63 @@ test("Miniflare: allows direct access to workers", async (t) => {
 	res = await fetch(cURL);
 	t.is(await res.text(), "c");
 
+	// Check can access workers directly with different entrypoints
+	const d1URL = await mf.unsafeGetDirectURL("d", "One");
+	const d2URL = await mf.unsafeGetDirectURL("d", "two");
+	res = await fetch(d1URL);
+	t.is(await res.text(), "d:1");
+	res = await fetch(d2URL);
+	t.is(await res.text(), "d:2");
+
 	// Can can only access configured for direct access
-	await t.throwsAsync(mf.unsafeGetDirectURL("d"), {
+	await t.throwsAsync(mf.unsafeGetDirectURL("z"), {
 		instanceOf: TypeError,
-		message: '"d" worker not found',
+		message: '"z" worker not found',
 	});
 	await t.throwsAsync(mf.unsafeGetDirectURL(""), {
 		instanceOf: TypeError,
-		message: 'Direct access disabled in "" worker',
+		message: 'Direct access disabled in "" worker for default entrypoint',
 	});
+	await t.throwsAsync(mf.unsafeGetDirectURL("d", "three"), {
+		instanceOf: TypeError,
+		message: 'Direct access disabled in "d" worker for "three" entrypoint',
+	});
+});
+test("Miniflare: allows RPC between multiple instances", async (t) => {
+	const mf1 = new Miniflare({
+		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+		import { WorkerEntrypoint } from "cloudflare:workers";
+		export class TestEntrypoint extends WorkerEntrypoint {
+			ping() { return "pong"; }
+		}
+		`,
+	});
+	t.teardown(() => mf1.dispose());
+
+	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
+
+	const mf2 = new Miniflare({
+		serviceBindings: {
+			SERVICE: { external: { address: testEntrypointUrl.host, http: {} } },
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const result = await env.SERVICE.ping();
+				return new Response(result);
+			}
+		}
+		`,
+	});
+	t.teardown(() => mf2.dispose());
+
+	const res = await mf2.dispatchFetch("http://placeholder");
+	t.is(await res.text(), "pong");
 });
 
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script

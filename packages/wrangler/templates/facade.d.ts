@@ -1,9 +1,11 @@
 declare module "__ENTRY_POINT__" {
-	import type { Middleware } from "./middleware/common";
-	const worker: ExportedHandler & {
-		middleware?: Middleware[];
-		envWrappers: ((env: Record<string, unknown>) => Record<string, unknown>)[];
-	};
+	import { Middleware } from "./middleware/common";
+	import { WorkerEntrypoint } from "cloudflare:workers";
+
+	export type WorkerEntrypointConstructor = typeof WorkerEntrypoint;
+	export type WithMiddleware<T> = T & { middleware?: Middleware[] };
+
+	const worker: WithMiddleware<ExportedHandler | WorkerEntrypointConstructor>;
 	export default worker;
 }
 
