@@ -90,7 +90,7 @@ function validateProjectName(
 
 /**
  * Validate that no named-environments other than "preview" and "production"
- * were specififed in the configuration file for Pages
+ * were specified in the configuration file for Pages
  */
 function validatePagesEnvironmentNames(
 	envNames: string[],

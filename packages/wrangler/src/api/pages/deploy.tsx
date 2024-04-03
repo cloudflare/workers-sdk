@@ -169,9 +169,10 @@ export async function deploy({
 	}
 
 	const nodejsCompat =
-		config?.compatibility_flags?.includes("nodejs_compat") ??
-		deploymentConfig.compatibility_flags?.includes("nodejs_compat") ??
-		false;
+		config !== undefined
+			? config.compatibility_flags?.includes("nodejs_compat") ?? false
+			: deploymentConfig.compatibility_flags?.includes("nodejs_compat") ??
+			  false;
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags

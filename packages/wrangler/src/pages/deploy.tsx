@@ -100,8 +100,8 @@ export const Handler = async (args: PagesDeployArgs) => {
 		/*
 		 * this reads the config file with `env` set to `undefined`, which will
 		 * return the top-level config. This contains all the information we
-		 * need from now. We will perform a second config file read later
-		 * in `/api/pages/deploy`, that will get the environment specififc config
+		 * need for now. We will perform a second config file read later
+		 * in `/api/pages/deploy`, that will get the environment specific config
 		 */
 		config = readConfig(configPath, { ...args, env: undefined }, true);
 	} catch (err) {
@@ -113,8 +113,6 @@ export const Handler = async (args: PagesDeployArgs) => {
 			throw err;
 		}
 	}
-
-	// const isPagesConfig = isPagesWranglerToml(configPath);
 
 	/*
 	 * If we found a `wrangler.toml` config file that doesn't specify
@@ -163,10 +161,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 	}
 
 	const isInteractive = process.stdin.isTTY;
-	if (
-		(!projectName || (projectName !== undefined && !isExistingProject)) &&
-		isInteractive
-	) {
+	if ((!projectName || !isExistingProject) && isInteractive) {
 		let existingOrNew: "existing" | "new" = "new";
 
 		/*
