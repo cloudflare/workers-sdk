@@ -9414,8 +9414,8 @@ export default{
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.js",
 				expectedModules: {
-					"index.js.map": expect.stringContaining(
-						`"sources":["another.ts","index.ts"],"sourceRoot":""`
+					"index.js.map": expect.stringMatching(
+						/"sources":\[".*symbol-dispose\.js","another\.ts","index\.ts"\],"sourceRoot":""/
 					),
 				},
 			});
