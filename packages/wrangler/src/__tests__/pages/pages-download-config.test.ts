@@ -4,9 +4,12 @@ import { readFile } from "fs/promises";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import writeWranglerToml from "../helpers/write-wrangler-toml";
 
 function mockSupportingDashRequests(
 	expectedAccountId: string,
@@ -275,12 +278,18 @@ describe("pages download config", () => {
 	runInTempDir();
 
 	mockApiToken();
+	const { setIsTTY } = useMockIsTTY();
+
 	const MOCK_ACCOUNT_ID = "MOCK_ACCOUNT_ID";
 	const MOCK_PROJECT_NAME = "MOCK_PROJECT_NAME";
 	mockAccountId({ accountId: MOCK_ACCOUNT_ID });
 
 	beforeEach(() => {
 		mockSupportingDashRequests(MOCK_ACCOUNT_ID, MOCK_PROJECT_NAME);
+		setIsTTY(true);
+	});
+	afterAll(() => {
+		clearDialogs();
 	});
 
 	it("should download full config correctly", async () => {
@@ -446,5 +455,344 @@ describe("pages download config", () => {
 
 		"
 	`);
+	});
+	describe("overwrite existing file", () => {
+		it("should overwrite existing file w/ --force", async () => {
+			await writeWranglerToml({ name: "some-project" });
+			await runWrangler(`pages download config ${MOCK_PROJECT_NAME} --force`);
+
+			await expect(
+				// Drop the Wrangler generation header
+				(await readFile("wrangler.toml", "utf8"))
+					.split("\n")
+					.slice(1)
+					.join("\n")
+			).toMatchInlineSnapshot(`
+					"name = \\"MOCK_PROJECT_NAME\\"
+					pages_build_output_dir = \\"dist-test\\"
+					compatibility_date = \\"2023-02-14\\"
+
+					[vars]
+					TEST_JSON_PREVIEW = \\"\\"\\"
+					{
+					json: \\"value\\"
+					}\\"\\"\\"
+					TEST_PLAINTEXT_PREVIEW = \\"PLAINTEXT\\"
+
+					[[kv_namespaces]]
+					id = \\"kv-id\\"
+					binding = \\"KV_PREVIEW\\"
+
+					[[kv_namespaces]]
+					id = \\"kv-id\\"
+					binding = \\"KV_PREVIEW2\\"
+
+					[[durable_objects.bindings]]
+					name = \\"DO_PREVIEW\\"
+					class_name = \\"some-class-do-id\\"
+					script_name = \\"some-script-do-id\\"
+					environment = \\"some-environment-do-id\\"
+
+					[[durable_objects.bindings]]
+					name = \\"DO_PREVIEW2\\"
+					class_name = \\"some-class-do-id\\"
+					script_name = \\"some-script-do-id\\"
+					environment = \\"some-environment-do-id\\"
+
+					[[durable_objects.bindings]]
+					name = \\"DO_PREVIEW3\\"
+					class_name = \\"do-class\\"
+					script_name = \\"do-s\\"
+					environment = \\"do-e\\"
+
+					[[d1_databases]]
+					database_id = \\"d1-id\\"
+					binding = \\"D1_PREVIEW\\"
+					database_name = \\"D1_PREVIEW\\"
+
+					[[d1_databases]]
+					database_id = \\"d1-id\\"
+					binding = \\"D1_PREVIEW2\\"
+					database_name = \\"D1_PREVIEW2\\"
+
+					[[r2_buckets]]
+					bucket_name = \\"r2-name\\"
+					binding = \\"R2_PREVIEW\\"
+
+					[[r2_buckets]]
+					bucket_name = \\"r2-name\\"
+					binding = \\"R2_PREVIEW2\\"
+
+					[[services]]
+					binding = \\"SERVICE_PREVIEW\\"
+					service = \\"service\\"
+					environment = \\"production\\"
+
+					[[services]]
+					binding = \\"SERVICE_PREVIEW2\\"
+					service = \\"service\\"
+					environment = \\"production\\"
+
+					[[queues.producers]]
+					binding = \\"QUEUE_PREVIEW\\"
+					queue = \\"q-id\\"
+
+					[[queues.producers]]
+					binding = \\"QUEUE_PREVIEW2\\"
+					queue = \\"q-id\\"
+
+					[[analytics_engine_datasets]]
+					binding = \\"AE_PREVIEW\\"
+					dataset = \\"data\\"
+
+					[[analytics_engine_datasets]]
+					binding = \\"AE_PREVIEW2\\"
+					dataset = \\"data\\"
+
+					[ai]
+					binding = \\"AI_PREVIEW\\"
+
+					[env.production]
+					compatibility_date = \\"2024-02-14\\"
+
+					  [env.production.vars]
+					  TEST_JSON = \\"\\"\\"
+					{
+					json: \\"value\\"
+					}\\"\\"\\"
+					  TEST_PLAINTEXT = \\"PLAINTEXT\\"
+
+					  [[env.production.kv_namespaces]]
+					  id = \\"kv-id\\"
+					  binding = \\"KV\\"
+
+					[[env.production.durable_objects.bindings]]
+					name = \\"DO\\"
+					class_name = \\"some-class-do-id\\"
+					script_name = \\"some-script-do-id\\"
+					environment = \\"some-environment-do-id\\"
+
+					  [[env.production.d1_databases]]
+					  database_id = \\"d1-id\\"
+					  binding = \\"D1\\"
+					  database_name = \\"D1\\"
+
+					  [[env.production.r2_buckets]]
+					  bucket_name = \\"r2-name\\"
+					  binding = \\"R2\\"
+
+					  [[env.production.services]]
+					  binding = \\"SERVICE\\"
+					  service = \\"service\\"
+					  environment = \\"production\\"
+
+					[[env.production.queues.producers]]
+					binding = \\"QUEUE\\"
+					queue = \\"q-id\\"
+
+					  [[env.production.analytics_engine_datasets]]
+					  binding = \\"AE\\"
+					  dataset = \\"data\\"
+
+					  [env.production.ai]
+					  binding = \\"AI\\"
+					"
+			`);
+		});
+		it("should not overwrite existing file w/o --force (non-interactive)", async () => {
+			setIsTTY(false);
+			await writeWranglerToml({ name: "some-project" });
+			await expect(
+				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Not overwriting existing \`wrangler.toml\` file"`
+			);
+
+			await expect(
+				// Drop the Wrangler generation header
+				(await readFile("wrangler.toml", "utf8"))
+					.split("\n")
+					.slice(1)
+					.join("\n")
+			).toMatchInlineSnapshot(`
+			"name = \\"some-project\\"
+			"
+		`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"? Your existing \`wrangler.toml\` file will be overwritten. Continue?
+			🤖 Using fallback value in non-interactive context: no
+			"
+		`);
+		});
+		it("should overwrite existing file w/ prompt", async () => {
+			await writeWranglerToml({ name: "some-project" });
+			await mockConfirm({
+				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",
+				result: true,
+			});
+			await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+
+			await expect(
+				// Drop the Wrangler generation header
+				(await readFile("wrangler.toml", "utf8"))
+					.split("\n")
+					.slice(1)
+					.join("\n")
+			).toMatchInlineSnapshot(`
+			"name = \\"MOCK_PROJECT_NAME\\"
+			pages_build_output_dir = \\"dist-test\\"
+			compatibility_date = \\"2023-02-14\\"
+
+			[vars]
+			TEST_JSON_PREVIEW = \\"\\"\\"
+			{
+			json: \\"value\\"
+			}\\"\\"\\"
+			TEST_PLAINTEXT_PREVIEW = \\"PLAINTEXT\\"
+
+			[[kv_namespaces]]
+			id = \\"kv-id\\"
+			binding = \\"KV_PREVIEW\\"
+
+			[[kv_namespaces]]
+			id = \\"kv-id\\"
+			binding = \\"KV_PREVIEW2\\"
+
+			[[durable_objects.bindings]]
+			name = \\"DO_PREVIEW\\"
+			class_name = \\"some-class-do-id\\"
+			script_name = \\"some-script-do-id\\"
+			environment = \\"some-environment-do-id\\"
+
+			[[durable_objects.bindings]]
+			name = \\"DO_PREVIEW2\\"
+			class_name = \\"some-class-do-id\\"
+			script_name = \\"some-script-do-id\\"
+			environment = \\"some-environment-do-id\\"
+
+			[[durable_objects.bindings]]
+			name = \\"DO_PREVIEW3\\"
+			class_name = \\"do-class\\"
+			script_name = \\"do-s\\"
+			environment = \\"do-e\\"
+
+			[[d1_databases]]
+			database_id = \\"d1-id\\"
+			binding = \\"D1_PREVIEW\\"
+			database_name = \\"D1_PREVIEW\\"
+
+			[[d1_databases]]
+			database_id = \\"d1-id\\"
+			binding = \\"D1_PREVIEW2\\"
+			database_name = \\"D1_PREVIEW2\\"
+
+			[[r2_buckets]]
+			bucket_name = \\"r2-name\\"
+			binding = \\"R2_PREVIEW\\"
+
+			[[r2_buckets]]
+			bucket_name = \\"r2-name\\"
+			binding = \\"R2_PREVIEW2\\"
+
+			[[services]]
+			binding = \\"SERVICE_PREVIEW\\"
+			service = \\"service\\"
+			environment = \\"production\\"
+
+			[[services]]
+			binding = \\"SERVICE_PREVIEW2\\"
+			service = \\"service\\"
+			environment = \\"production\\"
+
+			[[queues.producers]]
+			binding = \\"QUEUE_PREVIEW\\"
+			queue = \\"q-id\\"
+
+			[[queues.producers]]
+			binding = \\"QUEUE_PREVIEW2\\"
+			queue = \\"q-id\\"
+
+			[[analytics_engine_datasets]]
+			binding = \\"AE_PREVIEW\\"
+			dataset = \\"data\\"
+
+			[[analytics_engine_datasets]]
+			binding = \\"AE_PREVIEW2\\"
+			dataset = \\"data\\"
+
+			[ai]
+			binding = \\"AI_PREVIEW\\"
+
+			[env.production]
+			compatibility_date = \\"2024-02-14\\"
+
+			  [env.production.vars]
+			  TEST_JSON = \\"\\"\\"
+			{
+			json: \\"value\\"
+			}\\"\\"\\"
+			  TEST_PLAINTEXT = \\"PLAINTEXT\\"
+
+			  [[env.production.kv_namespaces]]
+			  id = \\"kv-id\\"
+			  binding = \\"KV\\"
+
+			[[env.production.durable_objects.bindings]]
+			name = \\"DO\\"
+			class_name = \\"some-class-do-id\\"
+			script_name = \\"some-script-do-id\\"
+			environment = \\"some-environment-do-id\\"
+
+			  [[env.production.d1_databases]]
+			  database_id = \\"d1-id\\"
+			  binding = \\"D1\\"
+			  database_name = \\"D1\\"
+
+			  [[env.production.r2_buckets]]
+			  bucket_name = \\"r2-name\\"
+			  binding = \\"R2\\"
+
+			  [[env.production.services]]
+			  binding = \\"SERVICE\\"
+			  service = \\"service\\"
+			  environment = \\"production\\"
+
+			[[env.production.queues.producers]]
+			binding = \\"QUEUE\\"
+			queue = \\"q-id\\"
+
+			  [[env.production.analytics_engine_datasets]]
+			  binding = \\"AE\\"
+			  dataset = \\"data\\"
+
+			  [env.production.ai]
+			  binding = \\"AI\\"
+			"
+		`);
+		});
+		it("should not overwrite existing file w/ prompt", async () => {
+			await writeWranglerToml({ name: "some-project" });
+			await mockConfirm({
+				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",
+				result: false,
+			});
+			await expect(
+				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Not overwriting existing \`wrangler.toml\` file"`
+			);
+
+			await expect(
+				// Drop the Wrangler generation header
+				(await readFile("wrangler.toml", "utf8"))
+					.split("\n")
+					.slice(1)
+					.join("\n")
+			).toMatchInlineSnapshot(`
+			"name = \\"some-project\\"
+			"
+		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
