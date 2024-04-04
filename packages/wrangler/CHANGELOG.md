@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.47.0
+
+### Minor Changes
+
+- [#5506](https://github.com/cloudflare/workers-sdk/pull/5506) [`7734f80`](https://github.com/cloudflare/workers-sdk/commit/7734f806c1ac2a38faabc87df4aa8344b585c430) Thanks [@penalosa](https://github.com/penalosa)! - feat: Add interactive prompt to `wrangler pages download config` if an existing `wrangler.toml` file exists
+
 ## 3.46.0
 
 ### Minor Changes
