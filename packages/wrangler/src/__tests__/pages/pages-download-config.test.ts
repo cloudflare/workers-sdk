@@ -602,7 +602,11 @@ describe("pages download config", () => {
 		it("should not overwrite existing file w/o --force (non-interactive)", async () => {
 			setIsTTY(false);
 			await writeWranglerToml({ name: "some-project" });
-			await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+			await expect(
+				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Not overwriting existing \`wrangler.toml\` file"`
+			);
 
 			await expect(
 				// Drop the Wrangler generation header
@@ -612,6 +616,11 @@ describe("pages download config", () => {
 					.join("\n")
 			).toMatchInlineSnapshot(`
 			"name = \\"some-project\\"
+			"
+		`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"? Your existing \`wrangler.toml\` file will be overwritten. Continue?
+			🤖 Using fallback value in non-interactive context: no
 			"
 		`);
 		});
@@ -767,7 +776,11 @@ describe("pages download config", () => {
 				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",
 				result: false,
 			});
-			await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+			await expect(
+				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Not overwriting existing \`wrangler.toml\` file"`
+			);
 
 			await expect(
 				// Drop the Wrangler generation header
@@ -779,6 +792,7 @@ describe("pages download config", () => {
 			"name = \\"some-project\\"
 			"
 		`);
+			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 	});
 });

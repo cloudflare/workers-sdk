@@ -225,7 +225,7 @@ export const Handler = async ({ projectName, force }: DownloadConfigArgs) => {
 			{ fallbackValue: false }
 		);
 		if (!overwrite) {
-			return;
+			throw new FatalError("Not overwriting existing `wrangler.toml` file");
 		}
 	}
 	await writeWranglerToml(config);
