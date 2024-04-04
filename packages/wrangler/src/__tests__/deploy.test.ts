@@ -9397,6 +9397,118 @@ export default{
 		});
 	});
 
+	describe("source maps", () => {
+		it("should include source map with bundle when upload_source_maps = true", async () => {
+			writeWranglerToml({
+				main: "index.ts",
+				upload_source_maps: true,
+			});
+			writeWorkerSource({ format: "ts" });
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringContaining(
+						`"sources":["another.ts","index.ts"],"sourceRoot":""`
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should not include source map with bundle when upload_source_maps = false", async () => {
+			writeWranglerToml({
+				main: "index.ts",
+				upload_source_maps: false,
+			});
+			writeWorkerSource({ format: "ts" });
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": null,
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should include source maps emitted by custom build when upload_source_maps = true", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: true,
+				build: {
+					command: `echo "custom build script"`,
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=index.js.map"
+			);
+			fs.writeFileSync(
+				"index.js.map",
+				JSON.stringify({
+					version: 3,
+					file: "index.js",
+					sources: ["index.ts"],
+					sourceRoot: "",
+				})
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringContaining(
+						`"sources":["index.ts"],"sourceRoot":""`
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should not include source maps emitted by custom build when upload_source_maps = false", async () => {
+			writeWranglerToml({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: false,
+				build: {
+					command: `echo "custom build script"`,
+				},
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=index.js.map"
+			);
+			fs.writeFileSync(
+				"index.js.map",
+				JSON.stringify({
+					version: 3,
+					file: "index.js",
+					sources: ["index.ts"],
+					sourceRoot: "",
+				})
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": null,
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+	});
+
 	describe("ai", () => {
 		it("should upload ai bindings", async () => {
 			writeWranglerToml({
