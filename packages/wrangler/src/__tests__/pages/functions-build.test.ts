@@ -214,7 +214,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
-				[/\/\/.+symbol-dispose\.js/, "// symbol-dispose.js"],
+				[/\/\/.+symbol-dispose\.js/, "// ~/symbol-dispose.js"],
 			]
 		);
 
@@ -227,7 +227,7 @@ export default {
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
 
-		// symbol-dispose.js
+		// ~/symbol-dispose.js
 		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
 		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
@@ -703,6 +703,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/\/\/.+symbol-dispose\.js/, "// ~/symbol-dispose.js"],
 			]
 		);
 
@@ -714,6 +715,10 @@ export default {
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
+
+		// ~/symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// ../utils/meaning-of-life.js
 		var MEANING_OF_LIFE = 21;
@@ -872,6 +877,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/\/\/.+symbol-dispose\.js/, "// ~/symbol-dispose.js"],
 			]
 		);
 
@@ -883,6 +889,10 @@ export default {
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
+
+		// ~/symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// ../utils/meaning-of-life.js
 		var MEANING_OF_LIFE = 21;
@@ -1039,6 +1049,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/\/\/.+symbol-dispose\.js/, "// ~/symbol-dispose.js"],
 			]
 		);
 
@@ -1050,6 +1061,10 @@ export default {
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
+
+		// ~/symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// ../utils/meaning-of-life.js
 		var MEANING_OF_LIFE = 21;
@@ -1127,6 +1142,7 @@ export default {
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
 				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/\/\/ .*\/symbol-dispose\.js/, "// ~/symbol-dispose.js"],
 			]
 		);
 
@@ -1138,6 +1154,10 @@ export default {
 		------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
+
+		// ~/symbol-dispose.js
+		Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+		Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
 
 		// ../utils/meaning-of-life.js
 		var MEANING_OF_LIFE = 21;
