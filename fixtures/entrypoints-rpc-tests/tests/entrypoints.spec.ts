@@ -202,7 +202,6 @@ test("should support default WorkerEntrypoint entrypoints", async ({ dev }) => {
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[[services]]
 			binding = "SERVICE"
@@ -390,7 +389,6 @@ test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[[services]]
 			binding = "SERVICE"
@@ -446,7 +444,7 @@ test("should support named entrypoints in pages dev", async ({ dev }) => {
 	};
 	const { url } = await dev(
 		files,
-		["--compatibility-flags=rpc", "--service=SERVICE=bound#ThingEntrypoint"],
+		["--service=SERVICE=bound#ThingEntrypoint"],
 		/* pagesPublicPath */ "dist"
 	);
 
@@ -462,7 +460,6 @@ test("should support co-dependent services", async ({ dev }) => {
 		"wrangler.toml": dedent`
 			name = "a"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[[services]]
 			binding = "SERVICE_B"
@@ -488,7 +485,6 @@ test("should support co-dependent services", async ({ dev }) => {
 		"wrangler.toml": dedent`
 			name = "b"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[[services]]
 			binding = "SERVICE_A"
@@ -550,7 +546,6 @@ test("should support binding to Durable Object in another worker", async ({
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[durable_objects]
 			bindings = [
@@ -606,7 +601,6 @@ test("should support binding to Durable Object in same worker", async ({
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[durable_objects]
 			bindings = [
@@ -641,7 +635,6 @@ test("should support binding to Durable Object in same worker with explicit scri
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[durable_objects]
 			bindings = [
@@ -898,7 +891,6 @@ test("should throw if performing RPC with session that hasn't started", async ({
 		"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
-			compatibility_flags = ["rpc"]
 
 			[[services]]
 			binding = "SERVICE"
