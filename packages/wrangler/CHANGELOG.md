@@ -1,5 +1,63 @@
 # wrangler
 
+## 3.46.0
+
+### Minor Changes
+
+- [#5282](https://github.com/cloudflare/workers-sdk/pull/5282) [`b7ddde1`](https://github.com/cloudflare/workers-sdk/commit/b7ddde1a5165223dcbe8781e928039123778b8a1) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - feature: Add source map support for Workers
+
+  Adds the `source_maps` boolean config option. When enabled, source maps included in the build output are uploaded alongside the built code modules. Uploaded source maps can then be used to remap stack traces emitted by the Workers runtime.
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: support named entrypoints in service bindings
+
+  This change allows service bindings to bind to a named export of another Worker. As an example, consider the following Worker named `bound`:
+
+  ```ts
+  import { WorkerEntrypoint } from "cloudflare:workers";
+
+  export class EntrypointA extends WorkerEntrypoint {
+  	fetch(request) {
+  		return new Response("Hello from entrypoint A!");
+  	}
+  }
+
+  export const entrypointB: ExportedHandler = {
+  	fetch(request, env, ctx) {
+  		return new Response("Hello from entrypoint B!");
+  	}
+  };
+
+  export default <ExportedHandler>{
+  	fetch(request, env, ctx) {
+  		return new Response("Hello from the default entrypoint!");
+  	}
+  };
+  ```
+
+  Up until now, you could only bind to the `default` entrypoint. With this change, you can bind to `EntrypointA` or `entrypointB` too using the new `entrypoint` option:
+
+  ```toml
+  [[services]]
+  binding = "SERVICE"
+  service = "bound"
+  entrypoint = "EntrypointA"
+  ```
+
+  To bind to named entrypoints with `wrangler pages dev`, use the `#` character:
+
+  ```shell
+  $ wrangler pages dev --service=SERVICE=bound#EntrypointA
+  ```
+
+### Patch Changes
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: ensure request `url` and `cf` properties preserved across service bindings
+
+  Previously, Wrangler could rewrite `url` and `cf` properties when sending requests via service bindings or Durable Object stubs. To match production behaviour, this change ensures these properties are preserved.
+
+- Updated dependencies [[`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327), [`6c3be5b`](https://github.com/cloudflare/workers-sdk/commit/6c3be5b299b22cad050760a6015106839b5cc74e), [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327), [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327)]:
+  - miniflare@3.20240403.0
+
 ## 3.45.0
 
 ### Minor Changes
