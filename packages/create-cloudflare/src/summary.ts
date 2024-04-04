@@ -12,9 +12,9 @@ export const printSummary = async (ctx: C3Context) => {
 
 	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
 	const nextSteps = [
-		dirRelativePath
-			? ["Navigate to the new directory", `cd ${dirRelativePath}`]
-			: [],
+		...(dirRelativePath
+			? [["Navigate to the new directory", `cd ${dirRelativePath}`]]
+			: []),
 		[
 			"Run the development server",
 			quoteShellArgs([npm, "run", ctx.template.devScript ?? "start"]),
@@ -59,7 +59,7 @@ export const printSummary = async (ctx: C3Context) => {
 	}
 
 	newline();
-	nextSteps.filter(entry => entry.length > 0).forEach((entry) => {
+	nextSteps.forEach((entry) => {
 		log(`${dim(entry[0])} ${blue(entry[1])}`);
 	});
 	newline();
