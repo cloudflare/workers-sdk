@@ -19,8 +19,7 @@
 		},
 		"build": { "dependsOn": ["^build"] },
 		"test": {
-			"dependsOn": ["^build"],
-			"cache": false
+			"dependsOn": ["^build"]
 		},
 		"test:watch": {
 			"cache": false
@@ -35,9 +34,7 @@
 			"dependsOn": ["^topological"]
 		},
 		"type:tests": {},
-		"test:ci": {
-			"cache": false
-		},
+		"test:ci": {},
 		"//#check:format": { "cache": true }
 	}
 }
