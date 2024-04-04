@@ -1,5 +1,68 @@
 # miniflare
 
+## 3.20240403.0
+
+### Minor Changes
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: customisable unsafe direct sockets entrypoints
+
+  Previously, Miniflare provided experimental `unsafeDirectHost` and `unsafeDirectPort` options for starting an HTTP server that pointed directly to a specific Worker. This change replaces these options with a single `unsafeDirectSockets` option that accepts an array of socket objects of the form `{ host?: string, port?: number, entrypoint?: string, proxy?: boolean }`. `host` defaults to `127.0.0.1`, `port` defaults to `0`, `entrypoint` defaults to `default`, and `proxy` defaults to `false`. This allows you to start HTTP servers for specific entrypoints of specific Workers. `proxy` controls the [`Style`](https://github.com/cloudflare/workerd/blob/af35f1e7b0f166ec4ca93a8bf7daeacda029f11d/src/workerd/server/workerd.capnp#L780-L789) of the socket.
+
+  Note these sockets set the `capnpConnectHost` `workerd` option to `"miniflare-unsafe-internal-capnp-connect"`. `external` `serviceBindings` will set their `capnpConnectHost` option to the same value allowing RPC over multiple `Miniflare` instances. Refer to https://github.com/cloudflare/workerd/pull/1757 for more information.
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feature: support named entrypoints for `serviceBindings`
+
+  This change allows service bindings to bind to a named export of another Worker using designators of the form `{ name: string | typeof kCurrentWorker, entrypoint?: string }`. Previously, you could only bind to the `default` entrypoint. With this change, you can bind to any exported entrypoint.
+
+  ```ts
+  import { kCurrentWorker, Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	workers: [
+  		{
+  			name: "a",
+  			serviceBindings: {
+  				A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
+  				A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
+  				B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
+  			},
+  			compatibilityFlags: ["rpc"],
+  			modules: true,
+  			script: `
+  			import { WorkerEntrypoint } from "cloudflare:workers";
+  
+  			export class RpcEntrypoint extends WorkerEntrypoint {
+  				ping() { return "a:rpc:pong"; }
+  			}
+  
+  			export const namedEntrypoint = {
+  				fetch(request, env, ctx) { return new Response("a:named:pong"); }
+  			};
+  
+  			...
+  			`,
+  		},
+  		{
+  			name: "b",
+  			modules: true,
+  			script: `
+  			export const anotherNamedEntrypoint = {
+  				fetch(request, env, ctx) { return new Response("b:named:pong"); }
+  			};
+  			`,
+  		},
+  	],
+  });
+  ```
+
+### Patch Changes
+
+- [#5499](https://github.com/cloudflare/workers-sdk/pull/5499) [`6c3be5b`](https://github.com/cloudflare/workers-sdk/commit/6c3be5b299b22cad050760a6015106839b5cc74e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump workerd@1.20240403.0
+
+- [#5215](https://github.com/cloudflare/workers-sdk/pull/5215) [`cd03d1d`](https://github.com/cloudflare/workers-sdk/commit/cd03d1d3fa6e733faa42e5abb92f37637503b327) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: allow `script`s without `scriptPath`s to import built-in modules
+
+  Previously, if a string `script` option was specified with `modules: true` but without a corresponding `scriptPath`, all `import`s were forbidden. This change relaxes that restriction to allow imports of built-in `node:*`, `cloudflare:*` and `workerd:*` modules without a `scriptPath`.
+
 ## 3.20240329.1
 
 ### Patch Changes
