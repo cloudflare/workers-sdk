@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-feat: Add interactive prompt to `wrangler pages download config` if an exsting `wrangler.toml` file exists
+feat: Add interactive prompt to `wrangler pages download config` if an existing `wrangler.toml` file exists
