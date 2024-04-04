@@ -1,8 +1,10 @@
+import { existsSync } from "fs";
 import { writeFile } from "node:fs/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
+import { confirm } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -191,13 +193,18 @@ async function downloadProject(accountId: string, projectName: string) {
 type DownloadConfigArgs = StrictYargsOptionsToInterface<typeof Options>;
 
 export function Options(yargs: CommonYargsArgv) {
-	return yargs.positional("projectName", {
-		type: "string",
-		description: "The Pages project to download",
-	});
+	return yargs
+		.positional("projectName", {
+			type: "string",
+			description: "The Pages project to download",
+		})
+		.option("force", {
+			describe: "Overwrite an existing `wrangler.toml` file without prompting",
+			type: "boolean",
+		});
 }
 
-export const Handler = async ({ projectName }: DownloadConfigArgs) => {
+export const Handler = async ({ projectName, force }: DownloadConfigArgs) => {
 	void metrics.sendMetricsEvent("download pages config");
 	await printWranglerBanner();
 
@@ -212,6 +219,15 @@ export const Handler = async ({ projectName }: DownloadConfigArgs) => {
 		throw new FatalError("Must specify a project name.", 1);
 	}
 	const config = await downloadProject(accountId, projectName);
+	if (!force && existsSync("wrangler.toml")) {
+		const overwrite = await confirm(
+			"Your existing `wrangler.toml` file will be overwritten. Continue?",
+			{ fallbackValue: false }
+		);
+		if (!overwrite) {
+			return;
+		}
+	}
 	await writeWranglerToml(config);
 	logger.info(
 		chalk.green(
