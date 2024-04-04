@@ -273,7 +273,7 @@ describe("generateTypes()", () => {
 			TEST_KV_NAMESPACE: KVNamespace;
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
-			"some-other-var": \\"some-other-value\\";
+			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			DURABLE_TEST1: DurableObjectNamespace;
 			DURABLE_TEST2: DurableObjectNamespace;
@@ -442,7 +442,7 @@ describe("generateTypes()", () => {
 		"interface Env {
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
-			"some-other-var": \\"some-other-value\\";
+			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 		}
 		"
@@ -530,7 +530,7 @@ describe("generateTypes()", () => {
 			"interface CloudflareEnv {
 				SOMETHING: \\"asdasdfasdf\\";
 				ANOTHER: \\"thing\\";
-				"some-other-var": \\"some-other-value\\";
+				\\"some-other-var\\": \\"some-other-value\\";
 				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			}
 			"
