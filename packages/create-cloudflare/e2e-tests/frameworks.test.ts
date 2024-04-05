@@ -104,6 +104,15 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		},
 		flags: [`--package-manager`, pm],
 	},
+	analog: {
+		testCommitMessage: true,
+		timeout: TEST_TIMEOUT,
+		verifyDeploy: {
+			route: "/",
+			expectedText: "The fullstack meta-framework for Angular!",
+		},
+		flags: ["--template", "angular-v17", "--skipTailwind"],
+	},
 	angular: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
