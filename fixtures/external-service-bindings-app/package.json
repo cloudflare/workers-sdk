@@ -10,7 +10,7 @@
 		"mod-d-dev": "wrangler dev module-worker-d/index.ts --local --port 8504 --env production",
 		"pages-dev": "cd pages-functions-app && npx wrangler pages dev public --port 8505 --service MODULE_A_SERVICE=module-worker-a MODULE_B_SERVICE=module-worker-b SERVICE_A_SERVICE=service-worker-a STAGING_MODULE_C_SERVICE=module-worker-c@staging STAGING_MODULE_D_SERVICE=module-worker-d@staging",
 		"dev": "npx concurrently -s first -k 'npm run mod-a-dev' 'npm run mod-b-dev' 'npm run ser-a-dev' 'npm run mod-c-dev' 'npm run mod-d-dev' 'npm run pages-dev'",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc --noEmit"
 	},

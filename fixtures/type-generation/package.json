@@ -3,7 +3,7 @@
 	"private": true,
 	"description": "A test for the `wrangler types` utility",
 	"scripts": {
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
 	"devDependencies": {

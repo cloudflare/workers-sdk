@@ -6,7 +6,7 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "wrangler pages dev public --port 8793",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},

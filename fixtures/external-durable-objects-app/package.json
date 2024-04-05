@@ -5,7 +5,7 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8400\" \"wrangler dev b/index.ts --local --port 8401\" \"npx wrangler dev c/index.ts --local --port 8402\" \"cd d && npx wrangler pages dev public --port 8403 --do PAGES_REFERENCED_DO=MyDurableObject@a\"",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},

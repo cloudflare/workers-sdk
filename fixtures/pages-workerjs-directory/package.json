@@ -5,7 +5,7 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --d1=D1 --d1=PUT=elsewhere --kv KV --kv KV_REF=other_kv --r2 R2 --r2=R2_REF=other_r2 --port 8794",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {

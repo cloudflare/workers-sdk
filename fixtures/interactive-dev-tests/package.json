@@ -2,7 +2,7 @@
 	"name": "interactive-dev-tests",
 	"private": true,
 	"scripts": {
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},

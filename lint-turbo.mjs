@@ -1,6 +1,6 @@
 import assert from "assert";
 import { execSync } from "child_process";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 
 function readJson(filePath) {
@@ -17,7 +17,6 @@ for (const p of paths) {
 	const pkg = readJson(path.join(p, "package.json"));
 
 	// Ensure all packages with a build script have a turbo build output configured
-
 	if (pkg.scripts?.build) {
 		console.log(pkg.name, "has build script. Checking turbo.json");
 		let turboConfig;
@@ -29,5 +28,13 @@ for (const p of paths) {
 		}
 		const buildOutputs = turboConfig.pipeline.build.outputs;
 		assert(buildOutputs.length > 0);
+	}
+
+	// Ensure all packages with a vitest config file have a "test:ci" script
+	if (existsSync(path.join(p, "vitest.config.ts"))) {
+		assert(
+			pkg.scripts["test:ci"],
+			`Package "${p}" is missing a "test:ci" script in package.json`
+		);
 	}
 }
