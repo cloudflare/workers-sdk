@@ -49,17 +49,45 @@ export async function listR2Buckets(
 export async function createR2Bucket(
 	accountId: string,
 	bucketName: string,
-	jurisdiction?: string
+	jurisdiction?: string,
+	storageClass?: string
 ): Promise<void> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	if (storageClass !== undefined) {
+		headers["cf-r2-storage-class"] = storageClass;
 	}
 	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
 		method: "POST",
 		body: JSON.stringify({ name: bucketName }),
 		headers,
 	});
+}
+
+/**
+ * Update the default storage class to `storageClass` of a bucket with the given `bucketName`
+ * within the account given by `accountId`.
+ */
+export async function updateR2BucketStorageClass(
+	accountId: string,
+	bucketName: string,
+	storageClass: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	headers["cf-r2-storage-class"] = storageClass;
+	return await fetchResult<void>(
+		`/accounts/${accountId}/r2/buckets/${bucketName}`,
+		{
+			method: "PATCH",
+			headers,
+		}
+	);
 }
 
 /**
@@ -127,7 +155,8 @@ export async function putR2Object(
 	objectName: string,
 	object: Readable | ReadableStream | Buffer,
 	options: Record<string, unknown>,
-	jurisdiction?: string
+	jurisdiction?: string,
+	storageClass?: string
 ): Promise<void> {
 	const headerKeys = [
 		"content-length",
@@ -145,6 +174,10 @@ export async function putR2Object(
 	}
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	if (storageClass !== undefined) {
+		headers["cf-r2-storage-class"] = storageClass;
 	}
 
 	const result = await fetchR2Objects(
