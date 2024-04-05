@@ -45,6 +45,9 @@ export const Handler = withConfig<HandlerOptions>(
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
 		}
+		if (output["version"] !== "alpha") {
+			delete output["version"];
+		}
 		if (result.version !== "alpha") {
 			const today = new Date();
 			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
@@ -114,7 +117,10 @@ export const Handler = withConfig<HandlerOptions>(
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
 			// Snip off the "uuid" property from the response and use those as the header
-			const entries = Object.entries(output).filter(([k, _v]) => k !== "uuid");
+			const entries = Object.entries(output).filter(
+				// also remove any version that isn't "alpha"
+				([k, v]) => k !== "uuid" && !(k === "version" && v !== "alpha")
+			);
 			const data = entries.map(([k, v]) => {
 				let value;
 				if (k === "database_size") {
