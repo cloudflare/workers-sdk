@@ -1,4 +1,3 @@
-import { d1BetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function Name(yargs: CommonYargsArgv) {
@@ -7,8 +6,7 @@ export function Name(yargs: CommonYargsArgv) {
 			describe: "The name or binding of the DB",
 			type: "string",
 			demandOption: true,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 export function Database(yargs: CommonYargsArgv) {
@@ -17,6 +15,5 @@ export function Database(yargs: CommonYargsArgv) {
 			describe: "The name or binding of the DB",
 			type: "string",
 			demandOption: true,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }

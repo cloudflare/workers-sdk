@@ -6,7 +6,6 @@ import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -19,8 +18,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;

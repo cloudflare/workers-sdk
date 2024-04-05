@@ -8,7 +8,6 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import {
-	d1BetaWarning,
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromId,
 } from "./utils";
@@ -29,8 +28,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			describe: "return output as clean JSON",
 			type: "boolean",
 			default: false,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;

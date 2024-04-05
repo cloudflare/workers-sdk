@@ -5,7 +5,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { Name } from "./options";
-import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
+import { getDatabaseByNameOrBinding } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -19,8 +19,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			type: "boolean",
 			alias: "y",
 			default: false,
-		})
-		.epilogue(d1BetaWarning);
+		});
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
