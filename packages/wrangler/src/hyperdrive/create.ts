@@ -1,7 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
-import { hyperdriveBetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -36,8 +35,7 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
 			},
-		})
-		.epilogue(hyperdriveBetaWarning);
+		});
 }
 
 export async function handler(
