@@ -31,8 +31,8 @@ describe("r2", () => {
 	it("create bucket", async () => {
 		const { stdout } = await run`$ ${WRANGLER} r2 bucket create ${bucketName}`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Creating bucket wrangler-smoke-test-bucket.
-			Created bucket wrangler-smoke-test-bucket."
+			"Creating bucket wrangler-smoke-test-bucket with default storage class set to Standard.
+			Created bucket wrangler-smoke-test-bucket with default storage class set to Standard."
 		`);
 	});
 
