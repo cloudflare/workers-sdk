@@ -106,6 +106,7 @@ const cliDefinition: ArgumentsDefinition = {
       pnpm create clouldfare --framework next -- --ts
       `,
 			values: [
+				{ name: "analog" },
 				{ name: "angular" },
 				{ name: "astro" },
 				{ name: "docusaurus" },
