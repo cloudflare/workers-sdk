@@ -21,9 +21,9 @@ type Env = {
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
-	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
+	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
-	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: Uint8Array;
+	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
