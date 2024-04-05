@@ -23,7 +23,7 @@ export function Options(yargs: CommonYargsArgv) {
 		})
 		.option("location", {
 			describe:
-				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
+				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\noc: Oceania\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
 		});
 }
@@ -53,7 +53,6 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 				body: JSON.stringify({
 					name,
-					experimental: true,
 					...(location && { primary_location_hint: location }),
 				}),
 			});
@@ -75,11 +74,7 @@ export const Handler = withConfig<HandlerOptions>(
 							? ` using primary location hint ${location}`
 							: ``}
 					</Text>
-					<Text>
-						Created your database using D1&apos;s new storage backend. The new
-						storage backend is not yet recommended for production workloads, but
-						backs up your data via point-in-time restore.
-					</Text>
+					<Text>Created your new D1 database.</Text>
 					<Text>&nbsp;</Text>
 					<Text>[[d1_databases]]</Text>
 					<Text>
