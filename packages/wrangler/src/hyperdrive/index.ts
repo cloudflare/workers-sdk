@@ -3,7 +3,6 @@ import { handler as deleteHandler, options as deleteOptions } from "./delete";
 import { handler as getHandler, options as getOptions } from "./get";
 import { handler as listHandler, options as listOptions } from "./list";
 import { handler as updateHandler, options as updateOptions } from "./update";
-import { hyperdriveBetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
 
 export function hyperdrive(yargs: CommonYargsArgv) {
@@ -27,6 +26,5 @@ export function hyperdrive(yargs: CommonYargsArgv) {
 			"Update a Hyperdrive config",
 			updateOptions,
 			updateHandler
-		)
-		.epilogue(hyperdriveBetaWarning);
+		);
 }
