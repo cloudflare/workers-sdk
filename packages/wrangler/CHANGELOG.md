@@ -1,5 +1,27 @@
 # wrangler
 
+## 3.48.0
+
+### Minor Changes
+
+- [#5429](https://github.com/cloudflare/workers-sdk/pull/5429) [`c5561b7`](https://github.com/cloudflare/workers-sdk/commit/c5561b7236adf2b97e09e4ae9139654e23d635fe) Thanks [@ocsfrank](https://github.com/ocsfrank)! - R2 will introduce storage classes soon. Wrangler allows you to interact with storage classes once it is
+  enabled on your account.
+
+  Wrangler supports an `-s` flag that allows the user to specify a storage class when creating a bucket,
+  changing the default storage class of a bucket, and uploading an object.
+
+  ```bash
+  wrangler r2 bucket create ia-bucket -s InfrequentAccess
+  wrangler r2 bucket update storage-class my-bucket -s InfrequentAccess
+  wrangler r2 object put bucket/ia-object -s InfrequentAccess --file foo
+  ```
+
+### Patch Changes
+
+- [#5531](https://github.com/cloudflare/workers-sdk/pull/5531) [`887150a`](https://github.com/cloudflare/workers-sdk/commit/887150ae64d78800e1f44ea25d69f06e76e9f127) Thanks [@penalosa](https://github.com/penalosa)! - fix: Write `wrangler pages functions build-env` to file rather than stdout
+
+- [#5526](https://github.com/cloudflare/workers-sdk/pull/5526) [`bafbd67`](https://github.com/cloudflare/workers-sdk/commit/bafbd6719bbec1e323ee161a0106bf98c60255a2) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: teach `wrangler d1 create` about Australia
+
 ## 3.47.1
 
 ### Patch Changes
