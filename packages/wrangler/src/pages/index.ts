@@ -9,10 +9,11 @@ import * as Dev from "./dev";
 import * as DownloadConfig from "./download-config";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
+import { secret } from "./secret";
 import * as Upload from "./upload";
 import { CLEANUP } from "./utils";
 import * as Validate from "./validate";
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 
 process.on("SIGINT", () => {
 	CLEANUP();
@@ -23,9 +24,10 @@ process.on("SIGTERM", () => {
 	process.exit();
 });
 
-export function pages(yargs: CommonYargsArgv) {
+export function pages(yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return (
 		yargs
+			.command(subHelp)
 			.command(
 				"dev [directory] [-- command..]",
 				"🧑‍💻 Develop your full-stack Pages application locally",
@@ -38,6 +40,7 @@ export function pages(yargs: CommonYargsArgv) {
 			 */
 			.command("functions", false, (args) =>
 				args
+					.command(subHelp)
 					.command(
 						"build [directory]",
 						"Compile a folder of Cloudflare Pages Functions into a single Worker",
@@ -59,6 +62,7 @@ export function pages(yargs: CommonYargsArgv) {
 			)
 			.command("project", "⚡️ Interact with your Pages projects", (args) =>
 				args
+					.command(subHelp)
 					.command(
 						"list",
 						"List your Cloudflare Pages projects",
@@ -90,6 +94,7 @@ export function pages(yargs: CommonYargsArgv) {
 				"🚀 Interact with the deployments of a project",
 				(args) =>
 					args
+						.command(subHelp)
 						.command(
 							"list",
 							"List deployments in your Cloudflare Pages project",
@@ -115,6 +120,11 @@ export function pages(yargs: CommonYargsArgv) {
 				"🆙 Deploy a directory of static assets as a Pages deployment",
 				Deploy.Options,
 				Deploy.Handler
+			)
+			.command(
+				"secret",
+				"🤫 Generate a secret that can be referenced in a Pages project",
+				(secretYargs) => secret(secretYargs, subHelp)
 			)
 			.command("download", "⚡️ Download settings from your project", (args) =>
 				args.command(

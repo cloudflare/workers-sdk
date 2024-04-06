@@ -430,7 +430,7 @@ export function createCLIParser(argv: string[]) {
 
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
-		return pages(pagesYargs.command(subHelp));
+		return pages(pagesYargs, subHelp);
 	});
 
 	// queues

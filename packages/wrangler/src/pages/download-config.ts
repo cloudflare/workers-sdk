@@ -51,9 +51,10 @@ interface PagesDeploymentConfig extends DeploymentConfig {
 		}
 	>;
 	ai_bindings: Record<string, Record<string, never>>;
+	wrangler_config_hash?: string;
 }
 
-interface PagesProject extends Project {
+export interface PagesProject extends Project {
 	deployment_configs: {
 		production: PagesDeploymentConfig;
 		preview: PagesDeploymentConfig;
