@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-Skip empty next steps in the output summary. Previously, they would log undefined undefined.
+fix: make sure that using the current directory doesn't generate an `undefined undefined` log in the output summary.
