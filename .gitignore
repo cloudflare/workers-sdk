@@ -189,6 +189,9 @@ _routes.generated.json
 packages/quick-edit/vscode
 packages/quick-edit/web
 
+packages/wrangler/config-schema.json
+
+
 # Vendored npm dependencies
 !vendor/*.tgz
 

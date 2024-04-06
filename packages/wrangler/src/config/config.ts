@@ -73,7 +73,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 *
 	 * More details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations
 	 *
-	 * @default `[]`
+	 * @default []
 	 */
 	migrations: {
 		/** A unique identifier for this migration. */
@@ -121,7 +121,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				 * items will be uploaded. Example: include = ["upload_dir"]
 				 *
 				 * @optional
-				 * @default `[]`
+				 * @default []
 				 */
 				include?: string[];
 
@@ -131,7 +131,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				 * uploads. Example: exclude = ["ignore_dir"]
 				 *
 				 * @optional
-				 * @default `[]`
+				 * @default []
 				 */
 				exclude?: string[];
 		  }
@@ -213,28 +213,28 @@ export interface DevConfig {
 	/**
 	 * IP address for the local dev server to listen on,
 	 *
-	 * @default `localhost`
+	 * @default localhost
 	 */
 	ip: string;
 
 	/**
 	 * Port for the local dev server to listen on
 	 *
-	 * @default `8787`
+	 * @default 8787
 	 */
 	port: number | undefined;
 
 	/**
 	 * Port for the local dev server's inspector to listen on
 	 *
-	 * @default `9229`
+	 * @default 9229
 	 */
 	inspector_port: number | undefined;
 
 	/**
 	 * Protocol that local wrangler dev server listens to requests on.
 	 *
-	 * @default `http`
+	 * @default http
 	 */
 	local_protocol: "http" | "https";
 
@@ -244,7 +244,7 @@ export interface DevConfig {
 	 * Setting this to `http` is not currently implemented for remote mode.
 	 * See https://github.com/cloudflare/workers-sdk/issues/583
 	 *
-	 * @default `https` in remote mode; same as local_protocol in local mode.
+	 * @default https
 	 */
 	upstream_protocol: "https" | "http";
 
@@ -293,7 +293,7 @@ interface EnvironmentMap {
 	 *
 	 * For more information, see the documentation at https://developers.cloudflare.com/workers/cli-wrangler/configuration#environments
 	 *
-	 * @default `{}`
+	 * @default {}
 	 */
 	env?: {
 		[envName: string]: RawEnvironment;
