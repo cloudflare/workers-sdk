@@ -44,6 +44,7 @@ export interface PagesConfigFields {
 
 export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
+	$schema: string | undefined;
 
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).

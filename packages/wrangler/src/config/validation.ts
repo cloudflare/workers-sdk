@@ -126,6 +126,15 @@ export function normalizeAndValidateConfig(
 		"string"
 	);
 
+	// Support explicit JSON schema setting
+	validateOptionalProperty(
+		diagnostics,
+		"",
+		"$schema",
+		rawConfig.$schema,
+		"string"
+	);
+
 	// TODO: set the default to false to turn on service environments as the default
 	const isLegacyEnv =
 		typeof args["legacy-env"] === "boolean"
@@ -272,7 +281,7 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		"top-level",
 		Object.keys(rawConfig),
-		[...Object.keys(config), "env"]
+		[...Object.keys(config), "env", "$schema"]
 	);
 
 	experimental(diagnostics, rawConfig, "assets");
