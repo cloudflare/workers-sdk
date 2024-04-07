@@ -28,7 +28,7 @@ export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	PagesConfigFields &
 	RawEnvironment &
 	DeprecatedConfigFields &
-	EnvironmentMap;
+	EnvironmentMap & { $schema?: string };
 
 // Pages-specific configuration fields
 export interface PagesConfigFields {
@@ -44,7 +44,6 @@ export interface PagesConfigFields {
 
 export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
-	$schema: string | undefined;
 
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
