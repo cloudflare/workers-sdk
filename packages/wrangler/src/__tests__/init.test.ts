@@ -16,6 +16,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
+import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
 
 /**
@@ -2575,6 +2576,7 @@ describe("init", () => {
 				],
 				customDomains = [],
 				workersDev = true,
+				limits,
 			}: {
 				id?: string;
 				usage_model?: string;
@@ -2585,6 +2587,7 @@ describe("init", () => {
 				routes?: unknown[];
 				customDomains?: unknown[];
 				workersDev?: boolean;
+				limits?: UserLimits;
 			} = {}) {
 				return {
 					schedules,
@@ -2603,6 +2606,7 @@ describe("init", () => {
 								created_on: "1987-09-27",
 								migration_tag: "some-migration-tag",
 								usage_model,
+								limits,
 								compatibility_date,
 								tail_consumers: [{ service: "listener" }],
 							},
@@ -2643,7 +2647,6 @@ describe("init", () => {
 
 			const mockConfigExpected: RawConfig = {
 				workers_dev: true,
-				usage_model: "bundled",
 				main: "src/index.js",
 				compatibility_date: "1987-09-27",
 				name: "isolinear-optical-chip",
@@ -3007,7 +3010,6 @@ describe("init", () => {
 			main = \\"src/index.js\\"
 			compatibility_date = \\"1987-09-27\\"
 			workers_dev = false
-			usage_model = \\"bundled\\"
 
 			[[routes]]
 			pattern = \\"delta.quadrant\\"
@@ -3123,7 +3125,6 @@ describe("init", () => {
 			main = \\"src/index.js\\"
 			compatibility_date = \\"1987-09-27\\"
 			workers_dev = true
-			usage_model = \\"bundled\\"
 
 			[[routes]]
 			pattern = \\"delta.quadrant\\"
@@ -3257,22 +3258,47 @@ describe("init", () => {
 					},
 				});
 			});
-			it("should ignore usage_model = standard", async () => {
+
+			it("should include user limits", async () => {
 				worker = makeWorker({
 					id: "isolinear-optical-chip",
-					usage_model: "standard",
+					limits: {
+						cpu_ms: 75,
+					},
 				});
 
-				await expect(
-					downloadWorker("LCARS", "isolinear-optical-chip")
-				).resolves.toMatchObject({
-					config: {
-						...mockConfigExpected,
-						main: "index.js",
-						usage_model: undefined,
+				const { config } = await downloadWorker(
+					"LCARS",
+					"isolinear-optical-chip"
+				);
+				expect(config).toMatchObject({
+					...mockConfigExpected,
+					main: "index.js",
+					limits: {
+						cpu_ms: 75,
 					},
 				});
 			});
+
+			it.each(["bundled", "unbound", "standard"])(
+				"should ignore usage_model = %s",
+				async (usage_model) => {
+					worker = makeWorker({
+						id: "isolinear-optical-chip",
+						usage_model,
+					});
+
+					const { config } = await downloadWorker(
+						"LCARS",
+						"isolinear-optical-chip"
+					);
+					expect(config).toMatchObject({
+						...mockConfigExpected,
+						main: "index.js",
+					});
+					expect(config.usage_model).toBeUndefined();
+				}
+			);
 
 			it("should use fallback compatibility date if none is upstream", async () => {
 				worker = makeWorker({
@@ -3387,7 +3413,6 @@ describe("init", () => {
 							compatibility_date: "1988-08-07",
 							main: "src/index.js",
 							workers_dev: true,
-							usage_model: "bundled",
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
 						}),
@@ -3485,34 +3510,6 @@ describe("init", () => {
 							...mockConfigExpected,
 							name: "isolinear-optical-chip",
 							main: "src/index.js",
-						}),
-					},
-				});
-			});
-
-			it("should have an explicit usage model for non-standard users", async () => {
-				mockConfirm(
-					{
-						text: "Would you like to use git to manage this Worker?",
-						result: false,
-					},
-					{
-						text: "No package.json found. Would you like to create one?",
-						result: true,
-					}
-				);
-
-				await runWrangler(
-					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
-				);
-
-				expect(std.out).toContain("cd isolinear-optical-chip");
-
-				checkFiles({
-					items: {
-						"isolinear-optical-chip/wrangler.toml": wranglerToml({
-							...mockConfigExpected,
-							usage_model: "bundled",
 						}),
 					},
 				});
