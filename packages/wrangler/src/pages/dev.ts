@@ -41,7 +41,6 @@ import type {
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 
-export const DEFAULT_PAGES_LOCAL_PORT = 8788;
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
  * - "binding=className"
@@ -77,6 +76,7 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 );
 
 const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
+const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
 
 export function Options(yargs: CommonYargsArgv) {
