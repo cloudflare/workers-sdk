@@ -25,7 +25,7 @@ import {
 import {
 	buildRawWorker,
 	checkRawWorker,
-	traverseAndBuildWorkerJSDirectory,
+	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
@@ -344,8 +344,9 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (usingWorkerDirectory) {
 		const runBuild = async () => {
-			const bundleResult = await traverseAndBuildWorkerJSDirectory({
+			const bundleResult = await produceWorkerBundleForWorkerJSDirectory({
 				workerJSDirectory: workerScriptPath,
+				bundle: enableBundling,
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompat,
 				defineNavigatorUserAgent,
