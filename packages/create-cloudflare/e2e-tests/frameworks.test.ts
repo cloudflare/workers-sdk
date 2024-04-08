@@ -111,7 +111,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "The fullstack meta-framework for Angular!",
 		},
-		flags: ["--template", "angular-v17", "--skipTailwind"],
+		flags: ["--skipTailwind"],
 	},
 	angular: {
 		testCommitMessage: true,

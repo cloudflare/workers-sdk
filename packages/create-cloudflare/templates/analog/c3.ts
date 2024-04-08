@@ -3,6 +3,8 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
+import { getLatestTypesEntrypoint } from "helpers/compatDate";
+import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
@@ -12,34 +14,54 @@ import type { C3Context } from "types";
 const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		"--template",
+		"angular-v17",
+	]);
 
 	logRaw(""); // newline
 };
 
-const configure = async () => {
-	// const packages = ["nitro-cloudflare-dev"];
+const configure = async (ctx: C3Context) => {
+	const packages = ["nitropack"];
 
 	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
 	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
 	if (pm === "pnpm") {
-		// packages.push("h3");
+		packages.push("h3");
 
-		await installPackages(["h3"], {
+		await installPackages(packages, {
 			dev: true,
-			startText: "Installing `h3`",
+			startText: `Installing ${packages.join(", ")}`,
 			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 		});
 	}
 
-	// await installPackages(packages, {
-	// 	dev: true,
-	// 	startText: "Installing nitro module `nitro-cloudflare-dev`",
-	// 	doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	// });
-
 	updateViteConfig();
 	updateMainServer();
+	updateEnvTypes(ctx);
+};
+
+const updateEnvTypes = (ctx: C3Context) => {
+	const filepath = "env.d.ts";
+
+	const s = spinner();
+	s.start(`Updating ${filepath}`);
+
+	let file = readFile(filepath);
+
+	let typesEntrypoint = `@cloudflare/workers-types/`;
+	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
+	if (latestEntrypoint) {
+		typesEntrypoint += `/${latestEntrypoint}`;
+	}
+
+	// Replace placeholder with actual types entrypoint
+	file = file.replace("WORKERS_TYPES_ENTRYPOINT", typesEntrypoint);
+	writeFile("env.d.ts", file);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${filepath}\``)}`);
 };
 
 const updateViteConfig = () => {
@@ -73,10 +95,6 @@ const updateViteConfig = () => {
 								),
 							])
 						),
-						// b.objectProperty(
-						// 	b.identifier("modules"),
-						// 	b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
-						// ),
 					])
 				);
 
