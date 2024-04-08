@@ -103,8 +103,8 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async (pkgJson: PackageJson, ctx: C3Context) => ({
 		scripts: {
-			deploy: `astro build && wrangler pages deploy ./dist`,
-			preview: `astro build && wrangler pages dev ./dist`,
+			deploy: `astro build && wrangler pages deploy`,
+			preview: `astro build && wrangler pages dev`,
 			...(usesTypescript(ctx) && { "build-cf-types": `wrangler types` }),
 		},
 	}),
