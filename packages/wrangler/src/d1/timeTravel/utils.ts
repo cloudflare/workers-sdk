@@ -32,14 +32,14 @@ export const getBookmarkIdFromTimestamp = async (
 	return bookmarkResult;
 };
 
-export const checkIfDatabaseIsExperimental = async (
+export const throwIfDatabaseIsAlpha = async (
 	accountId: string,
 	databaseId: string
 ): Promise<void> => {
 	const dbInfo = await getDatabaseInfoFromId(accountId, databaseId);
-	if (dbInfo.version !== "beta") {
+	if (dbInfo.version === "alpha") {
 		throw new UserError(
-			"Time travel is only available for D1 databases created with the --experimental-backend flag"
+			"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."
 		);
 	}
 };
