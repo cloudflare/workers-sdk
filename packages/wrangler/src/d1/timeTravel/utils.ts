@@ -32,7 +32,7 @@ export const getBookmarkIdFromTimestamp = async (
 	return bookmarkResult;
 };
 
-export const checkIfDatabaseIsExperimental = async (
+export const throwIfDatabaseIsAlpha = async (
 	accountId: string,
 	databaseId: string
 ): Promise<void> => {
