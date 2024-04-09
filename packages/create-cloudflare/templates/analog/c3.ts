@@ -2,7 +2,7 @@ import { crash, logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
+import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -38,7 +38,7 @@ const configure = async (ctx: C3Context) => {
 		});
 	}
 
-	updateViteConfig();
+	updateViteConfig(ctx);
 	updateMainServer();
 	updateEnvTypes(ctx);
 };
@@ -64,14 +64,25 @@ const updateEnvTypes = (ctx: C3Context) => {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${filepath}\``)}`);
 };
 
-const updateViteConfig = () => {
+const updateViteConfig = (ctx: C3Context) => {
 	const b = recast.types.builders;
 	const s = spinner();
 
 	const configFile = "vite.config.ts";
 	s.start(`Updating \`${configFile}\``);
 
+	const snippets = loadTemplateSnippets(ctx);
+
 	transformFile(configFile, {
+		visitProgram(n) {
+			const lastImportIndex = n.node.body.findLastIndex(
+				(t) => t.type === "ImportDeclaration"
+			);
+			const lastImport = n.get("body", lastImportIndex);
+			lastImport.insertAfter(...snippets.devBindingsModuleTs);
+
+			return this.traverse(n);
+		},
 		visitCallExpression(n) {
 			const callee = n.node.callee as recast.types.namedTypes.Identifier;
 			if (callee.name === "analog") {
@@ -94,6 +105,10 @@ const updateViteConfig = () => {
 									b.stringLiteral("./dist/analog/public/_worker.js")
 								),
 							])
+						),
+						b.objectProperty(
+							b.identifier("modules"),
+							b.arrayExpression([b.identifier("devBindingsModule")])
 						),
 					])
 				);
