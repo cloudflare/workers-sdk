@@ -313,7 +313,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			async (yargs) => {
 				return yargs
 					.positional("key", {
-						describe: "The variable name to be accessible in the Worker",
+						describe: "The variable name to be accessible in the Pages project",
 						type: "string",
 					})
 					.option("project-name", {
