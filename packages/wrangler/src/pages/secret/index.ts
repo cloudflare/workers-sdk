@@ -151,7 +151,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 		.command(subHelp)
 		.command(
 			"put <key>",
-			"Create or update a secret variable for a Worker",
+			"Create or update a secret variable for a Pages project",
 			(yargs) => {
 				return yargs
 					.positional("key", {
