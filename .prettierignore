@@ -1,4 +1,5 @@
 
+packages/wrangler/config-schema.json
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/
 packages/wrangler/emitted-types/
