@@ -20,6 +20,8 @@ import {
 	QueueContentType,
 	QueueContentTypeSchema,
 	QueueIncomingMessage,
+	QueueMessageDelay,
+	QueueMessageDelaySchema,
 	QueueOutgoingMessage,
 	QueuesBatchRequestSchema,
 	QueuesOutgoingBatchRequest,
@@ -63,6 +65,19 @@ function validateContentType(headers: Headers): QueueContentType {
 		throw new HttpError(
 			400,
 			`message content type ${format} is invalid; if specified, must be one of 'text', 'json', 'bytes', or 'v8'`
+		);
+	}
+	return result.data;
+}
+
+function validateMessageDelay(headers: Headers): QueueMessageDelay {
+	const format = headers.get("X-Msg-Delay-Secs");
+	if (!format) return undefined;
+	const result = QueueMessageDelaySchema.safeParse(Number(format));
+	if (!result.success) {
+		throw new HttpError(
+			400,
+			`message delay ${format} is invalid: ${result.error}`
 		);
 	}
 	return result.data;
@@ -235,13 +250,13 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		// Get messages to retry. If dispatching the batch failed for any reason,
 		// retry all messages.
 		const retryAll = response.retryBatch.retry || response.outcome !== "ok";
-		const retryMessagesIds = new Set(response.retryMessages.map(msg => msg.msgId));
+		const retryMessages = new Map(response.retryMessages?.map((r) => [r.msgId, r.delaySeconds]))
+		const globalDelay = response.retryBatch.delaySeconds ?? consumer.retryDelay ?? 0;
 
 		let failedMessages = 0;
-		const toRetry: QueueMessage[] = [];
 		const toDeadLetterQueue: QueueMessage[] = [];
 		for (const message of batch) {
-			if (retryAll || retryMessagesIds.has(message.id)) {
+			if (retryAll || retryMessages.has(message.id)) {
 				failedMessages++;
 				const failedAttempts = message.incrementFailedAttempts();
 				if (failedAttempts < maxAttempts) {
@@ -249,7 +264,13 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 						LogLevel.DEBUG,
 						`Retrying message "${message.id}" on queue "${this.name}"...`
 					);
-					toRetry.push(message);
+
+					const fn = () => {
+						this.#messages.push(message);
+						this.#ensurePendingFlush();
+					};
+					const delay = retryMessages.get(message.id) ?? globalDelay;
+					this.timers.setTimeout(fn, delay * 1000);
 				} else if (consumer.deadLetterQueue !== undefined) {
 					await this.logWithLevel(
 						LogLevel.WARN,
@@ -272,7 +293,6 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 
 		// Add messages for retry back to the queue, and ensure we flush again if
 		// we still have messages
-		this.#messages.push(...toRetry);
 		this.#pendingFlush = undefined;
 		if (this.#messages.length > 0) this.#ensurePendingFlush();
 
@@ -320,28 +340,36 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		this.#pendingFlush = { immediate: delay === 0, timeout };
 	}
 
-	#enqueue(messages: QueueIncomingMessage[]) {
+	#enqueue(messages: QueueIncomingMessage[], globalDelay: number = 0) {
 		for (const message of messages) {
 			const randomness = crypto.getRandomValues(new Uint8Array(16));
 			const id = message.id ?? Buffer.from(randomness).toString("hex");
 			const timestamp = new Date(message.timestamp ?? this.timers.now());
 			const body = deserialise(message);
-			this.#messages.push(new QueueMessage(id, timestamp, body));
+			const msg = new QueueMessage(id, timestamp, body);
+
+			const fn = () => {
+				this.#messages.push(msg);
+				this.#ensurePendingFlush();
+			}
+
+			const delay = message.delaySecs ?? globalDelay;
+			this.timers.setTimeout(fn, delay * 1000);
 		}
-		this.#ensurePendingFlush();
 	}
 
 	@POST("/message")
 	message: RouteHandler = async (req) => {
 		validateMessageSize(req.headers);
 		const contentType = validateContentType(req.headers);
+		const delay = validateMessageDelay(req.headers);
 		const body = Buffer.from(await req.arrayBuffer());
 
 		// If we don't have a consumer, drop the message
 		const consumer = this.#maybeConsumer;
 		if (consumer === undefined) return new Response();
 
-		this.#enqueue([{ contentType, body }]);
+		this.#enqueue([{ contentType, delaySecs: undefined, body }], delay);
 		return new Response();
 	};
 
@@ -352,13 +380,14 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		// a no-op. This allows us to enqueue a maximum size batch with additional
 		// ID and timestamp information.
 		validateBatchSize(req.headers);
+		const delay = validateMessageDelay(req.headers);
 		const body = QueuesBatchRequestSchema.parse(await req.json());
 
 		// If we don't have a consumer, drop the message
 		const consumer = this.#maybeConsumer;
 		if (consumer === undefined) return new Response();
 
-		this.#enqueue(body.messages);
+		this.#enqueue(body.messages, delay);
 		return new Response();
 	};
 }
