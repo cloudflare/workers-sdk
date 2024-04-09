@@ -149,7 +149,7 @@ describe("wrangler pages secret", () => {
 			it("should error with invalid env", async () => {
 				mockProjectRequests(
 					{ name: "the-key", text: "the-secret" },
-					// @ts-expect-error
+					// @ts-expect-error This is intentionally invalid
 					"some-env"
 				);
 				await expect(
@@ -380,7 +380,7 @@ describe("wrangler pages secret", () => {
 		beforeEach(() => {
 			setIsTTY(true);
 		});
-		function mockListRequest(env: "production" | "preview" = "production") {
+		function mockListRequest() {
 			msw.use(
 				rest.get(
 					"*/accounts/:accountId/pages/projects/:project",
@@ -655,7 +655,7 @@ describe("wrangler pages secret", () => {
 			msw.use(
 				rest.patch(
 					"*/accounts/:accountId/pages/projects/:project",
-					async (req, res, ctx) => {
+					async (_, res) => {
 						return res.networkError(`Failed to create secret`);
 					}
 				)
