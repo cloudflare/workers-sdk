@@ -3,7 +3,6 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { DEFAULT_LOCAL_PORT } from "..";
 import { unstable_dev } from "../api";
 import { readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
@@ -77,6 +76,7 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 );
 
 const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
+const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
 
 export function Options(yargs: CommonYargsArgv) {
@@ -862,7 +862,7 @@ function resolvePagesDevServerSettings(
 		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
 		ip: args.ip ?? config.dev.ip ?? DEFAULT_IP,
 		// because otherwise `unstable_dev` will default the port number to `0`
-		port: args.port ?? config.dev?.port ?? DEFAULT_LOCAL_PORT,
+		port: args.port ?? config.dev?.port ?? DEFAULT_PAGES_LOCAL_PORT,
 		inspectorPort: args.inspectorPort ?? config.dev?.inspector_port,
 		localProtocol: args.localProtocol ?? config.dev?.local_protocol,
 	};
