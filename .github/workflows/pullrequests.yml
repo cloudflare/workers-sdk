@@ -50,13 +50,6 @@ jobs:
           echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
           echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
 
-      - name: Install workerd Dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
-
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
 
@@ -112,7 +105,7 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Run tests & collect coverage
+      - name: Run tests
         run: pnpm run test:ci
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -129,6 +122,3 @@ jobs:
 
       - name: Run changeset version tests
         run: node .github/changeset-version.test.js
-
-      - name: Report Code Coverage
-        uses: codecov/codecov-action@v3

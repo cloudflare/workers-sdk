@@ -1696,7 +1696,7 @@ describe("pages deploy", () => {
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
@@ -1845,7 +1845,7 @@ describe("pages deploy", () => {
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
 
-					return res.once(
+					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,

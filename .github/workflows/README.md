@@ -84,13 +84,6 @@ See below for a summary of this repo's Actions
   - Runs formatting, linting and type checks.
   - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
 
-### CodeCov Main Context Updater (codecov-context.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Generated a code coverage report
-
 ### Handle Changesets (changesets.yml)
 
 - Triggers

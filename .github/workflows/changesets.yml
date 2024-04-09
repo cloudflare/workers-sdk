@@ -33,13 +33,6 @@ jobs:
           node-version: 16.18
           cache: "pnpm"
 
-      - name: Install workerd Dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
-
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
 
@@ -47,11 +40,6 @@ jobs:
         run: pnpm run build
         env:
           CI_OS: ${{ runner.os }}
-
-      - name: Check linting and formatting
-        run: pnpm run check
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Create Version PR or Publish to NPM
         id: changesets
