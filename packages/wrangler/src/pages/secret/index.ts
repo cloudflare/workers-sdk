@@ -364,7 +364,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 		)
 		.command(
 			"list",
-			"List all secrets for a Worker",
+			"List all secrets for a Pages project",
 			(yargs) => {
 				return yargs.option("project-name", {
 					type: "string",
