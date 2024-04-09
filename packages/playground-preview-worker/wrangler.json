@@ -1,5 +1,4 @@
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "playground-preview-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2023-08-17",

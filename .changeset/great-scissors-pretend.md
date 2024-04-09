@@ -1,6 +1,5 @@
 ---
 "create-cloudflare": minor
-"playground-preview-worker": patch
 "wrangler": minor
 ---
 
