@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { writeFile } from "node:fs/promises";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
+import { supportedCompatibilityDate } from "miniflare";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
@@ -74,6 +75,12 @@ async function toEnvironment(
 	const configObj = {} as RawEnvironment;
 	configObj.compatibility_date =
 		project.compatibility_date ?? new Date().toISOString().substring(0, 10);
+
+	// Find the latest supported compatibility date and use that
+	if (project.always_use_latest_compatibility_date) {
+		configObj.compatibility_date = supportedCompatibilityDate;
+	}
+
 	if (project.compatibility_flags?.length)
 		configObj.compatibility_flags = project.compatibility_flags;
 

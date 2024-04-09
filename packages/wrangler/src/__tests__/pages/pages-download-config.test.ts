@@ -1,6 +1,7 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
+import { supportedCompatibilityDate } from "miniflare";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -815,7 +816,7 @@ function mockSupportingDashRequests(
 										AI_PREVIEW: {},
 									},
 									fail_open: true,
-									always_use_latest_compatibility_date: false,
+									always_use_latest_compatibility_date: true,
 									compatibility_date: "2023-02-14",
 									compatibility_flags: [],
 									build_image_major_version: 2,
@@ -946,11 +947,15 @@ describe("pages download config", () => {
 
 		await expect(
 			// Drop the Wrangler generation header
-			(await readFile("wrangler.toml", "utf8")).split("\n").slice(1).join("\n")
+			(await readFile("wrangler.toml", "utf8"))
+				.split("\n")
+				.slice(1)
+				.join("\n")
+				.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 		).toMatchInlineSnapshot(`
 		"name = \\"MOCK_PROJECT_NAME\\"
 		pages_build_output_dir = \\"dist-test\\"
-		compatibility_date = \\"2023-02-14\\"
+		compatibility_date = \\"LATEST-SUPPORTED\\"
 
 		[placement]
 		mode = \\"smart\\"
@@ -1096,7 +1101,11 @@ describe("pages download config", () => {
 
 		await expect(
 			// Drop the Wrangler generation header
-			(await readFile("wrangler.toml", "utf8")).split("\n").slice(1).join("\n")
+			(await readFile("wrangler.toml", "utf8"))
+				.split("\n")
+				.slice(1)
+				.join("\n")
+				.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 		).toMatchInlineSnapshot(`
 		"name = \\"MOCK_PROJECT_NAME\\"
 		pages_build_output_dir = \\"dist-test\\"
@@ -1192,7 +1201,11 @@ describe("pages download config", () => {
 
 		await expect(
 			// Drop the Wrangler generation header
-			(await readFile("wrangler.toml", "utf8")).split("\n").slice(1).join("\n")
+			(await readFile("wrangler.toml", "utf8"))
+				.split("\n")
+				.slice(1)
+				.join("\n")
+				.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 		).toMatchInlineSnapshot(`
 		"name = \\"MOCK_PROJECT_NAME\\"
 		pages_build_output_dir = \\"dist-test\\"
@@ -1422,7 +1435,11 @@ describe("pages download config", () => {
 
 		await expect(
 			// Drop the Wrangler generation header
-			(await readFile("wrangler.toml", "utf8")).split("\n").slice(1).join("\n")
+			(await readFile("wrangler.toml", "utf8"))
+				.split("\n")
+				.slice(1)
+				.join("\n")
+				.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 		).toMatchInlineSnapshot(`
 		"name = \\"MOCK_PROJECT_NAME\\"
 		pages_build_output_dir = \\"dist-test\\"
@@ -1593,10 +1610,11 @@ describe("pages download config", () => {
 					.split("\n")
 					.slice(1)
 					.join("\n")
+					.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 			).toMatchInlineSnapshot(`
 			"name = \\"MOCK_PROJECT_NAME\\"
 			pages_build_output_dir = \\"dist-test\\"
-			compatibility_date = \\"2023-02-14\\"
+			compatibility_date = \\"LATEST-SUPPORTED\\"
 
 			[placement]
 			mode = \\"smart\\"
@@ -1752,6 +1770,7 @@ describe("pages download config", () => {
 					.split("\n")
 					.slice(1)
 					.join("\n")
+					.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 			).toMatchInlineSnapshot(`
 			"name = \\"some-project\\"
 			"
@@ -1776,10 +1795,11 @@ describe("pages download config", () => {
 					.split("\n")
 					.slice(1)
 					.join("\n")
+					.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 			).toMatchInlineSnapshot(`
 			"name = \\"MOCK_PROJECT_NAME\\"
 			pages_build_output_dir = \\"dist-test\\"
-			compatibility_date = \\"2023-02-14\\"
+			compatibility_date = \\"LATEST-SUPPORTED\\"
 
 			[placement]
 			mode = \\"smart\\"
@@ -1938,6 +1958,7 @@ describe("pages download config", () => {
 					.split("\n")
 					.slice(1)
 					.join("\n")
+					.replace(supportedCompatibilityDate, "LATEST-SUPPORTED")
 			).toMatchInlineSnapshot(`
 			"name = \\"some-project\\"
 			"
