@@ -309,7 +309,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 		)
 		.command(
 			"delete <key>",
-			"Delete a secret variable from a Worker",
+			"Delete a secret variable from a Pages project",
 			async (yargs) => {
 				return yargs
 					.positional("key", {
