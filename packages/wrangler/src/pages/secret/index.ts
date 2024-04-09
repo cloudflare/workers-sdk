@@ -13,11 +13,11 @@ import * as metrics from "../../metrics";
 import { parseJSON, readFileSync } from "../../parse";
 import { requireAuth } from "../../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
-import { PagesProject } from "../download-config";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
-import { PagesConfigCache } from "../types";
 import type { Config } from "../../config";
 import type { CommonYargsArgv, SubHelp } from "../../yargs-types";
+import type { PagesProject } from "../download-config";
+import type { PagesConfigCache } from "../types";
 
 function isPagesEnv(env: string): env is "production" | "preview" {
 	return ["production", "preview"].includes(env);
@@ -375,7 +375,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const { env, project, accountId, config } = await pagesProject(
+				const { env, project, config } = await pagesProject(
 					args.env,
 					args.projectName
 				);
