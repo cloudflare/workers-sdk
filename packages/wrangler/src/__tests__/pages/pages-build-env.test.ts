@@ -1,5 +1,9 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import { readFileSync, writeFileSync } from "node:fs";
+import {
+	EXIT_CODE_INVALID_PAGES_CONFIG,
+	EXIT_CODE_NO_CONFIG_FOUND,
+} from "../../pages/errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -33,13 +37,19 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should fail with no config file", async () => {
+	it("should exit with specific exit code if no config file is found", async () => {
+		const processExitMock = jest
+			.spyOn(process, "exit")
+			.mockImplementation(() => {
+				throw new Error("process exit mock");
+			});
 		await expect(
-			runWrangler("pages functions build-env . --outfile data.json")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"No Pages config file found"`
-		);
+			runWrangler("pages functions build-env . --outfile out.json")
+		).rejects.toThrowErrorMatchingInlineSnapshot(`"process exit mock"`);
+		expect(processExitMock).toHaveBeenCalledWith(EXIT_CODE_NO_CONFIG_FOUND);
+		processExitMock.mockRestore();
 	});
+
 	it("should fail with no project dir", async () => {
 		await expect(
 			runWrangler("pages functions build-env")
@@ -47,12 +57,19 @@ describe("pages build env", () => {
 			`"No Pages project location specified"`
 		);
 	});
+
 	it("should fail with no outfile", async () => {
 		await expect(
 			runWrangler("pages functions build-env .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(`"No outfile specified"`);
 	});
-	it("should fail correctly with a non-pages config file", async () => {
+
+	it("should exit with specific code if a non-pages config file is found", async () => {
+		const processExitMock = jest
+			.spyOn(process, "exit")
+			.mockImplementation(() => {
+				throw new Error("process exit mock");
+			});
 		writeWranglerToml({
 			vars: {
 				VAR1: "VALUE1",
@@ -81,21 +98,38 @@ describe("pages build env", () => {
 		// This error is specifically handled by the caller of build-env
 		await expect(
 			runWrangler("pages functions build-env . --outfile data.json")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Your wrangler.toml is not a valid Pages config file"`
+		).rejects.toThrowErrorMatchingInlineSnapshot(`"process exit mock"`);
+		expect(processExitMock).toHaveBeenCalledWith(
+			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
+		processExitMock.mockRestore();
 	});
-	it("should fail correctly with an unparseable config file", async () => {
+
+	it("should exit correctly with an unparseable config file", async () => {
+		const processExitMock = jest
+			.spyOn(process, "exit")
+			.mockImplementation(() => {
+				throw new Error("process exit mock");
+			});
 		writeFileSync("./wrangler.toml", 'INVALID "FILE');
 		// This error is specifically handled by the caller of build-env
 		await expect(
 			runWrangler("pages functions build-env . --outfile data.json")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Your wrangler.toml is not a valid Pages config file"`
+		).rejects.toThrowErrorMatchingInlineSnapshot(`"process exit mock"`);
+		expect(processExitMock).toHaveBeenCalledWith(
+			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
 		expect(std.err).toContain("ParseError");
+		processExitMock.mockRestore();
 	});
-	it("should fail correctly with a non-pages config file w/ invalid environment", async () => {
+
+	it("should exit correctly with a non-pages config file w/ invalid environment", async () => {
+		const processExitMock = jest
+			.spyOn(process, "exit")
+			.mockImplementation(() => {
+				throw new Error("process exit mock");
+			});
+
 		writeWranglerToml({
 			vars: {
 				VAR1: "VALUE1",
@@ -124,9 +158,11 @@ describe("pages build env", () => {
 		// This error is specifically handled by the caller of build-env
 		await expect(
 			runWrangler("pages functions build-env . --outfile data.json")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Your wrangler.toml is not a valid Pages config file"`
+		).rejects.toThrowErrorMatchingInlineSnapshot(`"process exit mock"`);
+		expect(processExitMock).toHaveBeenCalledWith(
+			EXIT_CODE_INVALID_PAGES_CONFIG
 		);
+		processExitMock.mockRestore();
 	});
 
 	it("should return top-level by default", async () => {
@@ -169,6 +205,7 @@ describe("pages build env", () => {
 			`"{\\"vars\\":{\\"VAR1\\":\\"VALUE1\\",\\"VAR2\\":\\"VALUE2\\"},\\"pages_build_output_dir\\":\\"dist\\"}"`
 		);
 	});
+
 	it("should return production", async () => {
 		process.env.PAGES_ENVIRONMENT = "production";
 		writeWranglerToml({

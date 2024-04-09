@@ -3,7 +3,11 @@ import path from "node:path";
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import { EXIT_CODE_NO_CONFIG_FOUND } from "./errors";
+import {
+	EXIT_CODE_INVALID_PAGES_CONFIG,
+	EXIT_CODE_NO_CONFIG_FOUND,
+} from "./errors";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -34,24 +38,30 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 	}
 
 	const configPath = path.resolve(args.projectDir, "wrangler.toml");
-	// Fail early if the config file doesn't exist
 	if (!existsSync(configPath)) {
-		throw new FatalError(
-			"No Pages config file found",
-			EXIT_CODE_NO_CONFIG_FOUND
-		);
+		logger.log("No Pages config file found. Skipping...");
+		process.exit(EXIT_CODE_NO_CONFIG_FOUND);
 	}
+
 	logger.log("Reading build configuration from your wrangler.toml file...");
 
-	const config = readConfig(
-		configPath,
-		{
-			...args,
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			env: process.env.PAGES_ENVIRONMENT,
-		},
-		true
-	);
+	let config: Omit<Config, "pages_build_output_dir"> & {
+		pages_build_output_dir: string;
+	};
+	try {
+		config = readConfig(
+			configPath,
+			{
+				...args,
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				env: process.env.PAGES_ENVIRONMENT,
+			},
+			true
+		);
+	} catch (err) {
+		logger.log("Invalid Pages config file found. Skipping...");
+		process.exit(EXIT_CODE_INVALID_PAGES_CONFIG);
+	}
 
 	// Ensure JSON variables are not included
 	const textVars = Object.fromEntries(
