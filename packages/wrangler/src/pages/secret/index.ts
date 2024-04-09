@@ -135,11 +135,10 @@ async function pagesProject(
 			);
 		} catch (err) {
 			// code `8000007` corresponds to project not found
-			if ((err as { code: number }).code !== 8000007) {
-				throw err;
-			} else {
+			if ((err as { code: number }).code === 8000007) {
 				throw new FatalError(`Project "${projectName}" does not exist.`, 1);
 			}
+			throw err;
 		}
 	} else {
 		throw new FatalError("Must specify a project name.", 1);
