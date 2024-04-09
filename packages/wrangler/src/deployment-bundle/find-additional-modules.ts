@@ -44,7 +44,7 @@ function isValidPythonPackageName(name: string): boolean {
  * See https://pip.pypa.io/en/latest/reference/requirements-file-format/ (Comments)
  * @param requirement The requirement to sanitize
  */
-function stripPythonRequirement(requirement: string): string {
+function stripComments(requirement: string): string {
 	const regex = /\w+#.*$/;
 	return requirement.replace(regex, "").trim();
 }
@@ -89,7 +89,7 @@ export async function findAdditionalModules(
 		}
 
 		for (let requirement of pythonRequirements.split("\n")) {
-			requirement = stripPythonRequirement(requirement);
+			requirement = stripComments(requirement);
 			if (requirement === "") continue;
 
 			if (!isValidPythonPackageName(requirement)) {

@@ -393,7 +393,7 @@ describe("python dependency tests", () => {
 		}));
 	});
 
-	it("can parse requirments file and use dependencies", async () => {
+	it("can parse requirements file and use dependencies", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,
