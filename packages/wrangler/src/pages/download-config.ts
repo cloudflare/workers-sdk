@@ -200,48 +200,53 @@ function simplifyEnvironments(
 	preview?: RawEnvironment;
 	production?: RawEnvironment;
 } {
+	const topLevel = { ...preview };
 	// If the environments are equal, don't include a production override
 	if (JSON.stringify(preview) === JSON.stringify(production)) {
 		// Don't include extraneous placement. No need to check the production setting since it's equal to preview
-		if (preview.placement?.mode === "off") {
-			delete preview.placement;
+		if (topLevel.placement?.mode === "off") {
+			delete topLevel.placement;
 		}
-		return { topLevel: preview };
+		return { topLevel };
 	}
 	// Remove duplication for inheritable keys (https://developers.cloudflare.com/pages/functions/wrangler-configuration/#inheritable-keys)
 	if (preview.compatibility_date === production.compatibility_date) {
 		delete production.compatibility_date;
+		delete preview.compatibility_date;
 	}
 	if (
 		JSON.stringify(preview.compatibility_flags) ===
 		JSON.stringify(production.compatibility_flags)
 	) {
 		delete production.compatibility_flags;
+		delete preview.compatibility_date;
 	}
 
 	if (
 		JSON.stringify(preview.placement) === JSON.stringify(production.placement)
 	) {
 		delete production.placement;
+		delete preview.compatibility_date;
 
 		// Don't include extraneous placement
-		if (preview.placement?.mode === "off") {
-			delete preview.placement;
+		if (topLevel.placement?.mode === "off") {
+			delete topLevel.placement;
 		}
 	}
 	if (JSON.stringify(preview.limits) === JSON.stringify(production.limits)) {
 		delete production.limits;
-		return { topLevel: preview, production };
+		delete preview.limits;
+		return { topLevel, production };
 	}
 	// At this point, we've simplified the environments as much as possible, and could ideally use `preview` for the top-level default and `production` as a named override if necessary
 	// However, this relies on the `production` named environment fully specifying all it's properties, which is not always the case. `limits` can be unset in a
 	// Pages environment, and if `preview` (i.e. the top level) sets a `limits` value the named `prodution` environment would inherit it, with no way to unset it (as there is for `placement` with `mode: "off"`, for instance)
 	// As such, if `preview` sets `limits` and `production` _doesn't_, make a named environment for both `preview` and `production`, and copy every other property from `preview` to the top-level for use locally
 	else if (preview.limits && !production.limits) {
-		const { limits: _, ...topLevel } = preview;
+		delete topLevel.limits;
 		return { topLevel, production, preview };
 	}
-	return { topLevel: preview, production };
+	return { topLevel, production };
 }
 
 async function downloadProject(accountId: string, projectName: string) {
