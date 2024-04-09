@@ -20,7 +20,7 @@
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
-		"test:ci": "dotenv -- turbo test:ci --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
+		"test:ci": "dotenv -- turbo test:ci",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
