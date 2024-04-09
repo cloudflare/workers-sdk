@@ -41,11 +41,6 @@ jobs:
         env:
           CI_OS: ${{ runner.os }}
 
-      - name: Check linting and formatting
-        run: pnpm run check
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-
       - name: Create Version PR or Publish to NPM
         id: changesets
         uses: changesets/action@v1
