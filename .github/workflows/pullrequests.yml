@@ -112,7 +112,7 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Run tests & collect coverage
+      - name: Run tests
         run: pnpm run test:ci
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -129,6 +129,3 @@ jobs:
 
       - name: Run changeset version tests
         run: node .github/changeset-version.test.js
-
-      - name: Report Code Coverage
-        uses: codecov/codecov-action@v3
