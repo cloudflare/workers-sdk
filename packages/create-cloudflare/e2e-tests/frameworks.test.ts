@@ -111,6 +111,16 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "The fullstack meta-framework for Angular!",
 		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
+		},
+		verifyBuild: {
+			outputDir: "./dist/analog/public",
+			script: "build",
+			route: "/api/v1/test",
+			expectedText: "C3_TEST",
+		},
 		flags: ["--skipTailwind"],
 	},
 	angular: {

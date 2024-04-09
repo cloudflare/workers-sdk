@@ -1,5 +1,11 @@
 name = "<TBD>"
 compatibility_date = "<TBD>"
+pages_build_output_dir = "./dist/analog/public"
+
+# Automatically places your application in an optimal location that minimizes latency
+# Docs: https://developers.cloudflare.com/pages/functions/smart-placement/
+[placement]
+mode = "smart"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
@@ -50,3 +56,21 @@ compatibility_date = "<TBD>"
 # [[services]]
 # binding = "MY_SERVICE"
 # service = "my-service"
+
+# To use different bindings for preview and production environments, follow the examples below.
+# When using environment-specific overrides for bindings, ALL bindings must be specified on a per-environment basis.
+# Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration#environment-specific-overrides
+
+# [[env.preview.kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "<PREVIEW_NAMESPACE_ID>"
+
+# [[env.production.kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "<PRODUCTION_NAMESPACE_ID>"
+
+# [env.preview.vars]
+# API_KEY = "xyz789"
+
+# [env.production.vars]
+# API_KEY = "abc123"
