@@ -1,3 +1,4 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
 main = "src/entry.py"
 compatibility_flags = ["python_workers"]
