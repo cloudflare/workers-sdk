@@ -43,13 +43,6 @@ jobs:
           node-version: 16.18
           cache: "pnpm"
 
-      - name: Install workerd dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
-
       - name: Install NPM dependencies
         run: pnpm install --frozen-lockfile
 

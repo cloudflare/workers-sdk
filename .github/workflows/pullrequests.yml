@@ -50,13 +50,6 @@ jobs:
           echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
           echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
 
-      - name: Install workerd Dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
-
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
 
