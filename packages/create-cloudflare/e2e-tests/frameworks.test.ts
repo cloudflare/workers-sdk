@@ -112,6 +112,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "The fullstack meta-framework for Angular!",
 		},
+		verifyDev: {
+			route: "/api/v1/test",
+			expectedText: "C3_TEST",
+		},
 		verifyBuildCfTypes: {
 			outputFile: "worker-configuration.d.ts",
 			envInterfaceName: "Env",
@@ -544,6 +548,7 @@ const verifyDevScript = async (
 			cwd: projectPath,
 			env: {
 				NODE_ENV: "development",
+				VITEST: undefined,
 			},
 		},
 		logStream

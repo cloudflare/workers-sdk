@@ -102,8 +102,6 @@ export const runDeploy = async (ctx: C3Context) => {
 		env: {
 			CLOUDFLARE_ACCOUNT_ID: ctx.account.id,
 			NODE_ENV: "production",
-			// unset the VITEST env variable as this causes e2e issues with some frameworks
-			VITEST: undefined,
 		},
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(

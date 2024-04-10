@@ -42,6 +42,8 @@ const testEnv = {
 	YARN_ENABLE_GLOBAL_CACHE: "false",
 	PNPM_HOME: "./.pnpm",
 	npm_config_cache: "./.npm/cache",
+	// unset the VITEST env variable as this causes e2e issues with some frameworks
+	VITEST: undefined,
 };
 
 export type PromptHandler = {
