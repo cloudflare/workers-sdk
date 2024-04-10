@@ -43,7 +43,7 @@
 		"@actions/artifact": "^2.0.1",
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.27.1",
-		"@cloudflare/workers-types": "^4.20240404.0",
+		"@cloudflare/workers-types": "^4.20240405.0",
 		"@turbo/gen": "^1.10.13",
 		"@vue/compiler-sfc": "^3.3.4",
 		"dotenv-cli": "^7.3.0",

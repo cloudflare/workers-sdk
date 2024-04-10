@@ -313,6 +313,7 @@ test("ProxyClient: can `JSON.stringify()` proxies", async (t) => {
 		key: "key",
 		size: 5,
 		uploaded: object.uploaded.toISOString(),
+		storageClass: '',
 		version: object.version,
 	});
 });
