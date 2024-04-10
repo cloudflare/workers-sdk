@@ -24,12 +24,13 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = ["nitropack"];
-
-	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
-	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
-	if (pm === "pnpm") {
+	// Fix hoisting issues with pnpm and yarn
+	if (pm === "pnpm" || pm === "yarn" || pm === "bun") {
+		const packages = [];
+		packages.push("nitropack");
 		packages.push("h3");
+		packages.push("@ngtools/webpack");
+		packages.push("@angular-devkit/build-angular");
 
 		await installPackages(packages, {
 			dev: true,
