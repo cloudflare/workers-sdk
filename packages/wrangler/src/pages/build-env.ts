@@ -39,8 +39,9 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 
 	const configPath = path.resolve(args.projectDir, "wrangler.toml");
 	if (!existsSync(configPath)) {
-		logger.log("No Pages config file found. Skipping...");
-		process.exit(EXIT_CODE_NO_CONFIG_FOUND);
+		logger.log("No Pages configuration file found. Exiting.");
+		process.exitCode = EXIT_CODE_NO_CONFIG_FOUND;
+		return;
 	}
 
 	logger.log("Reading build configuration from your wrangler.toml file...");
@@ -59,8 +60,9 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 			true
 		);
 	} catch (err) {
-		logger.log("Invalid Pages config file found. Skipping...");
-		process.exit(EXIT_CODE_INVALID_PAGES_CONFIG);
+		logger.log("Invalid Pages configuration file found. Exiting.");
+		process.exitCode = EXIT_CODE_INVALID_PAGES_CONFIG;
+		return;
 	}
 
 	// Ensure JSON variables are not included
