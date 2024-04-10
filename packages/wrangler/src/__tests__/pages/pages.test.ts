@@ -27,6 +27,7 @@ describe("pages", () => {
 		  wrangler pages project                         ⚡️ Interact with your Pages projects
 		  wrangler pages deployment                      🚀 Interact with the deployments of a project
 		  wrangler pages deploy [directory]              🆙 Deploy a directory of static assets as a Pages deployment  [aliases: publish]
+		  wrangler pages secret                          🤫 Generate a secret that can be referenced in a Pages project
 		  wrangler pages download                        ⚡️ Download settings from your project
 
 		Flags:
