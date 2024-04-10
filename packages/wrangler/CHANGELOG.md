@@ -1,5 +1,30 @@
 # wrangler
 
+## 3.49.0
+
+### Minor Changes
+
+- [#5549](https://github.com/cloudflare/workers-sdk/pull/5549) [`113ac41`](https://github.com/cloudflare/workers-sdk/commit/113ac41cda3bd6304c0683f6f8e61dcedf21e685) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support `wrangler pages secret put|delete|list|bulk`
+
+- [#5550](https://github.com/cloudflare/workers-sdk/pull/5550) [`4f47f74`](https://github.com/cloudflare/workers-sdk/commit/4f47f7422786e537eaefd034153998f848bcd573) Thanks [@penalosa](https://github.com/penalosa)! - feat: Generate a JSON schema for the Wrangler package & use it in templates
+
+- [#5561](https://github.com/cloudflare/workers-sdk/pull/5561) [`59591cd`](https://github.com/cloudflare/workers-sdk/commit/59591cd5ace98bbfefd2ec34eb77dfeafd8db97d) Thanks [@ocsfrank](https://github.com/ocsfrank)! - feat: update R2 CreateBucket action to include the storage class in the request body
+
+### Patch Changes
+
+- [#5374](https://github.com/cloudflare/workers-sdk/pull/5374) [`7999dd2`](https://github.com/cloudflare/workers-sdk/commit/7999dd2bacf53be3780ba70492003d417ffcd5f0) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - fix: Improvements to `--init-from-dash`
+
+  Adds user-specified CPU limit to `wrangler.toml` if one exists. Excludes `usage_model` from `wrangler.toml` in all cases, since this field is deprecated and no longer used.
+
+- [#5553](https://github.com/cloudflare/workers-sdk/pull/5553) [`dcd65dd`](https://github.com/cloudflare/workers-sdk/commit/dcd65dd3da19f619cd9c48d42433ac538a734816) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: refactor d1's time-travel compatibility check
+
+- [#5380](https://github.com/cloudflare/workers-sdk/pull/5380) [`57d5658`](https://github.com/cloudflare/workers-sdk/commit/57d5658bc5560f4ba38fd1b21a1988a4922feea2) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Respect `--no-bundle` when deploying a `_worker.js/` directory in Pages projects
+
+- [#5536](https://github.com/cloudflare/workers-sdk/pull/5536) [`a7aa28a`](https://github.com/cloudflare/workers-sdk/commit/a7aa28ad57c07ea96aad1ddc547afb11db679878) Thanks [@Cherry](https://github.com/Cherry)! - fix: resolve a regression where `wrangler pages dev` would bind to port 8787 by default instead of 8788 since wrangler@3.38.0
+
+- Updated dependencies [[`9575a51`](https://github.com/cloudflare/workers-sdk/commit/9575a514cbc206fea6d08f627253ead209fd2a8d)]:
+  - miniflare@3.20240405.0
+
 ## 3.48.0
 
 ### Minor Changes
