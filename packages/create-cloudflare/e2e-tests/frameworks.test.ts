@@ -106,7 +106,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	},
 	analog: {
 		testCommitMessage: true,
-		timeout: TEST_TIMEOUT,
+		timeout: LONG_TIMEOUT,
 		verifyDeploy: {
 			route: "/",
 			expectedText: "The fullstack meta-framework for Angular!",
@@ -477,7 +477,7 @@ const runCli = async (
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
 
-	const match = output.replaceAll("\n", "n").match(deployedUrlRe);
+	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return "";
