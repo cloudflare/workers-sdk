@@ -70,9 +70,9 @@ const rewriteNodeToInternalPlugin = {
 };
 
 /**
- * @type {Map<string, esbuild.BuildResult>}
+ * @type {Map<string, esbuild.BuildContext>}
  */
-const workersBuilders = new Map();
+const workerContexts = new Map();
 /**
  * @type {esbuild.Plugin}
  */
@@ -93,9 +93,9 @@ const embedWorkersPlugin = {
 			return { path: result.path, namespace };
 		});
 		build.onLoad({ filter: /.*/, namespace }, async (args) => {
-			let builder = workersBuilders.get(args.path);
-			if (builder === undefined) {
-				builder = await esbuild.build({
+			let context = workerContexts.get(args.path);
+			if (context === undefined) {
+				context = await esbuild.context({
 					platform: "node", // Marks `node:*` imports as external
 					format: "esm",
 					target: "esnext",
@@ -104,7 +104,6 @@ const embedWorkersPlugin = {
 					sourcesContent: false,
 					external: ["miniflare:shared", "miniflare:zod"],
 					metafile: true,
-					incremental: watch, // Allow `rebuild()` calls if watching
 					entryPoints: [args.path],
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
@@ -115,22 +114,21 @@ const embedWorkersPlugin = {
 							? [rewriteNodeToInternalPlugin]
 							: [],
 				});
-			} else {
-				builder = await builder.rebuild();
+				workerContexts.set(args.path, context);
 			}
-			workersBuilders.set(args.path, builder);
+			const result = await context.rebuild();
 			await fs.mkdir("worker-metafiles", { recursive: true });
 			await fs.writeFile(
 				path.join(
 					"worker-metafiles",
 					path.basename(args.path) + ".metafile.json"
 				),
-				JSON.stringify(builder.metafile)
+				JSON.stringify(result.metafile)
 			);
 			let outPath = args.path.substring(workersRoot.length + 1);
 			outPath = outPath.substring(0, outPath.lastIndexOf(".")) + ".js";
 			outPath = JSON.stringify(outPath);
-			const watchFiles = Object.keys(builder.metafile.inputs);
+			const watchFiles = Object.keys(result.metafile.inputs);
 			const contents = `
       import fs from "fs";
       import path from "path";
@@ -164,7 +162,7 @@ async function buildPackage() {
 	}
 	const outPath = path.join(pkgRoot, "dist");
 
-	await esbuild.build({
+	const context = await esbuild.context({
 		platform: "node",
 		format: "cjs",
 		target: "esnext",
@@ -187,11 +185,19 @@ async function buildPackage() {
 		],
 		plugins: [embedWorkersPlugin],
 		logLevel: watch ? "info" : "warning",
-		watch,
 		outdir: outPath,
 		outbase: pkgRoot,
 		entryPoints: [indexPath, ...testPaths],
 	});
+	if (watch) {
+		await context.watch();
+	} else {
+		await context.rebuild();
+		await context.dispose();
+		for (const workerContext of workerContexts.values()) {
+			await workerContext.dispose();
+		}
+	}
 }
 
 await buildPackage();

@@ -784,7 +784,11 @@ describe("middleware", () => {
 					.replace(/\/\/ .*/g, "")
 					.trim()
 			).toMatchInlineSnapshot(`
-			"var src_default = {
+			"Symbol.dispose ??= Symbol(\\"Symbol.dispose\\");
+			Symbol.asyncDispose ??= Symbol(\\"Symbol.asyncDispose\\");
+
+
+			var src_default = {
 			  async fetch(request, env) {
 			    return Response.json(env);
 			  }
@@ -827,7 +831,7 @@ describe("middleware", () => {
 			}
 
 
-			var __Facade_ScheduledController__ = class {
+			var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
 			  constructor(scheduledTime, cron, noRetry) {
 			    this.scheduledTime = scheduledTime;
 			    this.cron = cron;
@@ -835,7 +839,7 @@ describe("middleware", () => {
 			  }
 			  #noRetry;
 			  noRetry() {
-			    if (!(this instanceof __Facade_ScheduledController__)) {
+			    if (!(this instanceof ___Facade_ScheduledController__)) {
 			      throw new TypeError(\\"Illegal invocation\\");
 			    }
 			    this.#noRetry();
