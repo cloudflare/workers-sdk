@@ -25,20 +25,17 @@ export const mswR2handlers = [
 	),
 	rest.post(
 		"*/accounts/:accountId/r2/buckets",
-		(request, response, context) => {
-			const storageClassValue = request.headers.get("cf-r2-storage-class");
-			if (
-				storageClassValue !== null &&
-				!isValidStorageClass(storageClassValue)
-			) {
+		async (request, response, context) => {
+			const { storageClass } = await request.json();
+			if (storageClass !== null && !isValidStorageClass(storageClass)) {
 				return response.once(
 					context.status(400),
 					context.json({
 						success: false,
 						errors: [
 							{
-								code: 10062,
-								message: "The storage class specified is not valid.",
+								code: 10040,
+								message: "The JSON you provided was not well formed.",
 							},
 						],
 						messages: [],

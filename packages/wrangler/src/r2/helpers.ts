@@ -56,12 +56,12 @@ export async function createR2Bucket(
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
-	if (storageClass !== undefined) {
-		headers["cf-r2-storage-class"] = storageClass;
-	}
 	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
 		method: "POST",
-		body: JSON.stringify({ name: bucketName }),
+		body: JSON.stringify({
+			name: bucketName,
+			...(storageClass !== undefined && { storageClass }),
+		}),
 		headers,
 	});
 }
