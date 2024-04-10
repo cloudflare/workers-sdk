@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.18.0
+
+### Minor Changes
+
+- [#5550](https://github.com/cloudflare/workers-sdk/pull/5550) [`4f47f74`](https://github.com/cloudflare/workers-sdk/commit/4f47f7422786e537eaefd034153998f848bcd573) Thanks [@penalosa](https://github.com/penalosa)! - feat: Generate a JSON schema for the Wrangler package & use it in templates
+
+### Patch Changes
+
+- [#5355](https://github.com/cloudflare/workers-sdk/pull/5355) [`e18f18b`](https://github.com/cloudflare/workers-sdk/commit/e18f18b28a9cface804be1c3ff0630f57404522f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 4.7.4 | 4.7.5 |
+
+- [#5411](https://github.com/cloudflare/workers-sdk/pull/5411) [`a13a0c3`](https://github.com/cloudflare/workers-sdk/commit/a13a0c36857eb3fef34cc45cb2dffa134b04fcc4) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: display helpful error message when no accounts found during deployment
+
+  Previously, C3 would display `TypeError: Cannot read properties of undefined (reading 'value')` if you were logged in as a user without access to any accounts. This change ensures a more appropriate error message is displayed in this case.
+
+- [#5517](https://github.com/cloudflare/workers-sdk/pull/5517) [`3c2eba8`](https://github.com/cloudflare/workers-sdk/commit/3c2eba80aed5dd70eb7e96dc3a17dd1d0c03097b) Thanks [@admah](https://github.com/admah)! - fix: update failing test and add test command to package.json in C3 Hello World JS template.
+
 ## 2.17.1
 
 ### Patch Changes
