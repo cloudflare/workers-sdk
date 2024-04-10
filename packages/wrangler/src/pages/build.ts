@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path, {
 	basename,
 	dirname,
@@ -14,6 +14,7 @@ import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
+import { parseJSON } from "../parse";
 import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
@@ -32,6 +33,11 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+type BuildMetadata = {
+	wrangler_config_hash: string;
+	build_output_directory: string;
+};
 
 export type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -130,6 +136,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 	const validatedArgs = await validateArgs(args);
 
 	let bundle: BundleResult | undefined = undefined;
+	let workerBundleContents: Buffer | undefined = undefined;
 
 	if (validatedArgs.plugin) {
 		const {
@@ -212,14 +219,16 @@ export const Handler = async (args: PagesBuildArgs) => {
 			nodejsCompat,
 			legacyNodeCompat,
 			workerScriptPath,
+			workerBundlePath,
 			defineNavigatorUserAgent,
 		} = validatedArgs;
 
 		/**
-		 * prioritize building `_worker.js` over Pages Functions, if both exist
-		 * and if we were able to resolve _worker.js
+		 * Prioritise `_worker.bundle`, `_worker.js`, functions dir, in that order
 		 */
-		if (workerScriptPath) {
+		if (workerBundlePath) {
+			workerBundleContents = await readFile(workerBundlePath);
+		} else if (workerScriptPath) {
 			if (lstatSync(workerScriptPath).isDirectory()) {
 				bundle = await produceWorkerBundleForWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
@@ -283,20 +292,37 @@ export const Handler = async (args: PagesBuildArgs) => {
 		}
 
 		if (outdir) {
-			await writeAdditionalModules(bundle.modules, outdir);
+			if (workerBundleContents) {
+				await writeFile(
+					path.join(outdir, "_worker.bundle"),
+					workerBundleContents
+				);
+			} else if (bundle) {
+				await writeAdditionalModules(bundle.modules, outdir);
+			} else {
+				// This should never happen
+				throw new FatalError("Nothing to write to --outdir");
+			}
 		}
 
 		if (outfile) {
-			const workerBundleContents = await createUploadWorkerBundleContents(
-				bundle as BundleResult,
-				config
-			);
+			if (bundle && !workerBundleContents) {
+				workerBundleContents = Buffer.from(
+					await (
+						await createUploadWorkerBundleContents(
+							bundle as BundleResult,
+							config
+						)
+					).arrayBuffer()
+				);
+			}
+			if (!workerBundleContents) {
+				// This should never happen
+				throw new FatalError("Nothing to write to --outfile");
+			}
 
 			mkdirSync(dirname(outfile), { recursive: true });
-			writeFileSync(
-				outfile,
-				Buffer.from(await workerBundleContents.arrayBuffer())
-			);
+			writeFileSync(outfile, workerBundleContents);
 		}
 		if (buildMetadataPath && buildMetadata) {
 			writeFileSync(buildMetadataPath, JSON.stringify(buildMetadata));
@@ -313,13 +339,9 @@ type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
 	nodejsCompat: boolean;
 	defineNavigatorUserAgent: boolean;
 	workerScriptPath: string;
+	workerBundlePath: string;
 	config: Config | undefined;
-	buildMetadata:
-		| {
-				wrangler_config_hash: string;
-				build_output_directory: string;
-		  }
-		| undefined;
+	buildMetadata: BuildMetadata | undefined;
 };
 type PluginArgs = Omit<
 	PagesBuildArgs,
@@ -448,18 +470,31 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	let workerScriptPath: string | undefined;
+	let workerBundlePath: string | undefined;
 
 	if (args.buildOutputDirectory) {
+		const prospectiveWorkerBundlePath = resolvePath(
+			args.buildOutputDirectory,
+			"_worker.bundle"
+		);
+
 		const prospectiveWorkerScriptPath = resolvePath(
 			args.buildOutputDirectory,
 			"_worker.js"
 		);
 
-		const foundWorkerScript = existsSync(prospectiveWorkerScriptPath);
+		const foundWorkerBundle = existsSync(prospectiveWorkerBundlePath);
 
-		if (foundWorkerScript) {
+		const foundWorkerScript = existsSync(prospectiveWorkerScriptPath);
+		if (foundWorkerBundle) {
+			workerBundlePath = prospectiveWorkerBundlePath;
+		} else if (foundWorkerScript) {
 			workerScriptPath = prospectiveWorkerScriptPath;
-		} else if (!foundWorkerScript && !existsSync(args.directory)) {
+		} else if (
+			!foundWorkerScript &&
+			!foundWorkerBundle &&
+			!existsSync(args.directory)
+		) {
 			throw new FatalError(
 				`Could not find anything to build.
 We first looked inside the build output directory (${basename(
@@ -483,22 +518,54 @@ We looked for the Functions directory (${basename(
 		);
 	}
 
+	// The build metadata for this build (a hash of the config file it was based on, and the output directory that was used) is usually generated from wrangler.toml
+	// However, frameworks may want to allow users to use a completely different config file, and so may want to fully generate a `_build-metadata.json` file themselves
+	// This is an advanced use case, and should go along with a custom `_worker.bundle` file. The vast majority of users won't need to cutomise this!
+	let buildMetadata: BuildMetadata | undefined;
+
+	if (args.buildOutputDirectory) {
+		const prospectiveBuildMetadataPath = resolvePath(
+			args.buildOutputDirectory,
+			"_build-metadata.json"
+		);
+		if (existsSync(prospectiveBuildMetadataPath)) {
+			const maybeBuildMetadata = parseJSON<{
+				wrangler_config_hash?: string;
+				build_output_directory?: string;
+			}>(await readFile(prospectiveBuildMetadataPath, "utf8"));
+
+			// Ensure we only add known properties to the build metadata
+			buildMetadata =
+				maybeBuildMetadata?.wrangler_config_hash &&
+				maybeBuildMetadata?.build_output_directory
+					? {
+							wrangler_config_hash: maybeBuildMetadata.wrangler_config_hash,
+							build_output_directory: maybeBuildMetadata.build_output_directory,
+					  }
+					: undefined;
+		} else if (
+			config &&
+			args.projectDirectory &&
+			config.pages_build_output_dir
+		) {
+			buildMetadata = {
+				wrangler_config_hash: config.hash,
+				build_output_directory: path.relative(
+					args.projectDirectory,
+					config.pages_build_output_dir
+				),
+			};
+		}
+	}
+
 	return {
 		...argsExceptNodeCompat,
 		workerScriptPath,
+		workerBundlePath,
 		nodejsCompat,
 		legacyNodeCompat,
 		defineNavigatorUserAgent,
 		config,
-		buildMetadata:
-			config && args.projectDirectory && config.pages_build_output_dir
-				? {
-						wrangler_config_hash: config.hash,
-						build_output_directory: path.relative(
-							args.projectDirectory,
-							config.pages_build_output_dir
-						),
-				  }
-				: undefined,
+		buildMetadata,
 	} as ValidatedArgs;
 };
