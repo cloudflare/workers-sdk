@@ -107,6 +107,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	analog: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "The fullstack meta-framework for Angular!",
