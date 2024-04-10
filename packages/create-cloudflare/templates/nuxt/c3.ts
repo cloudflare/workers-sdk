@@ -56,7 +56,7 @@ const updateEnvTypes = (ctx: C3Context) => {
 
 	let file = readFile(filepath);
 
-	let typesEntrypoint = `@cloudflare/workers-types/`;
+	let typesEntrypoint = `@cloudflare/workers-types`;
 	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
 	if (latestEntrypoint) {
 		typesEntrypoint += `/${latestEntrypoint}`;

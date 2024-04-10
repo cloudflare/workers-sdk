@@ -24,7 +24,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	// Fix hoisting issues with pnpm and yarn
+	// Fix hoisting issues with pnpm, yarn and bun
 	if (pm === "pnpm" || pm === "yarn" || pm === "bun") {
 		const packages = [];
 		packages.push("nitropack");
@@ -52,7 +52,7 @@ const updateEnvTypes = (ctx: C3Context) => {
 
 	let file = readFile(filepath);
 
-	let typesEntrypoint = `@cloudflare/workers-types/`;
+	let typesEntrypoint = `@cloudflare/workers-types`;
 	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
 	if (latestEntrypoint) {
 		typesEntrypoint += `/${latestEntrypoint}`;
@@ -128,9 +128,9 @@ const updateMainServer = () => {
 	const b = recast.types.builders;
 	const s = spinner();
 
-	const configFile = "src/main.server.ts";
-	s.start(`Updating \`${configFile}\``);
-	transformFile(configFile, {
+	const serverFile = "src/main.server.ts";
+	s.start(`Updating \`${serverFile}\``);
+	transformFile(serverFile, {
 		visitProgram(n) {
 			const baseUrlImport = b.importDeclaration(
 				[b.importSpecifier(b.identifier("APP_BASE_HREF"))],
@@ -182,7 +182,7 @@ const updateMainServer = () => {
 			const objectArg = n.node.arguments[1];
 			if (objectArg.type !== "ObjectExpression") {
 				crash(
-					`Found unexpected argument type when modifying ${configFile}. Expected an object as second parameter to "renderApplication"`
+					`Found unexpected argument type when modifying ${serverFile}. Expected an object as second parameter to "renderApplication"`
 				);
 			}
 
@@ -241,7 +241,7 @@ const updateMainServer = () => {
 		},
 	});
 
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${serverFile}\``)}`);
 };
 
 const config: TemplateConfig = {

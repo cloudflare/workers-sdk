@@ -1,11 +1,7 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
 compatibility_date = "<TBD>"
 pages_build_output_dir = "./dist/analog/public"
-
-# Automatically places your application in an optimal location that minimizes latency
-# Docs: https://developers.cloudflare.com/pages/functions/smart-placement/
-[placement]
-mode = "smart"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.

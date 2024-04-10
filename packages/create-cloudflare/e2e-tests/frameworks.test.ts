@@ -108,8 +108,8 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
 		unsupportedOSs: ["win32"],
-		// The analog template works with yarn, it just takes a preventatively long time to build
-		// which makes it flaky in CI
+		// The analog template works with yarn, but the build takes so long that it
+		// becomes flaky in CI
 		unsupportedPms: ["yarn"],
 		verifyDeploy: {
 			route: "/",
