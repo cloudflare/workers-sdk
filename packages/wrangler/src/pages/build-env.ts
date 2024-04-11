@@ -3,7 +3,11 @@ import path from "node:path";
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
-import { EXIT_CODE_NO_CONFIG_FOUND } from "./errors";
+import {
+	EXIT_CODE_INVALID_PAGES_CONFIG,
+	EXIT_CODE_NO_CONFIG_FOUND,
+} from "./errors";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -33,25 +37,37 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		throw new FatalError("No outfile specified");
 	}
 
-	const configPath = path.resolve(args.projectDir, "wrangler.toml");
-	// Fail early if the config file doesn't exist
-	if (!existsSync(configPath)) {
-		throw new FatalError(
-			"No Pages config file found",
-			EXIT_CODE_NO_CONFIG_FOUND
-		);
-	}
-	logger.log("Reading build configuration from your wrangler.toml file...");
-
-	const config = readConfig(
-		configPath,
-		{
-			...args,
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			env: process.env.PAGES_ENVIRONMENT,
-		},
-		true
+	logger.log(
+		"Checking for configuration in a wrangler.toml configuration file (BETA)\n"
 	);
+
+	const configPath = path.resolve(args.projectDir, "wrangler.toml");
+	if (!existsSync(configPath)) {
+		logger.debug("No wrangler.toml configuration file found. Exiting.");
+		process.exitCode = EXIT_CODE_NO_CONFIG_FOUND;
+		return;
+	}
+
+	logger.log("Found wrangler.toml file. Reading build configuration...");
+
+	let config: Omit<Config, "pages_build_output_dir"> & {
+		pages_build_output_dir: string;
+	};
+	try {
+		config = readConfig(
+			configPath,
+			{
+				...args,
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				env: process.env.PAGES_ENVIRONMENT,
+			},
+			true
+		);
+	} catch (err) {
+		logger.debug("wrangler.toml file is invalid. Exiting.");
+		process.exitCode = EXIT_CODE_INVALID_PAGES_CONFIG;
+		return;
+	}
 
 	// Ensure JSON variables are not included
 	const textVars = Object.fromEntries(
@@ -75,9 +91,9 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		...vars.map(([key, value]) => `  - ${key}: ${value}`),
 	].join("\n");
 
-	logger.log(message);
-
 	logger.log(
 		`pages_build_output_dir: ${buildConfiguration.pages_build_output_dir}`
 	);
+
+	logger.log(message);
 };
