@@ -19,5 +19,8 @@
 	},
 	"engines": {
 		"node": ">=16.13"
+	},
+	"dependencies": {
+		"is-odd": "^3.0.1"
 	}
 }

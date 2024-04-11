@@ -355,6 +355,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-functions-app:
+    dependencies:
+      is-odd:
+        specifier: ^3.0.1
+        version: 3.0.1
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -413,11 +417,18 @@ importers:
 
   fixtures/pages-plugin-example:
     devDependencies:
+      is-odd:
+        specifier: ^3.0.1
+        version: 3.0.1
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-plugin-mounted-on-root-app:
+    dependencies:
+      is-odd:
+        specifier: ^3.0.1
+        version: 3.0.1
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -14121,9 +14132,19 @@ packages:
       kind-of: 3.2.2
     dev: true
 
+  /is-number@6.0.0:
+    resolution: {integrity: sha512-Wu1VHeILBK8KAWJUAiSZQX94GmOE45Rg6/538fKwiloUu21KncEkYGPqob2oSZ5mUT73vLGrHQjKw3KMPwfDzg==}
+    engines: {node: '>=0.10.0'}
+
   /is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
+
+  /is-odd@3.0.1:
+    resolution: {integrity: sha512-CQpnWPrDwmP1+SMHXZhtLtJv90yiyVfluGsX5iNCVkrhQtU3TQHsUWPG9wkdk9Lgd5yNpAg9jQEo90CBaXgWMA==}
+    engines: {node: '>=4'}
+    dependencies:
+      is-number: 6.0.0
 
   /is-path-cwd@2.2.0:
     resolution: {integrity: sha512-w942bTcih8fdJPJmQHFzkS76NEP8Kzzvmw92cXsazb8intwLqPibPPdXf4ANdKV3rYMuuQYGIWtvz9JilB3NFQ==}

@@ -24,6 +24,7 @@ export function buildPluginFromFunctions({
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
+	external,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
@@ -51,6 +52,7 @@ export function buildPluginFromFunctions({
 		nodejsCompat: true,
 		define: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
+		external,
 		plugins: [
 			buildNotifierPlugin(onEnd),
 			{

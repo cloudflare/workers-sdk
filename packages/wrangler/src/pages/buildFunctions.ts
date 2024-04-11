@@ -39,6 +39,7 @@ export async function buildFunctions({
 		`./functionsRoutes-${Math.random()}.mjs`
 	),
 	defineNavigatorUserAgent,
+	external,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -51,6 +52,7 @@ export async function buildFunctions({
 		| "watch"
 		| "plugin"
 		| "buildOutputDirectory"
+		| "external"
 	>
 > & {
 	functionsDirectory: string;
@@ -120,6 +122,7 @@ export async function buildFunctions({
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
 			defineNavigatorUserAgent,
+			external,
 		});
 	} else {
 		bundle = await buildWorkerFromFunctions({
@@ -137,6 +140,7 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			nodejsCompat,
 			defineNavigatorUserAgent,
+			external,
 		});
 	}
 

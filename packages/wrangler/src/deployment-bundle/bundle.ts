@@ -85,6 +85,7 @@ export type BundleOptions = {
 	local: boolean;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
+	external?: string[];
 };
 
 /**
@@ -122,6 +123,7 @@ export async function bundleWorker(
 		local,
 		projectRoot,
 		defineNavigatorUserAgent,
+		external,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -284,7 +286,9 @@ export async function bundleWorker(
 			  }
 			: {}),
 		inject,
-		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
+		external: bundle
+			? ["__STATIC_CONTENT_MANIFEST", ...(external ? external : [])]
+			: undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
 		sourcemap: sourcemap ?? true,
