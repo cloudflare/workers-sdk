@@ -64,9 +64,19 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 			true
 		);
 	} catch (err) {
-		logger.debug("wrangler.toml file is invalid. Exiting.");
-		process.exitCode = EXIT_CODE_INVALID_PAGES_CONFIG;
-		return;
+		// found `wrangler.toml` but `pages_build_output_dir` is not specififed
+		if (
+			err instanceof FatalError &&
+			err.code === EXIT_CODE_INVALID_PAGES_CONFIG
+		) {
+			logger.debug("wrangler.toml file is invalid. Exiting.");
+			process.exitCode = EXIT_CODE_INVALID_PAGES_CONFIG;
+			return;
+		}
+
+		// found `wrangler.toml` with `pages_build_output_dir` specified, but
+		// file contains invalid configuration
+		throw err;
 	}
 
 	// Ensure JSON variables are not included
