@@ -37,14 +37,18 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		throw new FatalError("No outfile specified");
 	}
 
+	logger.log(
+		"Checking for configuration in a wrangler.toml configuration file (BETA)\n"
+	);
+
 	const configPath = path.resolve(args.projectDir, "wrangler.toml");
 	if (!existsSync(configPath)) {
-		logger.log("No Pages configuration file found. Exiting.");
+		logger.debug("No wrangler.toml configuration file found. Exiting.");
 		process.exitCode = EXIT_CODE_NO_CONFIG_FOUND;
 		return;
 	}
 
-	logger.log("Reading build configuration from your wrangler.toml file...");
+	logger.log("Found wrangler.toml file. Reading build configuration...");
 
 	let config: Omit<Config, "pages_build_output_dir"> & {
 		pages_build_output_dir: string;
@@ -60,7 +64,7 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 			true
 		);
 	} catch (err) {
-		logger.log("Invalid Pages configuration file found. Exiting.");
+		logger.debug("wrangler.toml file is invalid. Exiting.");
 		process.exitCode = EXIT_CODE_INVALID_PAGES_CONFIG;
 		return;
 	}
@@ -87,9 +91,9 @@ export const Handler = async (args: PagesBuildEnvArgs) => {
 		...vars.map(([key, value]) => `  - ${key}: ${value}`),
 	].join("\n");
 
-	logger.log(message);
-
 	logger.log(
 		`pages_build_output_dir: ${buildConfiguration.pages_build_output_dir}`
 	);
+
+	logger.log(message);
 };
