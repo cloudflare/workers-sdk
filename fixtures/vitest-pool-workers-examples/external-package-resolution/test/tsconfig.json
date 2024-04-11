@@ -1,12 +1,4 @@
 {
-	"compilerOptions": {
-		"moduleResolution": "Bundler",
-		"module": "ESNext",
-		"types": [
-			"@cloudflare/workers-types/experimental",
-			"@cloudflare/vitest-pool-workers"
-		]
-	},
-	"include": ["./**/*.ts", "../src/env.d.ts"],
-	"exclude": []
+	"extends": "../../tsconfig.workerd-test.json",
+	"include": ["./**/*.ts", "../src/env.d.ts"]
 }
