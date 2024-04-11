@@ -117,7 +117,7 @@ const config: TemplateConfig = {
 			const mv = platform() === "win32" ? "move" : "mv";
 			scripts = {
 				...scripts,
-				"build-cf-types": `wrangler types && ${mv} worker-configuration.d.ts src/`,
+				typegen: `wrangler types && ${mv} worker-configuration.d.ts src/`,
 			};
 		}
 

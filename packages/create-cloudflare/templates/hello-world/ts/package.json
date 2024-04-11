@@ -6,7 +6,8 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest",
+		"typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"typescript": "^5.0.4",

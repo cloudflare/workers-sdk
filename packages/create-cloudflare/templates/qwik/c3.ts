@@ -136,7 +136,7 @@ const config: TemplateConfig = {
 		scripts: {
 			deploy: `${npm} run build && wrangler pages deploy`,
 			preview: `${npm} run build && wrangler pages dev`,
-			"build-cf-types": `wrangler types`,
+			typegen: `wrangler types`,
 		},
 	}),
 	devScript: "dev",
