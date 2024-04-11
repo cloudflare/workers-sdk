@@ -384,6 +384,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						}
 					);
 
+					console.log("test");
+
 					// Relevant project files should have been created
 					expect(projectPath).toExist();
 					const pkgJsonPath = join(projectPath, "package.json");
