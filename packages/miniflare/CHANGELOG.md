@@ -1,5 +1,15 @@
 # miniflare
 
+## 3.20240405.1
+
+### Minor Changes
+
+- [#5409](https://github.com/cloudflare/workers-sdk/pull/5409) [`08b4908`](https://github.com/cloudflare/workers-sdk/commit/08b490806093add445ff3d7b1969923cb4123d34) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: respect incoming `Accept-Encoding` header and ensure `Accept-Encoding`/`request.cf.clientAcceptEncoding` set correctly
+
+  Previously, Miniflare would pass through the incoming `Accept-Encoding` header to your Worker code. This change ensures this header is always set to `Accept-Encoding: br, gzip` for incoming requests to your Worker. The original value of `Accept-Encoding` will be stored in `request.cf.clientAcceptEncoding`. This matches [deployed behaviour](https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding).
+
+  Fixes #5246
+
 ## 3.20240405.0
 
 ### Patch Changes

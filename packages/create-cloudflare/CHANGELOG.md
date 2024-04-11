@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.18.1
+
+### Patch Changes
+
+- [#5333](https://github.com/cloudflare/workers-sdk/pull/5333) [`d5f3c13`](https://github.com/cloudflare/workers-sdk/commit/d5f3c1346cd75d2c4388082efa12ac558c806d71) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To     |
+  | ---------- | ----- | ------ |
+  | create-vue | 3.9.2 | 3.10.2 |
+
+- [#5576](https://github.com/cloudflare/workers-sdk/pull/5576) [`c9c68d8`](https://github.com/cloudflare/workers-sdk/commit/c9c68d81ae6b667c7b0664bf862744f1b9d3f5b4) Thanks [@jculvey](https://github.com/jculvey)! - chore: Update the wrangler.toml of the Python Workers template to include commented out bindings definitions.
+
 ## 2.18.0
 
 ### Minor Changes
