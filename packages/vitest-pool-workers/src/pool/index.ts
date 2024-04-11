@@ -56,7 +56,7 @@ import type {
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
-// https://github.com/vitest-dev/vitest/blob/v1.4.0/packages/vite-node/src/client.ts#L386
+// https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vite-node/src/client.ts#L386
 declare const __vite_ssr_import__: unknown;
 assert(
 	typeof __vite_ssr_import__ === "undefined",

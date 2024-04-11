@@ -2,4 +2,4 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-chore: bump vitest dependency to version 1.4.0
+chore: bump vitest dependency to version 1.5.0

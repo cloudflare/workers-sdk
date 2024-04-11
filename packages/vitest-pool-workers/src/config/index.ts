@@ -92,7 +92,7 @@ const configPlugin: PluginOption = {
 		ensureArrayIncludes(config.resolve.conditions, requiredConditions);
 
 		// Vitest sets this to an empty array if unset, so restore Vite defaults:
-		// https://github.com/vitest-dev/vitest/blob/v1.4.0/packages/vitest/src/node/plugins/index.ts#L77
+		// https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vitest/src/node/plugins/index.ts#L77
 		ensureArrayIncludes(config.resolve.mainFields, requiredMainFields);
 
 		// Apply `package.json` `browser` field remapping in SSR mode:

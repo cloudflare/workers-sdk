@@ -24,7 +24,7 @@ export default defineConfig({
 		server: {
 			deps: {
 				// Vitest automatically adds `/^(?!.*(?:node_modules)).*\.mjs$/` as an
-				// `inline` RegExp: https://github.com/vitest-dev/vitest/blob/v1.4.0/packages/vitest/src/node/config.ts#L214
+				// `inline` RegExp: https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vitest/src/node/config.ts#L236
 				// We'd like `packages/vitest-pool-workers/dist/pool/index.mjs` to be
 				// externalised though. Unfortunately, `inline`s are checked before
 				// `external`s, so there's no nice way we can override this. Instead,
