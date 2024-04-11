@@ -42,6 +42,20 @@ describe("pages build env", () => {
 		);
 	});
 
+	it("should fail with no project dir", async () => {
+		await expect(
+			runWrangler("pages functions build-env")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"No Pages project location specified"`
+		);
+	});
+
+	it("should fail with no outfile", async () => {
+		await expect(
+			runWrangler("pages functions build-env .")
+		).rejects.toThrowErrorMatchingInlineSnapshot(`"No outfile specified"`);
+	});
+
 	it("should exit with specific exit code if no config file is found", async () => {
 		logger.loggerLevel = "debug";
 		await runWrangler("pages functions build-env . --outfile out.json");
@@ -55,20 +69,6 @@ describe("pages build env", () => {
 			"No wrangler.toml configuration file found. Exiting."
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	it("should fail with no project dir", async () => {
-		await expect(
-			runWrangler("pages functions build-env")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"No Pages project location specified"`
-		);
-	});
-
-	it("should fail with no outfile", async () => {
-		await expect(
-			runWrangler("pages functions build-env .")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`"No outfile specified"`);
 	});
 
 	it("should exit with specific code if a non-pages config file is found", async () => {
@@ -112,7 +112,7 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should exit correctly with an unparseable config file", async () => {
+	it("should exit correctly with an unparseable non-pages config file", async () => {
 		logger.loggerLevel = "debug";
 
 		writeFileSync("./wrangler.toml", 'INVALID "FILE');
@@ -168,6 +168,51 @@ describe("pages build env", () => {
 	`);
 		expect(std.debug).toContain("wrangler.toml file is invalid. Exiting.");
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should throw an error if an invalid pages confg file is found", async () => {
+		writeWranglerToml({
+			pages_build_output_dir: "dist",
+			vars: {
+				VAR1: "VALUE1",
+			},
+			env: {
+				staging: {
+					vars: {
+						VAR1: "PROD_VALUE1",
+					},
+				},
+			},
+		});
+
+		await expect(runWrangler("pages functions build-env . --outfile data.json"))
+			.rejects.toThrowErrorMatchingInlineSnapshot(`
+		"Running configuration file validation for Pages:
+		  - Configuration file contains the following environment names that are not supported by Pages projects:
+		    \\"staging\\".
+		    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
+	`);
+	});
+
+	it("should exit if an unparseable pages confg file is found", async () => {
+		writeFileSync(
+			"./wrangler.toml",
+			`
+		pages_build_output_dir = "./dist"
+		name = "pages-is-awesome"
+		compatibility_date = "2024-01-01"
+
+		something that fails toml parsing
+		`
+		);
+
+		await runWrangler("pages functions build-env . --outfile data.json");
+		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
+		expect(std.out).toMatchInlineSnapshot(`
+		"Checking for configuration in a wrangler.toml configuration file (BETA)
+
+		Found wrangler.toml file. Reading build configuration..."
+	`);
 	});
 
 	it("should return top-level by default", async () => {
