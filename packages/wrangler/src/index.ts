@@ -71,6 +71,7 @@ import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
 import registerVersionsRollbackCommand from "./versions/rollback";
 import { whoami } from "./whoami";
+import { workflowsCommands } from "./workflows";
 import { asJson } from "./yargs-types";
 import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
@@ -600,6 +601,11 @@ export function createCLIParser(argv: string[]) {
 			});
 		}
 	);
+
+	// workflows
+	wrangler.command("workflows", "Manage your workflows", (workflowsYargs) => {
+		return workflowsCommands(workflowsYargs.command(subHelp));
+	});
 
 	// type generation
 	wrangler.command(

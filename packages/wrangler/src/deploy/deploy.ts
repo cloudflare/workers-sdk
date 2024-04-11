@@ -293,7 +293,9 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
-export default async function deploy(props: Props): Promise<void> {
+export default async function deploy(
+	props: Props
+): Promise<{ deploymentId: string } | undefined> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	if (!props.dispatchNamespace && accountId && name) {
@@ -815,6 +817,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Current Version ID:", deploymentId);
 
 	logVersionIdChange();
+
+	return deploymentId ? { deploymentId } : undefined;
 }
 
 function deployWfpUserWorker(
