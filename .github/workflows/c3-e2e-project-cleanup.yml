@@ -11,7 +11,7 @@ jobs:
   cleanup:
     timeout-minutes: 30
     name: "Cleanup Test Projects"
-    if: ${{ github.repository_owner == 'cloudflare' }}
+    if: github.repository == 'cloudflare/workers-sdk'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
