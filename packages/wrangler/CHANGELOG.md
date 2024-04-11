@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.50.0
+
+### Minor Changes
+
+- [#5587](https://github.com/cloudflare/workers-sdk/pull/5587) [`d95450f`](https://github.com/cloudflare/workers-sdk/commit/d95450f0b00fa32d4c827fc8ad25d8fc929a654d) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: `pages functions build-env` should throw error if invalid Pages config file is found
+
+- [#5572](https://github.com/cloudflare/workers-sdk/pull/5572) [`65aa21c`](https://github.com/cloudflare/workers-sdk/commit/65aa21cc2d53b99e4c6956a3fb69bd687a102266) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: fix `pages function build-env` to exit with code rather than throw fatal error
+
+  Currently pages functions build-env throws a fatal error if a config file does not exit, or if it is invalid. This causes issues for the CI system. We should instead exit with a specific code, if any of those situations arises.
+
+- [#5291](https://github.com/cloudflare/workers-sdk/pull/5291) [`ce00a44`](https://github.com/cloudflare/workers-sdk/commit/ce00a44c985859a5ffb5ee3dc392796e5d12ff1d) Thanks [@pmiguel](https://github.com/pmiguel)! - feature: Added bespoke OAuth scope for Queues management.
+
+### Patch Changes
+
+- Updated dependencies [[`08b4908`](https://github.com/cloudflare/workers-sdk/commit/08b490806093add445ff3d7b1969923cb4123d34)]:
+  - miniflare@3.20240405.1
+
 ## 3.49.0
 
 ### Minor Changes
