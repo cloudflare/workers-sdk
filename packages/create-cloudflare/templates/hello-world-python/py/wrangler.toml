@@ -6,7 +6,9 @@ compatibility_date = "<TBD>"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
-# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+# Docs:
+# - https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+# - https://developers.cloudflare.com/workers/configuration/secrets/
 # [vars]
 # MY_VARIABLE = "production_value"
 
