@@ -2,7 +2,6 @@ import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { compatDateFlag } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -66,12 +65,15 @@ const config: TemplateConfig = {
 	id: "solid",
 	displayName: "Solid",
 	platform: "pages",
+	copyFiles: {
+		path: "./templates",
+	},
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `${npm} run build && npx wrangler pages dev dist ${await compatDateFlag()} --compatibility-flag nodejs_compat`,
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && npx wrangler pages dev`,
+			deploy: `${npm} run build && wrangler pages deploy`,
 		},
 	}),
 	compatibilityFlags: ["nodejs_compat"],

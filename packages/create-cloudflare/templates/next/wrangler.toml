@@ -58,12 +58,16 @@ pages_build_output_dir = ".vercel/output/static"
 # When using environment-specific overrides for bindings, ALL bindings must be specified on a per-environment basis.
 # Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration#environment-specific-overrides
 
+######## PREVIEW environment config ########
+
 # [env.preview.vars]
 # API_KEY = "xyz789"
 
 # [[env.preview.kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"
 # id = "<PREVIEW_NAMESPACE_ID>"
+
+######## PRODUCTION environment config ########
 
 # [env.production.vars]
 # API_KEY = "abc123"

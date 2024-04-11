@@ -96,4 +96,3 @@ new_classes = ["MyDurableObject"]
 # [[vectorize]]
 # binding = "MY_INDEX"
 # index_name = "my-index"
-
