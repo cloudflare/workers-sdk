@@ -59,7 +59,7 @@ export type WorkerMetadataBinding =
 			script_name?: string;
 			environment?: string;
 	  }
-	| { type: "queue"; name: string; queue_name: string }
+	| { type: "queue"; name: string; queue_name: string; delivery_delay?: number }
 	| {
 			type: "r2_bucket";
 			name: string;
@@ -199,11 +199,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
-	bindings.queues?.forEach(({ binding, queue_name }) => {
+	bindings.queues?.forEach(({ binding, queue_name, delivery_delay }) => {
 		metadataBindings.push({
 			type: "queue",
 			name: binding,
 			queue_name,
+			delivery_delay,
 		});
 	});
 

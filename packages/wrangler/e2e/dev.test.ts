@@ -730,6 +730,63 @@ describe("hyperdrive dev tests", () => {
 	});
 });
 
+describe("queue dev tests", () => {
+	let worker: DevWorker;
+	let server: nodeNet.Server;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		server = nodeNet.createServer().listen();
+	});
+
+	it("matches expected configuration parameters", async () => {
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2024-04-04"
+
+					[[queues.producers]]
+					binding = "QUEUE"
+					queue = "test-queue"
+					delivery_delay = 2
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							env.QUEUE.send();
+							return new Response('sent');
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
+		await worker.runDevSession("", async (session) => {
+			const { text } = await retry(
+				(s) => {
+					return s.status !== 200;
+				},
+				async () => {
+					const resp = await fetch(`http://127.0.0.1:${session.port}`);
+					return { text: await resp.text(), status: resp.status };
+				}
+			);
+			expect(text).toBe("sent");
+		});
+	});
+
+	afterEach(() => {
+		if (server.listening) {
+			server.close();
+		}
+	});
+});
+
 describe("writes debug logs to hidden file", () => {
 	let a: DevWorker;
 	let b: DevWorker;

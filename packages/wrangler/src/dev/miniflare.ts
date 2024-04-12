@@ -97,10 +97,10 @@ function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
 				return getUnknownPrototypeKey(key);
 			}
 		});
-	
+
 		return Reflect.construct(handlerSuperKlass, [ctx, env], klass);
 	}
-		
+
 	Reflect.setPrototypeOf(klass.prototype, handlerSuperKlass.prototype);
 	Reflect.setPrototypeOf(klass, handlerSuperKlass);
 
@@ -111,7 +111,7 @@ function createDurableObjectClass({ className, proxyUrl }) {
 	const klass = createProxyPrototypeClass(DurableObject, (key) => {
 		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions.\`);
 	});
-	
+
 	// Forward regular HTTP requests to the other "wrangler dev" session
 	klass.prototype.fetch = function(request) {
 		if (proxyUrl === undefined) {
@@ -315,8 +315,13 @@ function r2BucketEntry({ binding, bucket_name }: CfR2Bucket): [string, string] {
 function d1DatabaseEntry(db: CfD1Database): [string, string] {
 	return [db.binding, db.preview_database_id ?? db.database_id];
 }
-function queueProducerEntry(queue: CfQueue): [string, string] {
-	return [queue.binding, queue.queue_name];
+function queueProducerEntry(
+	queue: CfQueue
+): [string, { queueName: string; deliveryDelay: number | undefined }] {
+	return [
+		queue.binding,
+		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
+	];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
@@ -331,6 +336,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 		maxBatchTimeout: consumer.max_batch_timeout,
 		maxRetires: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
+		retryDelay: consumer.retry_delay,
 	};
 	return [consumer.queue, options] as const;
 }
