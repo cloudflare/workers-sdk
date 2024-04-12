@@ -5,7 +5,9 @@ pages_build_output_dir = "./dist/analog/public"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
-# Docs: https://developers.cloudflare.com/pages/functions/bindings/#environment-variables
+# Docs:
+# - https://developers.cloudflare.com/pages/functions/bindings/#environment-variables
+# - https://developers.cloudflare.com/pages/functions/bindings/#secrets
 # [vars]
 # MY_VARIABLE = "production_value"
 
@@ -57,16 +59,20 @@ pages_build_output_dir = "./dist/analog/public"
 # When using environment-specific overrides for bindings, ALL bindings must be specified on a per-environment basis.
 # Docs: https://developers.cloudflare.com/pages/functions/wrangler-configuration#environment-specific-overrides
 
-# [[env.preview.kv_namespaces]]
-# binding = "MY_KV_NAMESPACE"
-# id = "<PREVIEW_NAMESPACE_ID>"
-
-# [[env.production.kv_namespaces]]
-# binding = "MY_KV_NAMESPACE"
-# id = "<PRODUCTION_NAMESPACE_ID>"
+######## PREVIEW environment config ########
 
 # [env.preview.vars]
 # API_KEY = "xyz789"
 
+# [[env.preview.kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "<PREVIEW_NAMESPACE_ID>"
+
+######## PRODUCTION environment config ########
+
 # [env.production.vars]
 # API_KEY = "abc123"
+
+# [[env.production.kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "<PRODUCTION_NAMESPACE_ID>"
