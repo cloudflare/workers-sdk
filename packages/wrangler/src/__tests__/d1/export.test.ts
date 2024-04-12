@@ -42,24 +42,61 @@ describe("execute", () => {
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
+
 		msw.use(
 			rest.post(
 				"*/accounts/:accountId/d1/database/:databaseId/export",
-				async (_req, res, ctx) => {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							result: { signedUrl: "https://example.com" },
-							success: true,
-							errors: [],
-							messages: [],
-						})
-					);
+				async (req, res, ctx) => {
+					const body = await req.json();
+
+					// First request, initiates a new task
+					if (!body.currentBookmark) {
+						return res(
+							ctx.status(202),
+							ctx.json({
+								success: true,
+								result: {
+									success: true,
+									type: "export",
+									at_bookmark: "yyyy",
+									status: "active",
+									messages: [
+										"Generating xxxx-yyyy.sql",
+										"Uploaded part 2", // out-of-order uploads ok
+										"Uploaded part 1",
+									],
+								},
+							})
+						);
+					}
+					// Subsequent request, sees that it is complete
+					else
+						return res(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								result: {
+									success: true,
+									type: "export",
+									at_bookmark: "yyyy",
+									status: "complete",
+									result: {
+										filename: "xxxx-yyyy.sql",
+										signedUrl: "https://example.com/xxxx-yyyy.sql",
+									},
+									messages: [
+										"Uploaded part 3",
+										"Uploaded part 4",
+										"Finished uploading xxxx-yyyy.sql in 4 parts.",
+									],
+								},
+							})
+						);
 				}
 			)
 		);
 		msw.use(
-			rest.get("https://example.com", async (req, res, ctx) => {
+			rest.get("https://example.com/xxxx-yyyy.sql", async (req, res, ctx) => {
 				return res(ctx.status(200), ctx.text(mockSqlContent));
 			})
 		);
