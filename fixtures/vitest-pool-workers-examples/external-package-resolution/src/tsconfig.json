@@ -1,0 +1,9 @@
+{
+	"extends": "../../tsconfig.workerd.json",
+	"include": ["./**/*.ts"],
+	"compilerOptions": {
+		// In this fixture, we're including the toucan-js library, which references `@cloudflare/workers-types`, whereas the rest of the fixture is referencing
+		// `@cloudflare/workers-types/experimental`. This causes a conflict in types defined, so we need to skip the lib check specifically in this directory
+		"skipLibCheck": true
+	}
+}

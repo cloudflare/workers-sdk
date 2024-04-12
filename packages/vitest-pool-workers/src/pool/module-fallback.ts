@@ -98,7 +98,10 @@ function isWithinTypeModuleContext(filePath: string): boolean {
 			const pkgPath = posixPath.join(parentPath, "package.json");
 			const pkgJson = fs.readFileSync(pkgPath, "utf8");
 			const pkg = JSON.parse(pkgJson);
-			const cache = pkg.type === "module";
+			const maybeModulePath = pkg.module
+				? posixPath.join(parentPath, pkg.module)
+				: "";
+			const cache = pkg.type === "module" || maybeModulePath === filePath;
 			dirPathTypeModuleCache.set(parentPath, cache);
 			return cache;
 		} catch (e: unknown) {
