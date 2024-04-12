@@ -465,6 +465,14 @@ export const CORE_PLUGIN: Plugin<
 				])
 			);
 		}
+		if (options.wrappedBindings !== undefined) {
+			bindingEntries.push(
+				...Object.keys(options.wrappedBindings).map((name) => [
+					name,
+					kProxyNodeBinding,
+				])
+			);
+		}
 
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
