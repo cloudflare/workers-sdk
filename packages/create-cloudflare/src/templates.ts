@@ -122,6 +122,7 @@ export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
 export type FrameworkName = keyof FrameworkMap;
 
 export const getFrameworkMap = async () => ({
+	analog: (await import("../templates/analog/c3")).default,
 	angular: (await import("../templates/angular/c3")).default,
 	astro: (await import("../templates/astro/c3")).default,
 	docusaurus: (await import("../templates/docusaurus/c3")).default,

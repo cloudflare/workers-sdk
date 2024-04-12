@@ -47,7 +47,7 @@ export const isUpdateAvailable = async () => {
 export const C3_DEFAULTS = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
 	type: "hello-world",
-	framework: "angular",
+	framework: "analog",
 	autoUpdate: true,
 	deploy: true,
 	git: true,

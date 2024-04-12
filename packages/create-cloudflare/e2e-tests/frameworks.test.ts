@@ -104,6 +104,33 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 		},
 		flags: [`--package-manager`, pm],
 	},
+	analog: {
+		testCommitMessage: true,
+		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
+		// The analog template works with yarn, but the build takes so long that it
+		// becomes flaky in CI
+		unsupportedPms: ["yarn"],
+		verifyDeploy: {
+			route: "/",
+			expectedText: "The fullstack meta-framework for Angular!",
+		},
+		verifyDev: {
+			route: "/api/v1/test",
+			expectedText: "C3_TEST",
+		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "Env",
+		},
+		verifyBuild: {
+			outputDir: "./dist/analog/public",
+			script: "build",
+			route: "/api/v1/test",
+			expectedText: "C3_TEST",
+		},
+		flags: ["--skipTailwind"],
+	},
 	angular: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
@@ -458,7 +485,7 @@ const runCli = async (
 	const deployedUrlRe =
 		/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
 
-	const match = output.replaceAll("\n", "n").match(deployedUrlRe);
+	const match = output.replaceAll("\n", "").match(deployedUrlRe);
 	if (!match || !match[1]) {
 		expect(false, "Couldn't find deployment url in C3 output").toBe(true);
 		return "";
@@ -524,6 +551,7 @@ const verifyDevScript = async (
 			cwd: projectPath,
 			env: {
 				NODE_ENV: "development",
+				VITEST: undefined,
 			},
 		},
 		logStream
