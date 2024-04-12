@@ -1333,6 +1333,9 @@ importers:
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
+      semver:
+        specifier: ^7.5.1
+        version: 7.5.4
       vitest:
         specifier: 1.5.0
         version: 1.5.0(@types/node@20.8.3)
@@ -1355,6 +1358,9 @@ importers:
       '@types/node':
         specifier: 20.8.3
         version: 20.8.3
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.5.1
       capnp-ts:
         specifier: ^0.7.0
         version: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)
@@ -6653,7 +6659,7 @@ packages:
       recast: 0.21.5
       remark-frontmatter: 4.0.1
       remark-mdx-frontmatter: 1.1.1
-      semver: 7.5.1
+      semver: 7.5.4
       sort-package-json: 1.57.0
       tar-fs: 2.1.1
       tsconfig-paths: 4.2.0
@@ -7735,7 +7741,7 @@ packages:
       grapheme-splitter: 1.0.4
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@5.0.3)
       typescript: 5.0.3
     transitivePeerDependencies:
@@ -7763,7 +7769,7 @@ packages:
       graphemer: 1.4.0
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
@@ -7791,7 +7797,7 @@ packages:
       graphemer: 1.4.0
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@5.0.3)
       typescript: 5.0.3
     transitivePeerDependencies:
@@ -7819,9 +7825,9 @@ packages:
       graphemer: 1.4.0
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
-      tsutils: 3.21.0(typescript@5.4.5)
-      typescript: 5.4.5
+      semver: 7.5.4
+      tsutils: 3.21.0(typescript@4.9.5)
+      typescript: 4.9.5
     transitivePeerDependencies:
       - supports-color
     dev: true

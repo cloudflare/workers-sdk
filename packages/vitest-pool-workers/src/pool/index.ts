@@ -20,6 +20,7 @@ import {
 	testRegExps,
 	WebSocket,
 } from "miniflare";
+import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
@@ -775,13 +776,13 @@ function assertCompatibleVitestVersion(ctx: Vitest) {
 		"Expected to find `vitest`'s version"
 	);
 
-	if (expectedVitestVersion !== actualVitestVersion) {
+	if (!semverSatisfies(actualVitestVersion, expectedVitestVersion)) {
 		const message = [
-			`You're running \`vitest@${actualVitestVersion}\`, but this version of \`@cloudflare/vitest-pool-workers\` only supports \`vitest@${expectedVitestVersion}\`.`,
+			`You're running \`vitest@${actualVitestVersion}\`, but this version of \`@cloudflare/vitest-pool-workers\` only officially supports \`vitest ${expectedVitestVersion}\`.`,
 			"`@cloudflare/vitest-pool-workers` currently depends on internal Vitest APIs that are not protected by semantic-versioning guarantees.",
-			`Please install \`vitest@${expectedVitestVersion}\` to continue using \`@cloudflare/vitest-pool-workers\`.`,
+			`Your tests may work without issue, but we can not guarantee compatibility outside of the above version range.`,
 		].join("\n");
-		throw new Error(message);
+		log.warn(message);
 	}
 }
 

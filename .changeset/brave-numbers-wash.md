@@ -2,4 +2,4 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-chore: bump vitest dependency to version 1.5.0
+fix: loosen the peer dependency version on vitest to support versions ranging from 1.3.0 to 1.5.0
