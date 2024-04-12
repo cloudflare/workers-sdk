@@ -605,9 +605,9 @@ const verifyBuildCfTypesScript = async (
 		`interface ${envInterfaceName} {`
 	);
 
-	// Run the `typegen` script to generate types for bindings in fixture
+	// Run the `cf-typegen` script to generate types for bindings in fixture
 	const buildTypesProc = spawnWithLogging(
-		[pm, "run", "typegen"],
+		[pm, "run", "cf-typegen"],
 		{ cwd: projectPath },
 		logStream
 	);

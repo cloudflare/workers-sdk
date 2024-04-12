@@ -6,7 +6,7 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"typegen": "wrangler types"
+		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
 		"@cloudflare/itty-router-openapi": "^1.0.1"

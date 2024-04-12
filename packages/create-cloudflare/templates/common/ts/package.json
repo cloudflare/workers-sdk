@@ -6,7 +6,7 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"typegen": "wrangler types"
+		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"itty-router": "^3.0.12",

@@ -54,15 +54,9 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-<<<<<<< HEAD
 			deploy: `${npm} run build && wrangler pages deploy`,
 			preview: `${npm} run build && wrangler pages dev`,
-			"build-cf-types": `wrangler types`,
-=======
-			deploy: `${npm} run build && wrangler pages deploy ./build/client`,
-			preview: `${npm} run build && wrangler pages dev ./build/client`,
-			typegen: `wrangler types`,
->>>>>>> 2e57cc244 (C3: Add typegen script to workers template)
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	devScript: "dev",

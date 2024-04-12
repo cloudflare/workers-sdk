@@ -9,7 +9,7 @@
  * - Run `npm run deploy` to publish your worker
  *
  * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run typegen`.
+ * `Env` object can be regenerated with `npm run cf-typegen`.
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
