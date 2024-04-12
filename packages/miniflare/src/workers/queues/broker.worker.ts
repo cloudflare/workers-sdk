@@ -23,6 +23,8 @@ import {
 	QueueMessageDelay,
 	QueueMessageDelaySchema,
 	QueueOutgoingMessage,
+	QueueProducer,
+	QueueProducersSchema,
 	QueuesBatchRequestSchema,
 	QueuesOutgoingBatchRequest,
 } from "./schemas";
@@ -183,6 +185,7 @@ interface PendingFlush {
 type QueueBrokerObjectEnv = MiniflareDurableObjectEnv & {
 	// Reference to own Durable Object namespace for sending to dead-letter queues
 	[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT]: DurableObjectNamespace;
+	[QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS]?: unknown;
 	[QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS]?: unknown;
 } & {
 	[K in `${typeof QueueBindings.SERVICE_WORKER_PREFIX}${string}`]:
@@ -191,15 +194,25 @@ type QueueBrokerObjectEnv = MiniflareDurableObjectEnv & {
 };
 
 export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectEnv> {
+	readonly #producers: Record<string, QueueProducer | undefined>;
 	readonly #consumers: Record<string, QueueConsumer | undefined>;
 	readonly #messages: QueueMessage[] = [];
 	#pendingFlush?: PendingFlush;
 
 	constructor(state: DurableObjectState, env: QueueBrokerObjectEnv) {
 		super(state, env);
+
+		const maybeProducers = env[QueueBindings.MAYBE_JSON_QUEUE_PRODUCERS];
+		if (maybeProducers === undefined) this.#producers = {};
+		else this.#producers = QueueProducersSchema.parse(maybeProducers);
+
 		const maybeConsumers = env[QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS];
 		if (maybeConsumers === undefined) this.#consumers = {};
 		else this.#consumers = QueueConsumersSchema.parse(maybeConsumers);
+	}
+
+	get #maybeProducer() {
+		return this.#producers[this.name];
 	}
 
 	get #maybeConsumer() {
@@ -291,8 +304,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			formatQueueResponse(this.name, acked, batch.length, endTime - startTime)
 		);
 
-		// Add messages for retry back to the queue, and ensure we flush again if
-		// we still have messages
+		// Ensure we flush again if we still have messages.
 		this.#pendingFlush = undefined;
 		if (this.#messages.length > 0) this.#ensurePendingFlush();
 
@@ -369,7 +381,10 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		const consumer = this.#maybeConsumer;
 		if (consumer === undefined) return new Response();
 
-		this.#enqueue([{ contentType, delaySecs: undefined, body }], delay);
+		this.#enqueue(
+			[{ contentType, delaySecs: delay, body }],
+			this.#maybeProducer?.deliveryDelay
+		);
 		return new Response();
 	};
 
@@ -380,7 +395,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		// a no-op. This allows us to enqueue a maximum size batch with additional
 		// ID and timestamp information.
 		validateBatchSize(req.headers);
-		const delay = validateMessageDelay(req.headers);
+		const delay = validateMessageDelay(req.headers) ?? this.#maybeProducer?.deliveryDelay;
 		const body = QueuesBatchRequestSchema.parse(await req.json());
 
 		// If we don't have a consumer, drop the message

@@ -143,6 +143,7 @@ export interface CfDurableObject {
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
+	delivery_delay?: number;
 }
 
 export interface CfR2Bucket {

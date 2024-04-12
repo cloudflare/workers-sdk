@@ -997,7 +997,11 @@ export function getBindings(
 	// Queues bindings ??
 	const queuesBindings = [
 		...(configParam.queues.producers || []).map((queue) => {
-			return { binding: queue.binding, queue_name: queue.queue };
+			return {
+				binding: queue.binding,
+				queue_name: queue.queue,
+				delivery_delay: queue.delivery_delay,
+			};
 		}),
 	];
 

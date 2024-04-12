@@ -171,6 +171,17 @@ level will be logged.
   Creates a new logger that logs nothing to the `console`, and always `throw`s
   `message`s logged at the `ERROR` level.
 
+### `interface QueueProducerOptions`
+
+- `queueName: string`
+
+  The name of the queue where messages will be sent by the producer.
+
+- `deliveryDelay?: number`
+
+  Default number of seconds to delay the delivery of messages to consumers.
+  Value between `0` (no delay) and `42300` (12 hours).
+
 ### `interface QueueConsumerOptions`
 
 - `maxBatchSize?: number`
@@ -191,6 +202,11 @@ level will be logged.
 
   Name of another Queue to send a message on if it fails processing after
   `maxRetries`. If this isn't specified, failed messages will be discarded.
+
+- `retryDelay?: number`
+
+  Number of seconds to delay the (re-)delivery of messages by default. Value
+  between `0` (no delay) and `42300` (12 hours).
 
 ### `interface WorkerOptions`
 
@@ -534,12 +550,12 @@ parameter in module format Workers.
 
 #### Queues
 
-- `queueProducers?: Record<string, string> | string[]`
+- `queueProducers?: Record<string, QueueProducerOptions> | string[]`
 
-  Record mapping binding name to queue names to inject as `WorkerQueue` bindings
+  Record mapping binding name to queue options to inject as `WorkerQueue` bindings
   into this Worker. Different Workers may bind to the same queue name with
   different binding names. If a `string[]` of binding names is specified, the
-  binding name and queue name are assumed to be the same.
+  binding name and queue name (part of the queue options) are assumed to be the same.
 
 - `queueConsumers?: Record<string, QueueConsumerOptions> | string[]`
 

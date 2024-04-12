@@ -53,6 +53,7 @@ import {
 	ProxyClient,
 	QUEUES_PLUGIN_NAME,
 	QueueConsumers,
+	QueueProducers,
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
@@ -386,6 +387,28 @@ function getWrappedBindingNames(
 		}
 	}
 	return wrappedBindingWorkerNames;
+}
+
+function getQueueProducers(allWorkerOpts: PluginWorkerOptions[]): QueueProducers {
+	const queueProducers: QueueProducers = new Map();
+	for (const workerOpts of allWorkerOpts) {
+		const workerName = workerOpts.core.name ?? "";
+		let workerProducers = workerOpts.queues.queueProducers;
+
+		if (workerProducers !== undefined) {
+			// De-sugar array consumer options to record mapping to empty options
+			if (Array.isArray(workerProducers)) {
+				workerProducers = Object.fromEntries(
+					workerProducers.map((bindingName) => [bindingName, { queueName: bindingName }])
+				);
+			}
+
+			for (const [bindingName, opts] of Object.entries(workerProducers)) {
+				queueProducers.set(bindingName, { workerName, ...opts });
+			}
+		}
+	}
+	return queueProducers;
 }
 
 function getQueueConsumers(
@@ -1015,6 +1038,7 @@ export class Miniflare {
 			allWorkerOpts,
 			durableObjectClassNames
 		);
+		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
@@ -1137,6 +1161,7 @@ export class Miniflare {
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
+				queueProducers,
 				queueConsumers,
 			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {

@@ -303,6 +303,8 @@ details on the multipart implementation.
 - **`POST /message`:**
   - Optional `X-Msg-Fmt` request header is one of "text", "json", "bytes", or
     "v8" (defaults to "v8"), and instructs how to interpret the body
+  - Optional `X-Msg-Delay-Sec` request header sets the number of seconds to
+    delay the delivery of this message (value between `0` and `42300` inclusive)
   - Request body is encoded message body
   - 200 response: empty body if enqueued
   - 413 response: message too large
@@ -311,6 +313,8 @@ details on the multipart implementation.
   - `CF-Queue-Largest-Msg` request header is size in bytes of largest message in
     batch
   - `CF-Queue-Batch-Bytes` request header is size in bytes of entire batch
+  - Optional `X-Msg-Delay-Sec` request header sets the number of seconds to
+    delay the delivery of this batch (value between `0` and `42300` inclusive)
   - Request body is JSON-encoded `{ messages: QueueIncomingMessage[] }`
   - 200 response: empty body if all messages enqueued
   - 413 response: batch or individual message too large

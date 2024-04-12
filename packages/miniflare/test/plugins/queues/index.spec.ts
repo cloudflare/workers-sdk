@@ -311,8 +311,7 @@ test("retries messages", async (t) => {
 	const log = new TestLog(t);
 	const mf = new Miniflare({
 		log,
-
-		queueProducers: { QUEUE: "queue" },
+		queueProducers: { QUEUE: { queueName: "queue" } },
 		queueConsumers: {
 			queue: { maxBatchSize: 5, maxBatchTimeout: 1, maxRetires: 2 },
 		},
@@ -560,7 +559,7 @@ test("moves to dead letter queue", async (t) => {
 		log,
 		verbose: true,
 
-		queueProducers: { BAD_QUEUE: "bad" },
+		queueProducers: { BAD_QUEUE: { queueName: "bad" } },
 		queueConsumers: {
 			// Check single Worker consuming multiple queues
 			bad: {
@@ -684,7 +683,7 @@ test("operations permit strange queue names", async (t) => {
 	const id = "my/ Queue";
 	const mf = new Miniflare({
 		verbose: true,
-		queueProducers: { QUEUE: id },
+		queueProducers: { QUEUE: { queueName: id } },
 		queueConsumers: [id],
 		serviceBindings: {
 			async REPORTER(request) {
@@ -732,7 +731,7 @@ test("supports message contentTypes", async (t) => {
 	const mf = new Miniflare({
 		log,
 		verbose: true,
-		queueProducers: { QUEUE: id },
+		queueProducers: { QUEUE: { queueName: id } },
 		queueConsumers: [id],
 		serviceBindings: {
 			async REPORTER(request) {
@@ -842,7 +841,7 @@ test("supports delivery delay", async (t) => {
 	const mf = new Miniflare({
 		log,
 		verbose: true,
-		queueProducers: ["QUEUE"],
+		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
 		queueConsumers: {
 			QUEUE: { maxBatchSize: 100, maxBatchTimeout: 0, maxRetires: 1, retryDelay: 3 },
 		},
@@ -858,14 +857,18 @@ test("supports delivery delay", async (t) => {
 		modules: true,
 		script: `export default {
       async fetch(request, env, ctx) {
-		const delay = new Number(request.headers.get("X-Msg-Delay-Secs"));
+		const delay = request.headers.get("X-Msg-Delay-Secs");
 		const url = new URL(request.url);
 		const body = await request.json();
 
 		if (url.pathname === "/send") {
-		  await env.QUEUE.send(body, { delaySeconds: delay });
+			if (delay === null) {
+				await env.QUEUE.send(body);
+			} else {
+				await env.QUEUE.send(body, { delaySeconds: Number(delay) });
+			}
 		} else if (url.pathname === "/batch") {
-		  await env.QUEUE.sendBatch(body, { delaySeconds: delay });
+		  await env.QUEUE.sendBatch(body, { delaySeconds: Number(delay) });
 		}
         return new Response(null, { status: 204 });
       },
@@ -935,7 +938,7 @@ test("supports delivery delay", async (t) => {
 		});
 	}
 
-	// Send batch of messages.
+	// Send batch of messages (default batch delay: 1 sec).
 	sendBatch(1, { body: 10, delaySeconds: 0 }, { body: 11 }, { body: 12, delaySeconds: 2 })
 
 	// Verify messages are received at the right times.
@@ -953,5 +956,19 @@ test("supports delivery delay", async (t) => {
 		await object.waitForFakeTasks();
 		t.is(batches.length, i);
 	}
+
+	batches = [];
+
+	// Sending message with delivery delay set at the producer settings level.
+	await mf.dispatchFetch("http://localhost/send", {
+		method: "POST",
+		body: JSON.stringify("test"),
+	});
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	t.is(batches.length, 0);
+	await object.advanceFakeTime(1000);
+	await object.waitForFakeTasks();
+	t.is(batches.length, 1);
 });
 
