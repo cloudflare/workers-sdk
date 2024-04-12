@@ -28,6 +28,7 @@
 				"NO_D1_WARNING",
 				"NO_HYPERDRIVE_WARNING",
 				"WRANGLER",
+				"WRANGLER_IMPORT",
 				"CUSTOM_BUILD_VAR",
 				"PWD",
 				"LC_ALL",

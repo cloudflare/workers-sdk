@@ -750,6 +750,7 @@ export function getGlobalServices({
 					"nodejs_compat",
 					"service_binding_extra_handlers",
 					"brotli_content_encoding",
+					"rpc",
 				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [

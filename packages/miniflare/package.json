@@ -87,7 +87,7 @@
 		"prettier": "^3.0.3",
 		"rimraf": "^3.0.2",
 		"source-map": "^0.6.0",
-		"typescript": "~5.0.4",
+		"typescript": "^5.4.5",
 		"which": "^2.0.2"
 	},
 	"engines": {

@@ -85,8 +85,8 @@ export class ProxyServer implements DurableObject {
 			if ((type === "Object" && !isPlainObject(value)) || type === "Promise") {
 				const address = this.nextHeapAddress++;
 				this.heap.set(address, value);
-				assert(typeof value === "object" && value !== null);
-				return [address, value.constructor.name];
+				assert(value !== null);
+				return [address, value?.constructor.name];
 			}
 		},
 	};
@@ -190,6 +190,10 @@ export class ProxyServer implements DurableObject {
 		if (opHeader === ProxyOps.GET) {
 			// If no key header is specified, just return the target
 			result = keyHeader === null ? target : target[keyHeader];
+
+			// Immediately resolve all RpcProperties
+			if (result?.constructor.name === "RpcProperty") result = await result;
+
 			if (typeof result === "function") {
 				// Calling functions-which-return-functions not yet supported
 				return new Response(null, {
@@ -255,7 +259,25 @@ export class ProxyServer implements DurableObject {
 			}
 			assert(Array.isArray(args));
 			try {
-				result = func.apply(target, args);
+				if (func.constructor.name === "RpcProperty") {
+					result = func(...args);
+					// Wrap RpcPromise instances with a standard promise to support serialisation
+					result = new Promise((resolve, reject) =>
+						(result as Promise<any>)
+							.then((v) => {
+								// Drop `Symbol.dispose` and `Symbol.asyncDispose` so that the resulting value can be serialised.
+								if (v.hasOwnProperty(Symbol.dispose)) delete v[Symbol.dispose];
+								if (v.hasOwnProperty(Symbol.asyncDispose))
+									delete v[Symbol.asyncDispose];
+								// TODO: add support for RPC stubs
+								resolve(v);
+							})
+							.catch(reject)
+					);
+				} else {
+					result = func.apply(target, args);
+				}
+
 				// See `isR2ObjectWriteHttpMetadata()` comment for why this special
 				if (isR2ObjectWriteHttpMetadata(targetName, keyHeader)) {
 					result = args[0];

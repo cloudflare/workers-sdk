@@ -4,7 +4,8 @@ compatibility_date = "2023-11-21"
 
 services = [
   { binding = "MY_SERVICE_A", service = "hello-worker-a" },
-  { binding = "MY_SERVICE_B", service = "hello-worker-b" }
+  { binding = "MY_SERVICE_B", service = "hello-worker-b" },
+  { binding = "MY_RPC", service = "rpc-worker", entrypoint = "NamedEntrypoint" }
 ]
 
 [vars]
