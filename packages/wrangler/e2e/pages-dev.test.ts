@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { makeRoot, seed } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler-command";
+import { WRANGLER } from "./helpers/wrangler";
 
 type MaybePromise<T = void> = T | Promise<T>;
 

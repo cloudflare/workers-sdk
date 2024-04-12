@@ -5,7 +5,7 @@ import shellac from "shellac";
 import { beforeAll, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { makeRoot, seed } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler-command";
+import { WRANGLER } from "./helpers/wrangler";
 
 describe("r2", () => {
 	let root: string;
