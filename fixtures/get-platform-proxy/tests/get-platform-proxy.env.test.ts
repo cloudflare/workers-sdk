@@ -230,7 +230,7 @@ describe("getPlatformProxy - env", () => {
 		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerTomlFilePath,
-				env: "production",
+				environment: "production",
 			});
 			try {
 				expect(env.MY_VAR).not.toBe("my-var-value");
@@ -263,7 +263,7 @@ describe("getPlatformProxy - env", () => {
 		it("should provide secrets targeting a specified environment", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
 				configPath: wranglerTomlFilePath,
-				env: "production",
+				environment: "production",
 			});
 			try {
 				const { MY_DEV_VAR } = env;
@@ -278,7 +278,7 @@ describe("getPlatformProxy - env", () => {
 			await expect(
 				getPlatformProxy({
 					configPath: wranglerTomlFilePath,
-					env: "non-existent-environment",
+					environment: "non-existent-environment",
 				})
 			).rejects.toThrow(
 				/No environment found in configuration with name "non-existent-environment"/

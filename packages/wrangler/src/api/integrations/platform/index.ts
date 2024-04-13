@@ -23,7 +23,7 @@ export type GetPlatformProxyOptions = {
 	/**
 	 * The name of the environment to use
 	 */
-	env?: string;
+	environment?: string;
 	/**
 	 * The path to the config object to use (default `wrangler.toml`)
 	 */
@@ -86,7 +86,7 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const env = options.env;
+	const env = options.environment;
 
 	const rawConfig = readConfig(options.configPath, {
 		experimentalJsonConfig: options.experimentalJsonConfig,
