@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import { Static, Text } from "ink";
@@ -16,7 +17,6 @@ import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
@@ -81,7 +81,7 @@ export function Options(yargs: CommonYargsArgv) {
 		.option("batch-size", {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
-			default: DEFAULT_BATCH_SIZE,
+			deprecated: true,
 		});
 }
 
@@ -98,7 +98,6 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		command,
 		json,
 		preview,
-		batchSize,
 	} = args;
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
@@ -126,7 +125,6 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			command,
 			json,
 			preview,
-			batchSize,
 		});
 
 		// Early exit if prompt rejected
@@ -177,6 +175,10 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	}
 };
 
+type ExecuteInput =
+	| { file: string; command: never }
+	| { file: never; command: string };
+
 export async function executeSql({
 	local,
 	remote,
@@ -188,7 +190,6 @@ export async function executeSql({
 	command,
 	json,
 	preview,
-	batchSize,
 }: {
 	local: boolean | undefined;
 	remote: boolean | undefined;
@@ -200,7 +201,6 @@ export async function executeSql({
 	command: string | undefined;
 	json: boolean | undefined;
 	preview: boolean | undefined;
-	batchSize: number;
 }) {
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
@@ -208,10 +208,12 @@ export async function executeSql({
 		logger.loggerLevel = "error";
 	}
 
-	const sql = file ? readFileSync(file) : command;
-	if (!sql) {
-		throw new UserError(`Error: must provide --command or --file.`);
-	}
+	const input = file
+		? ({ file } as ExecuteInput)
+		: command
+		? ({ command } as ExecuteInput)
+		: null;
+	if (!input) throw new UserError(`Error: must provide --command or --file.`);
 	if (local && remote) {
 		throw new UserError(
 			`Error: can't use --local and --remote at the same time`
@@ -224,30 +226,22 @@ export async function executeSql({
 		throw new UserError(`Error: can't use --persist-to without --local`);
 	}
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
-	const queries = splitSqlQuery(sql);
 
-	if (file && sql) {
-		if (queries[0].startsWith("SQLite format 3")) {
-			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
-			throw new UserError(
-				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
-			);
-		}
-	}
+	if (input.file) await checkForSQLiteBinary(input.file);
+
 	const result =
 		remote || preview
 			? await executeRemotely({
 					config,
 					name,
 					shouldPrompt,
-					batches: batchSplit(queries, batchSize),
-					json,
+					input,
 					preview,
 				})
 			: await executeLocally({
 					config,
 					name,
-					queries,
+					input,
 					persistTo,
 				});
 
@@ -260,12 +254,12 @@ export async function executeSql({
 async function executeLocally({
 	config,
 	name,
-	queries,
+	input,
 	persistTo,
 }: {
 	config: Config;
 	name: string;
-	queries: string[];
+	input: ExecuteInput;
 	persistTo: string | undefined;
 }) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
@@ -295,6 +289,9 @@ async function executeLocally({
 		d1Databases: { DATABASE: id },
 	});
 	const db = await mf.getD1Database("DATABASE");
+
+	const sql = input.file ? readFileSync(input.file) : input.command;
+	const queries = splitSqlQuery(sql);
 
 	let results: D1Result<Record<string, string | number | boolean>>[];
 	try {
@@ -328,30 +325,21 @@ async function executeRemotely({
 	config,
 	name,
 	shouldPrompt,
-	batches,
-	json,
+	input,
 	preview,
 }: {
 	config: Config;
 	name: string;
 	shouldPrompt: boolean | undefined;
-	batches: string[];
-	json: boolean | undefined;
+	input: ExecuteInput;
 	preview: boolean | undefined;
 }) {
-	const multiple_batches = batches.length > 1;
-	// in JSON mode, we don't want a prompt here
-	if (multiple_batches && !json) {
-		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
+	if (input.file) {
+		const warning = `ℹ️  This process may take some time, during which your D1 will be unavailable to serve queries.`;
 
 		if (shouldPrompt) {
-			const ok = await confirm(
-				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
-			);
-			if (!ok) {
-				return null;
-			}
-			logger.log(`🌀 Let's go`);
+			const ok = await confirm(`${warning}\n  Ok to proceed?`);
+			if (!ok) return null;
 		} else {
 			logger.error(warning);
 		}
@@ -376,14 +364,9 @@ async function executeRemotely({
 		"🌀 To execute on your local development database, remove the --remote flag from your wrangler command."
 	);
 
-	const results: QueryResult[] = [];
-	for (const sql of batches) {
-		if (multiple_batches) {
-			logger.log(
-				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
-			);
-		}
-
+	if (input.file) {
+		return null;
+	} else {
 		const result = await fetchResult<QueryResult[]>(
 			`/accounts/${accountId}/d1/database/${dbUuid}/query`,
 			{
@@ -392,13 +375,12 @@ async function executeRemotely({
 					"Content-Type": "application/json",
 					...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
 				},
-				body: JSON.stringify({ sql }),
+				body: JSON.stringify({ sql: input.command }),
 			}
 		);
 		logResult(result);
-		results.push(...result);
+		return result;
 	}
-	return results;
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
@@ -415,23 +397,19 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[], batchSize: number) {
-	logger.log(`🌀 Parsing ${queries.length} statements`);
-	const num_batches = Math.ceil(queries.length / batchSize);
-	const batches: string[] = [];
-	for (let i = 0; i < num_batches; i++) {
-		batches.push(queries.slice(i * batchSize, (i + 1) * batchSize).join("; "));
-	}
-	if (num_batches > 1) {
-		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${batchSize} statements per batch. Use --batch-size to override.)`
-		);
-	}
-	return batches;
-}
-
 function shorten(query: string | undefined, length: number) {
 	return query && query.length > length
 		? query.slice(0, length) + "..."
 		: query;
+}
+
+async function checkForSQLiteBinary(filename: string) {
+	const fd = await fs.open(filename, "r");
+	const buffer = Buffer.alloc(15);
+	await fd.read(buffer, 0, 15);
+	if (buffer.toString("utf8") === "SQLite format 3") {
+		throw new UserError(
+			"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
+		);
+	}
 }
