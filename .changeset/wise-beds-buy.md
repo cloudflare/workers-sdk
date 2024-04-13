@@ -7,4 +7,4 @@
 "wrangler": patch
 ---
 
-Show new Discord url everywhere for consistency. The old URL still works, but https://discord.cloudflare.com is preferred.
+docs: show new Discord url everywhere for consistency. The old URL still works, but https://discord.cloudflare.com is preferred.
