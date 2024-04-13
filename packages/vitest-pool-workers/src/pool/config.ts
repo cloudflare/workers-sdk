@@ -49,7 +49,9 @@ const WorkersPoolOptionsSchema = z.object({
 		})
 		.passthrough()
 		.optional(),
-	wrangler: z.object({ configPath: z.ostring() }).optional(),
+	wrangler: z
+		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.optional(),
 });
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
@@ -181,7 +183,10 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 		const { workerOptions, define, main } =
-			wrangler.unstable_getMiniflareWorkerOptions(configPath);
+			wrangler.unstable_getMiniflareWorkerOptions(
+				configPath,
+				options.wrangler.environment
+			);
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;
