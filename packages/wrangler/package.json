@@ -110,7 +110,6 @@
 		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "0.6.1",
-		"ts-json-schema-generator": "^1.5.0",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
@@ -199,6 +198,7 @@
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"ts-dedent": "^2.2.0",
+		"ts-json-schema-generator": "^1.5.0",
 		"undici": "5.28.3",
 		"update-check": "^1.5.4",
 		"ws": "^8.5.0",
