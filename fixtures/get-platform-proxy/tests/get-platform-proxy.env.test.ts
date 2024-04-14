@@ -156,8 +156,15 @@ describe("getPlatformProxy - bindings", () => {
 	});
 
 	type EntrypointService = Service<
-		NamedEntrypoint & Rpc.WorkerEntrypointBranded
-	>;
+		Omit<NamedEntrypoint, "getCounter"> & Rpc.WorkerEntrypointBranded
+	> & {
+		getCounter: () => Promise<
+			Promise<{
+				value: Promise<number>;
+				increment: (amount: number) => Promise<number>;
+			}>
+		>;
+	};
 
 	describe("provides rpc service bindings to external local workers", () => {
 		let rpc: EntrypointService;
@@ -175,6 +182,13 @@ describe("getPlatformProxy - bindings", () => {
 			const resp = await rpc.asJsonResponse([1, 2, 3]);
 			expect(resp.status).toMatchInlineSnapshot(`200`);
 			expect(await resp.text()).toMatchInlineSnapshot(`"[1,2,3]"`);
+		});
+		it("can obtain and interact with RpcStubs", async () => {
+			const counter = await rpc.getCounter();
+			expect(await counter.value).toMatchInlineSnapshot(`0`);
+			expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
+			expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
+			expect(await counter.value).toMatchInlineSnapshot(`12`);
 		});
 	});
 

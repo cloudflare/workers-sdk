@@ -1,4 +1,4 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
 export default {
 	async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
@@ -17,5 +17,21 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 		text: () => Promise<string>;
 	} {
 		return Response.json(args);
+	}
+	getCounter() {
+		return new Counter();
+	}
+}
+
+class Counter extends RpcTarget {
+	#value = 0;
+
+	increment(amount: number) {
+		this.#value += amount;
+		return this.#value;
+	}
+
+	get value() {
+		return this.#value;
 	}
 }

@@ -52,6 +52,9 @@ const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
 	.join("\0");
 function isPlainObject(value: unknown) {
 	const proto = Object.getPrototypeOf(value);
+	if(value?.constructor?.name === 'RpcStub') {
+		return false;
+	}
 	return (
 		proto === Object.prototype ||
 		proto === null ||
@@ -269,7 +272,17 @@ export class ProxyServer implements DurableObject {
 								if (v.hasOwnProperty(Symbol.dispose)) delete v[Symbol.dispose];
 								if (v.hasOwnProperty(Symbol.asyncDispose))
 									delete v[Symbol.asyncDispose];
-								// TODO: add support for RPC stubs
+
+								if(v.constructor.name === 'RpcStub') {
+									// Disguise the `RpcStub` as an object to allow its pseudo-serialization
+									// (this is needed because `RpcStub`s are functions and those cannot be serialized)
+									return resolve(new Proxy({ v }, {
+										get(target, p) {
+											return target.v[p];
+										},
+									}));
+								}
+
 								resolve(v);
 							})
 							.catch(reject)

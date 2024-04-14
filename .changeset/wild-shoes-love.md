@@ -2,11 +2,9 @@
 "miniflare": patch
 ---
 
-fix: add partial support for RPC in magic proxy
+fix: add support for RPC in magic proxy
 
 currently `Miniflare#getBindings()` does not return valid proxies to provided `serviceBindings` using RPC, make sure that appropriate proxies are instead returned
-
-(Note: such RPC support is partial and does not include RPC stubs, support for those will be added soon)
 
 Example:
 
@@ -29,16 +27,16 @@ const mf = new Miniflare({
 			modules: true,
 			name: "sum-worker",
 			script: `
-        import { WorkerEntrypoint } from 'cloudflare:workers';
+				import { WorkerEntrypoint } from 'cloudflare:workers';
 
-        export default { fetch() { return new Response(''); } }
+				export default { fetch() { return new Response(''); } }
 
-        export class SumEntrypoint extends WorkerEntrypoint {
-            sum(args) {
-                return args.reduce((a, b) => a + b);
-            }
-        }
-      `,
+				export class SumEntrypoint extends WorkerEntrypoint {
+					sum(args) {
+						return args.reduce((a, b) => a + b);
+					}
+				}
+			`,
 		},
 	],
 });
