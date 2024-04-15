@@ -1387,6 +1387,98 @@ test("Miniflare: getBindings() returns wrapped bindings", async (t) => {
 
 	t.is(helloWorld, 'Hello World');
 });
+test("Miniflare: getBindings() handles wrapped bindings returning objects containing functions", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					Greeter: {
+						scriptName: "greeter-obj-implementation",
+					},
+				},
+				modules: true,
+				script: "",
+			},
+			{
+				modules: true,
+				name: "greeter-obj-implementation",
+				script: `
+					export default function (env) {
+						const objWithFunction = {
+							sayHello: (name) => {
+								return "Hello " + name;
+							}
+						};
+						return objWithFunction;
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	interface Env {
+		Greeter: {
+			sayHello: (str: string) => string,
+		},
+	};
+	const { Greeter } = await mf.getBindings<Env>();
+
+	const helloWorld = Greeter.sayHello('World');
+
+	t.is(helloWorld, 'Hello World');
+});
+test("Miniflare: getBindings() handles wrapped bindings returning objects containing nested functions", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					Greeter: {
+						scriptName: "greeter-obj-implementation",
+					},
+				},
+				modules: true,
+				script: "",
+			},
+			{
+				modules: true,
+				name: "greeter-obj-implementation",
+				script: `
+					export default function (env) {
+						const objWithFunction = {
+							obj: {
+								obj1: {
+									obj2: {
+										sayHello: (name) => "Hello " + name + " from a nested function"
+									}
+								}
+							}
+						};
+						return objWithFunction;
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	interface Env {
+		Greeter: {
+			obj: {
+				obj1: {
+					obj2: {
+						sayHello: (str: string) => string,
+					}
+				}
+			}
+		},
+	};
+	const { Greeter } = await mf.getBindings<Env>();
+
+	const helloWorld = Greeter.obj.obj1.obj2.sayHello('World');
+
+	t.is(helloWorld, 'Hello World from a nested function');
+});
 test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
