@@ -5,7 +5,8 @@ import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
-describe("getPlatformProxy()", () => {
+// TODO(DEVX-1262): re-enable when we have set an API token with the proper AI permissions
+describe.skip("getPlatformProxy()", () => {
 	let run: typeof shellac;
 	beforeEach(async () => {
 		const root = await makeRoot();
