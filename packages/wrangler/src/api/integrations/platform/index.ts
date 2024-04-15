@@ -216,12 +216,18 @@ export type SourcelessWorkerOptions = Omit<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 > & { modulesRules?: ModuleRule[] };
 
-export function unstable_getMiniflareWorkerOptions(configPath: string): {
+export function unstable_getMiniflareWorkerOptions(
+	configPath: string,
+	environment?: string
+): {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
 } {
-	const config = readConfig(configPath, { experimentalJsonConfig: true });
+	const config = readConfig(configPath, {
+		experimentalJsonConfig: true,
+		env: environment,
+	});
 
 	const modulesRules: ModuleRule[] = config.rules
 		.concat(DEFAULT_MODULE_RULES)
