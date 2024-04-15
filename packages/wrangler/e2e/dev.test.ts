@@ -429,11 +429,15 @@ describe("python dependency tests", () => {
 	it("can parse requirements file and use dependencies", async () => {
 		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
-				(s) => s.status !== 200,
+				(s) => {
+					console.log(s);
+					return s.status !== 200;
+				},
 				async () => {
 					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
-				}
+				},
+				100
 			);
 			expect(text).toMatchInlineSnapshot('"[1 2 3]"');
 		});
