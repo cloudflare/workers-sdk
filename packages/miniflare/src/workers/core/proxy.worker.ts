@@ -55,11 +55,31 @@ function isPlainObject(value: unknown) {
 	if(value?.constructor?.name === 'RpcStub') {
 		return false;
 	}
+	if(value && typeof value === 'object') {
+		const valueAsRecord = value as Record<string, unknown>;
+		if (objectContainsFunctions(valueAsRecord)){
+			return false;
+		}
+	}
 	return (
 		proto === Object.prototype ||
 		proto === null ||
 		Object.getOwnPropertyNames(proto).sort().join("\0") === objectProtoNames
 	);
+}
+function objectContainsFunctions(obj: Record<string, unknown>): boolean {
+	for(const [, entry] of Object.entries(obj)) {
+		if(typeof entry === 'function') {
+			return true;
+		}
+		if(typeof entry === 'object' && entry) {
+			if(objectContainsFunctions(entry as Record<string, unknown>)) {
+				return false;
+			}
+		}
+	}
+
+	return false;
 }
 function getType(value: unknown) {
 	return Object.prototype.toString.call(value).slice(8, -1); // `[object <type>]`
