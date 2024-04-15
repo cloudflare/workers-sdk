@@ -32,10 +32,13 @@ const supportedPagesConfigFields = [
 	"analytics_engine_datasets",
 	"ai",
 	"version_metadata",
+	"dispatch_namespaces",
 	"dev",
 	// normalizeAndValidateConfig() sets this value
 	"configPath",
 ] as const;
+
+const ignoredPagesConfigFields = ["dispatch_namespaces"];
 
 export function validatePagesConfig(
 	config: Config,
@@ -56,6 +59,7 @@ export function validatePagesConfig(
 	validateProjectName(projectName, diagnostics);
 	validatePagesEnvironmentNames(envNames, diagnostics);
 	validateUnsupportedFields(config, diagnostics);
+	validateIgnoredFields(config, diagnostics);
 
 	return diagnostics;
 }
@@ -157,5 +161,23 @@ function validateUnsupportedFields(config: Config, diagnostics: Diagnostics) {
 				);
 			}
 		});
+	}
+}
+
+/**
+ * Check for configuration fields that are supported by Pages via the configuration file but ignored
+ */
+function validateIgnoredFields(config: Config, diagnostics: Diagnostics) {
+	for (const field of Object.keys(config) as Array<keyof Config>) {
+		if (
+			ignoredPagesConfigFields.includes(field) &&
+			config[field] !== undefined &&
+			JSON.stringify(config[field]) !==
+				JSON.stringify(defaultWranglerConfig[field])
+		) {
+			diagnostics.warnings.push(
+				`Configuration file for Pages projects does not support "${field}"`
+			);
+		}
 	}
 }

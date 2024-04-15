@@ -1,0 +1,2 @@
+name = "customer-script"
+dispatch_namespace = "my-namespace"

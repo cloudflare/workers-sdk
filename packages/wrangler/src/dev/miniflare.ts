@@ -19,6 +19,11 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import {
+	EXTERNAL_DISPATCH_WORKER_NAME,
+	generateDispatchFetcher,
+	generateExternalDispatchWorkerScript,
+} from "../dispatch-namespaces/fetcher";
 import { UserError } from "../errors";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
@@ -97,10 +102,10 @@ function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
 				return getUnknownPrototypeKey(key);
 			}
 		});
-	
+
 		return Reflect.construct(handlerSuperKlass, [ctx, env], klass);
 	}
-		
+
 	Reflect.setPrototypeOf(klass.prototype, handlerSuperKlass.prototype);
 	Reflect.setPrototypeOf(klass, handlerSuperKlass);
 
@@ -111,7 +116,7 @@ function createDurableObjectClass({ className, proxyUrl }) {
 	const klass = createProxyPrototypeClass(DurableObject, (key) => {
 		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions.\`);
 	});
-	
+
 	// Forward regular HTTP requests to the other "wrangler dev" session
 	klass.prototype.fetch = function(request) {
 		if (proxyUrl === undefined) {
@@ -568,6 +573,40 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
 		};
+	}
+	if (bindings.dispatch_namespaces?.length) {
+		for (const {
+			binding,
+			namespace,
+			outbound,
+		} of bindings.dispatch_namespaces) {
+			const identifier = getIdentifier(`dispatch_namespace_${binding}`);
+			const scriptName = `${EXTERNAL_DISPATCH_WORKER_NAME}_${identifier}`;
+
+			externalWorkers.push({
+				name: scriptName,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: generateExternalDispatchWorkerScript(
+							outbound?.parameters
+						),
+					},
+				],
+				serviceBindings: {
+					FETCHER: generateDispatchFetcher(
+						namespace,
+						outbound,
+						config.workerDefinitions
+					),
+				},
+			});
+
+			wrappedBindings[binding] = {
+				scriptName,
+			};
+		}
 	}
 
 	const bindingOptions = {

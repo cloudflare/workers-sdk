@@ -75,6 +75,19 @@ const SERVICE_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<service>[^@#\s]+)(@(?<environment>.*)$)?(#(?<entrypoint>.*))?$/
 );
 
+/* DISPATCH_NAMESPACE_REGEXP matches strings like:
+ * - "BINDING=ref"
+ * - "BINDING=ref@outbound"
+ * - "BINDING=ref@outbound#parameter,parameter2"
+ * - "BINDING=ref@outbound@envrionment"
+ * - "BINDING=ref@outbound@envrionment#parameter,parameter2"
+ * This is used to capture both the binding name (how the binding is used in JS) as well as the dispatch namespace reference.
+ * Optionally, it can include an outbound service name (with optional environment) and optionally parameters as well.
+ */
+const DISPATCH_NAMESPACE_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)(?:=(?<ref>[^\s@#]+))(@(?<outbound>[^\s@#]+)(@(?<environment>[^\s#]+))?(#(?<parameters>[^\s]+)))?$/
+);
+
 const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
 const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
@@ -187,6 +200,12 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "array",
 				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
 				alia: "s",
+			},
+			dispatch: {
+				// Not a fan of 'dispatch' here, but `--dispatch-namespace` is already used to deploy _to_ a namespace in Workers proper, and the rest of these bindings (^) all don't reference their "namespace" e.g. KV.
+				type: "array",
+				description:
+					"Dispatch namespace to bind (--dispatch DISPATCH_BINDING=namespace-name)",
 			},
 			"live-reload": {
 				type: "boolean",
@@ -309,6 +328,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		d1_databases,
 		r2_buckets,
 		services,
+		dispatch_namespaces,
 		ai,
 	} = getBindingsFromArgs(args);
 
@@ -647,6 +667,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		r2: r2_buckets,
 		services,
 		ai,
+		dispatchNamespaces: dispatch_namespaces,
 		rules: usingWorkerDirectory
 			? [
 					{
@@ -882,6 +903,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 		| "services"
 		| "ai"
 		| "version_metadata"
+		| "dispatch_namespaces"
 	>
 > & {
 	do_bindings?: DurableObjectBindings;
@@ -1036,6 +1058,38 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 		version_metadata = { binding: args.versionMetadata.toString() };
 	}
 
+	let dispatchNamespaces:
+		| EnvironmentNonInheritable["dispatch_namespaces"]
+		| undefined;
+	if (args.dispatch?.length) {
+		dispatchNamespaces = args.dispatch
+			.map((dispatchArg) => {
+				const { binding, ref, outbound, environment, parameters } =
+					DISPATCH_NAMESPACE_REGEXP.exec(dispatchArg.toString())?.groups || {};
+
+				if (!binding || !ref) {
+					logger.warn(
+						"Could not parse dispatch namespace binding:",
+						dispatchArg.toString()
+					);
+					return;
+				}
+
+				return {
+					binding,
+					namespace: ref || binding.toString(),
+					...(outbound && {
+						outbound: {
+							service: outbound,
+							environment: environment,
+							parameters: parameters?.split(","),
+						},
+					}),
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["dispatchNamespaces"];
+	}
+
 	/*
 	 * all these bindings will be merged with their corresponding configuration file counterparts
 	 * in `startDev()` -> `getBindingsAndAssetPaths()` -> `getBindings()`, so no need to address
@@ -1049,6 +1103,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 		services,
 		ai,
 		version_metadata,
+		dispatch_namespaces: dispatchNamespaces,
 
 		// don't construct the full `EnvironmentNonInheritable["durable_objects"]` shape here.
 		// `startDev()` will do that for us in its `getBindings()` function

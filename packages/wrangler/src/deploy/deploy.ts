@@ -535,6 +535,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityDate ?? config.compatibility_date,
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
+						dispatchNamespace:
+							props.dispatchNamespace || config.dispatch_namespace,
 					}
 			  );
 

@@ -1286,6 +1286,16 @@ function normalizeAndValidateEnvironment(
 			validateVars(envName),
 			{}
 		),
+		dispatch_namespace: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"dispatch_namespace",
+			isString,
+			undefined
+		),
 		define: notInheritable(
 			diagnostics,
 			topLevelEnv,

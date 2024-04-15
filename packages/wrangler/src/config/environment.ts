@@ -245,24 +245,6 @@ interface EnvironmentInheritable {
 	node_compat: boolean | undefined;
 
 	/**
-	 * Specifies namespace bindings that are bound to this Worker environment.
-	 *
-	 * NOTE: This field is not automatically inherited from the top level environment,
-	 * and so must be specified in every named environment.
-	 *
-	 * @default `[]`
-	 * @nonInheritable
-	 */
-	dispatch_namespaces: {
-		/** The binding name used to refer to the bound service. */
-		binding: string;
-		/** The namespace to bind to. */
-		namespace: string;
-		/** Details about the outbound worker which will handle outbound requests from your namespace */
-		outbound?: DispatchNamespaceOutbound;
-	}[];
-
-	/**
 	 *	Designates this worker as an internal-only "first-party" worker.
 	 */
 	first_party_worker: boolean | undefined;
@@ -355,6 +337,19 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	vars: Record<string, string | Json>;
+
+	/**
+	 * The dispatch namespace that your worker should belongs to.
+	 *
+	 * For more information about dispatch namespaces, see https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `undefined`
+	 * @nonInheritable
+	 */
+	dispatch_namespace: string | undefined;
 
 	/**
 	 * A list of durable objects that your worker should be bound to.
@@ -593,6 +588,24 @@ export interface EnvironmentNonInheritable {
 				entrypoint?: string;
 		  }[]
 		| undefined;
+
+	/**
+	 * Specifies namespace bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	dispatch_namespaces: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+		/** The namespace to bind to. */
+		namespace: string;
+		/** Details about the outbound worker which will handle outbound requests from your namespace */
+		outbound?: DispatchNamespaceOutbound;
+	}[];
 
 	/**
 	 * Specifies analytics engine datasets that are bound to this Worker environment.

@@ -92,6 +92,10 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: true,
 			})
+			.option("dispatch-namespace", {
+				describe: "Name of the Workers for Platforms dispatch namespace",
+				type: "string",
+			})
 			.option("ip", {
 				describe: "IP address to listen on",
 				type: "string",
@@ -350,9 +354,11 @@ export type AdditionalDevProps = {
 	ai?: {
 		binding: string;
 	};
+	// why is this snake_case? :(
 	version_metadata?: {
 		binding: string;
 	};
+	dispatchNamespaces?: Environment["dispatch_namespaces"];
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
 	additionalModules?: CfModule[];
@@ -499,6 +505,9 @@ export async function startDev(args: StartDevOptions) {
 					compatibilityFlags={
 						args.compatibilityFlags || configParam.compatibility_flags
 					}
+					dispatchNamespace={
+						args.dispatchNamespace || configParam.dispatch_namespace
+					}
 					usageModel={configParam.usage_model}
 					bindings={bindings}
 					crons={configParam.triggers.crons}
@@ -506,7 +515,7 @@ export async function startDev(args: StartDevOptions) {
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
-					forceLocal={args.forceLocal}
+					forceLocal={args.forceLocal || !!args.dispatchNamespace}
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
@@ -624,6 +633,7 @@ export async function startApiDev(args: StartDevOptions) {
 			),
 			compatibilityFlags:
 				args.compatibilityFlags ?? configParam.compatibility_flags,
+			dispatchNamespace: args.dispatchNamespace,
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
@@ -631,7 +641,7 @@ export async function startApiDev(args: StartDevOptions) {
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,
 			showInteractiveDevSession: args.showInteractiveDevSession,
-			forceLocal: args.forceLocal,
+			forceLocal: args.forceLocal || !!args.dispatchNamespace,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
 			local: !args.remote,
 			firstPartyWorker: configParam.first_party_worker,
@@ -820,6 +830,18 @@ async function validateDevServerSettings(
 		);
 	}
 
+	if (args.remote && args.dispatchNamespace) {
+		throw new UserError(
+			"The `--dispatch-namespace` argument cannot be used in conjunction with the `--remote` argument. If you want dispatch to this script from a Workers for Platforms dispatch namespace, please remove the `--remote` argument from your CLI command."
+		);
+	}
+
+	if (args.remote && args.local) {
+		throw new UserError(
+			"The `--remote` argument cannot be used in conjunction with the `--local` argument."
+		);
+	}
+
 	const localPersistencePath = getLocalPersistencePath(
 		args.persistTo,
 		config.configPath
@@ -857,6 +879,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 		d1Databases: args.d1Databases,
 		ai: args.ai,
 		version_metadata: args.version_metadata,
+		dispatchNamespaces: args.dispatchNamespaces,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
@@ -1001,6 +1024,15 @@ export function getBindings(
 		}),
 	];
 
+	// merge DO bindings
+	const dispatchConfig = configParam.dispatch_namespaces || [];
+	const dispatchArgs = args.dispatchNamespaces || [];
+	const mergedDispatchBindings = mergeWithOverride(
+		dispatchConfig,
+		dispatchArgs,
+		"binding"
+	);
+
 	const bindings = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
@@ -1032,6 +1064,7 @@ export function getBindings(
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
 		version_metadata: args.version_metadata || configParam.version_metadata,
+		dispatchNamespaces: mergedDispatchBindings,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
