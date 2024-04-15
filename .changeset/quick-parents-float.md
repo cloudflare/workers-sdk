@@ -26,16 +26,16 @@ const mf = new Miniflare({
 			modules: true,
 			name: "impl",
 			script: `
-        class Greeter {
-          sayHello(name) {
-            return "Hello " + name;
-          }
-        }
+				class Greeter {
+					sayHello(name) {
+						return "Hello " + name;
+					}
+				}
 
-        export default function (env) {
-          return new Greeter();
-        }
-      `,
+				export default function (env) {
+					return new Greeter();
+				}
+			`,
 		},
 	],
 });
