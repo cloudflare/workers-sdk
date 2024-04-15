@@ -30,11 +30,12 @@ import { isNavigatorDefined } from "../navigator-user-agent";
 import { APIError, ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import {
+	ensureQueuesExistByConfig,
 	getQueue,
-	postTypedConsumer,
+	postConsumer,
 	putConsumer,
+	putConsumerById,
 	putQueue,
-	putTypedConsumer,
 } from "../queues/client";
 import { syncAssets } from "../sites";
 import {
@@ -44,7 +45,6 @@ import {
 import triggersDeploy from "../triggers/deploy";
 import { logVersionIdChange } from "../utils/deployment-id-version-id-change";
 import { getZoneForRoute } from "../zones";
-import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
@@ -59,11 +59,7 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type {
-	PostQueueBody,
-	PostTypedConsumerBody,
-	PutConsumerBody,
-} from "../queues/client";
+import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 
@@ -701,7 +697,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
 		if (!props.dryRun) {
-			await ensureQueuesExist(config);
+			await ensureQueuesExistByConfig(config);
 
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
@@ -1002,47 +998,21 @@ export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
-export async function ensureQueuesExist(config: Config) {
-	const producers = (config.queues.producers || []).map(
-		(producer) => producer.queue
-	);
-	const consumers = (config.queues.consumers || []).map(
-		(consumer) => consumer.queue
-	);
-
-	const queueNames = producers.concat(consumers);
-	for (const queue of queueNames) {
-		try {
-			await getQueue(config, queue);
-		} catch (err) {
-			const queueErr = err as FetchError;
-			if (queueErr.code === 11000) {
-				// queue_not_found
-				throw new UserError(
-					`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`
-				);
-			}
-			throw err;
-		}
-	}
-}
-
 export async function updateQueueProducers(
 	config: Config
 ): Promise<Promise<string[]>[]> {
 	const producers = config.queues.producers || [];
 	const updateProducers: Promise<string[]>[] = [];
 	for (const producer of producers) {
-		const queue = await getQueue(config, producer.queue);
 		const body: PostQueueBody = {
-			queue_name: queue.queue_name,
+			queue_name: producer.queue,
 			settings: {
 				delivery_delay: producer.delivery_delay,
 			},
 		};
 
 		updateProducers.push(
-			putQueue(config, queue.queue_id, body).then(() => [
+			putQueue(config, producer.queue, body).then(() => [
 				`Producer for ${producer.queue}`,
 			])
 		);
@@ -1057,31 +1027,9 @@ export async function updateQueueConsumers(
 	const consumers = config.queues.consumers || [];
 	const updateConsumers: Promise<string[]>[] = [];
 	for (const consumer of consumers) {
-		if (consumer.type === "http_pull") {
-			const queue = await getQueue(config, consumer.queue);
-			const existingConsumer = queue.consumers && queue.consumers[0];
-			if (existingConsumer) {
-				const body: PostTypedConsumerBody = {
-					type: consumer.type,
-					dead_letter_queue: consumer.dead_letter_queue,
-					settings: {
-						batch_size: consumer.max_batch_size,
-						max_retries: consumer.max_retries,
-						visibility_timeout_ms: consumer.visibility_timeout_ms,
-						retry_delay: consumer.retry_delay,
-					},
-				};
-				updateConsumers.push(
-					putTypedConsumer(
-						config,
-						queue.queue_id,
-						existingConsumer.consumer_id,
-						body
-					).then(() => [`Consumer for ${consumer.queue}`])
-				);
-				continue;
-			}
+		const queue = await getQueue(config, consumer.queue);
 
+		if (consumer.type === "http_pull") {
 			const body: PostTypedConsumerBody = {
 				type: consumer.type,
 				dead_letter_queue: consumer.dead_letter_queue,
@@ -1092,14 +1040,36 @@ export async function updateQueueConsumers(
 					retry_delay: consumer.retry_delay,
 				},
 			};
+
+			const existingConsumer = queue.consumers && queue.consumers[0];
+			if (existingConsumer) {
+				updateConsumers.push(
+					putConsumerById(
+						config,
+						queue.queue_id,
+						existingConsumer.consumer_id,
+						body
+					).then(() => [`Consumer for ${consumer.queue}`])
+				);
+				continue;
+			}
 			updateConsumers.push(
-				postTypedConsumer(config, consumer.queue, body).then(() => [
+				postConsumer(config, consumer.queue, body).then(() => [
 					`Consumer for ${consumer.queue}`,
 				])
 			);
 		} else {
-			const body: PutConsumerBody = {
+			if (config.name === undefined) {
+				// TODO: how can we reliably get the current script name?
+				throw new UserError(
+					"Script name is required to update queue consumers"
+				);
+			}
+
+			const body: PostTypedConsumerBody = {
+				type: "worker",
 				dead_letter_queue: consumer.dead_letter_queue,
+				script_name: config.name,
 				settings: {
 					batch_size: consumer.max_batch_size,
 					max_retries: consumer.max_retries,
@@ -1111,18 +1081,24 @@ export async function updateQueueConsumers(
 				},
 			};
 
-			if (config.name === undefined) {
-				// TODO: how can we reliably get the current script name?
-				throw new UserError(
-					"Script name is required to update queue consumers"
-				);
-			}
-			const scriptName = config.name;
+			// Current script already assigned to queue?
+			const existingConsumer =
+				queue.consumers.filter(
+					(c) => c.script === config.name || c.service === config.name
+				).length > 0;
 			const envName = undefined; // TODO: script environment for wrangler deploy?
+			if (existingConsumer) {
+				updateConsumers.push(
+					putConsumer(config, consumer.queue, config.name, envName, body).then(
+						() => [`Consumer for ${consumer.queue}`]
+					)
+				);
+				continue;
+			}
 			updateConsumers.push(
-				putConsumer(config, consumer.queue, scriptName, envName, body).then(
-					() => [`Consumer for ${consumer.queue}`]
-				)
+				postConsumer(config, consumer.queue, body).then(() => [
+					`Consumer for ${consumer.queue}`,
+				])
 			);
 		}
 	}

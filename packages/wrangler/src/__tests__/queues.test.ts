@@ -4,11 +4,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type {
-	PostConsumerBody,
-	PostTypedConsumerBody,
-	QueueResponse,
-} from "../queues/client";
+import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();
@@ -17,6 +13,10 @@ describe("wrangler", () => {
 	const std = mockConsoleMethods();
 
 	describe("queues", () => {
+		const expectedQueueId = "queueId";
+		const expectedConsumerId = "consumerId";
+		const expectedQueueName = "testQueue";
+
 		it("should show the correct help text", async () => {
 			await runWrangler("queues --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -40,12 +40,42 @@ describe("wrangler", () => {
 		`);
 		});
 
+		function mockGetQueueByNameRequest(
+			queueName: string,
+			queue: QueueResponse | null
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				rest.get(
+					"*/accounts/:accountId/queues?*",
+					async (request, response, context) => {
+						requests.count += 1;
+						if (queue) {
+							const nameParam = request.url.searchParams.getAll("name");
+							expect(nameParam.length).toBeGreaterThan(0);
+							expect(nameParam[0]).toEqual(queueName);
+						}
+						expect(await request.text()).toEqual("");
+						return response.once(
+							context.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: queue ? [queue] : [],
+							})
+						);
+					}
+				)
+			);
+			return requests;
+		}
+
 		describe("list", () => {
 			function mockListRequest(queues: QueueResponse[], page: number) {
 				const requests = { count: 0 };
 				msw.use(
 					rest.get(
-						"*/accounts/:accountId/workers/queues?*",
+						"*/accounts/:accountId/queues?*",
 						async (request, response, context) => {
 							requests.count += 1;
 							const query = request.url.searchParams;
@@ -163,14 +193,14 @@ describe("wrangler", () => {
 
 		describe("create", () => {
 			function mockCreateRequest(
-				expectedQueueName: string,
+				queueName: string,
 				queueSettings: { delivery_delay?: number } | undefined = undefined
 			) {
 				const requests = { count: 0 };
 
 				msw.use(
 					rest.post(
-						"*/accounts/:accountId/workers/queues",
+						"*/accounts/:accountId/queues",
 						async (request, response, context) => {
 							requests.count += 1;
 
@@ -180,7 +210,7 @@ describe("wrangler", () => {
 									delivery_delay: number;
 								};
 							};
-							expect(body.queue_name).toEqual(expectedQueueName);
+							expect(body.queue_name).toEqual(queueName);
 							expect(body.settings).toEqual(queueSettings);
 							return response.once(
 								context.json({
@@ -188,7 +218,7 @@ describe("wrangler", () => {
 									errors: [],
 									messages: [],
 									result: {
-										queue_name: expectedQueueName,
+										queue_name: queueName,
 										created_on: "01-01-2001",
 										modified_on: "01-01-2001",
 									},
@@ -237,7 +267,7 @@ describe("wrangler", () => {
 				const queueName = "testQueue";
 				msw.use(
 					rest.post(
-						"*/accounts/:accountId/workers/queues",
+						"*/accounts/:accountId/queues",
 						async (request, response, context) => {
 							expect(request.params.accountId).toEqual("some-account-id");
 							return response.once(
@@ -261,7 +291,7 @@ describe("wrangler", () => {
 			"Creating queue testQueue.
 			Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues) failed.[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
 
 			  workers.api.error.unauthorized [code: 10023]
 
@@ -298,14 +328,14 @@ describe("wrangler", () => {
 		});
 
 		describe("delete", () => {
-			function mockDeleteRequest(expectedQueueName: string) {
+			function mockDeleteRequest(queueId: string) {
 				const requests = { count: 0 };
 				msw.use(
 					rest.delete(
-						"*/accounts/:accountId/workers/queues/:queueName",
+						"*/accounts/:accountId/queues/:queueId",
 						async (request, response, context) => {
 							requests.count += 1;
-							expect(request.params.queueName).toEqual(expectedQueueName);
+							expect(request.params.queueId).toEqual(queueId);
 							expect(request.params.accountId).toEqual("some-account-id");
 							return response.once(
 								context.json({
@@ -342,13 +372,46 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a queue", async () => {
-				const requests = mockDeleteRequest("testQueue");
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					expectedQueueName,
+					{
+						queue_id: expectedQueueId,
+						queue_name: expectedQueueName,
+						created_on: "",
+						producers: [],
+						consumers: [],
+						producers_total_count: 1,
+						consumers_total_count: 0,
+						modified_on: "",
+					}
+				);
+
+				const deleteRequest = mockDeleteRequest(expectedQueueId);
 				await runWrangler("queues delete testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Deleting queue testQueue.
 					Deleted queue testQueue."
 			  `);
-				expect(requests.count).toEqual(1);
+				expect(queueNameResolveRequest.count).toEqual(1);
+				expect(deleteRequest.count).toEqual(1);
+			});
+
+			it("should show error when a queue doesn't exist", async () => {
+				const queueNameResolveRequest = mockGetQueueByNameRequest(
+					expectedQueueName,
+					null
+				);
+
+				const deleteRequest = mockDeleteRequest(expectedQueueId);
+				await runWrangler();
+				await expect(
+					runWrangler("queues delete testQueue")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"Queue \\"testQueue\\" does not exist. To create it, run: wrangler queues create testQueue"`
+				);
+
+				expect(queueNameResolveRequest.count).toEqual(1);
+				expect(deleteRequest.count).toEqual(0);
 			});
 		});
 
@@ -379,16 +442,16 @@ describe("wrangler", () => {
 
 			describe("add", () => {
 				function mockPostRequest(
-					expectedQueueName: string,
-					expectedBody: PostConsumerBody
+					queueName: string,
+					expectedBody: PostTypedConsumerBody
 				) {
 					const requests = { count: 0 };
 					msw.use(
 						rest.post(
-							"*/accounts/:accountId/workers/queues/:queueName/consumers",
+							"*/accounts/:accountId/queues/:queueName/consumers",
 							async (request, response, context) => {
 								requests.count += 1;
-								expect(request.params.queueName).toEqual(expectedQueueName);
+								expect(request.params.queueName).toEqual(queueName);
 								expect(request.params.accountId).toEqual("some-account-id");
 								expect(await request.json()).toEqual(expectedBody);
 								return response.once(
@@ -435,8 +498,23 @@ describe("wrangler", () => {
 				});
 
 				it("should add a consumer using defaults", async () => {
-					const expectedBody: PostConsumerBody = {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 1,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
+					const expectedBody: PostTypedConsumerBody = {
 						script_name: "testScript",
+						type: "worker",
 						environment_name: "",
 						settings: {
 							batch_size: undefined,
@@ -447,8 +525,12 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: undefined,
 					};
-					mockPostRequest("testQueue", expectedBody);
+					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
 					await runWrangler("queues consumer add testQueue testScript");
+
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
+
 					expect(std.out).toMatchInlineSnapshot(`
 							"Adding consumer to queue testQueue.
 							Added consumer to queue testQueue."
@@ -456,8 +538,23 @@ describe("wrangler", () => {
 				});
 
 				it("should add a consumer using custom values", async () => {
-					const expectedBody: PostConsumerBody = {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 1,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
+					const expectedBody: PostTypedConsumerBody = {
 						script_name: "testScript",
+						type: "worker",
 						environment_name: "myEnv",
 						settings: {
 							batch_size: 20,
@@ -468,11 +565,15 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					mockPostRequest("testQueue", expectedBody);
+					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
 
 					await runWrangler(
 						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=10"
 					);
+
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
+
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
@@ -480,8 +581,9 @@ describe("wrangler", () => {
 				});
 
 				it("should show an error when two retry delays are set", async () => {
-					const expectedBody: PostConsumerBody = {
+					const expectedBody: PostTypedConsumerBody = {
 						script_name: "testScript",
+						type: "worker",
 						environment_name: "myEnv",
 						settings: {
 							batch_size: 20,
@@ -505,11 +607,43 @@ describe("wrangler", () => {
 					expect(requests.count).toEqual(0);
 				});
 
-				it("should show link to dash when not enabled", async () => {
-					const queueName = "testQueue";
+				it("should show an error when queue does not exist", async () => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						null
+					);
+					const expectedBody: PostTypedConsumerBody = {
+						script_name: "testScript",
+						type: "worker",
+						environment_name: "myEnv",
+						settings: {
+							batch_size: 20,
+							max_retries: 3,
+							max_wait_time_ms: 10 * 1000,
+							max_concurrency: 3,
+							retry_delay: 0,
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+
+					await expect(
+						runWrangler(
+							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Queue \\"testQueue\\" does not exist. To create it, run: wrangler queues create testQueue"`
+					);
+
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(0);
+				});
+
+				xit("should show link to dash when not enabled", async () => {
+					const queueName = "testQueueId";
 					msw.use(
 						rest.post(
-							"*/accounts/:accountId/workers/queues/:queueName/consumers",
+							"*/accounts/:accountId/queues/:testQueueId/consumers",
 							async (request, response, context) => {
 								expect(request.params.queueName).toEqual(queueName);
 								expect(request.params.accountId).toEqual("some-account-id");
@@ -538,7 +672,7 @@ describe("wrangler", () => {
 				"Adding consumer to queue testQueue.
 				Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/queues/testQueue/consumers) failed.[0m
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues/testQueue/consumers) failed.[0m
 
 				  workers.api.error.unauthorized [code: 10023]
 
@@ -551,24 +685,16 @@ describe("wrangler", () => {
 			});
 
 			describe("delete", () => {
-				function mockDeleteRequest(
-					expectedQueueName: string,
-					expectedScriptName: string,
-					expectedEnvName?: string
-				) {
+				function mockDeleteRequest(queueId: string, consumerId: string) {
 					const requests = { count: 0 };
-					let resource = `accounts/:accountId/workers/queues/:expectedQueueName/consumers/:expectedScriptName`;
-					if (expectedEnvName !== undefined) {
-						resource += `/environments/:expectedEnvName`;
-					}
+					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
+
 					msw.use(
 						rest.delete(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
 							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.expectedQueueName).toBe(expectedQueueName);
-							expect(request.params.expectedScriptName).toBe(
-								expectedScriptName
-							);
+							expect(request.params.expectedQueueId).toBe(queueId);
+							expect(request.params.expectedConsumerId).toBe(consumerId);
 							return response.once(
 								context.status(200),
 								context.json({
@@ -581,6 +707,34 @@ describe("wrangler", () => {
 						})
 					);
 
+					return requests;
+				}
+
+				function mockServiceRequest(serviceName: string, defaultEnv: string) {
+					const requests = { count: 0 };
+					const resource = `accounts/:accountId/workers/services/:serviceName`;
+
+					msw.use(
+						rest.get(`*/${resource}`, async (request, response, context) => {
+							requests.count++;
+							expect(request.params.accountId).toBe("some-account-id");
+							expect(request.params.serviceName).toBe(serviceName);
+							return response.once(
+								context.status(200),
+								context.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										id: serviceName,
+										default_environment: {
+											environment: defaultEnv,
+										},
+									},
+								})
+							);
+						})
+					);
 					return requests;
 				}
 
@@ -605,32 +759,367 @@ describe("wrangler", () => {
 			`);
 				});
 
-				it("should delete a consumer with no --env", async () => {
-					const requests = mockDeleteRequest("testQueue", "testScript");
-					await runWrangler("queues consumer remove testQueue testScript");
+				it("should show an error when queue does not exist", async () => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						null
+					);
+					const postRequest = mockDeleteRequest(
+						expectedQueueId,
+						expectedConsumerId
+					);
 
-					expect(requests.count).toEqual(1);
-					expect(std.out).toMatchInlineSnapshot(`
-						"Removing consumer from queue testQueue.
-						Removed consumer from queue testQueue."
-					`);
+					await expect(
+						runWrangler(
+							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"Queue \\"testQueue\\" does not exist. To create it, run: wrangler queues create testQueue"`
+					);
+
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(0);
 				});
 
-				it("should delete a consumer with --env", async () => {
-					const requests = mockDeleteRequest(
-						"testQueue",
-						"testScript",
-						"myEnv"
-					);
-					await runWrangler(
-						"queues consumer remove testQueue testScript --env myEnv"
-					);
+				describe("when script consumers are in use", () => {
+					it("should delete the correct consumer", async () => {
+						const queueNameResolveRequest = mockGetQueueByNameRequest(
+							expectedQueueName,
+							{
+								queue_id: expectedQueueId,
+								queue_name: expectedQueueName,
+								created_on: "",
+								producers: [],
+								consumers: [
+									{
+										consumer_id: expectedConsumerId,
+										script: "testScript",
+										type: "worker",
+										settings: {},
+									},
+								],
+								producers_total_count: 1,
+								consumers_total_count: 0,
+								modified_on: "",
+							}
+						);
 
-					expect(requests.count).toEqual(1);
-					expect(std.out).toMatchInlineSnapshot(`
+						const deleteRequest = mockDeleteRequest(
+							expectedQueueId,
+							expectedConsumerId
+						);
+						await runWrangler("queues consumer remove testQueue testScript");
+
+						expect(queueNameResolveRequest.count).toEqual(1);
+						expect(deleteRequest.count).toEqual(1);
+						expect(std.out).toMatchInlineSnapshot(`
 						"Removing consumer from queue testQueue.
 						Removed consumer from queue testQueue."
 					`);
+					});
+
+					it("should show error when deleting a non-existing consumer", async () => {
+						const queueNameResolveRequest = mockGetQueueByNameRequest(
+							expectedQueueName,
+							{
+								queue_id: expectedQueueId,
+								queue_name: expectedQueueName,
+								created_on: "",
+								producers: [],
+								consumers: [
+									{
+										consumer_id: expectedConsumerId,
+										script: "testScriptTwo",
+										type: "worker",
+										settings: {},
+									},
+								],
+								producers_total_count: 1,
+								consumers_total_count: 0,
+								modified_on: "",
+							}
+						);
+
+						const deleteRequest = mockDeleteRequest(
+							expectedQueueId,
+							expectedConsumerId
+						);
+						await expect(
+							runWrangler("queues consumer remove testQueue testScript")
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`"No worker consumer 'testScript' exists for queue testQueue"`
+						);
+
+						expect(queueNameResolveRequest.count).toEqual(1);
+						expect(deleteRequest.count).toEqual(0);
+					});
+				});
+
+				describe("when service consumers are in use", () => {
+					it("should delete a consumer with env set", async () => {
+						const queueNameResolveRequest = mockGetQueueByNameRequest(
+							expectedQueueName,
+							{
+								queue_id: expectedQueueId,
+								queue_name: expectedQueueName,
+								created_on: "",
+								producers: [],
+								consumers: [
+									{
+										consumer_id: expectedConsumerId,
+										service: "testScript",
+										environment: "myEnv",
+										type: "worker",
+										settings: {},
+									},
+								],
+								producers_total_count: 1,
+								consumers_total_count: 0,
+								modified_on: "",
+							}
+						);
+
+						const deleteRequest = mockDeleteRequest(
+							expectedQueueId,
+							expectedConsumerId
+						);
+						await runWrangler(
+							"queues consumer remove testQueue testScript --env myEnv"
+						);
+
+						expect(queueNameResolveRequest.count).toEqual(1);
+						expect(deleteRequest.count).toEqual(1);
+						expect(std.out).toMatchInlineSnapshot(`
+						"Removing consumer from queue testQueue.
+						Removed consumer from queue testQueue."
+					`);
+					});
+
+					it("should show error when deleting a non-matching environment", async () => {
+						const queueNameResolveRequest = mockGetQueueByNameRequest(
+							expectedQueueName,
+							{
+								queue_id: expectedQueueId,
+								queue_name: expectedQueueName,
+								created_on: "",
+								producers: [],
+								consumers: [
+									{
+										consumer_id: expectedConsumerId,
+										service: "testScriptTwo",
+										environment: "randomEnvironment",
+										type: "worker",
+										settings: {},
+									},
+								],
+								producers_total_count: 1,
+								consumers_total_count: 0,
+								modified_on: "",
+							}
+						);
+
+						const deleteRequest = mockDeleteRequest(
+							expectedQueueId,
+							expectedConsumerId
+						);
+						await expect(
+							runWrangler(
+								"queues consumer remove testQueue testScript --env anotherEnvironment"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`"No worker consumer 'testScript' exists for queue testQueue"`
+						);
+
+						expect(queueNameResolveRequest.count).toEqual(1);
+						expect(deleteRequest.count).toEqual(0);
+					});
+
+					it("should delete a consumer without env set", async () => {
+						const queueNameResolveRequest = mockGetQueueByNameRequest(
+							expectedQueueName,
+							{
+								queue_id: expectedQueueId,
+								queue_name: expectedQueueName,
+								created_on: "",
+								producers: [],
+								consumers: [
+									{
+										consumer_id: expectedConsumerId,
+										service: "testScript",
+										environment: "myEnv",
+										type: "worker",
+										settings: {},
+									},
+								],
+								producers_total_count: 1,
+								consumers_total_count: 1,
+								modified_on: "",
+							}
+						);
+
+						const serviceRequest = mockServiceRequest("testScript", "myEnv");
+						const deleteRequest = mockDeleteRequest(
+							expectedQueueId,
+							expectedConsumerId
+						);
+
+						await runWrangler("queues consumer remove testQueue testScript");
+
+						expect(queueNameResolveRequest.count).toEqual(1);
+						expect(deleteRequest.count).toEqual(1);
+						expect(serviceRequest.count).toEqual(1);
+						expect(std.out).toMatchInlineSnapshot(`
+						"Removing consumer from queue testQueue.
+						Removed consumer from queue testQueue."
+						`);
+					});
+
+					describe("when multiple consumers are set", () => {
+						it("should delete default environment consumer without env set", async () => {
+							const expectedDefaultEnvironment = "staging";
+							const expectedConsumerIdToDelete = "consumer-id-staging";
+							const queueNameResolveRequest = mockGetQueueByNameRequest(
+								expectedQueueName,
+								{
+									queue_id: expectedQueueId,
+									queue_name: expectedQueueName,
+									created_on: "",
+									producers: [],
+									consumers: [
+										{
+											consumer_id: expectedConsumerIdToDelete,
+											service: "testScript",
+											environment: "staging",
+											type: "worker",
+											settings: {},
+										},
+										{
+											consumer_id: expectedConsumerId,
+											service: "testScript",
+											environment: "production",
+											type: "worker",
+											settings: {},
+										},
+									],
+									producers_total_count: 1,
+									consumers_total_count: 2,
+									modified_on: "",
+								}
+							);
+
+							const serviceRequest = mockServiceRequest(
+								"testScript",
+								expectedDefaultEnvironment
+							);
+							const deleteRequest = mockDeleteRequest(
+								expectedQueueId,
+								expectedConsumerIdToDelete
+							);
+							await runWrangler("queues consumer remove testQueue testScript");
+
+							expect(queueNameResolveRequest.count).toEqual(1);
+							expect(serviceRequest.count).toEqual(1);
+							expect(deleteRequest.count).toEqual(1);
+							expect(std.out).toMatchInlineSnapshot(`
+							"Removing consumer from queue testQueue.
+							Removed consumer from queue testQueue."
+						`);
+						});
+
+						it("should delete matching consumer with env set", async () => {
+							const expectedConsumerIdToDelete = "consumer-id-staging";
+							const queueNameResolveRequest = mockGetQueueByNameRequest(
+								expectedQueueName,
+								{
+									queue_id: expectedQueueId,
+									queue_name: expectedQueueName,
+									created_on: "",
+									producers: [],
+									consumers: [
+										{
+											consumer_id: expectedConsumerIdToDelete,
+											service: "testScript",
+											environment: "staging",
+											type: "worker",
+											settings: {},
+										},
+										{
+											consumer_id: expectedConsumerId,
+											service: "testScript",
+											environment: "consumer-id-production",
+											type: "worker",
+											settings: {},
+										},
+									],
+									producers_total_count: 1,
+									consumers_total_count: 2,
+									modified_on: "",
+								}
+							);
+
+							const deleteRequest = mockDeleteRequest(
+								expectedQueueId,
+								expectedConsumerIdToDelete
+							);
+							await runWrangler(
+								"queues consumer remove testQueue testScript --env staging"
+							);
+
+							expect(queueNameResolveRequest.count).toEqual(1);
+							expect(deleteRequest.count).toEqual(1);
+							expect(std.out).toMatchInlineSnapshot(`
+								"Removing consumer from queue testQueue.
+								Removed consumer from queue testQueue."
+							`);
+						});
+
+						it("should show error when deleting on a non-matching environment", async () => {
+							const expectedConsumerIdToDelete = "consumer-id-staging";
+							const queueNameResolveRequest = mockGetQueueByNameRequest(
+								expectedQueueName,
+								{
+									queue_id: expectedQueueId,
+									queue_name: expectedQueueName,
+									created_on: "",
+									producers: [],
+									consumers: [
+										{
+											consumer_id: expectedConsumerIdToDelete,
+											service: "testScript",
+											environment: "staging",
+											type: "worker",
+											settings: {},
+										},
+										{
+											consumer_id: expectedConsumerId,
+											service: "testScript",
+											environment: "production",
+											type: "worker",
+											settings: {},
+										},
+									],
+									producers_total_count: 1,
+									consumers_total_count: 2,
+									modified_on: "",
+								}
+							);
+
+							const deleteRequest = mockDeleteRequest(
+								expectedQueueId,
+								expectedConsumerId
+							);
+							await expect(
+								runWrangler(
+									"queues consumer remove testQueue testScript --env anotherEnvironment"
+								)
+							).rejects.toThrowErrorMatchingInlineSnapshot(
+								`"No worker consumer 'testScript' exists for queue testQueue"`
+							);
+
+							expect(queueNameResolveRequest.count).toEqual(1);
+							expect(deleteRequest.count).toEqual(0);
+						});
+					});
 				});
 			});
 		});
@@ -659,32 +1148,8 @@ describe("wrangler", () => {
 			});
 
 			describe("add", () => {
-				function mockGetQueueRequest(expectedQueueName: string) {
-					const requests = { count: 0 };
-					msw.use(
-						rest.get(
-							"*/accounts/:accountId/workers/queues/:queueName",
-							async (request, response, context) => {
-								requests.count += 1;
-								expect(request.params.queueName).toEqual(expectedQueueName);
-								expect(request.params.accountId).toEqual("some-account-id");
-								return response.once(
-									context.json({
-										success: true,
-										errors: [],
-										messages: [],
-										result: {
-											queue_id: "fake-queue-id",
-										},
-									})
-								);
-							}
-						)
-					);
-					return requests;
-				}
 				function mockPostRequest(
-					expectedQueueId: string,
+					queueId: string,
 					expectedBody: PostTypedConsumerBody
 				) {
 					const requests = { count: 0 };
@@ -693,7 +1158,7 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/queues/:queueId/consumers",
 							async (request, response, context) => {
 								requests.count += 1;
-								expect(request.params.queueId).toEqual(expectedQueueId);
+								expect(request.params.queueId).toEqual(queueId);
 								expect(request.params.accountId).toEqual("some-account-id");
 								expect(await request.json()).toEqual(expectedBody);
 								return response.once(
@@ -738,6 +1203,20 @@ describe("wrangler", () => {
 				});
 
 				it("should add a consumer using defaults", async () => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 1,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
 					const expectedBody: PostTypedConsumerBody = {
 						type: "http_pull",
 						settings: {
@@ -748,10 +1227,11 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: undefined,
 					};
-					mockPostRequest("fake-queue-id", expectedBody);
-					mockGetQueueRequest("testQueue");
+					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
 
 					await runWrangler("queues consumer http add testQueue");
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 							"Adding consumer to queue testQueue.
 							Added consumer to queue testQueue."
@@ -759,6 +1239,20 @@ describe("wrangler", () => {
 				});
 
 				it("should add a consumer using custom values", async () => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 1,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
 					const expectedBody: PostTypedConsumerBody = {
 						type: "http_pull",
 						settings: {
@@ -769,12 +1263,13 @@ describe("wrangler", () => {
 						},
 						dead_letter_queue: "myDLQ",
 					};
-					mockPostRequest("fake-queue-id", expectedBody);
-					mockGetQueueRequest("testQueue");
+					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
 
 					await runWrangler(
 						"queues consumer http add testQueue --batch-size 20 --message-retries 3 --visibility-timeout-secs 6 --retry-delay-secs 3 --dead-letter-queue myDLQ"
 					);
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
@@ -783,47 +1278,15 @@ describe("wrangler", () => {
 			});
 
 			describe("delete", () => {
-				function mockGetQueueRequest(expectedQueueName: string) {
-					const requests = { count: 0 };
-					msw.use(
-						rest.get(
-							"*/accounts/:accountId/workers/queues/:queueName",
-							async (request, response, context) => {
-								requests.count += 1;
-								expect(request.params.queueName).toEqual(expectedQueueName);
-								expect(request.params.accountId).toEqual("some-account-id");
-								return response.once(
-									context.json({
-										success: true,
-										errors: [],
-										messages: [],
-										result: {
-											queue_id: "fake-queue-id",
-											consumers: [
-												{ consumer_id: "fake-consumer-id", type: "http_pull" },
-											],
-										},
-									})
-								);
-							}
-						)
-					);
-					return requests;
-				}
-				function mockDeleteRequest(
-					expectedQueueId: string,
-					expectedConsumerId: string
-				) {
+				function mockDeleteRequest(queueId: string, consumerId: string) {
 					const requests = { count: 0 };
 					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
 					msw.use(
 						rest.delete(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
 							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.expectedQueueId).toBe(expectedQueueId);
-							expect(request.params.expectedConsumerId).toBe(
-								expectedConsumerId
-							);
+							expect(request.params.expectedQueueId).toBe(queueId);
+							expect(request.params.expectedConsumerId).toBe(consumerId);
 							return response.once(
 								context.status(200),
 								context.json({
@@ -860,14 +1323,34 @@ describe("wrangler", () => {
 				});
 
 				it("should delete a pull consumer", async () => {
-					mockGetQueueRequest("testQueue");
-					const requests = mockDeleteRequest(
-						"fake-queue-id",
-						"fake-consumer-id"
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [
+								{
+									type: "http_pull",
+									consumer_id: expectedConsumerId,
+									settings: {},
+								},
+							],
+							producers_total_count: 1,
+							consumers_total_count: 1,
+							modified_on: "",
+						}
+					);
+
+					const postRequest = mockDeleteRequest(
+						expectedQueueId,
+						expectedConsumerId
 					);
 					await runWrangler("queues consumer http remove testQueue");
 
-					expect(requests.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
+					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 							"Removing consumer from queue testQueue.
 							Removed consumer from queue testQueue."

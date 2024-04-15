@@ -54,7 +54,7 @@ import type { KVNamespaceInfo } from "../kv/helpers";
 import type {
 	PostQueueBody,
 	PostTypedConsumerBody,
-	PutConsumerBody,
+	QueueResponse,
 } from "../queues/client";
 import type { RestRequest } from "msw";
 
@@ -9051,8 +9051,18 @@ export default{
 					},
 				],
 			});
-			mockGetQueue(queueName, queueId);
-			mockPutQueue(queueId, {
+			const existingQueue = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 1,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueById(queueId, {
 				queue_name: queueName,
 				settings: {},
 			});
@@ -9089,8 +9099,18 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue("queue1", queueId);
-			mockPutQueue(queueId, {
+			const existingQueue = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 1,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueById(queueId, {
 				queue_name: queueName,
 				settings: {
 					delivery_delay: 10,
@@ -9113,7 +9133,7 @@ export default{
 		`);
 		});
 
-		it("should update queue consumers on deploy", async () => {
+		it("should post worker queue consumers on deploy", async () => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9131,9 +9151,21 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue(queueName);
-			mockPutQueueConsumer(queueName, "test-name", {
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPostConsumerById(queueId, {
 				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
 				settings: {
 					batch_size: 5,
 					max_retries: 10,
@@ -9141,6 +9173,135 @@ export default{
 					retry_delay: 5,
 				},
 			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Consumer for queue1
+			Current Deployment ID: Galaxy-Class
+
+
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		});
+
+		it("should update worker queue consumers on deploy", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: queueName,
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 3,
+							max_retries: 10,
+							retry_delay: 5,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			const expectedConsumerId = "consumerId";
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						script: "test-name",
+						consumer_id: expectedConsumerId,
+						type: "worker",
+						settings: {},
+					},
+				],
+				producers_total_count: 1,
+				consumers_total_count: 1,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueConsumerById(queueId, queueName, expectedConsumerId, {
+				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 3000,
+					retry_delay: 5,
+				},
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Consumer for queue1
+			Current Deployment ID: Galaxy-Class
+
+
+			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		});
+
+		it("should update worker (service) queue consumers with default environment on deploy", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: queueName,
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 3,
+							max_retries: 10,
+							retry_delay: 5,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			const expectedConsumerId = "consumerId";
+			const expectedConsumerName = "test-name";
+			const expectedEnvironment = "production";
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						service: expectedConsumerName,
+						environment: "production",
+						consumer_id: expectedConsumerId,
+						type: "worker",
+						settings: {},
+					},
+				],
+				producers_total_count: 1,
+				consumers_total_count: 1,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockGetServiceByName(expectedConsumerName, expectedEnvironment);
+			mockPutQueueConsumerById(queueId, queueName, expectedConsumerId, {
+				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 3000,
+					retry_delay: 5,
+				},
+			});
+
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -9174,7 +9335,17 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue(queueName, queueId);
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
 			mockPostQueueHTTPConsumer(queueId, {
 				type: "http_pull",
 				dead_letter_queue: "myDLQ",
@@ -9213,28 +9384,24 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			msw.use(
-				rest.get(
-					`*/accounts/:accountId/workers/queues/queue1`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						return res(
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									queue: queueName,
-									queue_id: queueId,
-									consumers: [
-										{ type: "http_pull", consumer_id: "queue1-consumer-id" },
-									],
-								},
-							})
-						);
-					}
-				)
-			);
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						type: "http_pull",
+						consumer_id: "queue1-consumer-id",
+						settings: {},
+					},
+				],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+
 			msw.use(
 				rest.put(
 					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
@@ -9285,9 +9452,29 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue(queueName);
-			mockPutQueueConsumer(queueName, "test-name", {
+			const consumerId = "consumer-id";
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						type: "worker",
+						script: "test-name",
+						consumer_id: consumerId,
+						settings: {},
+					},
+				],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueConsumerById(queueId, queueName, consumerId, {
 				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
 				settings: {
 					batch_size: 5,
 					max_retries: 10,
@@ -9327,15 +9514,37 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueue(queueName);
-			mockPutQueueConsumer(queueName, "test-name", {
+
+			const consumerId = "consumer-id";
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						type: "worker",
+						script: "test-name",
+						consumer_id: consumerId,
+						settings: {},
+					},
+				],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueConsumerById(queueId, queueName, consumerId, {
 				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
 				settings: {
 					batch_size: 5,
 					max_retries: 10,
 					max_wait_time_ms: 3000,
 				},
 			});
+
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -9368,7 +9577,7 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueueMissing("queue1");
+			mockGetQueueByName(queueName, null);
 
 			await expect(
 				runWrangler("deploy index.js")
@@ -9387,7 +9596,7 @@ export default{
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockGetQueueMissing(queueName);
+			mockGetQueueByName(queueName, null);
 
 			await expect(
 				runWrangler("deploy index.js")
@@ -10310,23 +10519,25 @@ function mockServiceScriptData(options: {
 	}
 }
 
-function mockGetQueue(expectedQueueName: string, expectedQueueId?: string) {
+function mockGetQueueByName(queueName: string, queue: QueueResponse | null) {
 	const requests = { count: 0 };
 	msw.use(
 		rest.get(
-			`*/accounts/:accountId/workers/queues/${expectedQueueName}`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
+			"*/accounts/:accountId/queues?*",
+			async (request, response, context) => {
 				requests.count += 1;
-				return res(
-					ctx.json({
+				expect(await request.text()).toEqual("");
+				if (queue) {
+					const nameParam = request.url.searchParams.getAll("name");
+					expect(nameParam.length).toBeGreaterThan(0);
+					expect(nameParam[0]).toEqual(queueName);
+				}
+				return response(
+					context.json({
 						success: true,
 						errors: [],
 						messages: [],
-						result: {
-							queue_name: expectedQueueName,
-							queue_id: expectedQueueId,
-						},
+						result: queue ? [queue] : [],
 					})
 				);
 			}
@@ -10335,43 +10546,46 @@ function mockGetQueue(expectedQueueName: string, expectedQueueId?: string) {
 	return requests;
 }
 
-function mockGetQueueMissing(expectedQueueName: string) {
+function mockGetServiceByName(serviceName: string, defaultEnvironment: string) {
 	const requests = { count: 0 };
+	const resource = `*/accounts/:accountId/workers/services/:serviceName`;
 	msw.use(
-		rest.get(
-			`*/accounts/:accountId/workers/queues/${expectedQueueName}`,
-			(req, res, ctx) => {
-				requests.count += 1;
-				expect(req.params.accountId).toEqual("some-account-id");
+		rest.get(resource, async (request, response, context) => {
+			requests.count += 1;
+			expect(request.params.accountId).toEqual("some-account-id");
+			expect(request.params.serviceName).toEqual(serviceName);
 
-				return res(
-					ctx.json({
-						success: false,
-						errors: [
-							{
-								code: 11000,
-								message: "workers.api.error.queue_not_found",
+			return response(
+				context.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {
+						id: serviceName,
+						default_environment: {
+							environment: defaultEnvironment,
+							script: {
+								last_deployed_from: "wrangler",
 							},
-						],
-						messages: [],
-						result: null,
-					})
-				);
-			}
-		)
+						},
+					},
+				})
+			);
+		})
 	);
 	return requests;
 }
 
-function mockPutQueueConsumer(
+function mockPutQueueConsumerById(
+	expectedQueueId: string,
 	expectedQueueName: string,
-	expectedConsumerName: string,
-	expectedBody: PutConsumerBody
+	expectedConsumerId: string,
+	expectedBody: PostTypedConsumerBody
 ) {
 	const requests = { count: 0 };
 	msw.use(
 		rest.put(
-			`*/accounts/:accountId/workers/queues/${expectedQueueName}/consumers/${expectedConsumerName}`,
+			`*/accounts/:accountId/queues/${expectedQueueId}/consumers/${expectedConsumerId}`,
 			async (req, res, ctx) => {
 				const body = await req.json();
 				expect(req.params.accountId).toEqual("some-account-id");
@@ -10382,7 +10596,7 @@ function mockPutQueueConsumer(
 						success: true,
 						errors: [],
 						messages: [],
-						result: { queue: expectedQueueName },
+						result: { queue_name: expectedQueueName },
 					})
 				);
 			}
@@ -10391,7 +10605,37 @@ function mockPutQueueConsumer(
 	return requests;
 }
 
-function mockPutQueue(expectedQueueId: string, expectedBody: PostQueueBody) {
+function mockPostConsumerById(
+	expectedQueueId: string,
+	expectedBody: PostTypedConsumerBody
+) {
+	const requests = { count: 0 };
+	msw.use(
+		rest.post(
+			"*/accounts/:accountId/queues/:queueId/consumers",
+			async (request, response, context) => {
+				requests.count += 1;
+				expect(request.params.queueId).toEqual(expectedQueueId);
+				expect(request.params.accountId).toEqual("some-account-id");
+				expect(await request.json()).toEqual(expectedBody);
+				return response.once(
+					context.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					})
+				);
+			}
+		)
+	);
+	return requests;
+}
+
+function mockPutQueueById(
+	expectedQueueId: string,
+	expectedBody: PostQueueBody
+) {
 	const requests = { count: 0 };
 	msw.use(
 		rest.put(`*/accounts/:accountId/queues/:queueId`, async (req, res, ctx) => {

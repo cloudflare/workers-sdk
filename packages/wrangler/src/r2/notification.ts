@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { getQueueByID } from "../queues/client";
+import { getQueueById } from "../queues/client";
 import { printWranglerBanner } from "../update-check";
 import { requireApiToken, requireAuth } from "../user";
 import {
@@ -39,7 +39,7 @@ export async function GetHandler(
 	const tableOutput = await tableFromNotificationGetResponse(
 		config,
 		resp[args.bucket],
-		getQueueByID
+		getQueueById
 	);
 	logger.table(tableOutput);
 }

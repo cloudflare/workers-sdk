@@ -1,7 +1,6 @@
 import chalk from "chalk";
 import { fetchListResult, fetchResult } from "../cfetch";
 import {
-	ensureQueuesExist,
 	formatTime,
 	publishCustomDomains,
 	publishRoutes,
@@ -12,6 +11,7 @@ import {
 } from "../deploy/deploy";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
@@ -79,7 +79,7 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	}>(`${workerUrl}/subdomain`);
 
 	if (!props.dryRun) {
-		await ensureQueuesExist(config);
+		await ensureQueuesExistByConfig(config);
 	}
 
 	if (props.dryRun) {

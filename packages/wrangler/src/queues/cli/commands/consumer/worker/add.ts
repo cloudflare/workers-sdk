@@ -6,7 +6,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../../../yargs-types";
-import type { PostConsumerBody } from "../../../../client";
+import type { PostTypedConsumerBody } from "../../../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -50,21 +50,14 @@ export function options(yargs: CommonYargsArgv) {
 		});
 }
 
-export async function handler(
+function createBody(
 	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-
-	if (Array.isArray(args.retryDelaySecs)) {
-		throw new CommandLineArgsError(
-			`Cannot specify --retry-delay-secs multiple times`
-		);
-	}
-
-	const body: PostConsumerBody = {
+): PostTypedConsumerBody {
+	return {
 		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
 		environment_name: args.env ?? "", // API expects empty string as default
+		type: "worker",
 		settings: {
 			batch_size: args.batchSize,
 			max_retries: args.messageRetries,
@@ -76,6 +69,19 @@ export async function handler(
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};
+}
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
+	const config = readConfig(args.config, args);
+
+	if (Array.isArray(args.retryDelaySecs)) {
+		throw new CommandLineArgsError(
+			`Cannot specify --retry-delay-secs multiple times`
+		);
+	}
+
+	const body = createBody(args);
 
 	logger.log(`Adding consumer to queue ${args.queueName}.`);
 	await postConsumer(config, args.queueName, body);
