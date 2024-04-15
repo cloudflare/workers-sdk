@@ -1,3 +1,4 @@
+import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
@@ -200,7 +201,7 @@ function asFormData(fields: Record<string, unknown>): FormData {
 	const formData = new FormData();
 
 	for (const [name, value] of Object.entries(fields)) {
-		formData.append(name, value);
+		formData.append(name, Buffer.isBuffer(value) ? new Blob([value]) : value);
 	}
 
 	return formData;

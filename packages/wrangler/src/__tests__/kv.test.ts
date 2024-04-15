@@ -505,6 +505,29 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should put a key with a binary value and metadata", async () => {
+				const buf = Buffer.from(
+					"iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAiSURBVHgB7coxEQAACMPAgH/PgAM6dGwu49fA/deIBXrgAj2cAhIFT4QxAAAAAElFTkSuQmCC",
+					"base64"
+				);
+				writeFileSync("test.png", buf);
+				const requests = mockKeyPutRequest("some-namespace-id", {
+					key: "another-my-key",
+					value: buf,
+					metadata: {
+						mKey: "mValue",
+					},
+				});
+				await runWrangler(
+					`kv:key put another-my-key --namespace-id some-namespace-id --path test.png --metadata '{"mKey":"mValue"}'`
+				);
+				expect(requests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(
+					`"Writing the contents of test.png to the key \\"another-my-key\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."`
+				);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
 			it("should error if no key is provided", async () => {
 				await expect(
 					runWrangler("kv:key put")
