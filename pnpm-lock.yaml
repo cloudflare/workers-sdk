@@ -293,6 +293,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/external-dispatch-namespace-app:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20240405.0
+        version: 4.20250428.0
+      concurrently:
+        specifier: ^8.2.1
+        version: 8.2.2
+      undici:
+        specifier: ^5.28.3
+        version: 5.28.5
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/get-platform-proxy:
     devDependencies:
       '@cloudflare/workers-tsconfig':

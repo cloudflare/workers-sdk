@@ -66,6 +66,12 @@ async function resolveDevConfig(
 		};
 	};
 
+	if (input.dev?.remote && input.dev?.dispatchNamespace) {
+		throw new UserError(
+			"The `--dispatch-namespace` argument cannot be used in conjunction with the `--remote` argument. If you want dispatch to this script from a Workers for Platforms dispatch namespace, please remove the `--remote` argument from your CLI command."
+		);
+	}
+
 	const localPersistencePath = getLocalPersistencePath(
 		input.dev?.persist,
 		config
@@ -158,6 +164,10 @@ async function resolveBindings(
 			"version_metadata",
 			input.bindings
 		)?.[0],
+		dispatchNamespaces: extractBindingsOfType(
+			"dispatch_namespace",
+			input.bindings
+		),
 	});
 
 	const maskedVars = maskVars(bindings, config);

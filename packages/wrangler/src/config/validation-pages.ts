@@ -34,6 +34,7 @@ const supportedPagesConfigFields = [
 	"analytics_engine_datasets",
 	"ai",
 	"version_metadata",
+	"dispatch_namespaces",
 	"dev",
 	"mtls_certificates",
 	"browser",
@@ -43,6 +44,8 @@ const supportedPagesConfigFields = [
 	"userConfigPath",
 	"topLevelName",
 ] as const;
+
+const ignoredPagesConfigFields = ["dispatch_namespaces"];
 
 export function validatePagesConfig(
 	config: Config,
@@ -64,6 +67,7 @@ export function validatePagesConfig(
 	validatePagesEnvironmentNames(envNames, diagnostics);
 	validateUnsupportedFields(config, diagnostics);
 	validateDurableObjectBinding(config, diagnostics);
+	validateIgnoredFields(config, diagnostics);
 
 	return diagnostics;
 }
@@ -188,6 +192,24 @@ function validateDurableObjectBinding(
 			diagnostics.errors.push(
 				`Durable Objects bindings should specify a "script_name".\n` +
 					`Pages requires Durable Object bindings to specify the name of the Worker where the Durable Object is defined.`
+			);
+		}
+	}
+}
+
+/**
+ * Check for configuration fields that are supported by Pages via the configuration file but ignored
+ */
+function validateIgnoredFields(config: Config, diagnostics: Diagnostics) {
+	for (const field of Object.keys(config) as Array<keyof Config>) {
+		if (
+			ignoredPagesConfigFields.includes(field) &&
+			config[field] !== undefined &&
+			JSON.stringify(config[field]) !==
+				JSON.stringify(defaultWranglerConfig[field])
+		) {
+			diagnostics.warnings.push(
+				`Configuration file for Pages projects does not support "${field}"`
 			);
 		}
 	}

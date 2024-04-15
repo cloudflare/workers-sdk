@@ -135,6 +135,7 @@ export type BundleOptions = {
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
+	dispatchNamespace?: string | undefined;
 };
 
 /**
@@ -170,6 +171,7 @@ export async function bundleWorker(
 		projectRoot,
 		defineNavigatorUserAgent,
 		external,
+		dispatchNamespace,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -220,6 +222,20 @@ export async function bundleWorker(
 		middlewareToLoad.push({
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
+			supports: ["modules", "service-worker"],
+		});
+
+		middlewareToLoad.push({
+			name: "outbound",
+			path: "templates/middleware/middleware-outbound.ts",
+			supports: ["modules", "service-worker"],
+		});
+	}
+
+	if (dispatchNamespace) {
+		middlewareToLoad.push({
+			name: "dispatchee",
+			path: "templates/middleware/middleware-dispatchee.ts",
 			supports: ["modules", "service-worker"],
 		});
 	}

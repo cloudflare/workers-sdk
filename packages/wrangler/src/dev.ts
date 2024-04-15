@@ -96,6 +96,10 @@ export const dev = createCommand({
 			type: "boolean",
 			default: true,
 		},
+		"dispatch-namespace": {
+			describe: "Name of the Workers for Platforms dispatch namespace",
+			type: "string",
+		},
 		assets: {
 			describe: "Static assets to be served. Replaces Workers Sites.",
 			type: "string",
@@ -360,6 +364,7 @@ export type AdditionalDevProps = {
 	version_metadata?: {
 		binding: string;
 	};
+	dispatchNamespaces?: Environment["dispatch_namespaces"];
 	d1Databases?: Array<
 		Omit<Environment["d1_databases"][number], "database_id"> & {
 			database_id?: string | typeof INHERIT_SYMBOL;
@@ -409,6 +414,10 @@ async function updateDevEnvRegistry(
 				),
 			},
 			tailConsumers: devEnv.config.latestConfig?.tailConsumers,
+			dispatchNamespaces: extractBindingsOfType(
+				"dispatch_namespace",
+				devEnv.config.latestConfig?.bindings
+			),
 		},
 		registry
 	);
@@ -703,7 +712,8 @@ export async function startDev(args: StartDevOptions) {
 									url,
 									reloadEvent.config.name,
 									reloadEvent.proxyData.internalDurableObjects,
-									reloadEvent.proxyData.entrypointAddresses
+									reloadEvent.proxyData.entrypointAddresses,
+									reloadEvent.proxyData.dispatchNamespace
 								);
 							}
 						}
@@ -974,6 +984,14 @@ export function getBindings(
 		}),
 	];
 
+	const dispatchConfig = configParam.dispatch_namespaces || [];
+	const dispatchArgs = args.dispatchNamespaces || [];
+	const mergedDispatchBindings = mergeWithOverride(
+		dispatchConfig,
+		dispatchArgs,
+		"binding"
+	);
+
 	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
@@ -981,7 +999,7 @@ export function getBindings(
 		data_blobs: configParam.data_blobs,
 
 		// inheritable fields
-		dispatch_namespaces: configParam.dispatch_namespaces,
+		dispatch_namespaces: mergedDispatchBindings,
 		logfwdr: configParam.logfwdr,
 
 		// non-inheritable fields

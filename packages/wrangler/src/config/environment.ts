@@ -458,6 +458,19 @@ export interface EnvironmentNonInheritable {
 	vars: Record<string, string | Json>;
 
 	/**
+	 * The dispatch namespace that your Worker should belongs to.
+	 *
+	 * For more information about dispatch namespaces, see https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `undefined`
+	 * @nonInheritable
+	 */
+	dispatch_namespace: string | undefined;
+
+	/**
 	 * A list of durable objects that your Worker should be bound to.
 	 *
 	 * For more information about Durable Objects, see the documentation at

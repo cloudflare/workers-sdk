@@ -67,6 +67,7 @@ export async function getBoundRegisteredWorkers(
 			| { bindings: Extract<Binding, { type: "durable_object_namespace" }>[] }
 			| undefined;
 		tailConsumers: Config["tail_consumers"] | undefined;
+		dispatchNamespaces: Config["dispatch_namespaces"] | undefined;
 	},
 	existingWorkerDefinitions?: WorkerRegistry | undefined
 ): Promise<WorkerRegistry | undefined> {

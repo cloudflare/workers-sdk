@@ -15,4 +15,5 @@ export type WorkerDefinition = {
 	durableObjects: { name: string; className: string }[];
 	durableObjectsHost?: string;
 	durableObjectsPort?: number;
+	dispatchNamespace?: string;
 };

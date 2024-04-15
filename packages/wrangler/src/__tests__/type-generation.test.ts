@@ -86,7 +86,7 @@ describe("generateImportSpecifier", () => {
 
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
-	"define" | "tail_consumers" | "cloudchamber"
+	"define" | "dispatch_namespace" | "tail_consumers" | "cloudchamber"
 > &
 	Record<string, unknown> = {
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],

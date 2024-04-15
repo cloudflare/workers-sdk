@@ -297,6 +297,34 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("dispatch-namespace", () => {
+		it("should error if both --remote and --dispatch-namespace are specified", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev --remote --dispatch-namespace=foo")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`--dispatch-namespace\` argument cannot be used in conjunction with the \`--remote\` argument. If you want dispatch to this script from a Workers for Platforms dispatch namespace, please remove the \`--remote\` argument from your CLI command."`
+			);
+		});
+	});
+
+	describe("local", () => {
+		it("should error if both --local and --remote are specified", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev --local --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`--remote\` argument cannot be used in conjunction with the \`--local\` argument."`
+			);
+		});
+	});
+
 	describe("entry-points", () => {
 		it("should error if there is no entry-point specified", async () => {
 			vi.mocked(sniffUserAgent).mockReturnValue("npm");

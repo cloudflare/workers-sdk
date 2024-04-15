@@ -213,6 +213,7 @@ export class LocalRuntimeController extends RuntimeController {
 					proxyLogsToController: data.bundle.entry.format === "service-worker",
 					internalDurableObjects: internalObjects,
 					entrypointAddresses,
+					dispatchNamespace: data.config.dev.dispatchNamespace,
 				},
 			});
 		} catch (error) {

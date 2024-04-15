@@ -4,7 +4,7 @@ import { startDev } from "../dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { Environment } from "../config";
-import type { Rule } from "../config/environment";
+import type { DispatchNamespaceOutbound, Rule } from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
@@ -27,6 +27,7 @@ export interface Unstable_DevOptions {
 	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
 	compatibilityDate?: string; // Date to use for compatibility checks
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
+	dispatchNamespace?: string; // implies `local` and `experimental.forceLocal` are true
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
 	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
 	vars?: Record<string, string | Json>;
@@ -55,9 +56,15 @@ export interface Unstable_DevOptions {
 	ai?: {
 		binding: string;
 	};
+	// why is this snake_case? :(
 	version_metadata?: {
 		binding: string;
 	};
+	dispatchNamespaces?: {
+		binding: string;
+		namespace: string;
+		outbound?: DispatchNamespaceOutbound;
+	}[];
 	moduleRoot?: string;
 	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
@@ -179,6 +186,7 @@ export async function unstable_dev(
 		bundle: options?.bundle,
 		compatibilityDate: options?.compatibilityDate,
 		compatibilityFlags: options?.compatibilityFlags,
+		dispatchNamespace: options?.dispatchNamespace,
 		ip: "127.0.0.1",
 		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,

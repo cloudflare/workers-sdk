@@ -9,6 +9,11 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
+import {
+	EXTERNAL_DISPATCH_WORKER_NAME,
+	generateDispatchFetcher,
+	generateExternalDispatchWorkerScript,
+} from "../dispatch-namespaces/fetcher";
 import { createFatalError, UserError } from "../errors";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
@@ -672,6 +677,40 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 		};
+	}
+	if (bindings.dispatch_namespaces?.length) {
+		for (const {
+			binding,
+			namespace,
+			outbound,
+		} of bindings.dispatch_namespaces) {
+			const identifier = getIdentifier(`dispatch_namespace_${binding}`);
+			const scriptName = `${EXTERNAL_DISPATCH_WORKER_NAME}_${identifier}`;
+
+			externalWorkers.push({
+				name: scriptName,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: generateExternalDispatchWorkerScript(
+							outbound?.parameters
+						),
+					},
+				],
+				serviceBindings: {
+					FETCHER: generateDispatchFetcher(
+						namespace,
+						outbound,
+						config.workerDefinitions
+					),
+				},
+			});
+
+			wrappedBindings[binding] = {
+				scriptName,
+			};
+		}
 	}
 
 	if (bindings.images?.binding) {

@@ -160,6 +160,7 @@ async function getMiniflareOptionsFromConfig(
 		services: bindings.services,
 		durableObjects: rawConfig["durable_objects"],
 		tailConsumers: [],
+		dispatchNamespaces: bindings.dispatch_namespaces,
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({

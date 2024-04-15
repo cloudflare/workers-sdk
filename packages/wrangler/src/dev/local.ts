@@ -6,7 +6,8 @@ export function maybeRegisterLocalWorker(
 	url: URL,
 	name: string | undefined,
 	internalDurableObjects: CfDurableObject[] | undefined,
-	entrypointAddresses: WorkerEntrypointsDefinition | undefined
+	entrypointAddresses: WorkerEntrypointsDefinition | undefined,
+	dispatchNamespace: string | undefined
 ) {
 	if (name === undefined) {
 		return;
@@ -31,5 +32,6 @@ export function maybeRegisterLocalWorker(
 		durableObjectsHost: url.hostname,
 		durableObjectsPort: port,
 		entrypointAddresses: entrypointAddresses,
+		dispatchNamespace,
 	});
 }
