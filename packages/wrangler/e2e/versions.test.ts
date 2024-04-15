@@ -6,7 +6,7 @@ import { beforeAll, chai, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { normalizeOutput } from "./helpers/normalize";
 import { makeRoot, seed } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler-command";
+import { WRANGLER } from "./helpers/wrangler";
 
 chai.config.truncateThreshold = 1e6;
 

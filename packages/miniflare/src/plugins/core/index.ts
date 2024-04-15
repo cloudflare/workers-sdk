@@ -465,6 +465,14 @@ export const CORE_PLUGIN: Plugin<
 				])
 			);
 		}
+		if (options.wrappedBindings !== undefined) {
+			bindingEntries.push(
+				...Object.keys(options.wrappedBindings).map((name) => [
+					name,
+					kProxyNodeBinding,
+				])
+			);
+		}
 
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
@@ -742,6 +750,7 @@ export function getGlobalServices({
 					"nodejs_compat",
 					"service_binding_extra_handlers",
 					"brotli_content_encoding",
+					"rpc",
 				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [

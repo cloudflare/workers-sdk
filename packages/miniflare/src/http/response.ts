@@ -61,6 +61,7 @@ export class Response extends BaseResponse {
 	get status() {
 		// When passing a WebSocket, we validate that the passed status was actually
 		// 101, but we can't store this because `undici` rightfully complains.
+		// @ts-ignore
 		return this[kWebSocket] ? 101 : super.status;
 	}
 
@@ -74,6 +75,7 @@ export class Response extends BaseResponse {
 		if (this[kWebSocket]) {
 			throw new TypeError("Cannot clone a response to a WebSocket handshake.");
 		}
+		// @ts-ignore
 		const response = super.clone() as Response;
 		Object.setPrototypeOf(response, Response.prototype);
 		return response;

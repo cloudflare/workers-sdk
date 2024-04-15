@@ -8,7 +8,7 @@ import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { makeRoot } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler-command";
+import { WRANGLER } from "./helpers/wrangler";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(

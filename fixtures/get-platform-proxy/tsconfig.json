@@ -1,16 +1,9 @@
 {
-	"include": [
-		"workers/hello-worker-a",
-		"module-worker-b",
-		"service-worker-a",
-		"module-worker-c",
-		"module-worker-d",
-		"pages-functions-app"
-	],
+	"include": ["workers/*/*.ts"],
 	"compilerOptions": {
 		"target": "ES2020",
 		"module": "CommonJS",
 		"lib": ["ES2020"],
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types/experimental"]
 	}
 }

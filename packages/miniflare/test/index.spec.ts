@@ -713,11 +713,11 @@ test("Miniflare: service binding to named entrypoint", async (t) => {
 				export class RpcEntrypoint extends WorkerEntrypoint {
 					ping() { return "a:rpc:pong"; }
 				}
-				
+
 				export const namedEntrypoint = {
 					fetch(request, env, ctx) { return new Response("a:named:pong"); }
 				};
-				
+
 				export default {
 					async fetch(request, env) {
 						const aRpc = await env.A_RPC_SERVICE.ping();
@@ -1345,6 +1345,48 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 	};
 	t.throws(() => bindings.KV.get("key"), expectations);
 });
+test("Miniflare: getBindings() returns wrapped bindings", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					Greeter: {
+						scriptName: "greeter-implementation",
+					},
+				},
+				modules: true,
+				script: "",
+			},
+			{
+				modules: true,
+				name: "greeter-implementation",
+				script: `
+					class Greeter {
+						sayHello(name) {
+							return "Hello " + name;
+						}
+					}
+
+					export default function (env) {
+						return new Greeter();
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	interface Env {
+		Greeter: {
+			sayHello: (str: string) => string,
+		},
+	};
+	const { Greeter } = await mf.getBindings<Env>();
+
+	const helloWorld = Greeter.sayHello('World');
+
+	t.is(helloWorld, 'Hello World');
+});
 test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
@@ -1589,7 +1631,7 @@ test("Miniflare: allows direct access to workers", async (t) => {
 				script: `
 				import { WorkerEntrypoint } from "cloudflare:workers";
 				export class One extends WorkerEntrypoint {
-					fetch() { return new Response("d:1"); }				
+					fetch() { return new Response("d:1"); }
 				}
 				export const two = {
 					fetch() { return new Response("d:2"); }

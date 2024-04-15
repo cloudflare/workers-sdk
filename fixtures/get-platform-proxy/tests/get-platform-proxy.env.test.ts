@@ -6,10 +6,19 @@ import {
 	Fetcher,
 	R2Bucket,
 } from "@cloudflare/workers-types";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { unstable_dev } from "wrangler";
 import { getPlatformProxy } from "./shared";
-import type { KVNamespace } from "@cloudflare/workers-types";
+import type { NamedEntrypoint } from "../workers/rpc-worker";
+import type { KVNamespace, Rpc, Service } from "@cloudflare/workers-types";
 import type { UnstableDevWorker } from "wrangler";
 
 type Env = {
@@ -19,6 +28,7 @@ type Env = {
 	MY_DEV_VAR: string;
 	MY_SERVICE_A: Fetcher;
 	MY_SERVICE_B: Fetcher;
+	MY_RPC: Service;
 	MY_KV: KVNamespace;
 	MY_DO_A: DurableObjectNamespace;
 	MY_DO_B: DurableObjectNamespace;
@@ -36,18 +46,13 @@ describe("getPlatformProxy - bindings", () => {
 		vi.spyOn(console, "log").mockImplementation(() => {});
 	});
 
-	// Note: we're skipping the service workers and durable object tests
-	//       so there's no need to start separate workers right now, the
-	//       following beforeAll and afterAll should be un-commented when
-	//       we reenable the tests
+	beforeAll(async () => {
+		devWorkers = await startWorkers();
+	});
 
-	// beforeAll(async () => {
-	// 	devWorkers = await startWorkers();
-	// });
-
-	// afterAll(async () => {
-	// 	await Promise.allSettled(devWorkers.map((i) => i.stop()));
-	// });
+	afterAll(async () => {
+		await Promise.allSettled(devWorkers.map((i) => i.stop()));
+	});
 
 	describe("var bindings", () => {
 		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
@@ -87,7 +92,10 @@ describe("getPlatformProxy - bindings", () => {
 				const { MY_KV } = env;
 				expect(MY_KV).not.toEqual("my-dev-kv");
 				["get", "delete", "list", "put", "getWithMetadata"].every(
-					(methodName) => expect(typeof MY_KV[methodName]).toBe("function")
+					(methodName) =>
+						expect(
+							typeof (MY_KV as unknown as Record<string, unknown>)[methodName]
+						).toBe("function")
 				);
 			} finally {
 				await dispose();
@@ -134,9 +142,7 @@ describe("getPlatformProxy - bindings", () => {
 		}
 	});
 
-	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
-	//       when we run all our fixtures together (possibly because of race condition issues)
-	it.skip("provides service bindings to external local workers", async () => {
+	it("provides service bindings to external local workers", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
@@ -147,6 +153,43 @@ describe("getPlatformProxy - bindings", () => {
 		} finally {
 			await dispose();
 		}
+	});
+
+	type EntrypointService = Service<
+		Omit<NamedEntrypoint, "getCounter"> & Rpc.WorkerEntrypointBranded
+	> & {
+		getCounter: () => Promise<
+			Promise<{
+				value: Promise<number>;
+				increment: (amount: number) => Promise<number>;
+			}>
+		>;
+	};
+
+	describe("provides rpc service bindings to external local workers", () => {
+		let rpc: EntrypointService;
+		beforeEach(async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+			});
+			rpc = env.MY_RPC as unknown as EntrypointService;
+			return dispose;
+		});
+		it("can call RPC methods directly", async () => {
+			expect(await rpc.sum([1, 2, 3])).toMatchInlineSnapshot(`6`);
+		});
+		it("can call RPC methods returning a Response", async () => {
+			const resp = await rpc.asJsonResponse([1, 2, 3]);
+			expect(resp.status).toMatchInlineSnapshot(`200`);
+			expect(await resp.text()).toMatchInlineSnapshot(`"[1,2,3]"`);
+		});
+		it("can obtain and interact with RpcStubs", async () => {
+			const counter = await rpc.getCounter();
+			expect(await counter.value).toMatchInlineSnapshot(`0`);
+			expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
+			expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
+			expect(await counter.value).toMatchInlineSnapshot(`12`);
+		});
 	});
 
 	it("correctly obtains functioning KV bindings", async () => {
@@ -164,8 +207,6 @@ describe("getPlatformProxy - bindings", () => {
 		await dispose();
 	});
 
-	// Note: the following test is skipped due to flakiness caused by the local registry not working reliably
-	//       when we run all our fixtures together (possibly because of race condition issues)
 	it.skip("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,

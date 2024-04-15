@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { makeRoot, seed } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler-command";
+import { WRANGLER } from "./helpers/wrangler";
 
 // Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
 setGlobalDispatcher(
