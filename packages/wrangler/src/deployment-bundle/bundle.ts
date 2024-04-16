@@ -184,14 +184,14 @@ export async function bundleWorker(
 			path: "templates/middleware/middleware-outbound.ts",
 			supports: ["modules", "service-worker"],
 		});
-	}
 
-	if (dispatchNamespace) {
-		middlewareToLoad.push({
-			name: "dispatchee",
-			path: "templates/middleware/middleware-dispatchee.ts",
-			supports: ["modules", "service-worker"],
-		});
+		if (dispatchNamespace) {
+			middlewareToLoad.push({
+				name: "dispatchee",
+				path: "templates/middleware/middleware-dispatchee.ts",
+				supports: ["modules", "service-worker"],
+			});
+		}
 	}
 
 	if (serveAssetsFromWorker) {
