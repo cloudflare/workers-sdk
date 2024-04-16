@@ -4,9 +4,9 @@ compatibility_date = "<TBD>"
 pages_build_output_dir = "./build/client"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
-# Note: Use secrets to store sensitive data.
 # Docs:
 # - https://developers.cloudflare.com/pages/functions/bindings/#environment-variables
+# Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/pages/functions/bindings/#secrets
 # [vars]
 # MY_VARIABLE = "production_value"
