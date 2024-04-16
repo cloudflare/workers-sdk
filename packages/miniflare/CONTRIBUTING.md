@@ -10,7 +10,7 @@ you understand how everything fits together.
 Each `new Miniflare()` instance corresponds to a running `workerd` process.
 Calling `Miniflare#setOptions()` will restart the `workerd` process with new
 configuration (note `workerd` doesn't support hot reloading of configuration
-yet). Calling `Miniflare'dispose()` will shutdown the `workerd` process.
+yet). Calling `Miniflare'dispose()` will shut down the `workerd` process.
 
 Miniflare is composed of a set of plugins (Miniflare 2 used to multiple
 packages, and these plugins and Miniflare's API are a pullover from that). Each
@@ -147,7 +147,7 @@ If your binding is a wrapped binding with its API implemented in
   your binding in Node.js via Miniflare's magic proxy.
 - Refer to the implementation of existing APIs for how to do this.
 - Note the `ReplaceWorkersTypes` type replaces Workers `Request`, `Response`,
-  `ReadablesStream`, `Headers`, `Blob`, and `AbortSignal` with their Node.js
+  `ReadableStream`, `Headers`, `Blob`, and `AbortSignal` with their Node.js
   equivalents.
 
 ## How do Miniflare's existing bindings work?
