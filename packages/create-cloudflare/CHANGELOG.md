@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.19.0
+
+### Minor Changes
+
+- [#5529](https://github.com/cloudflare/workers-sdk/pull/5529) [`ad1d056`](https://github.com/cloudflare/workers-sdk/commit/ad1d056cb2710b790ff5d4532e9f694e099c27e2) Thanks [@jculvey](https://github.com/jculvey)! - feat: Adds a new template for [Analog.js](https://analogjs.org/), a full-stack Angular meta-framework.
+
 ## 2.18.1
 
 ### Patch Changes

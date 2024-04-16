@@ -1,5 +1,41 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.2.0
+
+### Minor Changes
+
+- [#5612](https://github.com/cloudflare/workers-sdk/pull/5612) [`8f470d9`](https://github.com/cloudflare/workers-sdk/commit/8f470d9854664c88da1682b092214521c4793885) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat: Support specifying an environment for your worker when running tests. This allows your tests to pick up bindings & variables that are scoped to specific environments.
+
+  For example:
+
+  ```ts
+  import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+
+  export default defineWorkersConfig({
+  	test: {
+  		poolOptions: {
+  			workers: {
+  				wrangler: {
+  					configPath: "./wrangler.toml",
+  					environment: "production",
+  				},
+  			},
+  		},
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#5589](https://github.com/cloudflare/workers-sdk/pull/5589) [`92bc055`](https://github.com/cloudflare/workers-sdk/commit/92bc0551b46891fc8cf600c4598029a232f2afc4) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: Support importing ES modules from libraries that do not correctly provide `"type"="module"` not use `.mjs` extensions
+
+  The toucan-js library has an entry point of `"module": "dist/index.esm.js"`. This file does not use the standard `.mjs` extension, nor does it specify `"type"="module"`, so the resolution and loading algorithm fails to identify this file as an ES Module, defaulting to CommonJS, breaking Vitest.
+  Fixes #5588
+
+- Updated dependencies [[`9a46e03`](https://github.com/cloudflare/workers-sdk/commit/9a46e03f013cc6f1e2d38d47f9bf002626b6bd95), [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210), [`fbe1c9c`](https://github.com/cloudflare/workers-sdk/commit/fbe1c9c816f2b5774060d721ff830e70d9b7d29f), [`22f5841`](https://github.com/cloudflare/workers-sdk/commit/22f58414d5697730f0337d17c7602b7fa3bebb79), [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210)]:
+  - wrangler@3.51.0
+  - miniflare@3.20240405.2
+
 ## 0.1.19
 
 ### Patch Changes

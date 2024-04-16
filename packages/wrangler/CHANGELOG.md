@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.51.0
+
+### Minor Changes
+
+- [#5477](https://github.com/cloudflare/workers-sdk/pull/5477) [`9a46e03`](https://github.com/cloudflare/workers-sdk/commit/9a46e03f013cc6f1e2d38d47f9bf002626b6bd95) Thanks [@pmiguel](https://github.com/pmiguel)! - feature: Changed Queues client to use the new QueueId and ConsumerId-based endpoints.
+
+- [#5172](https://github.com/cloudflare/workers-sdk/pull/5172) [`fbe1c9c`](https://github.com/cloudflare/workers-sdk/commit/fbe1c9c816f2b5774060d721ff830e70d9b7d29f) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Allow marking external modules (with `--external`) to avoid bundling them when building Pages Functions
+
+  It's useful for Pages Plugins which want to declare a peer dependency.
+
+### Patch Changes
+
+- [#5585](https://github.com/cloudflare/workers-sdk/pull/5585) [`22f5841`](https://github.com/cloudflare/workers-sdk/commit/22f58414d5697730f0337d17c7602b7fa3bebb79) Thanks [@geelen](https://github.com/geelen)! - Updates `wrangler d1 export` to handle larger DBs more efficiently
+
+- Updated dependencies [[`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210), [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210)]:
+  - miniflare@3.20240405.2
+
 ## 3.50.0
 
 ### Minor Changes

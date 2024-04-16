@@ -1,5 +1,102 @@
 # miniflare
 
+## 3.20240405.2
+
+### Patch Changes
+
+- [#5599](https://github.com/cloudflare/workers-sdk/pull/5599) [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210) Thanks [@penalosa](https://github.com/penalosa)! - fix: add support for wrapped bindings in magic proxy
+
+  currently `Miniflare#getBindings()` does not return proxies to provided `wrappedBindings`, make sure that appropriate proxies are instead returned
+
+  Example:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	workers: [
+  		{
+  			wrappedBindings: {
+  				Greeter: {
+  					scriptName: "impl",
+  				},
+  			},
+  			modules: true,
+  			script: `export default { fetch(){ return new Response(''); } }`,
+  		},
+  		{
+  			modules: true,
+  			name: "impl",
+  			script: `
+  				class Greeter {
+  					sayHello(name) {
+  						return "Hello " + name;
+  					}
+  				}
+  
+  				export default function (env) {
+  					return new Greeter();
+  				}
+  			`,
+  		},
+  	],
+  });
+
+  const { Greeter } = await mf.getBindings();
+
+  console.log(Greeter.sayHello("world")); // <--- prints 'Hello world'
+
+  await mf.dispose();
+  ```
+
+- [#5599](https://github.com/cloudflare/workers-sdk/pull/5599) [`c9f081a`](https://github.com/cloudflare/workers-sdk/commit/c9f081ab72142060a3cf2e9a7ef4546b8014b210) Thanks [@penalosa](https://github.com/penalosa)! - fix: add support for RPC in magic proxy
+
+  currently `Miniflare#getBindings()` does not return valid proxies to provided `serviceBindings` using RPC, make sure that appropriate proxies are instead returned
+
+  Example:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	workers: [
+  		{
+  			modules: true,
+  			script: `export default { fetch() { return new Response(''); } }`,
+  			serviceBindings: {
+  				SUM: {
+  					name: "sum-worker",
+  					entrypoint: "SumEntrypoint",
+  				},
+  			},
+  		},
+  		{
+  			modules: true,
+  			name: "sum-worker",
+  			script: `
+  				import { WorkerEntrypoint } from 'cloudflare:workers';
+  
+  				export default { fetch() { return new Response(''); } }
+  
+  				export class SumEntrypoint extends WorkerEntrypoint {
+  					sum(args) {
+  						return args.reduce((a, b) => a + b);
+  					}
+  				}
+  			`,
+  		},
+  	],
+  });
+
+  const { SUM } = await mf.getBindings();
+
+  const numbers = [1, 2, 3];
+
+  console.log(`The sum of ${numbers.join(", ")} is ${await SUM.sum(numbers)}`); // <--- prints 'The sum of 1, 2, 3 is 6'
+
+  await mf.dispose();
+  ```
+
 ## 3.20240405.1
 
 ### Minor Changes
