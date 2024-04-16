@@ -104,3 +104,38 @@ export interface D1QueriesGraphQLResponse {
 		};
 	};
 }
+
+export type ImportInitResponse = {
+	success: true;
+	filename: string;
+	uploadUrl: string;
+};
+export type ImportPollingResponse = {
+	success: true;
+	type: "import";
+	at_bookmark: string;
+	messages: string[];
+	errors: string[];
+} & (
+	| {
+			status: "active" | "error";
+	  }
+	| {
+			status: "complete";
+			result: {
+				success: boolean;
+				finalBookmark: string;
+				numQueries: number;
+				meta: {
+					served_by: string;
+					duration: number;
+					changes: number;
+					last_row_id: number;
+					changed_db: boolean;
+					size_after: number;
+					rows_read: number;
+					rows_written: number;
+				};
+			};
+	  }
+);

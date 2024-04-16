@@ -1,11 +1,13 @@
+import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
-import fs from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
+import md5File from "md5-file";
 import { Miniflare } from "miniflare";
 import React from "react";
+import { fetch } from "undici";
 import { printWranglerBanner } from "../";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
@@ -13,7 +15,7 @@ import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { JsonFriendlyFatalError, UserError } from "../errors";
 import { logger } from "../logger";
-import { readFileSync } from "../parse";
+import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
@@ -25,7 +27,11 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type {
+	Database,
+	ImportInitResponse,
+	ImportPollingResponse,
+} from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
 
 export type QueryResult = {
@@ -224,9 +230,7 @@ export async function executeSql({
 	}
 	if (persistTo && !local) {
 		throw new UserError(`Error: can't use --persist-to without --local`);
-	}
-	logger.log(`🌀 Mapping SQL input into an array of statements`);
-
+  }
 	if (input.file) await checkForSQLiteBinary(input.file);
 
 	const result =
@@ -335,13 +339,13 @@ async function executeRemotely({
 	preview: boolean | undefined;
 }) {
 	if (input.file) {
-		const warning = `ℹ️  This process may take some time, during which your D1 will be unavailable to serve queries.`;
+		const warning = `⚠️ This process may take some time, during which your D1 will be unavailable to serve queries.`;
 
 		if (shouldPrompt) {
 			const ok = await confirm(`${warning}\n  Ok to proceed?`);
 			if (!ok) return null;
 		} else {
-			logger.error(warning);
+			logger.log(warning);
 		}
 	}
 
@@ -351,36 +355,178 @@ async function executeRemotely({
 		accountId,
 		name
 	);
-	if (preview && !db.previewDatabaseUuid) {
-		const error = new UserError(
-			"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
-		);
-		logger.error(error.message);
-		throw error;
+	if (preview) {
+		if (!db.previewDatabaseUuid) {
+			const error = new UserError(
+				"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
+			);
+			logger.error(error.message);
+			throw error;
+		}
+		db.uuid = db.previewDatabaseUuid;
 	}
-	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
-	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);
+	logger.log(
+		`🌀 Executing on ${
+			db.previewDatabaseUuid ? "preview" : "remote"
+		} database ${name} (${db.uuid}):`
+	);
 	logger.log(
 		"🌀 To execute on your local development database, remove the --remote flag from your wrangler command."
 	);
 
 	if (input.file) {
+		// TODO: do we need to update hashing code if we upload in parts?
+		const etag = await md5File(input.file);
+
+		logger.log(
+			chalk.gray(
+				`Note: if the execution fails to complete, your DB will return to its original state and you can safely retry.`
+			)
+		);
+
+		const initResponse = await d1ApiPost<
+			| ImportInitResponse
+			| ImportPollingResponse
+			| { success: false; error: string }
+		>(accountId, db, "import", { action: "init", etag });
+
+		// An init response usually returns a {filename, uploadUrl} pair, except if we've detected that file
+		// already exists and is valid, to save people reuploading. In which case `initResponse` has already
+		// kicked the import process off.
+		const uploadRequired = "uploadUrl" in initResponse;
+		if (!uploadRequired) logger.log(`🌀 File already uploaded. Processing.`);
+		const firstPollResponse = uploadRequired
+			? await uploadAndBeginIngestion(
+					accountId,
+					db,
+					input.file,
+					etag,
+					initResponse
+			  )
+			: initResponse;
+
+		const finalResponse = await pollUntilComplete(
+			firstPollResponse,
+			accountId,
+			db
+		);
+
+		if (finalResponse.status !== "complete")
+			throw new APIError({ text: `D1 reset before execute completed!` });
+
+		const {
+			result: { numQueries, finalBookmark, meta },
+		} = finalResponse;
+		logger.log(
+			`🚣 Executed ${numQueries} queries in ${(meta.duration / 1000).toFixed(
+				2
+			)} seconds (${meta.rows_read} rows read, ${
+				meta.rows_written
+			} rows written)\n` +
+				`   Database is currently ${(meta.size_after / 1_000_000).toFixed(
+					2
+				)}MB (at bookmark ${chalk.gray(finalBookmark)}).`
+		);
+
 		return null;
 	} else {
-		const result = await fetchResult<QueryResult[]>(
-			`/accounts/${accountId}/d1/database/${dbUuid}/query`,
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
-				},
-				body: JSON.stringify({ sql: input.command }),
-			}
-		);
+		const result = await d1ApiPost<QueryResult[]>(accountId, db, "query", {
+			sql: input.command,
+		});
 		logResult(result);
 		return result;
 	}
+}
+
+async function uploadAndBeginIngestion(
+	accountId: string,
+	db: Database,
+	file: string,
+	etag: string,
+	initResponse: ImportInitResponse
+) {
+	const { uploadUrl, filename } = initResponse;
+	logger.log(`🌀 Uploading ${filename}...`);
+
+	const { size } = await fs.stat(file);
+
+	const uploadResponse = await fetch(uploadUrl, {
+		method: "PUT",
+		headers: {
+			"Content-length": `${size}`,
+		},
+		body: createReadStream(file),
+		duplex: "half", // required for NodeJS streams over .fetch ?
+	});
+
+	if (uploadResponse.status !== 200) {
+		throw new UserError(
+			`File could not be uploaded. Please retry.\nGot response: ${await uploadResponse.text()}`
+		);
+	}
+
+	const etagResponse = uploadResponse.headers.get("etag");
+	if (!etagResponse) {
+		throw new UserError(`File did not upload successfully. Please retry.`);
+	}
+	if (etag !== etagResponse.replace(/^"|"$/g, "")) {
+		throw new UserError(
+			`File contents did not upload successfully. Please retry.`
+		);
+	}
+	logger.log(`🌀 Uploading complete.`);
+
+	return await d1ApiPost<
+		ImportPollingResponse | { success: false; error: string }
+	>(accountId, db, "import", { action: "ingest", filename, etag });
+}
+
+async function pollUntilComplete(
+	response: ImportPollingResponse | { success: false; error: string },
+	accountId: string,
+	db: Database
+): Promise<ImportPollingResponse> {
+	if (!response.success) throw new Error(response.error);
+
+	response.messages.forEach((line) => {
+		logger.log(`🌀 ${line}`);
+	});
+
+	if (response.status === "complete") {
+		return response;
+	} else if (response.status === "error") {
+		throw new APIError({
+			text: response.errors?.join("\n"),
+			notes: response.messages.map((text) => ({ text })),
+		});
+	} else {
+		const newResponse = await d1ApiPost<
+			ImportPollingResponse | { success: false; error: string }
+		>(accountId, db, "import", {
+			action: "poll",
+			currentBookmark: response.at_bookmark,
+		});
+		return await pollUntilComplete(newResponse, accountId, db);
+	}
+}
+
+async function d1ApiPost<T>(
+	accountId: string,
+	db: Database,
+	action: string,
+	body: unknown
+) {
+	return await fetchResult<T>(
+		`/accounts/${accountId}/d1/database/${db.uuid}/${action}`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
+			},
+			body: JSON.stringify(body),
+		}
+	);
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
