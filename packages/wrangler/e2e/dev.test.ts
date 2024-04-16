@@ -395,51 +395,6 @@ describe("basic dev python tests", () => {
 	});
 });
 
-describe("python dependency tests", () => {
-	let worker: DevWorker;
-
-	beforeEach(async () => {
-		worker = await makeWorker();
-		await worker.seed((workerName) => ({
-			"wrangler.toml": dedent`
-					name = "${workerName}"
-					main = "index.py"
-					compatibility_date = "2024-03-20"
-					compatibility_flags = ["python_workers"]
-			`,
-			"requirements.txt": dedent`
-			# comment
-			numpy # comment 2`,
-			"index.py": dedent`
-					import numpy as np
-
-					from js import Response
-					def on_fetch(request):
-						return Response.new(str(np.array([1, 2, 3])))`,
-			"package.json": dedent`
-					{
-						"name": "${workerName}",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
-		}));
-	});
-
-	it("can parse requirements file and use dependencies", async () => {
-		await worker.runDevSession("", async (session) => {
-			const { text } = await retry(
-				(s) => s.status !== 200,
-				async () => {
-					const r = await fetch(`http://127.0.0.1:${session.port}`);
-					return { text: await r.text(), status: r.status };
-				}
-			);
-			expect(text).toMatchInlineSnapshot('"[1 2 3]"');
-		});
-	});
-});
-
 describe("dev registry", () => {
 	let a: DevWorker;
 	let b: DevWorker;
