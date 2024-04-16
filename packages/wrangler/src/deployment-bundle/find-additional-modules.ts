@@ -40,16 +40,6 @@ function isValidPythonPackageName(name: string): boolean {
 }
 
 /**
- * Strips comments and surrounding whitespace from a python requirements.txt line
- * See https://pip.pypa.io/en/latest/reference/requirements-file-format/ (Comments)
- * @param requirement The requirement to sanitize
- */
-function stripComments(requirement: string): string {
-	const regex = /\w+#.*$/;
-	return requirement.replace(regex, "").trim();
-}
-
-/**
  * Search the filesystem under the `moduleRoot` of the `entry` for potential additional modules
  * that match the given `rules`.
  */
@@ -88,10 +78,8 @@ export async function findAdditionalModules(
 			);
 		}
 
-		for (let requirement of pythonRequirements.split("\n")) {
-			requirement = stripComments(requirement);
+		for (const requirement of pythonRequirements.split("\n")) {
 			if (requirement === "") continue;
-
 			if (!isValidPythonPackageName(requirement)) {
 				throw new UserError(
 					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
