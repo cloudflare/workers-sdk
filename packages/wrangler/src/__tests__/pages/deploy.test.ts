@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
@@ -1210,6 +1211,80 @@ describe("pages deploy", () => {
 		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
+	});
+
+	it("should read files to upload in batches from disk to avoid EMFILE errors", async () => {
+		// Write more than 1000 files to disk
+		for (let i = 0; i < 4000; i++) {
+			writeFileSync(`logo-${i}.png`, "foobar".repeat(1000));
+		}
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		msw.use(
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
+					// Add a little timeout to delay responses
+					await setTimeout(200 * Math.random());
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					});
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/upload", async () => {
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
+			}),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async () => {
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							url: "https://abcxyz.foo.pages.dev/",
+						},
+					});
+				},
+				{ once: true }
+			),
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: { deployment_configs: { production: {}, preview: {} } },
+				});
+			})
+		);
+
+		await runWrangler("pages deploy . --project-name=foo");
+
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 4000 files (TIMINGS)
+
+			🌎 Deploying...
+			✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.
+
+			⚡️ Visit your deployment at https://abcxyz.foo.pages.dev/
+			⚡️ Check the deployment details on the Cloudflare dashboard: https://dash.cloudflare.com/some-account-id/pages/view/foo/undefined"
+		`);
 	});
 
 	it("should resolve child directories correctly", async () => {

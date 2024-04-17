@@ -14,5 +14,5 @@
  * So this helper removes these message from the snapshots to keep them consistent.
  */
 export function normalizeProgressSteps(str: string): string {
-	return str.replace(/Uploading... \(\d\/\d\)\r?\n?/g, "");
+	return str.replace(/Uploading... \(\d+\/\d+\)\r?\n?/g, "");
 }
