@@ -105,7 +105,7 @@ const config: TemplateConfig = {
 		scripts: {
 			deploy: `astro build && wrangler pages deploy`,
 			preview: `astro build && wrangler pages dev`,
-			...(usesTypescript(ctx) && { "build-cf-types": `wrangler types` }),
+			...(usesTypescript(ctx) && { "cf-typegen": `wrangler types` }),
 		},
 	}),
 };

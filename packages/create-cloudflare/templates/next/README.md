@@ -52,15 +52,15 @@ In order to enable the example:
   ```
   # KV Example:
   ```
-- If you're using TypeScript run the `build-cf-types` script to update the `env.d.ts` file:
+- If you're using TypeScript run the `cf-typegen` script to update the `env.d.ts` file:
   ```bash
-  npm run build-cf-types
+  npm run cf-typegen
   # or
-  yarn build-cf-types
+  yarn cf-typegen
   # or
-  pnpm build-cf-types
+  pnpm cf-typegen
   # or
-  bun build-cf-types
+  bun cf-typegen
   ```
 
 After doing this you can run the `dev` or `preview` script and visit the `/api/hello` route to see the example in action.
