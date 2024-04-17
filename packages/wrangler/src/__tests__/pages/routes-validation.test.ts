@@ -3,14 +3,14 @@ import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
-} from "../constants";
-import { getRoutesValidationErrorMessage } from "../errors";
+} from "../../pages/constants";
+import { getRoutesValidationErrorMessage } from "../../pages/errors";
 import {
 	isRoutesJSONSpec,
 	RoutesValidationError,
 	validateRoutes,
-} from "./routes-validation";
-import type { RoutesJSONSpec } from "./routes-transformation";
+} from "../../pages/functions/routes-validation";
+import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 
 describe("routes-validation", () => {
 	describe("isRoutesJSONSpec", () => {

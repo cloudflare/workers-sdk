@@ -1,15 +1,15 @@
-import { toUrlPath } from "../../paths";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_DESCRIPTION,
 	ROUTES_SPEC_VERSION,
-} from "../constants";
+} from "../../pages/constants";
 import {
 	compareRoutes,
 	convertRoutesToGlobPatterns,
 	convertRoutesToRoutesJSONSpec,
 	optimizeRoutesJSONSpec,
-} from "./routes-transformation";
+} from "../../pages/functions/routes-transformation";
+import { toUrlPath } from "../../paths";
 
 // TODO: make a convenience function for creating a list
 // of `convertRoutesToGlobPatterns` inputs from a string array
