@@ -221,8 +221,8 @@ export default {
 		return {
 			scripts: {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-				preview: `${pagesBuildRunCommand} && wrangler pages dev .vercel/output/static`,
-				deploy: `${pagesBuildRunCommand} && wrangler pages deploy .vercel/output/static`,
+				preview: `${pagesBuildRunCommand} && wrangler pages dev`,
+				deploy: `${pagesBuildRunCommand} && wrangler pages deploy`,
 				...(usesTypescript(ctx) && {
 					"build-cf-types": `wrangler types --env-interface CloudflareEnv env.d.ts`,
 				}),

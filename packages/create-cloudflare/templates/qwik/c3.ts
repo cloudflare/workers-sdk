@@ -134,8 +134,8 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
-			preview: `${npm} run build && wrangler pages dev ./dist`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
 			"build-cf-types": `wrangler types`,
 		},
 	}),

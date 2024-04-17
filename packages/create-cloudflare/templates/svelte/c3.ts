@@ -109,8 +109,8 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async (original: PackageJson, ctx: C3Context) => {
 		let scripts: Record<string, string> = {
-			preview: `${npm} run build && wrangler pages dev .svelte-kit/cloudflare`,
-			deploy: `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
+			preview: `${npm} run build && wrangler pages dev`,
+			deploy: `${npm} run build && wrangler pages deploy`,
 		};
 
 		if (usesTypescript(ctx)) {
