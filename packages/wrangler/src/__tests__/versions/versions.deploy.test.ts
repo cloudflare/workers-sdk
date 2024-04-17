@@ -545,7 +545,7 @@ describe("versions deploy", () => {
 			│
 			│ No non-versioned settings to sync. Skipping...
 			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
+			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334% and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
 		`);
 
 				expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);

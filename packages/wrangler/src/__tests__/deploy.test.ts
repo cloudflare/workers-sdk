@@ -5080,8 +5080,8 @@ addEventListener('fetch', event => {});`
 			        \`\`\`
 
 			      Refer to
-			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m
-			  for more details.
+			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
+			  details.
 
 			"
 		`);
