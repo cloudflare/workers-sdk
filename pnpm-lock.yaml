@@ -77,6 +77,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.27.1
         version: 2.27.1
+      '@changesets/parse':
+        specifier: ^0.4.0
+        version: 0.4.0
       '@cloudflare/workers-types':
         specifier: ^4.20240405.0
         version: 4.20240405.0
