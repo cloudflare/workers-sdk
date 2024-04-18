@@ -1,5 +1,29 @@
 # wrangler
 
+## 3.51.1
+
+### Patch Changes
+
+- [#5640](https://github.com/cloudflare/workers-sdk/pull/5640) [`bd2031b`](https://github.com/cloudflare/workers-sdk/commit/bd2031bd5e1304ea104f84f3aa20d231a81f83b1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: display user-friendly message when Pages function route param names are invalid.
+
+  Param names can only contain alphanumeric and underscore characters. Previously the user would see a confusing error message similar to:
+
+  ```
+   TypeError: Unexpected MODIFIER at 8, expected END
+  ```
+
+  Now the user is given an error similar to:
+
+  ```
+  Invalid Pages function route parameter - "[hyphen-not-allowed]". Parameter names must only contain alphanumeric and underscore characters.
+  ```
+
+  Fixes #5540
+
+- [#5619](https://github.com/cloudflare/workers-sdk/pull/5619) [`6fe0af4`](https://github.com/cloudflare/workers-sdk/commit/6fe0af46da3ff2262c99e46d287db64506233b43) Thanks [@gmemstr](https://github.com/gmemstr)! - fix: correctly handle non-text based files for kv put
+
+  The current version of the kv:key put command with the --path argument will treat file contents as a string because it is not one of Blob or File when passed to the form helper library. We should turn it into a Blob so it's not mangling inputs.
+
 ## 3.51.0
 
 ### Minor Changes
