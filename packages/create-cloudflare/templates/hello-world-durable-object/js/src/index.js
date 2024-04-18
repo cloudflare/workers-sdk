@@ -1,3 +1,5 @@
+import { DurableObject } from "cloudflare:workers";
+
 /**
  * Welcome to Cloudflare Workers! This is your first Durable Objects application.
  *
@@ -16,25 +18,27 @@
  */
 
 /** A Durable Object's behavior is defined in an exported Javascript class */
-export class MyDurableObject {
+export class MyDurableObject extends DurableObject {
 	/**
 	 * The constructor is invoked once upon creation of the Durable Object, i.e. the first call to
-	 * 	`DurableObjectStub::get` for a given identifier
+	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
 	 *
-	 * @param {DurableObjectState} state - The interface for interacting with Durable Object state
+	 * @param {DurableObjectState} ctx - The interface for interacting with Durable Object state
 	 * @param {Env} env - The interface to reference bindings declared in wrangler.toml
 	 */
-	constructor(state, env) {}
+	constructor(ctx, env) {
+		super(ctx, env);
+	}
 
 	/**
-	 * The Durable Object fetch handler will be invoked when a Durable Object instance receives a
-	 * 	request from a Worker via an associated stub
+	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
+	 *  Object instance receives a request from a Worker via the same method invokation on the stub
 	 *
-	 * @param {Request} request - The request submitted to a Durable Object instance from a Worker
-	 * @returns {Promise<Response>} The response to be sent back to the Worker
+	 * @param {string} name - The name provided to a Durable Object instance from a Worker
+	 * @returns {Promise<string>} The greeting to be sent back to the Worker
 	 */
-	async fetch(request) {
-		return new Response('Hello World');
+	async sayHello(name) {
+		return `Hello, ${name}!`;
 	}
 }
 
@@ -56,10 +60,10 @@ export default {
 		// The Durable Object constructor will be invoked upon the first call for a given id
 		let stub = env.MY_DURABLE_OBJECT.get(id);
 
-		// We call `fetch()` on the stub to send a request to the Durable Object instance
-		// The Durable Object instance will invoke its fetch handler to handle the request
-		let response = await stub.fetch(request);
+		// We call the `sayHello()` RPC method on the stub to invoke the method on the remote
+		// Durable Object instance
+		let greeting = await stub.sayHello("world");
 
-		return response;
+		return new Response(greeting);
 	},
 };
