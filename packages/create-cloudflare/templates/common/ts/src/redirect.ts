@@ -1,5 +1,5 @@
 export default {
-	async fetch(request, env, ctx) {
+	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
 		const redirectUrl = url.searchParams.get('redirectUrl'); // get a query param value (?redirectUrl=...)
 

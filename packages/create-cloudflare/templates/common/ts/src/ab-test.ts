@@ -6,7 +6,7 @@ const EXPERIMENTS = [
 ];
 
 export default {
-	async fetch(request, env, ctx) {
+	async fetch(request, env, ctx): Promise<Response> {
 		const fingerprint = [request.headers.get('cf-connecting-ip'), request.cf?.postalCode]; // add any values you want considered as a fingerprint
 		const activeExperiments = await getActiveExperiments(fingerprint, EXPERIMENTS);
 

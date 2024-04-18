@@ -18,7 +18,7 @@
 export default {
 	// The scheduled handler is invoked at the interval set in our wrangler.toml's
 	// [[triggers]] configuration.
-	async scheduled(event, env, ctx) {
+	async scheduled(event, env, ctx): Promise<void> {
 		// A Cron Trigger can make requests to other endpoints on the Internet,
 		// publish to a Queue, query a D1 Database, and much more.
 		//
