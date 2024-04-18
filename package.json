@@ -21,6 +21,7 @@
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
 		"test:ci": "dotenv -- turbo test:ci",
+		"test:e2e": "dotenv -- turbo test:e2e --filter=wrangler",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
@@ -30,7 +31,6 @@
 		"@types/node": "^20.0.0",
 		"cross-env": "^7.0.3",
 		"esbuild-register": "^3.5.0",
-		"ioredis": "^4.28.2",
 		"jsonc-parser": "^3.2.0",
 		"prettier": "^2.6.2",
 		"prettier-plugin-packagejson": "^2.2.18",

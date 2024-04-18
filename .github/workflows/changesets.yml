@@ -39,7 +39,15 @@ jobs:
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
-      - name: Check the build
+      - name: "Configure turbo repo cache environment variables"
+        run: |
+          touch .env
+          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
+          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
+          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
+          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
+
+      - name: Run builds
         run: pnpm run build
         env:
           CI_OS: ${{ runner.os }}

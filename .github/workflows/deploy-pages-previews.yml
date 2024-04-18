@@ -25,7 +25,7 @@ jobs:
     # Only run this on PRs that are for the "cloudflare" org and not "from" `main`
     # - non-Cloudflare PRs will not have the secrets needed
     # - PRs "from" main would accidentally do a production deployment
-    if: github.repository_owner == 'cloudflare' && github.head_ref != 'main'
+    if: github.repository_owner == 'cloudflare' && github.head_ref != 'main' && (contains(github.event.*.labels.*.name, 'preview:wrangler-devtools') || contains(github.event.*.labels.*.name, 'preview:quick-edit') || contains(github.event.*.labels.*.name, 'preview:workers-playground'))
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
