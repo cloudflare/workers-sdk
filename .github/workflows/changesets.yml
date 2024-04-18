@@ -36,8 +36,8 @@ jobs:
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check the build
-        run: pnpm run build
+      - name: Check the changesets
+        run: node -r esbuild-register tools/deployments/validate-changesets.ts
         env:
           CI_OS: ${{ runner.os }}
 
