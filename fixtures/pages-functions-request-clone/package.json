@@ -1,25 +1,24 @@
 {
-	"name": "pages-functions-app",
+	"name": "pages-functions-request-clone",
+	"version": "0.0.0",
 	"private": true,
 	"sideEffects": false,
+	"main": "dist/worker.js",
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "wrangler pages dev public --port 8789",
+		"dev": "wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240405.0",
+		"@cloudflare/workers-types": "^4.20221111.1",
 		"pages-plugin-example": "workspace:*",
-		"undici": "^5.28.3",
+		"undici": "^5.28.2",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"
-	},
-	"dependencies": {
-		"is-odd": "^3.0.1"
 	}
 }

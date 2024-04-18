@@ -1,0 +1,8 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"esModuleInterop": true
+	},
+	"include": ["**/*.ts", "../../../node-types.d.ts"]
+}
