@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.51.2
+
+### Patch Changes
+
+- [#5652](https://github.com/cloudflare/workers-sdk/pull/5652) [`ccb9d3d`](https://github.com/cloudflare/workers-sdk/commit/ccb9d3d4efba73a720945df4e1212a010fe40739) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: re-release due to broken build
+
 ## 3.51.1
 
 ### Patch Changes
