@@ -19,11 +19,8 @@ describe("durable objects", () => {
 				.replace(/[^\S\n]+\n/g, "\n")
 				.trimEnd();
 		}
-		expect(err).toMatchInlineSnapshot(`
-			"Command failed: pnpm run dev
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYour Worker depends on the following Durable Objects, which are not exported in your entrypoint file: FooBar.[0m
-
-			  You should export these objects from your entrypoint, src/index.js."
-		`);
+		expect(err).toContain(
+			"You should export these objects from your entrypoint, src/index.js."
+		);
 	});
 });

@@ -3,7 +3,7 @@
 	"private": true,
 	"description": "A test for the getPlatformProxy utility",
 	"scripts": {
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc --noEmit"
 	},

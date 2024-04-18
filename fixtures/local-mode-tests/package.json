@@ -8,7 +8,7 @@
 	"main": "index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},

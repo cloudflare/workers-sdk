@@ -6,7 +6,7 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 12345 --node-compat",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},

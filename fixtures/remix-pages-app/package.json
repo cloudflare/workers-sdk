@@ -10,7 +10,7 @@
 		"dev": "remix build && run-p \"dev:*\"",
 		"start": "cross-env NODE_ENV=production pnpm run dev:wrangler",
 		"check:type": "tsc",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
 	"dependencies": {

@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"check:lint": "eslint ."
 	},
 	"devDependencies": {

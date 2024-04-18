@@ -5,7 +5,7 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "concurrently -s first -k \"wrangler dev a/index.ts --port=8300 --inspector-port=0\" \"wrangler dev b/index.ts --port=8301 --inspector-port=0\"",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},

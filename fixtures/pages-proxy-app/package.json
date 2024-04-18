@@ -8,7 +8,7 @@
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev --compatibility-date=2024-01-17 --port 8790 --proxy 8791 -- pnpm run server",
 		"server": "node dist/index.js",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
