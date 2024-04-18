@@ -1,9 +1,12 @@
 import { mkdirSync, writeFileSync } from "fs";
-import { runInTempDir } from "../../__tests__/helpers/run-in-tmp";
+import {
+	compareRoutes,
+	generateConfigFromFileTree,
+} from "../../pages/functions/filepath-routing";
 import { toUrlPath } from "../../paths";
-import { compareRoutes, generateConfigFromFileTree } from "./filepath-routing";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import type { HTTPMethod, RouteConfig } from "../../pages/functions/routes";
 import type { UrlPath } from "../../paths";
-import type { HTTPMethod, RouteConfig } from "./routes";
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
@@ -221,6 +224,38 @@ describe("filepath-routing", () => {
           ],
         }
       `);
+		});
+
+		it("should display an error if a simple route param name is invalid", async () => {
+			mkdirSync("foo");
+			writeFileSync(
+				"foo/[hyphen-not-allowed].ts",
+				"export function onRequestPost() {}"
+			);
+			await expect(
+				generateConfigFromFileTree({
+					baseDir: ".",
+					baseURL: "/base" as UrlPath,
+				})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Invalid Pages function route parameter - \\"[hyphen-not-allowed]\\". Parameter names must only contain alphanumeric and underscore characters."`
+			);
+		});
+
+		it("should display an error if a catch-all route param name is invalid", async () => {
+			mkdirSync("foo");
+			writeFileSync(
+				"foo/[[hyphen-not-allowed]].ts",
+				"export function onRequestPost() {}"
+			);
+			await expect(
+				generateConfigFromFileTree({
+					baseDir: ".",
+					baseURL: "/base" as UrlPath,
+				})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Invalid Pages function route parameter - \\"[[hyphen-not-allowed]]\\". Parameters names must only contain alphanumeric and underscore characters."`
+			);
 		});
 	});
 });

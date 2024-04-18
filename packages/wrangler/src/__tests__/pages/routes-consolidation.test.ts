@@ -1,4 +1,7 @@
-import { consolidateRoutes, shortenRoute } from "./routes-consolidation";
+import {
+	consolidateRoutes,
+	shortenRoute,
+} from "../../pages/functions/routes-consolidation";
 
 describe("route-consolidation", () => {
 	const maxRuleLength = 100; // from constants.MAX_FUNCTIONS_ROUTES_RULE_LENGTH
