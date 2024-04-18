@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.20.0
+
+### Minor Changes
+
+- [#5562](https://github.com/cloudflare/workers-sdk/pull/5562) [`b7c1c51`](https://github.com/cloudflare/workers-sdk/commit/b7c1c51738abb9b4f2b53151b1aab3bee94ec704) Thanks [@jculvey](https://github.com/jculvey)! - feat: Update full-stack templates to use `wrangler.toml` for preview and deployment.
+
+- [#5597](https://github.com/cloudflare/workers-sdk/pull/5597) [`baac0e1`](https://github.com/cloudflare/workers-sdk/commit/baac0e1a52b178a289b44d2949a955a49d3d6a52) Thanks [@jculvey](https://github.com/jculvey)! - feat: Add a `cf-typegen` script to workers templates to dynamically generate a type definition from `wrangler.toml`.
+
+  This also updates the full-stack templates to rename the `build-cf-types` script to `cf-typegen` for consistency. Inline type definitons that previously existed in the `index.ts` of worker scripts have been removed and replaced with a comment informing the user of the `cf-typegen` script.
+
+### Patch Changes
+
+- [#5597](https://github.com/cloudflare/workers-sdk/pull/5597) [`baac0e1`](https://github.com/cloudflare/workers-sdk/commit/baac0e1a52b178a289b44d2949a955a49d3d6a52) Thanks [@jculvey](https://github.com/jculvey)! - chore: Update example `wrangler.toml` files to include a link to secrets documentation.
+
 ## 2.19.0
 
 ### Minor Changes
