@@ -63,6 +63,9 @@ jobs:
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
+      - name: Check the changesets
+        run: node -r esbuild-register tools/deployments/validate-changesets.ts
+
   test:
     timeout-minutes: 30
     concurrency:
