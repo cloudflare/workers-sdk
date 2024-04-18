@@ -7,6 +7,8 @@ import type { ApplicationID } from "./ApplicationID";
 import type { Command } from "./Command";
 import type { DeploymentID } from "./DeploymentID";
 import type { DeploymentLocation } from "./DeploymentLocation";
+import type { DeploymentState } from "./DeploymentState";
+import type { DeploymentType } from "./DeploymentType";
 import type { DeploymentVersion } from "./DeploymentVersion";
 import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
@@ -30,6 +32,7 @@ export type DeploymentV2 = {
 	created_at: ISO8601Timestamp;
 	account_id: AccountID;
 	version: DeploymentVersion;
+	type: DeploymentType;
 	image: Image;
 	location: DeploymentLocation;
 	/**
@@ -66,4 +69,5 @@ export type DeploymentV2 = {
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
+	state?: DeploymentState;
 };

@@ -8,5 +8,4 @@
 export enum NodeGroup {
 	METAL = "metal",
 	CLOUDCHAMBER = "cloudchamber",
-	GPU = "gpu",
 }

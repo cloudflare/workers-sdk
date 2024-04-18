@@ -80,6 +80,7 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"{
 		    \\"id\\": \\"1\\",
+		    \\"type\\": \\"default\\",
 		    \\"created_at\\": \\"123\\",
 		    \\"account_id\\": \\"123\\",
 		    \\"vcpu\\": 4,
@@ -127,6 +128,7 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"{
 		    \\"id\\": \\"1\\",
+		    \\"type\\": \\"default\\",
 		    \\"created_at\\": \\"123\\",
 		    \\"account_id\\": \\"123\\",
 		    \\"vcpu\\": 4,

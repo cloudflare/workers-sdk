@@ -74,6 +74,7 @@ export async function listCommand(
 	if (deploymentArgs.json || !isInteractive()) {
 		const deployments = (
 			await DeploymentsService.listDeploymentsV2(
+				undefined,
 				deploymentArgs.location,
 				deploymentArgs.image,
 				deploymentArgs.state as State,
