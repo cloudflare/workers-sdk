@@ -186,7 +186,9 @@ export async function versionsDeployHandler(args: VersionsDeployArgs) {
 	const trafficSummaryList = Array.from(confirmedVersionTraffic).map(
 		([versionId, percentage]) => `version ${versionId} at ${percentage}%`
 	);
-	const trafficSummaryString = new Intl.ListFormat().format(trafficSummaryList);
+	const trafficSummaryString = new Intl.ListFormat("en-US").format(
+		trafficSummaryList
+	);
 
 	cli.success(
 		`Deployed ${workerName} ${trafficSummaryString} (${elapsedString})`

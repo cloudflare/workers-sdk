@@ -779,7 +779,7 @@ async function installPackages(
 	//lets install the devDeps they asked for
 	//and run their package manager's install command if needed
 	if (depsToInstall.length > 0) {
-		const formatter = new Intl.ListFormat("en", {
+		const formatter = new Intl.ListFormat("en-US", {
 			style: "long",
 			type: "conjunction",
 		});

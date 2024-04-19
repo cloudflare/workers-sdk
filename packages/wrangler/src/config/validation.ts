@@ -39,7 +39,7 @@ import type {
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
-const ENGLISH = new Intl.ListFormat("en");
+const ENGLISH = new Intl.ListFormat("en-US");
 
 export function isPagesConfig(rawConfig: RawConfig): boolean {
 	return rawConfig.pages_build_output_dir !== undefined;
