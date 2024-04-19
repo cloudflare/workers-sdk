@@ -39,7 +39,7 @@ import type {
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
-const ENGLISH = new Intl.ListFormat("en");
+const ENGLISH = new Intl.ListFormat("en-US");
 
 export function isPagesConfig(rawConfig: RawConfig): boolean {
 	return rawConfig.pages_build_output_dir !== undefined;
@@ -625,7 +625,7 @@ function normalizeAndValidateMigrations(
 		.join(", ")}]
   \`\`\`
 
-Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details.`
+Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`
 					);
 				}
 			}

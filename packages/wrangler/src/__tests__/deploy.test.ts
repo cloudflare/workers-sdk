@@ -5080,8 +5080,8 @@ addEventListener('fetch', event => {});`
 			        \`\`\`
 
 			      Refer to
-			  [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
-			  for more details.
+			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
+			  details.
 
 			"
 		`);

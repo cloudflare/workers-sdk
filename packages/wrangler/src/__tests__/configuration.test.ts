@@ -994,7 +994,7 @@ describe("normalizeAndValidateConfig()", () => {
 			      new_classes = [\\"CLASS1\\"]
 			      \`\`\`
 
-			    Refer to https://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml for more details."
+			    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
 		`);
 		});
 

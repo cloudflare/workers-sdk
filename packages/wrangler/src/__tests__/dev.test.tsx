@@ -1087,33 +1087,33 @@ describe("wrangler dev", () => {
 			          - NAME_4: CLASS_4 (defined in SCRIPT_B)"
 		      `);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
-			          CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
-			          section to your wrangler.toml. Add this configuration to your wrangler.toml:
+			    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS_1,
+			  CLASS_3), but no [migrations] for them. This may not work as expected until you add a [migrations]
+			  section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-			                \`\`\`
-			                [[migrations]]
-			                tag = \\"v1\\" # Should be unique for each entry
-			                new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
-			                \`\`\`
+			        \`\`\`
+			        [[migrations]]
+			        tag = \\"v1\\" # Should be unique for each entry
+			        new_classes = [\\"CLASS_1\\", \\"CLASS_3\\"]
+			        \`\`\`
 
-			              Refer to
-			          [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
-			          for more details.
+			      Refer to
+			  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
+			  details.
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
 
-			          Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
-			          live instances.
-			          Remote Durable Objects that are affected:
-			          - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-			          - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
+			  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
+			  live instances.
+			  Remote Durable Objects that are affected:
+			  - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
+			  - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
 
-			        "
-		      `);
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});

@@ -24,7 +24,7 @@ function getCacheFolder() {
 	return __cacheFolder;
 }
 
-const arrayFormatter = new Intl.ListFormat("en", {
+const arrayFormatter = new Intl.ListFormat("en-US", {
 	style: "long",
 	type: "conjunction",
 });
