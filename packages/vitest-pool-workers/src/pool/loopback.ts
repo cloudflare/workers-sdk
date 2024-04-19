@@ -246,6 +246,9 @@ async function pushStackedStorage(intoDepth: number, persistPath: string) {
 			}
 			const namePath = path.join(keyPath, name);
 			const stackFrameNamePath = path.join(stackFrameKeyPath, name);
+			// from workerd.capnp:
+			// in certain situations extra files with the extensions `.sqlite-wal`, and `.sqlite-shm` may also be present.
+			if (name.endsWith(".sqlite-shm") || name.endsWith(".sqlite-wal")) continue;
 			assert(name.endsWith(".sqlite"), `Expected .sqlite, got ${namePath}`);
 			await fs.copyFile(namePath, stackFrameNamePath);
 		}
@@ -261,6 +264,9 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 			// If this is a blobs directory, it shouldn't contain any `.sqlite` files
 			if (name === BLOBS_DIR_NAME) break;
 			const namePath = path.join(keyPath, name);
+			// from workerd.capnp:
+			// in certain situations extra files with the extensions `.sqlite-wal`, and `.sqlite-shm` may also be present.
+			if (name.endsWith(".sqlite-shm") || name.endsWith(".sqlite-wal")) continue;
 			assert(name.endsWith(".sqlite"), `Expected .sqlite, got ${namePath}`);
 			await fs.unlink(namePath);
 		}
