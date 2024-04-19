@@ -139,7 +139,11 @@ describe("validatePagesConfig()", () => {
 					vars: { FOO: "foo" },
 					durable_objects: {
 						bindings: [
-							{ name: "TEST_DO_BINDING", class_name: "TEST_DO_CLASS" },
+							{
+								name: "TEST_DO_BINDING",
+								class_name: "TEST_DO_CLASS",
+								script_name: "TEST_DO_SCRIPT",
+							},
 						],
 					},
 					kv_namespaces: [{ binding: "TEST_KV_BINDING", id: "1" }],
@@ -265,6 +269,56 @@ describe("validatePagesConfig()", () => {
 			"Running configuration file validation for Pages:
 			  - Configuration file for Pages projects does not support \\"queues.consumers\\"
 			  - Configuration file for Pages projects does not support \\"cloudchamber\\""
+		`);
+		});
+	});
+
+	describe("DO bindings validation", () => {
+		it("should pass if all Durable Objects bindings specify 'script_name'", () => {
+			const config = generateConfigurationWithDefaults();
+			config.pages_build_output_dir = "./public";
+			config.name = "pages-project";
+			config.durable_objects.bindings = [
+				{
+					name: "foo-DO",
+					class_name: "foo-class",
+					script_name: "foo-script",
+				},
+				{
+					name: "bar-DO",
+					class_name: "bar-class",
+					script_name: "bar-script",
+				},
+			];
+
+			const diagnostics = validatePagesConfig(config, [], "pages-project");
+			expect(diagnostics.hasWarnings()).toBeFalsy();
+			expect(diagnostics.hasErrors()).toBeFalsy();
+		});
+
+		it("should fail if any of the Durable Object bindings does not specify 'script_name'", () => {
+			const config = generateConfigurationWithDefaults();
+			config.pages_build_output_dir = "./public";
+			config.name = "pages-project";
+			config.durable_objects.bindings = [
+				{
+					name: "foo-DO",
+					class_name: "foo-class",
+					script_name: "foo-script",
+				},
+				{
+					name: "bar-DO",
+					class_name: "bar-class",
+				},
+			];
+
+			const diagnostics = validatePagesConfig(config, [], "pages-project");
+			expect(diagnostics.hasWarnings()).toBeFalsy();
+			expect(diagnostics.hasErrors()).toBeTruthy();
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Running configuration file validation for Pages:
+			  - Durable Objects bindings should specify a \\"script_name\\".
+			    Pages requires Durable Object bindings to specify the name of the Worker where the Durable Object is defined."
 		`);
 		});
 	});
