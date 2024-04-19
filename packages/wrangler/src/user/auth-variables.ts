@@ -30,7 +30,7 @@ export const getCloudflareGlobalAuthEmailFromEnv =
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `WRANGLER_USE_STAGING` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getClientIdFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CLIENT_ID",
@@ -46,7 +46,7 @@ export const getClientIdFromEnv = getEnvironmentVariableFactory({
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `WRANGLER_USE_STAGING` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_AUTH_DOMAIN",
@@ -62,7 +62,7 @@ export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `WRANGLER_USE_STAGING` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_AUTH_URL",
@@ -75,7 +75,7 @@ export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `WRANGLER_USE_STAGING` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_TOKEN_URL",
@@ -88,7 +88,7 @@ export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
  *
  * Normally you should not need to set this explicitly.
  * If you want to switch to the staging environment set the
- * `WRANGLER_USE_STAGING` environment variable instead.
+ * `WRANGLER_API_ENVIRONMENT=staging` environment variable instead.
  */
 export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_REVOKE_URL",
