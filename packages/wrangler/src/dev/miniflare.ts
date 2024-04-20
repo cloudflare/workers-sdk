@@ -97,10 +97,10 @@ function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
 				return getUnknownPrototypeKey(key);
 			}
 		});
-	
+
 		return Reflect.construct(handlerSuperKlass, [ctx, env], klass);
 	}
-		
+
 	Reflect.setPrototypeOf(klass.prototype, handlerSuperKlass.prototype);
 	Reflect.setPrototypeOf(klass, handlerSuperKlass);
 
@@ -111,7 +111,7 @@ function createDurableObjectClass({ className, proxyUrl }) {
 	const klass = createProxyPrototypeClass(DurableObject, (key) => {
 		throw new Error(\`Cannot access \\\`\${className}#\${key}\\\` as Durable Object RPC is not yet supported between multiple \\\`wrangler dev\\\` sessions.\`);
 	});
-	
+
 	// Forward regular HTTP requests to the other "wrangler dev" session
 	klass.prototype.fetch = function(request) {
 		if (proxyUrl === undefined) {
@@ -121,7 +121,7 @@ function createDurableObjectClass({ className, proxyUrl }) {
 		proxyRequest.headers.set(HEADER_URL, request.url);
 		proxyRequest.headers.set(HEADER_NAME, className);
 		proxyRequest.headers.set(HEADER_ID, this.ctx.id.toString());
-		proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf));
+		proxyRequest.headers.set(HEADER_CF_BLOB, JSON.stringify(request.cf ?? {}));
 		return fetch(proxyRequest);
 	};
 
@@ -147,7 +147,7 @@ export default {
 		const originalUrl = request.headers.get(HEADER_URL);
 		const className = request.headers.get(HEADER_NAME);
 		const idString = request.headers.get(HEADER_ID);
-		const cfBlobString = request.headers.get(HEADER_CF_BLOB);
+		const cf = JSON.parse(request.headers.get(HEADER_CF_BLOB));
 		if (originalUrl === null || className === null || idString === null) {
 			return new Response("[wrangler] Received Durable Object proxy request with missing headers", { status: 400 });
 		}
@@ -159,7 +159,7 @@ export default {
 		const ns = env[className];
 		const id = ns.idFromString(idString);
 		const stub = ns.get(id);
-		return stub.fetch(request, { cf: JSON.parse(cfBlobString ?? "{}") });
+		return stub.fetch(request, { cf });
 	}
 }
 `;

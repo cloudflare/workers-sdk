@@ -207,7 +207,7 @@ describe("getPlatformProxy - bindings", () => {
 		await dispose();
 	});
 
-	it.skip("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
+	it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
 			configPath: wranglerTomlFilePath,
 		});
