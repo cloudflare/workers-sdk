@@ -372,26 +372,29 @@ export async function generateHandler<
 								const links: { href: string; rel: string; as?: string }[] = [];
 
 								const transformedResponse = new HTMLRewriter()
-									.on("link[rel~=preconnect],link[rel~=preload]", {
-										element(element) {
-											for (const [attributeName] of element.attributes) {
-												if (
-													!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
-														attributeName.toLowerCase()
-													)
-												) {
-													return;
+									.on(
+										"link[rel~=preconnect],link[rel~=preload],link[rel~=modulepreload]",
+										{
+											element(element) {
+												for (const [attributeName] of element.attributes) {
+													if (
+														!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
+															attributeName.toLowerCase()
+														)
+													) {
+														return;
+													}
 												}
-											}
 
-											const href = element.getAttribute("href") || undefined;
-											const rel = element.getAttribute("rel") || undefined;
-											const as = element.getAttribute("as") || undefined;
-											if (href && !href.startsWith("data:") && rel) {
-												links.push({ href, rel, as });
-											}
-										},
-									})
+												const href = element.getAttribute("href") || undefined;
+												const rel = element.getAttribute("rel") || undefined;
+												const as = element.getAttribute("as") || undefined;
+												if (href && !href.startsWith("data:") && rel) {
+													links.push({ href, rel, as });
+												}
+											},
+										}
+									)
 									.transform(clonedResponse);
 
 								// Needed to actually execute the HTMLRewriter handlers
