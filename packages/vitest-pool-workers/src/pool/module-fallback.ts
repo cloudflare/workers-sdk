@@ -265,7 +265,8 @@ async function viteResolve(
 		if (workerdBuiltinModules.has(id)) return `/${id}`;
 		throw new Error("Not found");
 	}
-	return resolved.id;
+	// strip off deps optimization hash
+	return resolved.id.split("v=")[0]
 }
 
 type ResolveMethod = "import" | "require";
