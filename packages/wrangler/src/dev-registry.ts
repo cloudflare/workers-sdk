@@ -36,6 +36,7 @@ export type WorkerDefinition = {
 	durableObjects: { name: string; className: string }[];
 	durableObjectsHost?: string;
 	durableObjectsPort?: number;
+	dispatchNamespace?: string | undefined;
 };
 
 /**
@@ -213,24 +214,38 @@ export async function getBoundRegisteredWorkers({
 	name,
 	services,
 	durableObjects,
+	dispatchNamespaces,
 }: {
 	name: string | undefined;
 	services: Config["services"] | undefined;
 	durableObjects: Config["durable_objects"] | undefined;
+	dispatchNamespaces: Config["dispatch_namespaces"] | undefined;
 }) {
+	// Unconvinced this is handling environment correctly?
 	const serviceNames = (services || []).map(
 		(serviceBinding) => serviceBinding.service
 	);
 	const durableObjectServices = (
 		durableObjects || { bindings: [] }
 	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
+	const dispatchNamespaceNames = (dispatchNamespaces || []).map(
+		(dispatchNamespaceBinding) => dispatchNamespaceBinding.namespace
+	);
+	const dispatchNamespaceOutbounds = (dispatchNamespaces || []).map(
+		(dispatchNamespaceBinding) =>
+			dispatchNamespaceBinding.outbound?.service || undefined
+	); // outbounds could be argued as a dependency of the dispatchees or of the parent, but whatever, we're just going to manage it on the parent
 
 	const workerDefinitions = await getRegisteredWorkers();
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
 			([key, _value]) =>
 				key !== name && // Always exclude current worker to avoid infinite loops
-				(serviceNames.includes(key) || durableObjectServices.includes(key))
+				(serviceNames.includes(key) ||
+					durableObjectServices.includes(key) ||
+					(_value.dispatchNamespace &&
+						dispatchNamespaceNames.includes(_value.dispatchNamespace)) ||
+					dispatchNamespaceOutbounds.includes(key))
 		)
 	);
 	return filteredWorkers;

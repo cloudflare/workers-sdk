@@ -52,6 +52,7 @@ function useDevRegistry(
 	name: string | undefined,
 	services: Config["services"] | undefined,
 	durableObjects: Config["durable_objects"] | undefined,
+	dispatchNamespaces: Config["dispatch_namespaces"] | undefined,
 	mode: "local" | "remote"
 ): WorkerRegistry {
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
@@ -75,6 +76,7 @@ function useDevRegistry(
 							name,
 							services,
 							durableObjects,
+							dispatchNamespaces,
 						}).then(
 							(boundRegisteredWorkers: WorkerRegistry | undefined) => {
 								setWorkers((prevWorkers) => {
@@ -121,7 +123,7 @@ function useDevRegistry(
 				}
 			);
 		};
-	}, [name, services, durableObjects, mode]);
+	}, [name, services, durableObjects, dispatchNamespaces, mode]);
 
 	return workers;
 }
@@ -159,6 +161,7 @@ export type DevProps = {
 	assetsConfig: Config["assets"];
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
+	dispatchNamespace: string | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
@@ -335,6 +338,7 @@ function DevSession(props: DevSessionProps) {
 		props.name,
 		props.bindings.services,
 		props.bindings.durable_objects,
+		props.bindings.dispatch_namespaces,
 		props.local ? "local" : "remote"
 	);
 	useEffect(() => {
@@ -378,6 +382,7 @@ function DevSession(props: DevSessionProps) {
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),
+		dispatchNamespace: props.dispatchNamespace,
 	});
 	useEffect(() => {
 		if (bundle) onReloadStart(bundle);
@@ -416,7 +421,8 @@ function DevSession(props: DevSessionProps) {
 				url,
 				props.name,
 				proxyData.internalDurableObjects,
-				proxyData.entrypointAddresses
+				proxyData.entrypointAddresses,
+				props.dispatchNamespace
 			);
 		}
 

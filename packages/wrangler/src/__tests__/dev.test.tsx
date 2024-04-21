@@ -141,6 +141,34 @@ describe("wrangler dev", () => {
 		});
 	});
 
+	describe("dispatch-namespace", () => {
+		it("should error if both --remote and --dispatch-namespace are specified", async () => {
+			writeWranglerToml({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev --remote --dispatch-namespace=foo")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`--dispatch-namespace\` argument cannot be used in conjunction with the \`--remote\` argument. If you want dispatch to this script from a Workers for Platforms dispatch namespace, please remove the \`--remote\` argument from your CLI command."`
+			);
+		});
+	});
+
+	describe("local", () => {
+		it("should error if both --local and --remote are specified", async () => {
+			writeWranglerToml({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev --local --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`--remote\` argument cannot be used in conjunction with the \`--local\` argument."`
+			);
+		});
+	});
+
 	describe("usage-model", () => {
 		it("should read wrangler.toml's usage_model", async () => {
 			writeWranglerToml({
@@ -1233,6 +1261,7 @@ describe("wrangler dev", () => {
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
+			      --dispatch-namespace                         Name of the Workers for Platforms dispatch namespace  [string]
 			      --ip                                         IP address to listen on  [string]
 			      --port                                       Port to listen on  [number]
 			      --inspector-port                             Port for devtools to connect to  [number]

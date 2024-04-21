@@ -331,6 +331,7 @@ export const defaultWranglerConfig: Config = {
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	vars: {},
+	dispatch_namespace: undefined,
 	durable_objects: { bindings: [] },
 	kv_namespaces: [],
 	queues: {
@@ -345,6 +346,7 @@ export const defaultWranglerConfig: Config = {
 	analytics_engine_datasets: [],
 	ai: undefined,
 	version_metadata: undefined,
+	dispatch_namespaces: [],
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */
@@ -381,7 +383,6 @@ export const defaultWranglerConfig: Config = {
 	no_bundle: undefined,
 	minify: undefined,
 	node_compat: undefined,
-	dispatch_namespaces: [],
 	first_party_worker: undefined,
 	zone_id: undefined,
 	logfwdr: { bindings: [] },

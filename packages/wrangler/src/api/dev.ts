@@ -2,7 +2,7 @@ import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 import type { Environment } from "../config";
-import type { Rule } from "../config/environment";
+import type { DispatchNamespaceOutbound, Rule } from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
@@ -27,6 +27,7 @@ export interface UnstableDevOptions {
 	nodeCompat?: boolean; // Enable Node.js compatibility
 	compatibilityDate?: string; // Date to use for compatibility checks
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
+	dispatchNamespace?: string; // implies `local` and `experimental.forceLocal` are true
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
 	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
 	vars?: Record<string, string | Json>;
@@ -55,9 +56,15 @@ export interface UnstableDevOptions {
 	ai?: {
 		binding: string;
 	};
+	// why is this snake_case? :(
 	version_metadata?: {
 		binding: string;
 	};
+	dispatchNamespaces?: {
+		binding: string;
+		namespace: string;
+		outbound?: DispatchNamespaceOutbound;
+	}[];
 	moduleRoot?: string;
 	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
@@ -176,6 +183,7 @@ export async function unstable_dev(
 		bundle: options?.bundle,
 		compatibilityDate: options?.compatibilityDate,
 		compatibilityFlags: options?.compatibilityFlags,
+		dispatchNamespace: options?.dispatchNamespace,
 		ip: options?.ip,
 		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,

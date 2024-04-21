@@ -59,6 +59,7 @@ export function useEsbuild({
 	projectRoot,
 	onBundleStart,
 	defineNavigatorUserAgent,
+	dispatchNamespace,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -86,6 +87,7 @@ export function useEsbuild({
 	projectRoot: string | undefined;
 	onBundleStart: () => void;
 	defineNavigatorUserAgent: boolean;
+	dispatchNamespace: string | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -191,6 +193,7 @@ export function useEsbuild({
 							local,
 							projectRoot,
 							defineNavigatorUserAgent,
+							dispatchNamespace,
 					  })
 					: undefined;
 
@@ -273,6 +276,7 @@ export function useEsbuild({
 		projectRoot,
 		onBundleStart,
 		defineNavigatorUserAgent,
+		dispatchNamespace,
 	]);
 	return bundle;
 }

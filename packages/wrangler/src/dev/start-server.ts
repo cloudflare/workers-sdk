@@ -70,6 +70,7 @@ export async function startDevServer(
 					name: props.name,
 					services: props.bindings.services,
 					durableObjects: props.bindings.durable_objects,
+					dispatchNamespaces: props.bindings.dispatch_namespaces,
 				});
 
 				if (
@@ -145,6 +146,7 @@ export async function startDevServer(
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),
+		dispatchNamespace: props.dispatchNamespace,
 	});
 
 	if (props.local) {
@@ -190,7 +192,8 @@ export async function startDevServer(
 					url,
 					props.name,
 					proxyData.internalDurableObjects,
-					proxyData.entrypointAddresses
+					proxyData.entrypointAddresses,
+					props.dispatchNamespace
 				);
 
 				props.onReady?.(ip, port, proxyData);
@@ -300,6 +303,7 @@ async function runEsbuild({
 	doBindings,
 	projectRoot,
 	defineNavigatorUserAgent,
+	dispatchNamespace,
 }: {
 	entry: Entry;
 	destination: string;
@@ -322,6 +326,7 @@ async function runEsbuild({
 	doBindings: DurableObjectBindings;
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
+	dispatchNamespace: string | undefined;
 }): Promise<EsbuildBundle> {
 	if (noBundle) {
 		additionalModules = dedupeModulesByName([
@@ -367,6 +372,7 @@ async function runEsbuild({
 					doBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
+					dispatchNamespace,
 			  })
 			: undefined;
 
