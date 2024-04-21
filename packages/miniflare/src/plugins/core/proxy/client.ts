@@ -191,10 +191,10 @@ class ProxyClientBridge {
 
 	getProxy<T extends object>(target: NativeTarget): T {
 		const handler = new ProxyStubHandler(this, target);
-		const proxy = new Proxy<T>(
-			{ [util.inspect.custom]: handler.inspect } as T,
-			handler
-		);
+		type FunctionWithProperties = ((...args: unknown[]) => unknown) & { [key: string|symbol]: unknown };
+		const proxyTarget = new Function() as FunctionWithProperties;
+		proxyTarget[util.inspect.custom] = handler.inspect;
+		const proxy = new Proxy<T>(proxyTarget as T, handler);
 		const held: NativeTargetHeldValue = {
 			address: target[kAddress],
 			version: this.#version,
@@ -218,7 +218,10 @@ class ProxyClientBridge {
 	}
 }
 
-class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
+class ProxyStubHandler<T extends object>
+	extends Function
+	implements ProxyHandler<T>
+{
 	readonly #version: number;
 	readonly #stringifiedTarget: string;
 	readonly #knownValues = new Map<string, unknown>();
@@ -260,6 +263,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		readonly bridge: ProxyClientBridge,
 		readonly target: NativeTarget
 	) {
+		super();
 		this.#version = bridge.version;
 		this.#stringifiedTarget = stringify(this.target, reducers);
 	}
@@ -357,6 +361,21 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			this.revivers
 		);
 		return this.#maybeThrow(syncRes, result, caller);
+	}
+
+	#thisFnKnownAsync = false;
+
+	apply(_target: T, ...args: unknown[]) {
+		const result = this.#call(
+			"__miniflareWrappedFunction",
+			this.#thisFnKnownAsync,
+			args[1] as unknown[],
+			this as Function
+		);
+		if (!this.#thisFnKnownAsync && result instanceof Promise) {
+			this.#thisFnKnownAsync = true;
+		}
+		return result;
 	}
 
 	get(_target: T, key: string | symbol, _receiver: unknown) {

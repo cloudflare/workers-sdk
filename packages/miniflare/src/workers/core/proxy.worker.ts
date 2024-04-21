@@ -52,9 +52,6 @@ const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
 	.join("\0");
 function isPlainObject(value: unknown) {
 	const proto = Object.getPrototypeOf(value);
-	if(value?.constructor?.name === 'RpcStub') {
-		return false;
-	}
 	if(isObject(value)) {
 		const valueAsRecord = value as Record<string, unknown>;
 		if (objectContainsFunctions(valueAsRecord)){
@@ -287,31 +284,9 @@ export class ProxyServer implements DurableObject {
 			}
 			assert(Array.isArray(args));
 			try {
-				if (func.constructor.name === "RpcProperty") {
-					result = func(...args);
-					// Wrap RpcPromise instances with a standard promise to support serialisation
-					result = new Promise((resolve, reject) =>
-						(result as Promise<any>)
-							.then((v) => {
-								// Drop `Symbol.dispose` and `Symbol.asyncDispose` so that the resulting value can be serialised.
-								if (v.hasOwnProperty(Symbol.dispose)) delete v[Symbol.dispose];
-								if (v.hasOwnProperty(Symbol.asyncDispose))
-									delete v[Symbol.asyncDispose];
-
-								if(v.constructor.name === 'RpcStub') {
-									// Disguise the `RpcStub` as an object to allow its pseudo-serialization
-									// (this is needed because `RpcStub`s are functions and those cannot be serialized)
-									return resolve(new Proxy({ v }, {
-										get(target, p) {
-											return target.v[p];
-										},
-									}));
-								}
-
-								resolve(v);
-							})
-							.catch(reject)
-					);
+				if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
+					// let's resolve RpcPromise instaces right away (to support serialization)
+					result = await func(...args);
 				} else {
 					result = func.apply(target, args);
 				}
