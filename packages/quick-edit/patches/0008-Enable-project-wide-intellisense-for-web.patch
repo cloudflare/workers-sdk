@@ -1,23 +1,27 @@
-From 2307f6d059a3e555ba1e0d3e1ec4482b2617cbb6 Mon Sep 17 00:00:00 2001
+From ad0eca736dfef06d2055336a2885f655432ef7df Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
-Date: Fri, 14 Apr 2023 01:54:40 +0100
-Subject: [PATCH 11/13] Support project-wide typescript on web
+Date: Sat, 17 Feb 2024 07:31:36 +0000
+Subject: [PATCH 8/9] Enable project-wide intellisense for web
 
 ---
  .../typescript-language-features/package.json |   2 +-
- .../src/extension.browser.ts                  |   4 -
+ .../src/languageProvider.ts                   |   4 -
  .../src/tsServer/serverProcess.browser.ts     |  66 ++-
  .../src/typescriptServiceClient.ts            |   4 +-
- .../web/cfs-simple.ts                         | 425 ++++++++++++++++++
- .../web/webServer.ts                          |  85 +++-
- 6 files changed, 547 insertions(+), 39 deletions(-)
- create mode 100644 extensions/typescript-language-features/web/cfs-simple.ts
+ .../web/src/cfs-simple.ts                     | 426 ++++++++++++++++++
+ .../web/src/fileWatcherManager.ts             |  23 +-
+ .../web/src/pathMapper.ts                     |   3 +-
+ .../web/src/serverHost.ts                     | 124 ++---
+ .../web/src/webServer.ts                      |  12 +-
+ .../web/src/workerSession.ts                  |  32 +-
+ 10 files changed, 571 insertions(+), 125 deletions(-)
+ create mode 100644 extensions/typescript-language-features/web/src/cfs-simple.ts
 
 diff --git a/extensions/typescript-language-features/package.json b/extensions/typescript-language-features/package.json
-index 30ccbd8..62f99a2 100644
+index 880c8dc..61b2888 100644
 --- a/extensions/typescript-language-features/package.json
 +++ b/extensions/typescript-language-features/package.json
-@@ -906,7 +906,7 @@
+@@ -983,7 +983,7 @@
              "%typescript.preferences.importModuleSpecifierEnding.index%",
              "%typescript.preferences.importModuleSpecifierEnding.js%"
            ],
@@ -26,63 +30,63 @@ index 30ccbd8..62f99a2 100644
            "description": "%typescript.preferences.importModuleSpecifierEnding%",
            "scope": "language-overridable"
          },
-diff --git a/extensions/typescript-language-features/src/extension.browser.ts b/extensions/typescript-language-features/src/extension.browser.ts
-index 517c6f8..b8bd688 100644
---- a/extensions/typescript-language-features/src/extension.browser.ts
-+++ b/extensions/typescript-language-features/src/extension.browser.ts
-@@ -21,7 +21,6 @@ import { TypeScriptServiceConfiguration } from './utils/configuration';
- import { BrowserServiceConfigurationProvider } from './utils/configuration.browser';
- import { Logger } from './utils/logger';
- import { getPackageInfo } from './utils/packageInfo';
--import { isWebAndHasSharedArrayBuffers } from './utils/platform';
- import { PluginManager } from './utils/plugins';
+diff --git a/extensions/typescript-language-features/src/languageProvider.ts b/extensions/typescript-language-features/src/languageProvider.ts
+index 6157c3b..a1f02c1 100644
+--- a/extensions/typescript-language-features/src/languageProvider.ts
++++ b/extensions/typescript-language-features/src/languageProvider.ts
+@@ -17,7 +17,6 @@ import { ClientCapability } from './typescriptService';
+ import TypeScriptServiceClient from './typescriptServiceClient';
+ import TypingsStatus from './ui/typingsStatus';
+ import { Disposable } from './utils/dispose';
+-import { isWeb } from './utils/platform';
  
- class StaticVersionProvider implements ITypeScriptVersionProvider {
-@@ -103,9 +102,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
- }
  
- async function preload(logger: Logger): Promise<void> {
--	if (!isWebAndHasSharedArrayBuffers()) {
--		return;
--	}
+ const validateSetting = 'validate.enable';
+@@ -141,9 +140,6 @@ export default class LanguageProvider extends Disposable {
+ 			return;
+ 		}
  
- 	const workspaceUri = vscode.workspace.workspaceFolders?.[0].uri;
- 	if (!workspaceUri || workspaceUri.scheme !== 'vscode-vfs' || workspaceUri.authority !== 'github') {
+-		if (diagnosticsKind === DiagnosticKind.Semantic && isWeb() && this.client.configuration.webProjectWideIntellisenseSuppressSemanticErrors) {
+-			return;
+-		}
+ 
+ 		const config = vscode.workspace.getConfiguration(this.id, file);
+ 		const reportUnnecessary = config.get<boolean>('showUnused', true);
 diff --git a/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts b/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
-index c5c2af3..da19f31 100644
+index bb57c26..9f8c71b 100644
 --- a/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
 +++ b/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
-@@ -105,11 +105,34 @@ class WorkerServerProcess implements TsServerProcess {
+@@ -114,11 +114,34 @@ class WorkerServerProcess implements TsServerProcess {
  				}
  				case 'watchDirectory':
  				case 'watchFile': {
--					this.watches.create(event.data.id, vscode.Uri.from(event.data.uri), /*watchParentDirs*/ true, !!event.data.recursive, {
--						change: uri => this.watcher.postMessage({ type: 'watch', event: 'change', uri }),
--						create: uri => this.watcher.postMessage({ type: 'watch', event: 'create', uri }),
--						delete: uri => this.watcher.postMessage({ type: 'watch', event: 'delete', uri }),
+-					this._watches.create(event.data.id, vscode.Uri.from(event.data.uri), /*watchParentDirs*/ true, !!event.data.recursive, {
+-						change: uri => this._watcher.postMessage({ type: 'watch', event: 'change', uri }),
+-						create: uri => this._watcher.postMessage({ type: 'watch', event: 'create', uri }),
+-						delete: uri => this._watcher.postMessage({ type: 'watch', event: 'delete', uri }),
 -					});
-+					this.watches.create(
++					this._watches.create(
 +						event.data.id,
 +						vscode.Uri.from(event.data.uri),
 +						/*watchParentDirs*/ true,
 +						!!event.data.recursive,
 +						{
 +							change: async (uri) =>
-+								this.watcher.postMessage({
++								this._watcher.postMessage({
 +									type: 'watch',
 +									event: 'change',
 +									uri,
 +									file: await vscode.workspace.fs.readFile(uri),
 +								}),
 +							create: async (uri) =>
-+								this.watcher.postMessage({
++								this._watcher.postMessage({
 +									type: 'watch',
 +									event: 'create',
 +									uri,
 +									file: await vscode.workspace.fs.readFile(uri),
 +								}),
 +							delete: (uri) =>
-+								this.watcher.postMessage({
++								this._watcher.postMessage({
 +									type: 'watch',
 +									event: 'delete',
 +									uri,
@@ -92,11 +96,11 @@ index c5c2af3..da19f31 100644
  					break;
  				}
  				default:
-@@ -134,9 +157,36 @@ class WorkerServerProcess implements TsServerProcess {
+@@ -143,9 +166,36 @@ class WorkerServerProcess implements TsServerProcess {
  			}
  		};
  
--		this.worker.postMessage(
+-		this._worker.postMessage(
 -			{ args, extensionUri },
 -			[syncChannel.port1, tsserverChannel.port1, watcherChannel.port1]
 +		async function addFilesFromDir(
@@ -124,7 +128,7 @@ index c5c2af3..da19f31 100644
 +			return storedFiles;
 +		}
 +		addFilesFromDir(vscode.Uri.parse('cfs:/')).then((storedFiles) =>
-+			this.worker.postMessage({ args, extensionUri, storedFiles }, [
++			this._worker.postMessage({ args, extensionUri, storedFiles }, [
 +				syncChannel.port1,
 +				tsserverChannel.port1,
 +				watcherChannel.port1,
@@ -133,38 +137,39 @@ index c5c2af3..da19f31 100644
  
  		const connection = new ServiceConnection<Requests>(syncChannel.port2);
 diff --git a/extensions/typescript-language-features/src/typescriptServiceClient.ts b/extensions/typescript-language-features/src/typescriptServiceClient.ts
-index 737f452..25bce58 100644
+index a389142..e216be7 100644
 --- a/extensions/typescript-language-features/src/typescriptServiceClient.ts
 +++ b/extensions/typescript-language-features/src/typescriptServiceClient.ts
-@@ -23,7 +23,7 @@ import { ServiceConfigurationProvider, SyntaxServerConfiguration, TsServerLogLev
+@@ -24,7 +24,7 @@ import { ServiceConfigurationProvider, SyntaxServerConfiguration, TsServerLogLev
  import { Disposable } from './utils/dispose';
- import * as fileSchemes from './utils/fileSchemes';
- import { Logger } from './utils/logger';
+ import * as fileSchemes from './configuration/fileSchemes';
+ import { Logger } from './logging/logger';
 -import { isWeb, isWebAndHasSharedArrayBuffers } from './utils/platform';
 +import { isWeb } from './utils/platform';
- import { TypeScriptPluginPathsProvider } from './utils/pluginPathsProvider';
- import { PluginManager, TypeScriptServerPlugin } from './utils/plugins';
- import { TelemetryProperties, TelemetryReporter, VSCodeTelemetryReporter } from './utils/telemetry';
-@@ -259,7 +259,7 @@ export default class TypeScriptServiceClient extends Disposable implements IType
+ import { PluginManager, TypeScriptServerPlugin } from './tsServer/plugins';
+ import { TelemetryProperties, TelemetryReporter, VSCodeTelemetryReporter } from './logging/telemetry';
+ import Tracer from './logging/tracer';
+@@ -269,7 +269,7 @@ export default class TypeScriptServiceClient extends Disposable implements IType
  	readonly onDidChangeCapabilities = this._onDidChangeCapabilities.event;
  
  	private isProjectWideIntellisenseOnWebEnabled(): boolean {
--		return isWebAndHasSharedArrayBuffers() && this._configuration.enableProjectWideIntellisenseOnWeb;
+-		return isWebAndHasSharedArrayBuffers() && this._configuration.webProjectWideIntellisenseEnabled;
 +		return true;
  	}
  
  	private cancelInflightRequestsForResource(resource: vscode.Uri): void {
-diff --git a/extensions/typescript-language-features/web/cfs-simple.ts b/extensions/typescript-language-features/web/cfs-simple.ts
+diff --git a/extensions/typescript-language-features/web/src/cfs-simple.ts b/extensions/typescript-language-features/web/src/cfs-simple.ts
 new file mode 100644
-index 0000000..0ba6abf
+index 0000000..043a369
 --- /dev/null
-+++ b/extensions/typescript-language-features/web/cfs-simple.ts
-@@ -0,0 +1,425 @@
++++ b/extensions/typescript-language-features/web/src/cfs-simple.ts
+@@ -0,0 +1,426 @@
 +/*---------------------------------------------------------------------------------------------
 + *  Copyright (c) Microsoft Corporation. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
 +import { URI } from 'vscode-uri';
++
 +enum FilePermission {
 +	/**
 +	 * The file is readonly.
@@ -176,7 +181,7 @@ index 0000000..0ba6abf
 +	 */
 +	Readonly = 1,
 +}
-+interface FileStat {
++export interface FileStat {
 +	/**
 +	 * The type of the file, e.g. is a regular file, a directory, or symbolic link
 +	 * to a file.
@@ -585,28 +590,52 @@ index 0000000..0ba6abf
 +		return haystack.substring(0, offset);
 +	}
 +}
-diff --git a/extensions/typescript-language-features/web/webServer.ts b/extensions/typescript-language-features/web/webServer.ts
-index 1db00fe..da46091 100644
---- a/extensions/typescript-language-features/web/webServer.ts
-+++ b/extensions/typescript-language-features/web/webServer.ts
-@@ -6,10 +6,14 @@
- /// <reference lib='webworker' />
- 
- import * as ts from 'typescript/lib/tsserverlibrary';
--import { ApiClient, FileType, Requests } from '@vscode/sync-api-client';
--import { ClientConnection } from '@vscode/sync-api-common/browser';
+diff --git a/extensions/typescript-language-features/web/src/fileWatcherManager.ts b/extensions/typescript-language-features/web/src/fileWatcherManager.ts
+index 8c8d740..1cd6557 100644
+--- a/extensions/typescript-language-features/web/src/fileWatcherManager.ts
++++ b/extensions/typescript-language-features/web/src/fileWatcherManager.ts
+@@ -7,6 +7,7 @@ import type * as ts from 'typescript/lib/tsserverlibrary';
  import { URI } from 'vscode-uri';
+ import { Logger } from './logging';
+ import { PathMapper, fromResource, looksLikeLibDtsPath, looksLikeNodeModules, mapUri } from './pathMapper';
++import { cfs } from './serverHost';
  
-+// Keep an in-memory representation of the current Worker script.
-+// This is in-memory within this (Web) Worker to avoid a dependency on SharedArrayBuffer
-+// The contents are updated on a slight lag from VSCode filesystem events
-+import { CFS, FileType } from './cfs-simple';
-+const cfs = new CFS();
-+
- // GLOBALS
- const watchFiles: Map<string, { path: string; callback: ts.FileWatcherCallback; pollingInterval?: number; options?: ts.WatchOptions }> = new Map();
- const watchDirectories: Map<string, { path: string; callback: ts.DirectoryWatcherCallback; recursive?: boolean; options?: ts.WatchOptions }> = new Map();
-@@ -44,7 +48,8 @@ function fromResource(extensionUri: URI, uri: URI) {
+ /**
+  * Copied from `ts.FileWatcherEventKind` to avoid direct dependency.
+@@ -32,7 +33,27 @@ export class FileWatcherManager {
+ 		private readonly pathMapper: PathMapper,
+ 		private readonly logger: Logger
+ 	) {
+-		watchPort.onmessage = (e: any) => this.updateWatch(e.data.event, URI.from(e.data.uri), extensionUri);
++		watchPort.onmessage = async (e: any) => {
++			try {
++				switch (e.data.event) {
++					case 'create':
++						await cfs.seed([[URI.from(e.data.uri), e.data.file]]);
++						break;
++					case 'change':
++						await cfs.writeFile(URI.from(e.data.uri), e.data.file, {
++							create: true,
++							overwrite: true,
++						});
++						break;
++					case 'delete':
++						await cfs.delete(URI.from(e.data.uri));
++						break;
++				}
++			} catch (e) {
++				console.error(e);
++			}
++			this.updateWatch(e.data.event, URI.from(e.data.uri), extensionUri);
++		};
+ 	}
+ 
+ 	watchFile(path: string, callback: ts.FileWatcherCallback, pollingInterval?: number, options?: ts.WatchOptions): ts.FileWatcher {
+diff --git a/extensions/typescript-language-features/web/src/pathMapper.ts b/extensions/typescript-language-features/web/src/pathMapper.ts
+index e925489..bbcd6ef 100644
+--- a/extensions/typescript-language-features/web/src/pathMapper.ts
++++ b/extensions/typescript-language-features/web/src/pathMapper.ts
+@@ -76,7 +76,8 @@ export function fromResource(extensionUri: URI, uri: URI) {
  		&& uri.path.endsWith('.d.ts')) {
  		return uri.path;
  	}
@@ -614,113 +643,267 @@ index 1db00fe..da46091 100644
 +	// Use `ts-nul-authority` when the authority is an empty string. All CFS file have an empty authority
 +	return `/${uri.scheme}/${uri.authority === '' ? 'ts-nul-authority' : uri.authority}${uri.path}`;
  }
- function updateWatch(event: 'create' | 'change' | 'delete', uri: URI, extensionUri: URI) {
- 	const kind = event === 'create' ? ts.FileWatcherEventKind.Created
-@@ -68,9 +73,9 @@ function updateWatch(event: 'create' | 'change' | 'delete', uri: URI, extensionU
+ 
+ export function looksLikeLibDtsPath(filepath: string) {
+diff --git a/extensions/typescript-language-features/web/src/serverHost.ts b/extensions/typescript-language-features/web/src/serverHost.ts
+index f2f9ca9..8069d8c 100644
+--- a/extensions/typescript-language-features/web/src/serverHost.ts
++++ b/extensions/typescript-language-features/web/src/serverHost.ts
+@@ -3,29 +3,36 @@
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+ 
+-import { ApiClient, FileStat, FileType, Requests } from '@vscode/sync-api-client';
+-import { ClientConnection } from '@vscode/sync-api-common/browser';
+-import { basename } from 'path';
+-import type * as ts from 'typescript/lib/tsserverlibrary';
++import * as ts from 'typescript/lib/tsserverlibrary';
+ import { FileWatcherManager } from './fileWatcherManager';
+ import { Logger } from './logging';
+ import { PathMapper, looksLikeNodeModules, mapUri } from './pathMapper';
+-import { findArgument, hasArgument } from './util/args';
++import { findArgument } from './util/args';
++
++// Keep an in-memory representation of the current Worker script.
++// This is in-memory within this (Web) Worker to avoid a dependency on SharedArrayBuffer
++// The contents are updated on a slight lag from VSCode filesystem events
++import { CFS, FileType, FileStat } from './cfs-simple';
++export const cfs = new CFS();
++
++// BEGIN misc internals
++
++// End misc internals
  
  type ServerHostWithImport = ts.server.ServerHost & { importPlugin(root: string, moduleName: string): Promise<ts.server.ModuleImportResult> };
  
--function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient: ApiClient | undefined, args: string[], fsWatcher: MessagePort): ServerHostWithImport {
-+function createServerHost(extensionUri: URI, logger: ts.server.Logger, args: string[], fsWatcher: MessagePort): ServerHostWithImport {
+ function createServerHost(
+ 	ts: typeof import('typescript/lib/tsserverlibrary'),
+ 	logger: Logger,
+-	apiClient: ApiClient | undefined,
++	_apiClient:undefined,
+ 	args: readonly string[],
+ 	watchManager: FileWatcherManager,
+ 	pathMapper: PathMapper,
+-	enabledExperimentalTypeAcquisition: boolean,
++	_enabledExperimentalTypeAcquisition: boolean,
+ 	exit: () => void,
+ ): ServerHostWithImport {
  	const currentDirectory = '/';
 -	const fs = apiClient?.vscode.workspace.fileSystem;
 +	const fs = cfs;
- 	let watchId = 0;
  
- 	// Legacy web
-@@ -170,7 +175,7 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 	// Internals
+ 	const combinePaths: (path: string, ...paths: (string | undefined)[]) => string = (ts as any).combinePaths;
+@@ -98,7 +105,7 @@ function createServerHost(
  		newLine: '\n',
  		useCaseSensitiveFileNames: true,
  		write: s => {
 -			apiClient?.vscode.terminal.write(s);
-+			logNormal(s);
++			logger.logNormal(s);
  		},
  		writeOutputIsTTY() {
  			return true;
-@@ -178,7 +183,9 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+@@ -106,7 +113,9 @@ function createServerHost(
  		readFile(path) {
- 			logVerbose('fs.readFile', { path });
+ 			logger.logVerbose('fs.readFile', { path });
  
 -			if (!fs) {
 +			// Load http resources bypassing CFS. This is pretty much just Typescript lib files
-+			const resource = toResource(path);
++			const resource = pathMapper.toResource(path);
 +			if (!fs || resource.scheme.startsWith('http')) {
  				const webPath = getWebPath(path);
  				if (webPath) {
  					const request = new XMLHttpRequest();
-@@ -192,7 +199,7 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
- 
- 			try {
- 				// We need to slice the bytes since we can't pass a shared array to text decoder
--				const contents = fs.readFile(toResource(path)).slice();
-+				const contents = fs.readFile(resource);
- 				return textDecoder.decode(contents);
- 			} catch (error) {
- 				logNormal('Error fs.readFile', { path, error: error + '' });
-@@ -225,7 +232,10 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+@@ -118,28 +127,12 @@ function createServerHost(
+ 				}
  			}
  
+-			let uri;
+-			try {
+-				uri = pathMapper.toResource(path);
+-			} catch (e) {
+-				return undefined;
+-			}
+-
+-			let contents: Uint8Array | undefined;
  			try {
--				fs.writeFile(toResource(path), textEncoder.encode(data));
-+				fs.writeFile(toResource(path), textEncoder.encode(data), {
+-				// We need to slice the bytes since we can't pass a shared array to text decoder
+-				contents = fs.readFile(uri);
++				const contents = fs.readFile(resource);
++				return textDecoder.decode(contents);
+ 			} catch (error) {
+-				if (!enabledExperimentalTypeAcquisition) {
+-					return undefined;
+-				}
+-				try {
+-					contents = fs.readFile(mapUri(uri, 'vscode-node-modules'));
+-				} catch (e) {
+-					return undefined;
+-				}
++				return undefined
+ 			}
+-			return textDecoder.decode(contents.slice());
+ 		},
+ 		getFileSize(path) {
+ 			logger.logVerbose('fs.getFileSize', { path });
+@@ -153,12 +146,6 @@ function createServerHost(
+ 			try {
+ 				ret = fs.stat(uri).size;
+ 			} catch (_error) {
+-				if (enabledExperimentalTypeAcquisition) {
+-					try {
+-						ret = fs.stat(mapUri(uri, 'vscode-node-modules')).size;
+-					} catch (_error) {
+-					}
+-				}
+ 			}
+ 			return ret;
+ 		},
+@@ -173,19 +160,11 @@ function createServerHost(
+ 				data = byteOrderMarkIndicator + data;
+ 			}
+ 
+-			let uri;
+ 			try {
+-				uri = pathMapper.toResource(path);
+-			} catch (e) {
+-				return;
+-			}
+-			const encoded = textEncoder.encode(data);
+-			try {
+-				fs.writeFile(uri, encoded);
+-				const name = basename(uri.path);
+-				if (uri.scheme !== 'vscode-global-typings' && (name === 'package.json' || name === 'package-lock.json' || name === 'package-lock.kdl')) {
+-					fs.writeFile(mapUri(uri, 'vscode-node-modules'), encoded);
+-				}
++				fs.writeFile(pathMapper.toResource(path), textEncoder.encode(data), {
 +					create: true,
 +					overwrite: true,
 +				});
  			} catch (error) {
- 				logNormal('Error fs.writeFile', { path, error: error + '' });
+ 				console.error('fs.writeFile', { path, error });
  			}
-@@ -235,8 +245,9 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
- 		},
+@@ -196,7 +175,9 @@ function createServerHost(
  		fileExists(path: string): boolean {
- 			logVerbose('fs.fileExists', { path });
-+			const resource = toResource(path);
+ 			logger.logVerbose('fs.fileExists', { path });
  
 -			if (!fs) {
++			const resource = pathMapper.toResource(path);
++
 +			if (!fs || resource.scheme.startsWith('http')) {
  				const webPath = getWebPath(path);
  				if (!webPath) {
  					return false;
-@@ -249,7 +260,7 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+@@ -208,24 +189,12 @@ function createServerHost(
+ 				return request.status === 200;
  			}
  
+-			let uri;
  			try {
--				return fs.stat(toResource(path)).type === FileType.File;
+-				uri = pathMapper.toResource(path);
+-			} catch (e) {
 +				return fs.stat(resource).type === FileType.File;
- 			} catch (error) {
- 				logNormal('Error fs.fileExists', { path, error: error + '' });
++			} catch (error) {
++				logger.logNormal('Error fs.fileExists', { path, error: error + '' });
  				return false;
-@@ -480,7 +491,6 @@ interface StartSessionOptions {
- }
- 
- class WorkerSession extends ts.server.Session<{}> {
--
- 	readonly wasmCancellationToken: WasmCancellationToken;
- 	readonly listener: (message: any) => void;
- 
-@@ -642,16 +652,12 @@ async function initializeSession(args: string[], extensionUri: URI, ports: { tss
- 		serverMode
- 	};
- 
--	let sys: ServerHostWithImport;
+ 			}
+-			let ret = false;
+-			try {
+-				ret = fs.stat(uri).type === FileType.File;
+-			} catch (_error) {
+-				if (enabledExperimentalTypeAcquisition) {
+-					try {
+-						ret = fs.stat(mapUri(uri, 'vscode-node-modules')).type === FileType.File;
+-					} catch (_error) {
+-					}
+-				}
+-			}
+-			return ret;
+ 		},
+ 		directoryExists(path: string): boolean {
+ 			logger.logVerbose('fs.directoryExists', { path });
+@@ -245,12 +214,7 @@ function createServerHost(
+ 			try {
+ 				stat = fs.stat(uri);
+ 			} catch (_error) {
+-				if (enabledExperimentalTypeAcquisition) {
+-					try {
+-						stat = fs.stat(mapUri(uri, 'vscode-node-modules'));
+-					} catch (_error) {
+-					}
+-				}
++
+ 			}
+ 			if (stat) {
+ 				if (path.startsWith('/https') && !path.endsWith('.d.ts')) {
+@@ -303,12 +267,7 @@ function createServerHost(
+ 			try {
+ 				s = fs.stat(uri);
+ 			} catch (_e) {
+-				if (enabledExperimentalTypeAcquisition) {
+-					try {
+-						s = fs.stat(mapUri(uri, 'vscode-node-modules'));
+-					} catch (_e) {
+-					}
+-				}
++
+ 			}
+ 			return s && new Date(s.mtime);
+ 		},
+@@ -406,23 +365,12 @@ function createServerHost(
+ export async function createSys(
+ 	ts: typeof import('typescript/lib/tsserverlibrary'),
+ 	args: readonly string[],
+-	fsPort: MessagePort,
++	_fsPort: MessagePort,
+ 	logger: Logger,
+ 	watchManager: FileWatcherManager,
+ 	pathMapper: PathMapper,
+ 	onExit: () => void,
+ ) {
 -	if (hasArgument(args, '--enableProjectWideIntelliSenseOnWeb')) {
--		const connection = new ClientConnection<Requests>(ports.sync);
+-		const enabledExperimentalTypeAcquisition = hasArgument(args, '--experimentalTypeAcquisition');
+-		const connection = new ClientConnection<Requests>(fsPort);
 -		await connection.serviceReady();
 -
--		sys = createServerHost(extensionUri, logger, new ApiClient(connection), args, ports.watcher);
+-		const apiClient = new ApiClient(connection);
+-		const fs = apiClient.vscode.workspace.fileSystem;
+-		const sys = createServerHost(ts, logger, apiClient, args, watchManager, pathMapper, enabledExperimentalTypeAcquisition, onExit);
+-		return { sys, fs };
 -	} else {
--		sys = createServerHost(extensionUri, logger, undefined, args, ports.watcher);
--
+-		return { sys: createServerHost(ts, logger, undefined, args, watchManager, pathMapper, false, onExit) };
 -	}
-+	const sys: ServerHostWithImport = createServerHost(
-+		extensionUri,
-+		logger,
-+		args,
-+		ports.watcher
-+	);
++	return { sys: createServerHost(ts, logger, undefined, args, watchManager, pathMapper, false, onExit) };
+ }
  
+diff --git a/extensions/typescript-language-features/web/src/webServer.ts b/extensions/typescript-language-features/web/src/webServer.ts
+index 3d2d5f9..72522b8 100644
+--- a/extensions/typescript-language-features/web/src/webServer.ts
++++ b/extensions/typescript-language-features/web/src/webServer.ts
+@@ -9,7 +9,7 @@ import { URI } from 'vscode-uri';
+ import { FileWatcherManager } from './fileWatcherManager';
+ import { Logger, parseLogLevel } from './logging';
+ import { PathMapper } from './pathMapper';
+-import { createSys } from './serverHost';
++import { createSys, cfs } from './serverHost';
+ import { findArgument, findArgumentStringArray, hasArgument, parseServerMode } from './util/args';
+ import { StartSessionOptions, startWorkerSession } from './workerSession';
+ 
+@@ -37,11 +37,11 @@ async function initializeSession(
+ 	const pathMapper = new PathMapper(extensionUri);
+ 	const watchManager = new FileWatcherManager(ports.watcher, extensionUri, enabledExperimentalTypeAcquisition, pathMapper, logger);
+ 
+-	const { sys, fs } = await createSys(ts, args, ports.sync, logger, watchManager, pathMapper, () => {
++	const { sys } = await createSys(ts, args, ports.sync, logger, watchManager, pathMapper, () => {
+ 		removeEventListener('message', listener);
+ 	});
  	setSys(sys);
- 	session = new WorkerSession(sys, options, ports.tsserver, logger, hrtime);
-@@ -671,6 +677,12 @@ let hasInitialized = false;
+-	startWorkerSession(ts, sys, fs, sessionOptions, ports.tsserver, pathMapper, logger);
++	startWorkerSession(ts, sys, undefined, sessionOptions, ports.tsserver, pathMapper, logger);
+ }
+ 
+ function parseSessionOptions(args: readonly string[], serverMode: ts.LanguageServiceMode | undefined): StartSessionOptions {
+@@ -62,6 +62,12 @@ let hasInitialized = false;
  const listener = async (e: any) => {
  	if (!hasInitialized) {
  		hasInitialized = true;
@@ -732,43 +915,69 @@ index 1db00fe..da46091 100644
 +		);
  		if ('args' in e.data) {
  			const args = e.data.args;
- 
-@@ -693,8 +705,33 @@ const listener = async (e: any) => {
- 
- 			const [sync, tsserver, watcher] = e.ports as MessagePort[];
  			const extensionUri = URI.from(e.data.extensionUri);
--			watcher.onmessage = (e: any) => updateWatch(e.data.event, URI.from(e.data.uri), extensionUri);
--			await initializeSession(args, extensionUri, { sync, tsserver, watcher }, logger);
-+			watcher.onmessage = async (e: any) => {
-+				try {
-+					switch (e.data.event) {
-+						case 'create':
-+							await cfs.seed([[URI.from(e.data.uri), e.data.file]]);
-+							break;
-+						case 'change':
-+							await cfs.writeFile(URI.from(e.data.uri), e.data.file, {
-+								create: true,
-+								overwrite: true,
-+							});
-+							break;
-+						case 'delete':
-+							await cfs.delete(URI.from(e.data.uri));
-+							break;
-+					}
-+				} catch (e) {
-+					console.error(e);
-+				}
-+				updateWatch(e.data.event, URI.from(e.data.uri), extensionUri);
-+			};
-+			await initializeSession(
-+				args,
-+				extensionUri,
-+				{ sync, tsserver, watcher },
-+				logger
-+			);
- 		} else {
- 			console.error('unexpected message in place of initial message: ' + JSON.stringify(e.data));
- 		}
+diff --git a/extensions/typescript-language-features/web/src/workerSession.ts b/extensions/typescript-language-features/web/src/workerSession.ts
+index 6ae517c..47802cd 100644
+--- a/extensions/typescript-language-features/web/src/workerSession.ts
++++ b/extensions/typescript-language-features/web/src/workerSession.ts
+@@ -2,10 +2,8 @@
+  *  Copyright (c) Microsoft Corporation. All rights reserved.
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+-import { FileSystem } from '@vscode/sync-api-client';
+-import type * as ts from 'typescript/lib/tsserverlibrary';
++import * as ts from 'typescript/lib/tsserverlibrary';
+ import { Logger } from './logging';
+-import { WebTypingsInstallerClient } from './typingsInstaller/typingsInstaller';
+ import { hrtime } from './util/hrtime';
+ import { WasmCancellationToken } from './wasmCancellationToken';
+ import { PathMapper } from './pathMapper';
+@@ -25,7 +23,7 @@ export interface StartSessionOptions {
+ export function startWorkerSession(
+ 	ts: typeof import('typescript/lib/tsserverlibrary'),
+ 	host: ts.server.ServerHost,
+-	fs: FileSystem | undefined,
++	_fs: undefined,
+ 	options: StartSessionOptions,
+ 	port: MessagePort,
+ 	pathMapper: PathMapper,
+@@ -40,19 +38,18 @@ export function startWorkerSession(
+ 
+ 		constructor() {
+ 			const cancellationToken = new WasmCancellationToken();
+-			const typingsInstaller = options.disableAutomaticTypingAcquisition || !fs ? ts.server.nullTypingsInstaller : new WebTypingsInstallerClient(host, '/vscode-global-typings/ts-nul-authority/projects');
+-
+-			super({
+-				host,
+-				cancellationToken,
+-				...options,
+-				typingsInstaller,
+-				byteLength: () => { throw new Error('Not implemented'); }, // Formats the message text in send of Session which is overridden in this class so not needed
+-				hrtime,
+-				logger: logger.tsLogger,
+-				canUseEvents: true,
+-			});
+-			this.wasmCancellationToken = cancellationToken;
++
++		super({
++			host,
++			cancellationToken,
++			...options,
++			typingsInstaller:ts.server.nullTypingsInstaller,
++			byteLength: () => { throw new Error('Not implemented'); }, // Formats the message text in send of Session which is overridden in this class so not needed
++			hrtime,
++			logger: logger.tsLogger,
++			canUseEvents: true,
++		});
++		this.wasmCancellationToken = cancellationToken;
+ 
+ 			this.listener = (message: any) => {
+ 				// TEMP fix since Cancellation.retrieveCheck is not correct
+@@ -124,3 +121,4 @@ export function startWorkerSession(
+ 
+ 	worker.listen();
+ }
++
 -- 
-2.39.2 (Apple Git-143)
+2.39.3 (Apple Git-145)
 

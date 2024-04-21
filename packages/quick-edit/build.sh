@@ -1,7 +1,7 @@
 set -eu
 
 # Cleanup development symlink to vscode
-rm -f web/vscode
+rm -f web/assets
 
 yarn --cwd ../../vendor/vscode
 

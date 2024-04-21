@@ -1,0 +1,30 @@
+From 6e4c026e1ba2beb66eaa391b83cbb8662b017cf4 Mon Sep 17 00:00:00 2001
+From: Jacob M-G Evans <jacobmgevans@gmail.com>
+Date: Tue, 28 Mar 2023 14:53:02 -0500
+Subject: [PATCH 4/9] Remove Account & Extension
+
+---
+ src/vs/workbench/browser/parts/globalCompositeBar.ts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/vs/workbench/browser/parts/globalCompositeBar.ts b/src/vs/workbench/browser/parts/globalCompositeBar.ts
+index 13432c8..6edf613 100644
+--- a/src/vs/workbench/browser/parts/globalCompositeBar.ts
++++ b/src/vs/workbench/browser/parts/globalCompositeBar.ts
+@@ -144,11 +144,11 @@ export class GlobalCompositeBar extends Disposable {
+ 	}
+ 
+ 	private get accountsVisibilityPreference(): boolean {
+-		return this.storageService.getBoolean(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, StorageScope.PROFILE, true);
++		return false;
+ 	}
+ 
+ 	private set accountsVisibilityPreference(value: boolean) {
+-		this.storageService.store(AccountsActivityActionViewItem.ACCOUNTS_VISIBILITY_PREFERENCE_KEY, value, StorageScope.PROFILE, StorageTarget.USER);
++
+ 	}
+ }
+ 
+-- 
+2.39.3 (Apple Git-145)
+

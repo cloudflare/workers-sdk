@@ -1,17 +1,17 @@
-From dca4f37b1b0c5b6488896e58b1fb649502b4b2dd Mon Sep 17 00:00:00 2001
+From 42b993a64d67e1444162ee64255393c97c76cd54 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Aug 2023 16:48:29 -0400
-Subject: [PATCH 13/13] Hide File Explorer by default
+Subject: [PATCH 6/9] Hide File Explorer by default
 
 ---
  src/vs/workbench/browser/layout.ts | 1 +
  1 file changed, 1 insertion(+)
 
 diff --git a/src/vs/workbench/browser/layout.ts b/src/vs/workbench/browser/layout.ts
-index b522eaa..64933ff 100644
+index 810c53f..4c77416 100644
 --- a/src/vs/workbench/browser/layout.ts
 +++ b/src/vs/workbench/browser/layout.ts
-@@ -534,6 +534,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
+@@ -637,6 +637,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
  			initialization: initialLayoutState,
  			runtime: layoutRuntimeState,
  		};
@@ -20,5 +20,5 @@ index b522eaa..64933ff 100644
  		// Sidebar View Container To Restore
  		if (this.isVisible(Parts.SIDEBAR_PART)) {
 -- 
-2.39.2 (Apple Git-143)
+2.39.3 (Apple Git-145)
 
