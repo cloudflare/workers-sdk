@@ -35,7 +35,7 @@ export const printSummary = async (ctx: C3Context) => {
 			"Read the documentation",
 			`https://developers.cloudflare.com/${ctx.template.platform}`,
 		],
-		["Stuck? Join us at", "https://discord.gg/cloudflaredev"],
+		["Stuck? Join us at", "https://discord.cloudflare.com"],
 	];
 
 	if (ctx.deployment.url) {

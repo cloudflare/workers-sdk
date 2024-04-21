@@ -266,7 +266,7 @@ export async function handlePrettyErrorRequest(
 	youch.addLink(() => {
 		return [
 			'<a href="https://developers.cloudflare.com/workers/" target="_blank" style="text-decoration:none">📚 Workers Docs</a>',
-			'<a href="https://discord.gg/cloudflaredev" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
+			'<a href="https://discord.cloudflare.com" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
 		].join("");
 	});
 	return new Response(await youch.toHTML(), {

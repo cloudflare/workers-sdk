@@ -69,7 +69,7 @@ export default function ToolsPane() {
 									title="Join Cloudflare’s developer Discord"
 									target="_blank"
 									display={"inline-flex"}
-									href={`https://discord.gg/cloudflaredev`}
+									href={`https://discord.cloudflare.com`}
 								>
 									<Icon
 										type="discord"
