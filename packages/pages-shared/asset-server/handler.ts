@@ -667,5 +667,5 @@ function isPreview(url: URL): boolean {
  * Content-Type header
  */
 function isHTMLContentType(contentType?: string | null) {
-	return contentType?.startsWith("text/html") || false;
+	return contentType?.toLowerCase().startsWith("text/html") || false;
 }
