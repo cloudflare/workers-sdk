@@ -1,0 +1,13 @@
+{
+	"name": "template-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy index.js",
+		"dev": "wrangler dev index.js",
+		"test": "vitest"
+	},
+	"dependencies": {
+		"greptime": "^0.3.3"
+	}
+}
