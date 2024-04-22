@@ -45,48 +45,20 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Pack Miniflare
-        run: pnpm pack --pack-destination $HOME
-        env:
-          NODE_ENV: "production"
-        working-directory: packages/miniflare
-
-      - name: Modify wrangler package.json miniflare dependency
-        run: pnpm add $(ls $HOME/miniflare-*.tgz)
-        working-directory: packages/wrangler
-
-      - name: Pack Wrangler
-        run: pnpm pack --pack-destination $HOME
-        env:
-          NODE_ENV: "production"
-        working-directory: packages/wrangler
-
-      - name: Find Wrangler
-        shell: bash
-        id: "find-wrangler"
-        run: echo "dir=$(ls $HOME/wrangler-*.tgz)" >> $GITHUB_OUTPUT;
-
-      - name: Run tests (unix)
-        if: matrix.os == 'macos-13' || matrix.os == 'ubuntu-22.04'
+      - name: Deploy a local version of Wrangler
         run: |
-          pnpm add ${{ steps.find-wrangler.outputs.dir}} --global
-          pnpm run --filter wrangler test:e2e
+          pnpm --filter wrangler deploy ${{ github.workspace}}/temp/wrangler
+          rm ${{ github.workspace}}/temp/wrangler/templates/tsconfig.json
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER: wrangler
-          WRANGLER_IMPORT: ${{ github.workspace }}/packages/wrangler/wrangler-dist/cli.js
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          NODE_ENV: "production"
 
-      - name: Run tests (windows)
-        if: matrix.os == 'windows-2022'
+      - name: Run tests
         run: pnpm run --filter wrangler test:e2e
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
-          WRANGLER_IMPORT: ${{ github.workspace }}/packages/wrangler/wrangler-dist/cli.js
+          WRANGLER: node ${{ github.workspace}}/temp/wrangler/bin/wrangler.js
+          WRANGLER_IMPORT: ${{ github.workspace}}/temp/wrangler/wrangler-dist/cli.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
 
