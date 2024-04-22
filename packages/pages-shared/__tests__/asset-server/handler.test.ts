@@ -513,7 +513,7 @@ describe("asset-server handler", () => {
 		}
 
 		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel=\\"preload\\"; as=image, </b.png>; rel=\\"preload\\"; as=image"`
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image"`
 		);
 
 		// Do it again, but this time ensure that we didn't write to cache again
@@ -534,7 +534,7 @@ describe("asset-server handler", () => {
 		}
 
 		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel=\\"preload\\"; as=image, </b.png>; rel=\\"preload\\"; as=image"`
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image"`
 		);
 	});
 });
