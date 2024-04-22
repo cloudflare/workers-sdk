@@ -4,8 +4,12 @@ import { generateRulesMatcher, replacer } from "../../asset-server/rulesEngine";
 describe("rules engine", () => {
 	test("it should match simple pathname hosts", () => {
 		const matcher = generateRulesMatcher({ "/test": 1, "/some%20page": 2 });
-		expect(matcher({ request: new Request("/test") })).toEqual([1]);
-		expect(matcher({ request: new Request("/some page") })).toEqual([2]);
+		expect(
+			matcher({ request: new Request("https://example.com/test") })
+		).toEqual([1]);
+		expect(
+			matcher({ request: new Request("https://example.com/some page") })
+		).toEqual([2]);
 	});
 
 	test("it should match cross-host requests", () => {
@@ -36,7 +40,9 @@ describe("rules engine", () => {
 			"/$~.%20/!+-/[bo|%7Bo%7D]...()": 1,
 		});
 		expect(
-			matcher({ request: new Request("/$~. \\!+-/[bo|{o}]...()") })
+			matcher({
+				request: new Request("https://example.com/$~. \\!+-/[bo|{o}]...()"),
+			})
 		).toEqual([1]);
 	});
 
@@ -52,21 +58,24 @@ describe("rules engine", () => {
 			},
 			(match, replacements) => replacer(match, replacements)
 		);
-		expect(matcher({ request: new Request("/foo/test/yes") })).toEqual([
-			"1/yes",
-			"2/test/yes",
-		]);
-		expect(matcher({ request: new Request("/foo/test/") })).toEqual([
-			"1/",
-			"2/test/",
-		]);
-		expect(matcher({ request: new Request("/foo/test") })).toEqual(["2/test"]);
-		expect(matcher({ request: new Request("/foo/") })).toEqual(["2/"]);
-		expect(matcher({ request: new Request("/foo") })).toEqual([]);
-		expect(matcher({ request: new Request("/blog/123/tricycle") })).toEqual([
-			"3/tricycle/123",
-			"4/123/tricycle",
-		]);
+		expect(
+			matcher({ request: new Request("https://example.com/foo/test/yes") })
+		).toEqual(["1/yes", "2/test/yes"]);
+		expect(
+			matcher({ request: new Request("https://example.com/foo/test/") })
+		).toEqual(["1/", "2/test/"]);
+		expect(
+			matcher({ request: new Request("https://example.com/foo/test") })
+		).toEqual(["2/test"]);
+		expect(
+			matcher({ request: new Request("https://example.com/foo/") })
+		).toEqual(["2/"]);
+		expect(
+			matcher({ request: new Request("https://example.com/foo") })
+		).toEqual([]);
+		expect(
+			matcher({ request: new Request("https://example.com/blog/123/tricycle") })
+		).toEqual(["3/tricycle/123", "4/123/tricycle"]);
 		expect(
 			matcher({ request: new Request("https://my.pages.dev/magic") })
 		).toEqual(["5/my/dev/magic"]);

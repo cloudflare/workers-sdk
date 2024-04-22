@@ -1,9 +1,12 @@
+import { Cache } from "@miniflare/cache";
+import { MemoryStorage } from "@miniflare/storage-memory";
 import { describe, expect, test } from "vitest";
 import { generateHandler } from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
 import type { RedirectRule } from "../../metadata-generator/types";
+import type { Cache as WorkersCache } from "@cloudflare/workers-types/experimental";
 
 describe("asset-server handler", () => {
 	test("Returns appropriate status codes", async () => {
@@ -83,7 +86,7 @@ describe("asset-server handler", () => {
 
 		{
 			const { response } = await getTestResponse({
-				request: "/%2Fwww.example.com/index/",
+				request: "https://example.com/%2Fwww.example.com/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -92,7 +95,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%5Cwww.example.com/index/",
+				request: "https://example.com/%5Cwww.example.com/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -101,7 +104,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%2Fwww.example.com/%2F/index/",
+				request: "https://example.com/%2Fwww.example.com/%2F/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -110,7 +113,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%09/www.example.com/%09/index/",
+				request: "https://example.com/%09/www.example.com/%09/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -119,7 +122,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%5Cwww.example.com/%5C/index/",
+				request: "https://example.com/%5Cwww.example.com/%5C/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -128,7 +131,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%2fwww.example.com/%2f/index/",
+				request: "https://example.com/%2fwww.example.com/%2f/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -137,7 +140,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%5cwww.example.com/%5c/index/",
+				request: "https://example.com/%5cwww.example.com/%5c/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -146,7 +149,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/foo/index/",
+				request: "https://example.com/foo/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -175,7 +178,7 @@ describe("asset-server handler", () => {
 
 		{
 			const { response } = await getTestResponse({
-				request: "/index.html",
+				request: "https://example.com/index.html",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -184,7 +187,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/index",
+				request: "https://example.com/index",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -193,7 +196,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/",
+				request: "https://example.com/",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -203,7 +206,7 @@ describe("asset-server handler", () => {
 		{
 			// The redirect rule takes precedence to the 308s
 			const { response } = await getTestResponse({
-				request: "/page.html",
+				request: "https://example.com/page.html",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -213,7 +216,7 @@ describe("asset-server handler", () => {
 		{
 			// The redirect rule takes precedence to the 308s
 			const { response } = await getTestResponse({
-				request: "/protocol-less-test",
+				request: "https://example.com/protocol-less-test",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -223,7 +226,7 @@ describe("asset-server handler", () => {
 		{
 			// This serves the HTML even though the redirect rule is present
 			const { response, spies } = await getTestResponse({
-				request: "/page",
+				request: "https://example.com/page",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -280,7 +283,7 @@ describe("asset-server handler", () => {
 
 		{
 			const { response } = await getTestResponse({
-				request: "/?sort=price",
+				request: "https://example.com/?sort=price",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -289,7 +292,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/recent",
+				request: "https://example.com/recent",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -298,7 +301,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/recent?other=query",
+				request: "https://example.com/recent?other=query",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -328,7 +331,7 @@ describe("asset-server handler", () => {
 
 		test("it should perform splat replacements", async () => {
 			const { response } = await getTestResponse({
-				request: "/blog/a-blog-posting",
+				request: "https://example.com/blog/a-blog-posting",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -340,7 +343,7 @@ describe("asset-server handler", () => {
 
 		test("it should perform placeholder replacements", async () => {
 			const { response } = await getTestResponse({
-				request: "/products/abba_562/tricycle/123abc@~!",
+				request: "https://example.com/products/abba_562/tricycle/123abc@~!",
 				metadata,
 				findAssetEntryForPath,
 			});
@@ -353,7 +356,7 @@ describe("asset-server handler", () => {
 		test("it should redirect both dynamic and static redirects", async () => {
 			{
 				const { response } = await getTestResponse({
-					request: "/home",
+					request: "https://example.com/home",
 					metadata,
 					findAssetEntryForPath,
 				});
@@ -362,7 +365,7 @@ describe("asset-server handler", () => {
 			}
 			{
 				const { response } = await getTestResponse({
-					request: "/blog/post",
+					request: "https://example.com/blog/post",
 					metadata,
 					findAssetEntryForPath,
 				});
@@ -373,7 +376,7 @@ describe("asset-server handler", () => {
 			}
 			{
 				const { response } = await getTestResponse({
-					request: "/foo",
+					request: "https://example.com/foo",
 					metadata,
 					findAssetEntryForPath,
 				});
@@ -455,6 +458,85 @@ describe("asset-server handler", () => {
 
 	// 	expect(res.status).toBe(302);
 	// 	expect(res.headers.get("Location")).toBe("https://bar.com/bar");
+
+	test("early hints should cache link headers", async () => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "index.html";
+			}
+
+			return null;
+		};
+
+		// Create cache storage to reuse between requests
+		const { caches, cacheSpy } = createCacheStorage();
+
+		const getResponse = async () =>
+			getTestResponse({
+				request: new Request("https://example.com/"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(
+						Object.assign(
+							new Response(`
+							<!DOCTYPE html>
+							<html>
+								<body>
+									<link rel="preload" as="image" href="/a.png" />
+									<link rel="preload" as="image" href="/b.png" />
+								</body>
+							</html>`),
+							{ contentType: "text/html" }
+						)
+					),
+			});
+
+		const { response, spies } = await getResponse();
+		expect(response.status).toBe(200);
+		// waitUntil should be called twice: once for asset-preservation, once for early hints
+		expect(spies.waitUntil.length).toBe(2);
+
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = cacheSpy[`eh:${deploymentId}`];
+		const earlyHintsRes = await earlyHintsCache.match("https://example.com/");
+
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/"
+			);
+		}
+
+		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel=\\"preload\\"; as=image, </b.png>; rel=\\"preload\\"; as=image"`
+		);
+
+		// Do it again, but this time ensure that we didn't write to cache again
+		const { response: response2, spies: spies2 } = await getResponse();
+
+		expect(response2.status).toBe(200);
+		// waitUntil should only be called for asset-preservation
+		expect(spies2.waitUntil.length).toBe(1);
+
+		await Promise.all(spies2.waitUntil);
+
+		const earlyHintsRes2 = await earlyHintsCache.match("https://example.com/");
+
+		if (!earlyHintsRes2) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/"
+			);
+		}
+
+		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel=\\"preload\\"; as=image, </b.png>; rel=\\"preload\\"; as=image"`
+		);
+	});
 });
 
 interface HandlerSpies {
@@ -462,11 +544,46 @@ interface HandlerSpies {
 	findAssetEntryForPath: number;
 	getAssetKey: number;
 	negotiateContent: number;
+	waitUntil: Promise<unknown>[];
+	caches: {
+		[key: string]: WorkersCache;
+	} & { default: WorkersCache };
+}
+
+function createMemoryCache(): WorkersCache {
+	// Miniflare RequestInit is missing CfProperties so we need to cast
+	return new Cache(new MemoryStorage()) as unknown as WorkersCache;
+}
+
+function createCacheStorage(): {
+	caches: CacheStorage;
+	cacheSpy: {
+		[key: string]: WorkersCache;
+	} & { default: WorkersCache };
+} {
+	const cacheSpy: { [key: string]: WorkersCache } & {
+		default: WorkersCache;
+	} = {
+		default: createMemoryCache(),
+	};
+	const caches = {
+		open(cacheName: string): Promise<WorkersCache> {
+			if (cacheSpy[cacheName]) {
+				return Promise.resolve(cacheSpy[cacheName]);
+			}
+			const cache = createMemoryCache();
+			cacheSpy[cacheName] = cache;
+			return Promise.resolve(cache);
+		},
+		default: cacheSpy.default,
+	};
+	return { caches, cacheSpy };
 }
 
 async function getTestResponse({
 	request,
 	metadata = createMetadataObject({
+		deploymentId: "mock-deployment-id",
 		redirects: {
 			invalid: [],
 			rules: [],
@@ -498,6 +615,10 @@ async function getTestResponse({
 		findAssetEntryForPath: 0,
 		getAssetKey: 0,
 		negotiateContent: 0,
+		waitUntil: [],
+		caches: {
+			default: createMemoryCache(),
+		},
 	};
 
 	const response = await generateHandler<string>({
@@ -525,6 +646,17 @@ async function getTestResponse({
 					contentType: "text/plain",
 				}
 			);
+		},
+		waitUntil: async (promise: Promise<unknown>) => {
+			spies.waitUntil.push(promise);
+		},
+		caches: options.caches ?? {
+			open(cacheName) {
+				const cache = createMemoryCache();
+				spies.caches[cacheName] = cache;
+				return Promise.resolve(cache);
+			},
+			...spies.caches,
 		},
 	});
 
