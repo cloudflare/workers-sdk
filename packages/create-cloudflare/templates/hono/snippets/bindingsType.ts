@@ -1,1 +1,1 @@
-type Bindings = Record<string, unknown> & CloudflareBindings;
+type Bindings = Record<string, unknown> & CloudflareBindings

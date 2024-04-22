@@ -1,5 +1,5 @@
 import { logRaw } from "@cloudflare/cli";
-import { brandColor } from "@cloudflare/cli/colors";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
@@ -52,7 +52,7 @@ const configure = async (ctx: C3Context) => {
 		},
 	});
 
-	s.stop(`${brandColor("updated")} \`${indexFile}\``);
+	s.stop(`${brandColor("updated")} \`${dim(indexFile)}\``);
 };
 
 const config: TemplateConfig = {
