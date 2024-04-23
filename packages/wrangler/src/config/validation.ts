@@ -27,6 +27,7 @@ import {
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
+	warnForUnnecessaryProperies,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -1998,6 +1999,13 @@ const validateDurableObjectBinding: ValidatorFn = (
 		isValid = false;
 	}
 
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"class_name",
+		"environment",
+		"name",
+		"script_name",
+	]);
+
 	return isValid;
 };
 
@@ -2048,6 +2056,11 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"destination",
+		"name",
+	]);
+
 	return isValid;
 };
 
@@ -2071,6 +2084,8 @@ const validateBrowserBinding =
 			diagnostics.errors.push(`binding should have a string "binding" field.`);
 			isValid = false;
 		}
+
+		warnForUnnecessaryProperies(diagnostics, field, value, ["binding"]);
 
 		return isValid;
 	};
@@ -2289,6 +2304,14 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"id",
+		"preview_id",
+	]);
+
 	return isValid;
 };
 
@@ -2336,6 +2359,13 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+        "allowed_destination_addresses",
+        "destination_address",
+        "name",
+	]);
+
 	return isValid;
 };
 
@@ -2444,6 +2474,14 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"bucket_name",
+		"preview_bucket_name",
+		"jurisdiction",
+	]);
+
 	return isValid;
 };
 
@@ -2457,6 +2495,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
+
 	// D1 databases must have a binding and either a database_name or database_id.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -2487,6 +2526,16 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"database_id",
+		"database_internal_env",
+		"database_name",
+		"migrations_dir",
+		"migrations_table",
+		"preview_database_id",
+	]);
+
 	return isValid;
 };
 
@@ -2515,6 +2564,12 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+        "binding",
+        "index_name",
+	]);
+
 	return isValid;
 };
 
@@ -2554,6 +2609,12 @@ const validateConstellationBinding: ValidatorFn = (
 			"Constellation Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_CONSTELLATION_WARNING=true to hide this message\n\nFor example: `export NO_CONSTELLATION_WARNING=true && wrangler <YOUR COMMAND HERE>`"
 		);
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"project_id",
+	]);
+
 	return isValid;
 };
 
@@ -2584,6 +2645,13 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"id",
+		"localConnectionString",
+	]);
+
 	return isValid;
 };
 
@@ -2771,6 +2839,12 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"dataset",
+	]);
+
 	return isValid;
 };
 
@@ -2896,6 +2970,12 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+
+	warnForUnnecessaryProperies(diagnostics, field, value, [
+		"binding",
+		"certificate_id",
+	]);
+
 	return isValid;
 };
 
@@ -2956,7 +3036,14 @@ function validateQueues(envName: string): ValidatorFn {
 			) {
 				isValid = false;
 			}
+
+			warnForUnnecessaryProperies(diagnostics, field, value, [
+				"binding",
+				"delivery_delay",
+				"queue",
+			]);
 		}
+
 		return isValid;
 	};
 }
@@ -3018,6 +3105,22 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		}
 	}
 
+	warnForUnnecessaryProperies(
+		diagnostics,
+		field,
+		value,
+		[
+			"dead_letter_queue",
+			"max_batch_size",
+			"max_batch_timeout",
+			"max_concurrency",
+			"max_retries",
+			"queue",
+			"retry_delay",
+			"type",
+			"visibility_timeout_ms",
+		]
+	);
 	return isValid;
 };
 

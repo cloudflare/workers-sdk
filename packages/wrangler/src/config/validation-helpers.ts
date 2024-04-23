@@ -589,6 +589,16 @@ const isRecord = (
 ): value is Record<string | number | symbol, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
+export const warnForUnnecessaryProperies = (diagnostic: Diagnostics, field: string, value: Object, keys: string[]) => {
+	for (const prop of Object.keys(value)) {
+		if(!keys.includes(prop)) {
+			diagnostic.warnings.push(
+				`"${field}" has unexpected key '${prop}'. Allowed keys are${keys.map(key => ` '${key}'`)}.`
+			)
+		}
+	}
+}
+
 /**
  * JavaScript `typeof` operator return values.
  */
