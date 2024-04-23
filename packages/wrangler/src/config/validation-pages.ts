@@ -10,6 +10,7 @@
 import { FatalError } from "../errors";
 import { defaultWranglerConfig } from "./config";
 import { Diagnostics } from "./diagnostics";
+import { isRequiredProperty } from "./validation-helpers";
 import type { Config } from "./config";
 
 const supportedPagesConfigFields = [
@@ -56,6 +57,7 @@ export function validatePagesConfig(
 	validateProjectName(projectName, diagnostics);
 	validatePagesEnvironmentNames(envNames, diagnostics);
 	validateUnsupportedFields(config, diagnostics);
+	validateDurableObjectBinding(config, diagnostics);
 
 	return diagnostics;
 }
@@ -157,5 +159,28 @@ function validateUnsupportedFields(config: Config, diagnostics: Diagnostics) {
 				);
 			}
 		});
+	}
+}
+
+/**
+ * Validate the "script_name" field is specified for [[durable_objects.bindings]]
+ *
+ * This is necessary because Pages cannot define/deploy a DO itself today,
+ * and so this needs to be done with a Worker.
+ */
+function validateDurableObjectBinding(
+	config: Config,
+	diagnostics: Diagnostics
+) {
+	if (config.durable_objects.bindings.length > 0) {
+		const invalidBindings = config.durable_objects.bindings.filter(
+			(binding) => !isRequiredProperty(binding, "script_name", "string")
+		);
+		if (invalidBindings.length > 0) {
+			diagnostics.errors.push(
+				`Durable Objects bindings should specify a "script_name".\n` +
+					`Pages requires Durable Object bindings to specify the name of the Worker where the Durable Object is defined.`
+			);
+		}
 	}
 }
