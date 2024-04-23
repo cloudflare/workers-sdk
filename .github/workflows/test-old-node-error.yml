@@ -5,14 +5,11 @@ on: pull_request
 jobs:
   check:
     name: "Checks"
-    timeout-minutes: 30
+    timeout-minutes: 10
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -20,7 +17,7 @@ jobs:
           fetch-depth: 0
 
       - name: Use Node.js v10
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 10.24.1
 
