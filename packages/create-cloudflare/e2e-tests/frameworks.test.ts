@@ -161,6 +161,10 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			route: "/",
 			expectedText: "Hello Hono!",
 		},
+		verifyBuildCfTypes: {
+			outputFile: "worker-configuration.d.ts",
+			envInterfaceName: "CloudflareBindings",
+		},
 		promptHandlers: [
 			{
 				matcher: /Do you want to install project dependencies\?/,

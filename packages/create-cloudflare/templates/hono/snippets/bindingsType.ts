@@ -1,1 +1,3 @@
-type Bindings = Record<string, unknown> & CloudflareBindings
+type Bindings = {
+  [key in keyof CloudflareBindings]: CloudflareBindings[key]
+}
