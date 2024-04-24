@@ -150,10 +150,15 @@ Your database may not be available to serve requests during the migration, conti
 		}
 
 		for (const migration of unappliedMigrations) {
-			let query = `
-								INSERT INTO ${migrationsTableName} (name) VALUES ('${migration.name}');
+			let query = fs.readFileSync(
+				`${migrationsPath}/${migration.name}`,
+				"utf8"
+			);
+			query += `
+								INSERT INTO ${migrationsTableName} (name)
+								values ('${migration.name}');
 						`;
-			query += fs.readFileSync(`${migrationsPath}/${migration.name}`, "utf8");
+
 			let success = true;
 			let errorNotes: Array<string> = [];
 			try {
