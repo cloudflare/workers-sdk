@@ -1,5 +1,34 @@
 # wrangler
 
+## 3.52.0
+
+### Minor Changes
+
+- [#5666](https://github.com/cloudflare/workers-sdk/pull/5666) [`81d9615`](https://github.com/cloudflare/workers-sdk/commit/81d961582da2db2b020305c63a9f1f1573ff873d) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Fix Pages config validation around Durable Objects
+
+  Today Pages cannot deploy Durable Objects itself. For this reason it is mandatory that when declaring Durable Objects bindings in the config file, the `script_name` is specified. We are currently not failing validation if
+  `script_name` is not specified but we should. These changes fix that.
+
+### Patch Changes
+
+- [#5610](https://github.com/cloudflare/workers-sdk/pull/5610) [`24840f6`](https://github.com/cloudflare/workers-sdk/commit/24840f67b6495a664f5463697aa49fa9478435b9) Thanks [@SuperchupuDev](https://github.com/SuperchupuDev)! - Mark `ts-json-schema-generator` as a dev dependency
+
+- [#5669](https://github.com/cloudflare/workers-sdk/pull/5669) [`a7e36d5`](https://github.com/cloudflare/workers-sdk/commit/a7e36d503f442a8225ffdedef30b569a8a396663) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: fix broken Durable Object local proxying (when no `cf` property is present)
+
+  A regression was introduced in wrangler 3.46.0 (https://github.com/cloudflare/workers-sdk/pull/5215)
+  which made it so that missing `Request#cf` properties are serialized as `"undefined"`, this in turn
+  throws a syntax parse error when such values are parsed via `JSON.parse` breaking the communication
+  with Durable Object local proxies. Fix such issue by serializing missing `Request#cf` properties as
+  `"{}"` instead.
+
+- [#5616](https://github.com/cloudflare/workers-sdk/pull/5616) [`c6312b5`](https://github.com/cloudflare/workers-sdk/commit/c6312b5017279b31ce99c761e2063973f7d948bf) Thanks [@webbertakken](https://github.com/webbertakken)! - fix: broken link to durable object migrations docs
+
+- [#5482](https://github.com/cloudflare/workers-sdk/pull/5482) [`1b7739e`](https://github.com/cloudflare/workers-sdk/commit/1b7739e0af99860aa063f01c0a6e7712ac072fdb) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - docs: show new Discord url everywhere for consistency. The old URL still works, but https://discord.cloudflare.com is preferred.
+
+- Updated dependencies [[`3a0d735`](https://github.com/cloudflare/workers-sdk/commit/3a0d7356bd8bc6fe614a3ef3f9c1278659555568), [`1b7739e`](https://github.com/cloudflare/workers-sdk/commit/1b7739e0af99860aa063f01c0a6e7712ac072fdb)]:
+  - miniflare@3.20240419.0
+  - @cloudflare/kv-asset-handler@0.3.2
+
 ## 3.51.2
 
 ### Patch Changes
