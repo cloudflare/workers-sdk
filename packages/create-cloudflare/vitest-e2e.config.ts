@@ -1,6 +1,8 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
+process.env.E2E = "true";
+
 export default defineConfig({
 	plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
 	test: {

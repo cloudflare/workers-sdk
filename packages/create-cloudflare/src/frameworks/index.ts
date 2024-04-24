@@ -1,6 +1,7 @@
 import { crash, logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
+import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import clisPackageJson from "./package.json";
 import type { C3Context } from "types";
@@ -49,4 +50,28 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	logRaw("");
 
 	await runCommand(cmd, { env });
+
+	// When running e2e tests, commit the result of the scaffolding tool to facilitate
+	// diffing what new code is added by C3 as part of the process
+	if (process.env.E2E !== undefined) {
+		const cmdEnv = {
+			silent: true,
+			cwd: ctx.project.path,
+		};
+
+		// Ignore store directories which are kept in test folders
+		writeFile(
+			".gitignore",
+			`
+    .pnpm
+    .wrangler
+    `
+		);
+
+		await runCommand(["git", "init"], cmdEnv);
+		await runCommand(["git", "add", "."], cmdEnv);
+
+		const commitMessage = `Initial commit by ${cli}`;
+		await runCommand(["git", "commit", "-m", commitMessage], cmdEnv);
+	}
 };
