@@ -662,7 +662,7 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/sites-app:
-    dependencies:
+    devDependencies:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../../packages/kv-asset-handler

@@ -6,7 +6,7 @@
 	"license": "ISC",
 	"author": "",
 	"main": "index.js",
-	"dependencies": {
+	"devDependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*"
 	}
 }
