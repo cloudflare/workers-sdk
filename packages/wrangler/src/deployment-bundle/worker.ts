@@ -111,6 +111,7 @@ export interface CfBrowserBinding {
 
 export interface CfAIBinding {
 	binding: string;
+	staging?: boolean;
 }
 
 /**

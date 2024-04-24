@@ -182,8 +182,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		return `${s.substring(0, maxLength - 3)}...`;
 	};
 
-	const output: { type: string; entries: { key: string; value: string }[] }[] =
-		[];
+	const output: {
+		type: string;
+		entries: { key: string; value: string | boolean }[];
+	}[] = [];
 
 	const {
 		data_blobs,
@@ -418,9 +420,14 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	}
 
 	if (ai !== undefined) {
+		const entries: [{ key: string; value: string | boolean }] = [
+			{ key: "Name", value: ai.binding },
+		];
+		if (ai.staging) entries.push({ key: "Staging", value: ai.staging });
+
 		output.push({
 			type: "AI",
-			entries: [{ key: "Name", value: ai.binding }],
+			entries: entries,
 		});
 	}
 
