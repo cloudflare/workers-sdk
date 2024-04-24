@@ -27,7 +27,6 @@ import {
 	validateOptionalTypedArray,
 	validateRequiredProperty,
 	validateTypedArray,
-	warnForUnnecessaryProperies,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -1999,7 +1998,7 @@ const validateDurableObjectBinding: ValidatorFn = (
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"class_name",
 		"environment",
 		"name",
@@ -2056,7 +2055,7 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"destination",
 		"name",
 	]);
@@ -2085,7 +2084,7 @@ const validateBrowserBinding =
 			isValid = false;
 		}
 
-		warnForUnnecessaryProperies(diagnostics, field, value, ["binding"]);
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), ["binding"]);
 
 		return isValid;
 	};
@@ -2306,7 +2305,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"preview_id",
@@ -2360,7 +2359,7 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
         "allowed_destination_addresses",
         "destination_address",
         "name",
@@ -2475,7 +2474,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
@@ -2526,7 +2525,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
 		"database_internal_env",
@@ -2565,7 +2564,7 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
         "binding",
         "index_name",
 	]);
@@ -2610,7 +2609,7 @@ const validateConstellationBinding: ValidatorFn = (
 		);
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"project_id",
 	]);
@@ -2646,7 +2645,7 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"localConnectionString",
@@ -2840,7 +2839,7 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"dataset",
 	]);
@@ -2971,7 +2970,7 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 		isValid = false;
 	}
 
-	warnForUnnecessaryProperies(diagnostics, field, value, [
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
 	]);
@@ -3037,7 +3036,7 @@ function validateQueues(envName: string): ValidatorFn {
 				isValid = false;
 			}
 
-			warnForUnnecessaryProperies(diagnostics, field, value, [
+			validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 				"binding",
 				"delivery_delay",
 				"queue",
@@ -3105,10 +3104,10 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		}
 	}
 
-	warnForUnnecessaryProperies(
+	validateAdditionalProperties(
 		diagnostics,
 		field,
-		value,
+		Object.keys(value),
 		[
 			"dead_letter_queue",
 			"max_batch_size",
