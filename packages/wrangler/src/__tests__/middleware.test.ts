@@ -33,6 +33,35 @@ describe("middleware", () => {
 		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
 
 		describe("module workers", () => {
+			it("should ignore non-iterable middleware", async () => {
+				const scriptContent = `
+			const middleware = async (request, env, _ctx, middlewareCtx) => {
+				const response = await middlewareCtx.next(request, env);
+				const text = await response.text();
+				return new Response(text + ' world');
+			}
+			export default {
+				middleware: middleware,
+				fetch(request, env, ctx) {
+					return new Response('Hello');
+				}
+			};
+			`;
+				fs.writeFileSync("index.js", scriptContent);
+
+				const worker = await unstable_dev("index.js", {
+					experimental: {
+						disableExperimentalWarning: true,
+						disableDevRegistry: true,
+					},
+				});
+
+				const resp = await worker.fetch();
+				let text;
+				if (resp) text = await resp.text();
+				expect(text).toMatchInlineSnapshot(`"Hello"`);
+				await worker.stop();
+			});
 			it("should register a middleware and intercept", async () => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {

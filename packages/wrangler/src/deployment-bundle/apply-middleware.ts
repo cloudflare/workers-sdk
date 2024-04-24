@@ -62,12 +62,12 @@ export async function applyMiddlewareLoaderFacade(
 			dedent/*javascript*/ `
 				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
 				${imports}
-				
+
 				worker.middleware = [
 					${middlewareFns.join(",")},
-					...(worker.middleware ?? []),
+					...(Array.isArray(worker.middleware) ? worker.middleware : []),
 				].filter(Boolean);
-				
+
 				export * from "${prepareFilePath(entry.file)}";
 				export default worker;
 			`
