@@ -22,7 +22,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240419.0",
+		"@cloudflare/workers-types": "^4.20240423.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",
