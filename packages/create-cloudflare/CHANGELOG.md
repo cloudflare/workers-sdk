@@ -1,5 +1,28 @@
 # create-cloudflare
 
+## 2.21.0
+
+### Minor Changes
+
+- [#5675](https://github.com/cloudflare/workers-sdk/pull/5675) [`235c439`](https://github.com/cloudflare/workers-sdk/commit/235c4398268322b6c0c13060bc3da91f52b4b066) Thanks [@jculvey](https://github.com/jculvey)! - feat: Improvements to `hono` template.
+
+  The `hono` template has been updated as follows:
+
+  - Bumps `create-hono` to `0.7.0`
+  - Automatically installs dependencies and specifies the detected package manager to avoid interactive prompts
+  - Adds a `wrangler.toml` file with commented out examples of all available bindings to match other templates.
+  - Adds a `cf-typegen` package script to automatically regenerate types for `Bindings` from `wrangler.toml`
+
+- [#5637](https://github.com/cloudflare/workers-sdk/pull/5637) [`b41c4ed`](https://github.com/cloudflare/workers-sdk/commit/b41c4edc2e4bf1da11ebff98c38f92f8057d5c59) Thanks [@joshthoward](https://github.com/joshthoward)! - feat: change Durable Objects "Hello, World!" template to use RPC methods
+
+### Patch Changes
+
+- [#5483](https://github.com/cloudflare/workers-sdk/pull/5483) [`a55314c`](https://github.com/cloudflare/workers-sdk/commit/a55314cb34c123ec141db10dcd2df455ea523d93) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: make sure that using the current directory doesn't generate an `undefined undefined` log in the output summary.
+
+- [#5482](https://github.com/cloudflare/workers-sdk/pull/5482) [`1b7739e`](https://github.com/cloudflare/workers-sdk/commit/1b7739e0af99860aa063f01c0a6e7712ac072fdb) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - docs: show new Discord url everywhere for consistency. The old URL still works, but https://discord.cloudflare.com is preferred.
+
+- [#5684](https://github.com/cloudflare/workers-sdk/pull/5684) [`c81fa65`](https://github.com/cloudflare/workers-sdk/commit/c81fa65cbc4b1749ab31afb114cc3cb40e22fef9) Thanks [@jculvey](https://github.com/jculvey)! - docs: Add Smart Placement example to `wrangler.toml` of templates.
+
 ## 2.20.1
 
 ### Patch Changes
