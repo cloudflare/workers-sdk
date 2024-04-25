@@ -5,30 +5,32 @@
 	},
 	"globalEnv": ["CI_OS", "NODE_VERSION"],
 	"pipeline": {
-		"wrangler#dev": {
-			"persistent": true,
-			"cache": false
-		},
-		"miniflare#dev": {
-			"persistent": true,
-			"cache": false
-		},
-		"@cloudflare/vitest-pool-workers#dev": {
+		"dev": {
 			"persistent": true,
 			"cache": false
 		},
 		"build": { "dependsOn": ["^build"] },
 		"test": {
-			"dependsOn": ["^build", "build"]
+			"dependsOn": ["build"]
 		},
 		"test:watch": {
+			"persistent": true,
 			"cache": false
 		},
-		"check:lint": {},
-		"check:type": {},
-		"type:tests": {},
+		"topological": {
+			"dependsOn": ["^topological"]
+		},
+		"check:lint": {
+			"dependsOn": ["topological"]
+		},
+		"check:type": {
+			"dependsOn": ["topological"]
+		},
+		"type:tests": {
+			"dependsOn": ["topological"]
+		},
 		"test:ci": {
-			"dependsOn": ["^build", "build"]
+			"dependsOn": ["build"]
 		},
 		"test:e2e": {},
 		"//#check:format": { "cache": true }
