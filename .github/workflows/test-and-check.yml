@@ -1,10 +1,6 @@
 name: Tests + Checks
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
+on: pull_request
 
 env:
   node-version: 16.18

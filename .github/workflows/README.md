@@ -4,13 +4,12 @@ See below for a summary of this repo's Actions
 
 - _⚠️ means that the check is expected to sometimes fail._
 
-## PR & main branch related actions
+## PR related actions
 
 ### Tests + Checks (test-and-check.yml)
 
 - Triggers
   - Updates to PRs.
-  - Commits merged to the `main` branch.
 - Actions
   - Builds all the packages.
   - Runs formatting, linting and type checks.
@@ -29,7 +28,7 @@ See below for a summary of this repo's Actions
 ## Test old Node.js version (test-old-node-error.yml)
 
 - Triggers
-  - Commits merged to the `main` branch.
+  - Commits merged to the `changeset-release/main` branch.
 - Actions
   - Makes sure that Wrangler's warning for old Node.js versions works.
 
