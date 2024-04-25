@@ -897,7 +897,7 @@ describe("middleware", () => {
 
 			src_default.middleware = [
 			  ,
-			  ...src_default.middleware ?? []
+			  ...Array.isArray(src_default.middleware) ? src_default.middleware : []
 			].filter(Boolean);
 			var middleware_insertion_facade_default = src_default;
 
