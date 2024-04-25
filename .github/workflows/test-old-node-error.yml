@@ -1,6 +1,9 @@
 name: Test old Node.js version
 
-on: pull_request
+on:
+  push:
+    branches:
+      - changeset-release/main
 
 jobs:
   check:

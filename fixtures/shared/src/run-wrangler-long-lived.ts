@@ -94,7 +94,7 @@ async function runLongLivedWrangler(
 			separator,
 		].join("\n");
 		rejectReadyPromise(new Error(message));
-	}, 20_000);
+	}, 50_000);
 
 	async function stop() {
 		const closePromise = events.once(wranglerProcess, "close");

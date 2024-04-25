@@ -1,4 +1,4 @@
-name: Prerelease
+name: Publish @beta pre-release
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
-      - name: Publish Beta to NPM
+      - name: Publish wrangler@beta to NPM
         run: pnpm publish --tag beta
         env:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
@@ -63,6 +63,12 @@ jobs:
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
         working-directory: packages/wrangler
+
+      - name: Publish create-cloudflare@beta to NPM
+        run: pnpm publish --tag beta
+        env:
+          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        working-directory: packages/create-cloudflare
 
       - name: Get Package Version
         run: echo "WRANGLER_VERSION=$(npm view wrangler@beta version)" >> $GITHUB_ENV

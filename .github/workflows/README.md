@@ -6,7 +6,7 @@ See below for a summary of this repo's Actions
 
 ## PR related actions
 
-### Pull Request (pullrequests.yml)
+### Tests + Checks (test-and-check.yml)
 
 - Triggers
   - Updates to PRs.
@@ -28,7 +28,7 @@ See below for a summary of this repo's Actions
 ## Test old Node.js version (test-old-node-error.yml)
 
 - Triggers
-  - Updates to PRs.
+  - Commits merged to the `changeset-release/main` branch.
 - Actions
   - Makes sure that Wrangler's warning for old Node.js versions works.
 
@@ -75,15 +75,6 @@ See below for a summary of this repo's Actions
 
 ## Main branch actions
 
-### Main branch (main.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Builds all the packages.
-  - Runs formatting, linting and type checks.
-  - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
-
 ### Handle Changesets (changesets.yml)
 
 - Triggers
@@ -94,12 +85,13 @@ See below for a summary of this repo's Actions
     - Public packages are deployed to npm
     - Private packages will run their `deploy` script, if they have one.
 
-### Prerelease (prereleases.yml)
+### Publish @beta pre-releases (prereleases.yml)
 
 - Triggers
   - Commits merged to the `main` branch, on the Cloudflare fork.
 - Actions
   - Publishes the `wrangler` package to npm under the `beta` dist-tag.
+  - Publishes the `create-cloudflare` package to npm under the `beta` dist-tag.
 
 ## Product-specific branch actions
 
@@ -141,10 +133,3 @@ See below for a summary of this repo's Actions
   - Scheduled to run at 3am each day.
 - Actions
   - Deletes any Workers and Pages projects that were not properly cleaned up by the C3 E2E tests.
-
-### Prerelease create-cloudflare (prerelease-create-cloudflare.yml)
-
-- Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork.
-- Actions
-  - Publishes the `create-cloudflare` package to npm under the `beta` dist-tag.
