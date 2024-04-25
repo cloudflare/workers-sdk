@@ -1193,6 +1193,86 @@ describe("pages download config", () => {
 
 		[ai]
 		binding = \\"AI_PREVIEW\\"
+
+		[env.production.vars]
+		TEST_JSON_PREVIEW = \\"\\"\\"
+		{
+		json: \\"value\\"
+		}\\"\\"\\"
+		TEST_PLAINTEXT_PREVIEW = \\"PLAINTEXT\\"
+
+		[[env.production.kv_namespaces]]
+		id = \\"kv-id\\"
+		binding = \\"KV_PREVIEW\\"
+
+		[[env.production.kv_namespaces]]
+		id = \\"kv-id\\"
+		binding = \\"KV_PREVIEW2\\"
+
+		[[env.production.durable_objects.bindings]]
+		name = \\"DO_PREVIEW\\"
+		class_name = \\"some-class-do-id\\"
+		script_name = \\"some-script-do-id\\"
+		environment = \\"some-environment-do-id\\"
+
+		[[env.production.durable_objects.bindings]]
+		name = \\"DO_PREVIEW2\\"
+		class_name = \\"some-class-do-id\\"
+		script_name = \\"some-script-do-id\\"
+		environment = \\"some-environment-do-id\\"
+
+		[[env.production.durable_objects.bindings]]
+		name = \\"DO_PREVIEW3\\"
+		class_name = \\"do-class\\"
+		script_name = \\"do-s\\"
+		environment = \\"do-e\\"
+
+		[[env.production.d1_databases]]
+		database_id = \\"d1-id\\"
+		binding = \\"D1_PREVIEW\\"
+		database_name = \\"D1_PREVIEW\\"
+
+		[[env.production.d1_databases]]
+		database_id = \\"d1-id\\"
+		binding = \\"D1_PREVIEW2\\"
+		database_name = \\"D1_PREVIEW2\\"
+
+		[[env.production.r2_buckets]]
+		bucket_name = \\"r2-name\\"
+		binding = \\"R2_PREVIEW\\"
+
+		[[env.production.r2_buckets]]
+		bucket_name = \\"r2-name\\"
+		binding = \\"R2_PREVIEW2\\"
+
+		[[env.production.services]]
+		binding = \\"SERVICE_PREVIEW\\"
+		service = \\"service\\"
+		environment = \\"production\\"
+
+		[[env.production.services]]
+		binding = \\"SERVICE_PREVIEW2\\"
+		service = \\"service\\"
+		environment = \\"production\\"
+
+		[[env.production.queues.producers]]
+		binding = \\"QUEUE_PREVIEW\\"
+		queue = \\"q-id\\"
+
+		[[env.production.queues.producers]]
+		binding = \\"QUEUE_PREVIEW2\\"
+		queue = \\"q-id\\"
+
+		[[env.production.analytics_engine_datasets]]
+		binding = \\"AE_PREVIEW\\"
+		dataset = \\"data\\"
+
+		[[env.production.analytics_engine_datasets]]
+		binding = \\"AE_PREVIEW2\\"
+		dataset = \\"data\\"
+
+		[env.production.ai]
+		binding = \\"AI_PREVIEW\\"
 		"
 	`);
 	});
