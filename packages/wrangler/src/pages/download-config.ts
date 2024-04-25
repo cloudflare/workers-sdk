@@ -69,44 +69,49 @@ export interface PagesProject extends Project {
 }
 
 async function toEnvironment(
-	project: PagesDeploymentConfig,
+	deploymentConfig: PagesDeploymentConfig,
 	accountId: string
 ): Promise<RawEnvironment> {
 	const configObj = {} as RawEnvironment;
 	configObj.compatibility_date =
-		project.compatibility_date ?? new Date().toISOString().substring(0, 10);
+		deploymentConfig.compatibility_date ??
+		new Date().toISOString().substring(0, 10);
 
 	// Find the latest supported compatibility date and use that
-	if (project.always_use_latest_compatibility_date) {
+	if (deploymentConfig.always_use_latest_compatibility_date) {
 		configObj.compatibility_date = supportedCompatibilityDate;
 	}
 
-	if (project.compatibility_flags?.length)
-		configObj.compatibility_flags = project.compatibility_flags;
+	if (deploymentConfig.compatibility_flags?.length)
+		configObj.compatibility_flags = deploymentConfig.compatibility_flags;
 
-	if (project.placement) {
-		configObj.placement = project.placement;
+	if (deploymentConfig.placement) {
+		configObj.placement = deploymentConfig.placement;
 	} else {
 		configObj.placement = { mode: "off" };
 	}
-	if (project.limits) {
-		configObj.limits = project.limits;
+	if (deploymentConfig.limits) {
+		configObj.limits = deploymentConfig.limits;
 	}
 
-	for (const [name, envVar] of Object.entries(project.env_vars ?? {})) {
+	for (const [name, envVar] of Object.entries(
+		deploymentConfig.env_vars ?? {}
+	)) {
 		if (envVar?.value && envVar?.type == "plain_text") {
 			configObj.vars ??= {};
 			configObj.vars[name] = envVar?.value;
 		}
 	}
 
-	for (const [name, namespace] of Object.entries(project.kv_namespaces ?? {})) {
+	for (const [name, namespace] of Object.entries(
+		deploymentConfig.kv_namespaces ?? {}
+	)) {
 		configObj.kv_namespaces ??= [];
 		configObj.kv_namespaces.push({ id: namespace.namespace_id, binding: name });
 	}
 
 	for (const [name, ns] of Object.entries(
-		project.durable_object_namespaces ?? {}
+		deploymentConfig.durable_object_namespaces ?? {}
 	)) {
 		configObj.durable_objects ??= { bindings: [] };
 		if (ns.class_name && ns.class_name !== "") {
@@ -133,7 +138,9 @@ async function toEnvironment(
 		}
 	}
 
-	for (const [name, namespace] of Object.entries(project.d1_databases ?? {})) {
+	for (const [name, namespace] of Object.entries(
+		deploymentConfig.d1_databases ?? {}
+	)) {
 		configObj.d1_databases ??= [];
 		configObj.d1_databases.push({
 			database_id: namespace.id,
@@ -142,7 +149,9 @@ async function toEnvironment(
 		});
 	}
 
-	for (const [name, bucket] of Object.entries(project.r2_buckets ?? {})) {
+	for (const [name, bucket] of Object.entries(
+		deploymentConfig.r2_buckets ?? {}
+	)) {
 		configObj.r2_buckets ??= [];
 		configObj.r2_buckets.push({
 			bucket_name: bucket.name,
@@ -151,7 +160,7 @@ async function toEnvironment(
 	}
 
 	for (const [name, { service, environment }] of Object.entries(
-		project.services ?? {}
+		deploymentConfig.services ?? {}
 	)) {
 		configObj.services ??= [];
 		configObj.services.push({
@@ -161,7 +170,9 @@ async function toEnvironment(
 		});
 	}
 
-	for (const [name, queue] of Object.entries(project.queue_producers ?? {})) {
+	for (const [name, queue] of Object.entries(
+		deploymentConfig.queue_producers ?? {}
+	)) {
 		configObj.queues ??= { producers: [] };
 		configObj.queues?.producers?.push({
 			binding: name,
@@ -170,7 +181,7 @@ async function toEnvironment(
 	}
 
 	for (const [name, { dataset }] of Object.entries(
-		project.analytics_engine_datasets ?? {}
+		deploymentConfig.analytics_engine_datasets ?? {}
 	)) {
 		configObj.analytics_engine_datasets ??= [];
 		configObj.analytics_engine_datasets.push({
@@ -178,7 +189,7 @@ async function toEnvironment(
 			dataset,
 		});
 	}
-	for (const [name] of Object.entries(project.ai_bindings ?? {})) {
+	for (const [name] of Object.entries(deploymentConfig.ai_bindings ?? {})) {
 		configObj.ai = { binding: name };
 	}
 	return configObj;
@@ -205,17 +216,9 @@ function simplifyEnvironments(
 ): {
 	topLevel: RawEnvironment;
 	preview?: RawEnvironment;
-	production?: RawEnvironment;
+	production: RawEnvironment;
 } {
 	const topLevel = { ...preview };
-	// If the environments are equal, don't include a production override
-	if (JSON.stringify(preview) === JSON.stringify(production)) {
-		// Don't include extraneous placement. No need to check the production setting since it's equal to preview
-		if (topLevel.placement?.mode === "off") {
-			delete topLevel.placement;
-		}
-		return { topLevel };
-	}
 	// Remove duplication for inheritable keys (https://developers.cloudflare.com/pages/functions/wrangler-configuration/#inheritable-keys)
 	if (preview.compatibility_date === production.compatibility_date) {
 		delete production.compatibility_date;
@@ -233,7 +236,7 @@ function simplifyEnvironments(
 		JSON.stringify(preview.placement) === JSON.stringify(production.placement)
 	) {
 		delete production.placement;
-		delete preview.compatibility_date;
+		delete preview.placement;
 
 		// Don't include extraneous placement
 		if (topLevel.placement?.mode === "off") {
@@ -271,18 +274,16 @@ async function downloadProject(accountId: string, projectName: string) {
 		name: project.name,
 		pages_build_output_dir: project.build_config.destination_dir,
 		...topLevel,
-		...(production
-			? {
-					env: preview
-						? {
-								preview,
-								production,
-						  }
-						: {
-								production,
-						  },
-			  }
-			: {}),
+		...{
+			env: preview
+				? {
+						preview,
+						production,
+				  }
+				: {
+						production,
+				  },
+		},
 	};
 }
 
