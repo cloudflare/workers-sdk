@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.21.1
+
+### Patch Changes
+
+- [#5687](https://github.com/cloudflare/workers-sdk/pull/5687) [`906c39a`](https://github.com/cloudflare/workers-sdk/commit/906c39a37094e86eea069315843c213cfea56e5c) Thanks [@jculvey](https://github.com/jculvey)! - fix: Fixes an issue with the `Bindings` type genereated by C3 being too permissive.
+
 ## 2.21.0
 
 ### Minor Changes
