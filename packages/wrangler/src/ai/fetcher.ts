@@ -19,6 +19,11 @@ export async function AIFetcher(request: Request): Promise<Response> {
 	request.headers.delete("Host");
 	request.headers.delete("Content-Length");
 
+	// Streaming doesn't currently work with `wrangler dev` if the responses are gzipped.
+	// We can explicitly opt out of gzip responses by setting
+	// `Accept-Encoding: identity` when making requests to the API.
+	request.headers.set("Accept-Encoding", "identity");
+
 	const res = await performApiFetch(`/accounts/${accountId}/ai/run/proxy`, {
 		method: "POST",
 		headers: Object.fromEntries(request.headers.entries()),
