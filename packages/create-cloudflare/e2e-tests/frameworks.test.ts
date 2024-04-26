@@ -1,7 +1,8 @@
-import { existsSync } from "fs";
+import { existsSync, mkdirSync, rmSync } from "fs";
 import { cp } from "fs/promises";
-import { join } from "path";
-import { readFile } from "helpers/files";
+import { join, resolve } from "path";
+import { runCommand } from "helpers/command";
+import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
@@ -440,6 +441,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await verifyDevScript(framework, projectPath, logStream);
 					await verifyBuildCfTypesScript(framework, projectPath, logStream);
 					await verifyBuildScript(framework, projectPath, logStream);
+					await storeDiff(framework, projectPath);
 				} finally {
 					clean(framework);
 					// Cleanup the project in case we need to retry it
@@ -457,6 +459,30 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		);
 	});
 });
+
+const storeDiff = async (framework: string, projectPath: string) => {
+	// We only need to do this once per-framework per-run, so avoid re-running for each package manager
+	if (process.env.TEST_PM !== "pnpm") {
+		return;
+	}
+
+	// Recreate the diffs folder
+	const diffsPath = resolve("./.e2e-diffs");
+	rmSync(diffsPath, {
+		recursive: true,
+		force: true,
+	});
+	mkdirSync(diffsPath, { recursive: true });
+
+	const outputPath = join(diffsPath, `${framework}.diff`);
+
+	const output = await runCommand(["git", "diff"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	writeFile(outputPath, output);
+};
 
 const runCli = async (
 	framework: string,

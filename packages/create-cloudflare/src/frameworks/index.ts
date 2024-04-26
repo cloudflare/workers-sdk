@@ -1,7 +1,6 @@
 import { crash, logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
-import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import clisPackageJson from "./package.json";
 import type { C3Context } from "types";
@@ -58,15 +57,6 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 			silent: true,
 			cwd: ctx.project.path,
 		};
-
-		// Ignore store directories which are kept in test folders
-		writeFile(
-			".gitignore",
-			`
-    .pnpm
-    .wrangler
-    `
-		);
 
 		await runCommand(["git", "init"], cmdEnv);
 		await runCommand(["git", "add", "."], cmdEnv);

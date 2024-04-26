@@ -54,3 +54,17 @@ runs:
       with:
         name: e2e-logs-${{matrix.os}}
         path: packages/create-cloudflare/.e2e-logs
+
+    - name: Store Framework Diffs
+      shell: bash
+      if: ${{ steps.run-e2e.outcome == 'success' }}
+      run: |
+        mv packages/create-cloudflare/.e2e-diffs packages/framework-diffs
+        git add packages/frameworks-diffs
+        git commit -m "Updating framework diffs"
+        git push
+
+    - name: Fail if errors detected
+      shell: bash
+      if: ${{ steps.run-e2e.outcome == 'failure' }}
+      run: exit 1
