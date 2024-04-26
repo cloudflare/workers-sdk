@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, rmSync } from "fs";
+import { existsSync } from "fs";
 import { cp } from "fs/promises";
-import { join, resolve } from "path";
+import { join } from "path";
 import { runCommand } from "helpers/command";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";

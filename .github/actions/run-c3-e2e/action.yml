@@ -57,7 +57,7 @@ runs:
 
     - name: Store Framework Diffs
       shell: bash
-      if: ${{ steps.run-e2e.outcome == 'success' && !inputs.quarantine }}
+      if: ${{ steps.run-e2e.outcome == 'success' && inputs.quarantine == false }}
       run: |
         mv packages/create-cloudflare/.e2e-diffs packages/c3-framework-diffs
         git add packages/c3-frameworks-diffs
