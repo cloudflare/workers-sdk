@@ -589,7 +589,6 @@ const isRecord = (
 ): value is Record<string | number | symbol, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-
 /**
  * JavaScript `typeof` operator return values.
  */

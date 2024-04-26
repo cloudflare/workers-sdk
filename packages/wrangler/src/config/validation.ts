@@ -2084,7 +2084,9 @@ const validateBrowserBinding =
 			isValid = false;
 		}
 
-		validateAdditionalProperties(diagnostics, field, Object.keys(value), ["binding"]);
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"binding",
+		]);
 
 		return isValid;
 	};
@@ -2304,7 +2306,6 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
@@ -2360,9 +2361,9 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-        "allowed_destination_addresses",
-        "destination_address",
-        "name",
+		"allowed_destination_addresses",
+		"destination_address",
+		"name",
 	]);
 
 	return isValid;
@@ -2565,8 +2566,8 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-        "binding",
-        "index_name",
+		"binding",
+		"index_name",
 	]);
 
 	return isValid;
@@ -3104,22 +3105,17 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		}
 	}
 
-	validateAdditionalProperties(
-		diagnostics,
-		field,
-		Object.keys(value),
-		[
-			"dead_letter_queue",
-			"max_batch_size",
-			"max_batch_timeout",
-			"max_concurrency",
-			"max_retries",
-			"queue",
-			"retry_delay",
-			"type",
-			"visibility_timeout_ms",
-		]
-	);
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"dead_letter_queue",
+		"max_batch_size",
+		"max_batch_timeout",
+		"max_concurrency",
+		"max_retries",
+		"queue",
+		"retry_delay",
+		"type",
+		"visibility_timeout_ms",
+	]);
 	return isValid;
 };
 
