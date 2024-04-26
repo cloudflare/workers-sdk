@@ -30,6 +30,7 @@ type Env = {
 	MY_SERVICE_B: Fetcher;
 	MY_RPC: Service;
 	MY_KV: KVNamespace;
+	MY_KV_PROD: KVNamespace;
 	MY_DO_A: DurableObjectNamespace;
 	MY_DO_B: DurableObjectNamespace;
 	MY_BUCKET: R2Bucket;
@@ -38,7 +39,7 @@ type Env = {
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
-describe("getPlatformProxy - bindings", () => {
+describe("getPlatformProxy - env", () => {
 	let devWorkers: UnstableDevWorker[];
 
 	beforeEach(() => {
@@ -264,6 +265,66 @@ describe("getPlatformProxy - bindings", () => {
 		} finally {
 			await dispose();
 		}
+	});
+
+	describe("with a target environment", () => {
+		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+				environment: "production",
+			});
+			try {
+				expect(env.MY_VAR).not.toBe("my-var-value");
+				expect(env.MY_VAR).toBe("my-PRODUCTION-var-value");
+				expect(env.MY_JSON_VAR).toEqual({ test: true, production: true });
+
+				expect(env.MY_KV).toBeTruthy();
+				expect(env.MY_KV_PROD).toBeTruthy();
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should not provide bindings targeting an environment when none was specified", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+			});
+			try {
+				expect(env.MY_VAR).not.toBe("my-PRODUCTION-var-value");
+				expect(env.MY_VAR).toBe("my-var-value");
+				expect(env.MY_JSON_VAR).toEqual({ test: true });
+
+				expect(env.MY_KV).toBeTruthy();
+				expect(env.MY_KV_PROD).toBeFalsy();
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should provide secrets targeting a specified environment", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+				environment: "production",
+			});
+			try {
+				const { MY_DEV_VAR } = env;
+				expect(MY_DEV_VAR).not.toEqual("my-dev-var-value");
+				expect(MY_DEV_VAR).toEqual("my-PRODUCTION-dev-var-value");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should error if a non-existent environment is provided", async () => {
+			await expect(
+				getPlatformProxy({
+					configPath: wranglerTomlFilePath,
+					environment: "non-existent-environment",
+				})
+			).rejects.toThrow(
+				/No environment found in configuration with name "non-existent-environment"/
+			);
+		});
 	});
 });
 
