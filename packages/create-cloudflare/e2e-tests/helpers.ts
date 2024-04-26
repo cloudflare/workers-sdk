@@ -159,7 +159,7 @@ export const waitForExit = async (
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
-	await new Promise((resolve, rejects) => {
+	await new Promise((res, rejects) => {
 		proc.stdout.on("data", (data) => {
 			stdout.push(data);
 			if (onData) {
@@ -173,7 +173,7 @@ export const waitForExit = async (
 
 		proc.on("close", (code) => {
 			if (code === 0) {
-				resolve(null);
+				res(null);
 			} else {
 				rejects(code);
 			}
@@ -292,7 +292,7 @@ export const testDeploymentCommitMessage = async (
 ) => {
 	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
 		// Wait for 2 seconds between each attempt
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await new Promise((res) => setTimeout(res, 2000));
 		// Note: we cannot simply run git and check the result since the commit can be part of the
 		//       deployment even without git, so instead we fetch the deployment info from the pages api
 		const response = await fetch(
