@@ -24,28 +24,29 @@ export type {
 	ConfigModuleRuleType,
 } from "./environment";
 
+type ReadConfigCommandArgs<CommandArgs> = CommandArgs &
+	Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig"> &
+	Partial<Pick<OnlyCamelCase<CommonYargsOptions>, "env">>;
+
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
-	args: CommandArgs &
-		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
+	args: ReadConfigCommandArgs<CommandArgs>,
 	requirePagesConfig: true
 ): Omit<Config, "pages_build_output_dir"> & { pages_build_output_dir: string };
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
-	args: CommandArgs &
-		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
+	args: ReadConfigCommandArgs<CommandArgs>,
 	requirePagesConfig?: boolean
 ): Config;
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
-	args: CommandArgs &
-		Pick<OnlyCamelCase<CommonYargsOptions>, "experimentalJsonConfig">,
+	args: ReadConfigCommandArgs<CommandArgs>,
 	requirePagesConfig?: boolean
 ): Config {
 	let rawConfig: RawConfig = {};

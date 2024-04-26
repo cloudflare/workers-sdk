@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.21.0",
+	"version": "2.21.1",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -31,7 +31,7 @@
 		"check:lint": "eslint .",
 		"check:type": "tsc",
 		"lint": "eslint",
-		"prepublishOnly": "pnpm run build",
+		"prepublishOnly": "pnpm -w run build",
 		"test:e2e:cleanup": "node -r esbuild-register scripts/e2eCleanup.ts",
 		"test:e2e:npm": "pnpm run build && cross-env TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
 		"test:e2e:pnpm": "pnpm run build && cross-env TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",

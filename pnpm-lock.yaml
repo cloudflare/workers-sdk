@@ -43,9 +43,6 @@ importers:
       esbuild-register:
         specifier: ^3.5.0
         version: 3.5.0(esbuild@0.17.19)
-      ioredis:
-        specifier: ^4.28.2
-        version: 4.28.4
       jsonc-parser:
         specifier: ^3.2.0
         version: 3.2.0
@@ -273,6 +270,9 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
     devDependencies:
+      fixtures-shared:
+        specifier: workspace:*
+        version: link:../shared
       strip-ansi:
         specifier: ^7.1.0
         version: 7.1.0
@@ -1579,9 +1579,6 @@ importers:
         specifier: ~2.3.2
         version: 2.3.3
     devDependencies:
-      '@cloudflare/ai':
-        specifier: ^1.0.35
-        version: 1.0.41
       '@cloudflare/cli':
         specifier: workspace:*
         version: link:../cli
@@ -1621,9 +1618,6 @@ importers:
       '@types/body-parser':
         specifier: ^1.19.2
         version: 1.19.2
-      '@types/busboy':
-        specifier: ^1.5.0
-        version: 1.5.0
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
@@ -1666,9 +1660,6 @@ importers:
       '@types/signal-exit':
         specifier: ^3.0.1
         version: 3.0.1
-      '@types/source-map-support':
-        specifier: ^0.5.7
-        version: 0.5.7
       '@types/supports-color':
         specifier: ^8.1.1
         version: 8.1.1
@@ -1720,9 +1711,6 @@ importers:
       express:
         specifier: ^4.18.1
         version: 4.18.1(supports-color@9.2.2)
-      finalhandler:
-        specifier: ^1.2.0
-        version: 1.2.0(supports-color@9.2.2)
       find-up:
         specifier: ^6.3.0
         version: 6.3.0
@@ -1753,12 +1741,6 @@ importers:
       ink-table:
         specifier: ^3.0.0
         version: 3.0.0(ink@3.2.0)(react@17.0.2)
-      ink-testing-library:
-        specifier: ^2.1.0
-        version: 2.1.0(@types/react@17.0.52)
-      ink-text-input:
-        specifier: ^4.0.3
-        version: 4.0.3(ink@3.2.0)(react@17.0.2)
       is-ci:
         specifier: ^3.0.1
         version: 3.0.1
@@ -1804,9 +1786,6 @@ importers:
       react-error-boundary:
         specifier: ^3.1.4
         version: 3.1.4(react@17.0.2)
-      remove-accents-esm:
-        specifier: ^0.0.1
-        version: 0.0.1
       semiver:
         specifier: ^1.1.0
         version: 1.1.0
@@ -7213,12 +7192,6 @@ packages:
       '@types/node': 18.16.10
     dev: true
 
-  /@types/busboy@1.5.0:
-    resolution: {integrity: sha512-ncOOhwmyFDW76c/Tuvv9MA9VGYUCn8blzyWmzYELcNGDb0WXWLSmFi7hJq25YdRBYJrmMBB5jZZwUjlJe9HCjQ==}
-    dependencies:
-      '@types/node': 18.16.10
-    dev: true
-
   /@types/cacheable-request@6.0.3:
     resolution: {integrity: sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==}
     dependencies:
@@ -7571,12 +7544,6 @@ packages:
 
   /@types/signal-exit@3.0.1:
     resolution: {integrity: sha512-OSitN9PP9E/c4tlt1Qdj3CAz5uHD9Da5rhUqlaKyQRCX1T7Zdpbk6YdeZbR2eiE2ce+NMBgVnMxGqpaPSNQDUQ==}
-    dev: true
-
-  /@types/source-map-support@0.5.7:
-    resolution: {integrity: sha512-rJqBfLel8jPuL5MwXxMH2Cdb6D80Snu3YJxDE+VJAmtT04l7j3OA7h+FYXlYDys0WeBVH/MPbExj3B8NCaDw9g==}
-    dependencies:
-      source-map: 0.6.1
     dev: true
 
   /@types/stack-utils@2.0.1:
@@ -10165,11 +10132,6 @@ packages:
     engines: {node: '>=6'}
     dev: false
 
-  /cluster-key-slot@1.1.0:
-    resolution: {integrity: sha512-2Nii8p3RwAPiFwsnZvukotvow2rIHM+yQ6ZcBXGHdniadkYGZYiGmkHJIbZPIV9nfv7m/U1IPMVVcAhoWFeklw==}
-    engines: {node: '>=0.10.0'}
-    dev: false
-
   /cmd-shim@4.1.0:
     resolution: {integrity: sha512-lb9L7EM4I/ZRVuljLPEtUJOP+xiQVknZ4ZMpMgEp4JzNldPb27HU03hi6K1/6CoIuit/Zm/LQXySErFeXxDprw==}
     engines: {node: '>=10'}
@@ -10920,11 +10882,6 @@ packages:
   /delegates@1.0.0:
     resolution: {integrity: sha512-bd2L678uiWATM6m5Z1VzNCErI3jiGzt6HGY8OVICs40JQq/HALfbyNJmp0UDakEY4pMMaN0Ly5om/B1VI/+xfQ==}
     dev: true
-
-  /denque@1.5.1:
-    resolution: {integrity: sha512-XwE+iZ4D6ZUB7mfYRMb5wByE8L74HCn30FBN7sWnXksWc1LO1bPDl67pBR9o/kC4z/xSNAwkMYcGgqDV3BE3Hw==}
-    engines: {node: '>=0.10'}
-    dev: false
 
   /depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
@@ -13745,31 +13702,6 @@ packages:
       react: 17.0.2
     dev: true
 
-  /ink-testing-library@2.1.0(@types/react@17.0.52):
-    resolution: {integrity: sha512-7TNlOjJlJXB33vG7yVa+MMO7hCjaC1bCn+zdpSjknWoLbOWMaFdKc7LJvqVkZ0rZv2+akhjXPrcR/dbxissjUw==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      '@types/react': '>=16.8.0 || 18'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-    dependencies:
-      '@types/react': 17.0.52
-    dev: true
-
-  /ink-text-input@4.0.3(ink@3.2.0)(react@17.0.2):
-    resolution: {integrity: sha512-eQD01ik9ltmNoHmkeQ2t8LszYkv2XwuPSUz3ie/85qer6Ll/j0QSlSaLNl6ENHZakBHdCBVZY04iOXcLLXA0PQ==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      ink: ^3.0.0-3
-      react: ^16.5.2 || ^17.0.0 || 18
-    dependencies:
-      chalk: 4.1.2
-      ink: 3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@17.0.52)(react@17.0.2)
-      react: 17.0.2
-      type-fest: 0.15.1
-    dev: true
-
   /ink@3.2.0(patch_hash=iiwbcf44d6ccmi6a27ljqs7qce)(@types/react@17.0.52)(react@17.0.2):
     resolution: {integrity: sha512-firNp1q3xxTzoItj/eOOSZQnYSlyrWks5llCTVX37nJ59K3eXbQ8PtzCguqo8YI19EELo5QxaKnJd4VxzhU8tg==}
     engines: {node: '>=10'}
@@ -13875,25 +13807,6 @@ packages:
       fp-ts: ^2.5.0
     dependencies:
       fp-ts: 2.13.1
-
-  /ioredis@4.28.4:
-    resolution: {integrity: sha512-KmG3FDd1pKZcWQ7/fIbwzvpkZ50NwRJ3RBK9dpetJrNfC+sxhK6TzaVkExvh9AiF+rAVSUmvqfHyQp5U418aDw==}
-    engines: {node: '>=6'}
-    dependencies:
-      cluster-key-slot: 1.1.0
-      debug: 4.3.4(supports-color@9.2.2)
-      denque: 1.5.1
-      lodash.defaults: 4.2.0
-      lodash.flatten: 4.4.0
-      lodash.isarguments: 3.1.0
-      p-map: 2.1.0
-      redis-commands: 1.7.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
 
   /ip@1.1.8:
     resolution: {integrity: sha512-PuExPYUiu6qMBQb4l06ecm6T6ujzhmh+MeJcW9wa89PoAz5pvd4zPgN5WJV104mb6S2T1AwNIAaB70JNrLQWhg==}
@@ -15326,6 +15239,7 @@ packages:
 
   /lodash.defaults@4.2.0:
     resolution: {integrity: sha512-qjxPLHd3r5DnsdGacqOMU6pb/avJzdh9tFX2ymgoZE27BmjXrNy/y4LoaiTeAb+O3gL8AfpJGtqfX/ae2leYYQ==}
+    dev: true
 
   /lodash.difference@4.5.0:
     resolution: {integrity: sha512-dS2j+W26TQ7taQBGN8Lbbq04ssV3emRw4NY58WErlTO29pIqS0HmoT5aJ9+TUQ1N3G+JOZSji4eugsWwGp9yPA==}
@@ -15333,6 +15247,7 @@ packages:
 
   /lodash.flatten@4.4.0:
     resolution: {integrity: sha512-C5N2Z3DgnnKr0LOpv/hKCgKdb7ZZwafIrsesve6lmzvZIRZRGaZ/l6Q8+2W7NaT+ZwO3fFlSCzCzrDCFdJfZ4g==}
+    dev: true
 
   /lodash.get@4.4.2:
     resolution: {integrity: sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==}
@@ -15340,6 +15255,7 @@ packages:
 
   /lodash.isarguments@3.1.0:
     resolution: {integrity: sha512-chi4NHZlZqZD18a0imDHnZPrDeBbTtVN7GXMwuGdRH9qotxAjYs3aVLKc7zNOG9eddR5Ksd8rvFEBc9SsggPpg==}
+    dev: true
 
   /lodash.isarray@3.0.4:
     resolution: {integrity: sha512-JwObCrNJuT0Nnbuecmqr5DgtuBppuCvGD9lxjFpAzwnVtdGoDQ1zig+5W8k5/6Gcn0gZ3936HDAlGd28i7sOGQ==}
@@ -16938,6 +16854,7 @@ packages:
   /p-map@2.1.0:
     resolution: {integrity: sha512-y3b8Kpd8OAN444hxfBbFfj1FY/RjtTd8tzYwhUqNYXx0fXx2iX4maP4Qr6qhIKbQXI02wTLAda4fYUbDagTUFw==}
     engines: {node: '>=6'}
+    dev: true
 
   /p-map@3.0.0:
     resolution: {integrity: sha512-d3qXVTF/s+W+CdJ5A29wywV2n8CQQYahlgz2bFiA+4eVNJbHJodPZ+/gXwPGh0bOqA+j8S+6+ckmvLGPk1QpxQ==}
@@ -18124,22 +18041,6 @@ packages:
       strip-indent: 3.0.0
     dev: true
 
-  /redis-commands@1.7.0:
-    resolution: {integrity: sha512-nJWqw3bTFy21hX/CPKHth6sfhZbdiHP6bTawSgQBlKOVRG7EZkfHbbHwQJnrE4vsQf0CMNE+3gJ4Fmm16vdVlQ==}
-    dev: false
-
-  /redis-errors@1.2.0:
-    resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
-    engines: {node: '>=4'}
-    dev: false
-
-  /redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
-    engines: {node: '>=4'}
-    dependencies:
-      redis-errors: 1.2.0
-    dev: false
-
   /reflect.getprototypeof@1.0.4:
     resolution: {integrity: sha512-ECkTw8TmJwW60lOTR+ZkODISW6RQ8+2CL3COqtiJKLd6MmB45hN51HprHFziKLGkAuTGQhBb91V8cy+KHlaCjw==}
     engines: {node: '>= 0.4'}
@@ -18283,10 +18184,6 @@ packages:
   /remix@1.17.0:
     resolution: {integrity: sha512-eZMXfetYXRE5AaXN7yPhHa7Z+EwsQ4eE3AGEXpL9FSVUskgGmNcURH6Hn11WjnA8mGh3WZVvTG+wWQ74lJ8FeQ==}
     engines: {node: '>=14'}
-    dev: true
-
-  /remove-accents-esm@0.0.1:
-    resolution: {integrity: sha512-Nbwv7X61l7a8Dgj1hdt1rM8scr4NntlrtSMW0r2YJPK7/NygnjrdVXwhs8HaQBy2x735WvNqHHuRNeswhR4ngQ==}
     dev: true
 
   /remove-accents@0.4.2:
@@ -19146,10 +19043,6 @@ packages:
       get-source: 2.0.12
     dev: false
 
-  /standard-as-callback@2.1.0:
-    resolution: {integrity: sha512-qoRRSyROncaz1z0mvYqIE4lCd9p2R90i6GxW3uZv5ucSu8tU7B5HXUP1gG8pVZsYNVaXjk8ClXHPttLyxAL48A==}
-    dev: false
-
   /static-extend@0.1.2:
     resolution: {integrity: sha512-72E9+uLc27Mt718pMHt9VMNiAL4LMsmDbBva8mxWUCkT07fSzEGMYUCk0XWY6lp0j6RBAG4cJ3mWuZv2OE3s0g==}
     engines: {node: '>=0.10.0'}
@@ -19953,11 +19846,6 @@ packages:
 
   /type-fest@0.13.1:
     resolution: {integrity: sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg==}
-    engines: {node: '>=10'}
-    dev: true
-
-  /type-fest@0.15.1:
-    resolution: {integrity: sha512-n+UXrN8i5ioo7kqT/nF8xsEzLaqFra7k32SEsSPwvXVGyAcRgV/FUQN/sgfptJTR1oRmmq7z4IXMFSM7im7C9A==}
     engines: {node: '>=10'}
     dev: true
 

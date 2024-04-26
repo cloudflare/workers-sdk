@@ -1,4 +1,4 @@
-name: Pull Request
+name: Tests + Checks
 
 on: pull_request
 
@@ -6,6 +6,7 @@ env:
   node-version: 16.18
 jobs:
   add-to-project:
+    if: github.ref != 'refs/heads/changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
@@ -42,7 +43,7 @@ jobs:
           node-version: ${{ env.node-version }}
           cache: "pnpm"
 
-      - name: "Create .env file"
+      - name: "Configure turbo repo cache environment variables"
         run: |
           touch .env
           echo TURBO_API=${{ secrets.TURBO_API }} >> .env
@@ -91,7 +92,7 @@ jobs:
           node-version: ${{ env.node-version }}
           cache: "pnpm"
 
-      - name: "Create .env file"
+      - name: "Configure turbo repo cache environment variables"
         run: |
           touch .env
           echo TURBO_API=${{ secrets.TURBO_API }} >> .env
@@ -102,12 +103,6 @@ jobs:
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run builds
-        run: pnpm run build
-        env:
-          NODE_ENV: "production"
-          CI_OS: ${{ runner.os }}
-
       - name: Run tests
         run: pnpm run test:ci
         env:
@@ -115,6 +110,7 @@ jobs:
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          CI_OS: ${{ runner.os }}
 
       - name: Upload debug logs
         if: always()

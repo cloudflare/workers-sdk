@@ -21,6 +21,10 @@ import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
  */
 export type GetPlatformProxyOptions = {
 	/**
+	 * The name of the environment to use
+	 */
+	environment?: string;
+	/**
 	 * The path to the config object to use (default `wrangler.toml`)
 	 */
 	configPath?: string;
@@ -82,12 +86,12 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
+	const env = options.environment;
+
 	const rawConfig = readConfig(options.configPath, {
 		experimentalJsonConfig: options.experimentalJsonConfig,
+		env,
 	});
-
-	// getBindingsProxy doesn't currently support selecting an environment
-	const env = undefined;
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig(
 		rawConfig,
