@@ -270,6 +270,9 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
     devDependencies:
+      fixtures-shared:
+        specifier: workspace:*
+        version: link:../shared
       strip-ansi:
         specifier: ^7.1.0
         version: 7.1.0
