@@ -20,8 +20,10 @@ import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
+	getDiffsPath,
 	isQuarantineMode,
 	keys,
+	recreateDiffsFolder,
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
@@ -354,6 +356,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	beforeAll(async (ctx) => {
 		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
+		recreateDiffsFolder();
 	});
 
 	beforeEach(async (ctx) => {
@@ -442,6 +445,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await verifyBuildCfTypesScript(framework, projectPath, logStream);
 					await verifyBuildScript(framework, projectPath, logStream);
 					await storeDiff(framework, projectPath);
+				} catch (e) {
+					expect.fail(
+						"Failed due to an exception while running C3. See logs for more details"
+					);
 				} finally {
 					clean(framework);
 					// Cleanup the project in case we need to retry it
@@ -466,15 +473,7 @@ const storeDiff = async (framework: string, projectPath: string) => {
 		return;
 	}
 
-	// Recreate the diffs folder
-	const diffsPath = resolve("./.e2e-diffs");
-	rmSync(diffsPath, {
-		recursive: true,
-		force: true,
-	});
-	mkdirSync(diffsPath, { recursive: true });
-
-	const outputPath = join(diffsPath, `${framework}.diff`);
+	const outputPath = join(getDiffsPath(), `${framework}.diff`);
 
 	const output = await runCommand(["git", "diff"], {
 		silent: true,
@@ -498,7 +497,7 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		"--no-git",
+		"--git",
 	];
 
 	args.push(...argv);

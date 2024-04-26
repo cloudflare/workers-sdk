@@ -7,7 +7,7 @@ import {
 } from "fs";
 import crypto from "node:crypto";
 import { tmpdir } from "os";
-import { basename, join } from "path";
+import { basename, join, resolve } from "path";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/retry";
@@ -200,6 +200,20 @@ export const createTestLogStream = (ctx: TaskContext) => {
 	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
 		flags: "a",
 	});
+};
+
+export const recreateDiffsFolder = () => {
+	// Recreate the diffs folder
+	const diffsPath = getDiffsPath();
+	rmSync(diffsPath, {
+		recursive: true,
+		force: true,
+	});
+	mkdirSync(diffsPath, { recursive: true });
+};
+
+export const getDiffsPath = () => {
+	return resolve("./.e2e-diffs");
 };
 
 export const recreateLogFolder = (suite: Suite) => {

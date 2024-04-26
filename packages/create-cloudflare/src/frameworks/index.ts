@@ -2,6 +2,7 @@ import { crash, logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
+import { isInsideGitRepo } from "../git";
 import clisPackageJson from "./package.json";
 import type { C3Context } from "types";
 
@@ -58,10 +59,13 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 			cwd: ctx.project.path,
 		};
 
-		await runCommand(["git", "init"], cmdEnv);
-		await runCommand(["git", "add", "."], cmdEnv);
+		// Certain framework scaffolders commit by default. If that's the case, skip.
+		if (!isInsideGitRepo(ctx.project.path)) {
+			await runCommand(["git", "init"], cmdEnv);
+			await runCommand(["git", "add", "."], cmdEnv);
 
-		const commitMessage = `Initial commit by ${cli}`;
-		await runCommand(["git", "commit", "-m", commitMessage], cmdEnv);
+			const commitMessage = `Initial commit by ${cli}`;
+			await runCommand(["git", "commit", "-m", commitMessage], cmdEnv);
+		}
 	}
 };

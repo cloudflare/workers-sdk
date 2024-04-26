@@ -59,8 +59,8 @@ runs:
       shell: bash
       if: ${{ steps.run-e2e.outcome == 'success' }}
       run: |
-        mv packages/create-cloudflare/.e2e-diffs packages/framework-diffs
-        git add packages/frameworks-diffs
+        mv packages/create-cloudflare/.e2e-diffs packages/c3-framework-diffs
+        git add packages/c3-frameworks-diffs
         git commit -m "Updating framework diffs"
         git push
 
