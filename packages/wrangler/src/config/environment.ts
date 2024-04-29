@@ -632,6 +632,7 @@ export interface EnvironmentNonInheritable {
 	ai:
 		| {
 				binding: string;
+				staging?: boolean;
 		  }
 		| undefined;
 
