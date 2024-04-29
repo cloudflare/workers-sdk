@@ -1,4 +1,4 @@
-import { NodeGroup } from "../../cloudchamber/client";
+import { DeploymentType, NodeGroup } from "../../cloudchamber/client";
 import type {
 	DeploymentV2,
 	PlacementWithEvents,
@@ -7,6 +7,7 @@ import type {
 export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 	{
 		id: "1",
+		type: DeploymentType.DEFAULT,
 		created_at: "123",
 		account_id: "123",
 		vcpu: 4,
@@ -25,6 +26,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 	},
 	{
 		id: "2",
+		type: DeploymentType.DEFAULT,
 		created_at: "1234",
 		account_id: "123",
 		vcpu: 4,
@@ -54,6 +56,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 	{
 		id: "1",
+		type: DeploymentType.DEFAULT,
 		created_at: "123",
 		account_id: "123",
 		vcpu: 4,
@@ -72,6 +75,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 	},
 	{
 		id: "2",
+		type: DeploymentType.DEFAULT,
 		created_at: "1234",
 		account_id: "123",
 		vcpu: 4,
@@ -98,6 +102,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 	},
 	{
 		id: "3",
+		type: DeploymentType.DEFAULT,
 		created_at: "123",
 		account_id: "123",
 		vcpu: 4,
@@ -116,6 +121,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 	},
 	{
 		id: "4",
+		type: DeploymentType.DEFAULT,
 		created_at: "1234",
 		account_id: "123",
 		vcpu: 4,

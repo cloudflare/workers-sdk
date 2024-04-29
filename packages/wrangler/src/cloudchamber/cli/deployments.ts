@@ -68,6 +68,7 @@ export async function loadDeployments(
 	start("Loading deployments");
 	const [deploymentsResponse, err] = await wrap(
 		DeploymentsService.listDeploymentsV2(
+			undefined,
 			deploymentsParams?.location,
 			deploymentsParams?.image,
 			deploymentsParams?.state as State,

@@ -69,6 +69,7 @@ describe("cloudchamber list", () => {
 		"[
 		    {
 		        \\"id\\": \\"1\\",
+		        \\"type\\": \\"default\\",
 		        \\"created_at\\": \\"123\\",
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
@@ -87,6 +88,7 @@ describe("cloudchamber list", () => {
 		    },
 		    {
 		        \\"id\\": \\"2\\",
+		        \\"type\\": \\"default\\",
 		        \\"created_at\\": \\"1234\\",
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
@@ -115,6 +117,7 @@ describe("cloudchamber list", () => {
 		    },
 		    {
 		        \\"id\\": \\"3\\",
+		        \\"type\\": \\"default\\",
 		        \\"created_at\\": \\"123\\",
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
@@ -133,6 +136,7 @@ describe("cloudchamber list", () => {
 		    },
 		    {
 		        \\"id\\": \\"4\\",
+		        \\"type\\": \\"default\\",
 		        \\"created_at\\": \\"1234\\",
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,

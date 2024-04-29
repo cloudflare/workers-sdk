@@ -4,8 +4,8 @@
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
-import type { Deployment } from "../models/Deployment";
 import type { DeploymentID } from "../models/DeploymentID";
+import type { DeploymentV2 } from "../models/DeploymentV2";
 import type { ListPlacements } from "../models/ListPlacements";
 import type { PlacementID } from "../models/PlacementID";
 import type { PlacementWithEvents } from "../models/PlacementWithEvents";
@@ -67,13 +67,13 @@ export class PlacementsService {
 	 * You can stop the current placement and create a new one. The new one will have the same durable properties of the deployment, but will otherwise be like new
 	 * @param placementId
 	 * @param requestBody
-	 * @returns Deployment Deployment replaced
+	 * @returns DeploymentV2 Deployment replaced
 	 * @throws ApiError
 	 */
 	public static replaceDeployment(
 		placementId: PlacementID,
 		requestBody: ReplaceDeploymentRequestBody
-	): CancelablePromise<Deployment> {
+	): CancelablePromise<DeploymentV2> {
 		return __request(OpenAPI, {
 			method: "POST",
 			url: "/placements/{placementID}",
