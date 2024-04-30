@@ -573,8 +573,8 @@ describe("normalizeAndValidateConfig()", () => {
 						env: "production",
 					}
 				);
-
 				expect(diagnostics.hasWarnings()).toBe(false);
+				
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(config).toEqual(
 					expect.objectContaining({

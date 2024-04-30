@@ -2047,8 +2047,13 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Unexpected fields found in d1_databases[2] field: \\"id\\"
+			  - Unexpected fields found in d1_databases[3] field: \\"id\\",\\"preview_id\\"
+			  - Unexpected fields found in d1_databases[4] field: \\"id\\""
+		`);
+				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
@@ -2143,8 +2148,11 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Unexpected fields found in constellation[2] field: \\"project\\""
+		`);
+				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - \\"constellation[0]\\" bindings should have a string \\"binding\\" field but got {}.
@@ -2239,8 +2247,11 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Unexpected fields found in hyperdrive[2] field: \\"project\\""
+		`);
+				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - \\"hyperdrive[0]\\" bindings should have a string \\"binding\\" field but got {}.
@@ -2899,7 +2910,13 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Unexpected fields found in mtls_certificates[3] field: \\"namespace\\"
+			  - Unexpected fields found in mtls_certificates[4] field: \\"id\\"
+			  - Unexpected fields found in mtls_certificates[7] field: \\"service\\""
+		`);
+				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:

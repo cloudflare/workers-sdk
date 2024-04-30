@@ -2364,6 +2364,7 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		"allowed_destination_addresses",
 		"destination_address",
 		"name",
+		"binding"
 	]);
 
 	return isValid;
@@ -3036,12 +3037,6 @@ function validateQueues(envName: string): ValidatorFn {
 			) {
 				isValid = false;
 			}
-
-			validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-				"binding",
-				"delivery_delay",
-				"queue",
-			]);
 		}
 
 		return isValid;
@@ -3105,17 +3100,6 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 		}
 	}
 
-	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-		"dead_letter_queue",
-		"max_batch_size",
-		"max_batch_timeout",
-		"max_concurrency",
-		"max_retries",
-		"queue",
-		"retry_delay",
-		"type",
-		"visibility_timeout_ms",
-	]);
 	return isValid;
 };
 
