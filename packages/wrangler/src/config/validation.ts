@@ -2364,7 +2364,7 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		"allowed_destination_addresses",
 		"destination_address",
 		"name",
-		"binding"
+		"binding",
 	]);
 
 	return isValid;
