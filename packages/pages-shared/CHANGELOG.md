@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.11.31
+
+### Patch Changes
+
+- [#4814](https://github.com/cloudflare/workers-sdk/pull/4814) [`488c081`](https://github.com/cloudflare/workers-sdk/commit/488c0815f1f9ca12f0dfbb88b485a2f813676e28) Thanks [@jahands](https://github.com/jahands)! - fix: Only apply early hints to html assets
+
 ## 0.11.30
 
 ### Patch Changes
