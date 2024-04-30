@@ -1,5 +1,25 @@
 # wrangler
 
+## 3.53.0
+
+### Minor Changes
+
+- [#5604](https://github.com/cloudflare/workers-sdk/pull/5604) [`327a456`](https://github.com/cloudflare/workers-sdk/commit/327a4568751a4046ff8794c72c658c074964a7c7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add support for environments in `getPlatformProxy`
+
+  allow `getPlatformProxy` to target environments by allowing users to specify an `environment` option
+
+  Example usage:
+
+  ```js
+  const { env } = await getPlatformProxy({
+  	environment: "production",
+  });
+  ```
+
+### Patch Changes
+
+- [#5705](https://github.com/cloudflare/workers-sdk/pull/5705) [`4097759`](https://github.com/cloudflare/workers-sdk/commit/4097759b6fbef4cd9aa81d3a6f01fc868ff50dd8) Thanks [@G4brym](https://github.com/G4brym)! - Add `staging` flag to AI binding
+
 ## 3.52.0
 
 ### Minor Changes
