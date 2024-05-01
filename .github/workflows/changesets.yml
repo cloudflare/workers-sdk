@@ -47,12 +47,16 @@ jobs:
           echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
           echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
 
+      - name: Build all packages
+        run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
+
       - name: Create Version PR or Publish to NPM
         id: changesets
         uses: changesets/action@v1
         with:
           version: node .github/changeset-version.js
-          # This runs wrangler#prepublishOnly, which runs a turbo build at the root of the repo
           publish: pnpm exec changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
