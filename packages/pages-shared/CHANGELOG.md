@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.11.32
+
+### Patch Changes
+
+- [#5733](https://github.com/cloudflare/workers-sdk/pull/5733) [`995199f`](https://github.com/cloudflare/workers-sdk/commit/995199f5901f9290e846d6477df613c26bf8ba01) Thanks [@penalosa](https://github.com/penalosa)! - fix: Build all packages before publishing
+
 ## 0.11.31
 
 ### Patch Changes
