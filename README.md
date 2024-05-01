@@ -1,37 +1,33 @@
 # Cloudflare Workers with itty-router Template
 
-This template demonstrates how to use the itty-router package to add routing to your Cloudflare Workers.
+Utilize the `itty-router` package to efficiently add routing to your Cloudflare Workers with this straightforward template.
 
 ## Setup
 
-To create a new project using this template, follow these steps:
+Creating a new project is a breeze. Simply follow these steps:
 
-1. Clone this repository or download the zip file.
-2. Navigate to the project directory.
-3. Run one of the following commands to generate your project:
+1. Clone this repository or download the provided zip file.
+2. Open your terminal and navigate to the project directory using `cd path/to/your-project`.
+3. Execute the command below to scaffold your project:
 
 ```bash
-$ npx wrangler generate my-project worker--xx
-# or
-$ yarn wrangler generate my-project worker--xx
-# or
-$ pnpm wrangler generate my-project worker--xx
-Make sure to replace my-project with your desired project name. The worker--xx parameter specifies the type of project to generate.
+$ npx create worker-itty-router my-project
 
-Before publishing your code, you need to edit the wrangler.toml file and add your Cloudflare account ID. More information about configuring and publishing your code can be found in the documentation.
+Ensure to replace my-project with your project's desired name.
+
+Before pushing your code, remember to personalize the wrangler.toml file with your unique Cloudflare account_id. You can find more guidance on configuration and deployment in our documentation.
 
 Deployment
-Once you are ready to deploy your code, run the following command:
+When you're set to launch your project, deploy it by running:
 
-bash
-Copy code
 $ npm run deploy
-# or
+# Alternatively, use yarn or pnpm
 $ yarn run deploy
-# or
 $ pnpm run deploy
-This will deploy your code to Cloudflare Workers.
 
+This command will upload your project to Cloudflare Workers and get it live!
 
-Contributing 
-If you encounter any issues or would like to contribute to this project, please feel free to open a pull request or submit an issue on GitHub.
+Contributing
+Stumbled upon a bug or have a feature in mind? We encourage contributions. Simply open a pull request or submit an issue on GitHub. We appreciate your input!
+
+Happy coding!
