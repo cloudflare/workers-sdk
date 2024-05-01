@@ -25,8 +25,17 @@ type BodyEncoding = "manual" | "automatic";
 // Before serving a 404, we check the cache to see if we've served this asset recently
 // and if so, serve it from the cache instead of responding with a 404.
 // This gives a bit of a grace period between deployments for any clients browsing the old deployment.
-export const ASSET_PRESERVATION_CACHE = "assetPreservationCache";
+export const ASSET_PRESERVATION_CACHE_V1 = "assetPreservationCache";
+// V2 stores the content hash instead of the asset.
+// TODO: Remove V1 once we've fully migrated to V2
+export const ASSET_PRESERVATION_CACHE_V2 = "assetPreservationCacheV2";
 const CACHE_CONTROL_PRESERVATION = "public, s-maxage=604800"; // 1 week
+
+/** The preservation cache should be periodically
+ * written to so that the age / expiration is reset.
+ * Note: Up to 12 hours of jitter added to this value.
+ */
+export const CACHE_PRESERVATION_WRITE_FREQUENCY = 86_400; // 1 day
 
 export const CACHE_CONTROL_BROWSER = "public, max-age=0, must-revalidate"; // have the browser check in with the server to make sure its local cache is valid before using it
 export const REDIRECTS_VERSION = 1;
@@ -311,6 +320,10 @@ export async function generateHandler<
 		}
 	}
 
+	function isNullBodyStatus(status: number): boolean {
+		return [101, 204, 205, 304].includes(status);
+	}
+
 	async function attachHeaders(response: Response) {
 		const existingHeaders = new Headers(response.headers);
 
@@ -456,7 +469,7 @@ export async function generateHandler<
 
 		// https://fetch.spec.whatwg.org/#null-body-status
 		return new Response(
-			[101, 204, 205, 304].includes(response.status) ? null : response.body,
+			isNullBodyStatus(response.status) ? null : response.body,
 			{
 				headers: headers,
 				status: response.status,
@@ -466,6 +479,13 @@ export async function generateHandler<
 	}
 
 	return await attachHeaders(await generateResponse());
+
+	/** We have non-standard cache behavior, so strip out all headers but keep the method */
+	function getCacheKey(): Request {
+		return new Request(request.url, {
+			method: request.method,
+		});
+	}
 
 	async function serveAsset(
 		servingAssetEntry: AssetEntry,
@@ -532,32 +552,43 @@ export async function generateHandler<
 				response.headers.set("x-robots-tag", "noindex");
 			}
 
-			if (options.preserve) {
-				// https://fetch.spec.whatwg.org/#null-body-status
-				const preservedResponse = new Response(
-					[101, 204, 205, 304].includes(response.status)
-						? null
-						: response.clone().body,
-					response
-				);
-				preservedResponse.headers.set(
-					"cache-control",
-					CACHE_CONTROL_PRESERVATION
-				);
-				preservedResponse.headers.set("x-robots-tag", "noindex");
+			if (options.preserve && waitUntil && caches) {
+				waitUntil(
+					(async () => {
+						try {
+							const assetPreservationCacheV2 = await caches.open(
+								ASSET_PRESERVATION_CACHE_V2
+							);
 
-				if (waitUntil && caches) {
-					waitUntil(
-						caches
-							.open(ASSET_PRESERVATION_CACHE)
-							.then((assetPreservationCache) =>
-								assetPreservationCache.put(request.url, preservedResponse)
-							)
-							.catch((err) => {
-								logError(err);
-							})
-					);
-				}
+							// Check if the asset has changed since last written to cache
+							// or if the cached entry is getting too old and should have
+							// it's expiration reset.
+							const match = await assetPreservationCacheV2.match(request);
+							if (
+								!match ||
+								assetKey !== (await match.text()) ||
+								isPreservationCacheResponseExpiring(match)
+							) {
+								// cache the asset key in the cache with all the headers.
+								// When we read it back, we'll re-fetch the body but use the
+								// cached headers.
+								const preservedResponse = new Response(assetKey, response);
+								preservedResponse.headers.set(
+									"cache-control",
+									CACHE_CONTROL_PRESERVATION
+								);
+								preservedResponse.headers.set("x-robots-tag", "noindex");
+
+								await assetPreservationCacheV2.put(
+									getCacheKey(),
+									preservedResponse
+								);
+							}
+						} catch (err) {
+							logError(err as Error);
+						}
+					})()
+				);
 			}
 
 			if (
@@ -585,15 +616,66 @@ export async function generateHandler<
 
 	async function notFound(): Promise<Response> {
 		if (caches) {
-			const assetPreservationCache = await caches.open(
-				ASSET_PRESERVATION_CACHE
-			);
-			const preservedResponse = await assetPreservationCache.match(request.url);
-			if (preservedResponse) {
-				if (setMetrics) setMetrics({ preservationCacheResult: "checked-hit" });
-				return preservedResponse;
-			} else {
-				if (setMetrics) setMetrics({ preservationCacheResult: "checked-miss" });
+			try {
+				const assetPreservationCacheV2 = await caches.open(
+					ASSET_PRESERVATION_CACHE_V2
+				);
+				let preservedResponse = await assetPreservationCacheV2.match(
+					getCacheKey()
+				);
+
+				// Continue serving from V1 preservation cache for some time to
+				// prevent 404s during the migration to V2
+				const cutoffDate = new Date("2024-05-10");
+				if (!preservedResponse && Date.now() < cutoffDate.getTime()) {
+					const assetPreservationCacheV1 = await caches.open(
+						ASSET_PRESERVATION_CACHE_V1
+					);
+					preservedResponse = await assetPreservationCacheV1.match(request.url);
+					if (preservedResponse) {
+						// V1 cache contains full response bodies so we return it directly
+						if (setMetrics) {
+							setMetrics({ preservationCacheResult: "checked-hit" });
+						}
+						return preservedResponse;
+					}
+				}
+
+				// V2 cache only contains the asset key, rather than the asset body:
+				if (preservedResponse) {
+					if (setMetrics) {
+						setMetrics({ preservationCacheResult: "checked-hit" });
+					}
+					// Always read the asset key to prevent hanging responses
+					const assetKey = await preservedResponse.text();
+					if (isNullBodyStatus(preservedResponse.status)) {
+						// We know the asset hasn't changed, so use the cached headers.
+						return new Response(null, preservedResponse);
+					}
+					if (assetKey) {
+						const asset = await fetchAsset(assetKey);
+						if (asset) {
+							// We know the asset hasn't changed, so use the cached headers.
+							return new Response(asset.body, preservedResponse);
+						} else {
+							logError(
+								new Error(
+									`preservation cache contained assetKey that does not exist in storage: ${assetKey}`
+								)
+							);
+						}
+					} else {
+						logError(new Error(`cached response had no assetKey: ${assetKey}`));
+					}
+				} else {
+					if (setMetrics) {
+						setMetrics({ preservationCacheResult: "checked-miss" });
+					}
+				}
+			} catch (err) {
+				// Don't throw an error because preservation cache is best effort.
+				// But log it because we should be able to fetch the asset here.
+				logError(err as Error);
 			}
 		} else {
 			if (setMetrics) setMetrics({ preservationCacheResult: "disabled" });
@@ -658,6 +740,26 @@ function isCacheable(request: Request) {
 function isPreview(url: URL): boolean {
 	if (url.hostname.endsWith(".pages.dev")) {
 		return url.hostname.split(".").length > 3 ? true : false;
+	}
+	return false;
+}
+
+/** Checks if a response is older than CACHE_PRESERVATION_WRITE_FREQUENCY
+ * and should be written to cache again to reset it's expiration.
+ */
+export function isPreservationCacheResponseExpiring(
+	response: Response
+): boolean {
+	const ageHeader = response.headers.get("age");
+	if (!ageHeader) return false;
+	try {
+		const age = parseInt(ageHeader);
+		// Add up to 12 hours of jitter to help prevent a
+		// thundering heard when a lot of assets expire at once.
+		const jitter = Math.floor(Math.random() * 43_200);
+		if (age > CACHE_PRESERVATION_WRITE_FREQUENCY + jitter) return true;
+	} catch {
+		return false;
 	}
 	return false;
 }

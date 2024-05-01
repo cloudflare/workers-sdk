@@ -1,7 +1,11 @@
 import { Cache } from "@miniflare/cache";
 import { MemoryStorage } from "@miniflare/storage-memory";
-import { describe, expect, test } from "vitest";
-import { generateHandler } from "../../asset-server/handler";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	CACHE_PRESERVATION_WRITE_FREQUENCY,
+	generateHandler,
+	isPreservationCacheResponseExpiring,
+} from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
@@ -472,7 +476,7 @@ describe("asset-server handler", () => {
 		};
 
 		// Create cache storage to reuse between requests
-		const { caches, cacheSpy } = createCacheStorage();
+		const { caches } = createCacheStorage();
 
 		const getResponse = async () =>
 			getTestResponse({
@@ -503,7 +507,7 @@ describe("asset-server handler", () => {
 
 		await Promise.all(spies.waitUntil);
 
-		const earlyHintsCache = cacheSpy[`eh:${deploymentId}`];
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
 		const earlyHintsRes = await earlyHintsCache.match("https://example.com/");
 
 		if (!earlyHintsRes) {
@@ -536,6 +540,239 @@ describe("asset-server handler", () => {
 		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
 			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image"`
 		);
+	});
+
+	describe("should serve deleted assets from preservation cache", async () => {
+		beforeEach(() => {
+			vi.useFakeTimers();
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		test("preservationCacheV2", async () => {
+			const deploymentId = "deployment-" + Math.random();
+			const metadata = createMetadataObject({ deploymentId }) as Metadata;
+			const { caches } = createCacheStorage();
+
+			let findAssetEntryForPath = async (path: string) => {
+				if (path === "/foo.html") {
+					return "asset-key-foo.html";
+				}
+				return null;
+			};
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/foo"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+			expect(await response.text()).toMatchInlineSnapshot('"hello world!"');
+			const expectedHeaders = {
+				"access-control-allow-origin": "*",
+				"cache-control": "public, max-age=0, must-revalidate",
+				"content-type": "undefined",
+				etag: '"asset-key-foo.html"',
+				"referrer-policy": "strict-origin-when-cross-origin",
+				"x-content-type-options": "nosniff",
+				"x-server-env": "dev",
+			};
+			expect(Object.fromEntries(response.headers)).toStrictEqual(
+				expectedHeaders
+			);
+			// waitUntil should be called for asset-preservation,
+			expect(spies.waitUntil.length).toBe(1);
+
+			await Promise.all(spies.waitUntil);
+
+			const preservationCacheV2 = await caches.open("assetPreservationCacheV2");
+			const preservationRes = await preservationCacheV2.match(
+				"https://example.com/foo"
+			);
+
+			if (!preservationRes) {
+				throw new Error(
+					"Did not match preservation cache on https://example.com/foo"
+				);
+			}
+
+			expect(await preservationRes.text()).toMatchInlineSnapshot(
+				'"asset-key-foo.html"'
+			);
+
+			// Delete the asset from the manifest and ensure it's served from preservation cache
+			findAssetEntryForPath = async (path: string) => {
+				return null;
+			};
+			const { response: response2 } = await getTestResponse({
+				request: new Request("https://example.com/foo"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response2.status).toBe(200);
+			expect(await response2.text()).toMatchInlineSnapshot('"hello world!"');
+			// Cached responses have the same headers with a few changes/additions:
+			expect(Object.fromEntries(response2.headers)).toStrictEqual({
+				...expectedHeaders,
+				"cache-control": "public, s-maxage=604800",
+				"x-robots-tag": "noindex",
+				"cf-cache-status": "HIT", // new header
+			});
+
+			// Serve with a fresh cache and ensure we don't get a response
+			const { response: response3 } = await getTestResponse({
+				request: new Request("https://example.com/foo"),
+				metadata,
+				findAssetEntryForPath,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response3.status).toBe(404);
+			expect(Object.fromEntries(response3.headers)).toMatchInlineSnapshot(`
+				{
+				  "access-control-allow-origin": "*",
+				  "referrer-policy": "strict-origin-when-cross-origin",
+				}
+			`);
+		});
+
+		test("preservationCacheV1 (fallback)", async () => {
+			vi.setSystemTime(new Date("2024-05-09")); // 1 day before fallback is disabled
+
+			const deploymentId = "deployment-" + Math.random();
+			const metadata = createMetadataObject({ deploymentId }) as Metadata;
+			const { caches } = createCacheStorage();
+
+			const preservationCacheV1 = await caches.open("assetPreservationCache");
+
+			// Write a response to the V1 cache and make sure it persists
+			await preservationCacheV1.put(
+				"https://example.com/foo",
+				new Response("preserved in V1 cache!", {
+					headers: {
+						"Cache-Control": "public, max-age=300",
+					},
+				})
+			);
+
+			const preservationRes = await preservationCacheV1.match(
+				"https://example.com/foo"
+			);
+
+			if (!preservationRes) {
+				throw new Error(
+					"Did not match preservation cache on https://example.com/foo"
+				);
+			}
+
+			expect(await preservationRes.text()).toMatchInlineSnapshot(
+				`"preserved in V1 cache!"`
+			);
+
+			// Delete the asset from the manifest and ensure it's served from V1 preservation cache
+			const findAssetEntryForPath = async (path: string) => {
+				return null;
+			};
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/foo"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+			expect(await response.text()).toMatchInlineSnapshot(
+				`"preserved in V1 cache!"`
+			);
+			expect(Object.fromEntries(response.headers)).toMatchInlineSnapshot(`
+				{
+				  "access-control-allow-origin": "*",
+				  "cache-control": "public, max-age=300",
+				  "cf-cache-status": "HIT",
+				  "content-type": "text/plain;charset=UTF-8",
+				  "referrer-policy": "strict-origin-when-cross-origin",
+				  "x-content-type-options": "nosniff",
+				}
+			`);
+			// No cache or early hints writes
+			expect(spies.waitUntil.length).toBe(0);
+
+			// Should disable fallback starting may 10th
+			vi.setSystemTime(new Date("2024-05-10"));
+			const { response: response2, spies: spies2 } = await getTestResponse({
+				request: new Request("https://example.com/foo"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response2.status).toBe(404);
+			expect(Object.fromEntries(response2.headers)).toMatchInlineSnapshot(`
+				{
+				  "access-control-allow-origin": "*",
+				  "referrer-policy": "strict-origin-when-cross-origin",
+				}
+			`);
+			// No cache or early hints writes
+			expect(spies2.waitUntil.length).toBe(0);
+		});
+	});
+
+	describe("isPreservationCacheResponseExpiring()", async () => {
+		test("no age header", async () => {
+			const res = new Response(null);
+			expect(isPreservationCacheResponseExpiring(res)).toBe(false);
+		});
+
+		test("empty age header", async () => {
+			const res = new Response(null, {
+				headers: { age: "" },
+			});
+			expect(isPreservationCacheResponseExpiring(res)).toBe(false);
+		});
+
+		test("unparsable age header", async () => {
+			const res = new Response(null, {
+				headers: { age: "not-a-number" },
+			});
+			expect(isPreservationCacheResponseExpiring(res)).toBe(false);
+		});
+
+		test("below write frequency", async () => {
+			const res = new Response(null, {
+				headers: { age: "0" },
+			});
+			expect(isPreservationCacheResponseExpiring(res)).toBe(false);
+
+			const res2 = new Response(null, {
+				headers: { age: "5" },
+			});
+			expect(isPreservationCacheResponseExpiring(res2)).toBe(false);
+
+			// At the max age (without jitter)
+			const res3 = new Response(null, {
+				headers: { age: CACHE_PRESERVATION_WRITE_FREQUENCY.toString() },
+			});
+			expect(isPreservationCacheResponseExpiring(res3)).toBe(false);
+		});
+
+		test("above write frequency + jitter", async () => {
+			const res = new Response(null, {
+				headers: {
+					age: (CACHE_PRESERVATION_WRITE_FREQUENCY + 43_200 + 1).toString(),
+				},
+			});
+			expect(isPreservationCacheResponseExpiring(res)).toBe(true);
+		});
 	});
 });
 
