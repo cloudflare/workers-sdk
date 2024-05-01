@@ -236,7 +236,7 @@ export const isString: ValidatorFn = (diagnostics, field, value) => {
  */
 export const isValidName: ValidatorFn = (diagnostics, field, value) => {
 	if (
-		(typeof value === "string" && /^$|^[a-z0-9_ ][a-z0-9-_ ]*$/.test(value)) ||
+		(typeof value === "string" && /^$|^[a-z0-9_][a-z0-9-_]*$/.test(value)) ||
 		value === undefined
 	) {
 		return true;
