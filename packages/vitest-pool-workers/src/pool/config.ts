@@ -18,6 +18,11 @@ const PLUGIN_VALUES = Object.values(PLUGINS);
 const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
 export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
+const WranglerOptionsSchema = z.object({
+	configPath: z.ostring(),
+	environment: z.ostring(),
+});
+
 const WorkersPoolOptionsSchema = z.object({
 	/**
 	 * Entrypoint to Worker run in the same isolate/context as tests. This is
@@ -50,7 +55,7 @@ const WorkersPoolOptionsSchema = z.object({
 		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.union([z.array(WranglerOptionsSchema), WranglerOptionsSchema])
 		.optional(),
 });
 export type SourcelessWorkerOptions = Omit<
@@ -174,7 +179,34 @@ async function parseCustomPoolOptions(
 	if (errorRef.value !== undefined) throw errorRef.value;
 
 	// Try to parse Wrangler config if any
-	if (options.wrangler?.configPath !== undefined) {
+	if (Array.isArray(options.wrangler)) {
+		for (const wranglerOptions of options.wrangler) {
+			if (wranglerOptions.configPath !== undefined) {
+				const configPath = path.resolve(rootPath, wranglerOptions.configPath);
+				// Make sure future accesses to `configPath` see a fully-resolved path
+				// (e.g. for getting accurate relative paths in error messages)
+				wranglerOptions.configPath = configPath;
+
+				// Lazily import `wrangler` if and when we need it
+				const wrangler = await import("wrangler");
+				const { workerOptions, define, main } =
+					wrangler.unstable_getMiniflareWorkerOptions(
+						configPath,
+						wranglerOptions.environment
+					);
+
+				// If `main` wasn't explicitly configured, fall back to Wrangler config's
+				options.main ??= main;
+				// Merge generated Miniflare options from Wrangler with specified overrides
+				options.miniflare = mergeWorkerOptions(
+					workerOptions,
+					options.miniflare as SourcelessWorkerOptions
+				);
+				// Record any Wrangler `define`s
+				options.defines = define;
+			}
+		}
+	} else if (options.wrangler?.configPath !== undefined) {
 		const configPath = path.resolve(rootPath, options.wrangler.configPath);
 		// Make sure future accesses to `configPath` see a fully-resolved path
 		// (e.g. for getting accurate relative paths in error messages)
