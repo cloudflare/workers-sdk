@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.11.33
+
+### Patch Changes
+
+- [#4797](https://github.com/cloudflare/workers-sdk/pull/4797) [`007ba93`](https://github.com/cloudflare/workers-sdk/commit/007ba9397be9a2914254d0b59e0695df1a518b52) Thanks [@jahands](https://github.com/jahands)! - refactor: Store asset key instead of body in preservation cache
+
+  - Add HTTP method to cache key to prevent returning null bodies in cached GET requests that follow a HEAD request
+  - Only write unchanged assets to preservation cache every 24-36 hours instead of on every request
+
 ## 0.11.32
 
 ### Patch Changes
