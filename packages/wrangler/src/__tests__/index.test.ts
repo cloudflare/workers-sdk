@@ -1,4 +1,6 @@
+import { logPossibleBugMessage } from "..";
 import { getPackageManager } from "../package-manager";
+import { updateCheck } from "../update-check";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -278,5 +280,23 @@ describe("wrangler", () => {
 		Total Upload: xx KiB / gzip: xx KiB
 		--dry-run: exiting now."
 	`);
+	});
+
+	describe("logPossibleBugMessage()", () => {
+		it("should display a 'possible bug' message", async () => {
+			await logPossibleBugMessage();
+			expect(std.out).toMatchInlineSnapshot(
+				`"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"`
+			);
+		});
+
+		it("should display a 'try updating' message if there is one available", async () => {
+			(updateCheck as jest.Mock).mockImplementation(async () => "123.123.123");
+			await logPossibleBugMessage();
+			expect(std.out).toMatchInlineSnapshot(`
+			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			Note that there is a newer version of Wrangler available (123.123.123). Consider checking whether upgrading resolves this error."
+		`);
+		});
 	});
 });
