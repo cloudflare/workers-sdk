@@ -9618,8 +9618,8 @@ export default{
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.js",
 				expectedModules: {
-					"index.js.map": expect.stringContaining(
-						`"sources":["another.ts","index.ts"],"sourceRoot":""`
+					"index.js.map": expect.stringMatching(
+						/"sources":\["another.ts","index.ts"\],"sourceRoot":"".*"file":"index.js"/
 					),
 				},
 			});
@@ -9663,9 +9663,9 @@ export default{
 				"index.js.map",
 				JSON.stringify({
 					version: 3,
-					file: "index.js",
 					sources: ["index.ts"],
 					sourceRoot: "",
+					file: "index.js",
 				})
 			);
 
@@ -9673,8 +9673,8 @@ export default{
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.js",
 				expectedModules: {
-					"index.js.map": expect.stringContaining(
-						`"sources":["index.ts"],"sourceRoot":""`
+					"index.js.map": expect.stringMatching(
+						/"sources":\["index.ts"\],"sourceRoot":"".*"file":"index.js"/
 					),
 				},
 			});
@@ -9715,6 +9715,29 @@ export default{
 			});
 
 			await runWrangler("deploy");
+		});
+		it("should correctly read sourcemaps with custom wrangler.toml location", async () => {
+			fs.mkdirSync("some/dir", { recursive: true });
+			writeWranglerToml(
+				{
+					main: "../../index.ts",
+					upload_source_maps: true,
+				},
+				"some/dir/wrangler.toml"
+			);
+			writeWorkerSource({ format: "ts" });
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringMatching(
+						/"sources":\[".*?another\.ts",".*?index\.ts"\],"sourceRoot":"".*"file":"index.js"/
+					),
+				},
+			});
+
+			await runWrangler("deploy -c some/dir/wrangler.toml");
 		});
 	});
 
