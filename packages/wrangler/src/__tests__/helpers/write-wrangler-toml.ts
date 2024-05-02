@@ -3,9 +3,12 @@ import TOML from "@iarna/toml";
 import type { RawConfig } from "../../config";
 
 /** Write a mock wrangler.toml file to disk. */
-export default function writeWranglerToml(config: RawConfig = {}) {
+export default function writeWranglerToml(
+	config: RawConfig = {},
+	path = "./wrangler.toml"
+) {
 	fs.writeFileSync(
-		"./wrangler.toml",
+		path,
 		TOML.stringify({
 			compatibility_date: "2022-01-12",
 			name: "test-name",
