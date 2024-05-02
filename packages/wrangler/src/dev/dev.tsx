@@ -327,7 +327,7 @@ function DevSession(props: DevSessionProps) {
 		[devEnv, startDevWorkerOptions]
 	);
 
-	useCustomBuild(props.entry, props.build, onBundleStart);
+	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir(props.projectRoot);
 
@@ -527,11 +527,7 @@ function useTmpDir(projectRoot: string | undefined): string | undefined {
 	return directory;
 }
 
-function useCustomBuild(
-	expectedEntry: Entry,
-	build: Config["build"],
-	onBundleStart: () => void
-): void {
+function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 	useEffect(() => {
 		if (!build.command) return;
 		let watcher: ReturnType<typeof watch> | undefined;
@@ -544,7 +540,6 @@ function useCustomBuild(
 					path.relative(expectedEntry.directory, expectedEntry.file) || ".";
 				//TODO: we should buffer requests to the proxy until this completes
 				logger.log(`The file ${filePath} changed, restarting build...`);
-				onBundleStart();
 				runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
 					logger.error("Custom build failed:", err);
 				});
@@ -554,7 +549,7 @@ function useCustomBuild(
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry, onBundleStart]);
+	}, [build, expectedEntry]);
 }
 
 function sleep(period: number) {
