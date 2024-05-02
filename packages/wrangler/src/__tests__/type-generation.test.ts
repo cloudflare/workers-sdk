@@ -1,10 +1,80 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
+import {
+	constructType,
+	constructTypeKey,
+	isValidIdentifier,
+} from "../type-generation";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "../config/environment";
+
+describe("isValidIdentifier", () => {
+	it("should return true for valid identifiers", () => {
+		expect(isValidIdentifier("valid")).toBe(true);
+		expect(isValidIdentifier("valid123")).toBe(true);
+		expect(isValidIdentifier("valid_123")).toBe(true);
+		expect(isValidIdentifier("valid_123_")).toBe(true);
+		expect(isValidIdentifier("_valid_123_")).toBe(true);
+		expect(isValidIdentifier("_valid_123_")).toBe(true);
+		expect(isValidIdentifier("$valid")).toBe(true);
+		expect(isValidIdentifier("$valid$")).toBe(true);
+	});
+
+	it("should return false for invalid identifiers", () => {
+		expect(isValidIdentifier("123invalid")).toBe(false);
+		expect(isValidIdentifier("invalid-123")).toBe(false);
+		expect(isValidIdentifier("invalid 123")).toBe(false);
+	});
+});
+
+describe("constructTypeKey", () => {
+	it("should return a valid type key", () => {
+		expect(constructTypeKey("valid")).toBe("valid");
+		expect(constructTypeKey("valid123")).toBe("valid123");
+		expect(constructTypeKey("valid_123")).toBe("valid_123");
+		expect(constructTypeKey("valid_123_")).toBe("valid_123_");
+		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+		expect(constructTypeKey("_valid_123_")).toBe("_valid_123_");
+		expect(constructTypeKey("$valid")).toBe("$valid");
+		expect(constructTypeKey("$valid$")).toBe("$valid$");
+
+		expect(constructTypeKey("123invalid")).toBe('"123invalid"');
+		expect(constructTypeKey("invalid-123")).toBe('"invalid-123"');
+		expect(constructTypeKey("invalid 123")).toBe('"invalid 123"');
+	});
+});
+
+describe("constructType", () => {
+	it("should return a valid type", () => {
+		expect(constructType("valid", "string")).toBe("valid: string;");
+		expect(constructType("valid123", "string")).toBe("valid123: string;");
+		expect(constructType("valid_123", "string")).toBe("valid_123: string;");
+		expect(constructType("valid_123_", "string")).toBe("valid_123_: string;");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
+		expect(constructType("_valid_123_", "string")).toBe("_valid_123_: string;");
+
+		expect(constructType("123invalid", "string")).toBe('"123invalid": string;');
+		expect(constructType("invalid-123", "string")).toBe(
+			'"invalid-123": string;'
+		);
+		expect(constructType("invalid 123", "string")).toBe(
+			'"invalid 123": string;'
+		);
+
+		expect(constructType("valid", 'a"', false)).toBe('valid: "a\\"";');
+		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\";');
+		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\b";');
+		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\b\\"";');
+
+		expect(constructType("valid", 1)).toBe("valid: 1;");
+		expect(constructType("valid", 12345)).toBe("valid: 12345;");
+		expect(constructType("valid", true)).toBe("valid: true;");
+		expect(constructType("valid", false)).toBe("valid: false;");
+	});
+});
 
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
@@ -20,6 +90,7 @@ const bindingsConfigMock: Omit<
 			activeDuty: true,
 			captian: "Picard",
 		}, // We can assume the objects will be stringified
+		"some-other-var": "some-other-value",
 	},
 	queues: {
 		producers: [
@@ -205,6 +276,7 @@ describe("generateTypes()", () => {
 			TEST_KV_NAMESPACE: KVNamespace;
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
+			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			DURABLE_TEST1: DurableObjectNamespace;
 			DURABLE_TEST2: DurableObjectNamespace;
@@ -374,6 +446,7 @@ describe("generateTypes()", () => {
 		"interface Env {
 			SOMETHING: \\"asdasdfasdf\\";
 			ANOTHER: \\"thing\\";
+			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 		}
 		"
@@ -461,6 +534,7 @@ describe("generateTypes()", () => {
 			"interface CloudflareEnv {
 				SOMETHING: \\"asdasdfasdf\\";
 				ANOTHER: \\"thing\\";
+				\\"some-other-var\\": \\"some-other-value\\";
 				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 			}
 			"
@@ -547,7 +621,7 @@ describe("generateTypes()", () => {
 				expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8")).toMatch(
-					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
 				);
 			});
 
@@ -592,7 +666,7 @@ describe("generateTypes()", () => {
 			expect(
 				fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8")
 			).toMatch(
-				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
 			);
 		});
 	});
