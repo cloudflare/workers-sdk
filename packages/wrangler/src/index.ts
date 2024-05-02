@@ -58,7 +58,7 @@ import {
 import { tailHandler, tailOptions } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
-import { printWranglerBanner } from "./update-check";
+import { printWranglerBanner, updateCheck } from "./update-check";
 import {
 	getAuthFromEnv,
 	listScopes,
@@ -839,10 +839,7 @@ export async function main(argv: string[]): Promise<void> {
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
 			if (!(e instanceof UserError)) {
-				logger.log(
-					`${fgGreenColor}%s${resetColor}`,
-					"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
-				);
+				await logPossibleBugMessage();
 			}
 		}
 
@@ -908,6 +905,22 @@ export function getDevCompatibilityDate(
 		);
 	}
 	return compatibilityDate ?? currentDate;
+}
+
+/**
+ * Write a message to the log that tells the user what they might do after we have reported an unexpected error.
+ */
+export async function logPossibleBugMessage() {
+	logger.log(
+		`${fgGreenColor}%s${resetColor}`,
+		"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
+	);
+	const latestVersion = await updateCheck();
+	if (latestVersion) {
+		logger.log(
+			`Note that there is a newer version of Wrangler available (${latestVersion}). Consider checking whether upgrading resolves this error.`
+		);
+	}
 }
 
 export { printWranglerBanner };
