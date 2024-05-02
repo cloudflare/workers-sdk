@@ -1,5 +1,32 @@
 # wrangler
 
+## 3.53.1
+
+### Patch Changes
+
+- [#5091](https://github.com/cloudflare/workers-sdk/pull/5091) [`6365c90`](https://github.com/cloudflare/workers-sdk/commit/6365c9077ed7f438a8f5fc827eae2ca04c2520e0) Thanks [@Cherry](https://github.com/Cherry)! - fix: better handle dashes and other invalid JS identifier characters in `wrangler types` generation for vars, bindings, etc.
+
+  Previously, with the following in your `wrangler.toml`, an invalid types file would be generated:
+
+  ```toml
+  [vars]
+  some-var = "foobar"
+  ```
+
+  Now, the generated types file will be valid:
+
+  ```typescript
+  interface Env {
+  	"some-var": "foobar";
+  }
+  ```
+
+- [#5748](https://github.com/cloudflare/workers-sdk/pull/5748) [`27966a4`](https://github.com/cloudflare/workers-sdk/commit/27966a43c65aa6046856d3b813af2d6797b894bf) Thanks [@penalosa](https://github.com/penalosa)! - fix: Load sourcemaps relative to the entry directory, not cwd.
+
+- [#5746](https://github.com/cloudflare/workers-sdk/pull/5746) [`1dd9f7e`](https://github.com/cloudflare/workers-sdk/commit/1dd9f7eeea4df9141c766e52c31828cf201ab71b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: suggest trying to update Wrangler if there is a newer one available after an unexpected error
+
+- [#5226](https://github.com/cloudflare/workers-sdk/pull/5226) [`f63e7a5`](https://github.com/cloudflare/workers-sdk/commit/f63e7a55613d56381c7396cf55c248dc2a0ad305) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: remove second Wrangler banner from `wrangler dispatch-namespace rename`
+
 ## 3.53.0
 
 ### Minor Changes
