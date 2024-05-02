@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-fix(wrangler): Remove second banner from `wrangler dispatch-namespace rename`
+fix: remove second Wrangler banner from `wrangler dispatch-namespace rename`
