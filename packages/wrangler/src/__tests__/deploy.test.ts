@@ -413,6 +413,34 @@ describe("deploy", () => {
 			"
 		`);
 		});
+
+		it("should warn user when additional properties are passed to a services config", async () => {
+			writeWranglerToml({
+				d1_databases: [
+					{
+						binding: "MY_DB",
+						database_name: "my-database",
+						database_id: "xxxxxxxxx",
+						// @ts-expect-error Depending on a users editor setup a type error in the toml will not be displayed.
+						// This test is checking that warnings for type errors are displayed
+						tail_consumers: [{ service: "<TAIL_WORKER_NAME>" }],
+					},
+				],
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+			    - Unexpected fields found in d1_databases[0] field: \\"tail_consumers\\"
+
+			"
+		`);
+		});
 	});
 
 	describe("environments", () => {

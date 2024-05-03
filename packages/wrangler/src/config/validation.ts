@@ -1998,6 +1998,13 @@ const validateDurableObjectBinding: ValidatorFn = (
 		isValid = false;
 	}
 
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"class_name",
+		"environment",
+		"name",
+		"script_name",
+	]);
+
 	return isValid;
 };
 
@@ -2048,6 +2055,11 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"destination",
+		"name",
+	]);
+
 	return isValid;
 };
 
@@ -2071,6 +2083,10 @@ const validateBrowserBinding =
 			diagnostics.errors.push(`binding should have a string "binding" field.`);
 			isValid = false;
 		}
+
+		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+			"binding",
+		]);
 
 		return isValid;
 	};
@@ -2289,6 +2305,13 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"id",
+		"preview_id",
+	]);
+
 	return isValid;
 };
 
@@ -2336,6 +2359,14 @@ const validateSendEmailBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"allowed_destination_addresses",
+		"destination_address",
+		"name",
+		"binding",
+	]);
+
 	return isValid;
 };
 
@@ -2444,6 +2475,14 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"bucket_name",
+		"preview_bucket_name",
+		"jurisdiction",
+	]);
+
 	return isValid;
 };
 
@@ -2457,6 +2496,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		return false;
 	}
 	let isValid = true;
+
 	// D1 databases must have a binding and either a database_name or database_id.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -2487,6 +2527,16 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"database_id",
+		"database_internal_env",
+		"database_name",
+		"migrations_dir",
+		"migrations_table",
+		"preview_database_id",
+	]);
+
 	return isValid;
 };
 
@@ -2515,6 +2565,12 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"index_name",
+	]);
+
 	return isValid;
 };
 
@@ -2554,6 +2610,12 @@ const validateConstellationBinding: ValidatorFn = (
 			"Constellation Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_CONSTELLATION_WARNING=true to hide this message\n\nFor example: `export NO_CONSTELLATION_WARNING=true && wrangler <YOUR COMMAND HERE>`"
 		);
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"project_id",
+	]);
+
 	return isValid;
 };
 
@@ -2584,6 +2646,13 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"id",
+		"localConnectionString",
+	]);
+
 	return isValid;
 };
 
@@ -2771,6 +2840,12 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"dataset",
+	]);
+
 	return isValid;
 };
 
@@ -2896,6 +2971,12 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"certificate_id",
+	]);
+
 	return isValid;
 };
 
@@ -2957,6 +3038,7 @@ function validateQueues(envName: string): ValidatorFn {
 				isValid = false;
 			}
 		}
+
 		return isValid;
 	};
 }
