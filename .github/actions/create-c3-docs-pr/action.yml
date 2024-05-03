@@ -1,0 +1,98 @@
+name: "Create C3 Docs PR"
+description: "Creates a PR to Cloudflare Docs most recent C3 diffs for full-stack frameworks"
+inputs:
+  token:
+    description: "Github access token"
+    required: true
+  releaseBranch:
+    description: "Name of the release branch containing diff workflow run"
+    required: true
+  targetHeadBranch:
+    description: "The name of the branch to push to in the target repo"
+    required: true
+  targetBaseBranch:
+    description: "The name of the base (main) branch to PR against in the target repo"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Lookup Workflow ID
+      id: lookup-workflow-id
+      uses: actions/github-script@v7
+      with:
+        retries: 3
+        retry-exempt-status-codes: 400,401,403
+        github-token: ${{ inputs.token }}
+        script: |
+          const {data: workflows} = await github.rest.actions.listWorkflowRuns({
+            owner: "cloudflare",
+            repo: "workers-sdk",
+            branch: "${{ inputs.releaseBranch }}",
+            workflow_id: "c3-e2e.yml",
+            per_page: 1,
+          });
+          return workflows.workflow_runs[0].id;
+
+    # For debug purposes
+    - name: Echo Workflow Id
+      shell: bash
+      run: |
+        echo ${{ steps.lookup-workflow-id.outputs.result }}
+
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config --global user.email wrangler@cloudflare.com
+        git config --global user.name 'Wrangler automated PR updater'
+
+    - name: Checkout Destination Repo
+      uses: actions/checkout@v3
+      with:
+        repository: cloudflare/cloudflare-docs
+        path: ./clone-dir
+        ref: ${{ inputs.targetBaseBranch }}
+        token: ${{ inputs.token }}
+        fetch-depth: 0
+
+    - name: Create Branch
+      working-directory: ./clone-dir
+      shell: bash
+      run: |
+        git checkout -b "c3-diffs-${{ github.sha }}"
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: e2e-framework-diffs
+        path: ./clone-dir/content/pages/framework-guides/c3-framework-diffs
+        github-token: ${{ inputs.token }}
+        run-id: ${{ steps.lookup-workflow-id.outputs.result }}
+
+    - name: Git Commit
+      id: git-commit
+      working-directory: ./clone-dir
+      shell: bash
+      run: |
+        git add diffs
+        if git status | grep -q "Changes to be committed"
+        then
+          git commit -m "Updating diffs"
+          git push -f -u origin HEAD:${{ inputs.targetHeadBranch }}
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "No changes detected, skipping PR creation."
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create PR
+      working-directory: ./clone-dir
+      if: ${{ steps.git-commit.outputs.has_changes == 'true' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        gh pr create \
+          -t "Updating C3 framework diffs" \
+          -b "Adding C3 diffs from workers-sdk release https://github.com/$GITHUB_REPOSITORY/commit/${{ github.sha }}" \
+          -B ${{ inputs.targetBaseBranch }} \
+          -H ${{ inputs.targetHeadBranch }}

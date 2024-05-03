@@ -65,8 +65,11 @@ jobs:
           WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID }}
           WORKERS_NEW_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_NEW_CLOUDFLARE_API_TOKEN }}
 
-      - name: Upload C3 Diffs
+      - name: Create C3 Diffs PR
         if: steps.changesets.outputs.published == 'true'
-        run: node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        uses: ./.github/actions/create-c3-docs-pr
+        with:
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          releaseBranch: "changeset-release/main"
+          targetHeadBranch: c3-diffs-${{ github.sha }}
+          targetBaseBranch: master

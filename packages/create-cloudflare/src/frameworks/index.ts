@@ -53,7 +53,7 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	// When running e2e tests, commit the result of the scaffolding tool to facilitate
 	// diffing what new code is added by C3 as part of the process
-	if (process.env.E2E !== undefined) {
+	if (process.env.SAVE_DIFFS) {
 		const cmdEnv = {
 			silent: true,
 			cwd: ctx.project.path,
