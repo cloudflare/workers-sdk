@@ -58,9 +58,10 @@ describe("deprecated-usage-model", () => {
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
 		Current Deployment ID: Galaxy-Class
+		Current Version ID: Galaxy-Class
 
 
-		NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 		  "warn": "",
 		}
 	`);

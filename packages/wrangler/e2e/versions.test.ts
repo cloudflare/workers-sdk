@@ -16,9 +16,6 @@ function matchWhoamiEmail(stdout: string): string {
 function matchVersionId(stdout: string): string {
 	return stdout.match(/Version ID:\s+([a-f\d-]+)/)?.[1] as string;
 }
-function matchDeploymentId(stdout: string): string {
-	return stdout.match(/Deployment ID:\s+([a-f\d-]+)/)?.[1] as string;
-}
 function countOccurences(stdout: string, substring: string) {
 	return stdout.split(substring).length - 1;
 }
@@ -62,7 +59,7 @@ describe("versions deploy", () => {
 		// TEMP: regular deploy needed for the first time to *create* the worker (will create 1 extra version + deployment in snapshots below)
 		const deploy = await runInWorker`$ ${WRANGLER} deploy`;
 
-		versionId0 = matchDeploymentId(deploy.stdout);
+		versionId0 = matchVersionId(deploy.stdout);
 	});
 
 	it("upload 1st worker version", async () => {
