@@ -310,12 +310,46 @@ function DevSession(props: DevSessionProps) {
 			props.liveReload,
 		]
 	);
+
 	const onBundleStart = useCallback(() => {
 		devEnv.proxy.onBundleStart({
 			type: "bundleStart",
 			config: startDevWorkerOptions,
 		});
 	}, [devEnv, startDevWorkerOptions]);
+	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+	const onCustomBuildEnd = useCallback(() => {
+		const TIMEOUT = 500; // TODO: find a lower bound for this value
+
+		// we don't need to do this timeout if we don't have a previous bundle
+		// (esbuild will definitely produce a new one)
+		if (!bundle) return;
+
+		esbuildStartTimeoutRef.current ??= setTimeout(() => {
+			// esbuild did not start within a reasonable time of the custom build finishing
+			// so we can assume that the custom build produced the same output
+			// and esbuild is choosing not to rebuild the same bundle
+			// so just call onReloadStart with the previous bundle
+			// like we would if esbuild just produced a new bundle
+			onReloadStart(bundle);
+		}, TIMEOUT);
+
+		return () => {
+			clearTimeout(esbuildStartTimeoutRef.current);
+		};
+	}, [devEnv, startDevWorkerOptions]);
+	const onEsbuildStart = useCallback(() => {
+		// see comment in onCustomBuildEnd
+		clearTimeout(esbuildStartTimeoutRef.current);
+
+		// we can conditionally call onBundleStart depending on if a custom build was specified
+		// if it was, that step already emitted the event
+		// but to not leak the conditions as to whether that process was run
+		// to anything outside the useCustomBuild hook (currently dependent on props.build.{command,watch_dir})
+		// we can just call onBundleStart unconditionally as emitting the event more than once is fine
+		// also, if the timeout fired before esbuild started, for some reason, firing this event again is needed
+		onBundleStart();
+	}, [esbuildStartTimeoutRef]);
 	const onReloadStart = useCallback(
 		(bundle: EsbuildBundle) => {
 			devEnv.proxy.onReloadStart({
@@ -327,7 +361,7 @@ function DevSession(props: DevSessionProps) {
 		[devEnv, startDevWorkerOptions]
 	);
 
-	useCustomBuild(props.entry, props.build, onBundleStart);
+	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
 	const directory = useTmpDir(props.projectRoot);
 
@@ -373,12 +407,14 @@ function DevSession(props: DevSessionProps) {
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
-		onBundleStart,
+		onStart: onEsbuildStart,
 		defineNavigatorUserAgent: isNavigatorDefined(
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),
 	});
+
+	// this suffices as an onEsbuildEnd callback
 	useEffect(() => {
 		if (bundle) onReloadStart(bundle);
 	}, [onReloadStart, bundle]);
@@ -530,7 +566,8 @@ function useTmpDir(projectRoot: string | undefined): string | undefined {
 function useCustomBuild(
 	expectedEntry: Entry,
 	build: Config["build"],
-	onBundleStart: () => void
+	onStart: () => void,
+	onEnd: () => void
 ): void {
 	useEffect(() => {
 		if (!build.command) return;
@@ -544,17 +581,21 @@ function useCustomBuild(
 					path.relative(expectedEntry.directory, expectedEntry.file) || ".";
 				//TODO: we should buffer requests to the proxy until this completes
 				logger.log(`The file ${filePath} changed, restarting build...`);
-				onBundleStart();
-				runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
-					logger.error("Custom build failed:", err);
-				});
+				onStart();
+				runCustomBuild(expectedEntry.file, relativeFile, build)
+					.catch((err) => {
+						logger.error("Custom build failed:", err);
+					})
+					.finally(() => {
+						onEnd();
+					});
 			});
 		}
 
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry, onBundleStart]);
+	}, [build, expectedEntry, onStart]);
 }
 
 function sleep(period: number) {
