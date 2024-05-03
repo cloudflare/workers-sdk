@@ -774,6 +774,36 @@ describe("asset-server handler", () => {
 			expect(isPreservationCacheResponseExpiring(res)).toBe(true);
 		});
 	});
+
+	test("internal asset error doesn't set headers", async () => {
+		const metadata = createMetadataObject({
+			deploymentId: "mock-deployment-id",
+			headers: {
+				invalid: [],
+				rules: [
+					{
+						path: "/*",
+						headers: {"x-unwanted-header": "foo"},
+						unsetHeaders: [],
+					},
+				],
+			}
+		}) as Metadata;
+
+		const { response } = await getTestResponse({
+			request: "https://foo.com/",
+			metadata,
+			fetchAsset: async (...args) => {
+				throw "uh oh";
+			},
+			findAssetEntryForPath: async (path: string) => {
+				return "some page";
+			},
+		});
+
+		expect(response.status).toBe(500);
+		expect(Object.fromEntries(response.headers)).not.toHaveProperty("x-unwanted-header");
+	});
 });
 
 interface HandlerSpies {

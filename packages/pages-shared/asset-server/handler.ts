@@ -446,7 +446,11 @@ export async function generateHandler<
 				};
 			}
 		);
-		const matches = headersMatcher({ request });
+
+		// If the response was an internal error from the asset handler, skip applying header rules.
+		// This avoids a case where we can cache 500s for a long time, depending on headers set by a user.
+		const assetError = response.status >= 400 && response.status <= 599
+		const matches = assetError ? [] : headersMatcher({ request });
 
 		// This keeps track of every header that we've set from _headers
 		// because we want to combine user declared headers but overwrite
