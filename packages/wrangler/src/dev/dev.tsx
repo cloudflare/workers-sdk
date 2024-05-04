@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import * as util from "node:util";
@@ -342,7 +341,7 @@ function DevSession(props: DevSessionProps) {
 		return () => {
 			clearTimeout(esbuildStartTimeoutRef.current);
 		};
-	}, [devEnv, startDevWorkerOptions, latestReloadCompleteEvent]);
+	}, [devEnv, latestReloadCompleteEvent]);
 	const onEsbuildStart = useCallback(() => {
 		// see comment in onCustomBuildEnd
 		clearTimeout(esbuildStartTimeoutRef.current);
@@ -354,13 +353,13 @@ function DevSession(props: DevSessionProps) {
 		// we can just call onBundleStart unconditionally as emitting the event more than once is fine
 		// also, if the timeout fired before esbuild started, for some reason, firing this event again is needed
 		onBundleStart();
-	}, [esbuildStartTimeoutRef]);
+	}, [esbuildStartTimeoutRef, onBundleStart]);
 	const onReloadStart = useCallback(
-		(bundle: EsbuildBundle) => {
+		(esbuildBundle: EsbuildBundle) => {
 			devEnv.proxy.onReloadStart({
 				type: "reloadStart",
 				config: startDevWorkerOptions,
-				bundle,
+				bundle: esbuildBundle,
 			});
 		},
 		[devEnv, startDevWorkerOptions]
@@ -602,7 +601,7 @@ function useCustomBuild(
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry, onStart]);
+	}, [build, expectedEntry, onStart, onEnd]);
 }
 
 function sleep(period: number) {
