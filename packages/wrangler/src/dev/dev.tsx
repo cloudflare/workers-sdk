@@ -325,7 +325,8 @@ function DevSession(props: DevSessionProps) {
 		// (esbuild will definitely produce a new one)
 		if (!bundle) return;
 
-		esbuildStartTimeoutRef.current ??= setTimeout(() => {
+		clearTimeout(esbuildStartTimeoutRef.current);
+		esbuildStartTimeoutRef.current = setTimeout(() => {
 			// esbuild did not start within a reasonable time of the custom build finishing
 			// so we can assume that the custom build produced the same output
 			// and esbuild is choosing not to rebuild the same bundle
