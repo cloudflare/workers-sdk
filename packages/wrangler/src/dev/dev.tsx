@@ -326,7 +326,7 @@ function DevSession(props: DevSessionProps) {
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
 	const bundle = useRef<ReturnType<typeof useEsbuild>>();
 	const onCustomBuildEnd = useCallback(() => {
-		const TIMEOUT = 500; // TODO: find a lower bound for this value
+		const TIMEOUT = 300; // TODO: find a lower bound for this value
 
 		clearTimeout(esbuildStartTimeoutRef.current);
 		esbuildStartTimeoutRef.current = setTimeout(() => {
