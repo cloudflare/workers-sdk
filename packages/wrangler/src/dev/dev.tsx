@@ -33,7 +33,11 @@ import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData, StartDevWorkerOptions } from "../api";
+import type {
+	ProxyData,
+	ReloadCompleteEvent,
+	StartDevWorkerOptions,
+} from "../api";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -319,32 +323,26 @@ function DevSession(props: DevSessionProps) {
 		});
 	}, [devEnv, startDevWorkerOptions]);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
 	const bundle = useRef<ReturnType<typeof useEsbuild>>();
 	const onCustomBuildEnd = useCallback(() => {
 		const TIMEOUT = 500; // TODO: find a lower bound for this value
 
-		// we don't need to do this timeout if we don't have a previous bundle
-		// (esbuild will definitely produce a new one)
-		if (!bundle.current) return;
-
 		clearTimeout(esbuildStartTimeoutRef.current);
 		esbuildStartTimeoutRef.current = setTimeout(() => {
-			// we don't need to do this timeout if we don't have a previous bundle
-			// (esbuild will definitely produce a new one)
-			assert(bundle.current);
-
 			// esbuild did not start within a reasonable time of the custom build finishing
 			// so we can assume that the custom build produced the same output
 			// and esbuild is choosing not to rebuild the same bundle
-			// so just call onReloadStart with the previous bundle
-			// like we would if esbuild just produced a new bundle
-			onReloadStart(bundle.current);
+			// therefore the previous worker can be considered reloaded
+			if (latestReloadCompleteEvent.current) {
+				devEnv.proxy.onReloadComplete(latestReloadCompleteEvent.current);
+			}
 		}, TIMEOUT);
 
 		return () => {
 			clearTimeout(esbuildStartTimeoutRef.current);
 		};
-	}, [devEnv, startDevWorkerOptions, bundle]);
+	}, [devEnv, startDevWorkerOptions, latestReloadCompleteEvent]);
 	const onEsbuildStart = useCallback(() => {
 		// see comment in onCustomBuildEnd
 		clearTimeout(esbuildStartTimeoutRef.current);
@@ -474,12 +472,14 @@ function DevSession(props: DevSessionProps) {
 		}
 
 		if (bundle.current) {
-			devEnv.proxy.onReloadComplete({
+			latestReloadCompleteEvent.current = {
 				type: "reloadComplete",
 				config: startDevWorkerOptions,
 				bundle: bundle.current,
 				proxyData,
-			});
+			};
+
+			devEnv.proxy.onReloadComplete(latestReloadCompleteEvent.current);
 		}
 
 		if (props.onReady) {
