@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import * as util from "node:util";
@@ -318,21 +319,26 @@ function DevSession(props: DevSessionProps) {
 		});
 	}, [devEnv, startDevWorkerOptions]);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+	const bundle = useRef<ReturnType<typeof useEsbuild>>();
 	const onCustomBuildEnd = useCallback(() => {
 		const TIMEOUT = 500; // TODO: find a lower bound for this value
 
 		// we don't need to do this timeout if we don't have a previous bundle
 		// (esbuild will definitely produce a new one)
-		if (!bundle) return;
+		if (!bundle.current) return;
 
 		clearTimeout(esbuildStartTimeoutRef.current);
 		esbuildStartTimeoutRef.current = setTimeout(() => {
+			// we don't need to do this timeout if we don't have a previous bundle
+			// (esbuild will definitely produce a new one)
+			assert(bundle.current);
+
 			// esbuild did not start within a reasonable time of the custom build finishing
 			// so we can assume that the custom build produced the same output
 			// and esbuild is choosing not to rebuild the same bundle
 			// so just call onReloadStart with the previous bundle
 			// like we would if esbuild just produced a new bundle
-			onReloadStart(bundle);
+			onReloadStart(bundle.current);
 		}, TIMEOUT);
 
 		return () => {
@@ -380,7 +386,7 @@ function DevSession(props: DevSessionProps) {
 		});
 	}, [devEnv, startDevWorkerOptions]);
 
-	const bundle = useEsbuild({
+	bundle.current = useEsbuild({
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
@@ -417,7 +423,7 @@ function DevSession(props: DevSessionProps) {
 
 	// this suffices as an onEsbuildEnd callback
 	useEffect(() => {
-		if (bundle) onReloadStart(bundle);
+		if (bundle.current) onReloadStart(bundle.current);
 	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
@@ -467,11 +473,11 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
-		if (bundle) {
+		if (bundle.current) {
 			devEnv.proxy.onReloadComplete({
 				type: "reloadComplete",
 				config: startDevWorkerOptions,
-				bundle,
+				bundle: bundle.current,
 				proxyData,
 			});
 		}
@@ -484,7 +490,7 @@ function DevSession(props: DevSessionProps) {
 	return props.local ? (
 		<Local
 			name={props.name}
-			bundle={bundle}
+			bundle={bundle.current}
 			format={props.entry.format}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
@@ -509,13 +515,13 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-			sourceMapPath={bundle?.sourceMapPath}
+			sourceMapPath={bundle.current?.sourceMapPath}
 			services={props.bindings.services}
 		/>
 	) : (
 		<Remote
 			name={props.name}
-			bundle={bundle}
+			bundle={bundle.current}
 			format={props.entry.format}
 			accountId={props.accountId}
 			bindings={props.bindings}
@@ -538,7 +544,7 @@ function DevSession(props: DevSessionProps) {
 			host={props.host}
 			routes={props.routes}
 			onReady={announceAndOnReady}
-			sourceMapPath={bundle?.sourceMapPath}
+			sourceMapPath={bundle.current?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
 		/>
 	);
