@@ -338,7 +338,7 @@ function DevSession(props: DevSessionProps) {
 		return () => {
 			clearTimeout(esbuildStartTimeoutRef.current);
 		};
-	}, [devEnv, startDevWorkerOptions]);
+	}, [devEnv, startDevWorkerOptions, bundle]);
 	const onEsbuildStart = useCallback(() => {
 		// see comment in onCustomBuildEnd
 		clearTimeout(esbuildStartTimeoutRef.current);
