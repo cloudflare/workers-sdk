@@ -1,31 +1,44 @@
-## Template: worker-router
 
-[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router)
+# Worker Router Template
 
-This template demonstrates using the [`itty-router`](https://github.com/kwhitley/itty-router) package to add routing to your Cloudflare Workers.
-
-[`index.js`](https://github.com/cloudflare/worker-template-router/blob/master/index.js) is the content of the Workers script.
+This template demonstrates how to use the `itty-router` package to add routing functionality to your Cloudflare Workers.
 
 ## Setup
 
-To create a `my-project` directory using this template, run:
+To create a new project directory named `my-project` using this template, run the following command:
 
-```sh
-$ npx wrangler generate my-project worker
-# or
-$ yarn wrangler generate my-project worker
-# or
-$ pnpm wrangler generate my-project worker
+bash
+npx wrangler generate my-project worker-router
 ```
 
-Before publishing your code you need to edit `wrangler.toml` file and add your Cloudflare `account_id` - more information about configuring and publishing your code can be found [in the documentation](https://developers.cloudflare.com/workers/learning/getting-started).
+Before deploying your code, make sure to edit the `wrangler.toml` file and add your Cloudflare account ID. For more information on configuring and deploying your code, refer to the Cloudflare Workers documentation.
 
-Once you are ready, you can publish your code by running the following command:
+Once you've configured your project, you can deploy your code using the following command:
 
-```sh
-$ npm run deploy
-# or
-$ yarn run deploy
-# or
-$ pnpm run deploy
+bash
+npm run deploy
 ```
+
+Directory Structure
+
+The directory structure of this template is as follows:
+
+.
+├── index.js
+└── wrangler.toml
+```
+
+- `index.js`: Contains the main code for your Cloudflare Worker.
+- `wrangler.toml`: Configuration file for Wrangler, the Cloudflare Workers CLI tool.
+
+ Resources
+
+- [itty-router GitHub Repository](https://github.com/cloudflare/itty-router)
+
+ License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+ Acknowledgments
+
+Thank you to the contributors of the `itty-router` package for providing a simple and efficient routing solution for Cloudflare Workers.
