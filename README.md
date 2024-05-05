@@ -1,77 +1,69 @@
-<h1 align="center">Cloudflare Workers SDK</h1>
+Setup
 
-<p align="center">
-<img src="cloudflare-workers-outline.png" alt="workers-logo" width="120px" height="120px"/>
-  <br>
-  Cloudflare Workers let you deploy serverless code instantly across the globe for exceptional performance, reliability, and scale.
-  <br>
-</p>
+To create a new project directory named `my-project` using this template, run the following command:
 
-<p align="center">
-  <a href="CONTRIBUTING.md">Contribute</a>
-  ·
-  <a href="https://github.com/cloudflare/workers-sdk/issues">Submit an Issue</a>
-  ·
-  <a href="https://discord.cloudflare.com/">Join Discord</a>
-  <br>
-  <br>
-</p>
 
-<p align="center">
-  <a href="https://www.npmjs.com/wrangler/">
-    <img src="https://img.shields.io/npm/v/wrangler.svg?logo=npm&logoColor=fff&label=NPM+package&color=orange" alt="Wrangler on npm" />
-  </a>&nbsp;
-  <a href="https://discord.cloudflare.com/">
-    <img src="https://img.shields.io/discord/595317990191398933.svg?logo=discord&logoColor=fff&label=Discord&color=7389d8" alt="Discord conversation" />
-  </a>&nbsp;
-  <a href="https://twitter.com/CloudflareDev">
-    <img src="https://img.shields.io/twitter/follow/cloudflaredev" alt="X conversation" />
-  </a>
-</p>
+npx wrangler generate my-project worker-router
 
-<hr>
+ or 
 
-## Quick Start
+yarn wrangler generate my-project worker-router
 
-To get started quickly with a new project, run the command below:
+ or
 
-```bash
-npx create-cloudflare@latest
+pnpm wrangler generate my-project worker-router
+
 ```
 
-For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
+Before deploying your code, make sure to edit the wrangler.toml file and add your Cloudflare account ID. For more information on configuring and deploying your code, refer to the Cloudflare Workers documentation.
 
-## Documentation
+Once you've configured your project, you can deploy your code using the following command:
 
-Visit the official Workers documentation [here](https://developers.cloudflare.com/workers/).
 
-- [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/)
-- [How Workers works](https://developers.cloudflare.com/workers/reference/how-workers-works/)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
-- [Observability](https://developers.cloudflare.com/workers/observability/)
-- [Platform](https://developers.cloudflare.com/workers/platform/)
+npm run deploy
+```
 
-## Directory
+ Worker Router Template
 
-| Package                                                                                                    | Description                                                                                                            | Links                                                           |
-| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)                        | A command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).                                | [Docs](https://developers.cloudflare.com/workers/wrangler/)     |
-| [`create-cloudflare (C3)`](https://github.com/cloudflare/workers-sdk/tree/main/packages/create-cloudflare) | A CLI for creating and deploying new applications to Cloudflare.                                                       | [Docs](https://developers.cloudflare.com/pages/get-started/c3/) |
-| [`miniflare`](https://github.com/cloudflare/workers-sdk/tree/main/packages/miniflare)                      | A simulator for developing and testing Cloudflare Workers, powered by [workerd](https://github.com/cloudflare/workerd) | [Docs](https://miniflare.dev)                                   |
-| [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)      | Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers                                       |                                                                 |
-| [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)                | Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients. |                                                                 |
+This template demonstrates how to use the `itty-router` package to add routing functionality to your Cloudflare Workers.
 
-In addition to these, this repo contains a selection of [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates) to help you get started with a variety of projects.
+ Getting Started
 
-## Contributing
+1. Install Dependencies
 
-We welcome new contributors! Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
 
-## Community
+npm install
+```
 
-Join us in the official [Cloudflare Discord](https://discord.cloudflare.com/) to meet other developers, ask questions, or learn more in general.
+2. Configure Wrangler
 
-## Links
+Edit the wrangler.toml file and add your Cloudflare account ID.
 
-- [Project Board](https://github.com/orgs/cloudflare/projects/1)
-- [Discussions](https://github.com/cloudflare/workers-sdk/discussions)
+3. Deploy
+
+```
+npm run deploy
+```
+
+Project Structure
+
+- index.js: The entry point of your Worker, containing the routing logic.
+- wrangler.toml: The configuration file for the Wrangler CLI tool.
+
+ Routing
+
+This template uses the itty-router package to handle routing in your Cloudflare Worker. You can define routes and their corresponding handlers in the index.js file.
+
+ Resources
+
+- [itty-router GitHub Repository](https://github.com/kwhitley/itty-router)
+- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
+
+ License
+
+This project is licensed under the MIT License.
+
+
+
+
+
