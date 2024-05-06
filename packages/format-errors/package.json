@@ -9,7 +9,7 @@
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240419.0",
 		"mustache": "^4.2.0",
 		"promjs": "^0.4.2",
