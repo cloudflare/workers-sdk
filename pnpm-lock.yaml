@@ -113,9 +113,6 @@ importers:
 
   fixtures/ai-app:
     devDependencies:
-      '@cloudflare/ai':
-        specifier: ^1.0.35
-        version: 1.0.41
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -3797,10 +3794,6 @@ packages:
     dev: true
     bundledDependencies:
       - is-unicode-supported
-
-  /@cloudflare/ai@1.0.41:
-    resolution: {integrity: sha512-n6ViGS7Q2X62d0Gf2UcPB6a6iJPC5xoDnRWyS+IbxyTWmJk9fiNdlK6Ft9koLdF/X+CeIzphg+mrVH3nvPpT6g==}
-    dev: true
 
   /@cloudflare/cloudflare-brand-assets@4.7.7:
     resolution: {integrity: sha512-L4EqYWkvse0265YIzraYUlkvvjW7Cr5LELiAiBStctENBoqRhMuR4Ff2X4g/r1BwsQ7S0LTECwLLbM6BNzhv3g==}
