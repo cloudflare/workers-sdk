@@ -1,77 +1,55 @@
-<h1 align="center">Cloudflare Workers SDK</h1>
 
-<p align="center">
-<img src="cloudflare-workers-outline.png" alt="workers-logo" width="120px" height="120px"/>
-  <br>
-  Cloudflare Workers let you deploy serverless code instantly across the globe for exceptional performance, reliability, and scale.
-  <br>
-</p>
+Cloudflare Worker: Itty Router Template
 
-<p align="center">
-  <a href="CONTRIBUTING.md">Contribute</a>
-  ·
-  <a href="https://github.com/cloudflare/workers-sdk/issues">Submit an Issue</a>
-  ·
-  <a href="https://discord.cloudflare.com/">Join Discord</a>
-  <br>
-  <br>
-</p>
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router)
 
-<p align="center">
-  <a href="https://www.npmjs.com/wrangler/">
-    <img src="https://img.shields.io/npm/v/wrangler.svg?logo=npm&logoColor=fff&label=NPM+package&color=orange" alt="Wrangler on npm" />
-  </a>&nbsp;
-  <a href="https://discord.cloudflare.com/">
-    <img src="https://img.shields.io/discord/595317990191398933.svg?logo=discord&logoColor=fff&label=Discord&color=7389d8" alt="Discord conversation" />
-  </a>&nbsp;
-  <a href="https://twitter.com/CloudflareDev">
-    <img src="https://img.shields.io/twitter/follow/cloudflaredev" alt="X conversation" />
-  </a>
-</p>
+This template leverages the [`itty-router`](https://github.com/kwhitley/itty-router) package, demonstrating a simple way to implement routing within Cloudflare Workers. Utilize this for creating modular and easy-to-navigate applications.
 
-<hr>
+### Template Structure
 
-## Quick Start
+The primary script of this template is located in [`index.js`](https://github.com/cloudflare/worker-template-router/blob/master/index.js), which contains the routing logic and example routes.
 
-To get started quickly with a new project, run the command below:
+Setup and Deployment
 
-```bash
-npx create-cloudflare@latest
+Creating the Project
+
+To set up your project directory using this template, execute one of the following commands depending on your package manager preference:
+
+```sh
+$ npx wrangler generate my-project worker-itty-router
+# or
+$ yarn wrangler generate my-project worker-itty-router
+# or
+$ pnpm wrangler generate my-project worker-itty-router
 ```
 
-For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
+These commands create a new directory named `my-project` with all necessary files to start a new Cloudflare Worker project using the Itty Router.
 
-## Documentation
+Configuration
 
-Visit the official Workers documentation [here](https://developers.cloudflare.com/workers/).
+Before deploying, edit the `wrangler.toml` file to include your Cloudflare `account_id`. This file configures your project settings and deployment options.
 
-- [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/)
-- [How Workers works](https://developers.cloudflare.com/workers/reference/how-workers-works/)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
-- [Observability](https://developers.cloudflare.com/workers/observability/)
-- [Platform](https://developers.cloudflare.com/workers/platform/)
+Publishing Your Worker
 
-## Directory
+When your project is configured and ready for deployment, use the following command to publish:
 
-| Package                                                                                                    | Description                                                                                                            | Links                                                           |
-| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)                        | A command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).                                | [Docs](https://developers.cloudflare.com/workers/wrangler/)     |
-| [`create-cloudflare (C3)`](https://github.com/cloudflare/workers-sdk/tree/main/packages/create-cloudflare) | A CLI for creating and deploying new applications to Cloudflare.                                                       | [Docs](https://developers.cloudflare.com/pages/get-started/c3/) |
-| [`miniflare`](https://github.com/cloudflare/workers-sdk/tree/main/packages/miniflare)                      | A simulator for developing and testing Cloudflare Workers, powered by [workerd](https://github.com/cloudflare/workerd) | [Docs](https://miniflare.dev)                                   |
-| [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)      | Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers                                       |                                                                 |
-| [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)                | Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients. |                                                                 |
+```sh
+$ npm run deploy
+# or
+$ yarn run deploy
+# or
+$ pnpm run deploy
+```
 
-In addition to these, this repo contains a selection of [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates) to help you get started with a variety of projects.
+For detailed guidance on configuring and deploying your worker, please refer to the [Cloudflare Workers Getting Started Guide](https://developers.cloudflare.com/workers/learning/getting-started).
 
-## Contributing
+Contributing
 
-We welcome new contributors! Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
+Your contributions to improve this template are welcome. Please fork the repository, apply your changes, and submit a pull request.
 
-## Community
+License
 
-Join us in the official [Cloudflare Discord](https://discord.cloudflare.com/) to meet other developers, ask questions, or learn more in general.
+This project is distributed under the MIT License. The full license text is available in the LICENSE file in the repository.
+```
 
-## Links
 
-- [Project Board](https://github.com/orgs/cloudflare/projects/1)
-- [Discussions](https://github.com/cloudflare/workers-sdk/discussions)
