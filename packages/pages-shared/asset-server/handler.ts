@@ -447,7 +447,7 @@ export async function generateHandler<
 			}
 		);
 
-		// If the response was an internal error from the asset handler, skip applying header rules.
+		// If the response was an internal error or 404 from the asset handler, skip applying header rules.
 		// This avoids a cases where we can cache undesirable files for a long time, depending on headers set by a user.
 		const assetError = response.status >= 400 && response.status <= 599
 		const matches = assetError ? [] : headersMatcher({ request });
