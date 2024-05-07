@@ -775,7 +775,7 @@ describe("asset-server handler", () => {
 		});
 	});
 
-	test("internal asset error doesn't set headers", async () => {
+	describe("internal asset error doesn't set headers", async () => {
 		const metadata = createMetadataObject({
 			deploymentId: "mock-deployment-id",
 			headers: {
@@ -787,22 +787,58 @@ describe("asset-server handler", () => {
 						unsetHeaders: [],
 					},
 				],
+			},
+			redirects: {
+				invalid: [],
+				rules: [{
+					from: "/here",
+					to: "/there",
+					status: 301,
+					lineNumber: 1,
+				}],
 			}
 		}) as Metadata;
 
-		const { response } = await getTestResponse({
-			request: "https://foo.com/",
-			metadata,
-			fetchAsset: async (...args) => {
-				throw "uh oh";
-			},
-			findAssetEntryForPath: async (path: string) => {
-				return "some page";
-			},
+		const findAssetEntryForPath = async (path: string) => {
+			if (path.startsWith("/asset")) return "some-asset";
+			return null;
+		};
+
+		test("500 skips headers", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/asset",
+				metadata,
+				fetchAsset: async (...args) => {
+					throw "uh oh";
+				},
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(500);
+			expect(Object.fromEntries(response.headers)).not.toHaveProperty("x-unwanted-header");
 		});
 
-		expect(response.status).toBe(500);
-		expect(Object.fromEntries(response.headers)).not.toHaveProperty("x-unwanted-header");
+		test("404 skips headers", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/404",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(404);
+			expect(Object.fromEntries(response.headers)).not.toHaveProperty("x-unwanted-header");
+		});
+
+		test("301 still has headers", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/here",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(301);
+			expect(Object.fromEntries(response.headers)).toHaveProperty("x-unwanted-header");
+		});
 	});
 });
 
