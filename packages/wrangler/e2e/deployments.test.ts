@@ -62,7 +62,8 @@ describe("deployments", () => {
 			Published tmp-e2e-wrangler (TIMINGS)
 			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: 00000000-0000-0000-0000-000000000000
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		workersDev = matchWorkersDev(stdout);
 
@@ -83,11 +84,12 @@ describe("deployments", () => {
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Deployment ID: 00000000-0000-0000-0000-000000000000
+			version ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
 			🟩 Active
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
@@ -108,7 +110,8 @@ describe("deployments", () => {
 			Published tmp-e2e-wrangler (TIMINGS)
 			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: 00000000-0000-0000-0000-000000000000
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
@@ -129,15 +132,17 @@ describe("deployments", () => {
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Deployment ID: 00000000-0000-0000-0000-000000000000
+			Version ID:    00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
 			Deployment ID: 00000000-0000-0000-0000-000000000000
+			Version ID:    00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
 			🟩 Active
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
@@ -149,7 +154,8 @@ describe("deployments", () => {
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Successfully rolled back to Deployment ID: 00000000-0000-0000-0000-000000000000
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: 00000000-0000-0000-0000-000000000000
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
@@ -160,21 +166,24 @@ describe("deployments", () => {
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Deployment ID: 00000000-0000-0000-0000-000000000000
+			Version ID:    00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
 			Deployment ID: 00000000-0000-0000-0000-000000000000
+			Version ID:    00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
 			Deployment ID: 00000000-0000-0000-0000-000000000000
+			Version ID:    00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Rollback from Wrangler 🤠
 			Rollback from: 00000000-0000-0000-0000-000000000000
 			Message:       A test message
 			🟩 Active
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});

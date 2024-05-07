@@ -68,7 +68,8 @@ describe("c3 integration", () => {
 			Published tmp-e2e-wrangler (TIMINGS)
 			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000
-			NOTE: "Deployment ID" in this output will be changed to "Version ID" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Current Version ID: 00000000-0000-0000-0000-000000000000
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);

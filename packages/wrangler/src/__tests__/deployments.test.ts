@@ -86,11 +86,13 @@ describe("deployments", () => {
 
 
 			Deployment ID: Constitution-Class-tag:test-name
+			Version ID:    Constitution-Class-tag:test-name
 			Created on:    2021-01-01T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Upload from Wrangler 🤠
 
 			Deployment ID: Intrepid-Class-tag:test-name
+			Version ID:    Intrepid-Class-tag:test-name
 			Created on:    2021-02-02T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Rollback from Wrangler 🤠
@@ -98,11 +100,13 @@ describe("deployments", () => {
 			Message:       Rolled back for this version
 
 			Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
+			Version ID:    3mEgaU1T-Intrepid-someThing-tag:test-name
 			Created on:    2021-02-03T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Wrangler 🤠
 
 			Deployment ID: Galaxy-Class-tag:test-name
+			Version ID:    Galaxy-Class-tag:test-name
 			Created on:    2021-01-04T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Rollback from Wrangler 🤠
@@ -110,7 +114,7 @@ describe("deployments", () => {
 			🟩 Active
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 
@@ -121,11 +125,13 @@ describe("deployments", () => {
 
 
 			Deployment ID: Constitution-Class-tag:something-else
+			Version ID:    Constitution-Class-tag:something-else
 			Created on:    2021-01-01T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Upload from Wrangler 🤠
 
 			Deployment ID: Intrepid-Class-tag:something-else
+			Version ID:    Intrepid-Class-tag:something-else
 			Created on:    2021-02-02T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Rollback from Wrangler 🤠
@@ -133,11 +139,13 @@ describe("deployments", () => {
 			Message:       Rolled back for this version
 
 			Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
+			Version ID:    3mEgaU1T-Intrepid-someThing-tag:something-else
 			Created on:    2021-02-03T00:00:00.000000Z
 			Author:        Kathryn-Janeway@federation.org
 			Source:        Wrangler 🤠
 
 			Deployment ID: Galaxy-Class-tag:something-else
+			Version ID:    Galaxy-Class-tag:something-else
 			Created on:    2021-01-04T00:00:00.000000Z
 			Author:        Jean-Luc-Picard@federation.org
 			Source:        Rollback from Wrangler 🤠
@@ -145,7 +153,7 @@ describe("deployments", () => {
 			🟩 Active
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 
@@ -168,6 +176,7 @@ describe("deployments", () => {
 
 
 			Deployment ID:       1701-E
+			Version ID:          1701-E
 			Created on:          2021-01-01T00:00:00.000000Z
 			Author:              Jean-Luc-Picard@federation.org
 			Source:              Wrangler 🤠
@@ -180,7 +189,7 @@ describe("deployments", () => {
 
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 
@@ -194,6 +203,7 @@ describe("deployments", () => {
 
 
 			Deployment ID:       1701-E
+			Version ID:          1701-E
 			Created on:          2021-01-01T00:00:00.000000Z
 			Author:              Jean-Luc-Picard@federation.org
 			Source:              Wrangler 🤠
@@ -209,7 +219,7 @@ describe("deployments", () => {
 
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 			it("should automatically log latest deployment details", async () => {
@@ -222,6 +232,7 @@ describe("deployments", () => {
 
 
 			Deployment ID:       1701-E
+			Version ID:          1701-E
 			Created on:          2021-01-01T00:00:00.000000Z
 			Author:              Jean-Luc-Picard@federation.org
 			Source:              Wrangler 🤠
@@ -234,7 +245,7 @@ describe("deployments", () => {
 
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
 		});
@@ -303,9 +314,10 @@ describe("deployments", () => {
 
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha
+			Current Version ID: galactic_mission_alpha
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -342,9 +354,10 @@ describe("deployments", () => {
 
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha
+			Current Version ID: galactic_mission_alpha
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -361,9 +374,10 @@ describe("deployments", () => {
 
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha
+			Current Version ID: galactic_mission_alpha
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -380,9 +394,10 @@ describe("deployments", () => {
 
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha
+			Current Version ID: galactic_mission_alpha
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -407,9 +422,10 @@ describe("deployments", () => {
 
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:test-name
 			Current Deployment ID: galactic_mission_alpha
+			Current Version ID: galactic_mission_alpha
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);
@@ -441,9 +457,10 @@ describe("deployments", () => {
 
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing-tag:something-else
 			Current Deployment ID: galactic_mission_alpha
+			Current Version ID: galactic_mission_alpha
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 
 				expect(requests.count).toEqual(1);

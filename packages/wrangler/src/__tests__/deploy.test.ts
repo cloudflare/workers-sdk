@@ -119,9 +119,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -160,9 +161,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -203,9 +205,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -229,9 +232,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
@@ -273,9 +277,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -301,9 +306,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -460,9 +466,10 @@ describe("deploy", () => {
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -484,9 +491,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -508,9 +516,10 @@ describe("deploy", () => {
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -532,9 +541,10 @@ describe("deploy", () => {
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -607,9 +617,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -638,9 +649,10 @@ describe("deploy", () => {
 			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -688,9 +700,10 @@ describe("deploy", () => {
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
 		Current Deployment ID: Galaxy-Class
+		Current Version ID: Galaxy-Class
 
 
-		NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 	`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -727,9 +740,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - The \\"route\\" field in your configuration is an empty string and will be ignored.
@@ -782,9 +796,10 @@ describe("deploy", () => {
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -824,9 +839,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  partner.com/* (zone name: owned-zone.com)
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -866,9 +882,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  subdomain.partner.com/* (zone name: owned-zone.com)
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -932,9 +949,10 @@ describe("deploy", () => {
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -1038,9 +1056,10 @@ describe("deploy", () => {
 			Published test-name (TIMINGS)
 			  example.com/some-route/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -1324,9 +1343,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1345,9 +1365,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1366,9 +1387,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1389,9 +1411,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1410,9 +1433,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1450,9 +1474,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1504,9 +1529,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1527,9 +1553,10 @@ Update them to point to this script instead?`,
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1562,9 +1589,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1591,9 +1619,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1612,9 +1641,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1712,9 +1742,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1797,9 +1828,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -1857,9 +1889,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
@@ -1949,9 +1982,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 
@@ -2118,9 +2152,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2164,9 +2199,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -2354,9 +2390,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -2406,9 +2443,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2470,9 +2508,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2535,9 +2574,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2633,9 +2673,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2690,9 +2731,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2748,9 +2790,10 @@ addEventListener('fetch', event => {});`
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2791,9 +2834,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2840,9 +2884,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2889,9 +2934,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2939,9 +2985,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2989,9 +3036,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3039,9 +3087,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3089,9 +3138,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3141,9 +3191,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3197,9 +3248,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3309,9 +3361,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			// Mask all but last upload progress message as upload order unknown
 			// (regexp replaces all single/double-digit percentages, i.e. not 100%)
@@ -3450,9 +3503,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3512,9 +3566,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3559,9 +3614,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -3607,9 +3663,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -3828,9 +3885,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -3982,9 +4040,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4006,9 +4065,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4029,9 +4089,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4051,9 +4112,10 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			No deploy targets for test-name (TIMINGS)
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4075,9 +4137,10 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			No deploy targets for test-name (TIMINGS)
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4103,9 +4166,10 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			No deploy targets for test-name (dev) (TIMINGS)
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4132,9 +4196,10 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			No deploy targets for test-name (dev) (TIMINGS)
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4162,9 +4227,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4193,9 +4259,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4225,9 +4292,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4260,9 +4328,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4297,9 +4366,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4361,9 +4431,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4383,9 +4454,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4463,9 +4535,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  http://example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4501,9 +4574,10 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4538,9 +4612,10 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4569,9 +4644,10 @@ addEventListener('fetch', event => {});`
 			  https://test-name.test-sub-domain.workers.dev
 			  http://example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4608,9 +4684,10 @@ addEventListener('fetch', event => {});`
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4647,9 +4724,10 @@ addEventListener('fetch', event => {});`
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4685,9 +4763,10 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4723,9 +4802,10 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4878,9 +4958,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4907,9 +4988,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5015,9 +5097,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -5058,9 +5141,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (testEnv) (TIMINGS)
 			  https://testEnv.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -5089,9 +5173,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -5143,9 +5228,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5191,9 +5277,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5247,9 +5334,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -5296,9 +5384,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -5346,9 +5435,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5413,9 +5503,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5479,9 +5570,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -5553,9 +5645,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -5592,9 +5685,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});
@@ -5618,9 +5712,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});
@@ -5881,9 +5976,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6299,9 +6395,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6370,9 +6467,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6407,9 +6505,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6448,9 +6547,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6523,9 +6623,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6564,9 +6665,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6639,9 +6741,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6686,9 +6789,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6714,9 +6818,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -6746,9 +6851,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6799,9 +6905,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6874,9 +6981,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6918,9 +7026,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6967,9 +7076,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7092,9 +7202,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7135,9 +7246,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7169,9 +7281,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7209,9 +7322,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7270,9 +7384,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -7328,9 +7443,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -7382,9 +7498,10 @@ addEventListener('fetch', event => {});`
 				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-				NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 			`);
 				});
 
@@ -7423,9 +7540,10 @@ addEventListener('fetch', event => {});`
 				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-				NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 			`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
@@ -7472,9 +7590,10 @@ addEventListener('fetch', event => {});`
 				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-				NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 			`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
@@ -7514,9 +7633,10 @@ addEventListener('fetch', event => {});`
 				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-				NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 			`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
@@ -7622,9 +7742,10 @@ addEventListener('fetch', event => {});`
 				Published test-name (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-				NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 			`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.warn).toMatchInlineSnapshot(`
@@ -7668,9 +7789,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7701,9 +7823,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7738,9 +7861,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -7791,9 +7915,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7893,9 +8018,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7926,9 +8052,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7964,9 +8091,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -7998,9 +8126,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -8031,9 +8160,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -8066,9 +8196,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -8099,9 +8230,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -8145,9 +8277,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -8199,9 +8332,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -8227,9 +8361,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -8271,9 +8406,10 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -8332,9 +8468,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -8569,9 +8706,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 			  "warn": "",
 			}
 		`);
@@ -9106,9 +9244,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Producer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9155,9 +9294,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Producer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9209,9 +9349,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9271,9 +9412,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9338,9 +9480,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9392,9 +9535,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9456,9 +9600,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9518,9 +9663,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9581,9 +9727,10 @@ export default{
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9802,9 +9949,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});
@@ -9840,9 +9988,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 
@@ -9874,9 +10023,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});
@@ -9913,9 +10063,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});
@@ -9947,9 +10098,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});
@@ -9976,9 +10128,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -10004,9 +10157,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -10034,9 +10188,10 @@ export default{
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -10066,9 +10221,10 @@ export default{
 			Uploaded test-name (TIMINGS)
 			  Dispatch Namespace: test-dispatch-namespace
 			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
 
 
-			NOTE: \\"Deployment ID\\" in this output will be changed to \\"Version ID\\" in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 		});
 	});

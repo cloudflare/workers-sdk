@@ -812,6 +812,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	await triggersDeploy(props);
 
 	logger.log("Current Deployment ID:", deploymentId);
+	logger.log("Current Version ID:", deploymentId);
 
 	logVersionIdChange();
 }
@@ -823,6 +824,7 @@ function deployWfpUserWorker(
 	// Will go under the "Uploaded" text
 	logger.log("  Dispatch Namespace:", dispatchNamespace);
 	logger.log("Current Deployment ID:", deploymentId);
+	logger.log("Current Version ID:", deploymentId);
 
 	logVersionIdChange();
 }
