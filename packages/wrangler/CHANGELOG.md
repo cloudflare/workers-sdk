@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.54.0
+
+### Minor Changes
+
+- [#5689](https://github.com/cloudflare/workers-sdk/pull/5689) [`19cac82`](https://github.com/cloudflare/workers-sdk/commit/19cac82233325d1f28eb02de53ea1a810bec3806) Thanks [@Ankcorn](https://github.com/Ankcorn)! - feat: Warn if unexpected key is in `wrangler.toml`
+
 ## 3.53.1
 
 ### Patch Changes
