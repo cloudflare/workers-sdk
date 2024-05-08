@@ -2,4 +2,6 @@
 "miniflare": patch
 ---
 
-fix: make the magic proxy able to proxy objects containing functions
+fix: Allow the magic proxy to proxy objects containing functions
+
+This was previously prevented but this change removes that restriction.
