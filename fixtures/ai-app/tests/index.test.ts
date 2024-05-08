@@ -20,18 +20,22 @@ describe("'wrangler dev' correctly renders pages", () => {
 		await stop?.();
 	});
 
-	it("ai binding is defined ", async ({ expect }) => {
+	it("ai binding methods ", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const content = await response.json();
-		expect(content).toEqual({
-			binding: {
-				fetcher: {},
-				lastRequestId: null,
-				logs: [],
-				options: {},
-			},
-			fetch: "function",
-			run: "function",
+		expect((content as Record<string, object>).fetch).toEqual("function");
+		expect((content as Record<string, object>).run).toEqual("function");
+	});
+
+	// TODO: unskip when https://github.com/cloudflare/workerd/pull/2095 is merged and released
+	it.skip("ai binding properties", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/`);
+		const content = await response.json();
+		expect((content as Record<string, object>).binding).toEqual({
+			fetcher: {},
+			lastRequestId: null,
+			logs: [],
+			options: {},
 		});
 	});
 });
