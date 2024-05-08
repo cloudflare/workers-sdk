@@ -18,7 +18,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240419.0",
+		"@cloudflare/workers-types": "^4.20240502.0",
 		"@types/cookie": "^0.5.1",
 		"cookie": "^0.5.0",
 		"itty-router": "^4.0.13",

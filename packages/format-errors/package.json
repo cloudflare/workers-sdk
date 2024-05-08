@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "*",
-		"@cloudflare/workers-types": "^4.20240419.0",
+		"@cloudflare/workers-types": "^4.20240502.0",
 		"mustache": "^4.2.0",
 		"promjs": "^0.4.2",
 		"toucan-js": "^3.2.3",
