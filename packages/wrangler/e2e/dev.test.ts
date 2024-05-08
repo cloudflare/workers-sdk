@@ -975,7 +975,7 @@ describe("zone selection", () => {
 
 describe("custom builds", () => {
 	let worker: DevWorker;
-	let defaultScript = dedent`
+	const defaultScript = dedent`
 		export default {
 			async fetch(request) {
 				if (request.url.includes("/long")) {
