@@ -3,9 +3,23 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"outputs": ["dist/**"],
+			"inputs": [
+				"src/**",
+				"scripts/**",
+				"types/**",
+				"worker-metafiles/**",
+				"*.mjs",
+				"*.js",
+				"*.json"
+			],
+			"outputs": ["dist/**", "bootstrap.js"],
 			"env": [
 				"CI_OS"
+			]
+		},
+		"test": {
+			"inputs": [
+				"test/**"
 			]
 		}
 	}
