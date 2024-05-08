@@ -153,6 +153,7 @@ export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
 				"Only one of `outboundService` or `fetchMock` may be specified per worker"
 			);
 		}
+		value.fetchMock = undefined;
 		value.outboundService = (req) => fetch(req, { dispatcher: fetchMock });
 	}
 	return value;
