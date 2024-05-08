@@ -16,7 +16,7 @@ import {
 	OptionalZodTypeOf,
 	PathSchema,
 } from "../../shared";
-import { Awaitable, QueueConsumerSchema, sanitisePath } from "../../workers";
+import { Awaitable, QueueConsumerSchema, QueueProducerSchema, sanitisePath } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
@@ -45,6 +45,9 @@ export type DurableObjectClassNames = Map<
 	>
 >;
 
+// Maps queue names to producer worker options.
+export type QueueProducers = Map<string, z.infer<typeof QueueProducerSchema>>;
+
 // Maps queue names to the Worker that wishes to consume it. Note each queue
 // can only be consumed by one Worker, but one Worker may consume multiple
 // queues. Support for multiple consumers of a single queue is not planned
@@ -70,6 +73,7 @@ export interface PluginServicesOptions<
 	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
+	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
 }
 

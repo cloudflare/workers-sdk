@@ -84,7 +84,7 @@ describe("deployments", () => {
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Deployment ID: 00000000-0000-0000-0000-000000000000
-			version ID: 00000000-0000-0000-0000-000000000000
+			Version ID:    00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠

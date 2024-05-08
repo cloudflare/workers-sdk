@@ -3,6 +3,15 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
+			"inputs": [
+				"bin/**",
+				"src/**",
+				"**/__tests__/**",
+				"scripts/**",
+				"templates/**",
+				"*.json",
+				"*.js"
+			],
 			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
 			"env": [
 				"NODE_EXTRA_CA_CERTS",
@@ -44,6 +53,14 @@
 				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
 				"WRANGLER_WORKER_REGISTRY_PORT"
 			]
+		},
+		"test:ci": {
+			"inputs": ["src/__tests__/**"],
+			"dependsOn": ["build"]
+		},
+		"test:e2e": {
+			"inputs": ["e2e/**"],
+			"dependsOn": ["build"]
 		}
 	}
 }
