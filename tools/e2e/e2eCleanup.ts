@@ -15,7 +15,11 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
 	process.exit(1);
 }
 
-void run();
+run().catch((e) => {
+	if ("code" in e) {
+		process.exit(e.code);
+	}
+});
 
 async function run() {
 	const projectsToDelete = await listTmpE2EProjects();

@@ -21,10 +21,16 @@ export type Worker = {
 
 class ApiError extends Error {
 	constructor(
-		public readonly url: string,
-		public readonly init: RequestInit,
-		public readonly response: Response
+		readonly url: string,
+		readonly init: RequestInit,
+		readonly response: Response
 	) {
+		super();
+	}
+}
+
+class FatalError extends Error {
+	constructor(readonly exitCode: number) {
 		super();
 	}
 }
@@ -35,9 +41,10 @@ const apiFetch = async (
 	queryParams = {}
 ) => {
 	const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
-	const queryString = queryParams
-		? `?${new URLSearchParams(queryParams).toString()}`
-		: "";
+	let queryString = new URLSearchParams(queryParams).toString();
+	if (queryString) {
+		queryString = "?" + queryString;
+	}
 	const url = `${baseUrl}${path}${queryString}`;
 
 	const response = await fetch(url, {
@@ -86,7 +93,7 @@ export const listTmpE2EProjects = async () => {
 			} else {
 				console.error(e);
 			}
-			process.exit(1);
+			throw new FatalError(1);
 		}
 	}
 
@@ -129,7 +136,7 @@ export const listTmpE2EWorkers = async () => {
 		} else {
 			console.error(e);
 		}
-		process.exit(1);
+		throw new FatalError(1);
 	}
 };
 
