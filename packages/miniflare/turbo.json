@@ -17,10 +17,9 @@
 				"CI_OS"
 			]
 		},
-		"test": {
-			"inputs": [
-				"test/**"
-			]
+		"test:ci": {
+			"inputs": ["test/**"],
+			"dependsOn": ["build"]
 		}
 	}
 }
