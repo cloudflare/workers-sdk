@@ -70,13 +70,14 @@ jobs:
   test:
     timeout-minutes: 60
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
       cancel-in-progress: true
 
     name: "Tests"
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        filter: ["./fixtures/*", "./packages/*", "./tools"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -104,7 +105,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm run test:ci
+        run: pnpm run test:ci --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
