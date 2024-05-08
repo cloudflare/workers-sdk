@@ -27,7 +27,6 @@ describe("'wrangler dev' correctly renders pages", () => {
 			binding: {
 				fetcher: {},
 				lastRequestId: null,
-				logs: [],
 				options: {},
 			},
 			fetch: "function",
