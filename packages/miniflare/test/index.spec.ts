@@ -1378,14 +1378,14 @@ test("Miniflare: getBindings() returns wrapped bindings", async (t) => {
 
 	interface Env {
 		Greeter: {
-			sayHello: (str: string) => string,
-		},
-	};
+			sayHello: (str: string) => string;
+		};
+	}
 	const { Greeter } = await mf.getBindings<Env>();
 
-	const helloWorld = Greeter.sayHello('World');
+	const helloWorld = Greeter.sayHello("World");
 
-	t.is(helloWorld, 'Hello World');
+	t.is(helloWorld, "Hello World");
 });
 test("Miniflare: getBindings() handles wrapped bindings returning objects containing functions", async (t) => {
 	const mf = new Miniflare({
@@ -1405,8 +1405,9 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 				script: `
 					export default function (env) {
 						const objWithFunction = {
-							sayHello: (name) => {
-								return "Hello " + name;
+							greeting: "Hello",
+							sayHello(name) {
+								return this.greeting + ' ' + name;
 							}
 						};
 						return objWithFunction;
@@ -1419,14 +1420,16 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 
 	interface Env {
 		Greeter: {
-			sayHello: (str: string) => string,
-		},
-	};
+			greeting: string;
+			sayHello: (str: string) => string;
+		};
+	}
 	const { Greeter } = await mf.getBindings<Env>();
 
-	const helloWorld = Greeter.sayHello('World');
+	const helloWorld = Greeter.sayHello("World");
 
-	t.is(helloWorld, 'Hello World');
+	t.is(helloWorld, "Hello World");
+	t.is(Greeter.greeting, "Hello");
 });
 test("Miniflare: getBindings() handles wrapped bindings returning objects containing nested functions", async (t) => {
 	const mf = new Miniflare({
@@ -1467,17 +1470,17 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 			obj: {
 				obj1: {
 					obj2: {
-						sayHello: (str: string) => string,
-					}
-				}
-			}
-		},
-	};
+						sayHello: (str: string) => string;
+					};
+				};
+			};
+		};
+	}
 	const { Greeter } = await mf.getBindings<Env>();
 
-	const helloWorld = Greeter.obj.obj1.obj2.sayHello('World');
+	const helloWorld = Greeter.obj.obj1.obj2.sayHello("World");
 
-	t.is(helloWorld, 'Hello World from a nested function');
+	t.is(helloWorld, "Hello World from a nested function");
 });
 test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	const mf = new Miniflare({
