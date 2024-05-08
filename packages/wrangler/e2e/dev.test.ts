@@ -91,7 +91,7 @@ async function runDevSession(
 
 		in ${workerPath} {
 			exits {
-        $ ${WRANGLER} dev ${flags}
+		$ ${WRANGLER} dev ${flags}
 			}
 		}
 			`;
@@ -750,47 +750,43 @@ describe("writes debug logs to hidden file", () => {
 		a = await makeWorker();
 		await a.seed({
 			"wrangler.toml": dedent`
-          name = "a"
-          main = "src/index.ts"
-          compatibility_date = "2023-01-01"
-      `,
+					name = "a"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+			`,
 			"src/index.ts": dedent/* javascript */ `
-        export default {
-          fetch(req, env) {
-            return new Response('A' + req.url);
-          },
-        };
-        `,
-			"package.json": dedent`
-          {
-            "name": "a",
-            "version": "0.0.0",
-            "private": true
-          }
-          `,
+				export default {
+					fetch(req, env) {
+						return new Response('A' + req.url);
+					},
+				};
+			`,
+			"package.json": JSON.stringify({
+				name: "a",
+				version: "0.0.0",
+				private: true,
+			}),
 		});
 
 		b = await makeWorker();
 		await b.seed({
 			"wrangler.toml": dedent`
-          name = "b"
-          main = "src/index.ts"
-          compatibility_date = "2023-01-01"
-      `,
+				name = "b"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+			`,
 			"src/index.ts": dedent/* javascript */ `
-        export default {
-          fetch(req, env) {
-            return new Response('B' + req.url);
-          },
-        };
-        `,
-			"package.json": dedent`
-          {
-            "name": "b",
-            "version": "0.0.0",
-            "private": true
-          }
-          `,
+				export default {
+					fetch(req, env) {
+						return new Response('B' + req.url);
+					},
+				};
+			`,
+			"package.json": JSON.stringify({
+				name: "b",
+				version: "0.0.0",
+				private: true,
+			}),
 		});
 	});
 
@@ -973,6 +969,68 @@ describe("zone selection", () => {
 				"X [ERROR] Could not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.
 				  For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
 			`);
+		});
+	});
+});
+
+describe("custom builds", () => {
+	let worker: DevWorker;
+	let defaultScript = dedent`
+		export default {
+			async fetch(request) {
+				if (request.url.includes("/long")) {
+					await new Promise((resolve) => setTimeout(resolve, 3000));
+				}
+
+				return new Response("Hello World 1!")
+			}
+		}`;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					compatibility_date = "2023-01-01"
+					main = "dist/index.js"
+					# build.command = "tsc --target esnext ./src/index.ts --outdir ./dist/"
+					build.command = "npm run build"
+			`,
+			"src/index.ts": defaultScript,
+			"package.json": JSON.stringify({
+				name: workerName,
+				version: "0.0.0",
+				private: true,
+				scripts: {
+					build:
+						"esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js",
+				},
+			}),
+		}));
+	});
+
+	it("works-around custom build noops causing esbuild rebundles + runtime reloads to skip and the ProxyWorker to hang in a paused state", async () => {
+		await worker.runDevSession("", async (session) => {
+			// Hit worker and confirm responsive
+			await waitForPortToBeBound(session.port);
+
+			// Save the worker with no changes (don't wait for promise to resolve)
+			void worker.seed({
+				"src/index.ts": defaultScript.replace(
+					"Hello World 1!",
+					"Hello World 2!"
+				),
+			});
+
+			// Hit worker while it's being saved and confirm it responds with new response
+			const { text } = await retry(
+				(s) => s.status !== 200,
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${session.port}/long`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text).toMatchInlineSnapshot(`"Hello World 2!"`);
 		});
 	});
 });
