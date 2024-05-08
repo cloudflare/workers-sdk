@@ -480,13 +480,6 @@ export async function generateHandler<
 
 	return await attachHeaders(await generateResponse());
 
-	/** We have non-standard cache behavior, so strip out all headers but keep the method */
-	function getCacheKey(): Request {
-		return new Request(request.url, {
-			method: request.method,
-		});
-	}
-
 	async function serveAsset(
 		servingAssetEntry: AssetEntry,
 		options = { preserve: true }
@@ -580,7 +573,7 @@ export async function generateHandler<
 								preservedResponse.headers.set("x-robots-tag", "noindex");
 
 								await assetPreservationCacheV2.put(
-									getCacheKey(),
+									request.url,
 									preservedResponse
 								);
 							}
@@ -621,12 +614,12 @@ export async function generateHandler<
 					ASSET_PRESERVATION_CACHE_V2
 				);
 				let preservedResponse = await assetPreservationCacheV2.match(
-					getCacheKey()
+					request.url
 				);
 
 				// Continue serving from V1 preservation cache for some time to
 				// prevent 404s during the migration to V2
-				const cutoffDate = new Date("2024-05-10");
+				const cutoffDate = new Date("2024-05-17");
 				if (!preservedResponse && Date.now() < cutoffDate.getTime()) {
 					const assetPreservationCacheV1 = await caches.open(
 						ASSET_PRESERVATION_CACHE_V1
