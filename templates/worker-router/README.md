@@ -8,7 +8,7 @@ This template demonstrates how to use the [`itty-router`](https://github.com/kwh
 
 ### Prerequisites
 
-Before you begin, ensure you have `wrangler` CLI installed. You can install it using npm:
+Before you begin, if you don't have `wrangler` installed, you can use `npx` which will install it temporarily when needed. If you prefer to install it permanently:
 
 ```sh
 npm install -g @cloudflare/wrangler
@@ -28,7 +28,13 @@ $ pnpm wrangler generate my-project worker-prospector
 
 ### Configuration
 
-Before deploying your project, you need to configure the `wrangler.toml` file with your Cloudflare account details. Replace the `account_id` field with your Cloudflare account ID. Detailed instructions on configuring your project can be found in the [official Cloudflare Workers documentation](https://developers.cloudflare.com/workers/learning/getting-started).
+With Wrangler v2+, configuration of the `account_id` is automated. Ensure that you are logged into your Cloudflare account through Wrangler by running:
+
+```sh
+wrangler login
+```
+
+This command will setup all necessary account details automatically.
 
 ### Deployment
 
@@ -42,8 +48,10 @@ $ yarn run deploy
 $ pnpm run deploy
 ```
 
-Ensure you have the right permissions and your `wrangler.toml` is properly configured before running the deploy command.
+Before deploying, make sure that your `wrangler.toml` is properly configured, which should be automatically handled by your login session.
 
 ### More Information
 
 For more information on working with Cloudflare Workers and `itty-router`, visit the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/).
+```
+
