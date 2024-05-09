@@ -148,10 +148,10 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 		inspectorPort: 0,
 		liveReload: true,
 		script: `addEventListener("fetch", (event) => {
-      event.respondWith(new Response("<p>👋</p>", {
-        headers: { "Content-Type": "text/html;charset=utf-8" }
-      }));
-    })`,
+			event.respondWith(new Response("<p>👋</p>", {
+				headers: { "Content-Type": "text/html;charset=utf-8" }
+			}));
+		})`,
 	};
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());
@@ -246,15 +246,15 @@ test("Miniflare: routes to multiple workers with fallback", async (t) => {
 				name: "a",
 				routes: ["*/api"],
 				script: `addEventListener("fetch", (event) => {
-          event.respondWith(new Response("a"));
-        })`,
+					event.respondWith(new Response("a"));
+				})`,
 			},
 			{
 				name: "b",
 				routes: ["*/api/*"], // Less specific than "a"'s
 				script: `addEventListener("fetch", (event) => {
-          event.respondWith(new Response("b"));
-        })`,
+					event.respondWith(new Response("b"));
+				})`,
 			},
 		],
 	};
@@ -291,8 +291,8 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	const mf = new Miniflare({
 		compatibilityFlags: ["brotli_content_encoding"],
 		script: `addEventListener("fetch", (event) => {
-      event.respondWith(CUSTOM.fetch(event.request));
-    })`,
+			event.respondWith(CUSTOM.fetch(event.request));
+		})`,
 		serviceBindings: {
 			CUSTOM(request) {
 				return fetch(http, request);
@@ -459,11 +459,11 @@ test("Miniflare: custom service using Set-Cookie header", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
-      async fetch(request, env, ctx) {
-        const res = await env.CUSTOM.fetch(request);
-        return Response.json(res.headers.getSetCookie());
-      }
-    }`,
+            async fetch(request, env, ctx) {
+				const res = await env.CUSTOM.fetch(request);
+				return Response.json(res.headers.getSetCookie());
+            }
+	    }`,
 		serviceBindings: {
 			CUSTOM(request) {
 				return fetch(http, request);
@@ -516,8 +516,8 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	// fetching from WebSocket origin server
 	const mf = new Miniflare({
 		script: `addEventListener("fetch", (event) => {
-      event.respondWith(CUSTOM.fetch(event.request));
-    })`,
+			event.respondWith(CUSTOM.fetch(event.request));
+		})`,
 		serviceBindings: {
 			// Testing loopback server WebSocket coupling
 			CUSTOM(request) {
@@ -566,19 +566,19 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 	const mfOther = new Miniflare({
 		modules: true,
 		script: `export default {
-      async fetch(request) {
-        const { method, url } = request;
-        const body = request.body && await request.text();
-        return Response.json({ method, url, body });
-      }
-    }`,
+			async fetch(request) {
+				const { method, url } = request;
+				const body = request.body && await request.text();
+				return Response.json({ method, url, body });
+			}
+		}`,
 	});
 	t.teardown(() => mfOther.dispose());
 
 	const mf = new Miniflare({
 		script: `addEventListener("fetch", (event) => {
-      event.respondWith(CUSTOM.fetch(event.request));
-    })`,
+			event.respondWith(CUSTOM.fetch(event.request));
+		})`,
 		serviceBindings: {
 			async CUSTOM(request) {
 				// Check internal keys removed (e.g. `MF-Custom-Service`, `MF-Original-URL`)
@@ -756,26 +756,26 @@ test("Miniflare: custom outbound service", async (t) => {
 				name: "a",
 				modules: true,
 				script: `export default {
-          async fetch() {
-            const res1 = await (await fetch("https://example.com/1")).text();
-            const res2 = await (await fetch("https://example.com/2")).text();
-            return Response.json({ res1, res2 });
-          }
-        }`,
+					async fetch() {
+						const res1 = await (await fetch("https://example.com/1")).text();
+						const res2 = await (await fetch("https://example.com/2")).text();
+						return Response.json({ res1, res2 });
+					}
+				}`,
 				outboundService: "b",
 			},
 			{
 				name: "b",
 				modules: true,
 				script: `export default {
-          async fetch(request, env) {
-            if (request.url === "https://example.com/1") {
-              return new Response("one");
-            } else {
-              return fetch(request);
-            }
-          }
-        }`,
+					async fetch(request, env) {
+						if (request.url === "https://example.com/1") {
+							return new Response("one");
+						} else {
+							return fetch(request);
+						}
+					}
+				}`,
 				outboundService(request) {
 					return new Response(`fallback:${request.url}`);
 				},
@@ -796,14 +796,14 @@ test("Miniflare: can send GET request with body", async (t) => {
 		compatibilityDate: "2023-08-01",
 		modules: true,
 		script: `export default {
-      async fetch(request) {
-        return Response.json({
-          cf: request.cf,
-          contentLength: request.headers.get("Content-Length"),
-          hasBody: request.body !== null,
-        });
-      }
-    }`,
+			async fetch(request) {
+				return Response.json({
+					cf: request.cf,
+					contentLength: request.headers.get("Content-Length"),
+					hasBody: request.body !== null,
+				});
+			}
+		}`,
 		cf: { key: "value" },
 	});
 	t.teardown(() => mf.dispose());
@@ -860,25 +860,25 @@ test("Miniflare: handles redirect responses", async (t) => {
 		compatibilityDate: "2024-01-01",
 		modules: true,
 		script: `export default {
-      async fetch(request, env) {
-        const url = new URL(request.url);
-				const externalUrl = new URL(env.EXTERNAL_URL);
-        if (url.pathname === "/redirect-relative") {
-        	return new Response(null, { status: 302, headers: { Location: "/relative-redirected" } });
-        } else if (url.pathname === "/redirect-absolute") {
-        	url.pathname = "/absolute-redirected";
-        	return Response.redirect(url, 302);
-        } else if (url.pathname === "/redirect-external") {
-        	externalUrl.pathname = "/ping";
-        	return Response.redirect(externalUrl, 302);
-        } else if (url.pathname === "/redirect-external-and-back") {
-					externalUrl.pathname = "/redirect-back";
-        	return Response.redirect(externalUrl, 302);
-        } else {
-        	return new Response("end:" + url.href);
-        }
-      }
-    }`,
+			async fetch(request, env) {
+				const url = new URL(request.url);
+						const externalUrl = new URL(env.EXTERNAL_URL);
+				if (url.pathname === "/redirect-relative") {
+					return new Response(null, { status: 302, headers: { Location: "/relative-redirected" } });
+				} else if (url.pathname === "/redirect-absolute") {
+					url.pathname = "/absolute-redirected";
+					return Response.redirect(url, 302);
+				} else if (url.pathname === "/redirect-external") {
+					externalUrl.pathname = "/ping";
+					return Response.redirect(externalUrl, 302);
+				} else if (url.pathname === "/redirect-external-and-back") {
+							externalUrl.pathname = "/redirect-back";
+					return Response.redirect(externalUrl, 302);
+				} else {
+					return new Response("end:" + url.href);
+				}
+			}
+	}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -941,10 +941,10 @@ test("Miniflare: fetch mocking", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
-      async fetch() {
-        return fetch("https://example.com/");
-      }
-    }`,
+			async fetch() {
+				return fetch("https://example.com/");
+			}
+		}`,
 		fetchMock,
 	});
 	t.teardown(() => mf.dispose());
@@ -974,10 +974,10 @@ test("Miniflare: custom upstream as origin (with colons)", async (t) => {
 		upstream: new URL("/extra:extra/", upstream.http.toString()).toString(),
 		modules: true,
 		script: `export default {
-      fetch(request) {
-        return fetch(request);
-      }
-    }`,
+			fetch(request) {
+				return fetch(request);
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
@@ -992,14 +992,14 @@ test("Miniflare: custom upstream as origin", async (t) => {
 		upstream: new URL("/extra/", upstream.http.toString()).toString(),
 		modules: true,
 		script: `export default {
-      async fetch(request) {
-        const resp = await (await fetch(request)).text();
-				return Response.json({
-					resp,
-					host: request.headers.get("Host")
-				});
-      }
-    }`,
+			async fetch(request) {
+				const resp = await (await fetch(request)).text();
+						return Response.json({
+							resp,
+							host: request.headers.get("Host")
+						});
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
@@ -1014,12 +1014,12 @@ test("Miniflare: set origin to original URL if proxy shared secret matches", asy
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
 		modules: true,
 		script: `export default {
-      async fetch(request) {
+			async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
-      }
-    }`,
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1034,12 +1034,12 @@ test("Miniflare: keep origin as listening host if proxy shared secret not provid
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
-      async fetch(request) {
+	  		async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
-      }
-    }`,
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1052,12 +1052,12 @@ test("Miniflare: 400 error on proxy shared secret header when not configured", a
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
-      async fetch(request) {
+	  		async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
-      }
-    }`,
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1075,12 +1075,12 @@ test("Miniflare: 400 error on proxy shared secret header mismatch with configura
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
 		modules: true,
 		script: `export default {
-      async fetch(request) {
+	  		async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host")
 				});
-      }
-    }`,
+	  		}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1100,18 +1100,18 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
 		compatibilityFlags: ["nodejs_compat", "rtti_api"],
 		scriptPath: "index.mjs",
 		script: `
-    import assert from "node:assert";
-    import { Buffer } from "node:buffer";
-    import { connect } from "cloudflare:sockets";
-    import rtti from "workerd:rtti";
-    export default {
-      fetch() {
-        assert.strictEqual(typeof connect, "function");
-        assert.strictEqual(typeof rtti, "object");
-        return new Response(Buffer.from("test").toString("base64"))
-      }
-    }
-    `,
+			import assert from "node:assert";
+			import { Buffer } from "node:buffer";
+			import { connect } from "cloudflare:sockets";
+			import rtti from "workerd:rtti";
+			export default {
+				fetch() {
+					assert.strictEqual(typeof connect, "function");
+					assert.strictEqual(typeof rtti, "object");
+					return new Response(Buffer.from("test").toString("base64"))
+				}
+			}
+		`,
 	});
 	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1169,10 +1169,10 @@ test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
-      fetch() {
-        return fetch("https://workers.cloudflare.com/cf.json");
-      }
-    }`,
+			fetch() {
+				return fetch("https://workers.cloudflare.com/cf.json");
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
@@ -1188,10 +1188,10 @@ test("Miniflare: accepts https requests", async (t) => {
 		modules: true,
 		https: true,
 		script: `export default {
-      fetch() {
-        return new Response("Hello world");
-      }
-    }`,
+			fetch() {
+				return new Response("Hello world");
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1209,15 +1209,15 @@ test("Miniflare: manually triggered scheduled events", async (t) => {
 		log,
 		modules: true,
 		script: `
-    let scheduledRun = false;
-    export default {
-      fetch() {
-        return new Response(scheduledRun);
-      },
-      scheduled() {
-        scheduledRun = true;
-      }
-    }`,
+			let scheduledRun = false;
+			export default {
+				fetch() {
+					return new Response(scheduledRun);
+				},
+				scheduled() {
+					scheduledRun = true;
+				}
+			}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1239,10 +1239,10 @@ test("Miniflare: listens on ipv6", async (t) => {
 		modules: true,
 		host: "*",
 		script: `export default {
-      fetch() {
-        return new Response("Hello world");
-      }
-    }`,
+			fetch() {
+				return new Response("Hello world");
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 
@@ -1276,9 +1276,9 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
-    export class DurableObject {}
-    export default { fetch() { return new Response(null, { status: 404 }); } }
-    `,
+			export class DurableObject {}
+			export default { fetch() { return new Response(null, { status: 404 }); } }
+		`,
 		bindings: { STRING: "hello", OBJECT: { a: 1, b: { c: 2 } } },
 		textBlobBindings: { TEXT: blobPath },
 		dataBlobBindings: { DATA: blobPath },
@@ -1486,44 +1486,44 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
-    let lastScheduledController;
-    let lastQueueBatch;
-    export default {
-      async fetch(request, env, ctx) {
-        const { pathname } = new URL(request.url);
-        if (pathname === "/scheduled") {
-          return Response.json({
-            scheduledTime: lastScheduledController?.scheduledTime,
-            cron: lastScheduledController?.cron,
-          });
-        } else if (pathname === "/queue") {
-          return Response.json({
-            queue: lastQueueBatch.queue,
-            messages: lastQueueBatch.messages.map((message) => ({
-              id: message.id,
-              timestamp: message.timestamp.getTime(),
-              body: message.body,
-              bodyType: message.body.constructor.name,
-            })),
-          });
-        } else if (pathname === "/get-url") {
-          return new Response(request.url);
-        } else {
-          return new Response(null, { status: 404 });
-        }
-      },
-      async scheduled(controller, env, ctx) {
-        lastScheduledController = controller;
-        if (controller.cron === "* * * * *") controller.noRetry();
-      },
-      async queue(batch, env, ctx) {
-        lastQueueBatch = batch;
-        if (batch.queue === "needy") batch.retryAll();
-        for (const message of batch.messages) {
-          if (message.id === "perfect") message.ack();
-        }
-      }
-    }`,
+		let lastScheduledController;
+		let lastQueueBatch;
+		export default {
+			async fetch(request, env, ctx) {
+				const { pathname } = new URL(request.url);
+				if (pathname === "/scheduled") {
+					return Response.json({
+						scheduledTime: lastScheduledController?.scheduledTime,
+						cron: lastScheduledController?.cron,
+					});
+				} else if (pathname === "/queue") {
+					return Response.json({
+						queue: lastQueueBatch.queue,
+						messages: lastQueueBatch.messages.map((message) => ({
+						id: message.id,
+						timestamp: message.timestamp.getTime(),
+						body: message.body,
+						bodyType: message.body.constructor.name,
+						})),
+					});
+				} else if (pathname === "/get-url") {
+					return new Response(request.url);
+				} else {
+					return new Response(null, { status: 404 });
+				}
+			},
+			async scheduled(controller, env, ctx) {
+				lastScheduledController = controller;
+				if (controller.cron === "* * * * *") controller.noRetry();
+			},
+			async queue(batch, env, ctx) {
+				lastQueueBatch = batch;
+				if (batch.queue === "needy") batch.retryAll();
+				for (const message of batch.messages) {
+					if (message.id === "perfect") message.ack();
+				}
+			}
+		}`,
 	});
 	t.teardown(() => mf.dispose());
 	const fetcher = await mf.getWorker();
@@ -1615,9 +1615,9 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 				name: "a",
 				modules: true,
 				script: `
-        export class DurableObject {}
-        export default { fetch() { return new Response("a"); } }
-        `,
+					export class DurableObject {}
+					export default { fetch() { return new Response("a"); } }
+				`,
 				d1Databases: ["DB"],
 				durableObjects: { DO: "DurableObject" },
 			},
@@ -1724,16 +1724,16 @@ test("Miniflare: allows direct access to workers", async (t) => {
 				compatibilityFlags: ["experimental"],
 				modules: true,
 				script: `
-				import { WorkerEntrypoint } from "cloudflare:workers";
-				export class One extends WorkerEntrypoint {
-					fetch() { return new Response("d:1"); }
-				}
-				export const two = {
-					fetch() { return new Response("d:2"); }
-				};
-				export const three = {
-					fetch() { return new Response("d:2"); }
-				};
+					import { WorkerEntrypoint } from "cloudflare:workers";
+					export class One extends WorkerEntrypoint {
+						fetch() { return new Response("d:1"); }
+					}
+					export const two = {
+						fetch() { return new Response("d:2"); }
+					};
+					export const three = {
+						fetch() { return new Response("d:2"); }
+					};
 				`,
 				unsafeDirectSockets: [{ entrypoint: "One" }, { entrypoint: "two" }],
 			},
@@ -1782,10 +1782,10 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
-		import { WorkerEntrypoint } from "cloudflare:workers";
-		export class TestEntrypoint extends WorkerEntrypoint {
-			ping() { return "pong"; }
-		}
+			import { WorkerEntrypoint } from "cloudflare:workers";
+			export class TestEntrypoint extends WorkerEntrypoint {
+				ping() { return "pong"; }
+			}
 		`,
 	});
 	t.teardown(() => mf1.dispose());
@@ -1799,12 +1799,12 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
-		export default {
-			async fetch(request, env, ctx) {
-				const result = await env.SERVICE.ping();
-				return new Response(result);
+			export default {
+				async fetch(request, env, ctx) {
+					const result = await env.SERVICE.ping();
+					return new Response(result);
+				}
 			}
-		}
 		`,
 	});
 	t.teardown(() => mf2.dispose());
@@ -1847,25 +1847,25 @@ test("Miniflare: exits cleanly", async (t) => {
 			"--no-warnings", // Hide experimental warnings
 			"-e",
 			`
-      const { Miniflare, Log, LogLevel } = require(${JSON.stringify(
-				miniflarePath
-			)});
-      const mf = new Miniflare({
-        verbose: true,
-        modules: true,
-        script: \`export default {
-          fetch() {
-            return new Response("body");
-          }
-        }\`
-      });
-      (async () => {
-        const res = await mf.dispatchFetch("http://placeholder/");
-        const text = await res.text();
-        process.send(text);
-        process.disconnect();
-      })();
-      `,
+			const { Miniflare, Log, LogLevel } = require(${JSON.stringify(
+						miniflarePath
+					)});
+			const mf = new Miniflare({
+				verbose: true,
+				modules: true,
+				script: \`export default {
+					fetch() {
+						return new Response("body");
+					}
+				}\`
+			});
+			(async () => {
+				const res = await mf.dispatchFetch("http://placeholder/");
+				const text = await res.text();
+				process.send(text);
+				process.disconnect();
+			})();
+	  `,
 		],
 		{
 			stdio: [/* in */ "ignore", /* out */ "pipe", /* error */ "pipe", "ipc"],
@@ -1955,26 +1955,26 @@ test("Miniflare: supports wrapped bindings", async (t) => {
 				},
 				modules: true,
 				script: `
-				class MiniKV {
-					constructor(env) {
-						this.STORE = env.STORE;
-						this.baseURL = "http://x/" + (env.NAMESPACE ?? "") + ":";
+					class MiniKV {
+						constructor(env) {
+							this.STORE = env.STORE;
+							this.baseURL = "http://x/" + (env.NAMESPACE ?? "") + ":";
+						}
+						async get(key) {
+							const res = await this.STORE.fetch(this.baseURL + key);
+							return res.status === 404 ? null : await res.text();
+						}
+						async set(key, body) {
+							await this.STORE.fetch(this.baseURL + key, { method: "PUT", body });
+						}
+						async delete(key) {
+							await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
+						}
 					}
-					async get(key) {
-						const res = await this.STORE.fetch(this.baseURL + key);
-						return res.status === 404 ? null : await res.text();
-					}
-					async set(key, body) {
-						await this.STORE.fetch(this.baseURL + key, { method: "PUT", body });
-					}
-					async delete(key) {
-						await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
-					}
-				}
 
-				export default function (env) {
-					return new MiniKV(env);
-				}
+					export default function (env) {
+						return new MiniKV(env);
+					}
 				`,
 			},
 		],
@@ -2435,12 +2435,12 @@ test("Miniflare: can use module fallback service", async (t) => {
 						type: "ESModule",
 						path: "/virtual/index.mjs",
 						contents: `
-						import a from "./a.mjs";
-						export default {
-							async fetch() {
-								return new Response(a);
+							import a from "./a.mjs";
+							export default {
+								async fetch() {
+									return new Response(a);
+								}
 							}
-						}
 						`,
 					},
 				],
@@ -2456,16 +2456,16 @@ test("Miniflare: can use module fallback service", async (t) => {
 						type: "ESModule",
 						path: "/virtual/index.mjs",
 						contents: `
-						export default {
-							async fetch() {
-								try {
-									await import("./a.mjs");
-									return new Response(null, { status: 204 });
-								} catch (e) {
-									return new Response(String(e), { status: 500 });
+							export default {
+								async fetch() {
+									try {
+										await import("./a.mjs");
+										return new Response(null, { status: 204 });
+									} catch (e) {
+										return new Response(String(e), { status: 500 });
+									}
 								}
 							}
-						}
 						`,
 					},
 				],
