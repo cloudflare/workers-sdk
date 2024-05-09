@@ -64,7 +64,7 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: e2e-framework-diffs
-        path: ./clone-dir/content/pages/framework-guides/c3-framework-diffs
+        path: ./clone-dir/content/pages/_partials/framework-diffs/
         github-token: ${{ inputs.token }}
         run-id: ${{ steps.lookup-workflow-id.outputs.result }}
 
@@ -93,6 +93,6 @@ runs:
       run: |
         gh pr create \
           -t "Updating C3 framework diffs" \
-          -b "Adding C3 diffs from workers-sdk release https://github.com/$GITHUB_REPOSITORY/commit/${{ github.sha }}" \
+          -b "Adding C3 diffs from workers-sdk release https://github.com/${{ github.repository }}/commit/${{ github.sha }}" \
           -B ${{ inputs.targetBaseBranch }} \
           -H ${{ inputs.targetHeadBranch }}

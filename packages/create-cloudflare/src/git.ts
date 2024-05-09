@@ -60,14 +60,14 @@ export const offerGit = async (ctx: C3Context) => {
 };
 
 export const gitCommit = async (ctx: C3Context) => {
-	if (!ctx.args.git) {
-		return;
-	}
-
 	// Note: createCommitMessage stores the message in ctx so that it can
 	//       be used later even if we're not in a git repository, that's why
 	//       we unconditionally run this command here
 	const commitMessage = await createCommitMessage(ctx);
+
+	if (!ctx.args.git) {
+		return;
+	}
 
 	// if a git repo existed before the process started then we don't want to commit
 	// we only commit if the git repo was initialized (directly or not) by c3

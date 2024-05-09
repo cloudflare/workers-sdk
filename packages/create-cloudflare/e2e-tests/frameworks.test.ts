@@ -468,7 +468,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 });
 
 const storeDiff = async (framework: string, projectPath: string) => {
-	// We only need to do this once per-framework per-run, so avoid re-running for each package manager
 	if (!process.env.SAVE_DIFFS) {
 		return;
 	}
