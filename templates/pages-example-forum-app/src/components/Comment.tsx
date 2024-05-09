@@ -13,10 +13,10 @@ import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai';
 import { BiExpand } from 'react-icons/bi';
 import { FaRegComment } from 'react-icons/fa';
 import commentServices from '../services/commentServices';
-import { Comment as CommentType, Operation } from 'types';
-import { useAuth } from 'context/AuthContext';
+import { Comment as CommentType, Operation } from '../types';
+import { useAuth } from '../context/AuthContext';
 import CommentDetail from './CommentDetail';
-import { timeDifferenceForDate } from 'utils/dateFormatter';
+import { timeDifferenceForDate } from '../utils/dateFormatter';
 
 type ButtonProps = {
 	icon: React.ReactNode;

@@ -1,12 +1,15 @@
 import qs from 'query-string';
-import { User } from 'types';
+import { User } from '../types';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
 // This is a service class that handles the authentication of the user by sending a request to the server with the code.
 // and returns a promise that resolves to the user object.
 class AuthService {
 	async loginViaGithub() {
-		const parsedQuery = qs.parseUrl(window.location.href);
+		const parsedQuery = qs.parseUrl(
+			// @ts-expect-error fix this type error
+			window.location.href
+		);
 		const response = await fetch('/api/code', {
 			method: 'POST',
 			body: JSON.stringify({
@@ -20,8 +23,13 @@ class AuthService {
 	}
 
 	async getUser() {
-		const decodedstring = process.env.REACT_APP_SECRET_KEY;
-		const token: string | null = localStorage.getItem('token');
+		const decodedstring =
+			// @ts-expect-error fix this type error
+			process.env.REACT_APP_SECRET_KEY;
+
+		const token: string | null =
+			// @ts-expect-error fix this type error
+			localStorage.getItem('token');
 		if (token !== null) {
 			const verifiedJWT = await jwt.verify(token, decodedstring as string);
 			if (verifiedJWT) {

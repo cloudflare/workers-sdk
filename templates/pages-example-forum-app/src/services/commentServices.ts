@@ -1,4 +1,4 @@
-import { Comment, Comments, CreateCommentType, Operation } from 'types';
+import { Comment, Comments, CreateCommentType, Operation } from '../types';
 
 class CommentServices {
 	async getComments() {

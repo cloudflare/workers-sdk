@@ -1,9 +1,7 @@
 import type { FC } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import useSWR, { SWRConfig } from 'swr';
+import { SWRConfig } from 'swr';
 import { Home } from './pages/Home';
-import { Setup } from './pages/Setup';
-import { Admin } from './pages/Admin';
 import { jsonFetcher } from './utils/jsonFetcher';
 
 const Router: FC = () => {

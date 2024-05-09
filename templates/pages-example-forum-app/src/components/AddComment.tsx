@@ -7,9 +7,9 @@ import {
 	Textarea,
 	useToast,
 } from '@chakra-ui/react';
-import commentServices from 'services/commentServices';
-import { Comment } from 'types';
-import { useAuth } from 'context/AuthContext';
+import commentServices from '../services/commentServices';
+import { Comment } from '../types';
+import { useAuth } from '../context/AuthContext';
 import Loading from './Loading';
 import Button from './shared/Button';
 
@@ -34,6 +34,7 @@ const AddComment: React.FC<Props> = ({ handleAddComment }) => {
 	const handleChange = (e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		setValues({
 			...values,
+			// @ts-expect-error fix this type error
 			[e.currentTarget.name]: e.currentTarget.value,
 		});
 	};

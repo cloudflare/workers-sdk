@@ -1,6 +1,6 @@
-import type { FC } from 'react';
+import type { FC, ReactNode } from 'react';
 
-export const ExternalLink: FC<{ href: string; className?: string }> = ({
+export const ExternalLink: FC<{ href: string; className?: string; children: ReactNode }> = ({
 	href,
 	className,
 	children,

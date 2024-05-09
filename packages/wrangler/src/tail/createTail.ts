@@ -1,5 +1,5 @@
 import { HttpsProxyAgent } from "https-proxy-agent";
-import WebSocket from "ws";
+import { WebSocket } from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
 import { proxy } from "../index";

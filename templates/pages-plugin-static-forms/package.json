@@ -9,7 +9,7 @@
 		"@cloudflare/pages-plugin-static-forms": "^1.0.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230518.0 ",
+		"@cloudflare/workers-types": "^4.20240419.0",
 		"wrangler": "^3.0.0"
 	}
 }

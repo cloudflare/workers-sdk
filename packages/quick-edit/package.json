@@ -20,7 +20,6 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"concurrently": "^8.0.1",
 		"tsx": "^3.12.8",
 		"wrangler": "workspace:*"
 	},

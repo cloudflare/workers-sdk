@@ -6,7 +6,7 @@
 		"dev": "wrangler pages dev public"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230518.0",
+		"@cloudflare/workers-types": "^4.20240419.0",
 		"wrangler": "^3.0.0"
 	}
 }

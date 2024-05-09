@@ -1,6 +1,6 @@
-import { FC } from 'react';
+import { FC, ReactNode } from 'react';
 
-export const Button: FC<{ type?: 'default'; onClick: () => void }> = ({
+export const Button: FC<{ type?: 'default'; onClick: () => void; children: ReactNode }> = ({
 	type = 'default',
 	onClick,
 	children,

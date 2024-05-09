@@ -7,7 +7,7 @@ import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, Log, LogLevel, Miniflare, fetch } from "miniflare";
 import type { RawSourceMap } from "source-map";
-import NodeWebSocket from "ws";
+import { WebSocket as NodeWebSocket } from "ws";
 import { escapeRegexpComponent, useTmp } from "../../../test-shared";
 
 const FIXTURES_PATH = path.resolve(

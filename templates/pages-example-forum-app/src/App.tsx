@@ -1,4 +1,4 @@
-import { Box, Heading, Icon } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 import { useEffect } from 'react';
 import CommentSection from './components/CommentSection';
 import Navbar from './components/Navbar';
@@ -9,7 +9,10 @@ function App() {
 	const { login } = useAuth();
 
 	useEffect(() => {
-		const parsedQuery = qs.parseUrl(window.location.href);
+		const parsedQuery = qs.parseUrl(
+			// @ts-expect-error fix this type error
+			window.location.href
+		);
 		const handleLogin = async () => {
 			await login();
 		};

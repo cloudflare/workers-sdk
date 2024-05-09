@@ -57,3 +57,8 @@ packages/create-cloudflare/templates/**/*.*
 # support this syntax so exclude those files.
 fixtures/vitest-pool-workers-examples/basics-unit-integration-self/src/index.ts
 fixtures/vitest-pool-workers-examples/queues/src/index.ts
+
+
+# /templates artifacts
+templates/**/build
+templates/**/dist

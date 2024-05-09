@@ -7,11 +7,11 @@
 		"start": "wrangler dev"
 	},
 	"dependencies": {
-		"hono": "^3.11.8"
+		"hono": "^3.12.11"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20231121.0",
-		"typescript": "^4.7.4",
+		"@cloudflare/workers-types": "^4.20240419.0",
+		"typescript": "^5.4.5",
 		"wrangler": "^3.21.0"
 	}
 }

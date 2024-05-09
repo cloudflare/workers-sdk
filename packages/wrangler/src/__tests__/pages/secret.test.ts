@@ -5,7 +5,10 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMembershipsFail } from "../helpers/mock-oauth-flow";
+import {
+	mockGetMemberships,
+	mockGetMembershipsFail,
+} from "../helpers/mock-oauth-flow";
 import { useMockStdin } from "../helpers/mock-stdin";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -20,16 +23,6 @@ function createFetchResult(result: unknown, success = true) {
 		messages: [],
 		result,
 	};
-}
-
-export function mockGetMemberships(
-	accounts: { id: string; account: { id: string; name: string } }[]
-) {
-	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(accounts)));
-		})
-	);
 }
 
 describe("wrangler pages secret", () => {

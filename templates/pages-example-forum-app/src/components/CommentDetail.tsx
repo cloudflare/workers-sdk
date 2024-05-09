@@ -14,10 +14,10 @@ import {
 	Image,
 	Textarea,
 } from '@chakra-ui/react';
-import { Comment as CommentType, SubComment } from 'types';
+import { Comment as CommentType, SubComment } from '../types';
 import Button from './shared/Button';
-import { useAuth } from 'context/AuthContext';
-import { timeDifferenceForDate } from 'utils/dateFormatter';
+import { useAuth } from '../context/AuthContext';
+import { timeDifferenceForDate } from '../utils/dateFormatter';
 
 type Props = {
 	isOpen: boolean;
@@ -58,6 +58,7 @@ const CommentDetail: React.FC<Props> = ({
 		<Modal
 			isOpen={isOpen}
 			onClose={onClose}
+			// @ts-expect-error fix this type error
 			finalFocusRef={btnRef}
 			scrollBehavior="inside"
 			size={'xl'}
@@ -68,13 +69,14 @@ const CommentDetail: React.FC<Props> = ({
 				<ModalCloseButton />
 				<ModalBody minHeight="50vh">
 					<VStack w="full" align="stretch" divider={<Divider />}>
-						<Text my={2}>{comment.message}</Text>
+						`` <Text my={2}>{comment.message}</Text>
 						<VStack my={2} spacing={2}>
 							<Textarea
 								id="subComment"
 								name="subComment"
 								value={subComment}
 								maxLength={40}
+								// @ts-expect-error fix this type error
 								onChange={(e: { target: { value: React.SetStateAction<string> } }) =>
 									setSubComment(e.target.value)
 								}

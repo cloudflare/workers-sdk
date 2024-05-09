@@ -4,7 +4,7 @@ module.exports = {
 		inline: false,
 	},
 	style: {
-		postcss: {
+		postcssOptions: {
 			plugins: [require('tailwindcss'), require('autoprefixer')],
 		},
 	},

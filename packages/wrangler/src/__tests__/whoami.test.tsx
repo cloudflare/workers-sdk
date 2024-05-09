@@ -167,6 +167,6 @@ describe("getUserInfo()", () => {
 		        environment variable.
 
 		      "
-	    `);
+		  `);
 	});
 });

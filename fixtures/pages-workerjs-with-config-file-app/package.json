@@ -10,9 +10,9 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"undici": "^5.28.3",
-		"wrangler": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*"
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

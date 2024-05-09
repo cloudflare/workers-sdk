@@ -1,6 +1,6 @@
 import { Heading, VStack } from '@chakra-ui/react';
 import Comment from './Comment';
-import { Comments } from 'types';
+import { Comments } from '../types';
 
 interface Props {
 	comments: Comments;

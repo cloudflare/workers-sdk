@@ -4,7 +4,7 @@ import AddComment from './AddComment';
 import Loading from './Loading';
 import CommentList from './CommentList';
 import commentServices from '../services/commentServices';
-import { Comment, Comments } from 'types';
+import { Comment, Comments } from '../types';
 
 const CommentSection: React.FC = () => {
 	const [loading, setloading] = useState(false);

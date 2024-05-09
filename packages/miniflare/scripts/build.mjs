@@ -104,7 +104,8 @@ const embedWorkersPlugin = {
 					sourcesContent: false,
 					external: ["miniflare:shared", "miniflare:zod"],
 					metafile: true,
-					incremental: watch, // Allow `rebuild()` calls if watching
+					// TODO: bring back watch mode
+					// incremental: watch, // Allow `rebuild()` calls if watching
 					entryPoints: [args.path],
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
@@ -186,8 +187,10 @@ async function buildPackage() {
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
-		logLevel: watch ? "info" : "warning",
-		watch,
+		logLevel: "warning",
+		// TODO: bring back watch mode
+		// logLevel: watch ? "info" : "warning",
+		// watch,
 		outdir: outPath,
 		outbase: pkgRoot,
 		entryPoints: [indexPath, ...testPaths],

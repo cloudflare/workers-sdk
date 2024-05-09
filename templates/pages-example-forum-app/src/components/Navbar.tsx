@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flex, Icon, Image, Link, useColorMode, Box, IconButton } from '@chakra-ui/react';
+import { Flex, Icon, Image, Link } from '@chakra-ui/react';
 import { AiFillGithub, AiFillBook } from 'react-icons/ai';
 import { MdLogout } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +11,7 @@ import ThemeToggler from './ThemeToggler';
 
 const Navbar: React.FC = () => {
 	const { user, logout } = useAuth();
-	const [show, setShow] = React.useState(false);
+
 	return (
 		<Flex align="center" justify="space-between" px={4} py={2} boxShadow="sm">
 			<Icon as={AiFillBook} w={8} h={8} />
