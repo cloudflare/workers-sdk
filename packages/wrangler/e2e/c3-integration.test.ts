@@ -1,41 +1,21 @@
-import crypto from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import shellac from "shellac";
 import { fetch } from "undici";
-import { beforeAll, describe, expect, it } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
-import { normalizeOutput } from "./helpers/normalize";
-import { retry } from "./helpers/retry";
+import { beforeAll, describe, expect } from "vitest";
+import { e2eTest } from "./helpers/e2e-wrangler-test";
+import { generateResourceName } from "./helpers/generate-resource-name";
 import { makeRoot } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler";
+import { waitForReady } from "./helpers/wrangler";
 
-function matchWorkersDev(stdout: string): string {
-	return stdout.match(
-		/https:\/\/tmp-e2e-wrangler-.+?\.(.+?\.workers\.dev)/
-	)?.[1] as string;
-}
-
-describe("c3 integration", () => {
+describe.sequential("c3 integration", () => {
 	let workerName: string;
-	let workerPath: string;
-	let workersDev: string | null = null;
-	let runInRoot: typeof shellac;
-	let runInWorker: typeof shellac;
+	let root: string;
 	let c3Packed: string;
-	let normalize: (str: string) => string;
 
 	beforeAll(async () => {
-		const root = await makeRoot();
-		runInRoot = shellac.in(root).env(process.env);
-		workerName = `tmp-e2e-wrangler-${crypto.randomBytes(4).toString("hex")}`;
-		workerPath = path.join(root, workerName);
-		runInWorker = shellac.in(workerPath).env(process.env);
-		normalize = (str) =>
-			normalizeOutput(str, {
-				[workerName]: "tmp-e2e-wrangler",
-				[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-			});
+		root = await makeRoot();
+		workerName = generateResourceName("c3");
 
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
 		const { stdout: version } = await shellac.in(pathToC3)`
@@ -45,7 +25,7 @@ describe("c3 integration", () => {
 		c3Packed = path.join(pathToC3, "pack", version);
 	});
 
-	it("init project via c3", async () => {
+	e2eTest("init project via c3", async ({ run }) => {
 		const env = {
 			...process.env,
 			WRANGLER_C3_COMMAND: `--package ${c3Packed} dlx create-cloudflare`,
@@ -55,49 +35,20 @@ describe("c3 integration", () => {
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		await runInRoot.env(env)`$$ ${WRANGLER} init ${workerName} --yes`;
+		const init = await run(`wrangler init ${workerName} --yes`, {
+			env,
+			cwd: root,
+		});
 
-		expect(existsSync(workerPath)).toBe(true);
+		expect(init).toContain("APPLICATION CREATED");
+
+		expect(existsSync(path.join(root, workerName))).toBe(true);
 	});
 
-	it("deploy the worker", async () => {
-		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded tmp-e2e-wrangler (TIMINGS)
-			Published tmp-e2e-wrangler (TIMINGS)
-			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
-			Current Deployment ID: 00000000-0000-0000-0000-000000000000
-			Current Version ID: 00000000-0000-0000-0000-000000000000
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
-		expect(stderr).toMatchInlineSnapshot('""');
-		workersDev = matchWorkersDev(stdout);
-		const { text } = await retry(
-			(s) => s.status !== 200,
-			async () => {
-				const r = await fetch(`https://${workerName}.${workersDev}`);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Hello World!"');
-	});
-
-	it("delete the worker", async () => {
-		const { stdout, stderr } = await runInWorker`$$ ${WRANGLER} delete`;
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete tmp-e2e-wrangler? This action cannot be undone.
-			🤖 Using fallback value in non-interactive context: yes
-			Successfully deleted tmp-e2e-wrangler"
-		`);
-		expect(stderr).toMatchInlineSnapshot('""');
-		const { status } = await retry(
-			(s) => s.status === 200 || s.status === 500,
-			async () => {
-				const r = await fetch(`https://${workerName}.${workersDev}`);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(status).toBe(404);
+	e2eTest("can run `wrangler dev` on generated worker", async ({ run }) => {
+		const worker = run(`wrangler dev`, { cwd: path.join(root, workerName) });
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
+		expect(await res.text()).toBe("Hello World!");
 	});
 });

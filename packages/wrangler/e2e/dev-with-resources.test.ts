@@ -1,95 +1,16 @@
 import assert from "node:assert";
-import childProcess from "node:child_process";
 import crypto from "node:crypto";
 import events from "node:events";
-import fs from "node:fs/promises";
-import rl from "node:readline";
-import { ReadableStream } from "node:stream/web";
-import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
-import stripAnsi from "strip-ansi";
+import dedent from "ts-dedent";
 import { Agent, fetch } from "undici";
-import { describe, expect, it } from "vitest";
+import { describe, expect } from "vitest";
 import { WebSocket } from "ws";
-import { dedent, makeRoot, seed } from "./helpers/setup";
-import { teardown } from "./helpers/teardown";
-import { WRANGLER } from "./helpers/wrangler-command";
+import { e2eTest } from "./helpers/e2e-wrangler-test";
+import { generateResourceName } from "./helpers/generate-resource-name";
+import { waitForReady } from "./helpers/wrangler";
 
-// =============================================================================
-// Configuration
-// =============================================================================
-
-const PIPE_OUTPUT = false;
 const RUNTIMES = [{ runtime: "local" }, { runtime: "remote" }] as const;
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-async function exec(command: string, cwd?: string): Promise<string> {
-	const child = childProcess.spawn(command, {
-		cwd,
-		env: process.env,
-		shell: true,
-		stdio: "pipe",
-	});
-
-	const lines: string[] = [];
-	const stdoutInterface = rl.createInterface(child.stdout);
-	const stderrInterface = rl.createInterface(child.stderr);
-	stdoutInterface.on("line", (line) => {
-		lines.push(line);
-		if (PIPE_OUTPUT) console.log(line);
-	});
-	stderrInterface.on("line", (line) => {
-		lines.push(line);
-		if (PIPE_OUTPUT) console.error(line);
-	});
-
-	const [exitCode] = await events.once(child, "exit");
-	if (exitCode !== 0) {
-		lines.unshift(`Failed to run ${JSON.stringify(command)}:`);
-		throw new Error(lines.join("\n"));
-	}
-
-	return lines.join("\n");
-}
-
-async function readUntil(
-	lines: ReadableStream<string>,
-	regExp: RegExp,
-	timeout = 10_000
-): Promise<RegExpMatchArray> {
-	const timeoutPromise = setTimeout(timeout, false as const);
-	const reader = lines.getReader();
-	const readArray: string[] = [];
-	const read = () => stripAnsi(readArray.join("\n"));
-	try {
-		// eslint-disable-next-line no-constant-condition
-		while (true) {
-			const result = await Promise.race([reader.read(), timeoutPromise]);
-			if (result === false) {
-				throw new Error(`Timed out matching ${regExp}:\n${read()}`);
-			}
-			if (result.done) {
-				throw new Error(`Exhausted matching ${regExp}:\n${read()}`);
-			}
-			const match = result.value.match(regExp);
-			if (match !== null) return match;
-			readArray.push(result.value);
-		}
-	} finally {
-		reader.releaseLock();
-	}
-}
-
-// =============================================================================
-// Resources
-// =============================================================================
-
-function generateResourceName(type = "worker") {
-	return `wrangler-e2e-${type}-${crypto.randomUUID()}`;
-}
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
 // Generated using https://webassembly.github.io/wabt/demo/wat2wasm/.
@@ -98,143 +19,76 @@ const WASM_ADD_MODULE = Buffer.from(
 	"base64"
 );
 
-// TODO: when we switch to TypeScript 5, actually use `using` keyword here,
-//  should be able to make these tests concurrent if we do.
-//  could also add a key to context: https://vitest.dev/guide/test-context.html
+const resourceTest = e2eTest.extend<{
+	r2: (isLocal: boolean) => Promise<string>;
+	kv: (isLocal: boolean) => Promise<string>;
+	d1: (isLocal: boolean) => Promise<{ id: string; name: string }>;
+}>({
+	async kv({ run }, use) {
+		const created = new Set<string>();
 
-interface TemporaryDirectory {
-	path: string;
-	seed(files: Record<string, string | Uint8Array>): Promise<void>;
-	exec(strings: TemplateStringsArray, ...args: unknown[]): Promise<string>;
-}
-async function usingTmpDir(): Promise<TemporaryDirectory> {
-	const tmpPath = await makeRoot();
-	teardown(() => fs.rm(tmpPath, { recursive: true, maxRetries: 10 }));
-	return {
-		path: tmpPath,
-		seed(files) {
-			return seed(tmpPath, files);
-		},
-		exec(strings, ...args) {
-			return exec(String.raw(strings, ...args), tmpPath);
-		},
-	};
-}
+		await use(async (isLocal) => {
+			const name = generateResourceName("kv").replaceAll("-", "_");
+			if (isLocal) return name;
 
-type Worker = URL & { lines: ReadableStream<string> };
-async function usingDevWorker(cwd: string, ...flags: string[]) {
-	// Start `wrangler dev` on random port
-	const port = await getPort();
-	const flagsString = flags.join(" ");
-	const command = `${WRANGLER} dev --ip=127.0.0.1 --port=${port} ${flagsString}`;
-	const child = childProcess.spawn(command, {
-		cwd,
-		env: process.env,
-		shell: true,
-		stdio: "pipe",
-	});
+			const result = await run(`wrangler kv:namespace create ${name}`);
+			const match = /id = "([0-9a-f]{32})"/.exec(result);
+			assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
+			const id = match[1];
+			created.add(id);
+			return id;
+		});
+		for (const resource of created) {
+			await run(`wrangler kv:namespace delete --namespace-id ${resource}`);
+		}
+		created.clear();
+	},
+	async r2({ run }, use) {
+		const created = new Set<string>();
 
-	// const readyPromise = new DeferredPromise<true>();
-	const exitPromise = events.once(child, "exit");
+		await use(async (isLocal) => {
+			const name = generateResourceName("r2");
+			if (isLocal) return name;
 
-	// Shutdown `wrangler dev` on test cleanup
-	teardown(() => {
-		child.kill();
-		return exitPromise;
-	});
+			await run(`wrangler r2 bucket create ${name}`);
+			created.add(name);
 
-	const lines = new ReadableStream<string>({
-		start(controller) {
-			const stdoutInterface = rl.createInterface(child.stdout);
-			const stderrInterface = rl.createInterface(child.stderr);
-			stdoutInterface.on("line", (line) => {
-				controller.enqueue(line);
-				if (PIPE_OUTPUT) console.log(line);
-			});
-			stderrInterface.on("line", (line) => {
-				controller.enqueue(line);
-				if (PIPE_OUTPUT) console.error(line);
-			});
-			void exitPromise.then(() => controller.close());
-		},
-	});
+			return name;
+		});
+		for (const resource of created) {
+			await await run(`wrangler r2 bucket delete ${resource}`);
+		}
+		created.clear();
+	},
+	async d1({ run }, use) {
+		const created = new Set<string>();
 
-	// Wait for Wrangler to be ready or to crash
-	await readUntil(lines, /Ready on|Listening at/);
+		await use(async (isLocal) => {
+			const name = generateResourceName("d1");
+			if (isLocal) return { id: crypto.randomUUID(), name };
 
-	const isSecure = flags.some((flag) => /--local-protocol[ =]https/.test(flag));
-	const protocol = isSecure ? "https" : "http";
-	const worker = new URL(`${protocol}://127.0.0.1:${port}`) as Worker;
-	worker.lines = lines;
-	return worker;
-}
+			const result = await run(`wrangler d1 create ${name}`);
+			const match = /database_id = "([0-9a-f-]{36})"/.exec(result);
+			assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
+			const id = match[1];
+			created.add(name);
 
-async function _usingDeployedWorker(_cwd: string): Promise<URL> {
-	// TODO(soon): for testing service bindings in remote
-	// TODO(soon): deploy worker
-	teardown(() => {
-		// TODO(soon): delete worker
-	});
-	// TODO(soon): return URL to worker
-	return new URL("https://workers.dev");
-}
-
-async function usingKVNamespace(isLocal: boolean): Promise<string /* id */> {
-	const name = generateResourceName("kv").replaceAll("-", "_");
-	if (isLocal) return name;
-
-	const result = await exec(`${WRANGLER} kv:namespace create ${name}`);
-	const match = /[0-9a-f]{32}/.exec(result);
-	assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
-	const id = match[0];
-	teardown(async () => {
-		await exec(`${WRANGLER} kv:namespace delete --namespace-id ${id}`);
-	});
-
-	return id;
-}
-
-async function usingR2Bucket(isLocal: boolean): Promise<string /* name */> {
-	const name = generateResourceName("r2");
-	if (isLocal) return name;
-
-	await exec(`${WRANGLER} r2 bucket create ${name}`);
-	teardown(async () => {
-		await exec(`${WRANGLER} r2 bucket delete ${name}`);
-	});
-
-	return name;
-}
-
-async function usingD1Database(
-	isLocal: boolean
-): Promise<{ id: string; name: string }> {
-	const name = generateResourceName("d1");
-	if (isLocal) return { id: crypto.randomUUID(), name };
-
-	const result = await exec(`${WRANGLER} d1 create ${name}`);
-	const match = /database_id = "([0-9a-f-]{36})"/.exec(result);
-	assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
-	const id = match[1];
-	teardown(async () => {
-		await exec(`${WRANGLER} d1 delete -y ${name}`);
-	});
-
-	return { id, name };
-}
-
-// =============================================================================
-// Tests
-// =============================================================================
+			return { id, name };
+		});
+		for (const resource of created) {
+			await await run(`wrangler d1 delete -y ${resource}`);
+		}
+		created.clear();
+	},
+});
 
 describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 	const isLocal = runtime === "local";
 	const runtimeFlags = isLocal ? [] : ["--remote"];
 
-	it("works with basic modules format worker", async () => {
-		const tmp = await usingTmpDir();
+	e2eTest("works with basic modules format worker", async ({ seed, run }) => {
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -255,11 +109,13 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		let res = await fetch(worker);
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		let res = await fetch(url);
+
 		expect(await res.text()).toBe("modules");
 
-		res = await fetch(new URL("/error", worker), {
+		res = await fetch(new URL("/error", url), {
 			headers: { Accept: "text/plain" },
 		});
 		const text = await res.text();
@@ -267,14 +123,13 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 			expect(text).toContain("Error: 🙈");
 			expect(text).toContain("src/index.ts:7:10");
 		}
-		await readUntil(worker.lines, /Error: 🙈/);
-		await readUntil(worker.lines, /src\/index\.ts:7:10/);
+		await worker.readUntil(/Error: 🙈/);
+		await worker.readUntil(/src\/index\.ts:7:10/);
 	});
 
-	it("works with basic service worker", async () => {
-		const tmp = await usingTmpDir();
+	e2eTest("works with basic service worker", async ({ seed, run }) => {
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -293,11 +148,12 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				});
 			`,
 		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		let res = await fetch(worker);
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		let res = await fetch(url);
 		expect(await res.text()).toBe("service worker");
 
-		res = await fetch(new URL("/error", worker), {
+		res = await fetch(new URL("/error", url), {
 			headers: { Accept: "text/plain" },
 		});
 		const text = await res.text();
@@ -305,22 +161,21 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 			expect(text).toContain("Error: 🙈");
 			expect(text).toContain("src/index.ts:6:9");
 		}
-		await readUntil(worker.lines, /Error: 🙈/);
-		await readUntil(worker.lines, /src\/index\.ts:6:9/);
+		await worker.readUntil(/Error: 🙈/);
+		await worker.readUntil(/src\/index\.ts:6:9/);
 	});
 
 	// TODO(now): no bundle? find additional modules?
-	it.todo("workers with no bundle");
-	it.todo("workers with find additional modules");
+	e2eTest.todo("workers with no bundle");
+	e2eTest.todo("workers with find additional modules");
 
-	it("respects compatibility settings", async () => {
-		const tmp = await usingTmpDir();
+	e2eTest("respects compatibility settings", async ({ seed, run }) => {
 		const workerName = generateResourceName();
 		// `global_navigator` enabled on `2022-03-21`: https://developers.cloudflare.com/workers/configuration/compatibility-dates/#global-navigator
 		// `http_headers_getsetcookie` enabled on `2023-03-01`: https://developers.cloudflare.com/workers/configuration/compatibility-dates/#headers-supports-getsetcookie
 		// `2022-03-22` should enable `global_navigator` but disable `http_headers_getsetcookie`
 		// `nodejs_compat` has no default-on-date
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -344,8 +199,9 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
 		expect(await res.json()).toEqual({
 			userAgent: "Cloudflare-Workers",
 			cookies: "😈", // No cookies for you!
@@ -353,11 +209,10 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 		});
 	});
 
-	it("starts inspector and allows debugging", async () => {
+	e2eTest("starts inspector and allows debugging", async ({ seed, run }) => {
 		const inspectorPort = await getPort();
-		const tmp = await usingTmpDir();
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -369,11 +224,10 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		await usingDevWorker(
-			tmp.path,
-			...runtimeFlags,
-			`--inspector-port=${inspectorPort}`
+		const worker = run(
+			`wrangler dev ${runtimeFlags} --inspector-port=${inspectorPort}`
 		);
+		await waitForReady(worker);
 		const inspectorUrl = new URL(`ws://127.0.0.1:${inspectorPort}`);
 		const ws = new WebSocket(inspectorUrl);
 		await events.once(ws, "open");
@@ -382,10 +236,9 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 		//  messages currently to non-deterministic to do this reliably
 	});
 
-	it("starts https server", async () => {
-		const tmp = await usingTmpDir();
+	e2eTest("starts https server", async ({ seed, run }) => {
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -397,53 +250,51 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		const worker = await usingDevWorker(
-			tmp.path,
-			...runtimeFlags,
-			"--local-protocol=https"
-		);
-		expect(worker.protocol).toBe("https:");
-		const res = await fetch(worker, {
+		const worker = run(`wrangler dev ${runtimeFlags} --local-protocol=https`);
+		const { url } = await waitForReady(worker);
+		const parsedURL = new URL(url);
+		expect(parsedURL.protocol).toBe("https:");
+		const res = await fetch(url, {
 			dispatcher: new Agent({ connect: { rejectUnauthorized: false } }),
 		});
 		expect(await res.text()).toBe("🔐");
 	});
 
-	it.skipIf(!isLocal)("uses configured upstream inside worker", async () => {
-		const tmp = await usingTmpDir();
-		const workerName = generateResourceName();
-		await tmp.seed({
-			"wrangler.toml": dedent`
+	e2eTest.skipIf(!isLocal)(
+		"uses configured upstream inside worker",
+		async ({ seed, run }) => {
+			const workerName = generateResourceName();
+			await seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request, env, ctx) { return new Response(request.url); }
 				}
 			`,
-		});
-		const worker = await usingDevWorker(
-			tmp.path,
-			...runtimeFlags,
+			});
 			// TODO(soon): explore using `--host` for remote mode in this test
-			"--local-upstream=example.com"
-		);
-		const res = await fetch(worker);
-		expect(await res.text()).toBe("http://example.com/");
-	});
+			const worker = run(
+				`wrangler dev ${runtimeFlags} --local-upstream=example.com`
+			);
+			const { url } = await waitForReady(worker);
+			const res = await fetch(url);
+			expect(await res.text()).toBe("http://example.com/");
+		}
+	);
 });
 
 describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 	const isLocal = runtime === "local";
-	const runtimeFlags = isLocal ? [] : ["--remote"];
+	const runtimeFlags = isLocal ? "" : "--remote";
 	const resourceFlags = isLocal ? "--local" : "";
 
-	it("exposes basic bindings", async () => {
-		const tmp = await usingTmpDir();
+	e2eTest("exposes basic bindings", async ({ seed, run }) => {
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"data/text.txt": "👋",
 			"data/binary.bin": "🌊",
 			"wrangler.toml": dedent`
@@ -470,8 +321,9 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				});
 			`,
 		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
 		expect(await res.json()).toEqual({
 			TEXT: "📄",
 			OBJECT: { charts: "📊" },
@@ -480,38 +332,41 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 		});
 	});
 
-	it("exposes WebAssembly module bindings in service workers", async () => {
-		const tmp = await usingTmpDir();
-		const workerName = generateResourceName();
-		await tmp.seed({
-			"add.wasm": WASM_ADD_MODULE,
-			"wrangler.toml": dedent`
+	e2eTest(
+		"exposes WebAssembly module bindings in service workers",
+		async ({ seed, run }) => {
+			const workerName = generateResourceName();
+			await seed({
+				"add.wasm": WASM_ADD_MODULE,
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 				[wasm_modules]
 				ADD_MODULE = "add.wasm"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				addEventListener("fetch", (event) => {
 					const instance = new WebAssembly.Instance(ADD_MODULE);
 					event.respondWith(new Response(instance.exports.add(1, 2)));
 				});
 			`,
-		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
-		expect(await res.text()).toBe("3");
-	});
+			});
+			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const { url } = await waitForReady(worker);
+			const res = await fetch(url);
+			expect(await res.text()).toBe("3");
+		}
+	);
 
-	it("exposes KV namespace bindings", async () => {
-		const tmp = await usingTmpDir();
-
-		const ns = await usingKVNamespace(isLocal);
-		await tmp.exec`${WRANGLER} kv:key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`;
+	resourceTest("exposes KV namespace bindings", async ({ kv, run, seed }) => {
+		const ns = await kv(isLocal);
+		await run(
+			`wrangler kv:key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
+		);
 
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -530,21 +385,22 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
 		expect(await res.text()).toBe("existing-value");
 
-		const result =
-			await tmp.exec`${WRANGLER} kv:key get ${resourceFlags} --namespace-id=${ns} new-key`;
+		const result = await run(
+			`wrangler kv:key get ${resourceFlags} --namespace-id=${ns} new-key`
+		);
 		// TODO(soon): make this `toBe()` once we remove `Logs were written` message
 		expect(result).toContain("new-value");
 	});
 
-	it("supports Workers Sites bindings", async () => {
-		const tmp = await usingTmpDir();
+	e2eTest("supports Workers Sites bindings", async ({ seed, run }) => {
 		const workerName = generateResourceName();
 		const kvAssetHandler = require.resolve("@cloudflare/kv-asset-handler");
-		await tmp.seed({
+		await seed({
 			"public/index.html": "<h1>👋</h1>",
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -577,41 +433,41 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 			`,
 		});
 
-		teardown(async () => {
-			// Try clean up created remote Workers Sites namespace
-			if (isLocal) return;
-			const listResult = await tmp.exec`${WRANGLER} kv:namespace list`;
-			// TODO(soon): remove `substring()` once we remove `Logs were written` message
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
+		expect(await res.text()).toBe("<h1>👋</h1>");
+
+		// Try to clean up created remote Workers Sites namespace
+		if (!isLocal) {
+			const listResult = await run(`wrangler kv:namespace list`);
 			const list = JSON.parse(
-				listResult.substring(0, listResult.lastIndexOf("]") + 1)
+				// Ignore extra debug output
+				listResult.substring(
+					listResult.indexOf("["),
+					listResult.lastIndexOf("]") + 1
+				)
 			);
 			assert(Array.isArray(list));
 			const ns = list.find(({ title }) => title.includes(workerName));
 			if (ns === undefined) {
 				console.warn("Couldn't find Workers Sites namespace to delete");
 			} else {
-				await tmp.exec`${WRANGLER} kv:namespace delete --namespace-id ${ns.id}`;
+				await run(`wrangler kv:namespace delete --namespace-id ${ns.id}`);
 			}
-		});
-
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
-		expect(await res.text()).toBe("<h1>👋</h1>");
+		}
 	});
 
-	it("exposes R2 bucket bindings", async () => {
-		const tmp = await usingTmpDir();
+	resourceTest("exposes R2 bucket bindings", async ({ seed, run, r2 }) => {
+		await seed({ "test.txt": "existing-value" });
 
-		await tmp.seed({ "test.txt": "existing-value" });
-		const name = await usingR2Bucket(isLocal);
-		await tmp.exec`${WRANGLER} r2 object put ${resourceFlags} ${name}/existing-key --file test.txt`;
-		teardown(async () => {
-			// `wrangler r2 bucket delete` requires the bucket to be empty
-			await tmp.exec`${WRANGLER} r2 object delete ${resourceFlags} ${name}/existing-key`;
-		});
+		const name = await r2(isLocal);
+		await run(
+			`wrangler r2 object put ${resourceFlags} ${name}/existing-key --file test.txt`
+		);
 
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -630,24 +486,27 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
 		expect(await res.text()).toBe("existing-value");
-		teardown(async () => {
-			await tmp.exec`${WRANGLER} r2 object delete ${resourceFlags} ${name}/new-key`;
-		});
 
-		const result =
-			await tmp.exec`${WRANGLER} r2 object get ${resourceFlags} ${name}/new-key --pipe`;
+		const result = await run(
+			`wrangler r2 object get ${resourceFlags} ${name}/new-key --pipe`
+		);
 		// TODO(soon): make this `toBe()` once we remove `Logs were written` message
 		expect(result).toContain("new-value");
+
+		await run(
+			`wrangler r2 object delete ${resourceFlags} ${name}/existing-key`
+		);
+		await run(`wrangler r2 object delete ${resourceFlags} ${name}/new-key`);
 	});
 
-	it("exposes D1 database bindings", async () => {
-		const { id, name } = await usingD1Database(isLocal);
-		const tmp = await usingTmpDir();
+	resourceTest("exposes D1 database bindings", async ({ seed, run, d1 }) => {
+		const { id, name } = await d1(isLocal);
 		const workerName = generateResourceName();
-		await tmp.seed({
+		await seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
@@ -671,23 +530,28 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		await tmp.exec`${WRANGLER} d1 execute ${resourceFlags} DB --file schema.sql`;
 
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		const res = await fetch(worker);
+		// D1 defaults to `--local`, so we deliberately use `runtimeFlags`, not `resourceFlags`
+		await run(`wrangler d1 execute ${runtimeFlags} DB --file schema.sql`);
+
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
 		expect(await res.json()).toEqual([{ key: "key1", value: "value1" }]);
 
-		const result =
-			await tmp.exec`${WRANGLER} d1 execute ${resourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`;
+		const result = await run(
+			`wrangler d1 execute ${runtimeFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
+		);
 		expect(result).toContain("value2");
 	});
 
-	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
-		const tmp = await usingTmpDir();
-		const queueName = generateResourceName("queue");
-		const workerName = generateResourceName();
-		await tmp.seed({
-			"wrangler.toml": dedent`
+	e2eTest.skipIf(!isLocal)(
+		"exposes queue producer/consumer bindings",
+		async ({ seed, run }) => {
+			const queueName = generateResourceName("queue");
+			const workerName = generateResourceName();
+			await seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -698,7 +562,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				queue = "${queueName}"
 				max_batch_timeout = 0
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					async fetch(request, env, ctx) {
 						await env.QUEUE.send("✉️");
@@ -709,21 +573,23 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 					}
 				}
 			`,
-		});
-		const worker = await usingDevWorker(tmp.path, ...runtimeFlags);
-		await fetch(worker);
-		await readUntil(worker.lines, /✉️/);
-	});
+			});
+			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const { url } = await waitForReady(worker);
+			await fetch(url);
+			await worker.readUntil(/✉️/);
+		}
+	);
 
 	// TODO(soon): implement E2E tests for other bindings
-	it.todo("exposes hyperdrive bindings");
-	it.skipIf(isLocal).todo("exposes send email bindings");
-	it.skipIf(isLocal).todo("exposes browser bindings");
-	it.skipIf(isLocal).todo("exposes Workers AI bindings");
-	it.skipIf(isLocal).todo("exposes Vectorize bindings");
-	it.skipIf(isLocal).todo("exposes Analytics Engine bindings");
-	it.skipIf(isLocal).todo("exposes dispatch namespace bindings");
-	it.skipIf(isLocal).todo("exposes mTLS bindings");
+	e2eTest.todo("exposes hyperdrive bindings");
+	e2eTest.skipIf(isLocal).todo("exposes send email bindings");
+	e2eTest.skipIf(isLocal).todo("exposes browser bindings");
+	e2eTest.skipIf(isLocal).todo("exposes Workers AI bindings");
+	e2eTest.skipIf(isLocal).todo("exposes Vectorize bindings");
+	e2eTest.skipIf(isLocal).todo("exposes Analytics Engine bindings");
+	e2eTest.skipIf(isLocal).todo("exposes dispatch namespace bindings");
+	e2eTest.skipIf(isLocal).todo("exposes mTLS bindings");
 });
 
 describe.each(RUNTIMES)("Multi-Worker Bindings: $runtime", ({ runtime }) => {
@@ -732,6 +598,6 @@ describe.each(RUNTIMES)("Multi-Worker Bindings: $runtime", ({ runtime }) => {
 
 	// TODO(soon): we already have tests for service bindings in `dev.test.ts`,
 	//  but would be good to get some more for Durable Objects
-	it.todo("exposes service bindings to other workers");
-	it.todo("exposes Durable Object bindings to other workers");
+	e2eTest.todo("exposes service bindings to other workers");
+	e2eTest.todo("exposes Durable Object bindings to other workers");
 });
