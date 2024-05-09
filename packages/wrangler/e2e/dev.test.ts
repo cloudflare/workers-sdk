@@ -976,3 +976,51 @@ describe("zone selection", () => {
 		});
 	});
 });
+
+describe("custom builds", () => {
+	let worker: DevWorker;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					compatibility_date = "2023-01-01"
+					main = "src/index.ts"
+					build.command = "echo 'hello'"
+					build.watch_dir = "custom_src"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request) {
+							return new Response("Hello, World!")
+						}
+					}`,
+		}));
+	});
+
+	it("does not hang when custom build does not cause esbuild to run", async () => {
+		await worker.runDevSession("", async (session) => {
+			// Hit worker and confirm responsive
+			await waitForPortToBeBound(session.port);
+
+			expect(session.stdout).toContain("echo 'hello'");
+			session.stdout = "";
+
+			// Check worker is responding
+			const response1 = await fetch(`http://127.0.0.1:${session.port}`);
+			expect(await response1.text()).toMatchInlineSnapshot(`"Hello, World!"`);
+
+			// trigger the custom build
+			await worker.seed(() => ({ "custom_src/foo.txt": "" }));
+			await setTimeout(500);
+
+			expect(session.stdout).toContain("echo 'hello'");
+			await setTimeout(500);
+
+			// Check worker is still responding
+			const response2 = await fetch(`http://127.0.0.1:${session.port}`);
+			expect(await response2.text()).toMatchInlineSnapshot(`"Hello, World!"`);
+		});
+	});
+});
