@@ -103,6 +103,7 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
+import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
 	CoreBindings,
 	CoreHeaders,
@@ -112,7 +113,6 @@ import {
 	SiteBindings,
 } from "./workers";
 import { formatZodError } from "./zod-format";
-import { isCompressedByCloudflareFL } from "./shared/mime-types";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
