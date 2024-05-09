@@ -112,7 +112,7 @@ import {
 	SiteBindings,
 } from "./workers";
 import { formatZodError } from "./zod-format";
-import { compressedByCloudflareFL } from "./shared/mime-types";
+import { isCompressedByCloudflareFL } from "./shared/mime-types";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -547,11 +547,11 @@ const restrictedWebSocketUpgradeHeaders = [
 	"sec-websocket-accept",
 ];
 
-export function _transformsForContentEncodingAndContentType(encoding: string | undefined, type: string | undefined): Transform[] {
+export function _transformsForContentEncodingAndContentType(encoding: string | undefined, type: string | undefined | null): Transform[] {
 	const encoders: Transform[] = [];
-	if (!encoding || !type) return encoders;
+	if (!encoding) return encoders;
     // if cloudflare's FL does not compress this mime-type, then don't compress locally either
-    if (!compressedByCloudflareFL.has(type)) return encoders;
+    if (!isCompressedByCloudflareFL(type)) return encoders;
 
 	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
 	const codings = encoding

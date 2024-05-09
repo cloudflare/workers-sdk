@@ -50,7 +50,7 @@ export const compressedByCloudflareFL = new Set([
     "application/geo+json",
 ]);
 
-export function isCompressedByCloudflareFL(contentTypeHeader: string | null) {
+export function isCompressedByCloudflareFL(contentTypeHeader: string | undefined | null) {
     if(!contentTypeHeader) return true; // Content-Type inferred as text/plain
 
     const [contentType] = contentTypeHeader?.split(';');
