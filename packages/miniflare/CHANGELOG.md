@@ -1,5 +1,19 @@
 # miniflare
 
+## 3.20240419.1
+
+### Minor Changes
+
+- [#5570](https://github.com/cloudflare/workers-sdk/pull/5570) [`66bdad0`](https://github.com/cloudflare/workers-sdk/commit/66bdad08834b403100d1e4d6cd507978cc50eaba) Thanks [@sesteves](https://github.com/sesteves)! - feature: support delayed delivery in the miniflare's queue simulator.
+
+  This change updates the miniflare's queue broker to support delayed delivery of messages, both when sending the message from a producer and when retrying the message from a consumer.
+
+### Patch Changes
+
+- [#5670](https://github.com/cloudflare/workers-sdk/pull/5670) [`9b4af8a`](https://github.com/cloudflare/workers-sdk/commit/9b4af8a59bc75ed494dd752c0a7007dbacf75e51) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Allow the magic proxy to proxy objects containing functions
+
+  This was previously prevented but this change removes that restriction.
+
 ## 3.20240419.0
 
 ### Patch Changes

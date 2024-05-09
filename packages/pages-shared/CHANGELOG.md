@@ -1,5 +1,16 @@
 # @cloudflare/pages-shared
 
+## 0.11.34
+
+### Patch Changes
+
+- [#5785](https://github.com/cloudflare/workers-sdk/pull/5785) [`c0b057b`](https://github.com/cloudflare/workers-sdk/commit/c0b057b9d196dc46f54530f91e8c87dee88d6cfa) Thanks [@jahands](https://github.com/jahands)! - fix: Remove request method from cache key
+
+  Reverts a change that added the request method to the cache key when reading/writing to cache.
+
+- Updated dependencies [[`66bdad0`](https://github.com/cloudflare/workers-sdk/commit/66bdad08834b403100d1e4d6cd507978cc50eaba), [`9b4af8a`](https://github.com/cloudflare/workers-sdk/commit/9b4af8a59bc75ed494dd752c0a7007dbacf75e51)]:
+  - miniflare@3.20240419.1
+
 ## 0.11.33
 
 ### Patch Changes
