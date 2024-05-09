@@ -13,6 +13,8 @@ import { retry } from "./helpers/retry";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler";
 
+// touch this file to see if e2e tests run automatically
+
 // Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
 setGlobalDispatcher(
 	new Agent({
