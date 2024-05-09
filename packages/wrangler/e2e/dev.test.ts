@@ -91,7 +91,7 @@ async function runDevSession(
 
 		in ${workerPath} {
 			exits {
-        $ ${WRANGLER} dev ${flags}
+		$ ${WRANGLER} dev ${flags}
 			}
 		}
 			`;
@@ -750,47 +750,43 @@ describe("writes debug logs to hidden file", () => {
 		a = await makeWorker();
 		await a.seed({
 			"wrangler.toml": dedent`
-          name = "a"
-          main = "src/index.ts"
-          compatibility_date = "2023-01-01"
-      `,
+					name = "a"
+					main = "src/index.ts"
+					compatibility_date = "2023-01-01"
+			`,
 			"src/index.ts": dedent/* javascript */ `
-        export default {
-          fetch(req, env) {
-            return new Response('A' + req.url);
-          },
-        };
-        `,
-			"package.json": dedent`
-          {
-            "name": "a",
-            "version": "0.0.0",
-            "private": true
-          }
-          `,
+				export default {
+					fetch(req, env) {
+						return new Response('A' + req.url);
+					},
+				};
+			`,
+			"package.json": JSON.stringify({
+				name: "a",
+				version: "0.0.0",
+				private: true,
+			}),
 		});
 
 		b = await makeWorker();
 		await b.seed({
 			"wrangler.toml": dedent`
-          name = "b"
-          main = "src/index.ts"
-          compatibility_date = "2023-01-01"
-      `,
+				name = "b"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+			`,
 			"src/index.ts": dedent/* javascript */ `
-        export default {
-          fetch(req, env) {
-            return new Response('B' + req.url);
-          },
-        };
-        `,
-			"package.json": dedent`
-          {
-            "name": "b",
-            "version": "0.0.0",
-            "private": true
-          }
-          `,
+				export default {
+					fetch(req, env) {
+						return new Response('B' + req.url);
+					},
+				};
+			`,
+			"package.json": JSON.stringify({
+				name: "b",
+				version: "0.0.0",
+				private: true,
+			}),
 		});
 	});
 
@@ -973,6 +969,54 @@ describe("zone selection", () => {
 				"X [ERROR] Could not access \`not-a-domain.testing.devprod.cloudflare.dev\`. Make sure the domain is set up to be proxied by Cloudflare.
 				  For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
 			`);
+		});
+	});
+});
+
+describe("custom builds", () => {
+	let worker: DevWorker;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					compatibility_date = "2023-01-01"
+					main = "src/index.ts"
+					build.command = "echo 'hello'"
+					build.watch_dir = "custom_src"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request) {
+							return new Response("Hello, World!")
+						}
+					}`,
+		}));
+	});
+
+	it("does not hang when custom build does not cause esbuild to run", async () => {
+		await worker.runDevSession("", async (session) => {
+			// Hit worker and confirm responsive
+			await waitForPortToBeBound(session.port);
+
+			expect(session.stdout).toContain("echo 'hello'");
+			session.stdout = "";
+
+			// Check worker is responding
+			const response1 = await fetch(`http://127.0.0.1:${session.port}`);
+			expect(await response1.text()).toMatchInlineSnapshot(`"Hello, World!"`);
+
+			// trigger the custom build
+			await worker.seed(() => ({ "custom_src/foo.txt": "" }));
+			await setTimeout(500);
+
+			expect(session.stdout).toContain("echo 'hello'");
+			await setTimeout(500);
+
+			// Check worker is still responding
+			const response2 = await fetch(`http://127.0.0.1:${session.port}`);
+			expect(await response2.text()).toMatchInlineSnapshot(`"Hello, World!"`);
 		});
 	});
 });

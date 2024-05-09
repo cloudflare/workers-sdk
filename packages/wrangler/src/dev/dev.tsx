@@ -32,7 +32,11 @@ import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData, StartDevWorkerOptions } from "../api";
+import type {
+	ProxyData,
+	ReloadCompleteEvent,
+	StartDevWorkerOptions,
+} from "../api";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -310,24 +314,58 @@ function DevSession(props: DevSessionProps) {
 			props.liveReload,
 		]
 	);
+
 	const onBundleStart = useCallback(() => {
 		devEnv.proxy.onBundleStart({
 			type: "bundleStart",
 			config: startDevWorkerOptions,
 		});
 	}, [devEnv, startDevWorkerOptions]);
+	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
+	const bundle = useRef<ReturnType<typeof useEsbuild>>();
+	const onCustomBuildEnd = useCallback(() => {
+		const TIMEOUT = 300; // TODO: find a lower bound for this value
+
+		clearTimeout(esbuildStartTimeoutRef.current);
+		esbuildStartTimeoutRef.current = setTimeout(() => {
+			// esbuild did not start within a reasonable time of the custom build finishing
+			// so we can assume that the custom build produced the same output
+			// and esbuild is choosing not to rebuild the same bundle
+			// therefore the previous worker can be considered reloaded
+			if (latestReloadCompleteEvent.current) {
+				devEnv.proxy.onReloadComplete(latestReloadCompleteEvent.current);
+			}
+		}, TIMEOUT);
+
+		return () => {
+			clearTimeout(esbuildStartTimeoutRef.current);
+		};
+	}, [devEnv, latestReloadCompleteEvent]);
+	const onEsbuildStart = useCallback(() => {
+		// see comment in onCustomBuildEnd
+		clearTimeout(esbuildStartTimeoutRef.current);
+
+		// we can conditionally call onBundleStart depending on if a custom build was specified
+		// if it was, that step already emitted the event
+		// but to not leak the conditions as to whether that process was run
+		// to anything outside the useCustomBuild hook (currently dependent on props.build.{command,watch_dir})
+		// we can just call onBundleStart unconditionally as emitting the event more than once is fine
+		// also, if the timeout fired before esbuild started, for some reason, firing this event again is needed
+		onBundleStart();
+	}, [esbuildStartTimeoutRef, onBundleStart]);
 	const onReloadStart = useCallback(
-		(bundle: EsbuildBundle) => {
+		(esbuildBundle: EsbuildBundle) => {
 			devEnv.proxy.onReloadStart({
 				type: "reloadStart",
 				config: startDevWorkerOptions,
-				bundle,
+				bundle: esbuildBundle,
 			});
 		},
 		[devEnv, startDevWorkerOptions]
 	);
 
-	useCustomBuild(props.entry, props.build, onBundleStart);
+	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
 	const directory = useTmpDir(props.projectRoot);
 
@@ -345,7 +383,7 @@ function DevSession(props: DevSessionProps) {
 		});
 	}, [devEnv, startDevWorkerOptions]);
 
-	const bundle = useEsbuild({
+	bundle.current = useEsbuild({
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
@@ -373,14 +411,16 @@ function DevSession(props: DevSessionProps) {
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
-		onBundleStart,
+		onStart: onEsbuildStart,
 		defineNavigatorUserAgent: isNavigatorDefined(
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),
 	});
+
+	// this suffices as an onEsbuildEnd callback
 	useEffect(() => {
-		if (bundle) onReloadStart(bundle);
+		if (bundle.current) onReloadStart(bundle.current);
 	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
@@ -430,13 +470,15 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
-		if (bundle) {
-			devEnv.proxy.onReloadComplete({
+		if (bundle.current) {
+			latestReloadCompleteEvent.current = {
 				type: "reloadComplete",
 				config: startDevWorkerOptions,
-				bundle,
+				bundle: bundle.current,
 				proxyData,
-			});
+			};
+
+			devEnv.proxy.onReloadComplete(latestReloadCompleteEvent.current);
 		}
 
 		if (props.onReady) {
@@ -447,7 +489,7 @@ function DevSession(props: DevSessionProps) {
 	return props.local ? (
 		<Local
 			name={props.name}
-			bundle={bundle}
+			bundle={bundle.current}
 			format={props.entry.format}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
@@ -472,13 +514,13 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-			sourceMapPath={bundle?.sourceMapPath}
+			sourceMapPath={bundle.current?.sourceMapPath}
 			services={props.bindings.services}
 		/>
 	) : (
 		<Remote
 			name={props.name}
-			bundle={bundle}
+			bundle={bundle.current}
 			format={props.entry.format}
 			accountId={props.accountId}
 			bindings={props.bindings}
@@ -501,7 +543,7 @@ function DevSession(props: DevSessionProps) {
 			host={props.host}
 			routes={props.routes}
 			onReady={announceAndOnReady}
-			sourceMapPath={bundle?.sourceMapPath}
+			sourceMapPath={bundle.current?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
 		/>
 	);
@@ -530,7 +572,8 @@ function useTmpDir(projectRoot: string | undefined): string | undefined {
 function useCustomBuild(
 	expectedEntry: Entry,
 	build: Config["build"],
-	onBundleStart: () => void
+	onStart: () => void,
+	onEnd: () => void
 ): void {
 	useEffect(() => {
 		if (!build.command) return;
@@ -544,17 +587,21 @@ function useCustomBuild(
 					path.relative(expectedEntry.directory, expectedEntry.file) || ".";
 				//TODO: we should buffer requests to the proxy until this completes
 				logger.log(`The file ${filePath} changed, restarting build...`);
-				onBundleStart();
-				runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
-					logger.error("Custom build failed:", err);
-				});
+				onStart();
+				runCustomBuild(expectedEntry.file, relativeFile, build)
+					.catch((err) => {
+						logger.error("Custom build failed:", err);
+					})
+					.finally(() => {
+						onEnd();
+					});
 			});
 		}
 
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry, onBundleStart]);
+	}, [build, expectedEntry, onStart, onEnd]);
 }
 
 function sleep(period: number) {
