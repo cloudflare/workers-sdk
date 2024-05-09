@@ -975,16 +975,6 @@ describe("zone selection", () => {
 
 describe("custom builds", () => {
 	let worker: DevWorker;
-	const defaultScript = dedent`
-		export default {
-			async fetch(request) {
-				if (request.url.includes("/long")) {
-					await new Promise((resolve) => setTimeout(resolve, 3000));
-				}
-
-				return new Response("Hello World 1!")
-			}
-		}`;
 
 	beforeEach(async () => {
 		worker = await makeWorker();
@@ -992,45 +982,41 @@ describe("custom builds", () => {
 			"wrangler.toml": dedent`
 					name = "${workerName}"
 					compatibility_date = "2023-01-01"
-					main = "dist/index.js"
-					# build.command = "tsc --target esnext ./src/index.ts --outdir ./dist/"
-					build.command = "npm run build"
+					main = "src/index.ts"
+					build.command = "echo 'hello'"
+					build.watch_dir = "custom_src"
 			`,
-			"src/index.ts": defaultScript,
-			"package.json": JSON.stringify({
-				name: workerName,
-				version: "0.0.0",
-				private: true,
-				scripts: {
-					build:
-						"esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js",
-				},
-			}),
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request) {
+							return new Response("Hello, World!")
+						}
+					}`,
 		}));
 	});
 
-	it("works-around custom build noops causing esbuild rebundles + runtime reloads to skip and the ProxyWorker to hang in a paused state", async () => {
+	it("does not hang when custom build does not cause esbuild to run", async () => {
 		await worker.runDevSession("", async (session) => {
 			// Hit worker and confirm responsive
 			await waitForPortToBeBound(session.port);
 
-			// Save the worker with no changes (don't wait for promise to resolve)
-			void worker.seed({
-				"src/index.ts": defaultScript.replace(
-					"Hello World 1!",
-					"Hello World 2!"
-				),
-			});
+			expect(session.stdout).toContain("echo 'hello'");
+			session.stdout = "";
 
-			// Hit worker while it's being saved and confirm it responds with new response
-			const { text } = await retry(
-				(s) => s.status !== 200,
-				async () => {
-					const r = await fetch(`http://127.0.0.1:${session.port}/long`);
-					return { text: await r.text(), status: r.status };
-				}
-			);
-			expect(text).toMatchInlineSnapshot(`"Hello World 2!"`);
+			// Check worker is responding
+			const response1 = await fetch(`http://127.0.0.1:${session.port}`);
+			expect(await response1.text()).toMatchInlineSnapshot(`"Hello, World!"`);
+
+			// trigger the custom build
+			await worker.seed(() => ({ "custom_src/foo.txt": "" }));
+			await setTimeout(500);
+
+			expect(session.stdout).toContain("echo 'hello'");
+			await setTimeout(500);
+
+			// Check worker is still responding
+			const response2 = await fetch(`http://127.0.0.1:${session.port}`);
+			expect(await response2.text()).toMatchInlineSnapshot(`"Hello, World!"`);
 		});
 	});
 });
