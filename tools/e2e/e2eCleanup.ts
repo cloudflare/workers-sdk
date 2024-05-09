@@ -3,7 +3,6 @@ import {
 	deleteWorker,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
-	Project,
 } from "./common";
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
@@ -16,7 +15,13 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
 	process.exit(1);
 }
 
-const run = async () => {
+run().catch((e) => {
+	if ("code" in e) {
+		process.exit(e.code);
+	}
+});
+
+async function run() {
 	const projectsToDelete = await listTmpE2EProjects();
 
 	for (const project of projectsToDelete) {
@@ -42,6 +47,4 @@ const run = async () => {
 	} else {
 		console.log(`Successfully deleted ${workersToDelete.length} workers`);
 	}
-};
-
-run();
+}

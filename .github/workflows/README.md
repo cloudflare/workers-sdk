@@ -73,6 +73,13 @@ See below for a summary of this repo's Actions
 - Actions
   - Generates changesets for the affected package.
 
+### E2E Project Cleanup (e2e-project-cleanup.yml)
+
+- Triggers
+  - Scheduled to run at 3am each day.
+- Actions
+  - Deletes any Workers and Pages projects that were not properly cleaned up by the E2E tests.
+
 ## Main branch actions
 
 ### Handle Changesets (changesets.yml)
@@ -126,10 +133,3 @@ See below for a summary of this repo's Actions
   - Updates to PRs, by the dependabot user, which touch c3-frameworks-update changesets.
 - Actions
   - Runs the all the C3 E2E (including quarantined) tests for the framework that was updated.
-
-### C3 E2E Project Cleanup (c3-e2e-project-cleanup.yml)
-
-- Triggers
-  - Scheduled to run at 3am each day.
-- Actions
-  - Deletes any Workers and Pages projects that were not properly cleaned up by the C3 E2E tests.

@@ -1867,6 +1867,9 @@ importers:
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
+      undici:
+        specifier: 5.28.3
+        version: 5.28.3
 
 packages:
 
