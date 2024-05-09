@@ -8,6 +8,10 @@ Fixes #[insert GH or internal issue number(s)].
   - [ ] TODO (before merge)
   - [ ] Included
   - [ ] Not necessary because:
+- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
+  - [ ] I don't know
+  - [ ] Required / Maybe required
+  - [ ] Not required because:
 - Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] TODO (before merge)
   - [ ] Included
