@@ -33,7 +33,7 @@ import {
 	WorkerOptions,
 	Worker_Module,
 	_forceColour,
-	_transformsForContentEncoding,
+	_transformsForContentEncodingAndContentType,
 	createFetchMock,
 	fetch,
 	kCurrentWorker,
@@ -278,13 +278,17 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	const testBody = "x".repeat(100);
 	const { http } = await useServer(t, (req, res) => {
 		const testEncoding = req.headers["x-test-encoding"]?.toString();
-		const encoders = _transformsForContentEncoding(testEncoding);
+		const contentType = "text/html"; // known content-type that will always be compressed
+		const encoders = _transformsForContentEncodingAndContentType(testEncoding, contentType);
 		let initialStream: Writable = res;
 		for (let i = encoders.length - 1; i >= 0; i--) {
 			encoders[i].pipe(initialStream);
 			initialStream = encoders[i];
 		}
-		res.writeHead(200, { "Content-Encoding": testEncoding });
+		res.writeHead(200, {
+			"Content-Encoding": testEncoding,
+			"Content-Type": contentType
+		});
 		initialStream.write(testBody);
 		initialStream.end();
 	});
@@ -303,9 +307,13 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 
 	const test = async (encoding: string) => {
 		const res = await mf.dispatchFetch("http://localhost", {
-			headers: { "X-Test-Encoding": encoding },
+			headers: {
+				"Accept-Encoding": encoding,
+				"X-Test-Encoding": encoding,
+			},
 		});
 		t.is(await res.text(), testBody, encoding);
+		t.is(res.headers.get('Content-Encoding'), encoding, encoding);
 	};
 
 	await test("gzip");
@@ -327,27 +335,63 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 		script: `
 		export default {
 			async fetch(request, env, ctx) {
-				const { pathname } = new URL(request.url);
-				if (pathname === "/") {
-					return Response.json({
-						AcceptEncoding: request.headers.get("Accept-Encoding"),
-						clientAcceptEncoding: request.cf.clientAcceptEncoding,
-					});
-				} else if (pathname === "/gzip") {
-					return new Response(env.TEST_BODY, { headers: { "Content-Encoding": "gzip" } });
-				} else if (pathname === "/br") {
-					return new Response(env.TEST_BODY, { headers: { "Content-Encoding": "br" } });
-				} else if (pathname === "/deflate") {
-					// workerd doesn't automatically encode "deflate"
-					const response = new Response(env.TEST_BODY);
-					const compressionStream = new CompressionStream("deflate");
-					const compressedBody = response.body.pipeThrough(compressionStream);
-					return new Response(compressedBody, {
-						headers: { "Content-Encoding": "deflate" },
-						encodeBody: "manual",
-					});
-				} else {
-					return new Response(null, { status: 404 });
+				const url = new URL(request.url);
+
+				switch (url.pathname) {
+					case "/": {
+						return Response.json({
+							AcceptEncoding: request.headers.get("Accept-Encoding"),
+							clientAcceptEncoding: request.cf.clientAcceptEncoding,
+						});
+					}
+
+					// Content-Encoding routes
+					case "/gzip": {
+						return new Response(env.TEST_BODY, {
+							headers: {
+								"Content-Encoding": "gzip",
+							}
+						});
+					}
+					case "/br": {
+						return new Response(env.TEST_BODY, {
+							headers: {
+								"Content-Encoding": "br",
+							}
+						});
+					}
+					case "/deflate": {
+						// workerd doesn't automatically encode "deflate"
+						const response = new Response(env.TEST_BODY);
+						const compressionStream = new CompressionStream("deflate");
+						const compressedBody = response.body.pipeThrough(compressionStream);
+						return new Response(compressedBody, {
+							encodeBody: "manual",
+							headers: {
+								"Content-Encoding": "deflate",
+							},
+						});
+					}
+
+					// Content-Type routes
+					case "/default-compressed": {
+						return new Response(env.TEST_BODY, {
+							headers: {
+								"Content-Type": "text/html",
+							}
+						});
+					}
+					case "/default-uncompressed": {
+						return new Response(env.TEST_BODY, {
+							headers: {
+								"Content-Type": "text/event-stream",
+							}
+						});
+					}
+
+					default: {
+						return new Response(null, { status: 404 });
+					}
 				}
 			},
 		};
@@ -360,6 +404,8 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 	const gzipUrl = new URL("/gzip", url);
 	const brUrl = new URL("/br", url);
 	const deflateUrl = new URL("/deflate", url);
+	const defaultCompressedUrl = new URL("/default-compressed", url);
+	const defaultUncompressedUrl = new URL("/default-uncompressed", url);
 
 	// https://github.com/cloudflare/workers-sdk/issues/5246
 	let res = await fetch(url, {
@@ -444,6 +490,18 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 	// Check malformed `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": ",(,br,,,q=," } });
 	t.is(res.headers.get("Content-Encoding"), "br");
+	t.is(await res.text(), testBody);
+
+	// Check `Content-Type: text/html` is compressed (FL always compresses html)
+	res = await fetch(defaultCompressedUrl);
+	t.is(res.headers.get("Content-Type"), "text/html");
+	t.is(res.headers.get("Content-Encoding"), 'gzip');
+	t.is(await res.text(), testBody);
+
+	// Check `Content-Type: text/event-stream` is not compressed (FL does not compress this mime type)
+	res = await fetch(defaultUncompressedUrl);
+	t.is(res.headers.get("Content-Type"), "text/event-stream");
+	t.is(res.headers.get("Content-Encoding"), null);
 	t.is(await res.text(), testBody);
 });
 

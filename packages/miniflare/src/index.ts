@@ -112,6 +112,7 @@ import {
 	SiteBindings,
 } from "./workers";
 import { formatZodError } from "./zod-format";
+import { compressedByCloudflareFL } from "./shared/mime-types";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -546,9 +547,11 @@ const restrictedWebSocketUpgradeHeaders = [
 	"sec-websocket-accept",
 ];
 
-export function _transformsForContentEncoding(encoding?: string): Transform[] {
+export function _transformsForContentEncodingAndContentType(encoding: string | undefined, type: string | undefined): Transform[] {
 	const encoders: Transform[] = [];
-	if (!encoding) return encoders;
+	if (!encoding || !type) return encoders;
+    // if cloudflare's FL does not compress this mime-type, then don't compress locally either
+    if (!compressedByCloudflareFL.has(type)) return encoders;
 
 	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
 	const codings = encoding
@@ -587,7 +590,8 @@ async function writeResponse(response: Response, res: http.ServerResponse) {
 	// If a `Content-Encoding` header is set, we'll need to encode the body
 	// (likely only set by custom service bindings)
 	const encoding = headers["content-encoding"]?.toString();
-	const encoders = _transformsForContentEncoding(encoding);
+	const type = headers["content-type"]?.toString();
+	const encoders = _transformsForContentEncodingAndContentType(encoding, type);
 	if (encoders.length > 0) {
 		// `Content-Length` if set, will be wrong as it's for the decoded length
 		delete headers["content-length"];
