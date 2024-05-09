@@ -23,7 +23,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm }}
       cancel-in-progress: true
     name: ${{ format('E2E ({0} on {1})', matrix.pm, matrix.os) }}
-    if: ${{ github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]' }}
+    if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       fail-fast: false
       matrix:
