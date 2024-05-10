@@ -21,7 +21,7 @@ app.get('/', async c => {
 	).all();
 
 	return c.html(
-		html`<!DOCTYPE html>
+		html`<!doctype html>
 			<html>
 				<head>
 					<meta charset="UTF-8" />

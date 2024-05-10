@@ -35,7 +35,7 @@ export const validateTemplateUrl = (value: Arg) => {
  */
 export const validateProjectDirectory = (
 	relativePath: string,
-	args: Partial<C3Args>
+	args: Partial<C3Args>,
 ) => {
 	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);

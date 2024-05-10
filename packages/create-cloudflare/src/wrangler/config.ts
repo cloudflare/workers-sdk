@@ -26,12 +26,12 @@ export const updateWranglerToml = async (ctx: C3Context) => {
 		if (!wranglerToml.match(validCompatDateRe)) {
 			newToml.replace(
 				compatDateRe,
-				`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
+				`compatibility_date = "${await getWorkerdCompatibilityDate()}"`,
 			);
 		}
 	} else {
 		newToml.prepend(
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`,
 		);
 	}
 

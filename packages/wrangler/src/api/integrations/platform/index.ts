@@ -48,7 +48,7 @@ export type GetPlatformProxyOptions = {
  */
 export type PlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 > = {
 	/**
 	 * Environment object containing the various Cloudflare bindings
@@ -82,7 +82,7 @@ export type PlatformProxy<
  */
 export async function getPlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {

@@ -38,7 +38,7 @@ describe("addWranglerToGitIgnore", () => {
 			(file: string, content: string) => {
 				appendFileResults.file = file;
 				appendFileResults.content = content;
-			}
+			},
 		);
 	});
 
@@ -50,7 +50,7 @@ describe("addWranglerToGitIgnore", () => {
 				isDirectory() {
 					return path.endsWith(".git");
 				},
-			})
+			}),
 		);
 		vi.mocked(existsSync).mockReset();
 		vi.mocked(readFile).mockReset();
@@ -66,14 +66,14 @@ describe("addWranglerToGitIgnore", () => {
 			"my-project/.gitignore",
 			`
       node_modules
-      .vscode`
+      .vscode`,
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
 		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`
+			`"my-project/.gitignore"`,
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
@@ -93,7 +93,7 @@ describe("addWranglerToGitIgnore", () => {
       .dev.vars
       .vscode
       .wrangler
-    `
+    `,
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -111,7 +111,7 @@ describe("addWranglerToGitIgnore", () => {
       .wrangler # This is for wrangler
       .dev.vars # this is for wrangler and getPlatformProxy
       .vscode
-    `
+    `,
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
@@ -127,14 +127,14 @@ describe("addWranglerToGitIgnore", () => {
 			`
       node_modules
       .dev.vars
-      .vscode`
+      .vscode`,
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
 		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`
+			`"my-project/.gitignore"`,
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
@@ -152,14 +152,14 @@ describe("addWranglerToGitIgnore", () => {
       .dev.vars
       .vscode
 
-    `
+    `,
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
 		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`
+			`"my-project/.gitignore"`,
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
@@ -182,13 +182,13 @@ describe("addWranglerToGitIgnore", () => {
 
 		// writeFile wrote the (empty) gitignore file
 		expect(writeFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`
+			`"my-project/.gitignore"`,
 		);
 		expect(writeFileResults.content).toMatchInlineSnapshot(`""`);
 
 		// and the correct lines were then added to it
 		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`
+			`"my-project/.gitignore"`,
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
@@ -221,14 +221,14 @@ describe("addWranglerToGitIgnore", () => {
       node_modules
       .wrangler/ # This is for wrangler
       .vscode
-    `
+    `,
 		);
 		addWranglerToGitIgnore({
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
 		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`
+			`"my-project/.gitignore"`,
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
@@ -239,10 +239,10 @@ describe("addWranglerToGitIgnore", () => {
 
 	function mockGitIgnore(path: string, content: string) {
 		vi.mocked(existsSync).mockImplementation(
-			(filePath: PathLike) => filePath === path
+			(filePath: PathLike) => filePath === path,
 		);
 		vi.mocked(readFile).mockImplementation((filePath: string) =>
-			filePath === path ? content.replace(/\n\s*/g, "\n") : ""
+			filePath === path ? content.replace(/\n\s*/g, "\n") : "",
 		);
 	}
 });

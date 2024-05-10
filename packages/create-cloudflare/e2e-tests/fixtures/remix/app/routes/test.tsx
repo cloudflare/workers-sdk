@@ -15,6 +15,6 @@ export async function loader({ context }: LoaderFunctionArgs) {
 			headers: {
 				"Content-Type": "application/json",
 			},
-		}
+		},
 	);
 }

@@ -60,7 +60,10 @@ function isDevToolsEvent<Method extends DevToolsEvents["method"]>(
 }
 
 export class InspectorProxyWorker implements DurableObject {
-	constructor(_state: DurableObjectState, readonly env: Env) {}
+	constructor(
+		_state: DurableObjectState,
+		readonly env: Env
+	) {}
 
 	websockets: {
 		proxyController?: WebSocket;

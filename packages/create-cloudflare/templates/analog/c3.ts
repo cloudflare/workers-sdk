@@ -76,7 +76,7 @@ const updateViteConfig = (ctx: C3Context) => {
 	transformFile(configFile, {
 		visitProgram(n) {
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration"
+				(t) => t.type === "ImportDeclaration",
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			lastImport.insertAfter(...snippets.devBindingsModuleTs);
@@ -91,13 +91,13 @@ const updateViteConfig = (ctx: C3Context) => {
 					b.objectExpression([
 						b.objectProperty(
 							b.identifier("preset"),
-							b.stringLiteral("cloudflare-pages")
+							b.stringLiteral("cloudflare-pages"),
 						),
 						b.objectProperty(
 							b.identifier("modules"),
-							b.arrayExpression([b.identifier("devBindingsModule")])
+							b.arrayExpression([b.identifier("devBindingsModule")]),
 						),
-					])
+					]),
 				);
 
 				n.node.arguments = [b.objectExpression([pluginArguments])];

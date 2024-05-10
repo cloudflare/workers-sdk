@@ -22,7 +22,7 @@ const configure = async (ctx: C3Context) => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``
+			`via \`${npx} astro add cloudflare\``,
 		)}`,
 	});
 
@@ -49,7 +49,7 @@ const updateAstroConfig = () => {
 						b.identifier("platformProxy"),
 						b.objectExpression([
 							b.objectProperty(b.identifier("enabled"), b.booleanLiteral(true)),
-						])
+						]),
 					),
 				]),
 			];
@@ -77,7 +77,7 @@ const updateEnvDeclaration = (ctx: C3Context) => {
 			// Preserve comments with the new body
 			const comments = n.get("comments").value;
 			n.node.comments = comments.map((c: recast.types.namedTypes.CommentLine) =>
-				b.commentLine(c.value)
+				b.commentLine(c.value),
 			);
 
 			// Add the patch

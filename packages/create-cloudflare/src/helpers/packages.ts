@@ -22,7 +22,7 @@ type InstallConfig = {
  */
 export const installPackages = async (
 	packages: string[],
-	config: InstallConfig = {}
+	config: InstallConfig = {},
 ) => {
 	const { npm } = detectPackageManager();
 
@@ -97,10 +97,10 @@ export const installWrangler = async () => {
 	await installPackages([`wrangler`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
-			"A command line tool for building Cloudflare Workers"
+			"A command line tool for building Cloudflare Workers",
 		)}`,
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``
+			`via \`${npm} install wrangler --save-dev\``,
 		)}`,
 	});
 };
