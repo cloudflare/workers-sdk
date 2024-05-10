@@ -126,7 +126,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			remote,
 			config,
 			name: database,
-			shouldPrompt: isInteractive && !yes,
+			shouldPrompt: isInteractive && !yes && !json,
 			persistTo,
 			file,
 			command,
@@ -422,12 +422,24 @@ async function executeRemotely({
 			)} seconds (${meta.rows_read} rows read, ${
 				meta.rows_written
 			} rows written)\n` +
-				`   Database is currently ${(meta.size_after / 1_000_000).toFixed(
-					2
-				)}MB (at bookmark ${chalk.gray(finalBookmark)}).`
+				chalk.gray(`   Database is currently at bookmark ${finalBookmark}.`)
 		);
 
-		return null;
+		return [
+			{
+				results: [
+					{
+						"Total queries executed": numQueries,
+						"Rows read": meta.rows_read,
+						"Rows written": meta.rows_written,
+						"Databas size (MB)": (meta.size_after / 1_000_000).toFixed(2),
+					},
+				],
+				success: true,
+				finalBookmark,
+				meta,
+			},
+		];
 	} else {
 		const result = await d1ApiPost<QueryResult[]>(accountId, db, "query", {
 			sql: input.command,
