@@ -1,26 +1,44 @@
-## Template: worker-router
+## Template: Worker-Router 
+
+This template demonstrates how to use the [`itty-router`](https://github.com/kwhitley/itty-router) package to implement routing in a Cloudflare Workers project.
+
+### Deploy with Workers
 
 [![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-router)
 
-This template demonstrates using the [`itty-router`](https://github.com/kwhitley/itty-router) package to add routing to your Cloudflare Workers.
+### Prerequisites
 
-[`index.js`](https://github.com/cloudflare/worker-template-router/blob/master/index.js) is the content of the Workers script.
-
-## Setup
-
-To create a `my-project` directory using this template, run:
+Before you begin, if you don't have `wrangler` installed, you can use `npx` which will install it temporarily when needed. If you prefer to install it permanently:
 
 ```sh
-$ npx wrangler generate my-project worker
-# or
-$ yarn wrangler generate my-project worker
-# or
-$ pnpm wrangler generate my-project worker
+npm install -g @cloudflare/wrangler
 ```
 
-Before publishing your code you need to edit `wrangler.toml` file and add your Cloudflare `account_id` - more information about configuring and publishing your code can be found [in the documentation](https://developers.cloudflare.com/workers/learning/getting-started).
+### Setup
 
-Once you are ready, you can publish your code by running the following command:
+To create a new project directory using this template, run one of the following commands based on your package manager preference:
+
+```sh
+$ npx wrangler generate my-project worker-prospector
+# or
+$ yarn wrangler generate my-project worker-prospector
+# or
+$ pnpm wrangler generate my-project worker-prospector
+```
+
+### Configuration
+
+With Wrangler v2+, configuration of the `account_id` is automated. Ensure that you are logged into your Cloudflare account through Wrangler by running:
+
+```sh
+wrangler login
+```
+
+This command will setup all necessary account details automatically.
+
+### Deployment
+
+To deploy your worker to Cloudflare, use the following commands based on your package manager:
 
 ```sh
 $ npm run deploy
@@ -28,4 +46,11 @@ $ npm run deploy
 $ yarn run deploy
 # or
 $ pnpm run deploy
+```
+
+Before deploying, make sure that your `wrangler.toml` is properly configured, which should be automatically handled by your login session.
+
+### More Information
+
+For more information on working with Cloudflare Workers and `itty-router`, visit the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/).
 ```
