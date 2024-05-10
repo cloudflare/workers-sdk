@@ -22,6 +22,11 @@ Fixes #[insert GH or internal issue number(s)].
   - [ ] Not necessary because:
 
 <!--
+Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?
+In particular, for non-trivial changes, please always engage on the issue or create a discussion or feature request issue first before writing your code.
+-->
+
+<!--
 **Note for PR author:**
 We want to celebrate and highlight awesome PR review!
 If you think this PR received a particularly high-caliber review, please assign it the label `highlight pr review` so future reviewers can take inspiration and learn from it.
