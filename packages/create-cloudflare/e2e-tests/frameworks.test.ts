@@ -496,7 +496,7 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		"--git",
+		process.env.SAVE_DIFFS ? "--git" : "--no-git",
 	];
 
 	args.push(...argv);

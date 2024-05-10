@@ -59,7 +59,8 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 			cwd: ctx.project.path,
 		};
 
-		// Certain framework scaffolders commit by default. If that's the case, skip.
+		// Certain framework scaffolders commit by default, which implies that they initialize a git repo.
+		// If that's the case and we are in a repo, so we should skip this step.
 		if (!isInsideGitRepo(ctx.project.path)) {
 			await runCommand(["git", "init"], cmdEnv);
 			await runCommand(["git", "add", "."], cmdEnv);
