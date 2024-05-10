@@ -51,9 +51,9 @@ export const compressedByCloudflareFL = new Set([
 ]);
 
 export function isCompressedByCloudflareFL(contentTypeHeader: string | undefined | null) {
-    if(!contentTypeHeader) return true; // Content-Type inferred as text/plain
+    if (!contentTypeHeader) return true; // Content-Type inferred as text/plain
 
-    const [contentType] = contentTypeHeader?.split(';');
+    const [contentType] = contentTypeHeader.split(';');
 
     return compressedByCloudflareFL.has(contentType);
 }

@@ -226,10 +226,10 @@ function ensureAcceptableEncoding(
 	const contentEncoding = response.headers.get("Content-Encoding");
 	const contentType = response.headers.get("Content-Type");
 
-    // if cloudflare's FL does not compress this mime-type, then don't compress locally either
-    if (!isCompressedByCloudflareFL(contentType)) {
-        return response;
-    }
+	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
+	if (!isCompressedByCloudflareFL(contentType)) {
+		return response;
+	}
 
 	// If `Content-Encoding` is defined, but unknown, return the response as is
 	if (
