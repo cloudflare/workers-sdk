@@ -550,8 +550,8 @@ const restrictedWebSocketUpgradeHeaders = [
 export function _transformsForContentEncodingAndContentType(encoding: string | undefined, type: string | undefined | null): Transform[] {
 	const encoders: Transform[] = [];
 	if (!encoding) return encoders;
-    // if cloudflare's FL does not compress this mime-type, then don't compress locally either
-    if (!isCompressedByCloudflareFL(type)) return encoders;
+	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
+	if (!isCompressedByCloudflareFL(type)) return encoders;
 
 	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
 	const codings = encoding
@@ -1589,6 +1589,16 @@ export class Miniflare {
 			const caught = JsonErrorSchema.parse(await response.json());
 			throw reviveError(this.#workerSrcOpts, caught);
 		}
+
+		// At this point, undici.fetch (used inside fetch, above)
+		// has decompressed the response body but retained the Content-Encoding header.
+		// This can cause problems for client implementations which rely
+		// on the Content-Encoding header rather than trying to infer it from the body.
+		// Technically, at this point, this a malformed response so let's remove the header
+		// Retain it as MF-Content-Encoding so we can tell the body was actually compressed.
+		const contentEncoding = response.headers.get('Content-Encoding');
+		if (contentEncoding) response.headers.set('MF-Content-Encoding', contentEncoding);
+		response.headers.delete('Content-Encoding');
 
 		if (
 			process.env.MINIFLARE_ASSERT_BODIES_CONSUMED === "true" &&

@@ -313,7 +313,7 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 			},
 		});
 		t.is(await res.text(), testBody, encoding);
-		t.is(res.headers.get('Content-Encoding'), encoding, encoding);
+		t.is(res.headers.get('MF-Content-Encoding'), encoding, encoding);
 	};
 
 	await test("gzip");
