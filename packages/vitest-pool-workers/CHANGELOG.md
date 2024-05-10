@@ -1,5 +1,14 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.2.9
+
+### Patch Changes
+
+- [#5458](https://github.com/cloudflare/workers-sdk/pull/5458) [`f520a71`](https://github.com/cloudflare/workers-sdk/commit/f520a71201c85a2ef3c071eff017816611b37c55) Thanks [@Cherry](https://github.com/Cherry)! - fix: loosen the peer dependency version on vitest to support versions ranging from 1.3.0 to 1.5.0
+
+- Updated dependencies []:
+  - wrangler@3.55.0
+
 ## 0.2.8
 
 ### Patch Changes
