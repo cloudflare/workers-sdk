@@ -783,20 +783,22 @@ describe("asset-server handler", () => {
 				rules: [
 					{
 						path: "/*",
-						headers: {"x-unwanted-header": "foo"},
+						headers: { "x-unwanted-header": "foo" },
 						unsetHeaders: [],
 					},
 				],
 			},
 			redirects: {
 				invalid: [],
-				rules: [{
-					from: "/here",
-					to: "/there",
-					status: 301,
-					lineNumber: 1,
-				}],
-			}
+				rules: [
+					{
+						from: "/here",
+						to: "/there",
+						status: 301,
+						lineNumber: 1,
+					},
+				],
+			},
 		}) as Metadata;
 
 		const findAssetEntryForPath = async (path: string) => {
@@ -815,10 +817,12 @@ describe("asset-server handler", () => {
 			});
 
 			expect(response.status).toBe(500);
-			expect(Object.fromEntries(response.headers)).not.toHaveProperty("x-unwanted-header");
+			expect(Object.fromEntries(response.headers)).not.toHaveProperty(
+				"x-unwanted-header"
+			);
 		});
 
-		test("404 skips headers", async () => {
+		test("404 doesn't skip headers", async () => {
 			const { response } = await getTestResponse({
 				request: "https://foo.com/404",
 				metadata,
@@ -826,10 +830,12 @@ describe("asset-server handler", () => {
 			});
 
 			expect(response.status).toBe(404);
-			expect(Object.fromEntries(response.headers)).not.toHaveProperty("x-unwanted-header");
+			expect(Object.fromEntries(response.headers)).toHaveProperty(
+				"x-unwanted-header"
+			);
 		});
 
-		test("301 still has headers", async () => {
+		test("301 doesn't skip headers", async () => {
 			const { response } = await getTestResponse({
 				request: "https://foo.com/here",
 				metadata,
@@ -837,7 +843,9 @@ describe("asset-server handler", () => {
 			});
 
 			expect(response.status).toBe(301);
-			expect(Object.fromEntries(response.headers)).toHaveProperty("x-unwanted-header");
+			expect(Object.fromEntries(response.headers)).toHaveProperty(
+				"x-unwanted-header"
+			);
 		});
 	});
 });

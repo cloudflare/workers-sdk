@@ -446,11 +446,7 @@ export async function generateHandler<
 				};
 			}
 		);
-
-		// If the response was an internal error or 404 from the asset handler, skip applying header rules.
-		// This avoids a cases where we can cache undesirable files for a long time, depending on headers set by a user.
-		const assetError = response.status >= 400 && response.status <= 599
-		const matches = assetError ? [] : headersMatcher({ request });
+		const matches = headersMatcher({ request });
 
 		// This keeps track of every header that we've set from _headers
 		// because we want to combine user declared headers but overwrite
@@ -482,7 +478,11 @@ export async function generateHandler<
 		);
 	}
 
-	return await attachHeaders(await generateResponse());
+	const responseWithoutHeaders = await generateResponse();
+	if (responseWithoutHeaders.status >= 500) {
+		return responseWithoutHeaders;
+	}
+	return await attachHeaders(responseWithoutHeaders);
 
 	/** We have non-standard cache behavior, so strip out all headers but keep the method */
 	function getCacheKey(): Request {
