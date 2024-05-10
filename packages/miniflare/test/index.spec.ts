@@ -313,7 +313,10 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 			},
 		});
 		t.is(await res.text(), testBody, encoding);
-		t.is(res.headers.get('MF-Content-Encoding'), encoding, encoding);
+		// This header is mostly just for this test -- but is an indication for anyone who wants to know if the response _was_ compressed
+        t.is(res.headers.get('MF-Content-Encoding'), encoding, `Expected the response, before decoding, to be encoded as ${encoding}`);
+		// Ensure this header has been removed -- undici.fetch has already decoded (decompressed) the response
+        t.is(res.headers.get('Content-Encoding'), null, 'Expected Content-Encoding header to be removed');
 	};
 
 	await test("gzip");
