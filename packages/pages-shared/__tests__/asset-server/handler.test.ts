@@ -774,6 +774,80 @@ describe("asset-server handler", () => {
 			expect(isPreservationCacheResponseExpiring(res)).toBe(true);
 		});
 	});
+
+	describe("internal asset error doesn't set headers", async () => {
+		const metadata = createMetadataObject({
+			deploymentId: "mock-deployment-id",
+			headers: {
+				invalid: [],
+				rules: [
+					{
+						path: "/*",
+						headers: { "x-unwanted-header": "foo" },
+						unsetHeaders: [],
+					},
+				],
+			},
+			redirects: {
+				invalid: [],
+				rules: [
+					{
+						from: "/here",
+						to: "/there",
+						status: 301,
+						lineNumber: 1,
+					},
+				],
+			},
+		}) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path.startsWith("/asset")) return "some-asset";
+			return null;
+		};
+
+		test("500 skips headers", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/asset",
+				metadata,
+				fetchAsset: async (...args) => {
+					throw "uh oh";
+				},
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(500);
+			expect(Object.fromEntries(response.headers)).not.toHaveProperty(
+				"x-unwanted-header"
+			);
+		});
+
+		test("404 doesn't skip headers", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/404",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(404);
+			expect(Object.fromEntries(response.headers)).toHaveProperty(
+				"x-unwanted-header"
+			);
+		});
+
+		test("301 doesn't skip headers", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/here",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(301);
+			expect(Object.fromEntries(response.headers)).toHaveProperty(
+				"x-unwanted-header"
+			);
+		});
+	});
 });
 
 interface HandlerSpies {
