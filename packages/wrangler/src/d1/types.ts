@@ -139,3 +139,21 @@ export type ImportPollingResponse = {
 			};
 	  }
 );
+
+export type ExportPollingResponse = {
+	success: true;
+	type: "export";
+	at_bookmark: string;
+	messages: string[];
+	errors: string[];
+} & (
+	| {
+			status: "active" | "error";
+	  }
+	| {
+			status: "complete";
+			result: { filename: string; signedUrl: string };
+	  }
+);
+
+export type PollingFailure = { success: false; error: string };

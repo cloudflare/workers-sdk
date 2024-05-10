@@ -15,7 +15,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type { Database, ExportPollingResponse, PollingFailure } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
 	return (
@@ -101,22 +101,6 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	return result;
 };
 
-type PollingResponse = {
-	success: true;
-	type: "export";
-	at_bookmark: string;
-	messages: string[];
-	errors: string[];
-} & (
-	| {
-			status: "active" | "error";
-	  }
-	| {
-			status: "complete";
-			result: { filename: string; signedUrl: string };
-	  }
-);
-
 async function exportRemotely(
 	config: Config,
 	name: string,
@@ -167,17 +151,18 @@ async function pollExport(
 	},
 	currentBookmark: string | undefined,
 	num_parts_uploaded = 0
-): Promise<PollingResponse> {
-	const response = await fetchResult<
-		PollingResponse | { success: false; error: string }
-	>(`/accounts/${accountId}/d1/database/${db.uuid}/export`, {
-		method: "POST",
-		body: JSON.stringify({
-			outputFormat: "polling",
-			dumpOptions,
-			currentBookmark,
-		}),
-	});
+): Promise<ExportPollingResponse> {
+	const response = await fetchResult<ExportPollingResponse | PollingFailure>(
+		`/accounts/${accountId}/d1/database/${db.uuid}/export`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				outputFormat: "polling",
+				dumpOptions,
+				currentBookmark,
+			}),
+		}
+	);
 
 	if (!response.success) {
 		throw new Error(response.error);

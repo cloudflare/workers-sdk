@@ -31,6 +31,7 @@ import type {
 	Database,
 	ImportInitResponse,
 	ImportPollingResponse,
+	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
 
@@ -385,9 +386,7 @@ async function executeRemotely({
 		);
 
 		const initResponse = await d1ApiPost<
-			| ImportInitResponse
-			| ImportPollingResponse
-			| { success: false; error: string }
+			ImportInitResponse | ImportPollingResponse | PollingFailure
 		>(accountId, db, "import", { action: "init", etag });
 
 		// An init response usually returns a {filename, uploadUrl} pair, except if we've detected that file
@@ -476,13 +475,16 @@ async function uploadAndBeginIngestion(
 	}
 	logger.log(`🌀 Uploading complete.`);
 
-	return await d1ApiPost<
-		ImportPollingResponse | { success: false; error: string }
-	>(accountId, db, "import", { action: "ingest", filename, etag });
+	return await d1ApiPost<ImportPollingResponse | PollingFailure>(
+		accountId,
+		db,
+		"import",
+		{ action: "ingest", filename, etag }
+	);
 }
 
 async function pollUntilComplete(
-	response: ImportPollingResponse | { success: false; error: string },
+	response: ImportPollingResponse | PollingFailure,
 	accountId: string,
 	db: Database
 ): Promise<ImportPollingResponse> {
@@ -500,12 +502,15 @@ async function pollUntilComplete(
 			notes: response.messages.map((text) => ({ text })),
 		});
 	} else {
-		const newResponse = await d1ApiPost<
-			ImportPollingResponse | { success: false; error: string }
-		>(accountId, db, "import", {
-			action: "poll",
-			currentBookmark: response.at_bookmark,
-		});
+		const newResponse = await d1ApiPost<ImportPollingResponse | PollingFailure>(
+			accountId,
+			db,
+			"import",
+			{
+				action: "poll",
+				currentBookmark: response.at_bookmark,
+			}
+		);
 		return await pollUntilComplete(newResponse, accountId, db);
 	}
 }
