@@ -18,42 +18,56 @@ import type {
 import type { Database } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
-	return Name(yargs)
-		.option("local", {
-			type: "boolean",
-			describe: "Export from your local DB you use with wrangler dev",
-			conflicts: "remote",
-		})
-		.option("remote", {
-			type: "boolean",
-			describe: "Export from your live D1",
-			conflicts: "local",
-		})
-		.option("no-schema", {
-			type: "boolean",
-			describe: "Only output table contents, not the DB schema",
-			conflicts: "no-data",
-		})
-		.option("no-data", {
-			type: "boolean",
-			describe:
-				"Only output table schema, not the contents of the DBs themselves",
-			conflicts: "no-schema",
-		})
-		.option("table", {
-			type: "string",
-			describe: "Specify which tables to include in export",
-		})
-		.option("output", {
-			type: "string",
-			describe: "Which .sql file to output to",
-			demandOption: true,
-		});
+	return (
+		Name(yargs)
+			.option("local", {
+				type: "boolean",
+				describe: "Export from your local DB you use with wrangler dev",
+				conflicts: "remote",
+			})
+			.option("remote", {
+				type: "boolean",
+				describe: "Export from your live D1",
+				conflicts: "local",
+			})
+			.option("no-schema", {
+				type: "boolean",
+				describe: "Only output table contents, not the DB schema",
+				conflicts: "no-data",
+			})
+			.option("no-data", {
+				type: "boolean",
+				describe:
+					"Only output table schema, not the contents of the DBs themselves",
+				conflicts: "no-schema",
+			})
+			// For --no-schema and --no-data to work, we need their positive versions
+			// to be defined. But keep them hidden as they default to true
+			.option("schema", {
+				type: "boolean",
+				hidden: true,
+				default: true,
+			})
+			.option("data", {
+				type: "boolean",
+				hidden: true,
+				default: true,
+			})
+			.option("table", {
+				type: "string",
+				describe: "Specify which tables to include in export",
+			})
+			.option("output", {
+				type: "string",
+				describe: "Which .sql file to output to",
+				demandOption: true,
+			})
+	);
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, remote, name, output, noSchema, noData, table } = args;
+	const { local, remote, name, output, schema, data, table } = args;
 	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 
@@ -65,6 +79,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	if (!remote) {
 		throw new UserError(`You must specify either --local or --remote`);
 	}
+
+	if (!schema && !data)
+		throw new UserError(`You cannot specify both --no-schema and --no-data`);
 
 	// Allow multiple --table x --table y flags or none
 	const tables: string[] = table
@@ -78,8 +95,8 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		name,
 		output,
 		tables,
-		noSchema,
-		noData
+		!schema,
+		!data
 	);
 	return result;
 };
@@ -105,8 +122,8 @@ async function exportRemotely(
 	name: string,
 	output: string,
 	tables: string[],
-	noSchema?: boolean,
-	noData?: boolean
+	noSchema: boolean,
+	noData: boolean
 ) {
 	const accountId = await requireAuth(config);
 	const db: Database = await getDatabaseByNameOrBinding(
