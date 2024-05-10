@@ -69,7 +69,7 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         uses: ./.github/actions/create-c3-docs-pr
         with:
-          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          token: ${{ secrets.C3_DIFF_TOOL_GH_TOKEN }}
           releaseBranch: "changeset-release/main"
           targetHeadBranch: c3-diffs-${{ github.sha }}
           targetBaseBranch: master
