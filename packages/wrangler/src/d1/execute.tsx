@@ -231,7 +231,7 @@ export async function executeSql({
 	}
 	if (persistTo && !local) {
 		throw new UserError(`Error: can't use --persist-to without --local`);
-  }
+	}
 	if (input.file) await checkForSQLiteBinary(input.file);
 
 	const result =
@@ -242,13 +242,13 @@ export async function executeSql({
 					shouldPrompt,
 					input,
 					preview,
-				})
+			  })
 			: await executeLocally({
 					config,
 					name,
 					input,
 					persistTo,
-				});
+			  });
 
 	if (json) {
 		logger.loggerLevel = existingLogLevel;
