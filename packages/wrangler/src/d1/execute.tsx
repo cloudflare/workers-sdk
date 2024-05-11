@@ -89,6 +89,7 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
 			deprecated: true,
+			hidden: true
 		});
 }
 
@@ -340,13 +341,13 @@ async function executeRemotely({
 	preview: boolean | undefined;
 }) {
 	if (input.file) {
-		const warning = `⚠️ This process may take some time, during which your D1 will be unavailable to serve queries.`;
+		const warning = `⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.`;
 
 		if (shouldPrompt) {
 			const ok = await confirm(`${warning}\n  Ok to proceed?`);
 			if (!ok) return null;
 		} else {
-			logger.log(warning);
+			logger.warn(warning);
 		}
 	}
 
@@ -358,11 +359,9 @@ async function executeRemotely({
 	);
 	if (preview) {
 		if (!db.previewDatabaseUuid) {
-			const error = new UserError(
+			throw new UserError(
 				"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
 			);
-			logger.error(error.message);
-			throw error;
 		}
 		db.uuid = db.previewDatabaseUuid;
 	}
@@ -395,7 +394,9 @@ async function executeRemotely({
 		const uploadRequired = "uploadUrl" in initResponse;
 		if (!uploadRequired) logger.log(`🌀 File already uploaded. Processing.`);
 		const firstPollResponse = uploadRequired
-			? await uploadAndBeginIngestion(
+			? // Upload the file to R2, then inform D1 to start processing it. The server delays before responding
+			  // in case the file is quite small and can be processed without a second round-trip.
+			  await uploadAndBeginIngestion(
 					accountId,
 					db,
 					input.file,
@@ -404,6 +405,8 @@ async function executeRemotely({
 			  )
 			: initResponse;
 
+		// If the file takes longer than the specified delay (~1s) to import, we'll need to continue polling
+		// until it's complete. If it's already finished, this call will early-exit.
 		const finalResponse = await pollUntilComplete(
 			firstPollResponse,
 			accountId,
