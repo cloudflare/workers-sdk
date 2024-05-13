@@ -101,6 +101,17 @@ export const Handler = async (args: PagesDeployArgs) => {
 		);
 	}
 
+	if (args.experimentalJsonConfig) {
+		throw new FatalError("Pages does not support `wrangler.json`", 1);
+	}
+
+	if (args.env) {
+		throw new FatalError(
+			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
+			1
+		);
+	}
+
 	let config: Config | undefined;
 	const configPath = findWranglerToml(process.cwd(), false);
 

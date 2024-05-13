@@ -263,6 +263,17 @@ export const Handler = async (args: PagesDevArguments) => {
 		);
 	}
 
+	if (args.experimentalJsonConfig) {
+		throw new FatalError("Pages does not support `wrangler.json`", 1);
+	}
+
+	if (args.env) {
+		throw new FatalError(
+			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
+			1
+		);
+	}
+
 	if (args.scriptPath !== undefined) {
 		logger.warn(
 			`\`--script-path\` is deprecated and will be removed in a future version of Wrangler.\nThe Worker script should be named \`_worker.js\` and located in the build output directory of your project (specified with \`wrangler pages dev <directory>\`).`

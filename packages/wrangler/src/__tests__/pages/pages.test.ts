@@ -31,11 +31,8 @@ describe("pages", () => {
 		  wrangler pages download                        ⚡️ Download settings from your project
 
 		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
+		  -h, --help     Show help  [boolean]
+		  -v, --version  Show version number  [boolean]"
 	`);
 	});
 
