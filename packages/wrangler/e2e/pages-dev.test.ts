@@ -1,11 +1,18 @@
 import getPort from "get-port";
+import { beforeEach } from "node:test";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { describe, expect } from "vitest";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
-import { waitForReady, waitForReload } from "./helpers/wrangler";
+import {
+	killAllWranglerDev,
+	waitForReady,
+	waitForReload,
+} from "./helpers/wrangler";
+
+beforeEach(killAllWranglerDev);
 
 describe("pages dev", () => {
 	e2eTest(

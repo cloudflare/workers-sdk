@@ -4,6 +4,7 @@ import { createWriteStream } from "node:fs";
 import rl from "node:readline";
 import { PassThrough } from "node:stream";
 import { ReadableStream } from "node:stream/web";
+import psList from "ps-list";
 import { readUntil } from "./read-until";
 import type { ChildProcess } from "node:child_process";
 
@@ -102,4 +103,22 @@ export async function waitForReload(
 	await worker.readUntil(
 		/Detected changes, restarted server|Reloading local server\.\.\./
 	);
+}
+
+export async function killAllWranglerDev() {
+	// TODO: Figure out why hanging wrangler processes are sometimes left around
+	// In the meantime, let's forcefully kill all `wrangler dev` and `workerd` processes we can find before each test
+	const processes = await psList({ all: false });
+	const wranglerDev = processes.filter(
+		(p) =>
+			(p.cmd?.includes("node") &&
+				p.cmd.includes("wrangler-dist") &&
+				p.cmd.includes("cli.js") &&
+				p.cmd.includes("dev")) ||
+			p.name === "workerd"
+	);
+
+	for (const proc of wranglerDev) {
+		process.kill(proc.pid, 9);
+	}
 }

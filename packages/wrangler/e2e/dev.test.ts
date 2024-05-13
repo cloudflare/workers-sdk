@@ -8,7 +8,13 @@ import { afterEach, beforeEach, describe, expect } from "vitest";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import { waitForReady, waitForReload } from "./helpers/wrangler";
+import {
+	killAllWranglerDev,
+	waitForReady,
+	waitForReload,
+} from "./helpers/wrangler";
+
+beforeEach(killAllWranglerDev);
 
 // Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
 setGlobalDispatcher(
@@ -351,8 +357,6 @@ describe("dev registry", () => {
 		await waitForReady(workerB);
 
 		// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
-		await waitForReload(workerA);
-		await waitForReload(workerA);
 		await waitForReload(workerA);
 		await waitForReload(workerA);
 

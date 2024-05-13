@@ -2,13 +2,16 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import events from "node:events";
 import getPort from "get-port";
+import { beforeEach } from "node:test";
 import dedent from "ts-dedent";
 import { Agent, fetch } from "undici";
 import { describe, expect } from "vitest";
 import { WebSocket } from "ws";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
-import { waitForReady } from "./helpers/wrangler";
+import { killAllWranglerDev, waitForReady } from "./helpers/wrangler";
+
+beforeEach(killAllWranglerDev);
 
 const RUNTIMES = [{ runtime: "local" }, { runtime: "remote" }] as const;
 
@@ -165,7 +168,6 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 		await worker.readUntil(/src\/index\.ts:6:9/);
 	});
 
-	// TODO(now): no bundle? find additional modules?
 	e2eTest.todo("workers with no bundle");
 	e2eTest.todo("workers with find additional modules");
 
