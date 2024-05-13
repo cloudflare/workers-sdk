@@ -35,7 +35,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 8.8.0
+          version: 9.1.1
 
       - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v3
@@ -86,7 +86,7 @@ jobs:
           fetch-depth: 0
       - uses: pnpm/action-setup@v2
         with:
-          version: 8.8.0
+          version: 9.1.1
       - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v3
         with:
