@@ -104,7 +104,7 @@ describe
 									},
 								],
 							},
-					  ]
+					  ],
 			)
 			.forEach((template) => {
 				const name = template.name ?? template.template;
@@ -118,7 +118,7 @@ describe
 							const deployedUrl = await runCli(
 								template,
 								projectPath,
-								logStream
+								logStream,
 							);
 
 							// Relevant project files should have been created
@@ -148,7 +148,7 @@ describe
 							await deleteWorker(projectName);
 						}
 					},
-					{ retry: 1, timeout: template.timeout || TEST_TIMEOUT }
+					{ retry: 1, timeout: template.timeout || TEST_TIMEOUT },
 				);
 			});
 	});
@@ -156,7 +156,7 @@ describe
 const runCli = async (
 	template: WorkerTestConfig,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { argv, promptHandlers, verifyDeploy } = template;
 
@@ -191,7 +191,7 @@ const runCli = async (
 
 const verifyDeployment = async (
 	deploymentUrl: string,
-	expectedString: string
+	expectedString: string,
 ) => {
 	await retry({ times: 5 }, async () => {
 		await sleep(1000);
@@ -199,7 +199,7 @@ const verifyDeployment = async (
 		const body = await res.text();
 		if (!body.includes(expectedString)) {
 			throw new Error(
-				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedString}"`
+				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedString}"`,
 			);
 		}
 	});

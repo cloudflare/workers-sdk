@@ -46,11 +46,13 @@ export class UserSession {
 	previewToken: string | undefined;
 	inspectorUrl: string | undefined;
 	workerName!: string;
-	constructor(private state: DurableObjectState, private env: Env) {
+	constructor(
+		private state: DurableObjectState,
+		private env: Env
+	) {
 		void this.state.blockConcurrencyWhile(async () => {
-			this.config = await this.state.storage.get<RealishPreviewConfig>(
-				"config"
-			);
+			this.config =
+				await this.state.storage.get<RealishPreviewConfig>("config");
 			let workerName = await this.state.storage.get<string>("workerName");
 			if (!workerName) {
 				workerName = crypto.randomUUID();

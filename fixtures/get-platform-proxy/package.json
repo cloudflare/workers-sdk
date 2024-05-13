@@ -11,6 +11,6 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240419.0",
 		"wrangler": "workspace:*",
-		"undici": "^5.28.3"
+		"undici": "^5.28.4"
 	}
 }

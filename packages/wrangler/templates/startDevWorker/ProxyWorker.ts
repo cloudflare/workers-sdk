@@ -33,7 +33,10 @@ export default {
 } as ExportedHandler<Env, unknown, ProxyWorkerIncomingRequestBody>;
 
 export class ProxyWorker implements DurableObject {
-	constructor(readonly state: DurableObjectState, readonly env: Env) {}
+	constructor(
+		readonly state: DurableObjectState,
+		readonly env: Env
+	) {}
 
 	proxyData?: ProxyData;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();

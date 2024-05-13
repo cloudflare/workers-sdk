@@ -13,7 +13,7 @@ export const HTTP_METHODS = [
 	"PATCH",
 	"DELETE",
 ] as const;
-export type HTTPMethod = typeof HTTP_METHODS[number];
+export type HTTPMethod = (typeof HTTP_METHODS)[number];
 
 export type RoutesCollection = Array<{
 	routePath: UrlPath;

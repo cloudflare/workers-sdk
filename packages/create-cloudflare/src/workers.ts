@@ -43,8 +43,8 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 	if (entrypointVersion === null) {
 		s.stop(
 			`${brandColor(
-				"skipped"
-			)} couldn't find latest compatible version of @cloudflare/workers-types`
+				"skipped",
+			)} couldn't find latest compatible version of @cloudflare/workers-types`,
 		);
 		return;
 	}
@@ -56,7 +56,7 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 		const currentTypes = config.compilerOptions?.types ?? [];
 
 		const explicitEntrypoint = (currentTypes as string[]).some((t) =>
-			t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/)
+			t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
 		);
 
 		// If a type declaration with an explicit entrypoint exists, leave the types as is
@@ -65,7 +65,7 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 			? [...currentTypes]
 			: [
 					...currentTypes.filter(
-						(t: string) => t !== "@cloudflare/workers-types"
+						(t: string) => t !== "@cloudflare/workers-types",
 					),
 					typesEntrypoint,
 			  ];
@@ -81,13 +81,13 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 			newTypes,
 			{
 				formattingOptions: { insertSpaces: useSpaces },
-			}
+			},
 		);
 		const updated = jsonc.applyEdits(tsconfig, edits);
 		writeFile(tsconfigPath, updated);
 	} catch (error) {
 		warn(
-			"Failed to update `tsconfig.json` with latest `@cloudflare/workers-types` entrypoint."
+			"Failed to update `tsconfig.json` with latest `@cloudflare/workers-types` entrypoint.",
 		);
 	}
 

@@ -65,7 +65,7 @@ export type RunnerConfig = {
 export const runC3 = async (
 	argv: string[] = [],
 	promptHandlers: PromptHandler[] = [],
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const cmd = ["node", "./dist/cli.js", ...argv];
 	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
@@ -113,7 +113,7 @@ export const runC3 = async (
 export const spawnWithLogging = (
 	args: string[],
 	opts: SpawnOptionsWithoutStdio,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const [cmd, ...argv] = args;
 
@@ -154,7 +154,7 @@ export const spawnWithLogging = (
  */
 export const waitForExit = async (
 	proc: ChildProcessWithoutNullStreams,
-	onData?: (chunk: string) => void
+	onData?: (chunk: string) => void,
 ) => {
 	const stdout: string[] = [];
 	const stderr: string[] = [];
@@ -274,7 +274,7 @@ export const testProjectDir = (suite: string) => {
 
 export const testDeploymentCommitMessage = async (
 	projectName: string,
-	framework: string
+	framework: string,
 ) => {
 	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
 		// Wait for 2 seconds between each attempt
@@ -287,7 +287,7 @@ export const testDeploymentCommitMessage = async (
 				headers: {
 					Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
 				},
-			}
+			},
 		);
 
 		const result = (
@@ -314,10 +314,10 @@ export const testDeploymentCommitMessage = async (
 	});
 
 	expect(projectLatestCommitMessage).toMatch(
-		/Initialize web application via create-cloudflare CLI/
+		/Initialize web application via create-cloudflare CLI/,
 	);
 	expect(projectLatestCommitMessage).toContain(
-		`C3 = create-cloudflare@${version}`
+		`C3 = create-cloudflare@${version}`,
 	);
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);

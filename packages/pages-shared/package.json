@@ -27,7 +27,7 @@
 		"@miniflare/cache": "^2.14.2",
 		"@miniflare/core": "^2.14.2",
 		"@miniflare/html-rewriter": "^2.14.2",
-		"concurrently": "^7.3.0",
+		"concurrently": "^8.2.2",
 		"glob": "^10.3.3"
 	},
 	"workers-sdk": {

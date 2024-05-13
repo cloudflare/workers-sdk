@@ -26,11 +26,11 @@ beforeEach(() => {
 const mockGitInstalled = (isInstalled = true) => {
 	if (isInstalled) {
 		vi.mocked(runCommand).mockResolvedValueOnce(
-			"git version 2.20.2 (Apple Git-100)"
+			"git version 2.20.2 (Apple Git-100)",
 		);
 	} else {
 		vi.mocked(runCommand).mockRejectedValueOnce(
-			new Error("zsh: command not found: git")
+			new Error("zsh: command not found: git"),
 		);
 	}
 };
@@ -43,13 +43,13 @@ const mockGitConfig = () => {
 const mockInsideGitRepo = (isInside: boolean) => {
 	if (isInside) {
 		vi.mocked(runCommand).mockResolvedValueOnce(
-			"On branch master\nnothing to commit, working tree clean"
+			"On branch master\nnothing to commit, working tree clean",
 		);
 	} else {
 		vi.mocked(runCommand).mockRejectedValueOnce(
 			new Error(
-				"fatal: not a git repository (or any of the parent directories): .git"
-			)
+				"fatal: not a git repository (or any of the parent directories): .git",
+			),
 		);
 	}
 };
@@ -62,7 +62,7 @@ describe("git helpers", () => {
 	describe("isGitConfigured", () => {
 		test("fully configured", async () => {
 			vi.mocked(runCommand).mockImplementation((cmd) =>
-				Promise.resolve(cmd.includes("email") ? "test@user.com" : "test user")
+				Promise.resolve(cmd.includes("email") ? "test@user.com" : "test user"),
 			);
 
 			await expect(isGitConfigured()).resolves.toBe(true);
@@ -70,14 +70,14 @@ describe("git helpers", () => {
 
 		test("no name", async () => {
 			vi.mocked(runCommand).mockImplementation((cmd) =>
-				Promise.resolve(cmd.includes("email") ? "test@user.com" : "")
+				Promise.resolve(cmd.includes("email") ? "test@user.com" : ""),
 			);
 			await expect(isGitConfigured()).resolves.toBe(false);
 		});
 
 		test("no email", async () => {
 			vi.mocked(runCommand).mockImplementation((cmd) =>
-				Promise.resolve(cmd.includes("name") ? "test user" : "")
+				Promise.resolve(cmd.includes("name") ? "test user" : ""),
 			);
 			await expect(isGitConfigured()).resolves.toBe(false);
 		});
@@ -130,7 +130,7 @@ describe("git helpers", () => {
 			await initializeGit(".");
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["git", "init", "--initial-branch", "production"],
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 
@@ -140,7 +140,7 @@ describe("git helpers", () => {
 			await initializeGit(".");
 			expect(vi.mocked(runCommand)).toHaveBeenLastCalledWith(
 				["git", "init"],
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 	});
@@ -161,7 +161,7 @@ describe("git helpers", () => {
 			expect(processArgument).toHaveBeenCalledOnce();
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["git", "init", "--initial-branch", "main"],
-				expect.any(Object)
+				expect.any(Object),
 			);
 			expect(ctx.args.git).toBe(true);
 		});
@@ -173,7 +173,7 @@ describe("git helpers", () => {
 			await offerGit(ctx);
 
 			expect(updateStatus).toHaveBeenCalledWith(
-				expect.stringContaining("Continuing without git")
+				expect.stringContaining("Continuing without git"),
 			);
 			expect(processArgument).not.toHaveBeenCalled();
 			expect(ctx.args.git).toBe(false);
@@ -187,7 +187,7 @@ describe("git helpers", () => {
 			await offerGit(ctx);
 
 			expect(updateStatus).toHaveBeenCalledWith(
-				expect.stringContaining("Continuing without git")
+				expect.stringContaining("Continuing without git"),
 			);
 			expect(processArgument).not.toHaveBeenCalled();
 			expect(ctx.args.git).toBe(false);
@@ -220,7 +220,7 @@ describe("git helpers", () => {
 			expect(processArgument).toHaveBeenCalledOnce();
 			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
 				["git", "init", "--initial-branch", "main"],
-				expect.any(Object)
+				expect.any(Object),
 			);
 			expect(ctx.args.git).toBe(false);
 		});
@@ -248,11 +248,11 @@ describe("git helpers", () => {
 			expect(spinner.start).toHaveBeenCalledOnce();
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["git", "add", "."],
-				expect.any(Object)
+				expect.any(Object),
 			);
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["git", "commit", "-m", expect.any(String)],
-				expect.any(Object)
+				expect.any(Object),
 			);
 			expect(spinner.stop).toHaveBeenCalledOnce();
 		});
@@ -267,7 +267,7 @@ describe("git helpers", () => {
 			expect(spinner.stop).not.toHaveBeenCalled();
 			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
 				["git", "commit", "-m", expect.any(String)],
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 
@@ -292,9 +292,9 @@ describe("git helpers", () => {
 				expect(spinner.stop).not.toHaveBeenCalled();
 				expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
 					["git", "commit", "-m", expect.any(String)],
-					expect.any(Object)
+					expect.any(Object),
 				);
-			}
+			},
 		);
 	});
 });

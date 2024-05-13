@@ -44,7 +44,7 @@ type RemoveIndex<T> = {
  * that corresponds to the yargs arguments, remove index types, and only allow camelCase
  */
 export type StrictYargsOptionsToInterface<
-	T extends (yargs: CommonYargsArgv) => Argv
+	T extends (yargs: CommonYargsArgv) => Argv,
 > = T extends (yargs: CommonYargsArgv) => Argv<infer P>
 	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
 	: never;
@@ -54,7 +54,7 @@ export type StrictYargsOptionsToInterface<
  * that corresponds to the yargs arguments, remove index types, and only allow camelCase
  */
 export type StrictYargsOptionsToInterfaceJSON<
-	T extends (yargs: CommonYargsArgvJSON) => Argv
+	T extends (yargs: CommonYargsArgvJSON) => Argv,
 > = T extends (yargs: CommonYargsArgvJSON) => Argv<infer P>
 	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
 	: never;

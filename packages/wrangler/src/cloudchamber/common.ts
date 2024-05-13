@@ -52,7 +52,7 @@ export function handleFailure<
 		infer K
 	>
 		? K
-		: never
+		: never,
 >(
 	cb: (t: CommandArgumentsObject, config: Config) => Promise<void>
 ): (

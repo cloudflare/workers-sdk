@@ -23,7 +23,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 					"Please specify the name of the existing worker in this account?",
 				label: "worker",
 				defaultValue: ctx.project.name,
-			}
+			},
 		);
 	}
 
@@ -46,22 +46,22 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 			env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
 			startText: "Downloading existing worker files",
 			doneText: `${brandColor("downloaded")} ${dim(
-				`existing "${ctx.args.existingScript}" worker files`
+				`existing "${ctx.args.existingScript}" worker files`,
 			)}`,
-		}
+		},
 	);
 
 	// copy src/* files from the downloaded worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "src"),
 		join(ctx.project.path, "src"),
-		{ recursive: true }
+		{ recursive: true },
 	);
 
 	// copy wrangler.toml from the downloaded worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
-		join(ctx.project.path, "wrangler.toml")
+		join(ctx.project.path, "wrangler.toml"),
 	);
 }
 

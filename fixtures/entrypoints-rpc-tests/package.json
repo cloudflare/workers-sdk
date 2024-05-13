@@ -9,6 +9,6 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"wrangler": "workspace:*",
 		"ts-dedent": "^2.2.0",
-		"undici": "^5.28.3"
+		"undici": "^5.28.4"
 	}
 }

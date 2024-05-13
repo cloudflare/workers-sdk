@@ -22,7 +22,7 @@ export const createTestContext = (name = "test", args?: C3Args): C3Context => {
 };
 
 export const createTestTemplate = (
-	config?: Partial<TemplateConfig>
+	config?: Partial<TemplateConfig>,
 ): TemplateConfig => {
 	return {
 		...config,

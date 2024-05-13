@@ -82,14 +82,14 @@ const updateNuxtConfig = () => {
 		b.objectExpression([
 			b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare-pages")
+				b.stringLiteral("cloudflare-pages"),
 			),
-		])
+		]),
 	);
 
 	const moduleDef = b.objectProperty(
 		b.identifier("modules"),
-		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")])
+		b.arrayExpression([b.stringLiteral("nitro-cloudflare-dev")]),
 	);
 
 	transformFile(configFile, {

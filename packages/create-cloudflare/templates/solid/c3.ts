@@ -39,18 +39,18 @@ const configure = async (ctx: C3Context) => {
 						b.objectExpression([
 							b.objectProperty(
 								b.identifier("preset"),
-								b.stringLiteral("cloudflare-pages")
+								b.stringLiteral("cloudflare-pages"),
 							),
 							b.objectProperty(
 								b.identifier("rollupConfig"),
 								b.objectExpression([
 									b.objectProperty(
 										b.identifier("external"),
-										b.arrayExpression([b.stringLiteral("node:async_hooks")])
+										b.arrayExpression([b.stringLiteral("node:async_hooks")]),
 									),
-								])
+								]),
 							),
-						])
+						]),
 					),
 				]),
 			];

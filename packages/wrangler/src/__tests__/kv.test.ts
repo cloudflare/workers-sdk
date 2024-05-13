@@ -897,7 +897,7 @@ describe("wrangler", () => {
 			for (const blankCursorValue of [undefined, null, ""] as [
 				undefined,
 				null,
-				""
+				"",
 			]) {
 				describe(`cursor - ${blankCursorValue}`, () => {
 					it("should make multiple requests for paginated results", async () => {

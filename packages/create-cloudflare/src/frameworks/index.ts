@@ -41,8 +41,8 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	updateStatus(
 		`Continue with ${ctx.template.displayName} ${dim(
-			`via \`${quoteShellArgs(cmd)}\``
-		)}`
+			`via \`${quoteShellArgs(cmd)}\``,
+		)}`,
 	);
 
 	// newline

@@ -52,7 +52,7 @@ export const printSummary = async (ctx: C3Context) => {
 			`${bgGreen(" APPLICATION CREATED ")}`,
 			`${dim("Deploy your application with")}`,
 			`${blue(
-				quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"])
+				quoteShellArgs([npm, "run", ctx.template.deployScript ?? "deploy"]),
 			)}`,
 		].join(" ");
 		logRaw(msg);

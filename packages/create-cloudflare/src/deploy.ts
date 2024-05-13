@@ -19,8 +19,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 		ctx.args.deploy = false;
 		updateStatus(
 			`Bindings must be configured in ${blue(
-				"`wrangler.toml`"
-			)} before your application can be deployed`
+				"`wrangler.toml`",
+			)} before your application can be deployed`,
 		);
 	}
 
@@ -105,7 +105,7 @@ export const runDeploy = async (ctx: C3Context) => {
 		},
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${quoteShellArgs(baseDeployCmd)}\``
+			`via \`${quoteShellArgs(baseDeployCmd)}\``,
 		)}`,
 	});
 

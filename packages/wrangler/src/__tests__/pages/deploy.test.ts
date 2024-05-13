@@ -20,7 +20,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
-// boop
+// beep
 
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();

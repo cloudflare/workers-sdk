@@ -150,9 +150,10 @@ export async function syncAssets(
 	// Get all existing keys in asset namespace
 	logger.info("Fetching list of already uploaded assets...");
 	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
-	const namespaceKeyInfoMap = new Map<string, typeof namespaceKeysResponse[0]>(
-		namespaceKeysResponse.map((x) => [x.name, x])
-	);
+	const namespaceKeyInfoMap = new Map<
+		string,
+		(typeof namespaceKeysResponse)[0]
+	>(namespaceKeysResponse.map((x) => [x.name, x]));
 	const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
 	const assetDirectory = path.join(
