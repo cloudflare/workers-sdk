@@ -42,7 +42,7 @@ export function runWrangler(
 	wranglerProcess.stderr.pipe(output);
 
 	const debugFile = createWriteStream(
-		encodeURIComponent(`${Date.now()}.e2e.log`)
+		encodeURIComponent(`${wranglerCommand}.${Date.now()}.e2e.log`)
 	);
 	output.pipe(debugFile);
 	const exitPromise = events.once(wranglerProcess, "exit");

@@ -1657,6 +1657,9 @@ importers:
       '@types/yargs':
         specifier: ^17.0.10
         version: 17.0.24
+      '@vitest/ui':
+        specifier: ^1.6.0
+        version: 1.6.0(vitest@1.6.0)
       '@webcontainer/env':
         specifier: ^1.1.0
         version: 1.1.0
@@ -1813,6 +1816,9 @@ importers:
       update-check:
         specifier: ^1.5.4
         version: 1.5.4
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.0(@types/node@20.1.7)(@vitest/ui@1.6.0)(supports-color@9.2.2)
       ws:
         specifier: ^8.5.0
         version: 8.11.0
@@ -15390,7 +15396,7 @@ snapshots:
   '@pkgr/utils@2.4.1':
     dependencies:
       cross-spawn: 7.0.3
-      fast-glob: 3.2.12
+      fast-glob: 3.3.2
       is-glob: 4.0.3
       open: 9.1.0
       picocolors: 1.0.0
@@ -15579,6 +15585,7 @@ snapshots:
       - bufferutil
       - encoding
       - less
+      - lightningcss
       - sass
       - stylus
       - sugarss
@@ -15917,7 +15924,7 @@ snapshots:
       chalk: 2.4.2
       commander: 10.0.1
       execa: 5.1.1
-      fast-glob: 3.2.12
+      fast-glob: 3.3.2
       fs-extra: 10.1.0
       gradient-string: 2.0.2
       inquirer: 8.2.4
@@ -16774,6 +16781,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
       - less
+      - lightningcss
       - sass
       - stylus
       - sugarss
@@ -19240,8 +19248,8 @@ snapshots:
 
   espree@9.5.2:
     dependencies:
-      acorn: 8.10.0
-      acorn-jsx: 5.3.2(acorn@8.10.0)
+      acorn: 8.11.3
+      acorn-jsx: 5.3.2(acorn@8.11.3)
       eslint-visitor-keys: 3.4.1
 
   espree@9.6.1:
@@ -19685,7 +19693,7 @@ snapshots:
   foreground-child@3.1.1:
     dependencies:
       cross-spawn: 7.0.3
-      signal-exit: 4.0.2
+      signal-exit: 4.1.0
 
   form-data@4.0.0:
     dependencies:
@@ -19930,7 +19938,7 @@ snapshots:
       '@types/glob': 7.2.0
       array-union: 2.1.0
       dir-glob: 3.0.1
-      fast-glob: 3.2.12
+      fast-glob: 3.3.2
       glob: 7.2.3
       ignore: 5.3.1
       merge2: 1.4.1
@@ -19948,7 +19956,7 @@ snapshots:
   globby@13.1.4:
     dependencies:
       dir-glob: 3.0.1
-      fast-glob: 3.2.12
+      fast-glob: 3.3.2
       ignore: 5.2.4
       merge2: 1.4.1
       slash: 4.0.0
@@ -20066,7 +20074,7 @@ snapshots:
 
   hast-util-to-estree@2.1.0:
     dependencies:
-      '@types/estree': 1.0.0
+      '@types/estree': 1.0.5
       '@types/estree-jsx': 1.0.0
       '@types/hast': 2.3.4
       '@types/unist': 2.0.6
@@ -22605,7 +22613,7 @@ snapshots:
     dependencies:
       nanoid: 3.3.7
       picocolors: 1.0.0
-      source-map-js: 1.0.2
+      source-map-js: 1.2.0
 
   postcss@8.4.33:
     dependencies:
@@ -24486,6 +24494,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
       - less
+      - lightningcss
       - sass
       - stylus
       - sugarss
@@ -24868,7 +24877,7 @@ snapshots:
       astring: 1.8.3
       estree-util-build-jsx: 2.2.0
       estree-util-is-identifier-name: 2.0.1
-      estree-walker: 3.0.1
+      estree-walker: 3.0.3
       got: 11.8.5
       hast-util-to-estree: 2.1.0
       loader-utils: 2.0.4
