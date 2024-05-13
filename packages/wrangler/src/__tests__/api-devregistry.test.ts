@@ -21,6 +21,7 @@ describe("multi-worker testing", () => {
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml",
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 				},
@@ -32,6 +33,7 @@ describe("multi-worker testing", () => {
 			"src/__tests__/helpers/worker-scripts/parent-worker.js",
 			{
 				config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml",
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 				},
@@ -103,6 +105,7 @@ describe("multi-worker testing", () => {
 					config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml",
 					// We need debug logs because this is where the message is written if registering the worker fails.
 					logLevel: "debug",
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 					},

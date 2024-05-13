@@ -29,6 +29,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should not intercept when middleware is not enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -44,6 +45,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should intercept when middleware is enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -60,6 +62,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -98,6 +101,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should not intercept when middleware is not enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -113,6 +117,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should intercept when middleware is enabled", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -129,6 +134,7 @@ describe("run scheduled events with middleware", () => {
 
 		it("should not trigger scheduled event on wrong route", async () => {
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,

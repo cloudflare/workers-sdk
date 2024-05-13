@@ -46,6 +46,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -76,6 +77,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -109,6 +111,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -139,6 +142,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -167,6 +171,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -195,6 +200,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -226,6 +232,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -258,6 +265,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -284,6 +292,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -312,6 +321,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -344,6 +354,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -372,6 +383,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -412,6 +424,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -436,6 +449,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -460,6 +474,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -486,6 +501,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -517,6 +533,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -546,6 +563,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -576,6 +594,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -605,6 +624,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -635,6 +655,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -660,6 +681,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -690,6 +712,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -720,6 +743,7 @@ describe("middleware", () => {
 				fs.writeFileSync("index.js", scriptContent);
 
 				const worker = await unstable_dev("index.js", {
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -949,6 +973,7 @@ describe("middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
