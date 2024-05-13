@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import events from "node:events";
-import { createWriteStream } from "node:fs";
 import rl from "node:readline";
 import { PassThrough } from "node:stream";
 import { ReadableStream } from "node:stream/web";
@@ -41,10 +40,6 @@ export function runWrangler(
 	wranglerProcess.stdout.pipe(output);
 	wranglerProcess.stderr.pipe(output);
 
-	const debugFile = createWriteStream(
-		encodeURIComponent(`${wranglerCommand}.${Date.now()}.e2e.log`)
-	);
-	output.pipe(debugFile);
 	const exitPromise = events.once(wranglerProcess, "exit");
 
 	const lineBuffer: string[] = [];
