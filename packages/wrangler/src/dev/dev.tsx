@@ -433,12 +433,6 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	if (props.local && props.bindings.hyperdrive?.length) {
-		logger.warn(
-			"Hyperdrive does not currently support 'wrangler dev' in local mode at this stage of the beta. Use the '--remote' flag to test a Hyperdrive configuration before deploying."
-		);
-	}
-
 	const announceAndOnReady: typeof props.onReady = async (
 		finalIp,
 		finalPort,
