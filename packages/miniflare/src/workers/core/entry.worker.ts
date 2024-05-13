@@ -9,6 +9,7 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { isCompressedByCloudflareFL } from '../../shared/mime-types';
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
 import { WorkerRoute, matchRoutes } from "./routing";
@@ -223,6 +224,12 @@ function ensureAcceptableEncoding(
 	if (encodings.length === 0) return response;
 
 	const contentEncoding = response.headers.get("Content-Encoding");
+	const contentType = response.headers.get("Content-Type");
+
+	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
+	if (!isCompressedByCloudflareFL(contentType)) {
+		return response;
+	}
 
 	// If `Content-Encoding` is defined, but unknown, return the response as is
 	if (
