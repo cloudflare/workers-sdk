@@ -1,5 +1,6 @@
 import { fetch } from "undici";
 import { unstable_dev } from "../api";
+import { mockConsoleMethods } from "./helpers/mock-console";
 
 jest.unmock("child_process");
 jest.unmock("undici");
@@ -9,6 +10,7 @@ jest.unmock("undici");
  * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
  */
 describe("multi-worker testing", () => {
+	mockConsoleMethods();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let childWorker: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +18,7 @@ describe("multi-worker testing", () => {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const workers: any[] = [];
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		childWorker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
@@ -42,7 +44,7 @@ describe("multi-worker testing", () => {
 		workers.push(parentWorker);
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		for (const worker of workers) {
 			await worker.stop();
 		}
@@ -89,7 +91,6 @@ describe("multi-worker testing", () => {
 		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
 			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
-				process.stdout.write(`\n${args}`);
 				// Regexp ignores colour codes
 				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args)))
 					requestResolve();

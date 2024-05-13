@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import path from "path";
 import dedent from "ts-dedent";
 import { unstable_dev } from "../api";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -23,6 +24,8 @@ async function seedFs(files: Record<string, string>): Promise<void> {
 	}
 }
 describe("middleware", () => {
+	mockConsoleMethods();
+
 	describe("workers change behaviour with middleware with wrangler dev", () => {
 		runInTempDir();
 

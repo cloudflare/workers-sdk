@@ -1,3 +1,4 @@
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
@@ -7,6 +8,7 @@ import { runWrangler } from "../helpers/run-wrangler";
  */
 describe("pages dev", () => {
 	runInTempDir();
+	mockConsoleMethods();
 
 	it("should error if neither [<directory>] nor [--<command>] command line args were specififed", async () => {
 		await expect(
