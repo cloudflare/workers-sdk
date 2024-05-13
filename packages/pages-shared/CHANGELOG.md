@@ -1,5 +1,14 @@
 # @cloudflare/pages-shared
 
+## 0.11.35
+
+### Patch Changes
+
+- [#5750](https://github.com/cloudflare/workers-sdk/pull/5750) [`f514934`](https://github.com/cloudflare/workers-sdk/commit/f514934d6be8ea3b6777435f35e236c5ad0528e2) Thanks [@aaronlisman](https://github.com/aaronlisman)! - fix: omit headers rules on internal error
+
+  The Pages asset handler will no longer apply headers rules on 5XX responses caused by some internal error.
+  This prevents transient errors from being cached when caching headers are being set by headers rules.
+
 ## 0.11.34
 
 ### Patch Changes
