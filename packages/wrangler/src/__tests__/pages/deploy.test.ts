@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { http, HttpResponse } from "msw";
+import dedent from "ts-dedent";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
@@ -54,26 +55,27 @@ describe("pages deploy", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler pages deploy [directory]
+			"wrangler pages deploy [directory]
 
-		🆙 Deploy a directory of static assets as a Pages deployment
+			🆙 Deploy a directory of static assets as a Pages deployment
 
-		Positionals:
-		  directory  The directory of static files to upload  [string]
+			Positionals:
+			  directory  The directory of static files to upload  [string]
 
-		Flags:
-		  -h, --help     Show help  [boolean]
-		  -v, --version  Show version number  [boolean]
+			Flags:
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]
 
-		Options:
-		      --project-name    The name of the project you want to deploy to  [string]
-		      --branch          The name of the branch you want to deploy to  [string]
-		      --commit-hash     The SHA to attach to this deployment  [string]
-		      --commit-message  The commit message to attach to this deployment  [string]
-		      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
-		      --skip-caching    Skip asset caching which speeds up builds  [boolean]
-		      --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]"
-	`);
+			Options:
+			      --project-name        The name of the project you want to deploy to  [string]
+			      --branch              The name of the branch you want to deploy to  [string]
+			      --commit-hash         The SHA to attach to this deployment  [string]
+			      --commit-message      The commit message to attach to this deployment  [string]
+			      --commit-dirty        Whether or not the workspace should be considered dirty for this deployment  [boolean]
+			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
+			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
+			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]"
+		`);
 	});
 
 	it("should error if no `[<directory>]` arg is specified in the `pages deploy` command", async () => {
@@ -4994,6 +4996,100 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 		});
 	});
 
+	const simulateServer = (
+		generatedWorkerBundleCheck: (
+			workerJsContent: FormDataEntryValue | null
+		) => Promise<void>,
+		compatibility_flags?: string[]
+	) => {
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		msw.use(
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) =>
+					HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: (await request.json()).hashes,
+						},
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async () =>
+					HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request }) => {
+					const body = await request.formData();
+					const generatedWorkerBundle = body.get("_worker.bundle");
+
+					await generatedWorkerBundleCheck(generatedWorkerBundle);
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			// we're expecting two API calls to `/projects/<name>`, so we need
+			// to mock both of them
+			mockGetProjectHandler("foo", compatibility_flags),
+			mockGetProjectHandler("foo", compatibility_flags)
+		);
+	};
+
 	describe("_worker.js bundling", () => {
 		beforeEach(() => {
 			mkdirSync("public");
@@ -5011,100 +5107,6 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 
 		const workerIsBundled = async (contents: FormDataEntryValue | null) =>
 			(await toString(contents)).includes("worker_default as default");
-
-		const simulateServer = (
-			generatedWorkerBundleCheck: (
-				workerJsContent: FormDataEntryValue | null
-			) => Promise<void>,
-			compatibility_flags?: string[]
-		) => {
-			mockGetUploadTokenRequest(
-				"<<funfetti-auth-jwt>>",
-				"some-account-id",
-				"foo"
-			);
-
-			msw.use(
-				http.post<never, { hashes: string[] }>(
-					"*/pages/assets/check-missing",
-					async ({ request }) =>
-						HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: (await request.json()).hashes,
-							},
-							{ status: 200 }
-						),
-					{ once: true }
-				),
-				http.post(
-					"*/pages/assets/upload",
-					async () =>
-						HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: null,
-							},
-							{ status: 200 }
-						),
-					{ once: true }
-				),
-				http.post(
-					"*/accounts/:accountId/pages/projects/foo/deployments",
-					async ({ request }) => {
-						const body = await request.formData();
-						const generatedWorkerBundle = body.get("_worker.bundle");
-
-						await generatedWorkerBundleCheck(generatedWorkerBundle);
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									id: "123-456-789",
-									url: "https://abcxyz.foo.pages.dev/",
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
-				http.get(
-					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
-					async ({ params }) => {
-						expect(params.accountId).toEqual("some-account-id");
-						expect(params.deploymentId).toEqual("123-456-789");
-
-						return HttpResponse.json(
-							{
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									latest_stage: {
-										name: "deploy",
-										status: "success",
-									},
-								},
-							},
-							{ status: 200 }
-						);
-					},
-					{ once: true }
-				),
-				// we're expecting two API calls to `/projects/<name>`, so we need
-				// to mock both of them
-				mockGetProjectHandler("foo", compatibility_flags),
-				mockGetProjectHandler("foo", compatibility_flags)
-			);
-		};
 
 		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
 			simulateServer((generatedWorkerJS) =>
@@ -5250,6 +5252,125 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			);
 			await runWrangler("pages deploy public --bundle=true --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+	});
+
+	describe("source maps", () => {
+		const bundleString = (entry: FormDataEntryValue | null) =>
+			toString(entry).then((str) =>
+				str
+					.replace(/formdata-undici-0.[0-9]*/g, "formdata-undici-0.test")
+					.replace(/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs")
+					.replace(/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js")
+			);
+
+		beforeEach(() => {
+			mkdirSync("dist");
+			writeFileSync(
+				"wrangler.toml",
+				dedent`
+					name = "foo"
+					pages_build_output_dir = "dist"
+					compatibility_date = "2024-01-01"
+					upload_source_maps = true
+				`
+			);
+		});
+
+		it("should upload sourcemaps for functions directory projects", async () => {
+			mkdirSync("functions");
+			writeFileSync(
+				"functions/[[path]].ts",
+				dedent`
+					export function onRequestGet() {
+						return new Response("")
+					};
+				`
+			);
+
+			simulateServer(async (entry) => {
+				const contents = await bundleString(entry);
+				// Ensure we get a sourcemap containing our functions file
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
+				);
+				expect(contents).toContain('"sources":["[[path]].ts"');
+			});
+
+			await runWrangler("pages deploy");
+		});
+
+		it("should upload sourcemaps for _worker.js file projects", async () => {
+			writeFileSync(
+				"dist/_worker.js",
+				dedent`
+					export default {
+						async fetch() {
+							return new Response("foo");
+						}
+					}
+				`
+			);
+
+			simulateServer(async (entry) => {
+				const contents = await bundleString(entry);
+				// Ensure we get a sourcemap containing our _worker.js file
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
+				);
+				expect(contents).toContain('"sources":["_worker.js"');
+			});
+
+			await runWrangler("pages deploy");
+		});
+
+		it("should upload sourcemaps for _worker.js directory projects", async () => {
+			mkdirSync("dist/_worker.js");
+			mkdirSync("dist/_worker.js/chunks");
+			writeFileSync(
+				"dist/_worker.js/index.js",
+				`export { handlers as default } from "./chunks/runtime.mjs";`
+			);
+
+			writeFileSync(
+				"dist/_worker.js/chunks/runtime.mjs",
+				dedent`
+					export const handlers = {};
+					//# sourceMappingURL=runtime.mjs.map
+				`
+			);
+			writeFileSync(
+				"dist/_worker.js/chunks/runtime.mjs.map",
+				JSON.stringify({
+					version: 3,
+					file: "runtime.mjs",
+					sources: [],
+					sourcesContent: null,
+					names: [],
+					mappings: "",
+				})
+			);
+
+			simulateServer(async (entry) => {
+				const contents = await bundleString(entry);
+
+				// Ensure we get a sourcemap containing our main worker file
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="bundledWorker-0.test.mjs.map"'
+				);
+				expect(contents).toContain('"sources":["dist/_worker.js/index.js"');
+
+				// Ensure our runtime file that wrangler doesn't bundle into the main output still
+				// get uploaded alongside their sourcemaps
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="chunks/runtime.mjs"; filename="chunks/runtime.mjs"'
+				);
+				expect(contents).toContain(
+					'Content-Disposition: form-data; name="chunks/runtime.mjs.map"; filename="chunks/runtime.mjs.map"'
+				);
+			});
+
+			await runWrangler("pages deploy");
 		});
 	});
 });

@@ -7,6 +7,7 @@ import { logger } from "../logger";
 import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
+import { tryAttachSourcemapToModule } from "./source-maps";
 import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
@@ -45,7 +46,8 @@ function isValidPythonPackageName(name: string): boolean {
  */
 export async function findAdditionalModules(
 	entry: Entry,
-	rules: Rule[] | ParsedRules
+	rules: Rule[] | ParsedRules,
+	attachSourcemaps = false
 ): Promise<CfModule[]> {
 	const files = getFiles(entry.moduleRoot, entry.moduleRoot);
 	const relativeEntryPoint = path
@@ -98,6 +100,13 @@ export async function findAdditionalModules(
 			});
 		}
 	}
+
+	// The modules we find might also have sourcemaps associated with them, so when we go to copy
+	// them into the output directory we need to preserve the sourcemaps.
+	if (attachSourcemaps) {
+		modules.forEach((module) => tryAttachSourcemapToModule(module));
+	}
+
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
 		logger.table(
@@ -211,5 +220,10 @@ export async function writeAdditionalModules(
 		logger.debug("Writing additional module to output", modulePath);
 		await mkdir(path.dirname(modulePath), { recursive: true });
 		await writeFile(modulePath, module.content);
+
+		if (module.sourceMap) {
+			const sourcemapPath = path.resolve(destination, module.sourceMap.name);
+			await writeFile(sourcemapPath, module.sourceMap.content);
+		}
 	}
 }

@@ -81,6 +81,12 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				hidden: true,
 			},
+			"upload-source-maps": {
+				type: "boolean",
+				default: false,
+				description:
+					"Whether to upload any server-side sourcemaps with this deployment",
+			},
 		});
 }
 
@@ -348,6 +354,8 @@ export const Handler = async (args: PagesDeployArgs) => {
 		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 		// There is no sane way to get the true value out of yargs, so here we are.
 		bundle: args.bundle ?? !args.noBundle,
+		// Sourcemaps from deploy arguments will take precedence so people can try it for one-off deployments without updating their wrangler.toml
+		sourceMaps: config?.upload_source_maps || args.uploadSourceMaps,
 		args,
 	});
 

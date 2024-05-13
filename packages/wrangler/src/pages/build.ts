@@ -235,6 +235,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					buildOutputDirectory,
 					nodejsCompat,
 					defineNavigatorUserAgent,
+					sourceMaps: config?.upload_source_maps ?? sourcemap,
 				});
 			} else {
 				/**
@@ -248,7 +249,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					outdir,
 					directory: buildOutputDirectory,
 					local: false,
-					sourcemap,
+					sourcemap: config?.upload_source_maps ?? sourcemap,
 					watch,
 					nodejsCompat,
 					defineNavigatorUserAgent,
@@ -268,7 +269,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					outputConfigPath,
 					functionsDirectory: directory,
 					minify,
-					sourcemap,
+					sourcemap: config?.upload_source_maps ?? sourcemap,
 					fallbackService,
 					watch,
 					plugin,

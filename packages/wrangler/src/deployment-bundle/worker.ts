@@ -50,6 +50,12 @@ export interface CfModule {
 	 */
 	content: string | Buffer;
 	/**
+	 * An optional sourcemap for this module if it's of a ESM or CJS type, this will only be present
+	 * if we're deploying with sourcemaps enabled. Since we copy extra modules that aren't bundled
+	 * we need to also copy the relevant sourcemaps into the final out directory.
+	 */
+	sourceMap?: CfWorkerSourceMap;
+	/**
 	 * The module type.
 	 *
 	 * If absent, will default to the main module's type.

@@ -363,6 +363,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				buildOutputDirectory: directory ?? ".",
 				nodejsCompat,
 				defineNavigatorUserAgent,
+				sourceMaps: config?.upload_source_maps ?? false,
 			});
 			modules = bundleResult.modules;
 			scriptPath = bundleResult.resolvedEntryPointPath;
