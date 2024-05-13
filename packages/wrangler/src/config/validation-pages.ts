@@ -34,6 +34,8 @@ const supportedPagesConfigFields = [
 	"ai",
 	"version_metadata",
 	"dev",
+	"mtls_certificates",
+	"browser",
 	// normalizeAndValidateConfig() sets this value
 	"configPath",
 ] as const;
