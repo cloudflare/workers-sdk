@@ -79,7 +79,7 @@ export function runWrangler(
 			resolve: (output: string) => void,
 			reject: (output: string) => void
 		) {
-			const [exitCode] = await events.once(wranglerProcess, "exit");
+			const [exitCode] = await exitPromise;
 			if (exitCode !== 0) {
 				lineBuffer.unshift(`Failed to run ${JSON.stringify(wranglerCommand)}:`);
 				reject(lineBuffer.join("\n"));
@@ -119,6 +119,7 @@ export async function killAllWranglerDev() {
 	);
 
 	for (const proc of wranglerDev) {
+		console.log("killing hanging process", proc.name, proc.cmd);
 		process.kill(proc.pid, 9);
 	}
 }

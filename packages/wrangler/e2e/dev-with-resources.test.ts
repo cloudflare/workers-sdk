@@ -2,10 +2,9 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import events from "node:events";
 import getPort from "get-port";
-import { beforeEach } from "node:test";
 import dedent from "ts-dedent";
 import { Agent, fetch } from "undici";
-import { describe, expect } from "vitest";
+import { beforeEach, describe, expect } from "vitest";
 import { WebSocket } from "ws";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -235,7 +234,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 		await events.once(ws, "open");
 		ws.close();
 		// TODO(soon): once we have inspector proxy worker, write basic tests here,
-		//  messages currently to non-deterministic to do this reliably
+		//  messages currently too non-deterministic to do this reliably
 	});
 
 	e2eTest("starts https server", async ({ seed, run }) => {
