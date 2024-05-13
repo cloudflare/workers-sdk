@@ -48,6 +48,10 @@ export function runWrangler(
 		start(controller) {
 			const lineInterface = rl.createInterface(output);
 			lineInterface.on("line", (line) => {
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				if (process.env.VITEST_MODE === "WATCH") {
+					console.log(line);
+				}
 				lineBuffer.push(line);
 				try {
 					controller.enqueue(line);

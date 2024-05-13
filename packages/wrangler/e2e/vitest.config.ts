@@ -12,6 +12,6 @@ export default defineConfig({
 		retry: 2,
 		include: ["e2e/**/*.test.ts"],
 		globalSetup: path.resolve(__dirname, "./validate-environment.ts"),
-		reporters: ["default", "html"],
+		reporters: ["verbose", "html"],
 	},
 });

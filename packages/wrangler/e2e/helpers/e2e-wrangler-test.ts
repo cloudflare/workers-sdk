@@ -1,4 +1,3 @@
-import { rm } from "node:fs/promises";
 import { test } from "vitest";
 import { makeRoot, seed } from "./setup";
 import { runWrangler } from "./wrangler";
@@ -18,7 +17,7 @@ export const e2eTest = test.extend<TestContext>({
 	async tmpPath({}, use) {
 		const root = await makeRoot();
 		await use(root);
-		await rm(root, { recursive: true, maxRetries: 10 });
+		// Note: we deliberately don't clean up this temporary directory since that can cause Windows CI runners to fail with EBUSY
 	},
 	async seed({ tmpPath }, use) {
 		await use((files) => {
