@@ -212,7 +212,7 @@ describe("pages dev", () => {
 		expect(text).toMatchInlineSnapshot('"Pages supports wrangler.toml ⚡️⚡️"');
 	});
 
-	e2eTest(
+	e2eTest.only(
 		"should recover from syntax error during dev session (_worker)",
 		async ({ run, seed }) => {
 			const worker = run("wrangler pages dev .");
