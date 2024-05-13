@@ -3,7 +3,7 @@ import { AddressInfo } from "net";
 import { URL } from "url";
 import { ExecutionContext } from "ava";
 import stoppable from "stoppable";
-import NodeWebSocket, { WebSocketServer } from "ws";
+import{ WebSocket as NodeWebSocket , WebSocketServer } from "ws";
 
 export async function useServer(
 	t: ExecutionContext,

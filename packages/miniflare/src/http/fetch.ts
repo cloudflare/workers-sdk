@@ -1,7 +1,7 @@
 import http from "http";
 import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
-import NodeWebSocket from "ws";
+import { WebSocket as NodeWebSocket } from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
 import { Request, RequestInfo, RequestInit } from "./request";
 import { Response } from "./response";

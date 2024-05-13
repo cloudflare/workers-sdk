@@ -1,6 +1,6 @@
 {
 	"name": "wrangler-root",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"description": "Monorepo for wrangler and associated packages",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
@@ -35,7 +35,7 @@
 		"prettier": "^2.6.2",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
-		"typescript": "^4.8.4",
+		"typescript": "^5.4.5",
 		"vite": "^5.0.12",
 		"vitest": "^1.2.2"
 	},
@@ -49,6 +49,7 @@
 		"@vue/compiler-sfc": "^3.3.4",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
+		"pnpm": "^8.6.11",
 		"turbo": "^1.10.14"
 	},
 	"engines": {
@@ -72,7 +73,7 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"capnpc-ts>typescript": "4.2.4"
+			"capnpc-ts>typescript": "5.4.5"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",

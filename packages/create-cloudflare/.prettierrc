@@ -14,5 +14,5 @@
 		"^[.]/index$",
 		"<TYPES>"
 	],
-	"importOrderTypeScriptVersion": "5.0.4"
+	"importOrderTypeScriptVersion": "5.4.5"
 }

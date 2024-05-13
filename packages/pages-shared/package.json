@@ -28,7 +28,7 @@
 		"@miniflare/core": "^2.14.2",
 		"@miniflare/html-rewriter": "^2.14.2",
 		"concurrently": "^7.3.0",
-		"glob": "^8.0.3"
+		"glob": "^10.3.3"
 	},
 	"workers-sdk": {
 		"prerelease": true

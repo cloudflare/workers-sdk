@@ -14,11 +14,13 @@ import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-toke
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
 import { FileReaderSync } from "../helpers/msw/read-file-sync";
+import { normalizeProgressSteps } from "../helpers/normalize-progress-steps";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
+
+// boop
 
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
