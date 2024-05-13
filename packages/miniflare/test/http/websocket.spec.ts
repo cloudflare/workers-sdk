@@ -13,7 +13,7 @@ import {
 	coupleWebSocket,
 	viewToBuffer,
 } from "miniflare";
-import { WebSocket as NodeWebSocket, Event as WebSocketEvent, WebSocketServer } from "ws";
+import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";
 
 const noop = () => {};

@@ -87,6 +87,7 @@ class InvalidURL extends HttpError {
 }
 
 function assertValidURL(maybeUrl: string) {
+	// @ts-expect-error SUNILFIX
 	if (!URL.canParse(maybeUrl)) throw new InvalidURL(maybeUrl);
 }
 
@@ -236,6 +237,7 @@ async function handleRawHttp(request: Request, url: URL) {
 
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
+	// @ts-expect-error SUNILFIX
 	const setCookieHeader = responseHeaders.getSetCookie();
 	for (const setCookie of setCookieHeader) {
 		rawHeaders.append("cf-ew-raw-set-cookie", setCookie);
