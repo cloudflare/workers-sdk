@@ -39,7 +39,7 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        env:
+        with:
           node-version: 18.18
 
       - name: Build tools and libraries

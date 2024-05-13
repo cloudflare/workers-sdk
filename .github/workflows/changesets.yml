@@ -23,29 +23,16 @@ jobs:
           token: ${{ secrets.GH_ACCESS_TOKEN }}
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v2
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
         with:
-          version: 9.1.1
-
-      - name: Use Node.js 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18.20.2
-          cache: "pnpm"
-
-      - name: Install NPM Dependencies
-        run: pnpm install --frozen-lockfile
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
-
-      - name: "Configure turbo repo cache environment variables"
-        run: |
-          touch .env
-          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
-          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
-          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
-          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
 
       - name: Build all packages
         run: pnpm run build
