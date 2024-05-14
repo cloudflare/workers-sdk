@@ -342,7 +342,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
 		maxBatchSize: consumer.max_batch_size,
 		maxBatchTimeout: consumer.max_batch_timeout,
-		maxRetries: consumer.max_retries,
+		maxRetires: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
 		retryDelay: consumer.retry_delay,
 	};
