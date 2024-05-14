@@ -213,7 +213,7 @@ describe("pages dev", () => {
 		expect(text).toMatchInlineSnapshot('"Pages supports wrangler.toml ⚡️⚡️"');
 	});
 
-	e2eTest.only(
+	e2eTest(
 		"should recover from syntax error during dev session (_worker)",
 		async ({ run, seed }) => {
 			const worker = run("wrangler pages dev .");
@@ -289,6 +289,8 @@ describe("pages dev", () => {
 							} // Syntax Error
 						}`,
 			});
+
+			await setTimeout(5_000);
 
 			await worker.readUntil(/Unexpected error building Functions directory/);
 
