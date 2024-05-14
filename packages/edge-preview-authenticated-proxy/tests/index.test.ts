@@ -21,6 +21,7 @@ describe("Preview Worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
 			config: path.join(__dirname, "../wrangler.toml"),
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 			},
@@ -74,6 +75,7 @@ compatibility_date = "2023-01-01"
 
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			config: path.join(tmpDir, "wrangler.toml"),
+			ip: "127.0.0.1",
 			experimental: { disableExperimentalWarning: true },
 		});
 	});
@@ -307,6 +309,7 @@ describe("Raw HTTP preview", () => {
 		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
 			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
 			host: "0000.rawhttp.devprod.cloudflare.dev",
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 			},
@@ -369,6 +372,7 @@ compatibility_date = "2023-01-01"
 
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			config: path.join(tmpDir, "wrangler.toml"),
+			ip: "127.0.0.1",
 			experimental: { disableExperimentalWarning: true },
 		});
 	});
