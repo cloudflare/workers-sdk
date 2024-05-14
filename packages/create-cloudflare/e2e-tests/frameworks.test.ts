@@ -160,6 +160,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	},
 	hono: {
 		testCommitMessage: false,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello Hono!",
