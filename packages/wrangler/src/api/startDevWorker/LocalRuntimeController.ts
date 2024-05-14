@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import { Log, LogLevel, Response, Miniflare, Mutex } from "miniflare";
+import { Log, LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import { withSourceURL } from "../../deployment-bundle/source-url";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { logger } from "../../logger";
@@ -18,16 +18,16 @@ import type {
 } from "./events";
 import type {
 	Binding,
-	ServiceDesignator,
-	StartDevWorkerOptions,
 	Bundle,
 	File,
+	ServiceDesignator,
+	StartDevWorkerOptions,
 } from "./types";
 import type {
 	MiniflareOptions,
+	SharedOptions,
 	SourceOptions,
 	WorkerOptions,
-	SharedOptions,
 } from "miniflare";
 
 const warnOnceMessages = new Set<string>();
@@ -267,7 +267,8 @@ function buildBindingOptions(event: BundleCompleteEvent) {
 				};
 			}
 		} else if (binding.type === "queue-producer") {
-			queueProducers[name] = binding.name;
+			// TODO(now): @penalosa figure out why `queueName` is required. Did Miniflare have a breaking change?
+			queueProducers[name] = { queueName: binding.name };
 		} else if (binding.type === "constellation") {
 			warnOnce(
 				"Miniflare does not support Constellation bindings yet, ignoring..."
@@ -410,7 +411,7 @@ function buildTriggerOptions(config: StartDevWorkerOptions) {
 			queueConsumers[trigger.name] = {
 				maxBatchSize: trigger.maxBatchSize,
 				maxBatchTimeout: trigger.maxBatchTimeout,
-				maxRetries: trigger.maxRetries,
+				maxRetires: trigger.maxRetries,
 				deadLetterQueue: trigger.deadLetterQueue,
 			};
 		} else {
