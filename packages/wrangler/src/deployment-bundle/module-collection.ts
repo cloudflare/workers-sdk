@@ -1,8 +1,10 @@
 import crypto from "node:crypto";
 import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import path from "node:path";
+import path, { dirname, relative } from "node:path";
+import { glob } from "glob";
 import globToRegExp from "glob-to-regexp";
+import { parseModule } from "magicast";
 import { sync as resolveSync } from "resolve";
 import { exports as resolveExports } from "resolve.exports";
 import { UserError } from "../errors";
@@ -247,6 +249,43 @@ export function createModuleCollector(props: {
 						}
 					);
 				}
+
+				build.onLoad({ filter: /.*/g }, async (args) => {
+					try {
+						const text = await readFile(args.path, "utf8");
+
+						const mod = parseModule(text);
+						if (mod.$ast.type === "Program") {
+							for (const directive of mod.$ast.directives.map(
+								(directive) => directive.value.value
+							)) {
+								const bundleMatch = directive.match(
+									/use wrangler bundle (?<glob>[^\s]+) (?<type>ESModule|CommonJS|CompiledWasm|Data|Text|PythonModule|PythonRequirement)/
+								);
+								if (bundleMatch && bundleMatch.groups) {
+									const baseDir = dirname(args.path);
+									const files = await glob(bundleMatch.groups.glob, {
+										cwd: baseDir,
+										nodir: true,
+										absolute: true,
+									});
+									for (const file of files) {
+										modules.push({
+											name: relative(baseDir, file),
+											filePath: file,
+											content: await readFile(file),
+											type: RuleTypeToModuleType[
+												bundleMatch.groups.type as ConfigModuleRuleType
+											],
+										});
+									}
+								}
+							}
+						}
+					} catch {}
+
+					return undefined;
+				});
 
 				// ~ end legacy module specifier support ~
 
