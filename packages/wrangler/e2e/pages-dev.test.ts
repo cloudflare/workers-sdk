@@ -555,7 +555,12 @@ describe("pages dev", () => {
 			});
 			await waitForReady(worker);
 
-			expect(normalizeOutput(worker.output)).toMatchInlineSnapshot(`
+			// We only care about the list of bindings and warnings, so strip other output
+			const [prestartOutput] = normalizeOutput(worker.output).split(
+				"⎔ Starting local server..."
+			);
+
+			expect(prestartOutput).toMatchInlineSnapshot(`
 				"▲ [WARNING] WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
 				  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
 				  Remote Durable Objects that are affected:
@@ -591,9 +596,7 @@ describe("pages dev", () => {
 				  - VAR3: "(hidden)"
 				▲ [WARNING] ⎔ Support for service bindings in local mode is experimental and may change.
 				▲ [WARNING] ⎔ Support for external Durable Objects in local mode is experimental and may change.
-				⎔ Starting local server...
-				▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
-				[wrangler:inf] Ready on http://localhost:<PORT>"
+				"
 			`);
 		}
 	);
