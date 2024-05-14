@@ -7,6 +7,7 @@ import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect } from "vitest";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
+import { retry } from "./helpers/retry";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
 import {
 	killAllWranglerDev,
@@ -207,10 +208,10 @@ describe("basic dev tests", () => {
 	}
 );
 
-describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+describe.only.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic python dev: $cmd",
 	({ cmd }) => {
-		e2eTest(`can modify worker during ${cmd}`, async ({ run, seed }) => {
+		e2eTest(`can modify entrypoint during ${cmd}`, async ({ run, seed }) => {
 			await seed({
 				"wrangler.toml": dedent`
 					name = "worker"
@@ -243,26 +244,74 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 
 			await seed({
 				"index.py": dedent`
+					from js import Response
+					def on_fetch(request):
+						return Response.new('Updated Python Worker value')`,
+			});
+
+			await waitForReload(worker);
+
+			// TODO(soon): work out why python workers need this retry before returning new content
+			const { text } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(url);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+
+			expect(text).toBe("Updated Python Worker value");
+		});
+
+		e2eTest(`can modify imports during ${cmd}`, async ({ run, seed }) => {
+			await seed({
+				"wrangler.toml": dedent`
+					name = "worker"
+					main = "index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["python_workers"]
+			`,
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
+				"index.py": dedent`
 					from arithmetic import mul
 
 					from js import Response
 					def on_fetch(request):
-						return Response.new(f"Updated Python Worker value {mul(2,3)}")`,
+						return Response.new(f"py hello world {mul(2,3)}")`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = run(cmd);
+
+			const { url } = await waitForReady(worker);
+
+			await expect(fetchText(url)).resolves.toBe("py hello world 6");
+
+			await seed({
 				"arithmetic.py": dedent`
 					def mul(a,b):
 						return a+b`,
 			});
 
-			// TODO(soon): work out why python workers reload twice
-			await waitForReload(worker);
 			await waitForReload(worker);
 
-			// TODO(soon): work out why python workers need this delay before returning new content
-			await setTimeout(5_000);
-
-			await expect(fetchText(url)).resolves.toBe(
-				"Updated Python Worker value 5"
+			// TODO(soon): work out why python workers need this retry before returning new content
+			const { text } = await retry(
+				(s) => s.status !== 200 || s.text === "py hello world 6",
+				async () => {
+					const r = await fetch(url);
+					return { text: await r.text(), status: r.status };
+				}
 			);
+
+			expect(text).toBe("py hello world 5");
 		});
 	}
 );
