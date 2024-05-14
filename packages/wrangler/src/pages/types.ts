@@ -1,3 +1,5 @@
+import { DeploymentStage } from "@cloudflare/types";
+
 type DeploymentConfig = {
 	d1_databases?: Record<string, { id: string }>;
 	compatibility_flags?: string[];
@@ -22,6 +24,7 @@ export type Project = {
 		preview?: DeploymentConfig;
 	};
 };
+
 export type Deployment = {
 	id: string;
 	created_on: string;
@@ -33,12 +36,10 @@ export type Deployment = {
 		};
 	};
 	url: string;
-	latest_stage: {
-		status: string;
-		ended_on: string;
-	};
+	latest_stage: DeploymentStage;
 	project_name: string;
 };
+
 export type UploadPayloadFile = {
 	key: string;
 	value: string;

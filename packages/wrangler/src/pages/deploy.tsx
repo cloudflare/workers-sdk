@@ -20,8 +20,8 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { PagesConfigCache } from "./types";
-import type { Project } from "@cloudflare/types";
+import type { Deployment, DeploymentStage, PagesConfigCache } from "./types";
+import type { Project, UnifiedDeploymentLogMessages } from "@cloudflare/types";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -337,9 +337,42 @@ export const Handler = async (args: PagesDeployArgs) => {
 		project_name: projectName,
 	});
 
-	logger.log(
-		`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
-	);
+	let latestDeploymentStage: DeploymentStage | undefined;
+
+	// can this ever become an infinite loop?
+	while (
+		latestDeploymentStage?.name !== "deploy" &&
+		latestDeploymentStage?.status !== "success" &&
+		latestDeploymentStage?.status !== "failure"
+	) {
+		try {
+			const deployment = await fetchResult<Deployment>(
+				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
+			);
+			latestDeploymentStage = deployment.latest_stage;
+		} catch (err) {
+			logger.debug(
+				`Attempt to get deployment status for deployment with id "${deploymentResponse.id}" failed: ${err}`
+			);
+		}
+	}
+
+	if (latestDeploymentStage.status === "success") {
+		logger.log(
+			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
+		);
+	} else {
+		// get persistent logs so we can show users the failure message
+		const logs = await fetchResult<UnifiedDeploymentLogMessages>(
+			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
+		);
+		// last log entry will be the most relevant for Direct Uploads
+		const failureMessage = logs.data[logs.total - 1].line;
+
+		logger.error(failureMessage.replace("Error:", "").trim());
+		logger.log("❌ Deployment failed!");
+	}
+
 	await metrics.sendMetricsEvent("create pages deployment");
 };
 
