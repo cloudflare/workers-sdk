@@ -71,6 +71,20 @@ export class ParseError extends UserError implements Message {
 // In particular, API errors which we'd like to report are `ParseError`s.
 // Therefore, allow particular `ParseError`s to be marked `reportable`.
 export class APIError extends ParseError {
+	#status?: number;
+	constructor({ status, ...rest }: Message & { status?: number }) {
+		super(rest);
+		this.name = this.constructor.name;
+		this.#status = status;
+	}
+
+	isGatewayError() {
+		if (this.#status !== undefined) {
+			return [524].includes(this.#status);
+		}
+		return false;
+	}
+
 	// Allow `APIError`s to be marked as handled.
 	#reportable = true;
 	get reportable() {

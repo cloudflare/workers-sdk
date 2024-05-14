@@ -104,6 +104,7 @@ export async function fetchInternal<ResponseType>(
 					text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
 				},
 			],
+			status: response.status,
 		});
 	}
 }
