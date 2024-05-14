@@ -1,5 +1,10 @@
+import fs from "node:fs";
+import { join } from "path";
+import { rest } from "msw";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
+import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -7,6 +12,7 @@ import writeWranglerToml from "../helpers/write-wrangler-toml";
 describe("execute", () => {
 	mockConsoleMethods();
 	runInTempDir();
+	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should require login when running against prod", async () => {
@@ -80,6 +86,31 @@ describe("execute", () => {
 				{
 					error: {
 						text: "Error: can't use --preview without --remote",
+					},
+				},
+				null,
+				2
+			)
+		);
+	});
+
+	it("should reject a binary SQLite DB", async () => {
+		setIsTTY(false);
+		writeWranglerToml({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		const path = join(__dirname, "fixtures", "db.sqlite3");
+		fs.copyFileSync(path, "db.sqlite3");
+
+		await expect(
+			runWrangler(`d1 execute db --file db.sqlite3 --local --json`)
+		).rejects.toThrowError(
+			JSON.stringify(
+				{
+					error: {
+						text: "Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again.",
 					},
 				},
 				null,

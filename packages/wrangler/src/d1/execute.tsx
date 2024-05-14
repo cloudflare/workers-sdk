@@ -89,7 +89,7 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
 			deprecated: true,
-			hidden: true
+			hidden: true,
 		});
 }
 
@@ -575,7 +575,7 @@ async function checkForSQLiteBinary(filename: string) {
 	await fd.read(buffer, 0, 15);
 	if (buffer.toString("utf8") === "SQLite format 3") {
 		throw new UserError(
-			"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
+			"Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again."
 		);
 	}
 }
