@@ -100,7 +100,6 @@ import {
 	CoreHeaders,
 	LogLevel,
 	Mutex,
-	QueueConsumer,
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
@@ -429,7 +428,7 @@ function getQueueConsumers(
 			// De-sugar array consumer options to record mapping to empty options
 			if (Array.isArray(workerConsumers)) {
 				workerConsumers = Object.fromEntries(
-					workerConsumers.map((queueName) => [queueName, <QueueConsumer>{}])
+					workerConsumers.map((queueName) => [queueName, {}])
 				);
 			}
 
