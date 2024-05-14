@@ -15,7 +15,7 @@ function matchWhoamiEmail(stdout: string): string {
 	return stdout.match(/associated with the email (.+?@.+?)!/)?.[1] as string;
 }
 
-describe.sequential("deployments", () => {
+describe("deployments", () => {
 	let root: string;
 	let workerName: string;
 	let workerPath: string;

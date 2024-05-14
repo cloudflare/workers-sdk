@@ -8,7 +8,7 @@ import { generateResourceName } from "./helpers/generate-resource-name";
 import { makeRoot } from "./helpers/setup";
 import { waitForReady } from "./helpers/wrangler";
 
-describe.sequential("c3 integration", () => {
+describe("c3 integration", () => {
 	let workerName: string;
 	let root: string;
 	let c3Packed: string;
