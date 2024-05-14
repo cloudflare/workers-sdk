@@ -6,8 +6,8 @@ import fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
-import { DeferredPromise, Response, fetch } from "miniflare";
-import { describe, it, expect } from "vitest";
+import { DeferredPromise, fetch, Response } from "miniflare";
+import { describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { teardown, useTmp } from "../../helpers/teardown";
@@ -788,7 +788,7 @@ describe("Multi-Worker Bindings", () => {
 		expect(await res.text()).toBe("a:registered:d:http://placeholder/");
 		res = await fetch(new URL("/E", url));
 		expect(await res.text()).toMatchInlineSnapshot(
-			'"a:[wrangler] Couldn\'t find `wrangler dev` session for service \\"e\\" to proxy to`"'
+			'"a:[wrangler] Couldn\'t find `wrangler dev` session for service "e" to proxy to`"'
 		);
 
 		// Check with no `getRegisteredWorker()` function defined
@@ -799,7 +799,7 @@ describe("Multi-Worker Bindings", () => {
 		url = joinUrlParts(event.proxyData.userWorkerUrl);
 		res = await fetch(new URL("/C", url));
 		expect(await res.text()).toMatchInlineSnapshot(
-			'"a:[wrangler] Couldn\'t find `wrangler dev` session for service \\"c\\" to proxy to`"'
+			'"a:[wrangler] Couldn\'t find `wrangler dev` session for service "c" to proxy to`"'
 		);
 	});
 	it("should expose Durable Object bindings to other workers", async () => {
@@ -959,13 +959,13 @@ describe("Multi-Worker Bindings", () => {
 		// Check missing Durable Object class
 		res = await fetch(new URL("/B_OBJECT_2", urlA));
 		expect(await res.text()).toMatchInlineSnapshot(
-			'"[wrangler] Couldn\'t find class \\"BObject2\\" in service \\"b\\" to proxy to"'
+			'"[wrangler] Couldn\'t find class "BObject2" in service "b" to proxy to"'
 		);
 
 		// Check missing service
 		res = await fetch(new URL("/C_OBJECT_1", urlA));
 		expect(await res.text()).toMatchInlineSnapshot(
-			'"[wrangler] Couldn\'t find `wrangler dev` session for service \\"c\\" to proxy to`"'
+			'"[wrangler] Couldn\'t find `wrangler dev` session for service "c" to proxy to`"'
 		);
 
 		// Check with no `getRegisteredWorker()` function defined
@@ -980,7 +980,7 @@ describe("Multi-Worker Bindings", () => {
 		urlA = joinUrlParts(eventA.proxyData.userWorkerUrl);
 		res = await fetch(new URL("/B_OBJECT_1", urlA));
 		expect(await res.text()).toMatchInlineSnapshot(
-			'"[wrangler] Couldn\'t find `wrangler dev` session for service \\"b\\" to proxy to`"'
+			'"[wrangler] Couldn\'t find `wrangler dev` session for service "b" to proxy to`"'
 		);
 	});
 });
