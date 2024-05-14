@@ -42,7 +42,9 @@ describe.sequential("deployments", () => {
 		);
 
 		await readUntil(
-			/To publish your Worker to the Internet, run `npm run deploy`/
+			/To publish your Worker to the Internet, run `npm run deploy`/,
+			// This can be very slow, so give it the same timeout as the test itself
+			120_000
 		);
 	});
 
