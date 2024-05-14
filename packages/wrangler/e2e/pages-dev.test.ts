@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
@@ -241,6 +242,8 @@ describe("pages dev", () => {
 						}
 					}`,
 			});
+
+			await setTimeout(5_000);
 
 			await worker.readUntil(/Failed to bundle/);
 

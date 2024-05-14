@@ -30,6 +30,8 @@ export async function readUntil(
 	} finally {
 		try {
 			reader.releaseLock();
-		} catch (e) {}
+		} catch (e) {
+			console.error("Error while releasing lock", e);
+		}
 	}
 }
