@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.56.0
+
+### Minor Changes
+
+- [#5712](https://github.com/cloudflare/workers-sdk/pull/5712) [`151bc3d`](https://github.com/cloudflare/workers-sdk/commit/151bc3d31cb970a8caa84fad687c8b1b47ced73f) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support `mtls_certificates` and `browser` bindings when using `wrangler.toml` with a Pages project
+
+### Patch Changes
+
+- [#5813](https://github.com/cloudflare/workers-sdk/pull/5813) [`9627cef`](https://github.com/cloudflare/workers-sdk/commit/9627cef2f1aadb44aa677e429b6cb6af9c8ee495) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Upload Pages project assets with more grace
+
+  - Reduces the maximum bucket size from 50 MiB to 40 MiB.
+  - Reduces the maximum asset count from 5000 to 2000.
+  - Allows for more retries (with increased sleep between attempts) when encountering an API gateway failure.
+
+- Updated dependencies [[`0725f6f`](https://github.com/cloudflare/workers-sdk/commit/0725f6f73199daf7f11eec9830bc4d1f66c05d62), [`89b6d7f`](https://github.com/cloudflare/workers-sdk/commit/89b6d7f3832b350b470a981eb3b4388517612363)]:
+  - miniflare@3.20240512.0
+
 ## 3.55.0
 
 ### Minor Changes
