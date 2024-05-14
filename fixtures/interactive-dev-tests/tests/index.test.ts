@@ -8,7 +8,7 @@ import stripAnsi from "strip-ansi";
 import { fetch } from "undici";
 import { afterEach, describe as baseDescribe, expect, it } from "vitest";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
-import type pty from "node-pty";
+import type pty from "@cdktf/node-pty-prebuilt-multiarch";
 
 // These tests are failing with `Error: read EPIPE` on Windows in CI. There's
 // still value running them on macOS and Linux.
@@ -36,13 +36,13 @@ const ptyOptions: pty.IPtyForkOptions = {
 	cols: 80,
 	rows: 30,
 	cwd: pkgRoot,
-	env: process.env,
+	env: process.env as Record<string, string>,
 };
 
 // Check `node-pty` installed and working correctly, skipping tests if not
 let nodePtySupported = true;
 try {
-	const pty = await import("node-pty");
+	const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
 	const ptyProcess = pty.spawn(
 		process.execPath,
 		["-p", "'ran node'"],
@@ -104,7 +104,7 @@ async function startWranglerDev(args: string[]) {
 	let exitResolve: ((code: number) => void) | undefined;
 	const exitPromise = new Promise<number>((resolve) => (exitResolve = resolve));
 
-	const pty = await import("node-pty");
+	const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
 	const ptyProcess = pty.spawn(
 		process.execPath,
 		[
