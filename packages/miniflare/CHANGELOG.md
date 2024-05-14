@@ -1,5 +1,20 @@
 # miniflare
 
+## 3.20240512.0
+
+### Patch Changes
+
+- [#5827](https://github.com/cloudflare/workers-sdk/pull/5827) [`0725f6f`](https://github.com/cloudflare/workers-sdk/commit/0725f6f73199daf7f11eec9830bc4d1f66c05d62) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20240419.0  | 1.20240512.0  |
+  | @cloudflare/workers-types | ^4.20240419.0 | ^4.20240512.0 |
+
+- [#5798](https://github.com/cloudflare/workers-sdk/pull/5798) [`89b6d7f`](https://github.com/cloudflare/workers-sdk/commit/89b6d7f3832b350b470a981eb3b4388517612363) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: update miniflare's response compression to act more like Cloudflare platform
+
 ## 3.20240419.1
 
 ### Minor Changes
