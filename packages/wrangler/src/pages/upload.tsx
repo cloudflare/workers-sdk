@@ -8,12 +8,14 @@ import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
+import { APIError } from "../parse";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
+	MAX_UPLOAD_GATEWAY_ERRORS,
 } from "./constants";
 import { ApiErrorCodes } from "./errors";
 import { validate } from "./validate";
@@ -197,6 +199,7 @@ export const upload = async (
 		if (bucket.files.length === 0) continue;
 
 		attempts = 0;
+		let gatewayErrors = 0;
 		const doUpload = async (): Promise<void> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
@@ -230,7 +233,20 @@ export const upload = async (
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 					);
 
-					if (
+					if (e instanceof APIError && e.isGatewayError()) {
+						// Gateway problem, wait for some additional time and set concurrency to 1
+						queue.concurrency = 1;
+						await new Promise((resolvePromise) =>
+							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
+						);
+
+						gatewayErrors++;
+
+						// only count as a failed attempt after a few initial gateway errors
+						if (gatewayErrors >= MAX_UPLOAD_GATEWAY_ERRORS) {
+							attempts++;
+						}
+					} else if (
 						(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
 						isJwtExpired(jwt)
 					) {

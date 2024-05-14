@@ -303,6 +303,80 @@ describe("pages project upload", () => {
 	`);
 	});
 
+	it("should retry uploads after gateway failures", async () => {
+		writeFileSync("logo.txt", "foobar");
+
+		// Accumulate multiple requests then assert afterwards
+		const requests: RestRequest[] = [];
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as { hashes: string[] };
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				requests.push(req);
+
+				if (requests.length < 7) {
+					return res(ctx.status(524), ctx.text(`<html>bang!</html>`));
+				} else {
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						})
+					);
+				}
+			})
+		);
+
+		await runWrangler("pages project upload .");
+
+		// Assert seven identical requests
+		expect(requests.length).toBe(7);
+		for (const init of requests) {
+			expect(init.headers.get("Authorization")).toBe(
+				"Bearer <<funfetti-auth-jwt>>"
+			);
+
+			const body = (await init.json()) as UploadPayloadFile[];
+			expect(body).toMatchObject([
+				{
+					key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+					value: Buffer.from("foobar").toString("base64"),
+					metadata: {
+						contentType: "text/plain",
+					},
+					base64: true,
+				},
+			]);
+		}
+
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Upload complete!"
+	`);
+	});
+
 	it("should try to use multiple buckets (up to the max concurrency)", async () => {
 		writeFileSync("logo.txt", "foobar");
 		writeFileSync("logo.png", "foobar");
