@@ -208,7 +208,7 @@ describe("basic dev tests", () => {
 	}
 );
 
-describe.only.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic python dev: $cmd",
 	({ cmd }) => {
 		e2eTest(`can modify entrypoint during ${cmd}`, async ({ run, seed }) => {
