@@ -1,5 +1,3 @@
-import { DeploymentStage } from "@cloudflare/types";
-
 type DeploymentConfig = {
 	d1_databases?: Record<string, { id: string }>;
 	compatibility_flags?: string[];
@@ -36,7 +34,10 @@ export type Deployment = {
 		};
 	};
 	url: string;
-	latest_stage: DeploymentStage;
+	latest_stage: {
+		status: string;
+		ended_on: string;
+	};
 	project_name: string;
 };
 

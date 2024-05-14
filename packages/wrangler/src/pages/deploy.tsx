@@ -11,7 +11,10 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import {
+	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
+	PAGES_CONFIG_CACHE_FILENAME,
+} from "./constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
@@ -20,8 +23,13 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Deployment, DeploymentStage, PagesConfigCache } from "./types";
-import type { Project, UnifiedDeploymentLogMessages } from "@cloudflare/types";
+import type { PagesConfigCache } from "./types";
+import type {
+	Deployment,
+	DeploymentStage,
+	Project,
+	UnifiedDeploymentLogMessages,
+} from "@cloudflare/types";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -338,30 +346,47 @@ export const Handler = async (args: PagesDeployArgs) => {
 	});
 
 	let latestDeploymentStage: DeploymentStage | undefined;
+	let attempts = 0;
 
-	// can this ever become an infinite loop?
+	logger.log("🌎 Checking deployment status...");
+
 	while (
+		attempts < MAX_DEPLOYMENT_STATUS_ATTEMPTS &&
 		latestDeploymentStage?.name !== "deploy" &&
 		latestDeploymentStage?.status !== "success" &&
 		latestDeploymentStage?.status !== "failure"
 	) {
 		try {
+			/*
+			 * Exponential backoff
+			 * On every retry, exponentially increase the wait time: 1 second, then
+			 * 2s, then 4s, then 8s, etc.
+			 */
+			await new Promise((resolvePromise) =>
+				setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+			);
+
+			logger.debug(
+				`attempt #${attempts}: Attempting to fetch status for deployment with id "${deploymentResponse.id}" ...`
+			);
+
 			const deployment = await fetchResult<Deployment>(
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
 			);
 			latestDeploymentStage = deployment.latest_stage;
 		} catch (err) {
+			// don't retry if API call retruned an error
 			logger.debug(
 				`Attempt to get deployment status for deployment with id "${deploymentResponse.id}" failed: ${err}`
 			);
 		}
 	}
 
-	if (latestDeploymentStage.status === "success") {
+	if (latestDeploymentStage?.status === "success") {
 		logger.log(
 			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
 		);
-	} else {
+	} else if (latestDeploymentStage?.status === "failure") {
 		// get persistent logs so we can show users the failure message
 		const logs = await fetchResult<UnifiedDeploymentLogMessages>(
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
@@ -371,6 +396,12 @@ export const Handler = async (args: PagesDeployArgs) => {
 
 		logger.error(failureMessage.replace("Error:", "").trim());
 		logger.log("❌ Deployment failed!");
+	} else {
+		logger.log(
+			`✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.\n\n` +
+				`⚡️ Visit your deployment at ${deploymentResponse.url}\n` +
+				`⚡️ Check the deployment logs on the Cloudflare dashboard: https://dash.cloudflare.com/${accountId}/pages/view/${projectName}/${deploymentResponse.id}`
+		);
 	}
 
 	await metrics.sendMetricsEvent("create pages deployment");
