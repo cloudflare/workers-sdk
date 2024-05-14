@@ -363,17 +363,15 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 		}
 	);
 
-	resourceTest.only(
-		"exposes KV namespace bindings",
-		async ({ kv, run, seed }) => {
-			const ns = await kv(isLocal);
-			await run(
-				`wrangler kv:key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
-			);
+	resourceTest("exposes KV namespace bindings", async ({ kv, run, seed }) => {
+		const ns = await kv(isLocal);
+		await run(
+			`wrangler kv:key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
+		);
 
-			const workerName = generateResourceName();
-			await seed({
-				"wrangler.toml": dedent`
+		const workerName = generateResourceName();
+		await seed({
+			"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -381,7 +379,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 					{ binding = "NAMESPACE", id = "${ns}", preview_id = "${ns}" }
 				]
 			`,
-				"src/index.ts": dedent`
+			"src/index.ts": dedent`
 				export default {
 					async fetch(request, env, ctx) {
 						const value = await env.NAMESPACE.get("existing-key");
@@ -390,18 +388,17 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 					}
 				}
 			`,
-			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
-			const { url } = await waitForReady(worker);
-			const res = await fetch(url);
-			expect(await res.text()).toBe("existing-value");
+		});
+		const worker = run(`wrangler dev ${runtimeFlags}`);
+		const { url } = await waitForReady(worker);
+		const res = await fetch(url);
+		expect(await res.text()).toBe("existing-value");
 
-			const result = await run(
-				`wrangler kv:key get ${resourceFlags} --namespace-id=${ns} new-key`
-			);
-			expect(result).toBe("new-value");
-		}
-	);
+		const result = await run(
+			`wrangler kv:key get ${resourceFlags} --namespace-id=${ns} new-key`
+		);
+		expect(result).toBe("new-value");
+	});
 
 	e2eTest("supports Workers Sites bindings", async ({ seed, run }) => {
 		const workerName = generateResourceName();
