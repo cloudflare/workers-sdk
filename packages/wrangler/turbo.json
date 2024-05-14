@@ -4,9 +4,10 @@
 	"pipeline": {
 		"build": {
 			"inputs": [
+				"!**/__tests__/**",
+				"!**/.wrangler/**",
 				"bin/**",
 				"src/**",
-				"**/__tests__/**",
 				"scripts/**",
 				"templates/**",
 				"*.json",
@@ -55,7 +56,7 @@
 			]
 		},
 		"test:ci": {
-			"inputs": ["src/__tests__/**"],
+			"inputs": ["!**/.wrangler/**", "**/__tests__/**"],
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {
