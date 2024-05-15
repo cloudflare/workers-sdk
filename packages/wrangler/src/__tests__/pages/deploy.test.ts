@@ -543,6 +543,217 @@ describe("pages deploy", () => {
 	`);
 	});
 
+	it("should retry GET /deployments/:deploymentId", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up /functions
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+		const a = true;
+		a();
+
+		export async function onRequest() {
+			return new Response("Hello, world!");
+		}
+		`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let getProjectRequestCount = 0;
+		let getDeploymentDetailsRequestCount = 0;
+
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+
+					// make sure this is all we uploaded
+					expect([...body.keys()]).toEqual([
+						"manifest",
+						"functions-filepath-routing-config.json",
+						"_worker.bundle",
+						"_routes.json",
+					]);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					getDeploymentDetailsRequestCount++;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					if (getDeploymentDetailsRequestCount < 3) {
+						// return a deployment stage != `deploy` for first 2 requests
+						// this will force wrangler to retry
+						return res(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "initialize",
+										status: "active",
+									},
+								},
+							})
+						);
+					} else {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							})
+						);
+					}
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy public --project-name=foo");
+
+		expect(getProjectRequestCount).toEqual(2);
+		expect(getDeploymentDetailsRequestCount).toEqual(3);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Uploading Functions bundle
+		🌎 Checking deployment status...
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	it("should refetch a JWT if it expires while uploading", async () => {
 		writeFileSync("logo.txt", "foobar");
 		mockGetUploadTokenRequest(
@@ -4068,6 +4279,443 @@ async function onRequest() {
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
+
+	it("should show a failure message, and appropriate logs, if the deployment of a Functions project failed", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up /functions
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+		const a = true;
+		a();
+
+		export async function onRequest() {
+			return new Response("Hello, world!");
+		}
+		`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let getProjectRequestCount = 0;
+
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(`*/pages/assets/upsert-hashes`, async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+
+					// make sure this is all we uploaded
+					expect([...body.keys()]).toEqual([
+						"manifest",
+						"functions-filepath-routing-config.json",
+						"_worker.bundle",
+						"_routes.json",
+					]);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "failure",
+								},
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId/history/logs?size=10000000",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								total: 1,
+								data: [
+									{
+										line: "Error: Failed to publish your Function. Got error: Uncaught TypeError: a is not a function\n  at functionsWorker-0.11031665179307093.js:41:1\n",
+										ts: "2024-05-13T12:12:45.606855Z",
+									},
+								],
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy public --project-name=foo");
+
+		expect(getProjectRequestCount).toEqual(2);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Uploading Functions bundle
+		🌎 Checking deployment status...
+		❌ Deployment failed!"
+	`);
+
+		expect(std.err).toMatchInlineSnapshot(`
+		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to publish your Function. Got error: Uncaught TypeError: a is not a function[0m
+
+		    at functionsWorker-0.11031665179307093.js:41:1
+
+		"
+	`);
+	});
+
+	it("should show a failure message, and appropriate logs, if the deployment of an Advanced Mode project failed", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up _worker.js
+		writeFileSync(
+			"public/_worker.js",
+			`
+			const a = true;
+			a();
+
+      export default {
+        async fetch(request, env) {
+          const url = new URL(request.url);
+          console.log("SOMETHING FROM WITHIN THE WORKER");
+          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+        }
+      };
+    `
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let getProjectRequestCount = 0;
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: true,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle");
+
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						["manifest", "_worker.bundle"].sort()
+					);
+
+					expect(manifest).toMatchInlineSnapshot(`
+				                                      Object {
+				                                        "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				                                      }
+			                                `);
+
+					expect(workerHasD1Shim(workerBundle as string)).toBeFalsy();
+					expect(workerBundle).toContain(
+						`console.log("SOMETHING FROM WITHIN THE WORKER");`
+					);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "failure",
+								},
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId/history/logs?size=10000000",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								total: 1,
+								data: [
+									{
+										line: "Error: Failed to publish your Function. Got error: Uncaught TypeError: a is not a function\n  at functionsWorker-0.11031665179307093.js:41:1\n",
+										ts: "2024-05-13T12:12:45.606855Z",
+									},
+								],
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async (req, res, ctx) => {
+					getProjectRequestCount++;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: {
+									production: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+									preview: {
+										d1_databases: { MY_D1_DB: { id: "fake-db" } },
+									},
+								},
+							} as Partial<Project>,
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy public --project-name=foo");
+
+		expect(getProjectRequestCount).toEqual(2);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
+		❌ Deployment failed!"
+	`);
+
+		expect(std.err).toMatchInlineSnapshot(`
+		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to publish your Function. Got error: Uncaught TypeError: a is not a function[0m
+
+		    at functionsWorker-0.11031665179307093.js:41:1
+
+		"
+	`);
+	});
+
+	describe("with Pages Functions", () => {});
+
+	describe("in Advanced Mode [_worker,js]", () => {});
+
+	describe("with wrangler.toml configuration", () => {});
 
 	describe("_worker.js bundling", () => {
 		beforeEach(() => {
