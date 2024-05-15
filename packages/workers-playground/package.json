@@ -61,7 +61,7 @@
 		"eslint-plugin-react-refresh": "^0.4.1",
 		"tsx": "^3.12.8",
 		"typescript": "^5.0.2",
-		"undici": "5.28.3",
+		"undici": "5.28.4",
 		"vite-plugin-rewrite-all": "^1.0.1",
 		"wrangler": "workspace:^"
 	}
