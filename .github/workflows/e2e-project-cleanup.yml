@@ -5,8 +5,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *" # Run at 3am each day
-env:
-  node-version: 18.17.1
 jobs:
   cleanup:
     timeout-minutes: 30

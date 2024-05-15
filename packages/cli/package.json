@@ -24,7 +24,7 @@
 	"devDependencies": {
 		"@clack/core": "^0.3.2",
 		"@clack/prompts": "^0.6.3",
-		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@typescript-eslint/eslint-plugin": "^5.55.0",
 		"@typescript-eslint/parser": "^5.55.0",
