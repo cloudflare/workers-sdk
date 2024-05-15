@@ -74,7 +74,7 @@ describe("pages deploy", () => {
 	`);
 	});
 
-	it("should throw an error if no `[<directory>]` arg is specified in the `pages deploy` command", async () => {
+	it("should error if no `[<directory>]` arg is specified in the `pages deploy` command", async () => {
 		await expect(
 			runWrangler("pages deploy")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -82,7 +82,7 @@ describe("pages deploy", () => {
 		);
 	});
 
-	it("should throw an error if no `[--project-name]` is specified", async () => {
+	it("should error if no `[--project-name]` is specified", async () => {
 		await expect(
 			runWrangler("pages deploy public")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -161,7 +161,31 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -193,6 +217,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -296,7 +321,32 @@ describe("pages deploy", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
+							result: {
+								id: "abc-def-ghi",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("abc-def-ghi");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
 						})
 					);
 				}
@@ -330,6 +380,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -430,28 +481,20 @@ describe("pages deploy", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: { url: "https://abcxyz.foo.pages.dev/" },
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
 							})
 						);
 					}
 				}
 			),
-			rest.post(
-				"*/accounts/:accountId/pages/projects/foo/deployments",
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
-					requests.push(req);
 					expect(req.params.accountId).toEqual("some-account-id");
-					expect(await (req as RestRequestWithFormData).formData())
-						.toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+					expect(req.params.deploymentId).toEqual("123-456-789");
 
 					return res.once(
 						ctx.status(200),
@@ -459,7 +502,12 @@ describe("pages deploy", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
 						})
 					);
 				}
@@ -490,6 +538,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -593,7 +642,32 @@ describe("pages deploy", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
 						})
 					);
 				}
@@ -630,6 +704,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -721,7 +796,31 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -790,6 +889,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -880,7 +980,32 @@ describe("pages deploy", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
+							result: {
+								id: "abc-def-ghi",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("abc-def-ghi");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
 						})
 					);
 				}
@@ -948,6 +1073,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1039,7 +1165,32 @@ describe("pages deploy", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
 						})
 					);
 				}
@@ -1108,6 +1259,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1186,7 +1338,32 @@ describe("pages deploy", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: { url: "https://abcxyz.foo.pages.dev/" },
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
 						})
 					);
 				}
@@ -1385,7 +1562,30 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -1421,6 +1621,7 @@ describe("pages deploy", () => {
 		✨ Success! Uploaded 1 files (TIMINGS)
 
 		✨ Uploading Functions bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -1532,7 +1733,30 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -1575,6 +1799,7 @@ describe("pages deploy", () => {
 
 		✨ Compiled Worker successfully
 		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -1685,7 +1910,30 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -1834,7 +2082,30 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -1873,6 +2144,7 @@ describe("pages deploy", () => {
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
 		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -2064,7 +2336,30 @@ describe("pages deploy", () => {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -2101,6 +2396,7 @@ describe("pages deploy", () => {
 
 		✨ Uploading Functions bundle
 		✨ Uploading _routes.json
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -2409,7 +2705,30 @@ and that at least one include rule is provided.
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -2446,6 +2765,7 @@ and that at least one include rule is provided.
 		✨ Compiled Worker successfully
 		✨ Uploading Worker bundle
 		✨ Uploading _routes.json
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -2726,7 +3046,30 @@ and that at least one include rule is provided.
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -2761,6 +3104,7 @@ and that at least one include rule is provided.
 
 		✨ Compiled Worker successfully
 		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -2942,7 +3286,30 @@ async function onRequest() {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -2980,6 +3347,7 @@ async function onRequest() {
 		✨ Success! Uploaded 1 files (TIMINGS)
 
 		✨ Uploading Functions bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -3177,7 +3545,30 @@ async function onRequest() {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -3215,6 +3606,7 @@ async function onRequest() {
 
 		✨ Compiled Worker successfully
 		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -3346,7 +3738,30 @@ async function onRequest() {
 							errors: [],
 							messages: [],
 							result: {
+								id: "123-456-789",
 								url: "https://abcxyz.pages-is-awesome.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/pages-is-awesome/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("123-456-789");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -3389,13 +3804,14 @@ async function onRequest() {
 
 		✨ Compiled Worker successfully
 		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
 	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
 
-	it("should throw an error if user attempts to specify a custom `wrangler.toml` file path", async () => {
+	it("should error if user attempts to specify a custom `wrangler.toml` file path", async () => {
 		await expect(
 			runWrangler("pages deploy --config foo.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -3580,7 +3996,30 @@ async function onRequest() {
 							errors: [],
 							messages: [],
 							result: {
+								id: "abc-def-ghi",
 								url: "https://abcxyz.pages-project.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/pages-project/deployments/:deploymentId",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.deploymentId).toEqual("abc-def-ghi");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
 							},
 						})
 					);
@@ -3623,6 +4062,7 @@ async function onRequest() {
 
 		✨ Compiled Worker successfully
 		✨ Uploading Worker bundle
+		🌎 Checking deployment status...
 		✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
 	`);
 
@@ -3695,7 +4135,30 @@ async function onRequest() {
 								errors: [],
 								messages: [],
 								result: {
+									id: "123-456-789",
 									url: "https://abcxyz.foo.pages.dev/",
+								},
+							})
+						);
+					}
+				),
+				rest.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						expect(req.params.deploymentId).toEqual("123-456-789");
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
 								},
 							})
 						);
