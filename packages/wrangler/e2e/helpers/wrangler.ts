@@ -19,7 +19,9 @@ export function runWrangler(
 	// The caller is responsible for cleaning up Wrangler processes. `runWrangler` will register started processes in this Set
 	cleanup?: Set<ChildProcess>
 ) {
-	if (options.debug) process.env.WRANGLER_LOG = "debug";
+	if (options.debug) {
+		process.env.WRANGLER_LOG = "debug";
+	}
 	// Enforce a `wrangler` prefix to make commands clearer to read
 	if (!wranglerCommand.startsWith("wrangler ")) {
 		throw new Error(
@@ -35,7 +37,9 @@ export function runWrangler(
 		stdio: "pipe",
 		env: options.env,
 	});
-	if (cleanup) cleanup.add(wranglerProcess);
+	if (cleanup) {
+		cleanup.add(wranglerProcess);
+	}
 	const output = new PassThrough();
 	wranglerProcess.stdout.pipe(output);
 	wranglerProcess.stderr.pipe(output);

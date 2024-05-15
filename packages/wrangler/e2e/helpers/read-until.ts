@@ -24,7 +24,9 @@ export async function readUntil(
 				throw new Error(`Exhausted matching ${regExp}:\n${read()}`);
 			}
 			const match = result.value.match(regExp);
-			if (match !== null) return match;
+			if (match !== null) {
+				return match;
+			}
 			readArray.push(result.value);
 		}
 	} finally {

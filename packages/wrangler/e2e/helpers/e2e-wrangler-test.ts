@@ -55,7 +55,9 @@ export const e2eTest = test.extend<TestContext>({
 
 		await use(async (isLocal) => {
 			const name = generateResourceName("kv").replaceAll("-", "_");
-			if (isLocal) return name;
+			if (isLocal) {
+				return name;
+			}
 
 			const result = await run(`wrangler kv:namespace create ${name}`);
 			const match = /id = "([0-9a-f]{32})"/.exec(result);
@@ -74,7 +76,9 @@ export const e2eTest = test.extend<TestContext>({
 
 		await use(async (isLocal) => {
 			const name = generateResourceName("r2");
-			if (isLocal) return name;
+			if (isLocal) {
+				return name;
+			}
 
 			await run(`wrangler r2 bucket create ${name}`);
 			created.add(name);
@@ -91,7 +95,9 @@ export const e2eTest = test.extend<TestContext>({
 
 		await use(async (isLocal) => {
 			const name = generateResourceName("d1");
-			if (isLocal) return { id: crypto.randomUUID(), name };
+			if (isLocal) {
+				return { id: crypto.randomUUID(), name };
+			}
 
 			const result = await run(`wrangler d1 create ${name}`);
 			const match = /database_id = "([0-9a-f-]{36})"/.exec(result);
