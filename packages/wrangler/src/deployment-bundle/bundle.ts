@@ -368,8 +368,9 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
-		if (!legacyNodeCompat && isBuildFailure(e))
+		if (!legacyNodeCompat && isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, forPages);
+		}
 		throw e;
 	}
 

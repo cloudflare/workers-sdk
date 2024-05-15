@@ -126,7 +126,9 @@ export function sleep(ms: number) {
 const scriptStartupErrorRegex = /startup/i;
 
 function errIsScriptSize(err: unknown): err is { code: 10027 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10027 = workers.api.error.script_too_large
 	if ((err as { code: number }).code === 10027) {
@@ -137,7 +139,9 @@ function errIsScriptSize(err: unknown): err is { code: 10027 } {
 }
 
 function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10021 = validation error
 	// no explicit error code for more granular errors than "invalid script"
@@ -265,7 +269,9 @@ export async function publishCustomDomains(
 			const message = `Custom Domains already exist for these domains:
 ${existingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) return fail();
+			if (!(await confirm(message))) {
+				return fail();
+			}
 			config.override_existing_origin = true;
 		}
 
@@ -276,7 +282,9 @@ Update them to point to this script instead?`;
 			const message = `You already have DNS records that conflict for these Custom Domains:
 ${conflicitingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) return fail();
+			if (!(await confirm(message))) {
+				return fail();
+			}
 			config.override_existing_dns_record = true;
 		}
 	}
@@ -674,8 +682,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
-		else void bundleSizePromise;
+		if (process.env.JEST_WORKER_ID !== undefined) {
+			await bundleSizePromise;
+		} else {
+			void bundleSizePromise;
+		}
 
 		const withoutStaticAssets = {
 			...bindings,
@@ -730,15 +741,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					// Print some useful information returned after publishing
 					// Not all fields will be populated for every worker
 					// These fields are likely to be scraped by tools, so do not rename
-					if (result.id) logger.log("Worker ID: ", result.id);
-					if (result.etag) logger.log("Worker ETag: ", result.etag);
-					if (result.pipeline_hash)
+					if (result.id) {
+						logger.log("Worker ID: ", result.id);
+					}
+					if (result.etag) {
+						logger.log("Worker ETag: ", result.etag);
+					}
+					if (result.pipeline_hash) {
 						logger.log("Worker PipelineHash: ", result.pipeline_hash);
-					if (result.mutable_pipeline_id)
+					}
+					if (result.mutable_pipeline_id) {
 						logger.log(
 							"Worker Mutable PipelineID (Development ONLY!):",
 							result.mutable_pipeline_id
 						);
+					}
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
@@ -764,12 +781,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						if (bundleType === "commonjs") {
+							return resolvedEntryPointPath;
+						}
 						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						if (moduleName === entryPointName) {
+							return resolvedEntryPointPath;
+						}
 						// Otherwise, return the file path of the matching module (if any)
 						for (const module of modules) {
-							if (moduleName === module.name) return module.filePath;
+							if (moduleName === module.name) {
+								return module.filePath;
+							}
 						}
 					};
 					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>

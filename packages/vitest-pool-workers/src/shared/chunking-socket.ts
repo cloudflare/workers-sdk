@@ -29,7 +29,9 @@ export function createChunkingSocket(
 				message = chunks + decoder.decode();
 				chunks = undefined;
 			}
-			for (const listener of listeners) listener(message);
+			for (const listener of listeners) {
+				listener(message);
+			}
 		} else {
 			// If this isn't a `string` message, it must be a chunk
 			chunks ??= "";

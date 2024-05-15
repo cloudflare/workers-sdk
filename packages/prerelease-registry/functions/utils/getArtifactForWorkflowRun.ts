@@ -26,7 +26,9 @@ export const getArtifactForWorkflowRun = async ({
 	const cache = caches.default;
 
 	const cachedResponse = await cache.match(cacheKey);
-	if (cachedResponse && cachedResponse.status === 200) return cachedResponse;
+	if (cachedResponse && cachedResponse.status === 200) {
+		return cachedResponse;
+	}
 
 	try {
 		const artifactsResponse = await gitHubFetch(
@@ -60,11 +62,12 @@ export const getArtifactForWorkflowRun = async ({
 		const artifact = artifacts.find(
 			(artifactCandidate) => artifactCandidate.name === name
 		);
-		if (artifact === undefined)
+		if (artifact === undefined) {
 			return Response.json(
 				{ artifact, name, "artifacts.length": artifacts.length },
 				{ status: 404 }
 			);
+		}
 
 		const redirResponse = await gitHubFetch(artifact.archive_download_url, {
 			// Azure will block the request if we auto redirect because
@@ -128,8 +131,9 @@ export const getArtifactForWorkflowRun = async ({
 		const files = zip.files;
 		const fileNames = Object.keys(files);
 		const tgzFileName = fileNames.find((fileName) => fileName.endsWith(".tgz"));
-		if (tgzFileName === undefined)
+		if (tgzFileName === undefined) {
 			return Response.json({ fileNames }, { status: 404 });
+		}
 
 		const tgzBlob = await files[tgzFileName].async("blob");
 		const response = new Response(tgzBlob, {

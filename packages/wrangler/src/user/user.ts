@@ -394,7 +394,9 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 	// get refreshToken/accessToken from fs if exists
 	try {
 		// if the environment variable is available, we don't need to do anything here
-		if (getAuthFromEnv()) return;
+		if (getAuthFromEnv()) {
+			return;
+		}
 
 		// otherwise try loading from the user auth config file.
 		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
@@ -449,10 +451,14 @@ export function getAPIToken(): ApiCredentials | undefined {
 	}
 
 	const localAPIToken = getAuthFromEnv();
-	if (localAPIToken) return localAPIToken;
+	if (localAPIToken) {
+		return localAPIToken;
+	}
 
 	const storedAccessToken = LocalState.accessToken?.value;
-	if (storedAccessToken) return { apiToken: storedAccessToken };
+	if (storedAccessToken) {
+		return { apiToken: storedAccessToken };
+	}
 
 	return undefined;
 }
@@ -955,13 +961,17 @@ export async function login(
 				server.close((closeErr?: Error) => {
 					if (error || closeErr) {
 						reject(error || closeErr);
-					} else resolve(status);
+					} else {
+						resolve(status);
+					}
 				});
 			}
 
 			assert(req.url, "This request doesn't have a URL"); // This should never happen
 			const { pathname, query } = url.parse(req.url, true);
-			if (req.method !== "GET") return res.end("OK");
+			if (req.method !== "GET") {
+				return res.end("OK");
+			}
 			switch (pathname) {
 				case "/oauth/callback": {
 					let hasAuthCode = false;
@@ -1112,7 +1122,9 @@ export function listScopes(message = "💁 Available scopes:"): void {
 
 export async function getAccountId(): Promise<string | undefined> {
 	const apiToken = getAPIToken();
-	if (!apiToken) return;
+	if (!apiToken) {
+		return;
+	}
 
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();

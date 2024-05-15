@@ -142,7 +142,9 @@ export function useEsbuild({
 					const errors = result.errors;
 					const warnings = result.warnings;
 					if (errors.length > 0) {
-						if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(result.errors);
+						if (!legacyNodeCompat) {
+							rewriteNodeCompatBuildFailure(result.errors);
+						}
 						logBuildFailure(errors, warnings);
 						return;
 					}
@@ -162,7 +164,9 @@ export function useEsbuild({
 		};
 
 		async function build() {
-			if (!destination) return;
+			if (!destination) {
+				return;
+			}
 
 			const newAdditionalModules = await getAdditionalModules();
 			const bundleResult =

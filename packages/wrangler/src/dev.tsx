@@ -735,7 +735,9 @@ async function validateDevServerSettings(
 	// React/Ink and useEffect()s, which swallow the error and turn it into a logw. Because it's a non-recoverable user error,
 	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
 	// the error to be thrown where it will correctly exit the Wrangler process
-	if (args.remote) await getZoneIdForPreview(host, routes);
+	if (args.remote) {
+		await getZoneIdForPreview(host, routes);
+	}
 	const initialIp = args.ip || config.dev.ip;
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);

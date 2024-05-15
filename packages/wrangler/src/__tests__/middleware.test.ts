@@ -58,7 +58,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -89,7 +91,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"OK"`);
 				await worker.stop();
 			});
@@ -123,7 +127,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
 				await worker.stop();
 			});
@@ -154,7 +160,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -183,7 +191,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -212,7 +222,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"OK"`);
 				await worker.stop();
 			});
@@ -244,7 +256,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
 				await worker.stop();
 			});
@@ -304,7 +318,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -366,7 +382,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -396,7 +414,9 @@ describe("middleware", () => {
 				const resp = await worker.fetch();
 				const status = resp?.status;
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				const testHeader = resp?.headers.get("x-test");
 				expect(status).toEqual(500);
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
@@ -436,7 +456,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world0"`);
 				await worker.stop();
 			});
@@ -486,7 +508,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -545,7 +569,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -575,7 +601,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -606,7 +634,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -636,7 +666,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -667,7 +699,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				await worker.stop();
 			});
@@ -694,7 +728,9 @@ describe("middleware", () => {
 				const resp = await worker.fetch();
 				const status = resp?.status;
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				const testHeader = resp?.headers.get("x-test");
 				expect(status).toEqual(500);
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
@@ -724,7 +760,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world1"`);
 				await worker.stop();
 			});
@@ -755,7 +793,9 @@ describe("middleware", () => {
 
 				const resp = await worker.fetch();
 				let text;
-				if (resp) text = await resp.text();
+				if (resp) {
+					text = await resp.text();
+				}
 				expect(text).toMatchInlineSnapshot(`"Hello world0"`);
 				await worker.stop();
 			});

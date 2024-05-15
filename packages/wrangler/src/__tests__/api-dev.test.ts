@@ -172,7 +172,9 @@ describe("unstable dev fetch input parsing", () => {
 		});
 		const resp = await worker.fetch(req);
 		let text;
-		if (resp) text = await resp.text();
+		if (resp) {
+			text = await resp.text();
+		}
 		expect(text).toMatchInlineSnapshot(`"requestPOST"`);
 		await worker.stop();
 	});
@@ -200,7 +202,9 @@ describe("unstable dev fetch input parsing", () => {
 		const url = new URL("http://localhost:80/test");
 		const resp = await worker.fetch(url);
 		let text;
-		if (resp) text = await resp.text();
+		if (resp) {
+			text = await resp.text();
+		}
 		expect(text).toMatchInlineSnapshot(`"request"`);
 		await worker.stop();
 	});
@@ -227,7 +231,9 @@ describe("unstable dev fetch input parsing", () => {
 		});
 		const resp = await worker.fetch("http://example.com/test");
 		let text;
-		if (resp) text = await resp.text();
+		if (resp) {
+			text = await resp.text();
+		}
 		expect(text).toMatchInlineSnapshot(`"request"`);
 		await worker.stop();
 	});
@@ -254,7 +260,9 @@ describe("unstable dev fetch input parsing", () => {
 		});
 		const resp = await worker.fetch("/test");
 		let text;
-		if (resp) text = await resp.text();
+		if (resp) {
+			text = await resp.text();
+		}
 		expect(text).toMatchInlineSnapshot(`"request"`);
 		await worker.stop();
 	});
@@ -281,7 +289,9 @@ describe("unstable dev fetch input parsing", () => {
 		});
 		const resp = await worker.fetch("");
 		let text;
-		if (resp) text = await resp.text();
+		if (resp) {
+			text = await resp.text();
+		}
 		expect(text).toMatchInlineSnapshot(`"Hello world"`);
 		await worker.stop();
 	});

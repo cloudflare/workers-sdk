@@ -109,8 +109,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 
 	const config = readConfig(args.config, args);
 
-	if (file && command)
+	if (file && command) {
 		return logger.error(`Error: can't provide both --command and --file.`);
+	}
 
 	const isInteractive = process.stdout.isTTY;
 	try {
@@ -129,7 +130,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		});
 
 		// Early exit if prompt rejected
-		if (!response) return;
+		if (!response) {
+			return;
+		}
 
 		if (isInteractive && !json) {
 			// Render table if single result
@@ -206,16 +209,20 @@ export async function executeSql({
 	}
 
 	const sql = file ? readFileSync(file) : command;
-	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
+	if (!sql) {
+		throw new UserError(`Error: must provide --command or --file.`);
+	}
 	if (local && remote) {
 		throw new UserError(
 			`Error: can't use --local and --remote at the same time`
 		);
 	}
-	if (preview && !remote)
+	if (preview && !remote) {
 		throw new UserError(`Error: can't use --preview without --remote`);
-	if (persistTo && !local)
+	}
+	if (persistTo && !local) {
 		throw new UserError(`Error: can't use --persist-to without --local`);
+	}
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
 
@@ -244,7 +251,9 @@ export async function executeSql({
 					persistTo,
 				});
 
-	if (json) logger.loggerLevel = existingLogLevel;
+	if (json) {
+		logger.loggerLevel = existingLogLevel;
+	}
 	return result;
 }
 
@@ -300,8 +309,12 @@ async function executeLocally({
 		results: (result.results ?? []).map((row) =>
 			Object.fromEntries(
 				Object.entries(row).map(([key, value]) => {
-					if (Array.isArray(value)) value = `[${value.join(", ")}]`;
-					if (value === null) value = "null";
+					if (Array.isArray(value)) {
+						value = `[${value.join(", ")}]`;
+					}
+					if (value === null) {
+						value = "null";
+					}
 					return [key, value];
 				})
 			)
@@ -335,7 +348,9 @@ async function executeRemotely({
 			const ok = await confirm(
 				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
 			);
-			if (!ok) return null;
+			if (!ok) {
+				return null;
+			}
 			logger.log(`🌀 Let's go`);
 		} else {
 			logger.error(warning);
@@ -363,10 +378,11 @@ async function executeRemotely({
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
-		if (multiple_batches)
+		if (multiple_batches) {
 			logger.log(
 				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
 			);
+		}
 
 		const result = await fetchResult<QueryResult[]>(
 			`/accounts/${accountId}/d1/database/${dbUuid}/query`,

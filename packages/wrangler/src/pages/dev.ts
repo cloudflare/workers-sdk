@@ -288,7 +288,9 @@ export const Handler = async (args: PagesDevArguments) => {
 			port: args.proxy,
 			command,
 		});
-		if (proxyPort === undefined) return undefined;
+		if (proxyPort === undefined) {
+			return undefined;
+		}
 	} else {
 		directory = resolve(directory);
 	}
@@ -743,7 +745,9 @@ function getPort(pid: number) {
 			.filter((line) => line !== null) as RegExpExecArray[];
 
 		const match = matches[0];
-		if (match) return parseInt(match[1]);
+		if (match) {
+			return parseInt(match[1]);
+		}
 	} catch (thrown) {
 		logger.error(
 			`Error scanning for ports of process with PID ${pid}: ${thrown}`

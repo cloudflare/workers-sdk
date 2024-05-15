@@ -105,16 +105,22 @@ export function setupSentry() {
 			beforeSend(event) {
 				delete event.server_name; // Computer name may contain PII
 				// Culture contains timezone and locale
-				if (event.contexts !== undefined) delete event.contexts.culture;
+				if (event.contexts !== undefined) {
+					delete event.contexts.culture;
+				}
 
 				// Rewrite Wrangler install location which may contain PII
 				const fakeInstallPath =
 					process.platform === "win32" ? "C:\\Project\\" : "/project/";
 				for (const exception of event.exception?.values ?? []) {
 					for (const frame of exception.stacktrace?.frames ?? []) {
-						if (frame.filename === undefined) continue;
+						if (frame.filename === undefined) {
+							continue;
+						}
 						const nodeModulesIndex = frame.filename.indexOf("node_modules");
-						if (nodeModulesIndex === -1) continue;
+						if (nodeModulesIndex === -1) {
+							continue;
+						}
 						frame.filename =
 							fakeInstallPath + frame.filename.substring(nodeModulesIndex);
 					}

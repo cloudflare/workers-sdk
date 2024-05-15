@@ -58,8 +58,11 @@ function getPort() {
 			const address = server.address();
 			assert(typeof address === "object" && address !== null);
 			server.close((err) => {
-				if (err) reject(err);
-				else resolve(address.port);
+				if (err) {
+					reject(err);
+				} else {
+					resolve(address.port);
+				}
 			});
 		});
 	});
@@ -113,7 +116,9 @@ async function runDevSession(
 		return bg.promise;
 	} finally {
 		try {
-			if (pid) process.kill(pid);
+			if (pid) {
+				process.kill(pid);
+			}
 		} catch {
 			// Ignore errors if we failed to kill the process (i.e. ESRCH if it's already terminated)
 		}

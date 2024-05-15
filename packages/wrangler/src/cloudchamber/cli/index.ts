@@ -32,8 +32,11 @@ export function pollSSHKeysUntilCondition(
 			SshPublicKeysService.listSshPublicKeys()
 				.then((sshKeys) => {
 					try {
-						if (!onSSHKeys(sshKeys)) setTimeout(() => poll(), 500);
-						else res(sshKeys);
+						if (!onSSHKeys(sshKeys)) {
+							setTimeout(() => poll(), 500);
+						} else {
+							res(sshKeys);
+						}
 					} catch (err) {
 						rej(err);
 					}
@@ -65,8 +68,11 @@ async function pollDeploymentUntilCondition(
 				.then((deployment) => {
 					errCount = 0;
 					try {
-						if (!onDeployment(deployment)) setTimeout(() => poll(), 500);
-						else res(deployment);
+						if (!onDeployment(deployment)) {
+							setTimeout(() => poll(), 500);
+						} else {
+							res(deployment);
+						}
 					} catch (err) {
 						rej(err);
 					}
@@ -94,8 +100,11 @@ async function pollDeploymentUntilConditionWithPlacement(
 			PlacementsService.getPlacement(placementId)
 				.then((placement) => {
 					errCount = 0;
-					if (!onPlacement(placement)) setTimeout(() => poll(), 500);
-					else res(placement);
+					if (!onPlacement(placement)) {
+						setTimeout(() => poll(), 500);
+					} else {
+						res(placement);
+					}
 				})
 				.catch((err) => {
 					errCount++;
@@ -128,8 +137,9 @@ async function waitForEvent(
 	deployment: DeploymentV2,
 	...eventName: EventName[]
 ): Promise<{ event?: PlacementEvent; placement: PlacementWithEvents }> {
-	if (!deployment.current_placement)
+	if (!deployment.current_placement) {
 		throw new Error("unexpected null current placement");
+	}
 	let foundEvent: PlacementEvent | undefined;
 	const placement = await pollDeploymentUntilConditionWithPlacement(
 		deployment.current_placement.id,
@@ -250,7 +260,9 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 				return true;
 			}
 
-			if (!newDeployment.current_placement) return false;
+			if (!newDeployment.current_placement) {
+				return false;
+			}
 
 			if (newDeployment.version > deployment.version) {
 				s.stop();

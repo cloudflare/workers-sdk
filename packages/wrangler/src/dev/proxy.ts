@@ -57,9 +57,10 @@ async function addCfAccessToken(
 	}
 	const token = await getAccessToken(domain);
 	accessTokenRef.current = token;
-	if (token)
+	if (token) {
 		headers["cookie"] =
 			`${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+	}
 }
 /**
  * Rewrite references in request headers
@@ -96,7 +97,9 @@ function writeHead(
 	);
 	for (const [key, values] of Object.entries(res.headers)) {
 		if (Array.isArray(values)) {
-			for (const value of values) socket.write(`${key}: ${value}\r\n`);
+			for (const value of values) {
+				socket.write(`${key}: ${value}\r\n`);
+			}
 		} else {
 			socket.write(`${key}: ${values}\r\n`);
 		}
@@ -525,7 +528,9 @@ function configureProxyServer({
 		addCfPreviewTokenHeader(headers, previewToken.value);
 		headers["host"] = previewToken.host;
 
-		if (originalHead?.byteLength) originalSocket.unshift(originalHead);
+		if (originalHead?.byteLength) {
+			originalSocket.unshift(originalHead);
+		}
 
 		const runtimeRequest = https.request(
 			{
@@ -545,7 +550,9 @@ function configureProxyServer({
 		runtimeRequest.on(
 			"upgrade",
 			(runtimeResponse, runtimeSocket, runtimeHead) => {
-				if (runtimeHead?.byteLength) runtimeSocket.unshift(runtimeHead);
+				if (runtimeHead?.byteLength) {
+					runtimeSocket.unshift(runtimeHead);
+				}
 				writeHead(originalSocket, {
 					httpVersion: "1.1",
 					statusCode: 101,

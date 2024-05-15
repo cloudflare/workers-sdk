@@ -393,8 +393,9 @@ async function promptPercentages(
 				const input = val !== "" ? val : defaultValue;
 				const percentage = parseFloat(input?.toString() ?? "");
 
-				if (isNaN(percentage) || percentage < 0 || percentage > 100)
+				if (isNaN(percentage) || percentage < 0 || percentage > 100) {
 					return "Please enter a number between 0 and 100.";
+				}
 			},
 			renderers: {
 				submit({ value }) {
@@ -429,7 +430,9 @@ async function promptPercentages(
 		if (err instanceof UserError) {
 			// if the user has indicated they'll accept all defaults (yesFlag)
 			// then rethrow to avoid an infinite loop of reprompting
-			if (yesFlag) throw err;
+			if (yesFlag) {
+				throw err;
+			}
 
 			cli.error(err.message, undefined, leftT);
 

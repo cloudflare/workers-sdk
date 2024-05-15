@@ -18,7 +18,9 @@ export async function getLocations(): Promise<Location[]> {
 }
 
 export function idToLocationName(locationId: string): string {
-	if (!cachedAccount) throw new Error("Needs a call to loadAccount beforehand");
+	if (!cachedAccount) {
+		throw new Error("Needs a call to loadAccount beforehand");
+	}
 	const locations = cachedAccount.locations;
 	for (const location of locations) {
 		if (location.location === locationId) {

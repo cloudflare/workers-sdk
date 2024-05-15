@@ -82,7 +82,9 @@ async function runDevSession(
 
 		return bg.promise;
 	} finally {
-		if (pid) process.kill(pid);
+		if (pid) {
+			process.kill(pid);
+		}
 	}
 }
 

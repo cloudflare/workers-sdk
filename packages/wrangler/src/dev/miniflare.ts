@@ -203,7 +203,9 @@ export class WranglerLog extends Log {
 
 	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
-		if (message.includes(EXTERNAL_SERVICE_WORKER_NAME)) return;
+		if (message.includes(EXTERNAL_SERVICE_WORKER_NAME)) {
+			return;
+		}
 		super.log(message);
 	}
 
@@ -211,10 +213,14 @@ export class WranglerLog extends Log {
 		// Only log warning about requesting a compatibility date after the workerd
 		// binary's version once, and only if there's an update available.
 		if (message.startsWith("The latest compatibility date supported by")) {
-			if (this.#warnedCompatibilityDateFallback) return;
+			if (this.#warnedCompatibilityDateFallback) {
+				return;
+			}
 			this.#warnedCompatibilityDateFallback = true;
 			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) return;
+				if (maybeNewVersion === undefined) {
+					return;
+				}
 				message += [
 					"",
 					"Features enabled by your requested compatibility date may not be available.",
@@ -238,7 +244,9 @@ function getIdentifier(name: string) {
 
 export function castLogLevel(level: LoggerLevel): LogLevel {
 	let key = level.toUpperCase() as Uppercase<LoggerLevel>;
-	if (key === "LOG") key = "INFO";
+	if (key === "LOG") {
+		key = "INFO";
+	}
 
 	return LogLevel[key];
 }
@@ -918,7 +926,9 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 	#mutex = new Mutex();
 
 	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		if (opts?.signal?.aborted) return;
+		if (opts?.signal?.aborted) {
+			return;
+		}
 		try {
 			const { options, internalObjects, entrypointNames } =
 				await buildMiniflareOptions(
@@ -926,7 +936,9 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 					config,
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
-			if (opts?.signal?.aborted) return;
+			if (opts?.signal?.aborted) {
+				return;
+			}
 			if (this.#mf === undefined) {
 				this.#mf = new Miniflare(options);
 			} else {
@@ -942,7 +954,9 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 				entrypointAddresses[name] = { host: directUrl.hostname, port };
 			}
 
-			if (opts?.signal?.aborted) return;
+			if (opts?.signal?.aborted) {
+				return;
+			}
 
 			const event = new ReloadedEvent("reloaded", {
 				url,

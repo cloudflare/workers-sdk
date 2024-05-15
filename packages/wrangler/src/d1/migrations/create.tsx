@@ -75,6 +75,8 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 
 function pad(num: number, size: number): string {
 	let newNum = num.toString();
-	while (newNum.length < size) newNum = "0" + newNum;
+	while (newNum.length < size) {
+		newNum = "0" + newNum;
+	}
 	return newNum;
 }

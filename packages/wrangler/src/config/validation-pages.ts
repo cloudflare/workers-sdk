@@ -100,7 +100,9 @@ function validatePagesEnvironmentNames(
 	envNames: string[],
 	diagnostics: Diagnostics
 ) {
-	if (!envNames?.length) return;
+	if (!envNames?.length) {
+		return;
+	}
 
 	const unsupportedPagesEnvNames = envNames.filter(
 		(name) => name !== "preview" && name !== "production"

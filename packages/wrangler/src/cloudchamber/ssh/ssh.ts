@@ -66,8 +66,9 @@ async function retrieveSSHKey(
 		validatePublicSSHKeyCLI(file, { json });
 		return file;
 	} catch (err) {
-		if (!json)
+		if (!json) {
 			logger.debug("couldn't read the file, assuming input is an ssh key");
+		}
 		validatePublicSSHKeyCLI(sshKeyPath, { json });
 		return sshKeyPath;
 	}
@@ -268,7 +269,9 @@ export async function handleListSSHKeysCommand(
 	start("Loading your ssh keys");
 	const [sshKeys, err] = await wrap(pollSSHKeysUntilCondition(() => true));
 	stop();
-	if (err) throw err;
+	if (err) {
+		throw err;
+	}
 
 	if (sshKeys.length === 0) {
 		endSection(
@@ -328,8 +331,12 @@ export async function promptForSSHKey(
 		question: "Name your ssh key in a recognisable format for later",
 		label: "name",
 		validate: (value) => {
-			if (typeof value !== "string") return "unknown error";
-			if (value.length === 0) return "you should fill this input";
+			if (typeof value !== "string") {
+				return "unknown error";
+			}
+			if (value.length === 0) {
+				return "you should fill this input";
+			}
 		},
 		defaultValue: args.name ?? "",
 		initialValue: args.name ?? "",
@@ -344,8 +351,12 @@ export async function promptForSSHKey(
 		question: "Insert the path to your public ssh key",
 		label: "ssh_key",
 		validate: (value) => {
-			if (typeof value !== "string") return "unknown error";
-			if (value.length === 0) return "you should fill this input";
+			if (typeof value !== "string") {
+				return "unknown error";
+			}
+			if (value.length === 0) {
+				return "you should fill this input";
+			}
 		},
 		defaultValue: args.publicKey ?? defaultSSHKeyPath,
 		initialValue: args.publicKey ?? defaultSSHKeyPath,

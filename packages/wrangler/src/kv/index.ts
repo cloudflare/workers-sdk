@@ -730,7 +730,9 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 						config.configPath,
 						namespaceId,
 						async (namespace) => {
-							for (const key of content) await namespace.delete(key);
+							for (const key of content) {
+								await namespace.delete(key);
+							}
 						}
 					);
 

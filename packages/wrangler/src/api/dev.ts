@@ -275,7 +275,9 @@ export function parseRequestInput(
 	protocol: "http" | "https" = "http"
 ): [RequestInfo, RequestInit] {
 	// Make sure URL is absolute
-	if (typeof input === "string") input = new URL(input, "http://placeholder");
+	if (typeof input === "string") {
+		input = new URL(input, "http://placeholder");
+	}
 	// Adapted from Miniflare 3's `dispatchFetch()` function
 	const forward = new Request(input, init);
 	const url = new URL(forward.url);

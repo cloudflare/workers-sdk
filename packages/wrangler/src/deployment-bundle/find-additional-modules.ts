@@ -52,7 +52,9 @@ export async function findAdditionalModules(
 		.relative(entry.moduleRoot, entry.file)
 		.replaceAll("\\", "/");
 
-	if (Array.isArray(rules)) rules = parseRules(rules);
+	if (Array.isArray(rules)) {
+		rules = parseRules(rules);
+	}
 	const modules = (await matchFiles(files, entry.moduleRoot, rules))
 		.filter((m) => m.name !== relativeEntryPoint)
 		.map((m) => ({
@@ -79,7 +81,9 @@ export async function findAdditionalModules(
 		}
 
 		for (const requirement of pythonRequirements.split("\n")) {
-			if (requirement === "") continue;
+			if (requirement === "") {
+				continue;
+			}
 			if (!isValidPythonPackageName(requirement)) {
 				throw new UserError(
 					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
@@ -186,7 +190,9 @@ export async function* findAdditionalModuleWatchDirs(
 	yield root;
 	for (const entry of await readdir(root, { withFileTypes: true })) {
 		if (entry.isDirectory()) {
-			if (entry.name === "node_modules" || entry.name === ".git") continue;
+			if (entry.name === "node_modules" || entry.name === ".git") {
+				continue;
+			}
 			yield* findAdditionalModuleWatchDirs(path.join(root, entry.name));
 		}
 	}

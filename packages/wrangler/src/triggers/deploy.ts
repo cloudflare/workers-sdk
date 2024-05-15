@@ -87,7 +87,9 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 		return;
 	}
 
-	if (!accountId) throw new UserError("Missing accountId");
+	if (!accountId) {
+		throw new UserError("Missing accountId");
+	}
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];

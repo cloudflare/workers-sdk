@@ -21,7 +21,9 @@ export async function getMigrationsPath({
 	createIfMissing: boolean;
 }): Promise<string> {
 	const dir = path.resolve(projectPath, migrationsFolderPath);
-	if (fs.existsSync(dir)) return dir;
+	if (fs.existsSync(dir)) {
+		return dir;
+	}
 
 	const warning = `No migrations folder found.${
 		migrationsFolderPath === DEFAULT_MIGRATION_PATH
@@ -119,7 +121,9 @@ const listAppliedMigrations = async ({
 		batchSize: DEFAULT_BATCH_SIZE,
 	});
 
-	if (!response || response[0].results.length === 0) return [];
+	if (!response || response[0].results.length === 0) {
+		return [];
+	}
 
 	return response[0].results as Migration[];
 };
@@ -131,7 +135,9 @@ function getMigrationNames(migrationsPath: string): Array<string> {
 
 	let dirent;
 	while ((dirent = dir.readSync()) !== null) {
-		if (dirent.name.endsWith(".sql")) migrations.push(dirent.name);
+		if (dirent.name.endsWith(".sql")) {
+			migrations.push(dirent.name);
+		}
 	}
 
 	dir.closeSync();

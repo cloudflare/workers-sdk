@@ -11,7 +11,9 @@ function maybeGetFile(filePath: string | URL) {
 	} catch (e: unknown) {
 		const notFound =
 			typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT";
-		if (!notFound) throw e;
+		if (!notFound) {
+			throw e;
+		}
 	}
 }
 
@@ -21,15 +23,21 @@ export type RetrieveSourceMapFunction = NonNullable<
 export function maybeRetrieveFileSourceMap(
 	filePath?: string
 ): ReturnType<RetrieveSourceMapFunction> {
-	if (filePath === undefined) return null;
+	if (filePath === undefined) {
+		return null;
+	}
 	const contents = maybeGetFile(filePath);
-	if (contents === undefined) return null;
+	if (contents === undefined) {
+		return null;
+	}
 
 	// Find the last source mapping URL if any
 	const mapRegexp = /# sourceMappingURL=(.+)/g;
 	const matches = [...contents.matchAll(mapRegexp)];
 	// If we couldn't find a source mapping URL, there's nothing we can do
-	if (matches.length === 0) return null;
+	if (matches.length === 0) {
+		return null;
+	}
 	const mapMatch = matches[matches.length - 1];
 
 	// Get the source map
@@ -45,7 +53,9 @@ export function maybeRetrieveFileSourceMap(
 		return { map, url: fileUrl.href };
 	} else {
 		const map = maybeGetFile(mapUrl);
-		if (map === undefined) return null;
+		if (map === undefined) {
+			return null;
+		}
 		return { map, url: mapUrl.href };
 	}
 }
@@ -101,7 +111,9 @@ export function getSourceMappedStack(
 	const callFrames = details.stackTrace?.callFrames;
 	// If this exception didn't come with `callFrames`, we can't do any source
 	// mapping without parsing the stack, so just return the description as is
-	if (callFrames === undefined) return description;
+	if (callFrames === undefined) {
+		return description;
+	}
 
 	const nameMessage = details.exception?.description?.split("\n")[0] ?? "";
 	const colonIndex = nameMessage.indexOf(":");
@@ -148,7 +160,9 @@ export function getSourceMappedString(
 	for (let i = 0; i < callSiteLines.length; i++) {
 		// If a call site doesn't have a file name, it's likely invalid, so don't
 		// apply source mapping (see cloudflare/workers-sdk#4668)
-		if (callSites[i].getFileName() === undefined) continue;
+		if (callSites[i].getFileName() === undefined) {
+			continue;
+		}
 
 		const callSiteLine = callSiteLines[i][0];
 		const callSiteAtIndex = callSiteLine.indexOf("at");
@@ -201,7 +215,9 @@ function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 	if (lineMatch[1]) {
 		functionName = lineMatch[1];
 		let methodStart = functionName.lastIndexOf(".");
-		if (functionName[methodStart - 1] == ".") methodStart--;
+		if (functionName[methodStart - 1] == ".") {
+			methodStart--;
+		}
 		if (methodStart > 0) {
 			object = functionName.substring(0, methodStart);
 			method = functionName.substring(methodStart + 1);

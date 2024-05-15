@@ -75,7 +75,9 @@ export const noopModuleCollector: ModuleCollector = {
 // Handles `wrangler`, `wrangler/example`, `wrangler/example.wasm`,
 // `@cloudflare/wrangler`, `@cloudflare/wrangler/example`, etc.
 export function extractPackageName(packagePath: string) {
-	if (packagePath.startsWith(".")) return null;
+	if (packagePath.startsWith(".")) {
+		return null;
+	}
 
 	const match = packagePath.match(/^(@[^/]+\/)?([^/]+)/);
 
@@ -274,7 +276,9 @@ export function createModuleCollector(props: {
 								// callback if `findAdditionalModules` is true. If we didn't
 								// find the module in `modules` in the above `if` block, leave
 								// it to `esbuild` to bundle it.
-								if (isJavaScriptModuleRule(rule)) return;
+								if (isJavaScriptModuleRule(rule)) {
+									return;
+								}
 
 								// Check if this file is possibly from an npm package
 								// and if so, validate the import against the package.json exports

@@ -56,7 +56,9 @@ export interface UserInfo {
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
 	const apiToken = getAPIToken();
-	if (!apiToken) return;
+	if (!apiToken) {
+		return;
+	}
 
 	const tokenPermissions = await getTokenPermissions();
 

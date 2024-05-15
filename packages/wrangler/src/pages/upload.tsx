@@ -196,7 +196,9 @@ export const upload = async (
 
 	for (const bucket of buckets) {
 		// Don't upload empty buckets (can happen for tiny projects)
-		if (bucket.files.length === 0) continue;
+		if (bucket.files.length === 0) {
+			continue;
+		}
 
 		attempts = 0;
 		let gatewayErrors = 0;

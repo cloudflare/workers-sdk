@@ -53,7 +53,9 @@ export const wranglerLogin = async () => {
 	s.start(`Logging into Cloudflare ${dim("checking authentication status")}`);
 	const alreadyLoggedIn = await isLoggedIn();
 	s.stop(brandColor(alreadyLoggedIn ? "logged in" : "not logged in"));
-	if (alreadyLoggedIn) return true;
+	if (alreadyLoggedIn) {
+		return true;
+	}
 
 	s.start(`Logging into Cloudflare ${dim("This will open a browser window")}`);
 

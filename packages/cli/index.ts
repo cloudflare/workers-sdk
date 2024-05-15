@@ -92,8 +92,12 @@ export const format = (
 			(i === 0 ? firstLinePrefix : linePrefix) + space() + formatLine(line)
 	);
 
-	if (newlineBefore) formattedLines.unshift(linePrefix);
-	if (newlineAfter) formattedLines.push(linePrefix);
+	if (newlineBefore) {
+		formattedLines.unshift(linePrefix);
+	}
+	if (newlineAfter) {
+		formattedLines.push(linePrefix);
+	}
 
 	return formattedLines.join("\n");
 };
@@ -119,7 +123,9 @@ export const startSection = (
 			subheading ? dim(subheading) : ""
 		}`
 	);
-	if (printNewLine) newline();
+	if (printNewLine) {
+		newline();
+	}
 };
 
 export const endSection = (heading: string, subheading?: string) => {

@@ -21,7 +21,9 @@ async function waitForWaitUntil(/* mut */ waitUntil: unknown[]): Promise<void> {
 		const results = await Promise.allSettled(waitUntil.splice(0));
 		// Record all rejected promises
 		for (const result of results) {
-			if (result.status === "rejected") errors.push(result.reason);
+			if (result.status === "rejected") {
+				errors.push(result.reason);
+			}
 		}
 	}
 
@@ -56,7 +58,9 @@ class ExecutionContext {
 	[kWaitUntil]: unknown[] = [];
 
 	constructor(flag: typeof kConstructFlag) {
-		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
+		if (flag !== kConstructFlag) {
+			throw new TypeError("Illegal constructor");
+		}
 	}
 
 	waitUntil(promise: unknown) {
@@ -95,7 +99,9 @@ class ScheduledController {
 	readonly cron!: string;
 
 	constructor(flag: typeof kConstructFlag, options?: FetcherScheduledOptions) {
-		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
+		if (flag !== kConstructFlag) {
+			throw new TypeError("Illegal constructor");
+		}
 
 		const scheduledTime = Number(options?.scheduledTime ?? Date.now());
 		const cron = String(options?.cron ?? "");
@@ -155,7 +161,9 @@ class QueueMessage<Body = unknown> /* Message */ {
 		controller: QueueController,
 		message: ServiceBindingQueueMessage<Body>
 	) {
-		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
+		if (flag !== kConstructFlag) {
+			throw new TypeError("Illegal constructor");
+		}
 		this.#controller = controller;
 
 		const id = String(message.id);
@@ -218,7 +226,9 @@ class QueueMessage<Body = unknown> /* Message */ {
 		if (!(this instanceof QueueMessage)) {
 			throw new TypeError("Illegal invocation");
 		}
-		if (this.#controller[kRetryAll]) return;
+		if (this.#controller[kRetryAll]) {
+			return;
+		}
 		if (this.#controller[kAckAll]) {
 			console.warn(
 				`Received a call to retry() on message ${this.id} after ackAll() was already called. ` +
@@ -240,7 +250,9 @@ class QueueMessage<Body = unknown> /* Message */ {
 		if (!(this instanceof QueueMessage)) {
 			throw new TypeError("Illegal invocation");
 		}
-		if (this.#controller[kAckAll]) return;
+		if (this.#controller[kAckAll]) {
+			return;
+		}
 		if (this.#controller[kRetryAll]) {
 			console.warn(
 				`Received a call to ack() on message ${this.id} after retryAll() was already called. ` +
@@ -270,7 +282,9 @@ class QueueController<Body = unknown> /* MessageBatch */ {
 		queueOption: string,
 		messagesOption: ServiceBindingQueueMessage<Body>[]
 	) {
-		if (flag !== kConstructFlag) throw new TypeError("Illegal constructor");
+		if (flag !== kConstructFlag) {
+			throw new TypeError("Illegal constructor");
+		}
 
 		const queue = String(queueOption);
 		const messages = messagesOption.map(
@@ -360,8 +374,12 @@ export async function getQueueResult(
 	const retryMessages: QueueRetryMessage[] = [];
 	const explicitAcks: string[] = [];
 	for (const message of batch.messages) {
-		if (message[kRetry]) retryMessages.push({ msgId: message.id });
-		if (message[kAck]) explicitAcks.push(message.id);
+		if (message[kRetry]) {
+			retryMessages.push({ msgId: message.id });
+		}
+		if (message[kAck]) {
+			explicitAcks.push(message.id);
+		}
 	}
 	return {
 		outcome: "ok",

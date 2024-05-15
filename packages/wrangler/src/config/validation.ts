@@ -2015,8 +2015,9 @@ const validateCflogfwdrObject: (env: string) => ValidatorFn =
 			envName,
 			validateCflogfwdrBinding
 		);
-		if (!bindingsValidation(diagnostics, field, value, topLevelEnv))
+		if (!bindingsValidation(diagnostics, field, value, topLevelEnv)) {
 			return false;
+		}
 
 		const v = value as {
 			bindings: [];

@@ -31,7 +31,9 @@ export function dedent(strings: TemplateStringsArray, ...values: unknown[]) {
 	}
 
 	// If the first line is just whitespace, remove it
-	if (lines.length > 0 && lines[0].trim() === "") lines = lines.slice(1);
+	if (lines.length > 0 && lines[0].trim() === "") {
+		lines = lines.slice(1);
+	}
 
 	// Remove indent from all lines, and return them all joined together
 	lines = lines.map((line) =>

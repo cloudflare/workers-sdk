@@ -161,8 +161,9 @@ app.get(`${rootDomain}/`, async (c) => {
 	const origin = await fetch(c.req.url, c.req);
 	const mutable = new Response(origin.body, origin);
 	const setCookieHeader = cookified.headers.get("Set-Cookie");
-	if (setCookieHeader !== null)
+	if (setCookieHeader !== null) {
 		mutable.headers.set("Set-Cookie", setCookieHeader);
+	}
 
 	return mutable;
 });

@@ -244,7 +244,9 @@ export function createCLIParser(argv: string[]) {
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
 			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
-				if (!(key in process.env)) process.env[key] = value;
+				if (!(key in process.env)) {
+					process.env[key] = value;
+				}
 			}
 			return true;
 		});
@@ -766,7 +768,9 @@ export async function main(argv: string[]): Promise<void> {
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
 		// Middleware called for each sub-command, but only want to record once
-		if (recordedCommand) return;
+		if (recordedCommand) {
+			return;
+		}
 		recordedCommand = true;
 		// `args._` doesn't include any positional arguments (e.g. script name,
 		// key to fetch) or flags
@@ -865,15 +869,19 @@ export async function main(argv: string[]): Promise<void> {
 			// needed, so we can cleanly exit. Note, we don't want to disconnect if
 			// this file was imported in Jest, as that would stop communication with
 			// the test runner.
-			if (typeof jest === "undefined") process.disconnect?.();
+			if (typeof jest === "undefined") {
+				process.disconnect?.();
+			}
 
 			await closeSentry();
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a
 			// command handler.
-			// eslint-disable-next-line no-unsafe-finally
-			if (!cliHandlerThrew) throw e;
+			if (!cliHandlerThrew) {
+				// eslint-disable-next-line no-unsafe-finally
+				throw e;
+			}
 		}
 	}
 }

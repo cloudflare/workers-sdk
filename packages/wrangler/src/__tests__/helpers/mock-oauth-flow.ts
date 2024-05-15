@@ -42,7 +42,9 @@ export const mockOAuthFlow = () => {
 		(
 			openInBrowser as jest.MockedFunction<typeof openInBrowser>
 		).mockImplementation(async (url: string) => {
-			if (respondWith) mockGrantAuthorization({ respondWith });
+			if (respondWith) {
+				mockGrantAuthorization({ respondWith });
+			}
 			// We don't support the grant response timing out.
 			if (oauthGrantResponse === "timeout") {
 				throw "unimplemented";

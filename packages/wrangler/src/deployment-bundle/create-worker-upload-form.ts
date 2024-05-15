@@ -406,7 +406,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		for (const subDir of subDirs) {
 			// Ignore `.` as it's not a subdirectory, and we don't want to
 			// register the manifest module in the root twice.
-			if (subDir === ".") continue;
+			if (subDir === ".") {
+				continue;
+			}
 			const relativePath = path.posix.relative(subDir, manifestModuleName);
 			const filePath = path.posix.join(subDir, manifestModuleName);
 			modules.push({
