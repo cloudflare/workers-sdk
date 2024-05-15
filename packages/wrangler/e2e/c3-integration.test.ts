@@ -6,7 +6,6 @@ import { beforeAll, describe, expect } from "vitest";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { makeRoot } from "./helpers/setup";
-import { waitForReady } from "./helpers/wrangler";
 
 describe("c3 integration", () => {
 	let workerName: string;
@@ -45,10 +44,13 @@ describe("c3 integration", () => {
 		expect(existsSync(path.join(root, workerName))).toBe(true);
 	});
 
-	e2eTest("can run `wrangler dev` on generated worker", async ({ run }) => {
-		const worker = run(`wrangler dev`, { cwd: path.join(root, workerName) });
-		const { url } = await waitForReady(worker);
-		const res = await fetch(url);
-		expect(await res.text()).toBe("Hello World!");
-	});
+	e2eTest(
+		"can run `wrangler dev` on generated worker",
+		async ({ run, waitForReady }) => {
+			const worker = run(`wrangler dev`, { cwd: path.join(root, workerName) });
+			const { url } = await waitForReady(worker);
+			const res = await fetch(url);
+			expect(await res.text()).toBe("Hello World!");
+		}
+	);
 });

@@ -9,165 +9,53 @@ import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { retry } from "./helpers/retry";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import {
-	killAllWranglerDev,
-	waitForReady,
-	waitForReload,
-} from "./helpers/wrangler";
+import { killAllWranglerDev } from "./helpers/wrangler";
 
 beforeEach(killAllWranglerDev);
+afterEach(killAllWranglerDev);
 
-// Use `Agent` with lower timeouts so `fetch()`s inside `retry()`s don't block for a long time
-setGlobalDispatcher(
-	new Agent({
-		connectTimeout: 10_000,
-		headersTimeout: 10_000,
-		bodyTimeout: 10_000,
-	})
+e2eTest(
+	"can import URL from 'url' in node_compat mode",
+	async ({ run, seed }) => {
+		await seed({
+			"wrangler.toml": dedent`
+				name = "worker"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				node_compat = true
+		`,
+			"src/index.ts": dedent`
+				const { URL } = require('url');
+				const { URL: nURL } = require('node:url');
+
+				export default {
+					fetch(request) {
+						const url = new URL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
+						const nUrl = new nURL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
+						return new Response(url + nUrl)
+					}
+				}`,
+		});
+		const worker = run(`wrangler dev`);
+
+		const { url } = await waitForReady(worker);
+
+		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+			`"postgresql://user:password@example.com:12345/dbname?sslmode=disablepostgresql://user:password@example.com:12345/dbname?sslmode=disable"`
+		);
+	}
 );
 
-type MaybePromise<T = void> = T | Promise<T>;
-
-const waitForPortToBeBound = async (port: number) => {
-	await retry(
-		() => false, // only retry if promise below rejects (network error)
-		() => fetch(`http://127.0.0.1:${port}`)
-	);
-};
-
-const waitUntilOutputContains = async (
-	session: SessionData,
-	substring: string,
-	intervalMs = 100
-) => {
-	await retry(
-		(stdout) => !stdout.includes(substring),
-		async () => {
-			await setTimeout(intervalMs);
-			return session.stdout + "\n\n\n" + session.stderr;
-		}
-	);
-};
-
-interface SessionData {
-	port: number;
-	stdout: string;
-	stderr: string;
-}
-
-function getPort() {
-	return new Promise<number>((resolve, reject) => {
-		const server = nodeNet.createServer((socket) => socket.destroy());
-		server.listen(0, () => {
-			const address = server.address();
-			assert(typeof address === "object" && address !== null);
-			server.close((err) => {
-				if (err) reject(err);
-				else resolve(address.port);
-			});
-		});
-	});
-}
-
-async function runDevSession(
-	workerPath: string,
-	flags: string,
-	session: (sessionData: SessionData) => MaybePromise
-) {
-	let pid;
-	try {
-		const portFlagMatch = flags.match(/--port (\d+)/);
-		let port = 0;
-		if (portFlagMatch) {
-			port = parseInt(portFlagMatch[1]);
-		}
-		if (port === 0) {
-			port = await getPort();
-			flags += ` --port ${port}`;
-		}
-
-		// Must use the `in` statement in the shellac script rather than `.in()` modifier on the `shellac` object
-		// otherwise the working directory does not get picked up.
-		let promiseResolve: (() => void) | undefined;
-		const promise = new Promise<void>((resolve) => (promiseResolve = resolve));
-		const bg = await shellac.env(process.env).bg`
-		await ${() => promise}
-
-		in ${workerPath} {
-			exits {
-		$ ${WRANGLER} dev ${flags}
-			}
-		}
-			`;
-		pid = bg.pid;
-
-		// sessionData is a mutable object where stdout/stderr update
-		const sessionData: SessionData = {
-			port,
-			stdout: "",
-			stderr: "",
-		};
-		bg.process.stdout.on("data", (chunk) => (sessionData.stdout += chunk));
-		bg.process.stderr.on("data", (chunk) => (sessionData.stderr += chunk));
-		// Only start `wrangler dev` once we've registered output listeners so we don't miss messages
-		promiseResolve?.();
-
-		await session(sessionData);
-
-		return bg.promise;
-	} finally {
-		try {
-			if (pid) process.kill(pid);
-		} catch {
-			// Ignore errors if we failed to kill the process (i.e. ESRCH if it's already terminated)
-		}
-	}
-}
-
-type DevWorker = {
-	workerName: string;
-	workerPath: string;
-	runDevSession: (
-		flags: string,
-		session: (sessionData: SessionData) => MaybePromise
-	) => ReturnType<typeof runDevSession>;
-	seed: (
-		seeder: ((name: string) => Record<string, string>) | Record<string, string>
-	) => ReturnType<typeof seed>;
-};
-async function makeWorker(): Promise<DevWorker> {
-	const root = await makeRoot();
-	const workerName = `tmp-e2e-wrangler-${crypto
-		.randomBytes(4)
-		.toString("hex")}`;
-	const workerPath = path.join(root, workerName);
-
-	return {
-		workerName,
-		workerPath,
-		runDevSession: (
-			flags: string,
-			session: (sessionData: SessionData) => MaybePromise
-		) => runDevSession(workerPath, flags, session),
-		seed: (seeder) =>
-			seed(
-				workerPath,
-				typeof seeder === "function" ? seeder(workerName) : seeder
-			),
-	};
-}
-
-describe("basic dev tests", () => {
-	let worker: DevWorker;
-
-	beforeEach(async () => {
-		worker = await makeWorker();
-		await worker.seed((workerName) => ({
-			"wrangler.toml": dedent`
-					name = "${workerName}"
-					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
-					compatibility_flags = ["nodejs_compat"]
+describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+	"basic js dev: $cmd",
+	({ cmd }) => {
+		e2eTest(`can modify worker during ${cmd}`, async ({ run, seed }) => {
+			await seed({
+				"wrangler.toml": dedent`
+							name = "worker"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							compatibility_flags = ["nodejs_compat"]
 
 							[vars]
 							KEY = "value"
@@ -211,108 +99,114 @@ describe("basic dev tests", () => {
 describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic python dev: $cmd",
 	({ cmd }) => {
-		e2eTest(`can modify entrypoint during ${cmd}`, async ({ run, seed }) => {
-			await seed({
-				"wrangler.toml": dedent`
+		e2eTest(
+			`can modify entrypoint during ${cmd}`,
+			async ({ run, seed, waitForReady, waitForReload }) => {
+				await seed({
+					"wrangler.toml": dedent`
 					name = "worker"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
-				"arithmetic.py": dedent`
+					"arithmetic.py": dedent`
 					def mul(a,b):
 						return a*b`,
-				"index.py": dedent`
+					"index.py": dedent`
 					from arithmetic import mul
 
 					from js import Response
 					def on_fetch(request):
 						return Response.new(f"py hello world {mul(2,3)}")`,
-				"package.json": dedent`
+					"package.json": dedent`
 					{
 						"name": "worker",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-			});
-			const worker = run(cmd);
+				});
+				const worker = run(cmd);
 
-			const { url } = await waitForReady(worker);
+				const { url } = await waitForReady(worker);
 
-			await expect(fetchText(url)).resolves.toBe("py hello world 6");
+				await expect(fetchText(url)).resolves.toBe("py hello world 6");
 
-			await seed({
-				"index.py": dedent`
+				await seed({
+					"index.py": dedent`
 					from js import Response
 					def on_fetch(request):
 						return Response.new('Updated Python Worker value')`,
-			});
+				});
 
-			await waitForReload(worker);
+				await waitForReload(worker);
 
-			// TODO(soon): work out why python workers need this retry before returning new content
-			const { text } = await retry(
-				(s) => s.status !== 200 || s.text === "py hello world 6",
-				async () => {
-					const r = await fetch(url);
-					return { text: await r.text(), status: r.status };
-				}
-			);
+				// TODO(soon): work out why python workers need this retry before returning new content
+				const { text } = await retry(
+					(s) => s.status !== 200 || s.text === "py hello world 6",
+					async () => {
+						const r = await fetch(url);
+						return { text: await r.text(), status: r.status };
+					}
+				);
 
-			expect(text).toBe("Updated Python Worker value");
-		});
+				expect(text).toBe("Updated Python Worker value");
+			}
+		);
 
-		e2eTest(`can modify imports during ${cmd}`, async ({ run, seed }) => {
-			await seed({
-				"wrangler.toml": dedent`
+		e2eTest(
+			`can modify imports during ${cmd}`,
+			async ({ run, seed, waitForReady, waitForReload }) => {
+				await seed({
+					"wrangler.toml": dedent`
 					name = "worker"
 					main = "index.py"
 					compatibility_date = "2023-01-01"
 					compatibility_flags = ["python_workers"]
 			`,
-				"arithmetic.py": dedent`
+					"arithmetic.py": dedent`
 					def mul(a,b):
 						return a*b`,
-				"index.py": dedent`
+					"index.py": dedent`
 					from arithmetic import mul
 
 					from js import Response
 					def on_fetch(request):
 						return Response.new(f"py hello world {mul(2,3)}")`,
-				"package.json": dedent`
+					"package.json": dedent`
 					{
 						"name": "worker",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-			});
-			const worker = run(cmd);
+				});
+				const worker = run(cmd);
 
-			const { url } = await waitForReady(worker);
+				const { url } = await waitForReady(worker);
 
-			await expect(fetchText(url)).resolves.toBe("py hello world 6");
+				await expect(fetchText(url)).resolves.toBe("py hello world 6");
 
-			await seed({
-				"arithmetic.py": dedent`
+				await seed({
+					"arithmetic.py": dedent`
 					def mul(a,b):
 						return a+b`,
-			});
+				});
 
-			await waitForReload(worker);
+				await waitForReload(worker);
 
-			// TODO(soon): work out why python workers need this retry before returning new content
-			const { text } = await retry(
-				(s) => s.status !== 200 || s.text === "py hello world 6",
-				async () => {
-					const r = await fetch(url);
-					return { text: await r.text(), status: r.status };
-				}
-			);
+				// TODO(soon): work out why python workers need this retry before returning new content
+				const { text } = await retry(
+					(s) => s.status !== 200 || s.text === "py hello world 6",
+					async () => {
+						const r = await fetch(url);
+						return { text: await r.text(), status: r.status };
+					}
+				);
 
-			expect(text).toBe("py hello world 5");
-		});
+				expect(text).toBe("py hello world 5");
+			}
+		);
 	}
 );
 
@@ -371,7 +265,7 @@ describe("dev registry", () => {
 		});
 	});
 
-	e2eTest("can fetch b", async ({ run }) => {
+	e2eTest("can fetch b", async ({ run, waitForReady }) => {
 		const worker = run("wrangler dev", { cwd: b });
 
 		const { url } = await waitForReady(worker);
@@ -381,38 +275,44 @@ describe("dev registry", () => {
 		).resolves.toMatchInlineSnapshot('"hello world"');
 	});
 
-	e2eTest("can fetch b through a (start b, start a)", async ({ run }) => {
-		const workerB = run("wrangler dev", { cwd: b });
-		// We don't need b's URL, but ensure that b starts up before a
-		await waitForReady(workerB);
+	e2eTest(
+		"can fetch b through a (start b, start a)",
+		async ({ run, waitForReady, waitForReload }) => {
+			const workerB = run("wrangler dev", { cwd: b });
+			// We don't need b's URL, but ensure that b starts up before a
+			await waitForReady(workerB);
 
-		const workerA = run("wrangler dev", { cwd: a });
-		const { url } = await waitForReady(workerA);
+			const workerA = run("wrangler dev", { cwd: a });
+			const { url } = await waitForReady(workerA);
 
-		// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
-		await waitForReload(workerA);
-		await waitForReload(workerA);
+			// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
+			await waitForReload(workerA);
+			await waitForReload(workerA);
 
-		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			'"hello world"'
-		);
-	});
+			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+				'"hello world"'
+			);
+		}
+	);
 
-	e2eTest("can fetch b through a (start a, start b)", async ({ run }) => {
-		const workerA = run("wrangler dev", { cwd: a });
-		const { url } = await waitForReady(workerA);
+	e2eTest(
+		"can fetch b through a (start a, start b)",
+		async ({ run, waitForReady, waitForReload }) => {
+			const workerA = run("wrangler dev", { cwd: a });
+			const { url } = await waitForReady(workerA);
 
-		const workerB = run("wrangler dev", { cwd: b });
-		await waitForReady(workerB);
+			const workerB = run("wrangler dev", { cwd: b });
+			await waitForReady(workerB);
 
-		// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
-		await waitForReload(workerA);
-		await waitForReload(workerA);
+			// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
+			await waitForReload(workerA);
+			await waitForReload(workerA);
 
-		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			'"hello world"'
-		);
-	});
+			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+				'"hello world"'
+			);
+		}
+	);
 });
 
 describe("hyperdrive dev tests", () => {
@@ -424,7 +324,7 @@ describe("hyperdrive dev tests", () => {
 
 	e2eTest(
 		"matches expected configuration parameters",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			let port = 5432;
 			if (server.address() && typeof server.address() !== "string") {
 				port = (server.address() as nodeNet.AddressInfo).port;
@@ -471,7 +371,7 @@ describe("hyperdrive dev tests", () => {
 		}
 	);
 
-	e2eTest("connects to a socket", async ({ run, seed }) => {
+	e2eTest("connects to a socket", async ({ run, seed, waitForReady }) => {
 		let port = 5432;
 		if (server.address() && typeof server.address() !== "string") {
 			port = (server.address() as nodeNet.AddressInfo).port;
@@ -526,7 +426,7 @@ describe("hyperdrive dev tests", () => {
 
 	e2eTest(
 		"uses HYPERDRIVE_LOCAL_CONNECTION_STRING for the localConnectionString variable in the binding",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			let port = 5432;
 			if (server.address() && typeof server.address() !== "string") {
 				port = (server.address() as nodeNet.AddressInfo).port;
@@ -593,7 +493,7 @@ describe("hyperdrive dev tests", () => {
 describe("queue dev tests", () => {
 	e2eTest(
 		"matches expected configuration parameters",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			await seed({
 				"wrangler.toml": dedent`
 					name = "worker"
@@ -668,7 +568,7 @@ describe("writes debug logs to hidden file", () => {
 
 	e2eTest(
 		"does NOT write to file when --log-level != debug",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			await seed({
 				"wrangler.toml": dedent`
 				name = "a"
@@ -701,37 +601,40 @@ describe("writes debug logs to hidden file", () => {
 });
 
 describe("zone selection", () => {
-	e2eTest("defaults to a workers.dev preview", async ({ run, seed }) => {
-		await seed({
-			"wrangler.toml": dedent`
+	e2eTest(
+		"defaults to a workers.dev preview",
+		async ({ run, seed, waitForReady }) => {
+			await seed({
+				"wrangler.toml": dedent`
 				name = "worker"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 				compatibility_flags = ["nodejs_compat"]`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response(request.url)
 					}
 				}`,
-			"package.json": dedent`
+				"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
-		});
-		const worker = run("wrangler dev --remote");
+			});
+			const worker = run("wrangler dev --remote");
 
-		const { url } = await waitForReady(worker);
+			const { url } = await waitForReady(worker);
 
-		const text = await fetchText(url);
+			const text = await fetchText(url);
 
-		expect(text).toContain(`devprod-testing7928.workers.dev`);
-	});
+			expect(text).toContain(`devprod-testing7928.workers.dev`);
+		}
+	);
 
-	e2eTest("respects dev.host setting", async ({ run, seed }) => {
+	e2eTest("respects dev.host setting", async ({ run, seed, waitForReady }) => {
 		await seed({
 			"wrangler.toml": dedent`
 				name = "worker"
@@ -765,9 +668,11 @@ describe("zone selection", () => {
 			`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
 		);
 	});
-	e2eTest("infers host from first route", async ({ run, seed }) => {
-		await seed({
-			"wrangler.toml": dedent`
+	e2eTest(
+		"infers host from first route",
+		async ({ run, seed, waitForReady }) => {
+			await seed({
+				"wrangler.toml": dedent`
 				name = "worker"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -777,30 +682,31 @@ describe("zone selection", () => {
 				pattern = "wrangler-testing.testing.devprod.cloudflare.dev/*"
 				zone_name = "testing.devprod.cloudflare.dev"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request) {
 						return new Response(request.url)
 					}
 				}`,
-			"package.json": dedent`
+				"package.json": dedent`
 				{
 					"name": "worker",
 					"version": "0.0.0",
 					"private": true
 				}
 				`,
-		});
-		const worker = run("wrangler dev --remote");
+			});
+			const worker = run("wrangler dev --remote");
 
-		const { url } = await waitForReady(worker);
+			const { url } = await waitForReady(worker);
 
-		const text = await fetchText(url);
+			const text = await fetchText(url);
 
-		expect(text).toMatchInlineSnapshot(
-			`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
-		);
-	});
+			expect(text).toMatchInlineSnapshot(
+				`"https://wrangler-testing.testing.devprod.cloudflare.dev/"`
+			);
+		}
+	);
 	e2eTest(
 		"fails with useful error message if host is not routable",
 		async ({ run, seed }) => {
@@ -841,7 +747,7 @@ describe("zone selection", () => {
 describe("custom builds", () => {
 	e2eTest(
 		"does not hang when custom build does not cause esbuild to run",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			await seed({
 				"wrangler.toml": dedent`
 						name = "worker"

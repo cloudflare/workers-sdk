@@ -59,6 +59,7 @@ jobs:
           WRANGLER_IMPORT: ${{ github.workspace}}/temp/wrangler/wrangler-dist/cli.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os }}
 
       - name: Upload debug logs
@@ -73,4 +74,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
-          path: packages/wrangler/html
+          path: ${{ runner.temp }}/test-report/

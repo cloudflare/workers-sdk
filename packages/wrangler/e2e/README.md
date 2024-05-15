@@ -14,7 +14,7 @@ You can then run the e2e test suite with the below command (run this in the `pac
 
 ## How tests are written
 
-The main thing to keep in mind is that tests should be written with the custom `e2eTest()` test fixture (see https://vitest.dev/guide/test-context.html#test-extend for more details). This is defined in https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/e2e/helpers/e2e-wrangler-test.ts, and is used to defined tests exactly as you'd use Vitest's default `test()` function:
+The main thing to keep in mind is that tests should be written with the custom `e2eTest()` test fixture (see https://vitest.dev/guide/test-context.html#test-extend for more details). This is defined in https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/e2e/helpers/e2e-wrangler-test.ts, and is used to define tests exactly as you'd use Vitest's default `test()` function:
 
 ```ts
 e2eTest("can fetch worker", async ({ run, seed }) => {

@@ -2,22 +2,19 @@ import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { beforeEach, describe, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect } from "vitest";
 import { e2eTest } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
-import {
-	killAllWranglerDev,
-	waitForReady,
-	waitForReload,
-} from "./helpers/wrangler";
+import { killAllWranglerDev } from "./helpers/wrangler";
 
 beforeEach(killAllWranglerDev);
+afterEach(killAllWranglerDev);
 
 describe("pages dev", () => {
 	e2eTest(
 		"should warn if no [--compatibility_date] command line arg was specified",
-		async ({ seed, run }) => {
+		async ({ seed, run, waitForReady }) => {
 			await seed({
 				"_worker.js": dedent`
 					export default {
@@ -39,7 +36,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should warn that [--experimental-local] is no longer required, if specified",
-		async ({ seed, run }) => {
+		async ({ seed, run, waitForReady }) => {
 			const port = await getPort();
 			const worker = run(
 				`wrangler pages dev --port ${port} . --experimental-local`
@@ -80,7 +77,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should warn if bindings specified as args in the command line are invalid",
-		async ({ run }) => {
+		async ({ run, waitForReady }) => {
 			const port = await getPort();
 			const worker = run(
 				`wrangler pages dev . --port ${port} --service test --kv = --do test --d1 = --r2 =`
@@ -98,7 +95,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should use bindings specified as args in the command line",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			await seed({
 				"_worker.js": dedent`
 					export default {
@@ -132,7 +129,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should modify worker during dev session (_worker)",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady, waitForReload }) => {
 			await seed({
 				"_worker.js": dedent`
 					export default {
@@ -168,7 +165,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should modify worker during dev session (Functions)",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady, waitForReload }) => {
 			const port = await getPort();
 			const worker = run(`wrangler pages dev --port ${port} .`);
 
@@ -199,31 +196,36 @@ describe("pages dev", () => {
 			).resolves.toMatchInlineSnapshot('"Updated Worker!"');
 		}
 	);
-	e2eTest("should support wrangler.toml", async ({ seed, run }) => {
-		await seed({
-			"public/_worker.js": dedent`
+	e2eTest(
+		"should support wrangler.toml",
+		async ({ seed, run, waitForReady }) => {
+			await seed({
+				"public/_worker.js": dedent`
 						export default {
 							async fetch(request, env) {
 								return new Response("Pages supports wrangler.toml ⚡️⚡️")
 							}
 						}`,
-			"wrangler.toml": dedent`
+				"wrangler.toml": dedent`
 					name = "pages-project"
 					pages_build_output_dir = "public"
 					compatibility_date = "2023-01-01"
 				`,
-		});
-		const port = await getPort();
-		const worker = run(`wrangler pages dev --port ${port}`);
-		const { url } = await waitForReady(worker);
+			});
+			const port = await getPort();
+			const worker = run(`wrangler pages dev --port ${port}`);
+			const { url } = await waitForReady(worker);
 
-		const text = await fetchText(url);
-		expect(text).toMatchInlineSnapshot('"Pages supports wrangler.toml ⚡️⚡️"');
-	});
+			const text = await fetchText(url);
+			expect(text).toMatchInlineSnapshot(
+				'"Pages supports wrangler.toml ⚡️⚡️"'
+			);
+		}
+	);
 
 	e2eTest(
 		"should recover from syntax error during dev session (_worker)",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady, waitForReload }) => {
 			const worker = run("wrangler pages dev .");
 
 			await seed({
@@ -274,7 +276,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should recover from syntax error during dev session (Functions)",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady, waitForReload }) => {
 			const port = await getPort();
 			const worker = run(`wrangler pages dev --port ${port} .`);
 
@@ -320,7 +322,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should support modifying _routes.json during dev session",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady, waitForReload }) => {
 			await seed({
 				"_worker.js": dedent`
 					export default {
@@ -377,7 +379,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should validate _routes.json during dev session, and fallback to default value",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			await seed({
 				"functions/foo.ts": dedent`
 					export async function onRequest() {
@@ -418,7 +420,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should use top-level configuration specified in `wrangler.toml`",
-		async ({ run, seed }) => {
+		async ({ run, seed, waitForReady }) => {
 			const port = await getPort();
 			const worker = run(`wrangler pages dev --port ${port}`);
 			await seed({
@@ -464,7 +466,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should merge (with override) `wrangler.toml` configuration with configuration provided via the command line, with command line args taking precedence",
-		async ({ seed, run }) => {
+		async ({ seed, run, waitForReady }) => {
 			const port = await getPort();
 
 			const flags = [
@@ -603,7 +605,7 @@ describe("pages dev", () => {
 
 	e2eTest(
 		"should pick up wrangler.toml configuration even in cases when `pages_build_output_dir` was not specified, but the <directory> command argument was",
-		async ({ seed, run }) => {
+		async ({ seed, run, waitForReady }) => {
 			await seed({
 				"public/_worker.js": dedent`
 					export default {
