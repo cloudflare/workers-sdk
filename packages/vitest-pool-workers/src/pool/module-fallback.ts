@@ -73,6 +73,15 @@ function isFile(filePath: string): boolean {
 	}
 }
 
+function isDirectory(filePath: string): boolean {
+	try {
+		return fs.statSync(filePath).isDirectory();
+	} catch (e) {
+		if (isFileNotFoundError(e)) return false;
+		throw e;
+	}
+}
+
 function getParentPaths(filePath: string): string[] {
 	const parentPaths: string[] = [];
 	// eslint-disable-next-line no-constant-condition
@@ -197,10 +206,23 @@ function maybeGetTargetFilePath(target: string): string | undefined {
 	// Can't use `fs.existsSync()` here as `target` could be a directory
 	// (e.g. `node:fs` and `node:fs/promises`)
 	if (isFile(target)) return target;
-	for (const extension of jsExtensions) {
-		const targetWithExtension = target + extension;
-		if (fs.existsSync(targetWithExtension)) return targetWithExtension;
+	
+	const checkWithExtensions = (target: string) => {
+		for (const extension of jsExtensions) {
+			const targetWithExtension = target + extension;
+			if (fs.existsSync(targetWithExtension)) return targetWithExtension;
+		}
+		return undefined;
 	}
+
+	const maybeTarget = checkWithExtensions(target);
+	if (maybeTarget) return maybeTarget;
+
+	if (isDirectory(target)) {
+		const maybeTarget = checkWithExtensions(posixPath.join(target, "index"));
+		if (maybeTarget) return maybeTarget;
+	}
+
 	if (target.endsWith(disableCjsEsmShimSuffix)) return target;
 }
 
