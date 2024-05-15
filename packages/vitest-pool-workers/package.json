@@ -59,7 +59,7 @@
 		"@types/semver": "^7.5.1",
 		"capnp-ts": "^0.7.0",
 		"capnpc-ts": "^0.7.0",
-		"undici": "5.28.3"
+		"undici": "5.28.4"
 	},
 	"dependencies": {
 		"birpc": "0.2.14",
