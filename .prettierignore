@@ -1,4 +1,4 @@
-packages/wrangler/CHANGELOG.md
+packages/*/CHANGELOG.md
 
 # Moved from /templates
 *-lock.*
