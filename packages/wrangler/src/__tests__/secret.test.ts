@@ -571,7 +571,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secret:bulk", async () => {
+		it("should create secrets from JSON file", async () => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -612,6 +612,31 @@ describe("wrangler secret", () => {
 					✨ 2 secrets successfully uploaded"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should fail if file is not valid JSON", async () => {
+			writeFileSync("secret.json", "bad file content");
+
+			await expect(
+				runWrangler("secret:bulk ./secret.json --name script-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The contents of \\"./secret.json\\" is not valid JSON: \\"ParseError: Unexpected token b\\""`
+			);
+		});
+
+		it("should fail if JSON file contains a record with non-string values", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"invalid-secret": 999,
+				})
+			);
+
+			await expect(
+				runWrangler("secret:bulk ./secret.json --name script-name")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The value for \\"invalid-secret\\" in \\"./secret.json\\" is not a \\"string\\" instead it is of type \\"number\\""`
+			);
 		});
 
 		it("should count success and network failure on secret:bulk", async () => {

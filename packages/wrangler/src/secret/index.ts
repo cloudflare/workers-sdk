@@ -5,7 +5,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
-import { UserError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import {
 	getLegacyScriptName,
 	isLegacyEnv,
@@ -380,10 +380,17 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	let content: Record<string, string>;
 	if (secretBulkArgs.json) {
 		const jsonFilePath = path.resolve(secretBulkArgs.json);
-		content = parseJSON<Record<string, string>>(
-			readFileSync(jsonFilePath),
-			jsonFilePath
-		);
+		try {
+			content = parseJSON<Record<string, string>>(
+				readFileSync(jsonFilePath),
+				jsonFilePath
+			);
+		} catch (e) {
+			throw new FatalError(
+				`The contents of "${secretBulkArgs.json}" is not valid JSON: "${e}"`
+			);
+		}
+		validateJSONFileSecrets(content, secretBulkArgs.json);
 	} else {
 		try {
 			const rl = readline.createInterface({ input: process.stdin });
@@ -487,3 +494,22 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 		throw new Error(`🚨 ${upsertBindings.length} secrets failed to upload`);
 	}
 };
+
+function validateJSONFileSecrets(
+	content: unknown,
+	jsonFilePath: string
+): asserts content is Record<string, string> {
+	if (content === null || typeof content !== "object") {
+		throw new FatalError(
+			`The contents of "${jsonFilePath}" is not valid. It should be a JSON object of string values.`
+		);
+	}
+	const entries = Object.entries(content);
+	for (const [key, value] of entries) {
+		if (typeof value !== "string") {
+			throw new FatalError(
+				`The value for "${key}" in "${jsonFilePath}" is not a "string" instead it is of type "${typeof value}"`
+			);
+		}
+	}
+}
