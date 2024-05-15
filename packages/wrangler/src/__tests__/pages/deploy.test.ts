@@ -217,7 +217,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -380,7 +380,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -538,7 +538,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -747,7 +747,7 @@ describe("pages deploy", () => {
 		✨ Success! Uploaded 1 files (TIMINGS)
 
 		✨ Uploading Functions bundle
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 
@@ -915,7 +915,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1100,7 +1100,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1284,7 +1284,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1470,7 +1470,7 @@ describe("pages deploy", () => {
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		🌎 Checking deployment status...
+		🌎 Deploying...
 		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 	`);
 	});
@@ -1833,7 +1833,7 @@ describe("pages deploy", () => {
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -2076,7 +2076,7 @@ async function onRequest() {
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -2329,7 +2329,7 @@ async function onRequest() {
 
 			✨ Uploading Functions bundle
 			✨ Uploading _routes.json
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -2662,7 +2662,7 @@ and that at least one include rule is provided.
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			❌ Deployment failed!"
 		`);
 
@@ -2848,7 +2848,7 @@ and that at least one include rule is provided.
 
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -3106,7 +3106,7 @@ and that at least one include rule is provided.
 
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -3357,7 +3357,7 @@ and that at least one include rule is provided.
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
 			✨ Uploading _routes.json
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -3697,7 +3697,7 @@ and that at least one include rule is provided.
 
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -4042,7 +4042,7 @@ and that at least one include rule is provided.
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 		`);
 
@@ -4248,7 +4248,7 @@ and that at least one include rule is provided.
 
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			❌ Deployment failed!"
 		`);
 
@@ -4453,7 +4453,7 @@ and that at least one include rule is provided.
 
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.pages-is-awesome.pages.dev/"
 		`);
 
@@ -4496,11 +4496,11 @@ and that at least one include rule is provided.
 			// `pages deploy` should fail because, even though the project name is specififed in the
 			// `wrangler.toml` file, the `pages_build_output_dir` field is missing from the config,
 			// so the file gets ignored
-			await expect(runWrangler("pages deploy public")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-			"request to https://api.cloudflare.com/client/v4/accounts/some-account-id/pages/projects?per_page=10&page=1 failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/accounts/some-account-id/pages/projects?per_page=10&page=1
-							"
-		`);
+			await expect(
+				runWrangler("pages deploy public")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Must specify a project name."`
+			);
 
 			expect(
 				std.warn.replace(/\S*\.toml/g, "wrangler.toml").replace(/\s/g, "")
@@ -4711,7 +4711,7 @@ and that at least one include rule is provided.
 
 			✨ Compiled Worker successfully
 			✨ Uploading Worker bundle
-			🌎 Checking deployment status...
+			🌎 Deploying...
 			✨ Deployment complete! Take a peek over at https://abcxyz.pages-project.pages.dev/"
 		`);
 

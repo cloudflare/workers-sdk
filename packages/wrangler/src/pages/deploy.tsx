@@ -348,7 +348,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 	let latestDeploymentStage: DeploymentStage | undefined;
 	let attempts = 0;
 
-	logger.log("🌎 Checking deployment status...");
+	logger.log("🌎 Deploying...");
 
 	while (
 		attempts < MAX_DEPLOYMENT_STATUS_ATTEMPTS &&
@@ -382,11 +382,17 @@ export const Handler = async (args: PagesDeployArgs) => {
 		}
 	}
 
-	if (latestDeploymentStage?.status === "success") {
+	if (
+		latestDeploymentStage?.name === "deploy" &&
+		latestDeploymentStage?.status === "success"
+	) {
 		logger.log(
 			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
 		);
-	} else if (latestDeploymentStage?.status === "failure") {
+	} else if (
+		latestDeploymentStage?.name === "deploy" &&
+		latestDeploymentStage?.status === "failure"
+	) {
 		// get persistent logs so we can show users the failure message
 		const logs = await fetchResult<UnifiedDeploymentLogMessages>(
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
@@ -400,7 +406,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		logger.log(
 			`✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.\n\n` +
 				`⚡️ Visit your deployment at ${deploymentResponse.url}\n` +
-				`⚡️ Check the deployment logs on the Cloudflare dashboard: https://dash.cloudflare.com/${accountId}/pages/view/${projectName}/${deploymentResponse.id}`
+				`⚡️ Check the deployment details on the Cloudflare dashboard: https://dash.cloudflare.com/${accountId}/pages/view/${projectName}/${deploymentResponse.id}`
 		);
 	}
 

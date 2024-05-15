@@ -56,7 +56,7 @@ export async function ListHandler({ projectName }: ListArgs) {
 	const getStatus = (deployment: Deployment) => {
 		// Return a pretty time since timestamp if successful otherwise the status
 		if (
-			deployment.latest_stage.status === `success` &&
+			deployment.latest_stage.status === "success" &&
 			deployment.latest_stage.ended_on
 		) {
 			return timeagoFormat(deployment.latest_stage.ended_on);
