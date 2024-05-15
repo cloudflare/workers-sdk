@@ -12,6 +12,7 @@ describe("unstable_dev", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -30,6 +31,7 @@ describe("unstable_dev", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -44,6 +46,7 @@ describe("unstable_dev", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -59,6 +62,7 @@ describe("unstable_dev", () => {
 			const worker = await unstable_dev(
 				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 				{
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -77,6 +81,7 @@ describe("unstable_dev", () => {
 			const worker = await unstable_dev(
 				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 				{
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
@@ -100,6 +105,7 @@ describe("unstable dev fetch input protocol", () => {
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				localProtocol: "http",
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -119,6 +125,7 @@ describe("unstable dev fetch input protocol", () => {
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				localProtocol: undefined,
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -154,6 +161,7 @@ describe("unstable dev fetch input parsing", () => {
 	`;
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,
@@ -183,6 +191,7 @@ describe("unstable dev fetch input parsing", () => {
 	`;
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,
@@ -210,6 +219,7 @@ describe("unstable dev fetch input parsing", () => {
 	`;
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,
@@ -236,6 +246,7 @@ describe("unstable dev fetch input parsing", () => {
 	`;
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,
@@ -262,6 +273,7 @@ describe("unstable dev fetch input parsing", () => {
 	`;
 		fs.writeFileSync("index.js", scriptContent);
 		const worker = await unstable_dev("index.js", {
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,

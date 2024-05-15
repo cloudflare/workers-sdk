@@ -1,6 +1,7 @@
 import { rest } from "msw";
 import { hasMorePages } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -46,6 +47,7 @@ describe("throwFetchError", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
+	mockConsoleMethods();
 
 	it("should include api errors and messages in error", async () => {
 		msw.use(

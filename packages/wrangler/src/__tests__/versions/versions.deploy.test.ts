@@ -1,4 +1,3 @@
-import { stderr, stdout } from "@cloudflare/cli/streams";
 import yargs from "yargs";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
@@ -8,7 +7,9 @@ import {
 	validateTrafficSubtotal,
 	versionsDeployOptions,
 } from "../../versions/deploy";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import {
 	msw,
 	mswGetVersion,
@@ -22,31 +23,12 @@ import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
-function collectStreamOutput() {
-	const std = { out: "", err: "" };
-	const onStdOutData = (chunk: Buffer) => (std.out += chunk.toString());
-	const onStdErrData = (chunk: Buffer) => (std.err += chunk.toString());
-
-	beforeEach(() => {
-		stdout.on("data", onStdOutData);
-		stderr.on("data", onStdErrData);
-	});
-
-	afterEach(() => {
-		stdout.off("data", onStdOutData);
-		stderr.off("data", onStdErrData);
-		std.out = "";
-		std.err = "";
-	});
-
-	return std;
-}
-
 describe("versions deploy", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-	const std = collectStreamOutput();
+	mockConsoleMethods();
+	const std = collectCLIOutput();
 
 	beforeEach(() => {
 		msw.use(

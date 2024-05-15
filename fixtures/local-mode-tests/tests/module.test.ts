@@ -19,6 +19,7 @@ describe("module worker", () => {
 			{
 				config: path.resolve(__dirname, "..", "wrangler.module.toml"),
 				vars: { VAR4: "https://google.com" },
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,

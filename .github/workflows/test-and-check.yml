@@ -3,7 +3,7 @@ name: Tests + Checks
 on: pull_request
 
 env:
-  node-version: 16.18
+  node-version: 18.20.2
 jobs:
   add-to-project:
     if: github.ref != 'refs/heads/changeset-release/main'

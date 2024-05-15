@@ -34,7 +34,21 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
 			process.env.PWD = originalCwd;
-			fs.rmSync(tmpDir, { recursive: true });
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch (e) {
+				// It seems that Windows doesn't let us delete this, with errors like:
+				//
+				// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+				// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+				// Serialized Error: {
+				// 	"code": "EBUSY",
+				// 	"errno": -4082,
+				// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+				// 	"syscall": "rmdir",
+				// }
+				console.error(e);
+			}
 		}
 	});
 }

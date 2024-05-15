@@ -35,6 +35,7 @@ fixtures/**/dist/**
 
 # TurboRepo CodeGen .hbs files
 **/*.hbs
+.turbo/**
 
 # Miniflare shouldn't be formatted with the root `prettier` version
 packages/miniflare

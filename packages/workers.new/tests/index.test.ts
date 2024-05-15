@@ -9,6 +9,7 @@ describe("worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 			},
