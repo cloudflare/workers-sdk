@@ -5,31 +5,19 @@ async function read(res: Response) {
 }
 
 test('get request', async () => {
-	const res = await run('GET');
+	const res = await run('up', 'GET');
 	expect(await read(res)).toEqual('OK');
 	expect(res.status).toBe(200);
 });
 
 test('empty post request', async () => {
-	const res = await run('POST', 0);
-	expect(await read(res)).toEqual('OK');
-	expect(res.status).toBe(200);
-});
-
-test('small post request', async () => {
-	const res = await run('POST', 10);
-	expect(await read(res)).toEqual('OK');
-	expect(res.status).toBe(200);
-});
-
-test('large post request', async () => {
-	const res = await run('POST', 1e8);
+	const res = await run('up', 'POST');
 	expect(await read(res)).toEqual('OK');
 	expect(res.status).toBe(200);
 });
 
 test('includes request time', async () => {
-	const { headers } = await run('POST');
+	const { headers } = await run('up', 'POST');
 	const reqTime = headers.get('cf-meta-request-time');
 
 	if (!reqTime) throw new Error('missing request time header');

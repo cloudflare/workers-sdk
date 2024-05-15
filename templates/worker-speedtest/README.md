@@ -4,7 +4,7 @@
 
 Worker for measuring download / upload connection speed from the client side, using the [Performance Timing API](https://w3c.github.io/perf-timing-primer/).
 
-[`index.js`](https://github.com/cloudflare/worker-speedtest-template/blob/master/router.js) is the content of the Workers script.
+[`index.ts`](https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-speedtest/src/index.ts) is the content of the Workers script.
 
 _Note:_ when running this as your own worker, your latency measurements may differ a small amount from the [official version](https://speed.cloudflare.com). This is due to the fact that we rely on an internal mechanism to determine the amount of server processing time, which is then subtracted from the measurement.
 

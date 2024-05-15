@@ -7,7 +7,7 @@ export default async function (request: Request) {
 	res.headers.set('timing-allow-origin', '*');
 
 	if (request.cf && request.cf.colo) {
-		res.headers.set('cf-meta-colo', request.cf.colo);
+		res.headers.set('cf-meta-colo', String(request.cf.colo));
 	}
 
 	res.headers.set('access-control-expose-headers', 'cf-meta-colo, cf-meta-request-time');
