@@ -1,6 +1,7 @@
 import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
 import path from "node:path";
+import { spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
@@ -384,9 +385,12 @@ async function executeRemotely({
 			)
 		);
 
-		const initResponse = await d1ApiPost<
-			ImportInitResponse | ImportPollingResponse | PollingFailure
-		>(accountId, db, "import", { action: "init", etag });
+		const initResponse = await spinnerWhile({
+			promise: d1ApiPost<
+				ImportInitResponse | ImportPollingResponse | PollingFailure
+			>(accountId, db, "import", { action: "init", etag }),
+			startMessage: "Checking if file needs uploading",
+		});
 
 		// An init response usually returns a {filename, uploadUrl} pair, except if we've detected that file
 		// already exists and is valid, to save people reuploading. In which case `initResponse` has already
@@ -460,17 +464,20 @@ async function uploadAndBeginIngestion(
 	initResponse: ImportInitResponse
 ) {
 	const { uploadUrl, filename } = initResponse;
-	logger.log(`🌀 Uploading ${filename}...`);
 
 	const { size } = await fs.stat(file);
 
-	const uploadResponse = await fetch(uploadUrl, {
-		method: "PUT",
-		headers: {
-			"Content-length": `${size}`,
-		},
-		body: createReadStream(file),
-		duplex: "half", // required for NodeJS streams over .fetch ?
+	const uploadResponse = await spinnerWhile({
+		promise: fetch(uploadUrl, {
+			method: "PUT",
+			headers: {
+				"Content-length": `${size}`,
+			},
+			body: createReadStream(file),
+			duplex: "half", // required for NodeJS streams over .fetch ?
+		}),
+		startMessage: `🌀 Uploading ${filename}`,
+		endMessage: `🌀 Uploading complete.`,
 	});
 
 	if (uploadResponse.status !== 200) {
@@ -488,7 +495,6 @@ async function uploadAndBeginIngestion(
 			`File contents did not upload successfully. Please retry.`
 		);
 	}
-	logger.log(`🌀 Uploading complete.`);
 
 	return await d1ApiPost<ImportPollingResponse | PollingFailure>(
 		accountId,

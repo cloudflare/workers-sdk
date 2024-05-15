@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import { join } from "path";
-import { rest } from "msw";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -12,7 +9,6 @@ import writeWranglerToml from "../helpers/write-wrangler-toml";
 describe("execute", () => {
 	mockConsoleMethods();
 	runInTempDir();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should require login when running against prod", async () => {
