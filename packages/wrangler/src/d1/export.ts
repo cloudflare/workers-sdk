@@ -80,8 +80,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		throw new UserError(`You must specify either --local or --remote`);
 	}
 
-	if (!schema && !data)
+	if (!schema && !data) {
 		throw new UserError(`You cannot specify both --no-schema and --no-data`);
+	}
 
 	// Allow multiple --table x --table y flags or none
 	const tables: string[] = table

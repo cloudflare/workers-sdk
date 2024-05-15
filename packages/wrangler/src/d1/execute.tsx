@@ -220,9 +220,11 @@ export async function executeSql({
 	const input = file
 		? ({ file } as ExecuteInput)
 		: command
-		? ({ command } as ExecuteInput)
-		: null;
-	if (!input) throw new UserError(`Error: must provide --command or --file.`);
+			? ({ command } as ExecuteInput)
+			: null;
+	if (!input) {
+		throw new UserError(`Error: must provide --command or --file.`);
+	}
 	if (local && remote) {
 		throw new UserError(
 			`Error: can't use --local and --remote at the same time`
@@ -234,7 +236,9 @@ export async function executeSql({
 	if (persistTo && !local) {
 		throw new UserError(`Error: can't use --persist-to without --local`);
 	}
-	if (input.file) await checkForSQLiteBinary(input.file);
+	if (input.file) {
+		await checkForSQLiteBinary(input.file);
+	}
 
 	const result =
 		remote || preview
@@ -244,13 +248,13 @@ export async function executeSql({
 					shouldPrompt,
 					input,
 					preview,
-			  })
+				})
 			: await executeLocally({
 					config,
 					name,
 					input,
 					persistTo,
-			  });
+				});
 
 	if (json) {
 		logger.loggerLevel = existingLogLevel;
@@ -346,7 +350,9 @@ async function executeRemotely({
 
 		if (shouldPrompt) {
 			const ok = await confirm(`${warning}\n  Ok to proceed?`);
-			if (!ok) return null;
+			if (!ok) {
+				return null;
+			}
 		} else {
 			logger.warn(warning);
 		}
@@ -396,17 +402,19 @@ async function executeRemotely({
 		// already exists and is valid, to save people reuploading. In which case `initResponse` has already
 		// kicked the import process off.
 		const uploadRequired = "uploadUrl" in initResponse;
-		if (!uploadRequired) logger.log(`🌀 File already uploaded. Processing.`);
+		if (!uploadRequired) {
+			logger.log(`🌀 File already uploaded. Processing.`);
+		}
 		const firstPollResponse = uploadRequired
 			? // Upload the file to R2, then inform D1 to start processing it. The server delays before responding
-			  // in case the file is quite small and can be processed without a second round-trip.
-			  await uploadAndBeginIngestion(
+				// in case the file is quite small and can be processed without a second round-trip.
+				await uploadAndBeginIngestion(
 					accountId,
 					db,
 					input.file,
 					etag,
 					initResponse
-			  )
+				)
 			: initResponse;
 
 		// If the file takes longer than the specified delay (~1s) to import, we'll need to continue polling
@@ -417,8 +425,9 @@ async function executeRemotely({
 			db
 		);
 
-		if (finalResponse.status !== "complete")
+		if (finalResponse.status !== "complete") {
 			throw new APIError({ text: `D1 reset before execute completed!` });
+		}
 
 		const {
 			result: { numQueries, finalBookmark, meta },
@@ -509,7 +518,9 @@ async function pollUntilComplete(
 	accountId: string,
 	db: Database
 ): Promise<ImportPollingResponse> {
-	if (!response.success) throw new Error(response.error);
+	if (!response.success) {
+		throw new Error(response.error);
+	}
 
 	response.messages.forEach((line) => {
 		logger.log(`🌀 ${line}`);
