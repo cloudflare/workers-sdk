@@ -16,7 +16,7 @@ afterEach(killAllWranglerDev);
 
 e2eTest(
 	"can import URL from 'url' in node_compat mode",
-	async ({ run, seed }) => {
+	async ({ run, seed, waitForReady }) => {
 		await seed({
 			"wrangler.toml": dedent`
 				name = "worker"
@@ -49,9 +49,11 @@ e2eTest(
 describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic js dev: $cmd",
 	({ cmd }) => {
-		e2eTest(`can modify worker during ${cmd}`, async ({ run, seed }) => {
-			await seed({
-				"wrangler.toml": dedent`
+		e2eTest(
+			`can modify worker during ${cmd}`,
+			async ({ run, seed, waitForReady, waitForReload }) => {
+				await seed({
+					"wrangler.toml": dedent`
 							name = "worker"
 							main = "src/index.ts"
 							compatibility_date = "2023-01-01"
@@ -60,39 +62,42 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 							[vars]
 							KEY = "value"
 					`,
-				"src/index.ts": dedent`
+					"src/index.ts": dedent`
 							export default {
 								fetch(request) {
 									return new Response("Hello World!")
 								}
 							}`,
-				"package.json": dedent`
+					"package.json": dedent`
 							{
 								"name": "worker",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
-			});
-			const worker = run(cmd);
+				});
+				const worker = run(cmd);
 
-			const { url } = await waitForReady(worker);
+				const { url } = await waitForReady(worker);
 
-			await expect(fetch(url).then((r) => r.text())).resolves.toMatchSnapshot();
+				await expect(
+					fetch(url).then((r) => r.text())
+				).resolves.toMatchSnapshot();
 
-			await seed({
-				"src/index.ts": dedent`
+				await seed({
+					"src/index.ts": dedent`
 						export default {
 							fetch(request, env) {
 								return new Response("Updated Worker! " + env.KEY)
 							}
 						}`,
-			});
+				});
 
-			await waitForReload(worker);
+				await waitForReload(worker);
 
-			await expect(fetchText(url)).resolves.toMatchSnapshot();
-		});
+				await expect(fetchText(url)).resolves.toMatchSnapshot();
+			}
+		);
 	}
 );
 
