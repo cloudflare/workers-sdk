@@ -108,7 +108,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support imperatively targeting a particular environment"`
+			`"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch"`
 		);
 	});
 
