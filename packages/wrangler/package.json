@@ -192,7 +192,7 @@
 		"timeago.js": "^4.0.2",
 		"ts-dedent": "^2.2.0",
 		"ts-json-schema-generator": "^1.5.0",
-		"undici": "5.28.3",
+		"undici": "5.28.4",
 		"update-check": "^1.5.4",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^8.3.0",
