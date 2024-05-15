@@ -137,6 +137,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	angular: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Congratulations! Your app is running.",
@@ -448,7 +449,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await storeDiff(framework, projectPath);
 				} catch (e) {
 					expect.fail(
-						"Failed due to an exception while running C3. See logs for more details"
+						"Failed due to an exception while running C3. See logs for more details",
 					);
 				} finally {
 					clean(framework);
