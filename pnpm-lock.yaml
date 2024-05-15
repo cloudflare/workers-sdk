@@ -1210,8 +1210,8 @@ importers:
         specifier: 5.28.4
         version: 5.28.4
       wrangler:
-        specifier: ^3.32.0
-        version: 3.55.0(@cloudflare/workers-types@4.20240512.0)
+        specifier: workspace:*
+        version: link:../wrangler
 
   packages/prerelease-registry:
     dependencies:
