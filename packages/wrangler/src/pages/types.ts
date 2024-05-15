@@ -22,6 +22,7 @@ export type Project = {
 		preview?: DeploymentConfig;
 	};
 };
+
 export type Deployment = {
 	id: string;
 	created_on: string;
@@ -39,6 +40,7 @@ export type Deployment = {
 	};
 	project_name: string;
 };
+
 export type UploadPayloadFile = {
 	key: string;
 	value: string;
