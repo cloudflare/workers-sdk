@@ -17,7 +17,7 @@
 		"check:lint": "dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
-		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
+		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
 		"test:ci": "dotenv -- turbo test:ci --concurrency 1",
