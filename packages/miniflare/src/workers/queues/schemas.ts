@@ -1,6 +1,11 @@
 import { Base64DataSchema, z } from "miniflare:zod";
 
-export const QueueMessageDelaySchema = z.number().int().min(0).max(43200).optional();
+export const QueueMessageDelaySchema = z
+	.number()
+	.int()
+	.min(0)
+	.max(43200)
+	.optional();
 
 export const QueueProducerOptionsSchema = /* @__PURE__ */ z.object({
 	// https://developers.cloudflare.com/queues/platform/configuration/#producer

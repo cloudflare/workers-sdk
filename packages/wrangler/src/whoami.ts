@@ -67,8 +67,8 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 		authType: usingGlobalAuthKey
 			? "Global API Key"
 			: usingEnvAuth
-			? "API Token"
-			: "OAuth Token",
+				? "API Token"
+				: "OAuth Token",
 		email: "authEmail" in apiToken ? apiToken.authEmail : await getEmail(),
 		accounts: await getAccounts(),
 		tokenPermissions,

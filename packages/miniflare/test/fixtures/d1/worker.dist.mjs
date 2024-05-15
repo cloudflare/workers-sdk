@@ -168,11 +168,11 @@ var D1Database = class {
 			typeof query == "object"
 				? query.map((s, index) => {
 						return { sql: s, params: params[index] };
-				  })
+					})
 				: {
 						sql: query,
 						params,
-				  }
+					}
 		);
 		const response = await this.binding.fetch(new URL(endpoint, "http://d1"), {
 			method: "POST",

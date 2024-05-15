@@ -5,17 +5,17 @@ import { readPrefix, reduceError } from "miniflare:shared";
 import {
 	CoreBindings,
 	CoreHeaders,
-	ProxyAddresses,
-	ProxyOps,
 	isFetcherFetch,
 	isR2ObjectWriteHttpMetadata,
+	ProxyAddresses,
+	ProxyOps,
 } from "./constants";
 import {
-	PlatformImpl,
-	ReducersRevivers,
 	createHTTPReducers,
 	createHTTPRevivers,
 	parseWithReadableStreams,
+	PlatformImpl,
+	ReducersRevivers,
 	stringifyWithStreams,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
@@ -52,12 +52,12 @@ const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
 	.join("\0");
 function isPlainObject(value: unknown) {
 	const proto = Object.getPrototypeOf(value);
-	if(value?.constructor?.name === 'RpcStub') {
+	if (value?.constructor?.name === "RpcStub") {
 		return false;
 	}
-	if(isObject(value)) {
+	if (isObject(value)) {
 		const valueAsRecord = value as Record<string, unknown>;
-		if (objectContainsFunctions(valueAsRecord)){
+		if (objectContainsFunctions(valueAsRecord)) {
 			return false;
 		}
 	}
@@ -68,12 +68,12 @@ function isPlainObject(value: unknown) {
 	);
 }
 function objectContainsFunctions(obj: Record<string, unknown>): boolean {
-	for(const [, entry] of Object.entries(obj)) {
-		if(typeof entry === 'function') {
+	for (const [, entry] of Object.entries(obj)) {
+		if (typeof entry === "function") {
 			return true;
 		}
-		if(isObject(entry)) {
-			if(objectContainsFunctions(entry as Record<string, unknown>)) {
+		if (isObject(entry)) {
+			if (objectContainsFunctions(entry as Record<string, unknown>)) {
 				return false;
 			}
 		}
@@ -83,7 +83,7 @@ function objectContainsFunctions(obj: Record<string, unknown>): boolean {
 }
 
 function isObject(value: unknown) {
-	return value && typeof value === 'object';
+	return value && typeof value === "object";
 }
 
 function getType(value: unknown) {
@@ -298,14 +298,19 @@ export class ProxyServer implements DurableObject {
 								if (v.hasOwnProperty(Symbol.asyncDispose))
 									delete v[Symbol.asyncDispose];
 
-								if(v.constructor.name === 'RpcStub') {
+								if (v.constructor.name === "RpcStub") {
 									// Disguise the `RpcStub` as an object to allow its pseudo-serialization
 									// (this is needed because `RpcStub`s are functions and those cannot be serialized)
-									return resolve(new Proxy({ v }, {
-										get(target, p) {
-											return target.v[p];
-										},
-									}));
+									return resolve(
+										new Proxy(
+											{ v },
+											{
+												get(target, p) {
+													return target.v[p];
+												},
+											}
+										)
+									);
 								}
 
 								resolve(v);

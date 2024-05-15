@@ -1,14 +1,14 @@
 import assert from "node:assert";
 import {
-	DELETE,
 	DeferredPromise,
+	DELETE,
 	GET,
 	HttpError,
 	KeyValueStorage,
+	maybeApply,
 	MiniflareDurableObject,
 	PUT,
 	RouteHandler,
-	maybeApply,
 } from "miniflare:shared";
 import { KVHeaders, KVLimits, KVParams } from "./constants";
 import {

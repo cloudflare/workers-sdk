@@ -52,7 +52,7 @@ export function handleFailure<
 		infer K
 	>
 		? K
-		: never
+		: never,
 >(
 	cb: (t: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
@@ -309,7 +309,7 @@ export function renderDeploymentConfiguration(
 			? []
 			: [
 					["Include IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"],
-			  ]),
+				]),
 	] as const;
 
 	updateStatus(

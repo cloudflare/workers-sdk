@@ -4,18 +4,18 @@ import http from "http";
 import { text } from "stream/consumers";
 import { ReadableStream, WritableStream } from "stream/web";
 import util from "util";
-import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import test, { ThrowsExpectation } from "ava";
 import {
 	DeferredPromise,
+	fetch,
 	File,
 	MessageEvent,
 	Miniflare,
 	ReplaceWorkersTypes,
 	Response,
 	WebSocketPair,
-	fetch,
 } from "miniflare";
+import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
 // make extensive use of the API proxy, testing their specific special cases.
@@ -313,7 +313,7 @@ test("ProxyClient: can `JSON.stringify()` proxies", async (t) => {
 		key: "key",
 		size: 5,
 		uploaded: object.uploaded.toISOString(),
-		storageClass: '',
+		storageClass: "",
 		version: object.version,
 	});
 });

@@ -1,7 +1,6 @@
 import assert from "assert";
 import crypto from "crypto";
 import fs from "fs/promises";
-import type { CacheStorage } from "@cloudflare/workers-types/experimental";
 import {
 	CACHE_PLUGIN_NAME,
 	HeadersInit,
@@ -15,10 +14,11 @@ import {
 } from "miniflare";
 import {
 	MiniflareDurableObjectControlStub,
-	MiniflareTestContext,
 	miniflareTest,
+	MiniflareTestContext,
 	useTmp,
 } from "../../test-shared";
+import type { CacheStorage } from "@cloudflare/workers-types/experimental";
 
 interface Context extends MiniflareTestContext {
 	caches: ReplaceWorkersTypes<CacheStorage>;

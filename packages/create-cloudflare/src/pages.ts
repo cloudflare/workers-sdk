@@ -47,7 +47,7 @@ export const createProject = async (ctx: C3Context) => {
 						e instanceof Error &&
 						// if the error is regarding name duplication we can exist as retrying is not going to help
 						e.message.includes(
-							"A project with this name already exists. Choose a different project name."
+							"A project with this name already exists. Choose a different project name.",
 						)
 					);
 				},
@@ -61,9 +61,9 @@ export const createProject = async (ctx: C3Context) => {
 					env: { CLOUDFLARE_ACCOUNT_ID },
 					startText: "Creating Pages project",
 					doneText: `${brandColor("created")} ${dim(
-						`via \`${quoteShellArgs(cmd)}\``
+						`via \`${quoteShellArgs(cmd)}\``,
 					)}`,
-				})
+				}),
 		);
 	} catch (error) {
 		crash("Failed to create pages project. See output above.");
@@ -88,9 +88,9 @@ export const createProject = async (ctx: C3Context) => {
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Verifying Pages project",
 				doneText: `${brandColor("verified")} ${dim(
-					`project is ready for deployment`
+					`project is ready for deployment`,
 				)}`,
-			})
+			}),
 		);
 	} catch (error) {
 		crash("Pages project isn't ready yet. Please try deploying again later.");

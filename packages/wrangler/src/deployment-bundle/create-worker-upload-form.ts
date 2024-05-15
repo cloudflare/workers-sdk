@@ -449,8 +449,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 						module.type === "compiled-wasm"
 							? "wasm_module"
 							: module.type === "text"
-							? "text_blob"
-							: "data_blob",
+								? "text_blob"
+								: "data_blob",
 					part: name,
 				});
 
@@ -462,8 +462,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 							module.type === "compiled-wasm"
 								? "application/wasm"
 								: module.type === "text"
-								? "text/plain"
-								: "application/octet-stream",
+									? "text/plain"
+									: "application/octet-stream",
 					})
 				);
 				// And then remove it from the modules collection

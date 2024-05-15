@@ -37,13 +37,13 @@ function createFetchResult(
 				errors,
 				messages,
 				result_info,
-		  }
+			}
 		: {
 				result,
 				success,
 				errors,
 				messages,
-		  };
+			};
 }
 
 export {

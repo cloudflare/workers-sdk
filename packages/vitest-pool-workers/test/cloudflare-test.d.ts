@@ -200,7 +200,7 @@ declare module "cloudflare:test" {
 		}
 		export interface MockDispatch<
 			TData extends object = object,
-			TError extends Error = Error
+			TError extends Error = Error,
 		> extends Options {
 			times: number | null;
 			persist: boolean;
@@ -209,7 +209,7 @@ declare module "cloudflare:test" {
 		}
 		export interface MockDispatchData<
 			TData extends object = object,
-			TError extends Error = Error
+			TError extends Error = Error,
 		> extends MockResponseOptions {
 			error: TError | null;
 			statusCode?: number;

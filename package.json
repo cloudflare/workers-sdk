@@ -27,12 +27,10 @@
 		"gen:package": "turbo gen package"
 	},
 	"dependencies": {
-		"@ianvs/prettier-plugin-sort-imports": "4.1.0",
 		"@types/node": "^20.0.0",
 		"cross-env": "^7.0.3",
 		"esbuild-register": "^3.5.0",
 		"jsonc-parser": "^3.2.0",
-		"prettier": "^2.6.2",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
 		"typescript": "^4.8.4",
@@ -45,10 +43,12 @@
 		"@changesets/cli": "^2.27.1",
 		"@changesets/parse": "^0.4.0",
 		"@cloudflare/workers-types": "^4.20240512.0",
+		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@turbo/gen": "^1.10.13",
 		"@vue/compiler-sfc": "^3.3.4",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
+		"prettier": "^3.2.5",
 		"turbo": "^1.10.14"
 	},
 	"engines": {

@@ -26,11 +26,7 @@
 			"miniflare:zod": ["./src/workers/shared/zod.worker.ts"]
 		}
 	},
-	"include": [
-		"src/**/*.ts",
-		"test/**/*.ts",
-		"types"
-	],
+	"include": ["src/**/*.ts", "test/**/*.ts", "types"],
 	"exclude": [
 		"src/workers/**/*.worker.ts",
 		"src/workers/node.d.ts",

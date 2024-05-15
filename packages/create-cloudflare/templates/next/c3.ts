@@ -35,7 +35,7 @@ const generate = async (ctx: C3Context) => {
 	//       (instead of making it a special case which needs extra care)
 	const newTomlContent = wranglerToml.replace(
 		/#\s+\[\[kv_namespaces\]\]\n#\s+binding\s+=\s+"MY_KV_NAMESPACE"\n#\s+id\s+=\s+"[a-zA-Z0-9]+?"/,
-		($1) => `# KV Example:\n${$1}`
+		($1) => `# KV Example:\n${$1}`,
 	);
 
 	if (!/# KV Example/.test(newTomlContent)) {
@@ -97,7 +97,7 @@ const configure = async (ctx: C3Context) => {
 	if (usesTs) {
 		copyFile(
 			join(getTemplatePath(ctx), "env.d.ts"),
-			join(projectPath, "env.d.ts")
+			join(projectPath, "env.d.ts"),
 		);
 		updateStatus("Created an env.d.ts file");
 	}
@@ -112,7 +112,7 @@ const configure = async (ctx: C3Context) => {
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
-		join(projectPath, "README.md")
+		join(projectPath, "README.md"),
 	);
 	updateStatus("Updated the README file");
 
@@ -120,7 +120,7 @@ const configure = async (ctx: C3Context) => {
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
-	ctx: C3Context
+	ctx: C3Context,
 ): Promise<boolean> => {
 	const eslintUsage = usesEslint(ctx);
 
@@ -128,7 +128,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 
 	if (eslintUsage.configType !== ".eslintrc.json") {
 		warn(
-			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`
+			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`,
 		);
 		return false;
 	}

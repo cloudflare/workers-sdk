@@ -305,7 +305,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 					}
-			  );
+				);
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -331,7 +331,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
-			  })
+				})
 			: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {

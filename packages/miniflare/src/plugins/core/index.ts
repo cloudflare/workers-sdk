@@ -12,13 +12,13 @@ import { z } from "zod";
 import { fetch } from "../../http";
 import {
 	Extension,
+	kVoid,
 	Service,
 	ServiceDesignator,
+	supportedCompatibilityDate,
 	Worker_Binding,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
-	kVoid,
-	supportedCompatibilityDate,
 } from "../../runtime";
 import {
 	Json,
@@ -36,34 +36,34 @@ import {
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	Plugin,
-	SERVICE_LOOPBACK,
-	WORKER_BINDING_SERVICE_LOOPBACK,
 	kProxyNodeBinding,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
+	Plugin,
+	SERVICE_LOOPBACK,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
-	SERVICE_ENTRY,
 	getBuiltinServiceName,
 	getCustomServiceName,
 	getUserServiceName,
+	SERVICE_ENTRY,
 } from "./constants";
 import {
+	buildStringScriptPath,
+	convertModuleDefinition,
 	ModuleLocator,
 	SourceOptions,
 	SourceOptionsSchema,
-	buildStringScriptPath,
-	convertModuleDefinition,
 	withSourceURL,
 } from "./modules";
 import { PROXY_SECRET } from "./proxy";
 import {
+	kCurrentWorker,
 	ServiceDesignatorSchema,
 	ServiceFetchSchema,
-	kCurrentWorker,
 } from "./services";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -624,8 +624,8 @@ export const CORE_PLUGIN: Plugin<
 						classNamesEntries.length === 0
 							? undefined
 							: options.unsafeEphemeralDurableObjects
-							? { inMemory: kVoid }
-							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+								? { inMemory: kVoid }
+								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 					globalOutbound:
 						options.outboundService === undefined
 							? undefined
@@ -635,7 +635,7 @@ export const CORE_PLUGIN: Plugin<
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
 									options.outboundService
-							  ),
+								),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&

@@ -874,7 +874,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 					args.site,
 					args.siteInclude,
 					args.siteExclude
-			  );
+				);
 	return { assetPaths, bindings };
 }
 

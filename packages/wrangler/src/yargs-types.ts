@@ -26,17 +26,16 @@ export type CommonYargsArgvSanitizedJSON<P = CommonYargsOptionsJSON> =
 
 export type CommonYargsArgv = Argv<CommonYargsOptions>;
 
-export type YargvToInterface<T> = T extends Argv<infer P>
-	? ArgumentsCamelCase<P>
-	: never;
+export type YargvToInterface<T> =
+	T extends Argv<infer P> ? ArgumentsCamelCase<P> : never;
 
 // See http://stackoverflow.com/questions/51465182/how-to-remove-index-signature-using-mapped-types
 type RemoveIndex<T> = {
 	[K in keyof T as string extends K
 		? never
 		: number extends K
-		? never
-		: K]: T[K];
+			? never
+			: K]: T[K];
 };
 
 /**
@@ -44,7 +43,7 @@ type RemoveIndex<T> = {
  * that corresponds to the yargs arguments, remove index types, and only allow camelCase
  */
 export type StrictYargsOptionsToInterface<
-	T extends (yargs: CommonYargsArgv) => Argv
+	T extends (yargs: CommonYargsArgv) => Argv,
 > = T extends (yargs: CommonYargsArgv) => Argv<infer P>
 	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
 	: never;
@@ -54,7 +53,7 @@ export type StrictYargsOptionsToInterface<
  * that corresponds to the yargs arguments, remove index types, and only allow camelCase
  */
 export type StrictYargsOptionsToInterfaceJSON<
-	T extends (yargs: CommonYargsArgvJSON) => Argv
+	T extends (yargs: CommonYargsArgvJSON) => Argv,
 > = T extends (yargs: CommonYargsArgvJSON) => Argv<infer P>
 	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
 	: never;

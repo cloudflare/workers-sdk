@@ -14,7 +14,7 @@ export default {
 			await env.QUEUE_PRODUCER.send({ key: pathname, value });
 			return new Response("Accepted", { status: 202 });
 		} else {
-			return new Response("Method Not Allowed", { status: 405 })
+			return new Response("Method Not Allowed", { status: 405 });
 		}
 	},
 	async queue(batch, env, ctx) {
@@ -22,7 +22,7 @@ export default {
 			await processJob(env, message.body);
 			message.ack();
 		}
-	}
+	},
 } satisfies ExportedHandler<Env, QueueJob>;
 // ^ Using `satisfies` provides type checking/completions for `ExportedHandler`
 //   whilst still allowing us to call `worker.fetch()` and `worker.queue()` in

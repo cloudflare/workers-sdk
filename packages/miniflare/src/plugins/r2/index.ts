@@ -8,9 +8,6 @@ import {
 } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
-	PersistenceSchema,
-	Plugin,
-	SERVICE_LOOPBACK,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
@@ -18,6 +15,9 @@ import {
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
+	PersistenceSchema,
+	Plugin,
+	SERVICE_LOOPBACK,
 } from "../shared";
 
 export const R2OptionsSchema = z.object({

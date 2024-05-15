@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { BlobStore } from "./blob.worker";
 import { LogLevel, SharedBindings, SharedHeaders } from "./constants";
 import { Router } from "./router.worker";
-import { TypedSql, all, createTypedSql, isTypedValue } from "./sql.worker";
+import { all, createTypedSql, isTypedValue, TypedSql } from "./sql.worker";
 import { Timers } from "./timers.worker";
 import { reduceError } from "./types";
 

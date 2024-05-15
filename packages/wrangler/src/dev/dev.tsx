@@ -97,7 +97,7 @@ function useDevRegistry(
 								}
 							}
 						);
-				  }, 300)
+					}, 300)
 				: undefined;
 
 		return () => {

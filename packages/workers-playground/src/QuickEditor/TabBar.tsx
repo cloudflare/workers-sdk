@@ -42,8 +42,8 @@ export const Tab = createComponent<typeof ReactTab, StyledTabProps>(
 				? theme.colors.gray[8]
 				: theme.colors.white
 			: isDarkMode()
-			? theme.colors.white
-			: theme.colors.gray[9],
+				? theme.colors.white
+				: theme.colors.gray[9],
 		outlineOffset: -3,
 		borderRadius: 0,
 		":first-child": {

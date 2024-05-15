@@ -228,7 +228,7 @@ export async function maybeHandleRunRequest(
 }
 
 type DurableObjectConstructor<
-	Env extends Record<string, unknown> = Record<string, unknown>
+	Env extends Record<string, unknown> = Record<string, unknown>,
 > = {
 	new (state: DurableObjectState, env: Env): DurableObject;
 };
@@ -362,9 +362,8 @@ export async function listDurableObjectIds(
 	const url = `http://placeholder/durable-objects?unique_key=${encodeURIComponent(
 		uniqueKey
 	)}`;
-	const res = await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
-		url
-	);
+	const res =
+		await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(url);
 	assert.strictEqual(res.status, 200);
 	const ids = await res.json();
 	assert(Array.isArray(ids));

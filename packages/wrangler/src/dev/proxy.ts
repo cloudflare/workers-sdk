@@ -51,17 +51,15 @@ async function addCfAccessToken(
 		return;
 	}
 	if (typeof accessTokenRef.current === "string") {
-		headers[
-			"cookie"
-		] = `${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+		headers["cookie"] =
+			`${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
 		return;
 	}
 	const token = await getAccessToken(domain);
 	accessTokenRef.current = token;
 	if (token)
-		headers[
-			"cookie"
-		] = `${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
+		headers["cookie"] =
+			`${headers["cookie"]};CF_Authorization=${accessTokenRef.current}`;
 }
 /**
  * Rewrite references in request headers
@@ -599,7 +597,7 @@ async function createProxyServer(
 		localProtocol === "https"
 			? createHttpsServer(
 					await getHttpsOptions(customHttpsKeyPath, customHttpsCertPath)
-			  )
+				)
 			: createHttpServer();
 
 	return server

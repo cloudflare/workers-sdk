@@ -105,7 +105,7 @@ export function logConsoleMessage(
 												.join(",\n") +
 											(ro.preview.overflow ? "\n  ..." : "") +
 											"\n}"
-								  );
+									);
 
 							break;
 						case "weakset":
@@ -121,7 +121,7 @@ export function logConsoleMessage(
 												.join(", ") +
 											(ro.preview.overflow ? ", ..." : "") +
 											" }"
-								  );
+									);
 							break;
 						case "regexp":
 							break;

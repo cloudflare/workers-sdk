@@ -826,8 +826,8 @@ export async function main(argv: string[]): Promise<void> {
 				currentPlatform === "win32"
 					? ", such as Command Prompt or Powershell."
 					: currentPlatform === "darwin"
-					? ", such as Terminal.app or iTerm."
-					: "."; // linux user detected, hand holding disengaged.
+						? ", such as Terminal.app or iTerm."
+						: "."; // linux user detected, hand holding disengaged.
 
 			logger.error(
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`

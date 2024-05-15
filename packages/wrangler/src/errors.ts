@@ -20,7 +20,10 @@ export class DeprecationError extends UserError {
 }
 
 export class FatalError extends UserError {
-	constructor(message?: string, readonly code?: number) {
+	constructor(
+		message?: string,
+		readonly code?: number
+	) {
 		super(message);
 	}
 }
@@ -34,7 +37,10 @@ export class FatalError extends UserError {
  * ```
  */
 export class JsonFriendlyFatalError extends FatalError {
-	constructor(message?: string, readonly code?: number) {
+	constructor(
+		message?: string,
+		readonly code?: number
+	) {
 		super(message);
 	}
 }

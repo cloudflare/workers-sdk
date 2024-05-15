@@ -26,7 +26,7 @@ describe("Package Helpers", () => {
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["npm", "install"],
-				expect.anything()
+				expect.anything(),
 			);
 		});
 
@@ -36,7 +36,7 @@ describe("Package Helpers", () => {
 			await npmInstall(createTestContext());
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["pnpm", "install"],
-				expect.anything()
+				expect.anything(),
 			);
 		});
 	});
@@ -61,7 +61,7 @@ describe("Package Helpers", () => {
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				[...initialArgs, ...packages],
-				expect.anything()
+				expect.anything(),
 			);
 		});
 
@@ -81,9 +81,9 @@ describe("Package Helpers", () => {
 
 				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 					[...initialArgs, ...packages],
-					expect.anything()
+					expect.anything(),
 				);
-			}
+			},
 		);
 	});
 
@@ -92,7 +92,7 @@ describe("Package Helpers", () => {
 
 		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 			["npm", "install", "--save-dev", "wrangler"],
-			expect.anything()
+			expect.anything(),
 		);
 	});
 });

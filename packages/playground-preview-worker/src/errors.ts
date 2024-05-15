@@ -91,7 +91,10 @@ export class RawHttpFailed extends HttpError {
 
 export class PreviewRequestFailed extends HttpError {
 	name = "PreviewRequestFailed";
-	constructor(private tokenId: string | undefined, reportable: boolean) {
+	constructor(
+		private tokenId: string | undefined,
+		reportable: boolean
+	) {
 		super("Valid token not found", 400, reportable);
 	}
 	get data(): { tokenId: string | undefined } {
@@ -115,7 +118,10 @@ export class PreviewRequestForbidden extends HttpError {
 
 export class BadUpload extends HttpError {
 	name = "BadUpload";
-	constructor(message = "Invalid upload", private readonly error?: string) {
+	constructor(
+		message = "Invalid upload",
+		private readonly error?: string
+	) {
 		super(message, 400, false);
 	}
 	get data() {

@@ -7,9 +7,9 @@ import test from "ava";
 import {
 	CloseEvent,
 	DeferredPromise,
+	fetch,
 	FormData,
 	MessageEvent,
-	fetch,
 } from "miniflare";
 import { WebSocketServer } from "ws";
 import { flaky, useServer } from "../test-shared";

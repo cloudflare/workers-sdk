@@ -273,7 +273,7 @@ async function buildSourceOptions(
 			? {
 					entrypointSource: readFileSync(scriptPath, "utf8"),
 					modules: config.bundle.modules,
-			  }
+				}
 			: withSourceURLs(scriptPath, config.bundle.modules);
 
 		const entrypointNames = isPython

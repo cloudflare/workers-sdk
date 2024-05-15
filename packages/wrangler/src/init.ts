@@ -110,7 +110,7 @@ export type ServiceMetadataRes = {
 			environment: string;
 			created_on: string;
 			modified_on: string;
-		}
+		},
 	];
 };
 
@@ -140,7 +140,7 @@ type CronTriggersRes = {
 			cron: string;
 			created_on: Date;
 			modified_on: Date;
-		}
+		},
 	];
 };
 
@@ -340,7 +340,7 @@ export async function initHandler(args: InitArgs) {
 					? `✨ Initialized git repository at ${path.relative(
 							process.cwd(),
 							creationDirectory
-					  )}`
+						)}`
 					: `✨ Initialized git repository`
 			);
 		}
@@ -835,7 +835,7 @@ async function getNewWorkerTestType(yesFlag?: boolean) {
 					},
 				],
 				defaultOption: 1,
-		  });
+			});
 }
 
 function getNewWorkerTemplate(
@@ -936,7 +936,7 @@ async function getWorkerConfig(
 
 	const allRoutes: Route[] = [
 		...routes.map(
-			(r) => ({ pattern: r.pattern, zone_name: r.zone_name } as ZoneNameRoute)
+			(r) => ({ pattern: r.pattern, zone_name: r.zone_name }) as ZoneNameRoute
 		),
 		...customDomains.map(
 			(c) =>
@@ -944,7 +944,7 @@ async function getWorkerConfig(
 					pattern: c.hostname,
 					zone_name: c.zone_name,
 					custom_domain: true,
-				} as CustomDomainRoute)
+				}) as CustomDomainRoute
 		),
 	];
 
@@ -970,14 +970,14 @@ async function getWorkerConfig(
 							new_classes: durableObjectClassNames,
 						},
 					],
-			  }
+				}
 			: {}),
 		...(cronTriggers.schedules.length
 			? {
 					triggers: {
 						crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
 					},
-			  }
+				}
 			: {}),
 		tail_consumers: serviceEnvMetadata.script.tail_consumers,
 		...mappedBindings,

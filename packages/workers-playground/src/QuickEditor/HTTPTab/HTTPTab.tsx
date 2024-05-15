@@ -33,9 +33,8 @@ const HTTP_METHODS = [
 
 const SELECT_OPTIONS = HTTP_METHODS.map((m) => ({ label: m, value: m }));
 
-type HTTPMethod = typeof HTTP_METHODS extends ReadonlyArray<infer T>
-	? T
-	: never;
+type HTTPMethod =
+	typeof HTTP_METHODS extends ReadonlyArray<infer T> ? T : never;
 
 const BodyInput = createStyledComponent(
 	() => ({

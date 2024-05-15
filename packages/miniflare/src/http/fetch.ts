@@ -5,7 +5,7 @@ import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
 import { Request, RequestInfo, RequestInit } from "./request";
 import { Response } from "./response";
-import { WebSocketPair, coupleWebSocket } from "./websocket";
+import { coupleWebSocket, WebSocketPair } from "./websocket";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
 function headersFromIncomingRequest(req: http.IncomingMessage): undici.Headers {

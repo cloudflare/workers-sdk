@@ -79,7 +79,7 @@ export const usesTypescript = (ctx: C3Context) => {
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
 
-type EslintRcFileName = `.eslintrc.${typeof eslintRcExts[number]}`;
+type EslintRcFileName = `.eslintrc.${(typeof eslintRcExts)[number]}`;
 
 type EslintUsageInfo =
 	| {

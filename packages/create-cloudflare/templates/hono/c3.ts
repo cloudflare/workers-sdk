@@ -35,7 +35,7 @@ const configure = async (ctx: C3Context) => {
 		// Insert the env declaration after the last import (but before the rest of the body)
 		visitProgram: function (n) {
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration"
+				(t) => t.type === "ImportDeclaration",
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			lastImport.insertAfter(...snippets.bindingsTypeTs);

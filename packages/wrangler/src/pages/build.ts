@@ -508,7 +508,7 @@ We looked for the Functions directory (${basename(
 							args.projectDirectory,
 							config.pages_build_output_dir
 						),
-				  }
+					}
 				: undefined,
 	} as ValidatedArgs;
 };

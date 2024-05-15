@@ -71,8 +71,8 @@ export const Handler = withConfig<HandlerOptions>(
 						{db.created_in_region
 							? ` in region ${db.created_in_region}`
 							: location
-							? ` using primary location hint ${location}`
-							: ``}
+								? ` using primary location hint ${location}`
+								: ``}
 					</Text>
 					<Text>Created your new D1 database.</Text>
 					<Text>&nbsp;</Text>

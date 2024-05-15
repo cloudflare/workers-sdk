@@ -36,8 +36,8 @@ export async function printBundleSize(
 		percentage > 90
 			? chalk.red(bundleReport)
 			: percentage > 70
-			? chalk.yellow(bundleReport)
-			: chalk.green(bundleReport);
+				? chalk.yellow(bundleReport)
+				: chalk.green(bundleReport);
 
 	logger.log(`Total Upload: ${colorizedReport}`);
 
