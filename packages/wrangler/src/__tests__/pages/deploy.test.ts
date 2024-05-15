@@ -58,10 +58,8 @@ describe("pages deploy", () => {
 		  directory  The directory of static files to upload  [string]
 
 		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+		  -h, --help     Show help  [boolean]
+		  -v, --version  Show version number  [boolean]
 
 		Options:
 		      --project-name    The name of the project you want to deploy to  [string]
@@ -87,6 +85,30 @@ describe("pages deploy", () => {
 			runWrangler("pages deploy public")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`"Must specify a project name."`
+		);
+	});
+
+	it("should error if the [--config] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages deploy public --config=/path/to/wrangler.toml")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
+		);
+	});
+
+	it("should error if the [--experimental-json-config] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages deploy public --experimental-json-config")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Pages does not support \`wrangler.json\`"`
+		);
+	});
+
+	it("should error if the [--env] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages deploy public --env=production")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Pages does not support imperatively targeting a particular environment"`
 		);
 	});
 

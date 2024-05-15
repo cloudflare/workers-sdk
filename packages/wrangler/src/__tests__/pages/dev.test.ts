@@ -33,4 +33,20 @@ describe("pages dev", () => {
 			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
 		);
 	});
+
+	it("should error if the [--experimental-json-config] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages dev public --experimental-json-config")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Pages does not support \`wrangler.json\`"`
+		);
+	});
+
+	it("should error if the [--env] command line arg was specififed", async () => {
+		await expect(
+			runWrangler("pages dev public --env=production")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"Pages does not support imperatively targeting a particular environment"`
+		);
+	});
 });
