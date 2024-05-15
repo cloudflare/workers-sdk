@@ -227,6 +227,9 @@ export async function getBoundRegisteredWorkers({
 		durableObjects || { bindings: [] }
 	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
 
+	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
+		return {};
+	}
 	const workerDefinitions = await getRegisteredWorkers();
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
