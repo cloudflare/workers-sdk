@@ -196,6 +196,9 @@ packages/wrangler-devtools/depot
 packages/wrangler-devtools/devtools-frontend
 packages/miniflare/dist-types/
 
+fixtures/remix-pages-app/public/build
+fixtures/remix-pages-app/functions/\[\[path\]\].js
+
 .mf
 .tmp
 *.metafile.json
