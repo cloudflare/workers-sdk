@@ -19,7 +19,6 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240512.0",
-		"typescript": "^4.5.5",
 		"wrangler": "workspace:*"
 	}
 }

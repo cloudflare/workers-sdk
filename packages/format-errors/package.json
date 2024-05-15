@@ -15,7 +15,6 @@
 		"promjs": "^0.4.2",
 		"toucan-js": "^3.2.3",
 		"tsconfig": "*",
-		"typescript": "^5.0.2",
 		"wrangler": "workspace:*",
 		"zod": "^3.22.3"
 	}
