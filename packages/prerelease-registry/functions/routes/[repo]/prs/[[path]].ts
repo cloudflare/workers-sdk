@@ -26,8 +26,9 @@ export const onRequestGet: PagesFunction<
 
 	const pullRequestID = parseInt(path[0]);
 	const name = path[1];
-	if (isNaN(pullRequestID) || name === undefined)
+	if (isNaN(pullRequestID) || name === undefined) {
 		return Response.json({ pullRequestID, name }, { status: 404 });
+	}
 
 	const gitHubFetch = generateGitHubFetch(env);
 
@@ -94,8 +95,9 @@ export const onRequestGet: PagesFunction<
 				workflowRunCandidate.head_sha === sha &&
 				workflowRunCandidate.workflow_id === WORKFLOW_ID
 		);
-		if (workflowRun === undefined)
+		if (workflowRun === undefined) {
 			return Response.json({ workflowRun, sha }, { status: 404 });
+		}
 
 		return getArtifactForWorkflowRun({
 			repo: repo as string,

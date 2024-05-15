@@ -133,7 +133,9 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			`About to apply ${unappliedMigrations.length} migration(s)
 Your database may not be available to serve requests during the migration, continue?`
 		);
-		if (!ok) return;
+		if (!ok) {
+			return;
+		}
 
 		// don't backup prod db when applying migrations locally, in preview, or when using the experimental backend
 		if (!(local || preview)) {

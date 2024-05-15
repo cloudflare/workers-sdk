@@ -15,7 +15,9 @@ export async function fetchVersion(
 	versionCache?: VersionCache
 ) {
 	const cachedVersion = versionCache?.get(versionId);
-	if (cachedVersion) return cachedVersion;
+	if (cachedVersion) {
+		return cachedVersion;
+	}
 
 	const version = await fetchResult<ApiVersion>(
 		`/accounts/${accountId}/workers/scripts/${workerName}/versions/${versionId}`
@@ -65,7 +67,9 @@ export async function fetchLatestDeploymentVersions(
 ): Promise<[ApiVersion[], Map<VersionId, Percentage>]> {
 	const latestDeployment = await fetchLatestDeployment(accountId, workerName);
 
-	if (!latestDeployment) return [[], new Map()];
+	if (!latestDeployment) {
+		return [[], new Map()];
+	}
 
 	const versionTraffic = new Map(
 		latestDeployment.versions.map(({ version_id: versionId, percentage }) => [

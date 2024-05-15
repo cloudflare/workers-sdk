@@ -13,7 +13,9 @@ import type { Server } from "node:http";
 // Safety of `!`: `parseInt(undefined)` is NaN
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 let DEV_REGISTRY_PORT = parseInt(process.env.WRANGLER_WORKER_REGISTRY_PORT!);
-if (Number.isNaN(DEV_REGISTRY_PORT)) DEV_REGISTRY_PORT = 6284;
+if (Number.isNaN(DEV_REGISTRY_PORT)) {
+	DEV_REGISTRY_PORT = 6284;
+}
 const DEV_REGISTRY_HOST = `http://127.0.0.1:${DEV_REGISTRY_PORT}`;
 
 let globalServer: Server | null;

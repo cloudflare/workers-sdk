@@ -38,7 +38,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Fetch triggered at /__scheduled"`);
 			await worker.stop();
 		});
@@ -55,7 +57,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
 			await worker.stop();
 		});
@@ -72,7 +76,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/test");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
 			await worker.stop();
 		});
@@ -110,7 +116,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Fetch triggered at /__scheduled"`);
 			await worker.stop();
 		});
@@ -127,7 +135,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Ran scheduled event"`);
 			await worker.stop();
 		});
@@ -144,7 +154,9 @@ describe("run scheduled events with middleware", () => {
 
 			const resp = await worker.fetch("/test");
 			let text;
-			if (resp) text = await resp.text();
+			if (resp) {
+				text = await resp.text();
+			}
 			expect(text).toMatchInlineSnapshot(`"Hello world!"`);
 			await worker.stop();
 		});

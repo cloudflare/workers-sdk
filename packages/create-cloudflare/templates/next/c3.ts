@@ -124,7 +124,9 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 ): Promise<boolean> => {
 	const eslintUsage = usesEslint(ctx);
 
-	if (!eslintUsage.used) return false;
+	if (!eslintUsage.used) {
+		return false;
+	}
 
 	if (eslintUsage.configType !== ".eslintrc.json") {
 		warn(

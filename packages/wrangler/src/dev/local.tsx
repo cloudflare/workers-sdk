@@ -115,11 +115,15 @@ export function maybeRegisterLocalWorker(
 	internalDurableObjects: CfDurableObject[] | undefined,
 	entrypointAddresses: WorkerEntrypointsDefinition | undefined
 ) {
-	if (name === undefined) return;
+	if (name === undefined) {
+		return;
+	}
 
 	let protocol = url.protocol;
 	protocol = protocol.substring(0, url.protocol.length - 1);
-	if (protocol !== "http" && protocol !== "https") return;
+	if (protocol !== "http" && protocol !== "https") {
+		return;
+	}
 
 	const port = parseInt(url.port);
 	return registerWorker(name, {
@@ -170,7 +174,9 @@ function useLocalWorker(props: LocalProps) {
 	useEffect(() => {
 		const abortController = new AbortController();
 
-		if (!props.bundle || !props.format) return;
+		if (!props.bundle || !props.format) {
+			return;
+		}
 		let server = miniflareServerRef.current;
 		if (server === undefined) {
 			logger.log(chalk.dim("⎔ Starting local server..."));

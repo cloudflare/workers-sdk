@@ -420,7 +420,9 @@ function DevSession(props: DevSessionProps) {
 
 	// this suffices as an onEsbuildEnd callback
 	useEffect(() => {
-		if (bundle.current) onReloadStart(bundle.current);
+		if (bundle.current) {
+			onReloadStart(bundle.current);
+		}
 	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
@@ -576,7 +578,9 @@ function useCustomBuild(
 	onEnd: () => void
 ): void {
 	useEffect(() => {
-		if (!build.command) return;
+		if (!build.command) {
+			return;
+		}
 		let watcher: ReturnType<typeof watch> | undefined;
 		if (build.watch_dir) {
 			watcher = watch(build.watch_dir, {
@@ -722,8 +726,12 @@ function useHotkeys(props: {
 				// open browser
 				case "b": {
 					if (port === 0) {
-						if (!portUsable) logger.info("Waiting for port...");
-						if (blockBrowserOpen) return;
+						if (!portUsable) {
+							logger.info("Waiting for port...");
+						}
+						if (blockBrowserOpen) {
+							return;
+						}
 						blockBrowserOpen = true;
 						await portUsablePromise;
 						blockBrowserOpen = false;
@@ -744,7 +752,9 @@ function useHotkeys(props: {
 				}
 				// toggle local
 				case "l":
-					if (forceLocal) return;
+					if (forceLocal) {
+						return;
+					}
 					setToggles((previousToggles) => ({
 						...previousToggles,
 						local: !previousToggles.local,

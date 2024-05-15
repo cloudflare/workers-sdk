@@ -9,7 +9,9 @@ import { UserError } from "../errors";
  * @returns the initial input, without `BEGIN TRANSACTION`/`COMMIT`
  */
 export function trimSqlQuery(sql: string): string {
-	if (!mayContainTransaction(sql)) return sql;
+	if (!mayContainTransaction(sql)) {
+		return sql;
+	}
 
 	//note that we are intentionally not using greedy replace here, as we're targeting sqlite's dump command
 	const trimmedSql = sql

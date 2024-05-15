@@ -276,7 +276,9 @@ export async function deployHandler(
 					args.siteExclude
 				);
 
-	if (!args.dryRun) await standardPricingWarning(config);
+	if (!args.dryRun) {
+		await standardPricingWarning(config);
+	}
 
 	await deploy({
 		config,

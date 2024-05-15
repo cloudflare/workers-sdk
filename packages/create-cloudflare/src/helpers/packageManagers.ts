@@ -122,10 +122,14 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 	}
 
 	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
+	if (existsSync(nodeModulesPath)) {
+		rmSync(nodeModulesPath, { recursive: true });
+	}
 
 	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
-	if (existsSync(lockfilePath)) rmSync(lockfilePath);
+	if (existsSync(lockfilePath)) {
+		rmSync(lockfilePath);
+	}
 
 	await runCommand([npm, "install"], {
 		silent: true,

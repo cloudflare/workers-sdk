@@ -233,7 +233,9 @@ export async function Handler({
 		let didTerminate = false;
 
 		return async () => {
-			if (didTerminate) return;
+			if (didTerminate) {
+				return;
+			}
 
 			tail.terminate();
 			await deleteTail();

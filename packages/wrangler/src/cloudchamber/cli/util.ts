@@ -25,7 +25,9 @@ export function fakeWait<T = Record<string, unknown>>(
 ) {
 	return new Promise<typeof object>((res, rej) => {
 		setTimeout(() => {
-			if (reject) return rej(object);
+			if (reject) {
+				return rej(object);
+			}
 			res(object);
 		}, ms);
 	});

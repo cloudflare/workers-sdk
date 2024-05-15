@@ -140,7 +140,9 @@ async function fetchDefaultRollbackVersionId(
 			({ percentage }) => percentage === 100
 		);
 
-		if (stableVersion) return stableVersion.version_id;
+		if (stableVersion) {
+			return stableVersion.version_id;
+		}
 	}
 
 	// if we get here, we did not find a stable version

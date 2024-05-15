@@ -106,8 +106,12 @@ export function compareRoutes(routeA: string, routeB: string) {
 		const isWildcardB = segmentsB[i].includes("*");
 
 		// sort wildcard segments after non-wildcard segments
-		if (isWildcardA && !isWildcardB) return 1;
-		if (!isWildcardA && isWildcardB) return -1;
+		if (isWildcardA && !isWildcardB) {
+			return 1;
+		}
+		if (!isWildcardA && isWildcardB) {
+			return -1;
+		}
 	}
 
 	// all else equal, just sort the paths lexicographically

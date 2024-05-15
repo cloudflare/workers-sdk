@@ -424,7 +424,9 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		const entries: [{ key: string; value: string | boolean }] = [
 			{ key: "Name", value: ai.binding },
 		];
-		if (ai.staging) entries.push({ key: "Staging", value: ai.staging });
+		if (ai.staging) {
+			entries.push({ key: "Staging", value: ai.staging });
+		}
 
 		output.push({
 			type: "AI",

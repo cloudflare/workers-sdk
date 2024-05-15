@@ -18,6 +18,9 @@ export function getRelativeProjectPath(
 	project: WorkspaceProject
 ): string | number {
 	const projectPath = getProjectPath(project);
-	if (typeof projectPath === "number") return projectPath;
-	else return path.relative("", projectPath);
+	if (typeof projectPath === "number") {
+		return projectPath;
+	} else {
+		return path.relative("", projectPath);
+	}
 }

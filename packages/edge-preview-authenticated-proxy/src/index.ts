@@ -87,7 +87,9 @@ class InvalidURL extends HttpError {
 }
 
 function assertValidURL(maybeUrl: string) {
-	if (!URL.canParse(maybeUrl)) throw new InvalidURL(maybeUrl);
+	if (!URL.canParse(maybeUrl)) {
+		throw new InvalidURL(maybeUrl);
+	}
 }
 
 function switchRemote(url: URL, remote: string) {

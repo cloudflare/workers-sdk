@@ -65,7 +65,11 @@ export type WorkersUserConfigExport = WorkersUserConfig<UserConfig>;
 export type WorkersProjectConfigExport = WorkersUserConfig<UserWorkspaceConfig>;
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {
-	for (const item of items) if (!array.includes(item)) array.push(item);
+	for (const item of items) {
+		if (!array.includes(item)) {
+			array.push(item);
+		}
+	}
 }
 
 const requiredConditions = ["workerd", "worker", "browser"];
@@ -85,7 +89,9 @@ const configPlugin: PluginOption = {
 		// Remove "node" condition added by the `vitest:project` plugin. We're
 		// running tests inside `workerd`, not Node.js, so "node" isn't needed.
 		const nodeIndex = config.resolve.conditions.indexOf("node");
-		if (nodeIndex !== -1) config.resolve.conditions.splice(nodeIndex, 1);
+		if (nodeIndex !== -1) {
+			config.resolve.conditions.splice(nodeIndex, 1);
+		}
 
 		// Use the same resolve conditions as `wrangler`, minus "import" as this
 		// breaks Vite's `require()` resolve

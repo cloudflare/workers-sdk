@@ -120,10 +120,14 @@ function forEachMiniflare(
 	mfs: SingleOrPerTestFileMiniflare,
 	callback: (mf: Miniflare) => Promise<unknown>
 ): Promise<unknown> {
-	if (mfs instanceof Miniflare) return callback(mfs);
+	if (mfs instanceof Miniflare) {
+		return callback(mfs);
+	}
 
 	const promises: Promise<unknown>[] = [];
-	for (const mf of mfs.values()) promises.push(callback(mf));
+	for (const mf of mfs.values()) {
+		promises.push(callback(mf));
+	}
 	return Promise.all(promises);
 }
 
@@ -139,7 +143,9 @@ const allProjects = new Map<string /* projectName */, Project>();
 
 function getRunnerName(project: WorkspaceProject, testFile?: string) {
 	const name = `${WORKER_NAME_PREFIX}runner-${project.getName()}`;
-	if (testFile === undefined) return name;
+	if (testFile === undefined) {
+		return name;
+	}
 	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
 	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
 	return `${name}-${testFileHash}-${testFile}`;
@@ -149,7 +155,9 @@ function isDurableObjectDesignatorToSelf(
 	value: unknown
 ): value is string | { className: string } {
 	// Either this is a simple `string` designator to the current worker...
-	if (typeof value === "string") return true;
+	if (typeof value === "string") {
+		return true;
+	}
 	// ...or it's an object designator without a `scriptName`. We're assuming the
 	// user isn't able to guess the current worker name, so if a `scriptName` is
 	// set, the designator is definitely for another worker.
@@ -217,7 +225,9 @@ function fixupDurableObjectBindingsToSelf(
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
 	const result = new Set<string>();
-	if (worker.durableObjects === undefined) return result;
+	if (worker.durableObjects === undefined) {
+		return result;
+	}
 	for (const key of Object.keys(worker.durableObjects)) {
 		const designator = worker.durableObjects[key];
 		// `designator` hasn't been validated at this point
@@ -399,8 +409,12 @@ function buildProjectWorkerOptions(
 	`;
 
 	// Make sure we define the runner script, including object wrappers & defines
-	if ("script" in runnerWorker) delete runnerWorker.script;
-	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
+	if ("script" in runnerWorker) {
+		delete runnerWorker.script;
+	}
+	if ("scriptPath" in runnerWorker) {
+		delete runnerWorker.scriptPath;
+	}
 
 	// We want module names to be their absolute path without the leading	slash
 	// (i.e. the modules root should be the root directory). On Windows, we'd
@@ -479,7 +493,9 @@ type ModuleFallbackService = NonNullable<
 const moduleFallbackServices = new WeakMap<Vitest, ModuleFallbackService>();
 function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 	let service = moduleFallbackServices.get(ctx);
-	if (service !== undefined) return service;
+	if (service !== undefined) {
+		return service;
+	}
 	service = handleModuleFallbackRequest.bind(undefined, ctx.vitenode.server);
 	moduleFallbackServices.set(ctx, service);
 	return service;
@@ -579,7 +595,9 @@ async function getProjectMiniflare(
 function maybeGetResolvedMainPath(project: Project): string | undefined {
 	const projectPath = getProjectPath(project.project);
 	const main = project.options.main;
-	if (main === undefined) return;
+	if (main === undefined) {
+		return;
+	}
 	if (typeof projectPath === "string") {
 		return path.resolve(path.dirname(projectPath), main);
 	} else {
@@ -742,11 +760,15 @@ function getPackageJson(dirPath: string): PackageJson | undefined {
 			const contents = fs.readFileSync(pkgJsonPath, "utf8");
 			return JSON.parse(contents);
 		} catch (e) {
-			if (!isFileNotFoundError(e)) throw e;
+			if (!isFileNotFoundError(e)) {
+				throw e;
+			}
 		}
 		const nextDirPath = path.dirname(dirPath);
 		// `path.dirname()` of the root directory is the root directory
-		if (nextDirPath === dirPath) return;
+		if (nextDirPath === dirPath) {
+			return;
+		}
 		dirPath = nextDirPath;
 	}
 }
@@ -830,7 +852,9 @@ export default function (ctx: Vitest): ProcessPool {
 			const filesByProject = new Map<WorkspaceProject, string[]>();
 			for (const [project, file] of specs) {
 				let group = filesByProject.get(project);
-				if (group === undefined) filesByProject.set(project, (group = []));
+				if (group === undefined) {
+					filesByProject.set(project, (group = []));
+				}
 				group.push(file);
 			}
 			for (const [workspaceProject, files] of filesByProject) {

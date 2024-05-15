@@ -26,7 +26,9 @@ export function mayContainMultipleStatements(sql: string): boolean {
  */
 export default function splitSqlQuery(sql: string): string[] {
 	const trimmedSql = trimSqlQuery(sql);
-	if (!mayContainMultipleStatements(trimmedSql)) return [trimmedSql];
+	if (!mayContainMultipleStatements(trimmedSql)) {
+		return [trimmedSql];
+	}
 	const split = splitSqlIntoStatements(trimmedSql);
 	if (split.length === 0) {
 		return [trimmedSql];

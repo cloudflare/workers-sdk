@@ -193,8 +193,12 @@ async function handleModifyCommand(
 			question: modifyImageQuestion,
 			label: "",
 			validate: (value) => {
-				if (typeof value !== "string") return "unknown error";
-				if (value.endsWith(":latest")) return "we don't allow :latest tags";
+				if (typeof value !== "string") {
+					return "unknown error";
+				}
+				if (value.endsWith(":latest")) {
+					return "we don't allow :latest tags";
+				}
 			},
 			defaultValue: args.image ?? "",
 			initialValue: args.image ?? "",

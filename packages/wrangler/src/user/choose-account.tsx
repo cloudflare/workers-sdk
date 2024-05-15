@@ -34,7 +34,9 @@ export async function getAccountChoices(): Promise<ChooseAccountItem[]> {
 					`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID"`
 				);
-			} else throw err;
+			} else {
+				throw err;
+			}
 		}
 	}
 }

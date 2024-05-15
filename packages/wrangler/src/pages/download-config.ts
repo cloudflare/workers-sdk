@@ -68,8 +68,9 @@ async function toEnvironment(
 	const configObj = {} as RawEnvironment;
 	configObj.compatibility_date =
 		project.compatibility_date ?? new Date().toISOString().substring(0, 10);
-	if (project.compatibility_flags?.length)
+	if (project.compatibility_flags?.length) {
 		configObj.compatibility_flags = project.compatibility_flags;
+	}
 
 	for (const [name, envVar] of Object.entries(project.env_vars ?? {})) {
 		if (envVar?.value && envVar?.type == "plain_text") {

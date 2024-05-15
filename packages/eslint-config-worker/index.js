@@ -45,6 +45,7 @@ module.exports = {
 			],
 
 			rules: {
+				curly: ["error", "all"],
 				"no-empty": "off",
 				"no-empty-function": "off",
 				"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],

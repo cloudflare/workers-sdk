@@ -145,7 +145,9 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							}
 							await stream.promises.pipeline(input, output);
 						}
-						if (!pipe) logger.log("Download complete.");
+						if (!pipe) {
+							logger.log("Download complete.");
+						}
 					}
 				)
 				.command(

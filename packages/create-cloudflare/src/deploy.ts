@@ -45,7 +45,9 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	ctx.deployment = {};
 
 	const loginSuccess = await wranglerLogin();
-	if (!loginSuccess) return false;
+	if (!loginSuccess) {
+		return false;
+	}
 
 	await chooseAccount(ctx);
 

@@ -70,7 +70,7 @@ describe("execute", () => {
 						);
 					}
 					// Subsequent request, sees that it is complete
-					else
+					else {
 						return res(
 							ctx.status(200),
 							ctx.json({
@@ -92,6 +92,7 @@ describe("execute", () => {
 								},
 							})
 						);
+					}
 				}
 			)
 		);

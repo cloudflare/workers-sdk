@@ -16,11 +16,15 @@ const scripts: Record<string, string> = {
 	response: `return new Response("ok")`,
 };
 function getBindings(scriptName: string | readonly string[]) {
-	if (typeof scriptName !== "string") return "";
+	if (typeof scriptName !== "string") {
+		return "";
+	}
 	return scriptName.split("--").flatMap((part) => bindings[part] ?? []);
 }
 function getScript(scriptName: string | readonly string[]): string {
-	if (typeof scriptName !== "string") return "";
+	if (typeof scriptName !== "string") {
+		return "";
+	}
 	return `export default {fetch(request){
     ${scriptName
 			.split("--")

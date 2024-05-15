@@ -29,7 +29,9 @@ export const poll = async (url: string): Promise<boolean> => {
 	await sleep(10 * 1000);
 
 	await pollDns(domain, start, s);
-	if (await pollHttp(url, start, s)) return true;
+	if (await pollHttp(url, start, s)) {
+		return true;
+	}
 
 	s.stop(
 		`${brandColor(
@@ -92,7 +94,9 @@ export const isDomainResolvable = async (domain: string) => {
 		const nameServers = await lookupSubdomainNameservers(domain);
 
 		// If the subdomain nameservers aren't resolvable yet, keep polling
-		if (nameServers.length === 0) return false;
+		if (nameServers.length === 0) {
+			return false;
+		}
 
 		// Once they are resolvable, query these nameservers for the domain's 'A' record
 		const dns = new dns2({ nameServers });

@@ -385,7 +385,9 @@ async function runEsbuild({
 export async function startLocalServer(
 	props: LocalProps
 ): Promise<{ stop: () => Promise<void> }> {
-	if (!props.bundle || !props.format) return { async stop() {} };
+	if (!props.bundle || !props.format) {
+		return { async stop() {} };
+	}
 
 	// Log warnings for experimental dev-registry-dependent options
 	if (props.bindings.services && props.bindings.services.length > 0) {

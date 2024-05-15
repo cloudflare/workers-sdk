@@ -162,7 +162,9 @@ function throwFetchError(
 	resource: string,
 	response: FetchResult<unknown>
 ): never {
-	for (const error of response.errors) maybeThrowFriendlyError(error);
+	for (const error of response.errors) {
+		maybeThrowFriendlyError(error);
+	}
 
 	const error = new APIError({
 		text: `A request to the Cloudflare API (${resource}) failed.`,

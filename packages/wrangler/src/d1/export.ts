@@ -57,12 +57,14 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 
-	if (local)
+	if (local) {
 		throw new UserError(
 			`Local imports/exports will be coming in a future version of Wrangler.`
 		);
-	if (!remote)
+	}
+	if (!remote) {
 		throw new UserError(`You must specify either --local or --remote`);
+	}
 
 	// Allow multiple --table x --table y flags or none
 	const tables: string[] = table
@@ -123,8 +125,9 @@ async function exportRemotely(
 
 	const finalResponse = await pollExport(accountId, db, dumpOptions, undefined);
 
-	if (finalResponse.status !== "complete")
+	if (finalResponse.status !== "complete") {
 		throw new APIError({ text: `D1 reset before export completed!` });
+	}
 
 	logger.log(`🌀 Downloading SQL to ${output}...`);
 	logger.log(
@@ -159,7 +162,9 @@ async function pollExport(
 		}),
 	});
 
-	if (!response.success) throw new Error(response.error);
+	if (!response.success) {
+		throw new Error(response.error);
+	}
 
 	response.messages.forEach((line) => {
 		if (line.startsWith(`Uploaded part`)) {

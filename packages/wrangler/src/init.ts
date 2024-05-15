@@ -1137,7 +1137,9 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 					default: {
 						// If we don't know what the type is, its an unsafe binding
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						if (!(binding as any)?.type) break;
+						if (!(binding as any)?.type) {
+							break;
+						}
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
 							metadata: configObj.unsafe?.metadata ?? undefined,

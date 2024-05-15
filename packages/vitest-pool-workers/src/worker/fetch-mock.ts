@@ -40,7 +40,9 @@ setDispatcher((opts, handler) => {
 // option can be used in the `vitest.config.ts`.
 globalThis.fetch = async (input, init) => {
 	const isActive = isMockActive(fetchMock);
-	if (!isActive) return originalFetch.call(globalThis, input, init);
+	if (!isActive) {
+		return originalFetch.call(globalThis, input, init);
+	}
 
 	const request = new Request(input, init);
 	const url = new URL(request.url);
@@ -111,7 +113,9 @@ globalThis.fetch = async (input, init) => {
 			responseStatusCode = statusCode;
 			responseStatusText = statusText;
 
-			if (headers === null) return true;
+			if (headers === null) {
+				return true;
+			}
 			assert.strictEqual(headers.length % 2, 0, "Expected key/value array");
 			responseHeaders = Array.from({ length: headers.length / 2 }).map(
 				(_, i) => [headers[i * 2].toString(), headers[i * 2 + 1].toString()]

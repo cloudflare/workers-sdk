@@ -254,7 +254,9 @@ export function useWorker(
 			}
 			setToken(undefined); // reset token in case we're re-running
 
-			if (!props.bundle || !props.format) return;
+			if (!props.bundle || !props.format) {
+				return;
+			}
 
 			if (!startedRef.current) {
 				startedRef.current = true;
@@ -512,7 +514,9 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			logger.error(error.message);
 			throw error;
 		}
-		if (!props.bundle || !props.format) return;
+		if (!props.bundle || !props.format) {
+			return;
+		}
 
 		const init = await createRemoteWorkerInit({
 			bundle: props.bundle,

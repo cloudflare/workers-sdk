@@ -46,7 +46,9 @@ describe("deployments", () => {
 		try {
 			fs.unlinkSync("wrangler.toml");
 		} catch (e) {
-			if (!isFileNotFound(e)) throw e;
+			if (!isFileNotFound(e)) {
+				throw e;
+			}
 		}
 	});
 

@@ -4,8 +4,9 @@ import path from "node:path";
 export function fileURLToPath(url: string | URL): string {
 	// https://github.com/denoland/deno_std/blob/01a401c432fd5628efd3a4fafffdc14660efe9e2/node/url.ts#L1286
 	// Thanks 🦖!
-	if (typeof url === "string") url = new URL(url);
-	else if (!(url instanceof URL)) {
+	if (typeof url === "string") {
+		url = new URL(url);
+	} else if (!(url instanceof URL)) {
 		throw new TypeError(`Expected path to be string | URL, got ${url}`);
 	}
 	if (url.protocol !== "file:") {

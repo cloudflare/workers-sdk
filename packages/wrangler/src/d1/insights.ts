@@ -137,7 +137,9 @@ export const Handler = withConfig<HandlerOptions>(
 
 			graphqlQueriesResult?.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
 				(row) => {
-					if (!row.dimensions.query) return;
+					if (!row.dimensions.query) {
+						return;
+					}
 					output.push({
 						query: row.dimensions.query,
 						avgRowsRead: row?.avg?.rowsRead ?? 0,

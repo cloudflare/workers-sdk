@@ -30,7 +30,9 @@ export type BaseErrorEvent<Source = string, Data = undefined> = {
 };
 
 export function castErrorCause(cause: unknown) {
-	if (cause instanceof Error) return cause;
+	if (cause instanceof Error) {
+		return cause;
+	}
 
 	const error = new Error();
 	error.cause = cause;

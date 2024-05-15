@@ -59,7 +59,9 @@ globalThis.setTimeout = (...args: Parameters<typeof setTimeout>) => {
 };
 // @ts-expect-error overload types not compatible
 globalThis.clearTimeout = (...args: Parameters<typeof clearTimeout>) => {
-	if (args[0] === -0.5) return;
+	if (args[0] === -0.5) {
+		return;
+	}
 	return originalClearTimeout.apply(globalThis, args);
 };
 
@@ -94,7 +96,9 @@ class WebSocketMessagePort extends events.EventEmitter {
 	}
 
 	postMessage(data: unknown) {
-		if (this.socket.readyState !== WebSocket.READY_STATE_OPEN) return;
+		if (this.socket.readyState !== WebSocket.READY_STATE_OPEN) {
+			return;
+		}
 
 		const stringified = structuredSerializableStringify(data);
 		try {
@@ -140,7 +144,9 @@ function reduceError(e: any): JsonError {
 
 let patchedFunction = false;
 function ensurePatchedFunction(unsafeEval: UnsafeEval) {
-	if (patchedFunction) return;
+	if (patchedFunction) {
+		return;
+	}
 	patchedFunction = true;
 	// `new Function()` is used by `@vitest/snapshot`
 	globalThis.Function = new Proxy(globalThis.Function, {
@@ -241,7 +247,9 @@ export class RunnerObject implements DurableObject {
 
 	async fetch(request: Request): Promise<Response> {
 		const response = await maybeHandleRunRequest(request, this);
-		if (response !== undefined) return response;
+		if (response !== undefined) {
+			return response;
+		}
 
 		return this.handleVitestRunRequest(request);
 	}

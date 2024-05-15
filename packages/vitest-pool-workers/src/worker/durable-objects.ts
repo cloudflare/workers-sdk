@@ -48,7 +48,9 @@ function isDurableObjectStub(v: unknown): v is DurableObjectStub {
 // will automatically invalidate when needed.
 let sameIsolatedNamespaces: DurableObjectNamespace[] | undefined;
 function getSameIsolateNamespaces(): DurableObjectNamespace[] {
-	if (sameIsolatedNamespaces !== undefined) return sameIsolatedNamespaces;
+	if (sameIsolatedNamespaces !== undefined) {
+		return sameIsolatedNamespaces;
+	}
 	sameIsolatedNamespaces = [];
 
 	const options = getSerializedOptions();
@@ -59,7 +61,9 @@ function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 	for (const [key, designator] of options.durableObjectBindingDesignators) {
 		// We're assuming the user isn't able to guess the current worker name, so
 		// if a `scriptName` is set, the designator is for another worker.
-		if (designator.scriptName !== undefined) continue;
+		if (designator.scriptName !== undefined) {
+			continue;
+		}
 
 		const namespace = internalEnv[key];
 		assert(
@@ -139,7 +143,9 @@ export async function runInDurableObject<O extends DurableObject, R>(
 
 async function runAlarm(instance: DurableObject, state: DurableObjectState) {
 	const alarm = await state.storage.getAlarm();
-	if (alarm === null) return false;
+	if (alarm === null) {
+		return false;
+	}
 	await state.storage.deleteAlarm();
 	await instance.alarm?.();
 	return true;
@@ -202,7 +208,9 @@ export async function maybeHandleRunRequest(
 	state?: DurableObjectState
 ): Promise<Response | undefined> {
 	const actionId = request.cf?.[CF_KEY_ACTION];
-	if (actionId === undefined) return;
+	if (actionId === undefined) {
+		return;
+	}
 	assert(typeof actionId === "number", `Expected numeric ${CF_KEY_ACTION}`);
 	try {
 		const callback = actionResults.get(actionId);
@@ -290,7 +298,9 @@ class DurableObjectWrapper implements DurableObject {
 
 		// If this is an internal Durable Object action, handle it...
 		const response = await maybeHandleRunRequest(request, instance, this.state);
-		if (response !== undefined) return response;
+		if (response !== undefined) {
+			return response;
+		}
 
 		// Otherwise, pass through to the user code
 		if (instance.fetch === undefined) {

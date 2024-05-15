@@ -220,7 +220,9 @@ async function checkAndConfirmForceDeleteIfNecessary(
 		isUsedAsDurableObjectNamespace(references, scriptName) ||
 		isUsedAsDispatchOutbound(references) ||
 		isUsedAsTailConsumer(tailProducers);
-	if (!isDependentService) return false;
+	if (!isDependentService) {
+		return false;
+	}
 
 	const dependentMessages: string[] = [];
 	for (const serviceBindingReference of references.services?.incoming || []) {
@@ -231,7 +233,9 @@ async function checkAndConfirmForceDeleteIfNecessary(
 	}
 	for (const implementedDOBindingReference of references.durable_objects ||
 		[]) {
-		if (implementedDOBindingReference.service === scriptName) continue;
+		if (implementedDOBindingReference.service === scriptName) {
+			continue;
+		}
 		const dependentScript = renderScriptName(implementedDOBindingReference);
 		dependentMessages.push(
 			`- Worker ${dependentScript} has a binding to the Durable Object Namespace "${implementedDOBindingReference.durable_object_namespace_name}" implemented by this Worker`

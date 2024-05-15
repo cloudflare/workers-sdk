@@ -54,7 +54,9 @@ class WorkersSnapshotEnvironment extends NodeSnapshotEnvironment {
 
 	async readSnapshotFile(filePath: string): Promise<string | null> {
 		const res = await this.#fetch("GET", filePath);
-		if (res.status === 404) return null;
+		if (res.status === 404) {
+			return null;
+		}
 		assert.strictEqual(res.status, 200);
 		return await res.text();
 	}
@@ -143,7 +145,9 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		action: "push" | "pop",
 		source: Test | Suite
 	): Promise<void> {
-		if (!this.isolatedStorage) return;
+		if (!this.isolatedStorage) {
+			return;
+		}
 
 		// Ensure all `ctx.waitUntil()` calls complete before aborting all objects.
 		// `ctx.waitUntil()`s may contain storage calls (e.g. caching responses)
@@ -226,7 +230,9 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		const tries = tryStates.get(test);
 		assert(tries !== undefined);
 		const active = tries.active;
-		if (newActive !== undefined) tries.active = newActive;
+		if (newActive !== undefined) {
+			tries.active = newActive;
+		}
 		if (active !== undefined && !tries.popped.has(active)) {
 			tries.popped.add(active);
 			await this.updateStackedStorage("pop", test);

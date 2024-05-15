@@ -92,8 +92,9 @@ describe("multi-worker testing", () => {
 			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
 				// Regexp ignores colour codes
-				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args)))
+				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args))) {
 					requestResolve();
+				}
 			})
 		);
 

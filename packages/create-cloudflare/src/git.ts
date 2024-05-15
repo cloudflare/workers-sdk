@@ -43,7 +43,9 @@ export const offerGit = async (ctx: C3Context) => {
 
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
-	if (insideGitRepo) return;
+	if (insideGitRepo) {
+		return;
+	}
 
 	ctx.args.git = await processArgument(ctx.args, "git", {
 		type: "confirm",
@@ -65,7 +67,9 @@ export const gitCommit = async (ctx: C3Context) => {
 
 	// if a git repo existed before the process started then we don't want to commit
 	// we only commit if the git repo was initialized (directly or not) by c3
-	if (ctx.gitRepoAlreadyExisted) return;
+	if (ctx.gitRepoAlreadyExisted) {
+		return;
+	}
 
 	const gitInstalled = await isGitInstalled();
 	const gitInitialized = await isInsideGitRepo(ctx.project.path);
@@ -166,13 +170,17 @@ export async function isGitConfigured() {
 			useSpinner: false,
 			silent: true,
 		});
-		if (!userName) return false;
+		if (!userName) {
+			return false;
+		}
 
 		const email = await runCommand(["git", "config", "user.email"], {
 			useSpinner: false,
 			silent: true,
 		});
-		if (!email) return false;
+		if (!email) {
+			return false;
+		}
 
 		return true;
 	} catch {

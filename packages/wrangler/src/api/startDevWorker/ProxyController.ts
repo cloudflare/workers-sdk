@@ -52,7 +52,9 @@ export class ProxyController extends EventEmitter {
 	secret = randomUUID();
 
 	protected createProxyWorker() {
-		if (this._torndown) return;
+		if (this._torndown) {
+			return;
+		}
 		assert(this.latestConfig !== undefined);
 
 		const cert =
@@ -191,7 +193,9 @@ export class ProxyController extends EventEmitter {
 	}
 
 	async reconnectInspectorProxyWorker(): Promise<WebSocket | undefined> {
-		if (this._torndown) return;
+		if (this._torndown) {
+			return;
+		}
 
 		const existingWebSocket = await this.inspectorProxyWorkerWebSocket?.promise;
 		if (existingWebSocket?.readyState === WebSocket.READY_STATE_OPEN) {
@@ -214,7 +218,9 @@ export class ProxyController extends EventEmitter {
 				}
 			));
 		} catch (cause) {
-			if (this._torndown) return;
+			if (this._torndown) {
+				return;
+			}
 
 			const error = castErrorCause(cause);
 
@@ -237,7 +243,9 @@ export class ProxyController extends EventEmitter {
 			// don't reconnect
 		});
 		webSocket.addEventListener("error", () => {
-			if (this._torndown) return;
+			if (this._torndown) {
+				return;
+			}
 
 			void this.reconnectInspectorProxyWorker();
 		});
@@ -253,7 +261,9 @@ export class ProxyController extends EventEmitter {
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
 	): Promise<void> {
-		if (this._torndown) return;
+		if (this._torndown) {
+			return;
+		}
 
 		// Don't do any async work here. Enqueue the message with the mutex immediately.
 
@@ -262,7 +272,9 @@ export class ProxyController extends EventEmitter {
 				assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
 				const ready = await this.proxyWorker.ready.catch(() => undefined);
-				if (!ready) return;
+				if (!ready) {
+					return;
+				}
 
 				return this.proxyWorker.dispatchFetch(
 					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
@@ -273,7 +285,9 @@ export class ProxyController extends EventEmitter {
 				);
 			});
 		} catch (cause) {
-			if (this._torndown) return;
+			if (this._torndown) {
+				return;
+			}
 
 			const error = castErrorCause(cause);
 
@@ -293,7 +307,9 @@ export class ProxyController extends EventEmitter {
 		message: InspectorProxyWorkerIncomingWebSocketMessage,
 		retries = 3
 	): Promise<void> {
-		if (this._torndown) return;
+		if (this._torndown) {
+			return;
+		}
 
 		try {
 			// returns the existing websocket, if already connected
@@ -302,7 +318,9 @@ export class ProxyController extends EventEmitter {
 
 			websocket.send(JSON.stringify(message));
 		} catch (cause) {
-			if (this._torndown) return;
+			if (this._torndown) {
+				return;
+			}
 
 			const error = castErrorCause(cause);
 
@@ -379,14 +397,18 @@ export class ProxyController extends EventEmitter {
 	) {
 		switch (message.method) {
 			case "Runtime.consoleAPICalled": {
-				if (this._torndown) return;
+				if (this._torndown) {
+					return;
+				}
 
 				logConsoleMessage(message.params);
 
 				break;
 			}
 			case "Runtime.exceptionThrown": {
-				if (this._torndown) return;
+				if (this._torndown) {
+					return;
+				}
 
 				const stack = getSourceMappedStack(message.params.exceptionDetails);
 				logger.error(message.params.exceptionDetails.text, stack);
@@ -414,7 +436,9 @@ export class ProxyController extends EventEmitter {
 
 				break;
 			case "debug-log":
-				if (this._torndown) break;
+				if (this._torndown) {
+					break;
+				}
 
 				logger.debug("[InspectorProxyWorker]", ...message.args);
 
@@ -518,7 +542,9 @@ export class ProxyControllerLogger extends WranglerLog {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker
 		// keep the ProxyWorker request logs if we're in debug mode
-		if (message.includes("/cdn-cgi/") && this.level < LogLevel.DEBUG) return;
+		if (message.includes("/cdn-cgi/") && this.level < LogLevel.DEBUG) {
+			return;
+		}
 		super.log(message);
 	}
 }
@@ -532,7 +558,9 @@ function didMiniflareOptionsChange(
 	prev: MiniflareOptions | undefined,
 	next: MiniflareOptions
 ) {
-	if (prev === undefined) return false; // first time, so 'no change'
+	if (prev === undefined) {
+		return false;
+	} // first time, so 'no change'
 
 	// otherwise, if they're not deeply equal, they've changed
 	return !deepEquality(prev, next);
