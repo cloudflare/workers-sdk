@@ -3,11 +3,6 @@ import { Blob } from "buffer";
 import fs from "fs/promises";
 import path from "path";
 import consumers from "stream/consumers";
-import type {
-	KVNamespace,
-	KVNamespaceListOptions,
-	KVNamespaceListResult,
-} from "@cloudflare/workers-types/experimental";
 import { Macro, ThrowsExpectation } from "ava";
 import {
 	KV_PLUGIN_NAME,
@@ -16,15 +11,20 @@ import {
 	ReplaceWorkersTypes,
 } from "miniflare";
 import {
+	createJunkStream,
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
-	MiniflareTestContext,
-	Namespaced,
-	createJunkStream,
 	miniflareTest,
+	MiniflareTestContext,
 	namespace,
+	Namespaced,
 	useTmp,
 } from "../../test-shared";
+import type {
+	KVNamespace,
+	KVNamespaceListOptions,
+	KVNamespaceListResult,
+} from "@cloudflare/workers-types/experimental";
 
 function secondsToMillis(seconds: number): number {
 	return seconds * 1000;

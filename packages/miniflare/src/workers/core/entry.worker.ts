@@ -1,7 +1,7 @@
 import {
-	Colorize,
 	blue,
 	bold,
+	Colorize,
 	green,
 	grey,
 	red,
@@ -9,10 +9,10 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
-import { isCompressedByCloudflareFL } from '../../shared/mime-types';
+import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
-import { WorkerRoute, matchRoutes } from "./routing";
+import { matchRoutes, WorkerRoute } from "./routing";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;

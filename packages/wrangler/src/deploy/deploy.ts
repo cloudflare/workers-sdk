@@ -430,8 +430,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const workerUrl = props.dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
 		: notProd
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	let deploymentId: string | null = null;
 
@@ -532,7 +532,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 					}
-			  );
+				);
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -571,7 +571,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
-			  })
+				})
 			: undefined;
 
 		const assets = await syncAssets(

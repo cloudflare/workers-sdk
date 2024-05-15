@@ -91,7 +91,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: [keys.left, keys.enter],
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(projectPath).toExist();
@@ -99,7 +99,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`yes typescript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
-			}
+			},
 		);
 
 		test.skipIf(process.platform === "win32")(
@@ -130,7 +130,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: ["n"],
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(projectPath).toExist();
@@ -138,7 +138,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`no typescript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
-			}
+			},
 		);
 
 		test.skipIf(process.platform === "win32")(
@@ -156,7 +156,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 							input: ["n"],
 						},
 					],
-					logStream
+					logStream,
 				);
 
 				expect(projectPath).toExist();
@@ -164,7 +164,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`yes typescript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
-			}
+			},
 		);
-	}
+	},
 );

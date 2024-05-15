@@ -51,7 +51,10 @@ export class File implements FileStat {
 	data?: Uint8Array;
 	permissions?: FilePermission;
 
-	constructor(public uri: Uri, name: string) {
+	constructor(
+		public uri: Uri,
+		name: string
+	) {
 		this.type = FileType.File;
 		this.ctime = Date.now();
 		this.mtime = Date.now();
@@ -72,7 +75,10 @@ export class Directory implements FileStat {
 	name: string;
 	entries: Map<string, File | Directory>;
 
-	constructor(public uri: Uri, name: string) {
+	constructor(
+		public uri: Uri,
+		name: string
+	) {
 		this.type = FileType.Directory;
 		this.ctime = Date.now();
 		this.mtime = Date.now();

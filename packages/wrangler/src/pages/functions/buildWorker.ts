@@ -257,7 +257,7 @@ export function buildRawWorker({
 								});
 							},
 						} as Plugin,
-				  ]
+					]
 				: []),
 		],
 		isOutfile: !outdir,

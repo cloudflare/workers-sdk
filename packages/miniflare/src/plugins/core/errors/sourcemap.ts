@@ -1,6 +1,6 @@
 import assert from "assert";
-import type { Options } from "@cspotcode/source-map-support";
 import { parseStack } from "./callsite";
+import type { Options } from "@cspotcode/source-map-support";
 
 // `source-map-support` will only modify `Error.prepareStackTrace` if this is
 // the first time `install()` has been called. This is governed by shared data

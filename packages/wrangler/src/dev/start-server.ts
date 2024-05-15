@@ -341,7 +341,7 @@ async function runEsbuild({
 				entry,
 				findAdditionalModules: findAdditionalModules ?? false,
 				rules,
-		  });
+			});
 
 	const bundleResult =
 		processEntrypoint || !noBundle
@@ -367,7 +367,7 @@ async function runEsbuild({
 					doBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
-			  })
+				})
 			: undefined;
 
 	return {

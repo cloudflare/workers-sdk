@@ -133,7 +133,7 @@ export async function generateHandler<
 	Asset extends { body: ReadableStream | null; contentType: string } = {
 		body: ReadableStream | null;
 		contentType: string;
-	}
+	},
 >({
 	request,
 	metadata,
@@ -226,10 +226,10 @@ export async function generateHandler<
 					destination.origin === new URL(request.url).origin
 						? `${destination.pathname}${destination.search || search}${
 								destination.hash
-						  }`
+							}`
 						: `${destination.href}${destination.search ? "" : search}${
 								destination.hash
-						  }`;
+							}`;
 				switch (status) {
 					case 301:
 						return new MovedPermanentlyResponse(location, undefined, {
@@ -350,9 +350,8 @@ export async function generateHandler<
 			// "Early Hints cache entries are keyed by request URI and ignore query strings."
 			// https://developers.cloudflare.com/cache/about/early-hints/
 			const earlyHintsCacheKey = `${protocol}//${host}${pathname}`;
-			const earlyHintsResponse = await earlyHintsCache.match(
-				earlyHintsCacheKey
-			);
+			const earlyHintsResponse =
+				await earlyHintsCache.match(earlyHintsCacheKey);
 			if (earlyHintsResponse) {
 				const earlyHintsLinkHeader = earlyHintsResponse.headers.get("Link");
 				if (earlyHintsLinkHeader) {

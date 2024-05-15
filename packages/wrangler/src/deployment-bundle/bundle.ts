@@ -191,7 +191,7 @@ export async function bundleWorker(
 								browserTTL:
 									assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
 								bypassCache: bypassAssetCache,
-						  }
+							}
 						: {},
 			},
 			supports: ["modules", "service-worker"],
@@ -283,7 +283,7 @@ export async function bundleWorker(
 					outdir: undefined,
 					outfile: destination,
 					entryNames: undefined,
-			  }
+				}
 			: {}),
 		inject,
 		external: bundle
@@ -321,7 +321,7 @@ export async function bundleWorker(
 						NodeGlobalsPolyfills({ buffer: true }),
 						standardURLPlugin(),
 						NodeModulesPolyfills(),
-				  ]
+					]
 				: []),
 			nodejsCompatPlugin(!!nodejsCompat),
 			cloudflareInternalPlugin,

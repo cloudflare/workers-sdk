@@ -1,6 +1,9 @@
 import { Blob } from "buffer";
 import { arrayBuffer } from "stream/consumers";
 import { ReadableStream } from "stream/web";
+import { File, Headers } from "undici";
+import { Request, RequestInit, Response } from "../../../http";
+import { PlatformImpl } from "../../../workers";
 import type {
 	AbortSignal as WorkerAbortSignal,
 	Blob as WorkerBlob,
@@ -11,9 +14,6 @@ import type {
 	RequestInit as WorkerRequestInit,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-import { File, Headers } from "undici";
-import { Request, RequestInit, Response } from "../../../http";
-import { PlatformImpl } from "../../../workers";
 
 export const NODE_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
 	// Node's implementation of these classes don't quite match Workers',

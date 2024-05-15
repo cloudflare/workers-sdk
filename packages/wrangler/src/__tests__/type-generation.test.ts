@@ -416,7 +416,7 @@ describe("generateTypes()", () => {
 					? {
 							bindings: bindingsConfigMock.unsafe.bindings,
 							metadata: bindingsConfigMock.unsafe.metadata,
-					  }
+						}
 					: undefined,
 			} as TOML.JsonMap),
 			"utf-8"

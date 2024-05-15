@@ -96,7 +96,7 @@ describe("wrangler", () => {
 												uploaded_on: now.toISOString(),
 												expires_on: oneYearLater.toISOString(),
 											},
-									  ]
+										]
 									: certs,
 						})
 					);

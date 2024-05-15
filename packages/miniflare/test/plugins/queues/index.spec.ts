@@ -843,11 +843,16 @@ test("supports delivery delay", async (t) => {
 		verbose: true,
 		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
 		queueConsumers: {
-			QUEUE: { maxBatchSize: 100, maxBatchTimeout: 0, maxRetires: 1, retryDelay: 3 },
+			QUEUE: {
+				maxBatchSize: 100,
+				maxBatchTimeout: 0,
+				maxRetires: 1,
+				retryDelay: 3,
+			},
 		},
 		serviceBindings: {
 			async REPORTER(request) {
-				const batch = StringArraySchema.parse(await request.json())
+				const batch = StringArraySchema.parse(await request.json());
 				if (batch.length > 0) {
 					batches.push(batch);
 				}
@@ -939,7 +944,12 @@ test("supports delivery delay", async (t) => {
 	}
 
 	// Send batch of messages (default batch delay: 1 sec).
-	sendBatch(1, { body: 10, delaySeconds: 0 }, { body: 11 }, { body: 12, delaySeconds: 2 })
+	sendBatch(
+		1,
+		{ body: 10, delaySeconds: 0 },
+		{ body: 11 },
+		{ body: 12, delaySeconds: 2 }
+	);
 
 	// Verify messages are received at the right times.
 	for (let i = 1; i <= 3; i++) {
@@ -971,4 +981,3 @@ test("supports delivery delay", async (t) => {
 	await object.waitForFakeTasks();
 	t.is(batches.length, 1);
 });
-

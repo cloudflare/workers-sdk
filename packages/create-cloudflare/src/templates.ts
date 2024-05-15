@@ -82,7 +82,7 @@ export type TemplateConfig = {
 	 * */
 	transformPackageJson?: (
 		pkgJson: PackageJson,
-		ctx: C3Context
+		ctx: C3Context,
 	) => Promise<Record<string, string | object>>;
 
 	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
@@ -175,7 +175,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 	// Add backwards compatibility for the older argument (webFramework)
 	if (args.type && args.type === "webFramework") {
 		warn(
-			"The `webFramework` type is deprecated and will be removed in a future version. Please use `web-framework` instead."
+			"The `webFramework` type is deprecated and will be removed in a future version. Please use `web-framework` instead.",
 		);
 		args.type = "web-framework";
 	}
@@ -187,7 +187,7 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 			value,
 			label: displayName,
 			hidden,
-		})
+		}),
 	);
 
 	const type = await processArgument<string>(args, "type", {
@@ -223,7 +223,7 @@ export const selectFramework = async (args: Partial<C3Args>) => {
 		([key, config]) => ({
 			label: config.displayName,
 			value: key,
-		})
+		}),
 	);
 
 	const framework = await processArgument<string>(args, "framework", {
@@ -466,13 +466,13 @@ export const getTemplatePath = (ctx: C3Context) => {
 };
 
 export const isVariantInfo = (
-	copyFiles: CopyFiles
+	copyFiles: CopyFiles,
 ): copyFiles is VariantInfo => {
 	return "path" in (copyFiles as VariantInfo);
 };
 
 export const getCopyFilesDestinationDir = (
-	ctx: C3Context
+	ctx: C3Context,
 ): undefined | string => {
 	const { copyFiles } = ctx.template;
 
@@ -509,8 +509,8 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	const wranglerGitIgnoreFilesToAdd = wranglerGitIgnoreFiles.filter(
 		(file) =>
 			!existingGitIgnoreContent.match(
-				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`)
-			)
+				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`),
+			),
 	);
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {
@@ -537,7 +537,7 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 
 	s.stop(
 		`${brandColor(gitIgnorePreExisted ? "updated" : "created")} ${dim(
-			".gitignore file"
-		)}`
+			".gitignore file",
+		)}`,
 	);
 };

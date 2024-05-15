@@ -461,7 +461,7 @@ function mockHyperdriveRequest() {
 												port: reqBody.origin.port,
 												database: reqBody.origin.database,
 												user: reqBody.origin.user,
-										  }
+											}
 										: defaultConfig.origin,
 								caching: reqBody.caching ?? defaultConfig.caching,
 							},

@@ -3,18 +3,9 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"inputs": [
-				"src/**",
-				"scripts/**",
-				"types/**",
-				"*.mjs",
-				"*.js",
-				"*.json"
-			],
+			"inputs": ["src/**", "scripts/**", "types/**", "*.mjs", "*.js", "*.json"],
 			"outputs": ["dist/**", "bootstrap.js", "worker-metafiles/**"],
-			"env": [
-				"CI_OS"
-			]
+			"env": ["CI_OS"]
 		},
 		"test:ci": {
 			"inputs": ["test/**"],

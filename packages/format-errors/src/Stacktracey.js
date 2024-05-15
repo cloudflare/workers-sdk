@@ -255,17 +255,20 @@ export default class StackTracey {
 	mergeRepeatedLines() {
 		return new StackTracey(
 			partition(this.items, (e) => e.file + e.line).map((group) => {
-				return group.items.slice(1).reduce((memo, entry) => {
-					memo.callee =
-						(memo.callee || "<anonymous>") +
-						" → " +
-						(entry.callee || "<anonymous>");
-					memo.calleeShort =
-						(memo.calleeShort || "<anonymous>") +
-						" → " +
-						(entry.calleeShort || "<anonymous>");
-					return memo;
-				}, O.assign({}, group.items[0]));
+				return group.items.slice(1).reduce(
+					(memo, entry) => {
+						memo.callee =
+							(memo.callee || "<anonymous>") +
+							" → " +
+							(entry.callee || "<anonymous>");
+						memo.calleeShort =
+							(memo.calleeShort || "<anonymous>") +
+							" → " +
+							(entry.calleeShort || "<anonymous>");
+						return memo;
+					},
+					O.assign({}, group.items[0])
+				);
 			})
 		);
 	}

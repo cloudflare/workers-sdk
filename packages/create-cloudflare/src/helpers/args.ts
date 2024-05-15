@@ -207,7 +207,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	const doubleDashesIdx = argv.indexOf("--");
 	const c3Args = argv.slice(
 		0,
-		doubleDashesIdx < 0 ? undefined : doubleDashesIdx
+		doubleDashesIdx < 0 ? undefined : doubleDashesIdx,
 	);
 	const additionalArgs =
 		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
@@ -235,7 +235,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		}
 	}
 
-	let args: Awaited<typeof yargsObj["argv"]> | null = null;
+	let args: Awaited<(typeof yargsObj)["argv"]> | null = null;
 
 	try {
 		args = await yargsObj.argv;

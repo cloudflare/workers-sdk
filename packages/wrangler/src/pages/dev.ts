@@ -653,7 +653,7 @@ export const Handler = async (args: PagesDevArguments) => {
 						type: "ESModule",
 						globs: ["**/*.js", "**/*.mjs"],
 					},
-			  ]
+				]
 			: undefined,
 		bundle: enableBundling,
 		persistTo: args.persistTo,

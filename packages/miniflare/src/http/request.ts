@@ -1,12 +1,12 @@
-import type {
-	IncomingRequestCfProperties,
-	RequestInitCfProperties,
-} from "@cloudflare/workers-types/experimental";
 import {
 	Request as BaseRequest,
 	RequestInfo as BaseRequestInfo,
 	RequestInit as BaseRequestInit,
 } from "undici";
+import type {
+	IncomingRequestCfProperties,
+	RequestInitCfProperties,
+} from "@cloudflare/workers-types/experimental";
 
 export type RequestInitCfType =
 	| Partial<IncomingRequestCfProperties>

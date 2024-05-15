@@ -245,7 +245,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				const value = args.path
 					? readFileSyncToBuffer(args.path)
 					: // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					  args.value!;
+						args.value!;
 
 				const metadataLog = metadata
 					? ` with metadata "${JSON.stringify(metadata)}"`

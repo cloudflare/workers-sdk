@@ -81,7 +81,7 @@ export async function deployments(
 		const triggerStr = versions.annotations?.["workers/triggered_by"]
 			? `${formatTrigger(
 					versions.annotations["workers/triggered_by"]
-			  )} from ${formatSource(versions.metadata.source)}`
+				)} from ${formatSource(versions.metadata.source)}`
 			: `${formatSource(versions.metadata.source)}`;
 
 		let version = `
@@ -282,7 +282,7 @@ export async function viewDeployment(
 	const triggerStr = deploymentDetails.annotations?.["workers/triggered_by"]
 		? `${formatTrigger(
 				deploymentDetails.annotations["workers/triggered_by"]
-		  )} from ${formatSource(deploymentDetails.metadata.source)}`
+			)} from ${formatSource(deploymentDetails.metadata.source)}`
 		: `${formatSource(deploymentDetails.metadata.source)}`;
 
 	const rollbackStr = deploymentDetails.annotations?.["workers/rollback_from"]

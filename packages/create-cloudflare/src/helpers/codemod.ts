@@ -70,7 +70,7 @@ export const parseFile = (filePath: string) => {
 // Transform a file with the provided transformer methods and write it back to disk
 export const transformFile = (
 	filePath: string,
-	methods: recast.types.Visitor
+	methods: recast.types.Visitor,
 ) => {
 	const ast = parseFile(filePath);
 

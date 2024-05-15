@@ -9,9 +9,6 @@ import {
 import { PathSchema } from "../../shared";
 import { SharedBindings } from "../../workers";
 import {
-	PersistenceSchema,
-	Plugin,
-	SERVICE_LOOPBACK,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
@@ -19,13 +16,16 @@ import {
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
+	PersistenceSchema,
+	Plugin,
+	SERVICE_LOOPBACK,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 import {
-	SitesOptions,
 	getSitesBindings,
 	getSitesNodeBindings,
 	getSitesServices,
+	SitesOptions,
 } from "./sites";
 
 export const KVOptionsSchema = z.object({

@@ -1,5 +1,7 @@
 import assert from "node:assert";
 import {
+	all,
+	get,
 	HttpError,
 	MiniflareDurableObject,
 	MiniflareDurableObjectEnv,
@@ -7,8 +9,6 @@ import {
 	RouteHandler,
 	TypedSqlStorage,
 	TypedValue,
-	all,
-	get,
 	viewToBuffer,
 } from "miniflare:shared";
 import { z } from "miniflare:zod";

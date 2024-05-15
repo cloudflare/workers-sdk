@@ -211,7 +211,7 @@ export function normalizeAndValidateConfig(
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
 						Object.keys(rawConfig.env)
-				  )}\n`
+					)}\n`
 				: "";
 			const message =
 				`No environment found in configuration with name "${envName}".\n` +
@@ -370,11 +370,11 @@ function normalizeAndValidateBuild(
 								process.cwd(),
 								path.join(path.dirname(configPath), `${dir}`)
 							)
-					  )
+						)
 					: path.relative(
 							process.cwd(),
 							path.join(path.dirname(configPath), `${watch_dir}`)
-					  )
+						)
 				: watch_dir,
 		cwd,
 		deprecatedUpload,
@@ -811,7 +811,7 @@ function normalizeAndValidateModulePaths(
 					? path.relative(
 							process.cwd(),
 							path.join(path.dirname(configPath), filePath)
-					  )
+						)
 					: filePath;
 			}
 		}
@@ -1571,7 +1571,7 @@ function validateAndNormalizeTsconfig(
 		? path.relative(
 				process.cwd(),
 				path.join(path.dirname(configPath), tsconfig)
-		  )
+			)
 		: tsconfig;
 }
 

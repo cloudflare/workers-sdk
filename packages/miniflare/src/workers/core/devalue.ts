@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
+import { parse, stringify } from "devalue";
 import type {
 	Blob as WorkerBlob,
 	BlobOptions as WorkerBlobOptions,
@@ -10,7 +11,6 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-import { parse, stringify } from "devalue";
 
 // This file implements `devalue` reducers and revivers for structured-
 // serialisable types not supported by default. See serialisable types here:

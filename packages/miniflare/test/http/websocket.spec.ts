@@ -6,12 +6,12 @@ import test from "ava";
 import { expectTypeOf } from "expect-type";
 import {
 	CloseEvent,
+	coupleWebSocket,
 	DeferredPromise,
 	MessageEvent,
+	viewToBuffer,
 	WebSocket,
 	WebSocketPair,
-	coupleWebSocket,
-	viewToBuffer,
 } from "miniflare";
 import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";

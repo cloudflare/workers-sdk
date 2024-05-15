@@ -190,6 +190,20 @@ packages/quick-edit/vscode
 packages/quick-edit/web
 
 packages/wrangler/config-schema.json
+packages/wrangler-devtools/built-devtools
+packages/wrangler-devtools/.cipd
+packages/wrangler-devtools/depot
+packages/wrangler-devtools/devtools-frontend
+packages/miniflare/dist-types/
+
+fixtures/remix-pages-app/public/build
+fixtures/remix-pages-app/functions/\[\[path\]\].js
+
+.mf
+.tmp
+*.metafile.json
+*.drawio.svg.bkp
+*.drawio.svg.dtmp
 
 
 # Vendored npm dependencies
@@ -212,3 +226,5 @@ dist/**
 
 # Runtime dependencies report
 runtime-versions.md
+
+/worker-rust/target/

@@ -39,9 +39,9 @@ To utilize the `TURBO_REMOTE_CACHE_SIGNATURE_KEY` which will increase the securi
 		{
 			"binding": "R2_ARTIFACT_ARCHIVE", // The binding name for the bucket, used in the Worker i.e. env.R2_ARTIFACT_ARCHIVE.get(<key>)
 			"bucket_name": "turbo-cache", // bucket name when looking for objects in dashboard
-			"preview_bucket_name": "turbo-cache-preview"
-		}
-	]
+			"preview_bucket_name": "turbo-cache-preview",
+		},
+	],
 }
 ```
 

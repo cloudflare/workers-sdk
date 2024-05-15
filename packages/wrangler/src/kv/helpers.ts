@@ -232,7 +232,7 @@ export async function putKVKeyValue(
 				? asFormData({
 						value: keyValue.value,
 						metadata: JSON.stringify(keyValue.metadata),
-				  })
+					})
 				: keyValue.value,
 		},
 		searchParams

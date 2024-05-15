@@ -9,7 +9,7 @@ function checkURL(request, init) {
 						? new Request(request, init)
 						: request
 					).url
-			  );
+				);
 	if (url.port && url.port !== "443" && url.protocol === "https:") {
 		if (!urls.has(url.toString())) {
 			urls.add(url.toString());

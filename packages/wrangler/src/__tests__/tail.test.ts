@@ -1139,12 +1139,12 @@ function generateTailInfo(overload: boolean): TailInfo {
 				message:
 					"Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.",
 				type: "overload",
-		  }
+			}
 		: {
 				message:
 					"Tail has exited sampling mode and is no longer dropping messages.",
 				type: "overload-stop",
-		  };
+			};
 }
 
 function generateMockQueueEvent(opts?: Partial<QueueEvent>): QueueEvent {

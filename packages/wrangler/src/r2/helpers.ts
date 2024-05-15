@@ -362,7 +362,7 @@ export const R2EventableOperations = [
 	"CompleteMultipartUpload",
 	"CopyObject",
 ] as const;
-export type R2EventableOperation = typeof R2EventableOperations[number];
+export type R2EventableOperation = (typeof R2EventableOperations)[number];
 
 export const actionsForEventCategories: Record<
 	"object-create" | "object-delete",
@@ -438,7 +438,7 @@ export async function tableFromNotificationGetResponse(
 > {
 	const reducer = async ([_, { queue, rules }]: [
 		DetailID,
-		NotificationDetail[DetailID]
+		NotificationDetail[DetailID],
 	]) => {
 		const queueResp = await queueIdentifier(config, queue);
 		const rows = [];

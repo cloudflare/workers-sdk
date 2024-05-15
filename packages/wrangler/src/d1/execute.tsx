@@ -236,13 +236,13 @@ export async function executeSql({
 					batches: batchSplit(queries, batchSize),
 					json,
 					preview,
-			  })
+				})
 			: await executeLocally({
 					config,
 					name,
 					queries,
 					persistTo,
-			  });
+				});
 
 	if (json) logger.loggerLevel = existingLogLevel;
 	return result;

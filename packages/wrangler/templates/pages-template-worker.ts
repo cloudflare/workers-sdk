@@ -29,7 +29,7 @@ type EventContext<Env, P extends string, Data> = {
 declare type PagesFunction<
 	Env = unknown,
 	P extends string = string,
-	Data extends Record<string, unknown> = Record<string, unknown>
+	Data extends Record<string, unknown> = Record<string, unknown>,
 > = (context: EventContext<Env, P, Data>) => Response | Promise<Response>;
 /* end @cloudflare/workers-types */
 

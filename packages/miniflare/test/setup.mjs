@@ -1,10 +1,10 @@
 import Module from "node:module";
-import {
-	_initialiseInstanceRegistry,
-	_enableControlEndpoints,
-} from "../dist/src/index.js";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+	_enableControlEndpoints,
+	_initialiseInstanceRegistry,
+} from "../dist/src/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

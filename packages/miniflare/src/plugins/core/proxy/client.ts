@@ -3,7 +3,6 @@ import assert from "assert";
 import crypto from "crypto";
 import { ReadableStream, TransformStream } from "stream/web";
 import util from "util";
-import type { ServiceWorkerGlobalScope } from "@cloudflare/workers-types/experimental";
 import { stringify } from "devalue";
 import { Headers } from "undici";
 import { DispatchFetch, Request, Response } from "../../../http";
@@ -11,21 +10,22 @@ import { prefixStream, readPrefix } from "../../../shared";
 import {
 	Awaitable,
 	CoreHeaders,
-	ProxyAddresses,
-	ProxyOps,
-	ReducersRevivers,
-	StringifiedWithStream,
 	createHTTPReducers,
 	createHTTPRevivers,
 	isFetcherFetch,
 	isR2ObjectWriteHttpMetadata,
 	parseWithReadableStreams,
+	ProxyAddresses,
+	ProxyOps,
+	ReducersRevivers,
+	StringifiedWithStream,
 	stringifyWithStreams,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../workers";
 import { DECODER, SynchronousFetcher, SynchronousResponse } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
+import type { ServiceWorkerGlobalScope } from "@cloudflare/workers-types/experimental";
 
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");

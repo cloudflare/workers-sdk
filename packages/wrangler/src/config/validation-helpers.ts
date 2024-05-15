@@ -93,13 +93,13 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
 				validate,
 				defaultValue,
 				transformFn
-		  )
+			)
 		: notAllowedInNamedServiceEnvironment(
 				diagnostics,
 				topLevelEnv,
 				rawEnv,
 				field
-		  );
+			);
 }
 
 /**
@@ -169,7 +169,7 @@ type DeepKeyOf<T> = (
 	T extends object
 		? {
 				[K in Exclude<keyof T, symbol>]: `${K}${DotPrefix<DeepKeyOf<T[K]>>}`;
-		  }[Exclude<keyof T, symbol>]
+			}[Exclude<keyof T, symbol>]
 		: ""
 ) extends infer D
 	? Extract<D, string>

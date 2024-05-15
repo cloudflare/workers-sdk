@@ -103,14 +103,14 @@ export function useEsbuild({
 					entry,
 					findAdditionalModules: findAdditionalModules ?? false,
 					rules: rules,
-			  });
+				});
 
 		async function getAdditionalModules() {
 			return noBundle
 				? dedupeModulesByName([
 						...((await doFindAdditionalModules(entry, rules)) ?? []),
 						...additionalModules,
-				  ])
+					])
 				: additionalModules;
 		}
 
@@ -191,7 +191,7 @@ export function useEsbuild({
 							local,
 							projectRoot,
 							defineNavigatorUserAgent,
-					  })
+						})
 					: undefined;
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.

@@ -15,5 +15,6 @@
 		"^[.]/index$",
 		"<TYPES>"
 	],
-	"importOrderTypeScriptVersion": "4.8.4"
+	"importOrderTypeScriptVersion": "4.8.4",
+	"importOrderParserPlugins": ["typescript", "jsx", "decorators"]
 }

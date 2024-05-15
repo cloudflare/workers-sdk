@@ -240,7 +240,7 @@ function fixupDurableObjectBindingsToSelf(
 
 type ProjectWorkers = [
 	runnerWorker: WorkerOptions,
-	...auxiliaryWorkers: WorkerOptions[]
+	...auxiliaryWorkers: WorkerOptions[],
 ];
 
 const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";

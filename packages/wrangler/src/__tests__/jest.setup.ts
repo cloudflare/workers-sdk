@@ -209,7 +209,7 @@ jest.mock("../metrics/metrics-config", () => {
 							deviceId: "mock-device",
 							userId: undefined,
 						};
-				  },
+					},
 	};
 	return fakeModule;
 });
