@@ -464,12 +464,12 @@ function buildProjectWorkerOptions(
 	return workers;
 }
 
-const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
+const SHARED_MINIFLARE_OPTIONS = {
 	log: mfLog,
 	verbose: true,
 	handleRuntimeStdio,
 	unsafeStickyBlobs: true,
-};
+} satisfies Partial<MiniflareOptions>;
 
 type ModuleFallbackService = NonNullable<
 	MiniflareOptions["unsafeModuleFallbackService"]
