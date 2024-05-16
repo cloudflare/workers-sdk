@@ -1,5 +1,14 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.2.11
+
+### Patch Changes
+
+- [#5838](https://github.com/cloudflare/workers-sdk/pull/5838) [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update undici to the latest version to avoid a potential vulnerability
+
+- Updated dependencies [[`7e97ba8`](https://github.com/cloudflare/workers-sdk/commit/7e97ba8778be3cf1d93d44ed191748853c6661e0), [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161), [`63f7acb`](https://github.com/cloudflare/workers-sdk/commit/63f7acb37e7e7ceb60594ac91baf95cd30037d76), [`2869e03`](https://github.com/cloudflare/workers-sdk/commit/2869e0379667d755d1de5543cb80886cc42c211f), [`86a6e09`](https://github.com/cloudflare/workers-sdk/commit/86a6e09d8a369a3bb8aee8c252174bd01e090c54), [`df2daf2`](https://github.com/cloudflare/workers-sdk/commit/df2daf2c858229fd812bf1fe818b206ef1345a00)]:
+  - wrangler@3.57.0
+
 ## 0.2.10
 
 ### Patch Changes
@@ -91,16 +100,16 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-  	test: {
-  		poolOptions: {
-  			workers: {
-  				wrangler: {
-  					configPath: "./wrangler.toml",
-  					environment: "production",
-  				},
-  			},
-  		},
-  	},
+    test: {
+      poolOptions: {
+        workers: {
+          wrangler: {
+            configPath: "./wrangler.toml",
+            environment: "production",
+          },
+        },
+      },
+    },
   });
   ```
 
