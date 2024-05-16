@@ -21,7 +21,7 @@ runs:
   using: "composite"
   steps:
     - id: pm
-      uses: actions/github-script@7
+      uses: actions/github-script@v7
       env:
         PM: ${{ inputs.packageManager }}
       with:
