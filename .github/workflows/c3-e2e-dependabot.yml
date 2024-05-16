@@ -44,11 +44,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm, bun, yarn]
+        pm: [npm@0.0.0, pnpm@9.0.0, bun@1.0.3, yarn@1.0.0]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
-            pm: pnpm
+            pm: pnpm@9.0.0
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -62,7 +62,7 @@ jobs:
       - name: E2E Tests
         uses: ./.github/actions/run-c3-e2e
         with:
-          package-manager: ${{ matrix.pm }}
+          packageManager: ${{ matrix.pm }}
           framework: ${{ needs.get-dependabot-bumped-framework.outputs.bumped-framework-cli }}
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
