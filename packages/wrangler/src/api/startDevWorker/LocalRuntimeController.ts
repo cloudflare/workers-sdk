@@ -32,22 +32,30 @@ import type {
 
 const warnOnceMessages = new Set<string>();
 function warnOnce(message: string) {
-	if (warnOnceMessages.has(message)) return;
+	if (warnOnceMessages.has(message)) {
+		return;
+	}
 	warnOnceMessages.add(message);
 	logger.warn(message);
 }
 
 function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
-		if (file.contents instanceof Buffer) return file.contents;
+		if (file.contents instanceof Buffer) {
+			return file.contents;
+		}
 		return Buffer.from(file.contents);
 	}
 	return fs.readFileSync(file.path);
 }
 function getTextFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
-		if (typeof file.contents === "string") return file.contents;
-		if (file.contents instanceof Buffer) return file.contents.toString();
+		if (typeof file.contents === "string") {
+			return file.contents;
+		}
+		if (file.contents instanceof Buffer) {
+			return file.contents.toString();
+		}
 		return Buffer.from(file.contents).toString();
 	}
 	return fs.readFileSync(file.path, "utf8");
@@ -121,7 +129,9 @@ class WranglerLog extends Log {
 
 	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
-		if (message.includes(EXTERNAL_DURABLE_OBJECTS_WORKER_NAME)) return;
+		if (message.includes(EXTERNAL_DURABLE_OBJECTS_WORKER_NAME)) {
+			return;
+		}
 		super.log(message);
 	}
 
@@ -129,10 +139,14 @@ class WranglerLog extends Log {
 		// Only log warning about requesting a compatibility date after the workerd
 		// binary's version once, and only if there's an update available.
 		if (message.startsWith("The latest compatibility date supported by")) {
-			if (this.#warnedCompatibilityDateFallback) return;
+			if (this.#warnedCompatibilityDateFallback) {
+				return;
+			}
 			this.#warnedCompatibilityDateFallback = true;
 			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) return;
+				if (maybeNewVersion === undefined) {
+					return;
+				}
 				message += [
 					"",
 					"Features enabled by your requested compatibility date may not be available.",
@@ -166,7 +180,9 @@ function getIdentifier(name: string) {
 
 function castLogLevel(level: LoggerLevel): LogLevel {
 	let key = level.toUpperCase() as Uppercase<LoggerLevel>;
-	if (key === "LOG") key = "INFO";
+	if (key === "LOG") {
+		key = "INFO";
+	}
 	return LogLevel[key];
 }
 
@@ -259,7 +275,9 @@ function buildBindingOptions(event: BundleCompleteEvent) {
 				const serviceName = binding.service.name;
 				serviceBindings[name] = (request) => {
 					const registeredFetch = getRegisteredWorker?.(serviceName);
-					if (registeredFetch !== undefined) return registeredFetch(request);
+					if (registeredFetch !== undefined) {
+						return registeredFetch(request);
+					}
 					return new Response(
 						`[wrangler] Couldn't find \`wrangler dev\` session for service "${serviceName}" to proxy to\``,
 						{ status: 503 }
@@ -327,7 +345,9 @@ function buildBindingOptions(event: BundleCompleteEvent) {
 				assert(controlHeader !== null);
 				const { scriptName } = JSON.parse(controlHeader);
 				const registeredFetch = getRegisteredWorker?.(scriptName);
-				if (registeredFetch !== undefined) return registeredFetch(request);
+				if (registeredFetch !== undefined) {
+					return registeredFetch(request);
+				}
 				return new Response(
 					`[wrangler] Couldn't find \`wrangler dev\` session for service "${scriptName}" to proxy to\``,
 					{ status: 503 }
@@ -429,7 +449,9 @@ function buildPersistOptions(
 	config: StartDevWorkerOptions
 ): PersistOptions | undefined {
 	const persist = config.dev?.persist ?? false;
-	if (persist === false) return;
+	if (persist === false) {
+		return;
+	}
 	const persistTo = persist === true ? undefined : persist.path;
 	const configPath = config.config?.path;
 	const localPersistencePath = getLocalPersistencePath(persistTo, configPath);
@@ -520,7 +542,9 @@ export class LocalRuntimeController extends RuntimeController {
 			const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
-			if (id !== this.#currentBundleId) return;
+			if (id !== this.#currentBundleId) {
+				return;
+			}
 			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
 				config: data.config,

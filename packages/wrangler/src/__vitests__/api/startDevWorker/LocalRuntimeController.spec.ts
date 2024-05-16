@@ -757,7 +757,9 @@ describe("Multi-Worker Bindings", () => {
 			},
 			dev: {
 				getRegisteredWorker(name) {
-					if (!["c", "d"].includes(name)) return undefined;
+					if (!["c", "d"].includes(name)) {
+						return undefined;
+					}
 					return (request) => {
 						const body = `registered:${name}:${request.url}`;
 						return new Response(body);
@@ -845,7 +847,9 @@ describe("Multi-Worker Bindings", () => {
 			},
 			dev: {
 				getRegisteredWorker(name) {
-					if (name !== "b") return undefined;
+					if (name !== "b") {
+						return undefined;
+					}
 					return (request) => {
 						assert(urlB !== undefined);
 						const url = new URL(request.url);
