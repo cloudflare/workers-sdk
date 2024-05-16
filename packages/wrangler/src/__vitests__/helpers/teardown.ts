@@ -18,11 +18,12 @@ afterEach(async () => {
 			errors.push(error);
 		}
 	}
-	if (errors.length > 0)
+	if (errors.length > 0) {
 		throw new AggregateError(
 			errors,
 			["Unable to teardown:", ...errors.map(String)].join("\n")
 		);
+	}
 });
 
 export function useTmp() {
