@@ -15,45 +15,59 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type { Database, ExportPollingResponse, PollingFailure } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
-	return Name(yargs)
-		.option("local", {
-			type: "boolean",
-			describe: "Export from your local DB you use with wrangler dev",
-			conflicts: "remote",
-		})
-		.option("remote", {
-			type: "boolean",
-			describe: "Export from your live D1",
-			conflicts: "local",
-		})
-		.option("no-schema", {
-			type: "boolean",
-			describe: "Only output table contents, not the DB schema",
-			conflicts: "no-data",
-		})
-		.option("no-data", {
-			type: "boolean",
-			describe:
-				"Only output table schema, not the contents of the DBs themselves",
-			conflicts: "no-schema",
-		})
-		.option("table", {
-			type: "string",
-			describe: "Specify which tables to include in export",
-		})
-		.option("output", {
-			type: "string",
-			describe: "Which .sql file to output to",
-			demandOption: true,
-		});
+	return (
+		Name(yargs)
+			.option("local", {
+				type: "boolean",
+				describe: "Export from your local DB you use with wrangler dev",
+				conflicts: "remote",
+			})
+			.option("remote", {
+				type: "boolean",
+				describe: "Export from your live D1",
+				conflicts: "local",
+			})
+			.option("no-schema", {
+				type: "boolean",
+				describe: "Only output table contents, not the DB schema",
+				conflicts: "no-data",
+			})
+			.option("no-data", {
+				type: "boolean",
+				describe:
+					"Only output table schema, not the contents of the DBs themselves",
+				conflicts: "no-schema",
+			})
+			// For --no-schema and --no-data to work, we need their positive versions
+			// to be defined. But keep them hidden as they default to true
+			.option("schema", {
+				type: "boolean",
+				hidden: true,
+				default: true,
+			})
+			.option("data", {
+				type: "boolean",
+				hidden: true,
+				default: true,
+			})
+			.option("table", {
+				type: "string",
+				describe: "Specify which tables to include in export",
+			})
+			.option("output", {
+				type: "string",
+				describe: "Which .sql file to output to",
+				demandOption: true,
+			})
+	);
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, remote, name, output, noSchema, noData, table } = args;
+	const { local, remote, name, output, schema, data, table } = args;
 	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 
@@ -64,6 +78,10 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	}
 	if (!remote) {
 		throw new UserError(`You must specify either --local or --remote`);
+	}
+
+	if (!schema && !data) {
+		throw new UserError(`You cannot specify both --no-schema and --no-data`);
 	}
 
 	// Allow multiple --table x --table y flags or none
@@ -78,35 +96,19 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		name,
 		output,
 		tables,
-		noSchema,
-		noData
+		!schema,
+		!data
 	);
 	return result;
 };
-
-type PollingResponse = {
-	success: true;
-	type: "export";
-	at_bookmark: string;
-	messages: string[];
-	errors: string[];
-} & (
-	| {
-			status: "active" | "error";
-	  }
-	| {
-			status: "complete";
-			result: { filename: string; signedUrl: string };
-	  }
-);
 
 async function exportRemotely(
 	config: Config,
 	name: string,
 	output: string,
 	tables: string[],
-	noSchema?: boolean,
-	noData?: boolean
+	noSchema: boolean,
+	noData: boolean
 ) {
 	const accountId = await requireAuth(config);
 	const db: Database = await getDatabaseByNameOrBinding(
@@ -150,17 +152,18 @@ async function pollExport(
 	},
 	currentBookmark: string | undefined,
 	num_parts_uploaded = 0
-): Promise<PollingResponse> {
-	const response = await fetchResult<
-		PollingResponse | { success: false; error: string }
-	>(`/accounts/${accountId}/d1/database/${db.uuid}/export`, {
-		method: "POST",
-		body: JSON.stringify({
-			outputFormat: "polling",
-			dumpOptions,
-			currentBookmark,
-		}),
-	});
+): Promise<ExportPollingResponse> {
+	const response = await fetchResult<ExportPollingResponse | PollingFailure>(
+		`/accounts/${accountId}/d1/database/${db.uuid}/export`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				outputFormat: "polling",
+				dumpOptions,
+				currentBookmark,
+			}),
+		}
+	);
 
 	if (!response.success) {
 		throw new Error(response.error);
