@@ -4,6 +4,9 @@ inputs:
   packageManager:
     description: "Which package manager to run the tests with"
     required: true
+  packageManagerVersion:
+    description: "Which package manager version to run the tests with"
+    required: true
   quarantine:
     description: "Whether to run the tests in quarantine mode"
     required: false
@@ -20,21 +23,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - id: pm
-      uses: actions/github-script@v7
-      env:
-        PM: ${{ inputs.packageManager }}
-      with:
-        script: |
-          const [name, version] = process.env.PM.split('@')
-          core.setOutput('name', name)
-          core.setOutput('version', version)
-
-    - if: ${{ steps.pm.outputs.name == 'bun' }}
-      name: Install Bun ${{ steps.pm.outputs.version }}
+    - if: ${{ inputs.packageManager == 'bun' }}
+      name: Install Bun ${{ inputs.packageManagerVersion }}
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: ${{ steps.pm.outputs.version }}
+        bun-version: ${{ inputs.packageManagerVersion }}
 
     # Needed because gatsby requires git
     - name: Configure Git
@@ -52,8 +45,8 @@ runs:
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
-        TEST_PM: ${{ steps.pm.outputs.name }}
-        TEST_PM_VERSION: ${{ steps.pm.outputs.version }}
+        TEST_PM: ${{ inputs.packageManager }}
+        TEST_PM_VERSION: ${{ inputs.packageManagerVersion }}
 
     - name: Upload Logs
       uses: actions/upload-artifact@v3

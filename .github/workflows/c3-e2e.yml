@@ -25,11 +25,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm@0.0.0, pnpm@9.0.0, bun@1.0.3, yarn@1.0.0]
+        pm:
+          [
+            { name: npm, version: "0.0.0" },
+            { name: pnpm, version: "9.0.0" },
+            { name: bun, version: "1.0.3" },
+            { name: yarn, verison: "1.0.0" },
+          ]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
-            pm: pnpm@9.0.0
+            pm: { name: pnpm, version: "9.0.0" }
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -56,7 +62,8 @@ jobs:
         env:
           NPM_PUBLISH_TOKEN: NOT_USED
         with:
-          packageManager: ${{ matrix.pm }}
+          packageManager: ${{ matrix.pm.name }}
+          packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
