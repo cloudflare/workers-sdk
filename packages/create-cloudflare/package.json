@@ -32,10 +32,7 @@
 		"check:type": "tsc",
 		"lint": "eslint",
 		"prepublishOnly": "pnpm -w run build",
-		"test:e2e:npm": "pnpm run build && cross-env TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:pnpm": "pnpm run build && cross-env TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:bun": "pnpm run build && cross-env TEST_PM=bun vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:yarn": "pnpm run build && cross-env TEST_PM=yarn vitest run --config ./vitest-e2e.config.ts",
+		"test:e2e": "vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"test:unit:watch": "vitest --config ./vitest.config.ts",
 		"watch": "node -r esbuild-register scripts/build.ts --watch",
@@ -76,7 +73,6 @@
 		"indent-string": "^5.0.0",
 		"magic-string": "^0.30.5",
 		"open": "^8.4.0",
-		"pnpm": "^8.10.0",
 		"recast": "^0.22.0",
 		"semver": "^7.5.1",
 		"undici": "5.28.4",
@@ -84,8 +80,7 @@
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
-		"yargs": "^17.7.1",
-		"yarn": "^1.22.19"
+		"yargs": "^17.7.1"
 	},
 	"engines": {
 		"node": ">=18.14.1"

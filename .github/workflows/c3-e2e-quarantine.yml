@@ -10,8 +10,7 @@ on:
       - main
     paths:
       - packages/create-cloudflare/**
-env:
-  bun-version: 1.0.3
+
 jobs:
   e2e:
     timeout-minutes: 30
@@ -23,7 +22,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm, bun]
+        pm:
+          [
+            { name: npm, version: "0.0.0" },
+            { name: pnpm, version: "9.0.0" },
+            { name: bun, version: "1.0.3" },
+          ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -33,11 +37,17 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: E2E Tests
         uses: ./.github/actions/run-c3-e2e
         with:
-          package-manager: ${{ matrix.pm }}
+          packageManager: ${{ matrix.pm.name}}
+          packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: true
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

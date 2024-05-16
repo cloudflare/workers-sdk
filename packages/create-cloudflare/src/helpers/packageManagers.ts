@@ -3,7 +3,6 @@ import path from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
-import { devDependencies } from "../../package.json";
 import { runCommand } from "./command";
 import type { C3Context } from "types";
 
@@ -23,29 +22,10 @@ export const detectPackageManager = () => {
 
 	let { name, version } = pmInfo ?? { name: "npm", version: "0.0.0" };
 
-	if (process.env.TEST_PM) {
-		switch (process.env.TEST_PM) {
-			case "pnpm":
-				name = "pnpm";
-				version = devDependencies["pnpm"].replace("^", "");
-				process.env.npm_config_user_agent = "pnpm";
-				break;
-			case "yarn":
-				name = "yarn";
-				version = devDependencies["yarn"].replace("^", "");
-				process.env.npm_config_user_agent = "yarn";
-				break;
-			case "bun":
-				name = "bun";
-				version = "1.0.0";
-				process.env.npm_config_user_agent = "bun";
-				break;
-			case "npm":
-				name = "npm";
-				version = "0.0.0";
-				process.env.npm_config_user_agent = "npm";
-				break;
-		}
+	if (process.env.TEST_PM && process.env.TEST_PM_VERSION) {
+		name = process.env.TEST_PM as PmName;
+		version = process.env.TEST_PM_VERSION;
+		process.env.npm_config_user_agent = name;
 	}
 
 	switch (name) {
