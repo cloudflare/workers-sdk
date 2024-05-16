@@ -852,6 +852,48 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 		});
+
+		it("should warn on unsafe binding metadata usage", () => {
+			const expectedConfig: RawConfig = {
+				unsafe: {
+					bindings: [
+						{
+							type: "metadata",
+							name: "METADATA",
+						},
+					],
+				},
+			};
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				expectedConfig,
+				"project/wrangler.toml",
+				{ env: undefined }
+			);
+
+			expect(config).toEqual(
+				expect.objectContaining({
+					unsafe: {
+						bindings: [
+							{
+								type: "metadata",
+								name: "METADATA",
+							},
+						],
+					},
+				})
+			);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(true);
+
+			expect(normalizeSlashes(diagnostics.renderWarnings()))
+				.toMatchInlineSnapshot(`
+"Processing project/wrangler.toml configuration:
+  - \\"unsafe\\" fields are experimental and may change or break at any time.
+  - \\"unsafe.bindings[0]\\": {\\"type\\":\\"metadata\\",\\"name\\":\\"METADATA\\"}
+    - The deployment object in the metadata binding is now deprecated. Please switch using the version_metadata binding for access to version specific fields: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata"
+`);
+		});
 	});
 
 	describe("top-level environment configuration", () => {
