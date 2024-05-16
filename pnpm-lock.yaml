@@ -765,8 +765,8 @@ importers:
         specifier: ^8.6.11
         version: 8.6.11
       undici:
-        specifier: 5.28.3
-        version: 5.28.3
+        specifier: 5.28.4
+        version: 5.28.4
 
   packages/create-cloudflare:
     devDependencies:
@@ -882,8 +882,8 @@ importers:
         specifier: ^7.5.1
         version: 7.5.1
       undici:
-        specifier: 5.28.3
-        version: 5.28.3
+        specifier: 5.28.4
+        version: 5.28.4
       vite-tsconfig-paths:
         specifier: ^4.0.8
         version: 4.2.0(typescript@5.4.5)(vite@5.0.12(@types/node@18.16.10))
@@ -3863,6 +3863,10 @@ packages:
 
   '@fastify/busboy@2.1.0':
     resolution: {integrity: sha512-+KpH+QxZU7O4675t3mnkQKcZZg56u+K/Ct2K+N2AZYNVK8kyeo/bI18tI8aPm3tvNNRyTWfj6s5tnGNlcbQRsA==}
+    engines: {node: '>=14'}
+
+  '@fastify/busboy@2.1.1':
+    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
 
   '@gar/promisify@1.1.3':
@@ -9243,6 +9247,10 @@ packages:
     resolution: {integrity: sha512-JjCoypp+jKn1ttEFExxhetCKeJt9zhAgAve5FXHixTvFDW/5aEktX9bufBKLRRMdU7bNtpLfcGu94B3cdEJgjg==}
     engines: {node: '>= 0.8.0'}
 
+  optionator@0.9.4:
+    resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
+    engines: {node: '>= 0.8.0'}
+
   ora@4.1.1:
     resolution: {integrity: sha512-sjYP8QyVWBpBZWD6Vr1M/KwknSw6kJOz41tvGMlwWeClHBtYKTbHMki1PsLZnxKpXMPbTKv9b3pjQu3REib96A==}
     engines: {node: '>=8'}
@@ -11538,6 +11546,10 @@ packages:
 
   word-wrap@1.2.3:
     resolution: {integrity: sha512-Hz/mrNwitNRh/HUAtM/VT/5VH+ygD6DV7mYKZAtHOrbs8U7lvPS6xf7EJKMF0uW1KJCl0H701g3ZGus+muE5vQ==}
+    engines: {node: '>=0.10.0'}
+
+  word-wrap@1.2.5:
+    resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
 
   wordwrap@1.0.0:
@@ -14015,6 +14027,8 @@ snapshots:
   '@eslint/js@8.57.0': {}
 
   '@fastify/busboy@2.1.0': {}
+
+  '@fastify/busboy@2.1.1': {}
 
   '@gar/promisify@1.1.3': {}
 
@@ -18469,7 +18483,7 @@ snapshots:
       lodash.merge: 4.6.2
       minimatch: 3.1.2
       natural-compare: 1.4.0
-      optionator: 0.9.3
+      optionator: 0.9.4
       strip-ansi: 6.0.1
       text-table: 0.2.0
     transitivePeerDependencies:
@@ -21404,6 +21418,15 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
 
+  optionator@0.9.4:
+    dependencies:
+      deep-is: 0.1.4
+      fast-levenshtein: 2.0.6
+      levn: 0.4.1
+      prelude-ls: 1.2.1
+      type-check: 0.4.0
+      word-wrap: 1.2.5
+
   ora@4.1.1:
     dependencies:
       chalk: 3.0.0
@@ -23437,7 +23460,7 @@ snapshots:
 
   undici@5.28.2:
     dependencies:
-      '@fastify/busboy': 2.1.0
+      '@fastify/busboy': 2.1.1
 
   undici@5.28.3:
     dependencies:
@@ -23445,7 +23468,7 @@ snapshots:
 
   undici@5.28.4:
     dependencies:
-      '@fastify/busboy': 2.1.0
+      '@fastify/busboy': 2.1.1
 
   unicode-canonical-property-names-ecmascript@2.0.0: {}
 
@@ -23981,6 +24004,8 @@ snapshots:
       string-width: 4.2.3
 
   word-wrap@1.2.3: {}
+
+  word-wrap@1.2.5: {}
 
   wordwrap@1.0.0: {}
 
