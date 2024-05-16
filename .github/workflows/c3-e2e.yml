@@ -17,9 +17,9 @@ jobs:
     #       in .github/workflows/c3-e2e-dependabot.yml
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('E2E ({0} on {1})', matrix.pm, matrix.os) }}
+    name: ${{ format('E2E ({0}@{1} on {2})', matrix.pm.name, matrix.pm.version, matrix.os) }}
     if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       fail-fast: false
