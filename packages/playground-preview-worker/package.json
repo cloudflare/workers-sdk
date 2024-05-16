@@ -25,6 +25,6 @@
 		"promjs": "^0.4.2",
 		"toucan-js": "^3.2.2",
 		"undici": "5.28.4",
-		"wrangler": "^3.32.0"
+		"wrangler": "workspace:*"
 	}
 }
