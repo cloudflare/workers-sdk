@@ -20,17 +20,21 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: winterjung/split@v2
-      id: pm
+    - id: pm
+      uses: actions/github-script@7
+      env:
+        PM: ${{ inputs.packageManager }}
       with:
-        msg: ${{ inputs.packageManager }}
-        separator: "@"
+        script: |
+          const [name, version] = process.env.PM.split('@')
+          core.setOutput('name', name)
+          core.setOutput('version', version)
 
-    - if: ${{ steps.pm.outputs._0 == 'bun' }}
-      name: Install Bun ${{ steps.pm.outputs._1 }}
+    - if: ${{ steps.pm.outputs.name == 'bun' }}
+      name: Install Bun ${{ steps.pm.outputs.version }}
       uses: oven-sh/setup-bun@v1
       with:
-        bun-version: ${{ steps.pm.outputs._1 }}
+        bun-version: ${{ steps.pm.outputs.version }}
 
     # Needed because gatsby requires git
     - name: Configure Git
@@ -42,23 +46,18 @@ runs:
     - name: E2E Tests
       id: run-e2e
       shell: bash
-      continue-on-error: true
       run: pnpm run test:e2e --filter create-cloudflare
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
-        TEST_PM: ${{ steps.pm.outputs._0 }}
-        TEST_PM_VERSION: ${{ steps.pm.outputs._1 }}
+        TEST_PM: ${{ steps.pm.outputs.name }}
+        TEST_PM_VERSION: ${{ steps.pm.outputs.version }}
 
     - name: Upload Logs
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: e2e-logs-${{matrix.os}}
         path: packages/create-cloudflare/.e2e-logs
-
-    - name: Fail if errors detected
-      shell: bash
-      if: ${{ steps.run-e2e.outcome == 'failure' }}
-      run: exit 1
