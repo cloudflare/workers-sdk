@@ -94,7 +94,8 @@
 		"snapshotFormat": {
 			"escapeString": true,
 			"printBasicPrototype": true
-		}
+		},
+		"prettierPath": null
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
