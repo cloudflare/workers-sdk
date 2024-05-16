@@ -580,6 +580,49 @@ describe("wrangler", () => {
 					`);
 				});
 
+				it("should add a consumer with batchTimeout of 0", async () => {
+					const queueNameResolveRequest = mockGetQueueByNameRequest(
+						expectedQueueName,
+						{
+							queue_id: expectedQueueId,
+							queue_name: expectedQueueName,
+							created_on: "",
+							producers: [],
+							consumers: [],
+							producers_total_count: 1,
+							consumers_total_count: 0,
+							modified_on: "",
+						}
+					);
+
+					const expectedBody: PostTypedConsumerBody = {
+						script_name: "testScript",
+						type: "worker",
+						environment_name: "myEnv",
+						settings: {
+							batch_size: 20,
+							max_retries: 3,
+							max_wait_time_ms: 0,
+							max_concurrency: 3,
+							retry_delay: 10,
+						},
+						dead_letter_queue: "myDLQ",
+					};
+					const postRequest = mockPostRequest(expectedQueueId, expectedBody);
+
+					await runWrangler(
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 0 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=10"
+					);
+
+					expect(queueNameResolveRequest.count).toEqual(1);
+					expect(postRequest.count).toEqual(1);
+
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding consumer to queue testQueue.
+						Added consumer to queue testQueue."
+					`);
+				});
+
 				it("should show an error when two retry delays are set", async () => {
 					const expectedBody: PostTypedConsumerBody = {
 						script_name: "testScript",
