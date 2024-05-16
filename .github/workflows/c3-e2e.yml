@@ -10,8 +10,6 @@ on:
       - main
     paths:
       - packages/create-cloudflare/**
-env:
-  bun-version: 1.0.3
 
 jobs:
   e2e:
@@ -27,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm, bun, yarn]
+        pm: [npm@0.0.0, pnpm@9.0.0, bun@1.0.3, yarn@1.0.0]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
@@ -42,12 +40,18 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
 
+      - name: Build
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+
       - name: E2E Tests
         uses: ./.github/actions/run-c3-e2e
         env:
           NPM_PUBLISH_TOKEN: NOT_USED
         with:
-          package-manager: ${{ matrix.pm }}
+          packageManager: ${{ matrix.pm }}
           quarantine: false
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

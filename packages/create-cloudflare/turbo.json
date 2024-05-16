@@ -4,7 +4,13 @@
 
 	"pipeline": {
 		"build": {
-			"env": ["VITEST", "TEST_PM", "npm_config_user_agent", "CI"],
+			"env": [
+				"VITEST",
+				"TEST_PM",
+				"TEST_PM_VERSION",
+				"npm_config_user_agent",
+				"CI"
+			],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e:*": {

@@ -22,29 +22,10 @@ export const detectPackageManager = () => {
 
 	let { name, version } = pmInfo ?? { name: "npm", version: "0.0.0" };
 
-	if (process.env.TEST_PM) {
-		switch (process.env.TEST_PM) {
-			case "pnpm":
-				name = "pnpm";
-				version = "9.0.0";
-				process.env.npm_config_user_agent = "pnpm";
-				break;
-			case "yarn":
-				name = "yarn";
-				version = "1.0.0";
-				process.env.npm_config_user_agent = "yarn";
-				break;
-			case "bun":
-				name = "bun";
-				version = "1.0.0";
-				process.env.npm_config_user_agent = "bun";
-				break;
-			case "npm":
-				name = "npm";
-				version = "0.0.0";
-				process.env.npm_config_user_agent = "npm";
-				break;
-		}
+	if (process.env.TEST_PM && process.env.TEST_PM_VERSION) {
+		name = process.env.TEST_PM as PmName;
+		version = process.env.TEST_PM_VERSION;
+		process.env.npm_config_user_agent = name;
 	}
 
 	switch (name) {
