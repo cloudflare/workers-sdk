@@ -2185,6 +2185,17 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 					"For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
 			);
 		}
+
+		if (
+			value.type === "metadata" &&
+			isRequiredProperty(value, "name", "string")
+		) {
+			diagnostics.warnings.push(
+				"The deployment object in the metadata binding is now deprecated. " +
+					"Please switch using the version_metadata binding for access to version specific fields: " +
+					"https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata"
+			);
+		}
 	} else {
 		diagnostics.errors.push(`binding should have a string "type" field.`);
 		isValid = false;
