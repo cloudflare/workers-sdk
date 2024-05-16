@@ -2,4 +2,6 @@
 "wrangler": patch
 ---
 
-Update Hyperdrive logs to reflect that hyperdrive bindings are now supported in local dev
+fix: remove Hyperdrive warning for local development.
+
+Hyperdrive bindings are now supported when developing locally with Hyperdrive. We should update our logs to reflect this.
