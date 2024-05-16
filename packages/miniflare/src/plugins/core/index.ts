@@ -125,9 +125,13 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
-		wasmBindings: z.record(z.union([PathSchema, z.instanceof(Uint8Array)])).optional(),
+		wasmBindings: z
+			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.optional(),
 		textBlobBindings: z.record(PathSchema).optional(),
-		dataBlobBindings: z.record(z.union([PathSchema, z.instanceof(Uint8Array)])).optional(),
+		dataBlobBindings: z
+			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
 			.record(z.union([z.string(), WrappedBindingSchema]))

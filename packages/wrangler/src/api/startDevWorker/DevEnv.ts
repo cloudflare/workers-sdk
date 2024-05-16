@@ -6,8 +6,7 @@ import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { RuntimeController } from "./BaseController";
-import type { Controller } from "./BaseController";
+import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { DevWorker, StartDevWorkerOptions } from "./types";
 
