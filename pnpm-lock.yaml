@@ -761,9 +761,6 @@ importers:
       log-update:
         specifier: ^5.0.1
         version: 5.0.1
-      pnpm:
-        specifier: ^8.6.11
-        version: 8.6.11
       undici:
         specifier: 5.28.4
         version: 5.28.4
@@ -872,9 +869,6 @@ importers:
       open:
         specifier: ^8.4.0
         version: 8.4.0
-      pnpm:
-        specifier: ^8.10.0
-        version: 8.10.2
       recast:
         specifier: ^0.22.0
         version: 0.22.0
@@ -899,9 +893,6 @@ importers:
       yargs:
         specifier: ^17.7.1
         version: 17.7.1
-      yarn:
-        specifier: ^1.22.19
-        version: 1.22.19
 
   packages/edge-preview-authenticated-proxy:
     devDependencies:
@@ -9569,16 +9560,6 @@ packages:
   plur@5.1.0:
     resolution: {integrity: sha512-VP/72JeXqak2KiOzjgKtQen5y3IZHn+9GOuLDafPv0eXa47xq0At93XahYBs26MsifCQ4enGKwbjBTKgb9QJXg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
-  pnpm@8.10.2:
-    resolution: {integrity: sha512-B4IJPVumx62UYggbwe8HdQFqS0EJ7KHh/tzqbxEBQ69fUJk9s2xCfU+oxivjkgoyJNsS2nGdJGyhndnxgEjDPA==}
-    engines: {node: '>=16.14'}
-    hasBin: true
-
-  pnpm@8.6.11:
-    resolution: {integrity: sha512-jqknppuj45tDzJsLcLqkAxytBHZXIx9JTYkGNq0/7pSRggpio9wRxTDj4NA2ilOHPlJ5BVjB5Ij5dx65woMi5A==}
-    engines: {node: '>=16.14'}
-    hasBin: true
 
   polished@4.2.2:
     resolution: {integrity: sha512-Sz2Lkdxz6F2Pgnpi9U5Ng/WdWAUZxmHrNPoVlm3aAemxoy2Qy7LGjQg4uf8qKelDAUW94F4np3iH2YPf2qefcQ==}
@@ -21755,10 +21736,6 @@ snapshots:
   plur@5.1.0:
     dependencies:
       irregular-plurals: 3.5.0
-
-  pnpm@8.10.2: {}
-
-  pnpm@8.6.11: {}
 
   polished@4.2.2:
     dependencies:
