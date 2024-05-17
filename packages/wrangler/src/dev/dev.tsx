@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import * as util from "node:util";
@@ -16,6 +17,7 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
+import { createDeferred } from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -27,6 +29,7 @@ import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
+import { requireApiToken } from "../user";
 import { openInspector } from "./inspect";
 import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
@@ -274,6 +277,16 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
+	const [accountId, setAccountId] = useState(props.accountId);
+	const accountIdDeferred = useMemo(createDeferred<string>, []);
+	const setAccountIdAndResolveDeferred = useCallback(
+		(newAccountId: string) => {
+			setAccountId(newAccountId);
+			accountIdDeferred.resolve(newAccountId);
+		},
+		[setAccountId, accountIdDeferred]
+	);
+
 	const [devEnv] = useState(() => new DevEnv());
 	useEffect(() => {
 		return () => {
@@ -283,8 +296,32 @@ function DevSession(props: DevSessionProps) {
 	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
 		() => ({
 			name: props.name ?? "worker",
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
+			_bindings: props.bindings,
+			routes: props.routes,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			sendMetrics: props.sendMetrics,
+			usageModel: props.usageModel,
+			site:
+				props.isWorkersSite && props.assetPaths
+					? {
+							path: path.join(
+								props.assetPaths.baseDirectory,
+								props.assetPaths?.assetDirectory
+							),
+							include: props.assetPaths.includePatterns,
+							exclude: props.assetPaths.excludePatterns,
+						}
+					: undefined,
 			dev: {
+				auth: () => {
+					assert(accountId);
+					return { accountId, apiToken: requireApiToken() };
+				},
+				remote: !props.local,
 				server: {
 					hostname: props.initialIp,
 					port: props.initialPort,
@@ -304,6 +341,18 @@ function DevSession(props: DevSessionProps) {
 		}),
 		[
 			props.name,
+			props.compatibilityDate,
+			props.compatibilityFlags,
+			props.bindings,
+			props.routes,
+			props.env,
+			props.legacyEnv,
+			props.sendMetrics,
+			props.usageModel,
+			props.isWorkersSite,
+			props.assetPaths,
+			accountId,
+			props.local,
 			props.initialIp,
 			props.initialPort,
 			props.localProtocol,
@@ -354,16 +403,6 @@ function DevSession(props: DevSessionProps) {
 		// also, if the timeout fired before esbuild started, for some reason, firing this event again is needed
 		onBundleStart();
 	}, [esbuildStartTimeoutRef, onBundleStart]);
-	const onReloadStart = useCallback(
-		(esbuildBundle: EsbuildBundle) => {
-			devEnv.proxy.onReloadStart({
-				type: "reloadStart",
-				config: startDevWorkerOptions,
-				bundle: esbuildBundle,
-			});
-		},
-		[devEnv, startDevWorkerOptions]
-	);
 
 	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
@@ -420,10 +459,17 @@ function DevSession(props: DevSessionProps) {
 
 	// this suffices as an onEsbuildEnd callback
 	useEffect(() => {
-		if (bundle.current) {
-			onReloadStart(bundle.current);
+		const currentBundle = bundle.current;
+		if (currentBundle) {
+			devEnv.runtimes.forEach((runtime) =>
+				runtime.onBundleComplete({
+					type: "bundleComplete",
+					config: startDevWorkerOptions,
+					bundle: currentBundle,
+				})
+			);
 		}
-	}, [onReloadStart, bundle]);
+	}, [devEnv, startDevWorkerOptions, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -541,6 +587,8 @@ function DevSession(props: DevSessionProps) {
 			onReady={announceAndOnReady}
 			sourceMapPath={bundle.current?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
+			// startDevWorker
+			setAccountId={setAccountIdAndResolveDeferred}
 		/>
 	);
 }

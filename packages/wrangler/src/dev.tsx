@@ -602,6 +602,7 @@ export async function startApiDev(args: StartDevOptions) {
 			httpsKeyPath: args.httpsKeyPath,
 			httpsCertPath: args.httpsCertPath,
 			localUpstream: args.localUpstream ?? host ?? getInferredHost(routes),
+			local: args.local ?? !args.remote,
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,
 			accountId:
@@ -633,7 +634,6 @@ export async function startApiDev(args: StartDevOptions) {
 			showInteractiveDevSession: args.showInteractiveDevSession,
 			forceLocal: args.forceLocal,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
-			local: !args.remote,
 			firstPartyWorker: configParam.first_party_worker,
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
@@ -684,7 +684,12 @@ function maskVars(bindings: CfWorkerInit["bindings"], configParam: Config) {
 	return maskedVars;
 }
 
-async function getHostAndRoutes(args: StartDevOptions, config: Config) {
+async function getHostAndRoutes(
+	args: Pick<StartDevOptions, "host" | "routes">,
+	config: Pick<Config, "route" | "routes"> & {
+		dev: Pick<Config["dev"], "host">;
+	}
+) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
 	const host = args.host || config.dev.host;
@@ -876,7 +881,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 					args.site,
 					args.siteInclude,
 					args.siteExclude
-				);
+			  );
 	return { assetPaths, bindings };
 }
 
