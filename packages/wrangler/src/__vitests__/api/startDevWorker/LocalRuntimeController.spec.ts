@@ -14,6 +14,8 @@ import { teardown, useTmp } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type {
 	Bundle,
+	File,
+	Module,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 	UrlOriginAndPathnameParts,
@@ -58,7 +60,7 @@ function singleModuleBundle(
 }
 
 describe("Core", () => {
-	it("should start Miniflare with module worker", async () => {
+	it.only("should start Miniflare with module worker", async () => {
 		const controller = new LocalRuntimeController();
 		teardown(() => controller.teardown());
 
@@ -69,13 +71,13 @@ describe("Core", () => {
 			compatibilityDate: "2023-10-01",
 		};
 		const bundle: Bundle = {
-			type: "modules",
+			type: "esm",
 			modules: [
 				{
-					type: "ESModule",
+					type: "esm",
 					name: "index.mjs",
-					path: "/virtual/esm/index.mjs",
-					contents: `
+					filePath: "/virtual/esm/index.mjs",
+					content: `
 					import add from "./add.cjs";
 					import base64 from "./base64.cjs";
 					import wave1 from "./data/wave.txt";
@@ -100,10 +102,10 @@ describe("Core", () => {
 					}`,
 				},
 				{
-					type: "CommonJS",
+					type: "commonjs",
 					name: "add.cjs",
-					path: "/virtual/cjs/add.cjs",
-					contents: `
+					filePath: "/virtual/cjs/add.cjs",
+					content: `
 					const addModule = require("./add.wasm");
 					const addInstance = new WebAssembly.Instance(addModule);
 					module.exports = {
@@ -115,10 +117,10 @@ describe("Core", () => {
 					`,
 				},
 				{
-					type: "NodeJsCompatModule",
+					type: "commonjs",
 					name: "base64.cjs",
-					path: "/virtual/node/base64.cjs",
-					contents: `module.exports = {
+					filePath: "/virtual/node/base64.cjs",
+					content: `module.exports = {
 						encode(value) {
 							return Buffer.from(value).toString("base64");
 						},
@@ -130,10 +132,37 @@ describe("Core", () => {
 						}
 					}`,
 				},
-				{ type: "Text", name: "data/wave.txt", contents: "👋" },
-				{ type: "Data", name: "data/wave.bin", contents: "🌊" },
-				{ type: "CompiledWasm", name: "add.wasm", contents: WASM_ADD_MODULE },
+				{
+					type: "text",
+					name: "data/wave.txt",
+					filePath: "/virtual/data/wave.txt",
+					content: "👋",
+				},
+				{
+					type: "buffer",
+					name: "data/wave.bin",
+					filePath: "/virtual/data/wave.bin",
+					content: "🌊",
+				},
+				{
+					type: "compiled-wasm",
+					name: "add.wasm",
+					filePath: "/virtual/add.wasm",
+					content: WASM_ADD_MODULE,
+				},
 			],
+			id: 0,
+			path: "/virtual/index.mjs",
+			entry: {
+				file: "index.mjs",
+				directory: "/virtual/",
+				format: "modules",
+				moduleRoot: "/virtual",
+				name: undefined,
+			},
+			dependencies: {},
+			sourceMapPath: undefined,
+			sourceMapMetadata: undefined,
 		};
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });

@@ -4,8 +4,10 @@ import { Mutex } from "miniflare";
 import onExit from "signal-exit";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { logger } from "../logger";
+import { logger, Logger } from "../logger";
 import type { LoggerLevel } from "../logger";
+
+console.log(Logger);
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",
