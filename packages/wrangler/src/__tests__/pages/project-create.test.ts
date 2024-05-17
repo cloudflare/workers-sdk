@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { mockConsoleMethods } from "./../helpers/mock-console";
@@ -21,7 +22,7 @@ describe("pages project create", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should create a project with a production branch", async () => {
+	it("should create a project with a production branch", async ({ expect }) => {
 		msw.use(
 			rest.post(
 				"*/accounts/:accountId/pages/projects",
@@ -64,7 +65,7 @@ describe("pages project create", () => {
         `);
 	});
 
-	it("should create a project with compatibility flags", async () => {
+	it("should create a project with compatibility flags", async ({ expect }) => {
 		msw.use(
 			rest.post(
 				"*/accounts/:accountId/pages/projects",
@@ -105,7 +106,9 @@ describe("pages project create", () => {
         `);
 	});
 
-	it("should create a project with a compatibility date", async () => {
+	it("should create a project with a compatibility date", async ({
+		expect,
+	}) => {
 		msw.use(
 			rest.post(
 				"*/accounts/:accountId/pages/projects",

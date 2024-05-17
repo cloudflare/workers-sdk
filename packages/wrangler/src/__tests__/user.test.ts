@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { beforeEach, describe, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	loginOrRefreshIfRequired,
@@ -21,9 +22,10 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
+import type { MockInstance } from "vitest";
 
 describe("User", () => {
-	let isCISpy: jest.SpyInstance;
+	let isCISpy: MockInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
 	// TODO: Implement these two mocks with MSW
@@ -32,11 +34,13 @@ describe("User", () => {
 
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
 	describe("login", () => {
-		it("should login a user when `wrangler login` is run", async () => {
+		it("should login a user when `wrangler login` is run", async ({
+			expect,
+		}) => {
 			mockOAuthServerCallback("success");
 
 			let counter = 0;
@@ -73,7 +77,9 @@ describe("User", () => {
 		});
 	});
 
-	it("should handle errors for failed token refresh in a non-interactive environment", async () => {
+	it("should handle errors for failed token refresh in a non-interactive environment", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
@@ -89,7 +95,9 @@ describe("User", () => {
 		);
 	});
 
-	it("should confirm no error message when refresh is successful", async () => {
+	it("should confirm no error message when refresh is successful", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
@@ -101,12 +109,14 @@ describe("User", () => {
 		expect(std.err).toContain("");
 	});
 
-	it("should revert to non-interactive mode if in CI", async () => {
+	it("should revert to non-interactive mode if in CI", async ({ expect }) => {
 		isCISpy.mockReturnValue(true);
 		await expect(loginOrRefreshIfRequired()).resolves.toEqual(false);
 	});
 
-	it("should revert to non-interactive mode if isTTY throws an error", async () => {
+	it("should revert to non-interactive mode if isTTY throws an error", async ({
+		expect,
+	}) => {
 		setIsTTY({
 			stdin() {
 				throw new Error("stdin is not tty");

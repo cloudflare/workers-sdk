@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -18,7 +19,9 @@ describe("time-travel", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("restore", () => {
-		it("should reject the use of --timestamp with --bookmark", async () => {
+		it("should reject the use of --timestamp with --bookmark", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerToml({
 				d1_databases: [
@@ -37,7 +40,7 @@ describe("time-travel", () => {
 	});
 
 	describe("throwIfDatabaseIsAlpha", () => {
-		it("should throw for alpha dbs", async () => {
+		it("should throw for alpha dbs", async ({ expect }) => {
 			writeWranglerToml({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
@@ -77,7 +80,7 @@ describe("time-travel", () => {
 				"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."
 			);
 		});
-		it("should not throw for non-alpha dbs", async () => {
+		it("should not throw for non-alpha dbs", async ({ expect }) => {
 			writeWranglerToml({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },

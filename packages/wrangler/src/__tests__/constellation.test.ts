@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -13,7 +14,7 @@ describe("constellation help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help when no argument is passed", async () => {
+	it("should show help when no argument is passed", async ({ expect }) => {
 		await runWrangler("constellation");
 		await endEventLoop();
 
@@ -35,7 +36,9 @@ describe("constellation help", () => {
 	`);
 	});
 
-	it("should show help when an invalid argument is passed", async () => {
+	it("should show help when an invalid argument is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("constellation asdf")).rejects.toThrow(
 			"Unknown argument: asdf"
 		);
@@ -75,7 +78,7 @@ describe("constellation commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -85,7 +88,7 @@ describe("constellation commands", () => {
 		clearDialogs();
 	});
 
-	it("should handle project creation", async () => {
+	it("should handle project creation", async ({ expect }) => {
 		mockConstellationRequest();
 		await runWrangler("constellation project create new_project ONNX");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -99,7 +102,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle project listing", async () => {
+	it("should handle project listing", async ({ expect }) => {
 		mockConstellationRequest();
 		await runWrangler("constellation project list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -117,7 +120,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle project deletion", async () => {
+	it("should handle project deletion", async ({ expect }) => {
 		mockConstellationRequest();
 		mockConfirm({
 			text: "Ok to proceed?",
@@ -138,7 +141,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle catalog list", async () => {
+	it("should handle catalog list", async ({ expect }) => {
 		mockConstellationRequest();
 		await runWrangler("constellation catalog list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -156,7 +159,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle runtime list", async () => {
+	it("should handle runtime list", async ({ expect }) => {
 		mockConstellationRequest();
 		await runWrangler("constellation runtime list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -176,7 +179,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle model upload", async () => {
+	it("should handle model upload", async ({ expect }) => {
 		mockConstellationRequest();
 		await fs.promises.writeFile("model.onnx", `model`);
 		await runWrangler(
@@ -193,7 +196,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle model list", async () => {
+	it("should handle model list", async ({ expect }) => {
 		mockConstellationRequest();
 		await runWrangler("constellation model list new_project3");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -213,7 +216,7 @@ describe("constellation commands", () => {
 	`);
 	});
 
-	it("should handle model deletion", async () => {
+	it("should handle model deletion", async ({ expect }) => {
 		mockConstellationRequest();
 		mockConfirm({
 			text: "Ok to proceed?",

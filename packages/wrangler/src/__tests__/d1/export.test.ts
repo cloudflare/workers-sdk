@@ -1,5 +1,6 @@
 import fs from "fs";
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -16,13 +17,13 @@ describe("execute", () => {
 	runInTempDir();
 	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
-	it("should throw if output is missing", async () => {
+	it("should throw if output is missing", async ({ expect }) => {
 		await expect(runWrangler("d1 export db --local")).rejects.toThrowError(
 			`Missing required argument: output`
 		);
 	});
 
-	it("should reject --local mode (for now)", async () => {
+	it("should reject --local mode (for now)", async ({ expect }) => {
 		await expect(
 			runWrangler("d1 export db --local --output /tmp/test.sql")
 		).rejects.toThrowError(
@@ -30,7 +31,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should handle remote", async () => {
+	it("should handle remote", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [

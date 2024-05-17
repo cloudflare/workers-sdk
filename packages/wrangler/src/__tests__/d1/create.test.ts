@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -16,19 +17,19 @@ describe("create", () => {
 	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should throw if local flag is provided", async () => {
+	it("should throw if local flag is provided", async ({ expect }) => {
 		await expect(runWrangler("d1 create test --local")).rejects.toThrowError(
 			`Unknown argument: local`
 		);
 	});
 
-	it("should throw if remote flag is provided", async () => {
+	it("should throw if remote flag is provided", async ({ expect }) => {
 		await expect(runWrangler("d1 create test --remote")).rejects.toThrowError(
 			`Unknown argument: remote`
 		);
 	});
 
-	it("should throw if location flag isn't in the list", async () => {
+	it("should throw if location flag isn't in the list", async ({ expect }) => {
 		setIsTTY(false);
 		mockOAuthServerCallback();
 		mockGetMemberships([
@@ -41,7 +42,9 @@ describe("create", () => {
 		);
 	});
 
-	it("should try send a request to the API for a valid input", async () => {
+	it("should try send a request to the API for a valid input", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		mockOAuthServerCallback();
 		mockGetMemberships([

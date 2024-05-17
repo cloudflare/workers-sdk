@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { rest } from "msw";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
@@ -17,6 +18,7 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { MockInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
 
@@ -25,9 +27,9 @@ describe("metrics", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	beforeEach(() => {
-		// Tell jest to use the original version of the `getMetricsConfig()` function in these tests.
-		const mockMetricsConfig = jest.requireMock("../metrics/metrics-config");
+	beforeEach(async () => {
+		// Tell vitest to use the original version of the `getMetricsConfig()` function in these tests.
+		const mockMetricsConfig = await vi.importMock("../metrics/metrics-config");
 		mockMetricsConfig.useOriginal = true;
 		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
 		logger.loggerLevel = "debug";
@@ -49,12 +51,12 @@ describe("metrics", () => {
 
 		// These tests should never hit the `/user` API endpoint.
 		const userRequests = mockUserRequest();
-		afterEach(() => {
+		afterEach(({ expect }) => {
 			expect(userRequests.count).toBe(0);
 		});
 
 		describe("identify()", () => {
-			it("should send a request to the default URL", async () => {
+			it("should send a request to the default URL", async ({ expect }) => {
 				const request = mockMetricRequest(
 					{
 						event: "identify",
@@ -81,7 +83,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a debug log if the dispatcher is disabled", async () => {
+			it("should write a debug log if the dispatcher is disabled", async ({
+				expect,
+			}) => {
 				const requests = mockMetricRequest({}, {}, "identify");
 				const dispatcher = await getMetricsDispatcher({
 					...MOCK_DISPATCHER_OPTIONS,
@@ -99,7 +103,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a debug log if the request fails", async () => {
+			it("should write a debug log if the request fails", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.post("*/identify", async (req, res) => {
 						return res.networkError("BAD REQUEST");
@@ -118,7 +124,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a warning log if no source key has been provided", async () => {
+			it("should write a warning log if no source key has been provided", async ({
+				expect,
+			}) => {
 				global.SPARROW_SOURCE_KEY = undefined;
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
 				await dispatcher.identify({ a: 1, b: 2 });
@@ -132,7 +140,7 @@ describe("metrics", () => {
 		});
 
 		describe("sendEvent()", () => {
-			it("should send a request to the default URL", async () => {
+			it("should send a request to the default URL", async ({ expect }) => {
 				const requests = mockMetricRequest(
 					{
 						event: "some-event",
@@ -161,7 +169,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a debug log if the dispatcher is disabled", async () => {
+			it("should write a debug log if the dispatcher is disabled", async ({
+				expect,
+			}) => {
 				const requests = mockMetricRequest({}, {}, "event");
 
 				const dispatcher = await getMetricsDispatcher({
@@ -180,7 +190,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a debug log if the request fails", async () => {
+			it("should write a debug log if the request fails", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.post("*/event", async (_, res) => {
 						return res.networkError("BAD REQUEST");
@@ -198,7 +210,9 @@ describe("metrics", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should write a warning log if no source key has been provided", async () => {
+			it("should write a warning log if no source key has been provided", async ({
+				expect,
+			}) => {
 				global.SPARROW_SOURCE_KEY = undefined;
 				const requests = mockMetricRequest({}, {}, "event");
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
@@ -216,13 +230,13 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
-		let isCISpy: jest.SpyInstance;
+		let isCISpy: MockInstance;
 
 		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
 			// Default the mock TTY to interactive for all these tests.
 			setIsTTY(true);
-			isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+			isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
 		describe("enabled", () => {
@@ -234,7 +248,9 @@ describe("metrics", () => {
 				process.env = ORIGINAL_ENV;
 			});
 
-			it("should return the WRANGLER_SEND_METRICS environment variable for enabled if it is defined", async () => {
+			it("should return the WRANGLER_SEND_METRICS environment variable for enabled if it is defined", async ({
+				expect,
+			}) => {
 				process.env.WRANGLER_SEND_METRICS = "false";
 				expect(await getMetricsConfig({})).toMatchObject({
 					enabled: false,
@@ -245,14 +261,18 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return false if running in a CI environment", async () => {
+			it("should return false if running in a CI environment", async ({
+				expect,
+			}) => {
 				isCISpy.mockReturnValue(true);
 				expect(await getMetricsConfig({})).toMatchObject({
 					enabled: false,
 				});
 			});
 
-			it("should return the sendMetrics argument for enabled if it is defined", async () => {
+			it("should return the sendMetrics argument for enabled if it is defined", async ({
+				expect,
+			}) => {
 				expect(
 					await getMetricsConfig({ sendMetrics: false, offline: false })
 				).toMatchObject({
@@ -265,7 +285,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return enabled false if the process is not interactive", async () => {
+			it("should return enabled false if the process is not interactive", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				expect(
 					await getMetricsConfig({
@@ -277,7 +299,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return enabled true if the user on this device previously agreed to send metrics", async () => {
+			it("should return enabled true if the user on this device previously agreed to send metrics", async ({
+				expect,
+			}) => {
 				await writeMetricsConfig({
 					permission: {
 						enabled: true,
@@ -294,7 +318,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should return enabled false if the user on this device previously refused to send metrics", async () => {
+			it("should return enabled false if the user on this device previously refused to send metrics", async ({
+				expect,
+			}) => {
 				await writeMetricsConfig({
 					permission: {
 						enabled: false,
@@ -311,7 +337,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should accept and store permission granting to send metrics if the user agrees", async () => {
+			it("should accept and store permission granting to send metrics if the user agrees", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: true,
@@ -329,7 +357,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should accept and store permission declining to send metrics if the user declines", async () => {
+			it("should accept and store permission declining to send metrics if the user declines", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: false,
@@ -347,7 +377,9 @@ describe("metrics", () => {
 				});
 			});
 
-			it("should ignore the config if the permission date is older than the current metrics date", async () => {
+			it("should ignore the config if the permission date is older than the current metrics date", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: false,
@@ -382,7 +414,9 @@ describe("metrics", () => {
 		});
 
 		describe("deviceId", () => {
-			it("should return a deviceId found in the config file", async () => {
+			it("should return a deviceId found in the config file", async ({
+				expect,
+			}) => {
 				await writeMetricsConfig({ deviceId: "XXXX-YYYY-ZZZZ" });
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
@@ -392,7 +426,9 @@ describe("metrics", () => {
 				expect((await readMetricsConfig()).deviceId).toEqual(deviceId);
 			});
 
-			it("should create and store a new deviceId if none is found in the config file", async () => {
+			it("should create and store a new deviceId if none is found in the config file", async ({
+				expect,
+			}) => {
 				await writeMetricsConfig({});
 				const { deviceId } = await getMetricsConfig({
 					sendMetrics: true,
@@ -407,7 +443,7 @@ describe("metrics", () => {
 
 		describe("userId", () => {
 			const userRequests = mockUserRequest();
-			it("should return a userId found in a cache file", async () => {
+			it("should return a userId found in a cache file", async ({ expect }) => {
 				await saveToConfigCache(USER_ID_CACHE_PATH, {
 					userId: "CACHED_USER_ID",
 				});
@@ -419,7 +455,9 @@ describe("metrics", () => {
 				expect(userRequests.count).toBe(0);
 			});
 
-			it("should fetch the userId from Cloudflare and store it in a cache file", async () => {
+			it("should fetch the userId from Cloudflare and store it in a cache file", async ({
+				expect,
+			}) => {
 				writeAuthConfigFile({ oauth_token: "DUMMY_TOKEN" });
 				const { userId } = await getMetricsConfig({
 					sendMetrics: true,
@@ -431,7 +469,9 @@ describe("metrics", () => {
 				expect(userRequests.count).toBe(1);
 			});
 
-			it("should not fetch the userId from Cloudflare if running in `offline` mode", async () => {
+			it("should not fetch the userId from Cloudflare if running in `offline` mode", async ({
+				expect,
+			}) => {
 				writeAuthConfigFile({ oauth_token: "DUMMY_TOKEN" });
 				const { userId } = await getMetricsConfig({
 					sendMetrics: true,
@@ -471,15 +511,15 @@ function mockUserRequest() {
 
 function mockMetricRequest(
 	body: unknown,
-	header: unknown,
+	header: Record<string, string>,
 	endpoint: "identify" | "event"
 ) {
 	const requests = { count: 0 };
 	msw.use(
 		rest.post(`*/${endpoint}`, async (req, res, cxt) => {
 			requests.count++;
-			expect(await req.json()).toEqual(body);
-			expect(req.headers).toContain(header);
+			assert.deepEqual(await req.json(), body);
+			assert.deepInclude(req.headers, header);
 			return res.once(cxt.status(200), cxt.json({}));
 		})
 	);

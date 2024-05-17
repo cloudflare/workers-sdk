@@ -1,11 +1,6 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
-import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import type { ConfigModuleRuleType } from "../config";
-
 /*
  * This file contains inline comments with the word "javascript"
  * This signals to a compatible editor extension that the template string
@@ -13,11 +8,17 @@ import type { ConfigModuleRuleType } from "../config";
  * is zjcompt.es6-string-javascript, but there are others.
  */
 
+import { describe, it, test } from "vitest";
+import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { runInTempDir } from "./helpers/run-in-tmp";
+import type { ConfigModuleRuleType } from "../config";
+
 describe("traverse module graph", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("should not detect JS without module rules", async () => {
+	it("should not detect JS without module rules", async ({ expect }) => {
 		await writeFile(
 			"./index.js",
 			dedent/* javascript */ `
@@ -49,13 +50,16 @@ describe("traverse module graph", () => {
 		expect(modules).toStrictEqual([]);
 	});
 
-	it.each([
-		["ESModule", "esm"],
-		["CommonJS", "commonjs"],
-	])("should detect JS as %s", async (type, format) => {
-		await writeFile(
-			"./index.js",
-			dedent/* javascript */ `
+	test.each`
+		type          | format
+		${"ESModule"} | ${"esm"}
+		${"CommonJS"} | ${"commonjs"}
+	`(
+		"Module type $type should have format $format",
+		async ({ type, format, expect }) => {
+			await writeFile(
+				"./index.js",
+				dedent/* javascript */ `
 			import { HELLO } from "./other.js"
 			export default {
 				async fetch(request) {
@@ -63,28 +67,29 @@ describe("traverse module graph", () => {
 				}
 			}
 			`
-		);
-		await writeFile(
-			"./other.js",
-			dedent/* javascript */ `
+			);
+			await writeFile(
+				"./other.js",
+				dedent/* javascript */ `
 			export const HELLO = "WORLD"
 			`
-		);
+			);
 
-		const modules = await findAdditionalModules(
-			{
-				file: path.join(process.cwd(), "./index.js"),
-				directory: process.cwd(),
-				format: "modules",
-				moduleRoot: process.cwd(),
-			},
-			[{ type: type as ConfigModuleRuleType, globs: ["**/*.js"] }]
-		);
+			const modules = await findAdditionalModules(
+				{
+					file: path.join(process.cwd(), "./index.js"),
+					directory: process.cwd(),
+					format: "modules",
+					moduleRoot: process.cwd(),
+				},
+				[{ type: type as ConfigModuleRuleType, globs: ["**/*.js"] }]
+			);
 
-		expect(modules[0].type).toStrictEqual(format);
-	});
+			expect(modules[0].type).toStrictEqual(format);
+		}
+	);
 
-	it("should not resolve JS outside the module root", async () => {
+	it("should not resolve JS outside the module root", async ({ expect }) => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
@@ -118,7 +123,7 @@ describe("traverse module graph", () => {
 		expect(modules).toStrictEqual([]);
 	});
 
-	it("should resolve JS with module root", async () => {
+	it("should resolve JS with module root", async ({ expect }) => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
@@ -152,7 +157,7 @@ describe("traverse module graph", () => {
 		expect(modules[0].name).toStrictEqual("other.js");
 	});
 
-	it("should ignore files not matched by glob", async () => {
+	it("should ignore files not matched by glob", async ({ expect }) => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
@@ -186,7 +191,9 @@ describe("traverse module graph", () => {
 		expect(modules.length).toStrictEqual(0);
 	});
 
-	it("should resolve files that match the default rules", async () => {
+	it("should resolve files that match the default rules", async ({
+		expect,
+	}) => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
@@ -220,7 +227,9 @@ describe("traverse module graph", () => {
 		expect(modules[0].name).toStrictEqual("other.txt");
 	});
 
-	it("should error if a rule is ignored because the previous was not marked 'fall-through'", async () => {
+	it("should error if a rule is ignored because the previous was not marked 'fall-through'", async ({
+		expect,
+	}) => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",

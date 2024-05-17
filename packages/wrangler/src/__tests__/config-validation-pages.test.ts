@@ -1,10 +1,13 @@
+import { describe, it } from "vitest";
 import { defaultWranglerConfig } from "../config/config";
 import { validatePagesConfig } from "../config/validation-pages";
 import type { Config } from "../config";
 
 describe("validatePagesConfig()", () => {
 	describe("`main` field validation", () => {
-		it("should error if configuration contains both `pages_build_output_dir` and `main` config fields", () => {
+		it("should error if configuration contains both `pages_build_output_dir` and `main` config fields", ({
+			expect,
+		}) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 			config.main = "./src/index.js";
@@ -23,7 +26,9 @@ describe("validatePagesConfig()", () => {
 	});
 
 	describe("`name` field validation", () => {
-		it('should error if "name" field is not specififed at the top-level', () => {
+		it('should error if "name" field is not specififed at the top-level', ({
+			expect,
+		}) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 
@@ -39,7 +44,7 @@ describe("validatePagesConfig()", () => {
 	});
 
 	describe("named environments validation", () => {
-		it("should pass if no named environments are defined", () => {
+		it("should pass if no named environments are defined", ({ expect }) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 			config.name = "pages-project";
@@ -49,7 +54,9 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
 
-		it("should pass for environments named 'preview' and/or 'production'", () => {
+		it("should pass for environments named 'preview' and/or 'production'", ({
+			expect,
+		}) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 			config.name = "pages-project";
@@ -79,7 +86,7 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
 
-		it("should error for any other named environments", () => {
+		it("should error for any other named environments", ({ expect }) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./assets";
 			config.name = "pages-project";
@@ -115,7 +122,9 @@ describe("validatePagesConfig()", () => {
 	});
 
 	describe("unsupported fields validation", () => {
-		it("should pass if configuration contains only Pages-supported configuration fields", () => {
+		it("should pass if configuration contains only Pages-supported configuration fields", ({
+			expect,
+		}) => {
 			let config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./dist";
 			config.name = "pages-project";
@@ -193,7 +202,9 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
 
-		it("should fail if configuration contains any fields that are not supported by Pages projects", () => {
+		it("should fail if configuration contains any fields that are not supported by Pages projects", ({
+			expect,
+		}) => {
 			const defaultConfig = generateConfigurationWithDefaults();
 			defaultConfig.pages_build_output_dir = "./public";
 			defaultConfig.name = "pages-project";
@@ -276,7 +287,9 @@ describe("validatePagesConfig()", () => {
 	});
 
 	describe("DO bindings validation", () => {
-		it("should pass if all Durable Objects bindings specify 'script_name'", () => {
+		it("should pass if all Durable Objects bindings specify 'script_name'", ({
+			expect,
+		}) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 			config.name = "pages-project";
@@ -298,7 +311,9 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasErrors()).toBeFalsy();
 		});
 
-		it("should fail if any of the Durable Object bindings does not specify 'script_name'", () => {
+		it("should fail if any of the Durable Object bindings does not specify 'script_name'", ({
+			expect,
+		}) => {
 			const config = generateConfigurationWithDefaults();
 			config.pages_build_output_dir = "./public";
 			config.name = "pages-project";

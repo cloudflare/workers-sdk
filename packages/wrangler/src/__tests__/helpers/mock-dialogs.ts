@@ -1,4 +1,6 @@
 import prompts from "prompts";
+import { assert } from "vitest";
+import type { Mock } from "vitest";
 
 /**
  * The expected values for a confirmation request.
@@ -21,15 +23,18 @@ export interface ConfirmExpectation {
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
+		(prompts as unknown as Mock).mockImplementationOnce(
 			({ type, name, message, initial }) => {
-				expect({ type, name, message }).toStrictEqual({
-					type: "confirm",
-					name: "value",
-					message: expectation.text,
-				});
+				assert.deepStrictEqual(
+					{ type, name, message },
+					{
+						type: "confirm",
+						name: "value",
+						message: expectation.text,
+					}
+				);
 				if (expectation.options) {
-					expect(initial).toStrictEqual(expectation.options?.defaultValue);
+					assert.deepStrictEqual(initial, expectation.options?.defaultValue);
 				}
 
 				return Promise.resolve({ value: expectation.result });
@@ -62,16 +67,20 @@ export interface PromptExpectation {
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
+		(prompts as unknown as Mock).mockImplementationOnce(
 			({ type, name, message, initial, style }) => {
-				expect({ type, name, message }).toStrictEqual({
-					type: "text",
-					name: "value",
-					message: expectation.text,
-				});
+				assert.deepStrictEqual(
+					{ type, name, message },
+					{
+						type: "text",
+						name: "value",
+						message: expectation.text,
+					}
+				);
 				if (expectation.options) {
-					expect(initial).toStrictEqual(expectation.options?.defaultValue);
-					expect(style).toStrictEqual(
+					assert.deepStrictEqual(initial, expectation.options?.defaultValue);
+					assert.deepStrictEqual(
+						style,
 						expectation.options?.isSecret ? "password" : "default"
 					);
 				}
@@ -114,16 +123,19 @@ export function mockSelect<Values>(
 	...expectations: SelectExpectation<Values>[]
 ) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
+		(prompts as unknown as Mock).mockImplementationOnce(
 			({ type, name, message, choices, initial }) => {
-				expect({ type, name, message }).toStrictEqual({
-					type: "select",
-					name: "value",
-					message: expectation.text,
-				});
+				assert.deepStrictEqual(
+					{ type, name, message },
+					{
+						type: "select",
+						name: "value",
+						message: expectation.text,
+					}
+				);
 				if (expectation.options) {
-					expect(choices).toStrictEqual(expectation.options?.choices);
-					expect(initial).toStrictEqual(expectation.options?.defaultOption);
+					assert.deepStrictEqual(choices, expectation.options?.choices);
+					assert.deepStrictEqual(initial, expectation.options?.defaultOption);
 				}
 				return Promise.resolve({ value: expectation.result });
 			}
@@ -133,7 +145,8 @@ export function mockSelect<Values>(
 
 export function clearDialogs() {
 	// No dialog mocks should be left after each test, and so calling the dialog methods should throw
-	expect(() => prompts({ type: "select", name: "unknown" })).toThrow(
+	assert.throws(
+		() => prompts({ type: "select", name: "unknown" }),
 		"Unexpected call to "
 	);
 }

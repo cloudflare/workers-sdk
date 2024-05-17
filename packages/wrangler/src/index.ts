@@ -873,7 +873,7 @@ export async function main(argv: string[]): Promise<void> {
 			// needed, so we can cleanly exit. Note, we don't want to disconnect if
 			// this file was imported in Jest, as that would stop communication with
 			// the test runner.
-			if (typeof jest === "undefined") {
+			if (!process.env.VITEST_WORKER_ID) {
 				process.disconnect?.();
 			}
 

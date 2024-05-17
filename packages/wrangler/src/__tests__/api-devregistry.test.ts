@@ -1,14 +1,15 @@
 import { fetch } from "undici";
-import { unstable_dev } from "../api";
-import { mockConsoleMethods } from "./helpers/mock-console";
-
-jest.unmock("child_process");
-jest.unmock("undici");
-
 /**
  * a huge caveat to how testing multi-worker scripts works:
  * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
  */
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { unstable_dev } from "../api";
+import { mockConsoleMethods } from "./helpers/mock-console";
+
+vi.unmock("child_process");
+vi.unmock("undici");
+
 describe("multi-worker testing", () => {
 	mockConsoleMethods();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,7 +51,9 @@ describe("multi-worker testing", () => {
 		}
 	});
 
-	it("parentWorker and childWorker should be added devRegistry", async () => {
+	it("parentWorker and childWorker should be added devRegistry", async ({
+		expect,
+	}) => {
 		const resp = await fetch("http://127.0.0.1:6284/workers");
 		if (resp) {
 			const parsedResp = (await resp.json()) as {
@@ -62,7 +65,7 @@ describe("multi-worker testing", () => {
 		}
 	});
 
-	it("childWorker should return Hello World itself", async () => {
+	it("childWorker should return Hello World itself", async ({ expect }) => {
 		const resp = await childWorker.fetch();
 		if (resp) {
 			const text = await resp.text();
@@ -70,7 +73,9 @@ describe("multi-worker testing", () => {
 		}
 	});
 
-	it("parentWorker should return Hello World by invoking the child worker", async () => {
+	it("parentWorker should return Hello World by invoking the child worker", async ({
+		expect,
+	}) => {
 		const resp = await parentWorker.fetch();
 		if (resp) {
 			const parsedResp = await resp.text();
@@ -78,7 +83,9 @@ describe("multi-worker testing", () => {
 		}
 	});
 
-	it("should be able to stop and start the server with no warning logs", async () => {
+	it("should be able to stop and start the server with no warning logs", async ({
+		expect,
+	}) => {
 		// Spy on all the console methods
 		let logs = "";
 		// Resolve when we see `[mf:inf] GET / 200 OK` message. This log is sent in
@@ -89,7 +96,7 @@ describe("multi-worker testing", () => {
 			(resolve) => (requestResolve = resolve)
 		);
 		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
-			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+			vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
 				// Regexp ignores colour codes
 				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args))) {

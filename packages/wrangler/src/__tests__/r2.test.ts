@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
 import prettyBytes from "pretty-bytes";
+import { beforeEach, describe, it } from "vitest";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -26,7 +27,9 @@ describe("r2", () => {
 		mockAccountId();
 		mockApiToken();
 
-		it("should show the correct help when an invalid command is passed", async () => {
+		it("should show the correct help when an invalid command is passed", async ({
+			expect,
+		}) => {
 			await expect(() =>
 				runWrangler("r2 bucket foo")
 			).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
@@ -59,7 +62,7 @@ describe("r2", () => {
 		});
 
 		describe("list", () => {
-			it("should list buckets & check request inputs", async () => {
+			it("should list buckets & check request inputs", async ({ expect }) => {
 				const expectedBuckets: R2BucketInfo[] = [
 					{ name: "bucket-1-local-once", creation_date: "01-01-2001" },
 					{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
@@ -99,7 +102,7 @@ describe("r2", () => {
 		});
 
 		describe("create", () => {
-			it("should error if no bucket name is given", async () => {
+			it("should error if no bucket name is given", async ({ expect }) => {
 				await expect(
 					runWrangler("r2 bucket create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -132,7 +135,9 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should error if the bucket to create contains spaces", async () => {
+			it("should error if the bucket to create contains spaces", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("r2 bucket create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -165,7 +170,9 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should create a bucket & check request inputs", async () => {
+			it("should create a bucket & check request inputs", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.post(
 						"*/accounts/:accountId/r2/buckets",
@@ -184,7 +191,9 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should create a bucket with the expected jurisdiction", async () => {
+			it("should create a bucket with the expected jurisdiction", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.post(
 						"*/accounts/:accountId/r2/buckets",
@@ -204,7 +213,9 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should create a bucket with the expected default storage class", async () => {
+			it("should create a bucket with the expected default storage class", async ({
+				expect,
+			}) => {
 				await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
 				expect(std.out).toMatchInlineSnapshot(`
 				            "Creating bucket testBucket with default storage class set to InfrequentAccess.
@@ -212,7 +223,7 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should error if storage class is invalid", async () => {
+			it("should error if storage class is invalid", async ({ expect }) => {
 				await expect(
 					runWrangler("r2 bucket create testBucket -s Foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -234,7 +245,7 @@ describe("r2", () => {
 		});
 
 		describe("update", () => {
-			it("should error if invalid command is passed", async () => {
+			it("should error if invalid command is passed", async ({ expect }) => {
 				await expect(
 					runWrangler("r2 bucket update foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
@@ -262,7 +273,7 @@ describe("r2", () => {
 			});
 
 			describe("storage-class", () => {
-				it("should error if storage class is missing", async () => {
+				it("should error if storage class is missing", async ({ expect }) => {
 					await expect(
 						runWrangler("r2 bucket update storage-class testBucket")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -295,7 +306,7 @@ describe("r2", () => {
 			          `);
 				});
 
-				it("should error if storage class is invalid", async () => {
+				it("should error if storage class is invalid", async ({ expect }) => {
 					await expect(
 						runWrangler("r2 bucket update storage-class testBucket -s Foo")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -315,7 +326,7 @@ describe("r2", () => {
 		`);
 				});
 
-				it("should update the default storage class", async () => {
+				it("should update the default storage class", async ({ expect }) => {
 					await runWrangler(
 						"r2 bucket update storage-class testBucket -s InfrequentAccess"
 					);
@@ -328,7 +339,7 @@ describe("r2", () => {
 		});
 
 		describe("delete", () => {
-			it("should error if no bucket name is given", async () => {
+			it("should error if no bucket name is given", async ({ expect }) => {
 				await expect(
 					runWrangler("r2 bucket delete")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -360,7 +371,9 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should error if the bucket name to delete contains spaces", async () => {
+			it("should error if the bucket name to delete contains spaces", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("r2 bucket delete abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -392,7 +405,9 @@ describe("r2", () => {
 			          `);
 			});
 
-			it("should delete a bucket specified by name & check requests inputs", async () => {
+			it("should delete a bucket specified by name & check requests inputs", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.delete(
 						"*/accounts/:accountId/r2/buckets/:bucketName",
@@ -420,7 +435,9 @@ describe("r2", () => {
 		describe("sippy", () => {
 			const { setIsTTY } = useMockIsTTY();
 
-			it("should show the correct help when an invalid command is passed", async () => {
+			it("should show the correct help when an invalid command is passed", async ({
+				expect,
+			}) => {
 				await expect(() =>
 					runWrangler("r2 bucket sippy foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
@@ -450,7 +467,9 @@ describe("r2", () => {
 			});
 
 			describe("enable", () => {
-				it("should enable sippy on AWS for the given bucket", async () => {
+				it("should enable sippy on AWS for the given bucket", async ({
+					expect,
+				}) => {
 					setIsTTY(false);
 
 					msw.use(
@@ -483,7 +502,9 @@ describe("r2", () => {
 					);
 				});
 
-				it("should enable sippy on GCS for the given bucket", async () => {
+				it("should enable sippy on GCS for the given bucket", async ({
+					expect,
+				}) => {
 					setIsTTY(false);
 
 					msw.use(
@@ -515,7 +536,7 @@ describe("r2", () => {
 					);
 				});
 
-				it("should error if no bucket name is given", async () => {
+				it("should error if no bucket name is given", async ({ expect }) => {
 					await expect(
 						runWrangler("r2 bucket sippy enable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -559,7 +580,7 @@ describe("r2", () => {
 			});
 
 			describe("disable", () => {
-				it("should error if no bucket name is given", async () => {
+				it("should error if no bucket name is given", async ({ expect }) => {
 					await expect(
 						runWrangler("r2 bucket sippy disable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -591,7 +612,7 @@ describe("r2", () => {
 			`);
 				});
 
-				it("should disable Sippy for the given bucket", async () => {
+				it("should disable Sippy for the given bucket", async ({ expect }) => {
 					setIsTTY(false);
 
 					msw.use(
@@ -610,7 +631,7 @@ describe("r2", () => {
 			});
 
 			describe("get", () => {
-				it("should error if no bucket name is given", async () => {
+				it("should error if no bucket name is given", async ({ expect }) => {
 					await expect(
 						runWrangler("r2 bucket sippy get")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -643,7 +664,9 @@ describe("r2", () => {
 				});
 			});
 
-			it("should get the status of Sippy for the given bucket", async () => {
+			it("should get the status of Sippy for the given bucket", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				msw.use(
@@ -672,7 +695,7 @@ describe("r2", () => {
 
 		describe("notification", () => {
 			describe("get", () => {
-				it("follows happy path as expected", async () => {
+				it("follows happy path as expected", async ({ expect }) => {
 					const bucketName = "my-bucket";
 					const queueId = "471537e8-6e5a-4163-a4d4-9478087c32c3";
 					const queueName = "my-queue";
@@ -737,7 +760,7 @@ describe("r2", () => {
 			`);
 				});
 
-				it("shows correct output on error", async () => {
+				it("shows correct output on error", async ({ expect }) => {
 					await expect(
 						runWrangler(`r2 bucket notification get`)
 					).rejects.toMatchInlineSnapshot(
@@ -762,7 +785,7 @@ describe("r2", () => {
 				});
 			});
 			describe("create", () => {
-				it("follows happy path as expected", async () => {
+				it("follows happy path as expected", async ({ expect }) => {
 					const eventTypes: R2EventType[] = ["object-create", "object-delete"];
 					const actions: R2EventableOperation[] = [];
 					const bucketName = "my-bucket";
@@ -842,7 +865,9 @@ describe("r2", () => {
 			`);
 				});
 
-				it("errors if required options are not provided", async () => {
+				it("errors if required options are not provided", async ({
+					expect,
+				}) => {
 					await expect(
 						runWrangler("r2 bucket notification create notification-test-001")
 					).rejects.toMatchInlineSnapshot(
@@ -874,7 +899,7 @@ describe("r2", () => {
 			});
 
 			describe("delete", () => {
-				it("follows happy path as expected", async () => {
+				it("follows happy path as expected", async ({ expect }) => {
 					const bucketName = "my-bucket";
 					const queue = "my-queue";
 					msw.use(
@@ -933,7 +958,9 @@ describe("r2", () => {
 			`);
 				});
 
-				it("errors if required options are not provided", async () => {
+				it("errors if required options are not provided", async ({
+					expect,
+				}) => {
 					await expect(
 						runWrangler("r2 bucket notification delete notification-test-001")
 					).rejects.toMatchInlineSnapshot(
@@ -969,7 +996,7 @@ describe("r2", () => {
 			mockAccountId();
 			mockApiToken();
 
-			it("should download R2 object from bucket", async () => {
+			it("should download R2 object from bucket", async ({ expect }) => {
 				await runWrangler(
 					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
@@ -980,7 +1007,9 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should download R2 object from bucket into directory", async () => {
+			it("should download R2 object from bucket into directory", async ({
+				expect,
+			}) => {
 				await runWrangler(
 					`r2 object get bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
 				);
@@ -989,7 +1018,7 @@ describe("r2", () => {
 				);
 			});
 
-			it("should upload R2 object to bucket", async () => {
+			it("should upload R2 object to bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
@@ -1001,7 +1030,9 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should upload R2 object with storage class to bucket", async () => {
+			it("should upload R2 object with storage class to bucket", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
@@ -1013,7 +1044,9 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should fail to upload R2 object to bucket if too large", async () => {
+			it("should fail to upload R2 object to bucket if too large", async ({
+				expect,
+			}) => {
 				const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE + 1024 * 1024;
 				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
 				await expect(
@@ -1029,7 +1062,9 @@ describe("r2", () => {
 			`);
 			});
 
-			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
+			it("should pass all fetch option flags into requestInit & check request inputs", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.put(
 						"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
@@ -1083,7 +1118,7 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should delete R2 object from bucket", async () => {
+			it("should delete R2 object from bucket", async ({ expect }) => {
 				await runWrangler(
 					`r2 object delete bucketName-object-test/wormhole-img.png`
 				);
@@ -1094,7 +1129,9 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should not allow `--pipe` & `--file` to run together", async () => {
+			it("should not allow `--pipe` & `--file` to run together", async ({
+				expect,
+			}) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await expect(
 					runWrangler(

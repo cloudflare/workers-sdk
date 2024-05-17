@@ -1,4 +1,5 @@
 import path from "node:path";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { normalizeAndValidateConfig } from "../config/validation";
 import {
 	generateRawConfigForPages,
@@ -10,7 +11,7 @@ describe("normalizeAndValidateConfig()", () => {
 	describe("Pages configuration", () => {
 		let pagesRawConfig: RawConfig = {};
 
-		beforeEach(() => {
+		beforeEach(({ expect }) => {
 			pagesRawConfig = generateRawConfigForPages(
 				"pages-is-awesome",
 				"./public"
@@ -30,7 +31,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("named environments", () => {
-			it("should return config corresponding to the top-level environment, if no named environment is provided", () => {
+			it("should return config corresponding to the top-level environment, if no named environment is provided", ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
 					undefined,
@@ -130,7 +133,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it('should return config corresponding to the "preview" named environment, if it exists in the configuration file', () => {
+			it('should return config corresponding to the "preview" named environment, if it exists in the configuration file', ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
 					undefined,
@@ -230,7 +235,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it('should return config corresponding to the "production" named environment, if it exists in the configuration file', () => {
+			it('should return config corresponding to the "production" named environment, if it exists in the configuration file', ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					pagesRawConfig,
 					undefined,
@@ -330,7 +337,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it("should return config corresponding to any other Pages-unsupported named environment, if it exists in the configuration file", () => {
+			it("should return config corresponding to any other Pages-unsupported named environment, if it exists in the configuration file", ({
+				expect,
+			}) => {
 				/**
 				 * While Pages config only supports "preview" & "production" named
 				 * environments, the following is a valid test case, because all
@@ -449,7 +458,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it('should return config corresponding to the top-level environment, if the "preview" named environment does not exist in the configuration file', () => {
+			it('should return config corresponding to the top-level environment, if the "preview" named environment does not exist in the configuration file', ({
+				expect,
+			}) => {
 				// delete the "preview" environment configuration. This leaves us
 				// with just top-level and "production" env config
 				delete pagesRawConfig.env?.preview;
@@ -557,7 +568,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it('should return config corresponding to the top-level environment, if the "production" named environment does not exist in the configuration file', () => {
+			it('should return config corresponding to the top-level environment, if the "production" named environment does not exist in the configuration file', ({
+				expect,
+			}) => {
 				// delete the "production" environment configuration. This leaves us
 				// with just the top-level config
 				delete pagesRawConfig.env?.production;
@@ -665,7 +678,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 			});
 
-			it("should return config corresponding to the top-level environment, if any other Pages-unsupported named environment does not exist in the configuration file", () => {
+			it("should return config corresponding to the top-level environment, if any other Pages-unsupported named environment does not exist in the configuration file", ({
+				expect,
+			}) => {
 				/**
 				 * While Pages config only supports "preview" & "production" named
 				 * environments, the following is a valid test case, because

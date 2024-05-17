@@ -1,5 +1,6 @@
 import { cwd } from "process";
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -20,7 +21,7 @@ describe("migrate", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("create", () => {
-		it("should reject the --local flag for create", async () => {
+		it("should reject the --local flag for create", async ({ expect }) => {
 			setIsTTY(false);
 			writeWranglerToml({
 				d1_databases: [
@@ -38,7 +39,7 @@ describe("migrate", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken();
 		const { mockOAuthServerCallback } = mockOAuthFlow();
-		it("should not attempt to login in local mode", async () => {
+		it("should not attempt to login in local mode", async ({ expect }) => {
 			setIsTTY(false);
 			writeWranglerToml({
 				d1_databases: [
@@ -53,7 +54,9 @@ describe("migrate", () => {
 			);
 		});
 
-		it("should try to read D1 config from wrangler.toml", async () => {
+		it("should try to read D1 config from wrangler.toml", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerToml();
 			await expect(
@@ -63,7 +66,9 @@ describe("migrate", () => {
 			);
 		});
 
-		it("should not try to read wrangler.toml in local mode", async () => {
+		it("should not try to read wrangler.toml in local mode", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerToml();
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.
@@ -74,7 +79,9 @@ describe("migrate", () => {
 			);
 		});
 
-		it("should reject the use of --preview with --local", async () => {
+		it("should reject the use of --preview with --local", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerToml({
 				d1_databases: [
@@ -88,7 +95,9 @@ describe("migrate", () => {
 			).rejects.toThrowError(`Error: can't use --preview without --remote`);
 		});
 
-		it("multiple accounts: should throw when trying to apply migrations without an account_id in config", async () => {
+		it("multiple accounts: should throw when trying to apply migrations without an account_id in config", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			writeWranglerToml({
@@ -123,7 +132,9 @@ Your database may not be available to serve requests during the migration, conti
 				`More than one account available but unable to select one in non-interactive mode.`
 			);
 		});
-		it("multiple accounts: should let the user apply migrations with an account_id in config", async () => {
+		it("multiple accounts: should let the user apply migrations with an account_id in config", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			msw.use(
 				rest.post(
@@ -209,7 +220,7 @@ Your database may not be available to serve requests during the migration, conti
 		mockAccountId();
 		mockApiToken({ apiToken: null });
 
-		it("should not attempt to login in local mode", async () => {
+		it("should not attempt to login in local mode", async ({ expect }) => {
 			setIsTTY(false);
 			writeWranglerToml({
 				d1_databases: [
@@ -224,7 +235,9 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
-		it("should use the custom migrations folder when provided", async () => {
+		it("should use the custom migrations folder when provided", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerToml({
 				d1_databases: [
@@ -246,7 +259,9 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
-		it("should try to read D1 config from wrangler.toml when logged in", async () => {
+		it("should try to read D1 config from wrangler.toml when logged in", async ({
+			expect,
+		}) => {
 			// no need to clear this env var as it's implicitly cleared by mockApiToken in afterEach
 			process.env.CLOUDFLARE_API_TOKEN = "api-token";
 			reinitialiseAuthTokens();
@@ -259,7 +274,9 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
-		it("should throw if user is not authenticated and not using --local", async () => {
+		it("should throw if user is not authenticated and not using --local", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			await expect(
@@ -269,7 +286,9 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
-		it("should not try to read wrangler.toml in local mode", async () => {
+		it("should not try to read wrangler.toml in local mode", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerToml();
 			// If we get to the point where we are checking for migrations then we have not checked wrangler.toml.

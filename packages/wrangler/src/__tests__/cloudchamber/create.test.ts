@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -23,7 +24,7 @@ describe("cloudchamber create", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber create --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -52,7 +53,9 @@ describe("cloudchamber create", () => {
 	`);
 	});
 
-	it("should create deployment (detects no interactivity)", async () => {
+	it("should create deployment (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -100,7 +103,9 @@ describe("cloudchamber create", () => {
 	`);
 	});
 
-	it("should create deployment indicating ssh keys (detects no interactivity)", async () => {
+	it("should create deployment indicating ssh keys (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({
 			vcpu: 40,
@@ -148,7 +153,9 @@ describe("cloudchamber create", () => {
 	`);
 	});
 
-	it("can't create deployment due to lack of fields (json)", async () => {
+	it("can't create deployment due to lack of fields (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		expect(std.err).toMatchInlineSnapshot(`""`);

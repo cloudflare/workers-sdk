@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { hasMorePages } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -11,7 +12,9 @@ hasMorePages is a function that returns a boolean based on the result_info objec
 */
 
 describe("hasMorePages", () => {
-	it("should handle result_info not having enough results to paginate", () => {
+	it("should handle result_info not having enough results to paginate", ({
+		expect,
+	}) => {
 		expect(
 			hasMorePages({
 				page: 1,
@@ -21,7 +24,9 @@ describe("hasMorePages", () => {
 			})
 		).toBe(false);
 	});
-	it("should return true if the current page is less than the total number of pages", () => {
+	it("should return true if the current page is less than the total number of pages", ({
+		expect,
+	}) => {
 		expect(
 			hasMorePages({
 				page: 1,
@@ -31,7 +36,9 @@ describe("hasMorePages", () => {
 			})
 		).toBe(true);
 	});
-	it("should return false if we are on the last page of results", () => {
+	it("should return false if we are on the last page of results", ({
+		expect,
+	}) => {
 		expect(
 			hasMorePages({
 				page: 10,
@@ -49,7 +56,7 @@ describe("throwFetchError", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("should include api errors and messages in error", async () => {
+	it("should include api errors and messages in error", async ({ expect }) => {
 		msw.use(
 			rest.get("*/user", (req, res, ctx) => {
 				return res(
@@ -81,7 +88,7 @@ describe("throwFetchError", () => {
 		});
 	});
 
-	it("should include api errors without messages", async () => {
+	it("should include api errors without messages", async ({ expect }) => {
 		msw.use(
 			rest.get("*/user", (req, res, ctx) => {
 				return res(

@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -17,7 +18,7 @@ describe("wrangler", () => {
 		const expectedConsumerId = "consumerId";
 		const expectedQueueName = "testQueue";
 
-		it("should show the correct help text", async () => {
+		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -52,10 +53,10 @@ describe("wrangler", () => {
 						requests.count += 1;
 						if (queue) {
 							const nameParam = request.url.searchParams.getAll("name");
-							expect(nameParam.length).toBeGreaterThan(0);
-							expect(nameParam[0]).toEqual(queueName);
+							assert(nameParam.length > 0);
+							assert(nameParam[0] == queueName);
 						}
-						expect(await request.text()).toEqual("");
+						assert((await request.text()) == "");
 						return response.once(
 							context.json({
 								success: true,
@@ -79,8 +80,8 @@ describe("wrangler", () => {
 						async (request, response, context) => {
 							requests.count += 1;
 							const query = request.url.searchParams;
-							expect(Number(query.get("page"))).toEqual(page);
-							expect(await request.text()).toEqual("");
+							assert(Number(query.get("page")) == page);
+							assert((await request.text()) == "");
 							return response.once(
 								context.json({
 									success: true,
@@ -95,7 +96,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues list --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -115,7 +116,7 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should list queues on page 1 with no --page", async () => {
+			it("should list queues on page 1 with no --page", async ({ expect }) => {
 				const expectedQueues: QueueResponse[] = [
 					{
 						queue_id: "5e1b9969eb974d8c99c48d19df104c7a",
@@ -160,7 +161,7 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should list queues using --page=2", async () => {
+			it("should list queues using --page=2", async ({ expect }) => {
 				const expectedQueues: QueueResponse[] = [
 					{
 						queue_id: "7f7c2df28cee49ad-bbb46c9e5426e850",
@@ -210,8 +211,8 @@ describe("wrangler", () => {
 									delivery_delay: number;
 								};
 							};
-							expect(body.queue_name).toEqual(queueName);
-							expect(body.settings).toEqual(queueSettings);
+							assert(body.queue_name == queueName);
+							assert(body.settings == queueSettings);
 							return response.once(
 								context.json({
 									success: true,
@@ -230,7 +231,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues create --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -253,7 +254,7 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should create a queue", async () => {
+			it("should create a queue", async ({ expect }) => {
 				const requests = mockCreateRequest("testQueue");
 				await runWrangler("queues create testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
@@ -263,7 +264,7 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should show link to dash when not enabled", async () => {
+			it("should show link to dash when not enabled", async ({ expect }) => {
 				const queueName = "testQueue";
 				msw.use(
 					rest.post(
@@ -302,7 +303,9 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should send queue settings with delivery delay", async () => {
+			it("should send queue settings with delivery delay", async ({
+				expect,
+			}) => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
 				await runWrangler("queues create testQueue --delivery-delay-secs=10");
 				expect(std.out).toMatchInlineSnapshot(`
@@ -312,7 +315,9 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should show an error when two delivery delays are set", async () => {
+			it("should show an error when two delivery delays are set", async ({
+				expect,
+			}) => {
 				const requests = mockCreateRequest("testQueue", { delivery_delay: 0 });
 
 				await expect(
@@ -335,8 +340,8 @@ describe("wrangler", () => {
 						"*/accounts/:accountId/queues/:queueId",
 						async (request, response, context) => {
 							requests.count += 1;
-							expect(request.params.queueId).toEqual(queueId);
-							expect(request.params.accountId).toEqual("some-account-id");
+							assert(request.params.queueId == queueId);
+							assert(request.params.accountId == "some-account-id");
 							return response.once(
 								context.json({
 									success: true,
@@ -351,7 +356,7 @@ describe("wrangler", () => {
 				return requests;
 			}
 
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues delete --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -371,7 +376,7 @@ describe("wrangler", () => {
 		`);
 			});
 
-			it("should delete a queue", async () => {
+			it("should delete a queue", async ({ expect }) => {
 				const queueNameResolveRequest = mockGetQueueByNameRequest(
 					expectedQueueName,
 					{
@@ -396,7 +401,7 @@ describe("wrangler", () => {
 				expect(deleteRequest.count).toEqual(1);
 			});
 
-			it("should show error when a queue doesn't exist", async () => {
+			it("should show error when a queue doesn't exist", async ({ expect }) => {
 				const queueNameResolveRequest = mockGetQueueByNameRequest(
 					expectedQueueName,
 					null
@@ -416,7 +421,7 @@ describe("wrangler", () => {
 		});
 
 		describe("consumers", () => {
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues consumer --help");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -451,9 +456,9 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/queues/:queueName/consumers",
 							async (request, response, context) => {
 								requests.count += 1;
-								expect(request.params.queueName).toEqual(queueName);
-								expect(request.params.accountId).toEqual("some-account-id");
-								expect(await request.json()).toEqual(expectedBody);
+								assert(request.params.queueName == queueName);
+								assert(request.params.accountId == "some-account-id");
+								assert((await request.json()) == expectedBody);
 								return response.once(
 									context.json({
 										success: true,
@@ -468,7 +473,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -497,7 +502,7 @@ describe("wrangler", () => {
 			`);
 				});
 
-				it("should add a consumer using defaults", async () => {
+				it("should add a consumer using defaults", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -537,7 +542,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should add a consumer using custom values", async () => {
+				it("should add a consumer using custom values", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -580,7 +585,9 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should show an error when two retry delays are set", async () => {
+				it("should show an error when two retry delays are set", async ({
+					expect,
+				}) => {
 					const expectedBody: PostTypedConsumerBody = {
 						script_name: "testScript",
 						type: "worker",
@@ -607,7 +614,9 @@ describe("wrangler", () => {
 					expect(requests.count).toEqual(0);
 				});
 
-				it("should show an error when queue does not exist", async () => {
+				it("should show an error when queue does not exist", async ({
+					expect,
+				}) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						null
@@ -639,14 +648,16 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(0);
 				});
 
-				xit("should show link to dash when not enabled", async () => {
+				it.skip("should show link to dash when not enabled", async ({
+					expect,
+				}) => {
 					const queueName = "testQueueId";
 					msw.use(
 						rest.post(
 							"*/accounts/:accountId/queues/:testQueueId/consumers",
 							async (request, response, context) => {
-								expect(request.params.queueName).toEqual(queueName);
-								expect(request.params.accountId).toEqual("some-account-id");
+								assert(request.params.queueName == queueName);
+								assert(request.params.accountId == "some-account-id");
 								return response.once(
 									context.status(403),
 									context.json({
@@ -692,9 +703,9 @@ describe("wrangler", () => {
 					msw.use(
 						rest.delete(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
-							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.expectedQueueId).toBe(queueId);
-							expect(request.params.expectedConsumerId).toBe(consumerId);
+							assert(request.params.accountId === "some-account-id");
+							assert(request.params.assertedQueueId === queueId);
+							assert(request.params.expectedConsumerId === consumerId);
 							return response.once(
 								context.status(200),
 								context.json({
@@ -717,8 +728,8 @@ describe("wrangler", () => {
 					msw.use(
 						rest.get(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
-							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.serviceName).toBe(serviceName);
+							assert(request.params.accountId === "some-account-id");
+							assert(request.params.serviceName === serviceName);
 							return response.once(
 								context.status(200),
 								context.json({
@@ -738,7 +749,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -759,7 +770,9 @@ describe("wrangler", () => {
 			`);
 				});
 
-				it("should show an error when queue does not exist", async () => {
+				it("should show an error when queue does not exist", async ({
+					expect,
+				}) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						null
@@ -782,7 +795,7 @@ describe("wrangler", () => {
 				});
 
 				describe("when script consumers are in use", () => {
-					it("should delete the correct consumer", async () => {
+					it("should delete the correct consumer", async ({ expect }) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -818,7 +831,9 @@ describe("wrangler", () => {
 					`);
 					});
 
-					it("should show error when deleting a non-existing consumer", async () => {
+					it("should show error when deleting a non-existing consumer", async ({
+						expect,
+					}) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -856,7 +871,7 @@ describe("wrangler", () => {
 				});
 
 				describe("when service consumers are in use", () => {
-					it("should delete a consumer with env set", async () => {
+					it("should delete a consumer with env set", async ({ expect }) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -895,7 +910,9 @@ describe("wrangler", () => {
 					`);
 					});
 
-					it("should show error when deleting a non-matching environment", async () => {
+					it("should show error when deleting a non-matching environment", async ({
+						expect,
+					}) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -934,7 +951,7 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(0);
 					});
 
-					it("should delete a consumer without env set", async () => {
+					it("should delete a consumer without env set", async ({ expect }) => {
 						const queueNameResolveRequest = mockGetQueueByNameRequest(
 							expectedQueueName,
 							{
@@ -975,7 +992,9 @@ describe("wrangler", () => {
 					});
 
 					describe("when multiple consumers are set", () => {
-						it("should delete default environment consumer without env set", async () => {
+						it("should delete default environment consumer without env set", async ({
+							expect,
+						}) => {
 							const expectedDefaultEnvironment = "staging";
 							const expectedConsumerIdToDelete = "consumer-id-staging";
 							const queueNameResolveRequest = mockGetQueueByNameRequest(
@@ -1026,7 +1045,9 @@ describe("wrangler", () => {
 						`);
 						});
 
-						it("should delete matching consumer with env set", async () => {
+						it("should delete matching consumer with env set", async ({
+							expect,
+						}) => {
 							const expectedConsumerIdToDelete = "consumer-id-staging";
 							const queueNameResolveRequest = mockGetQueueByNameRequest(
 								expectedQueueName,
@@ -1073,7 +1094,9 @@ describe("wrangler", () => {
 							`);
 						});
 
-						it("should show error when deleting on a non-matching environment", async () => {
+						it("should show error when deleting on a non-matching environment", async ({
+							expect,
+						}) => {
 							const expectedConsumerIdToDelete = "consumer-id-staging";
 							const queueNameResolveRequest = mockGetQueueByNameRequest(
 								expectedQueueName,
@@ -1125,7 +1148,7 @@ describe("wrangler", () => {
 		});
 
 		describe("http_pull consumers", () => {
-			it("should show the correct help text", async () => {
+			it("should show the correct help text", async ({ expect }) => {
 				await runWrangler("queues consumer http --help");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1158,9 +1181,9 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/queues/:queueId/consumers",
 							async (request, response, context) => {
 								requests.count += 1;
-								expect(request.params.queueId).toEqual(queueId);
-								expect(request.params.accountId).toEqual("some-account-id");
-								expect(await request.json()).toEqual(expectedBody);
+								assert(request.params.queueId == queueId);
+								assert(request.params.accountId == "some-account-id");
+								assert((await request.json()) == expectedBody);
 								return response.once(
 									context.json({
 										success: true,
@@ -1175,7 +1198,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer http add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -1202,7 +1225,7 @@ describe("wrangler", () => {
 			`);
 				});
 
-				it("should add a consumer using defaults", async () => {
+				it("should add a consumer using defaults", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -1238,7 +1261,7 @@ describe("wrangler", () => {
 					`);
 				});
 
-				it("should add a consumer using custom values", async () => {
+				it("should add a consumer using custom values", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{
@@ -1284,9 +1307,9 @@ describe("wrangler", () => {
 					msw.use(
 						rest.delete(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
-							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.expectedQueueId).toBe(queueId);
-							expect(request.params.expectedConsumerId).toBe(consumerId);
+							assert(request.params.accountId === "some-account-id");
+							assert(request.params.expectedQueueId === queueId);
+							assert(request.params.expectedConsumerId === consumerId);
 							return response.once(
 								context.status(200),
 								context.json({
@@ -1302,7 +1325,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should show the correct help text", async () => {
+				it("should show the correct help text", async ({ expect }) => {
 					await runWrangler("queues consumer http remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
@@ -1322,7 +1345,7 @@ describe("wrangler", () => {
 			`);
 				});
 
-				it("should delete a pull consumer", async () => {
+				it("should delete a pull consumer", async ({ expect }) => {
 					const queueNameResolveRequest = mockGetQueueByNameRequest(
 						expectedQueueName,
 						{

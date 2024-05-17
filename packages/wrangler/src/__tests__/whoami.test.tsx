@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo } from "../whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -27,18 +28,24 @@ describe("getUserInfo()", () => {
 		process.env = ENV_COPY;
 	});
 
-	it("should return undefined if there is no config file", async () => {
+	it("should return undefined if there is no config file", async ({
+		expect,
+	}) => {
 		const userInfo = await getUserInfo();
 		expect(userInfo).toBeUndefined();
 	});
 
-	it("should return undefined if there is an empty config file", async () => {
+	it("should return undefined if there is an empty config file", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({});
 		const userInfo = await getUserInfo();
 		expect(userInfo).toBeUndefined();
 	});
 
-	it("should return undefined for email if the user settings API request fails with 9109", async () => {
+	it("should return undefined for email if the user settings API request fails with 9109", async ({
+		expect,
+	}) => {
 		process.env = {
 			CLOUDFLARE_API_TOKEN: "123456789",
 		};
@@ -74,7 +81,9 @@ describe("getUserInfo()", () => {
 		const userInfo = await getUserInfo();
 		expect(userInfo?.email).toBeUndefined();
 	});
-	it("should say it's using an API token when one is set", async () => {
+	it("should say it's using an API token when one is set", async ({
+		expect,
+	}) => {
 		process.env = {
 			CLOUDFLARE_API_TOKEN: "123456789",
 		};
@@ -92,7 +101,9 @@ describe("getUserInfo()", () => {
 		});
 	});
 
-	it("should say it's using a Global API Key when one is set", async () => {
+	it("should say it's using a Global API Key when one is set", async ({
+		expect,
+	}) => {
 		process.env = {
 			CLOUDFLARE_API_KEY: "123456789",
 			CLOUDFLARE_EMAIL: "user@example.com",
@@ -111,7 +122,9 @@ describe("getUserInfo()", () => {
 		});
 	});
 
-	it("should use a Global API Key in preference to an API token", async () => {
+	it("should use a Global API Key in preference to an API token", async ({
+		expect,
+	}) => {
 		process.env = {
 			CLOUDFLARE_API_KEY: "123456789",
 			CLOUDFLARE_EMAIL: "user@example.com",
@@ -131,7 +144,9 @@ describe("getUserInfo()", () => {
 		});
 	});
 
-	it("should return undefined only a Global API Key, but not Email, is set", async () => {
+	it("should return undefined only a Global API Key, but not Email, is set", async ({
+		expect,
+	}) => {
 		process.env = {
 			CLOUDFLARE_API_KEY: "123456789",
 		};
@@ -139,7 +154,9 @@ describe("getUserInfo()", () => {
 		expect(userInfo).toEqual(undefined);
 	});
 
-	it("should return the user's email and accounts if authenticated via config token", async () => {
+	it("should return the user's email and accounts if authenticated via config token", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		const userInfo = await getUserInfo();
 
@@ -155,7 +172,9 @@ describe("getUserInfo()", () => {
 		});
 	});
 
-	it("should display a warning message if the config file contains a legacy api_token field", async () => {
+	it("should display a warning message if the config file contains a legacy api_token field", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
 		await getUserInfo();
 

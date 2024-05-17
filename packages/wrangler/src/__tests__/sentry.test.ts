@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as Sentry from "@sentry/node";
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -39,12 +40,12 @@ describe("sentry", () => {
 		msw.resetHandlers();
 	});
 	describe("non interactive", () => {
-		it("should not hit sentry in normal usage", async () => {
+		it("should not hit sentry in normal usage", async ({ expect }) => {
 			await runWrangler("version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry after error", async () => {
+		it("should not hit sentry after error", async ({ expect }) => {
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
 			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
 							]
@@ -67,12 +68,12 @@ describe("sentry", () => {
 			setIsTTY(false);
 		});
 
-		it("should not hit sentry in normal usage", async () => {
+		it("should not hit sentry in normal usage", async ({ expect }) => {
 			await runWrangler("version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry with user error", async () => {
+		it("should not hit sentry with user error", async ({ expect }) => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
 				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
 			);
@@ -80,7 +81,9 @@ describe("sentry", () => {
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should not hit sentry after reportable error when permission denied", async () => {
+		it("should not hit sentry after reportable error when permission denied", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare?",
 				result: false,
@@ -97,7 +100,9 @@ describe("sentry", () => {
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
-		it("should hit sentry after reportable error when permission provided", async () => {
+		it("should hit sentry after reportable error when permission provided", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare?",
 				result: true,

@@ -1,10 +1,8 @@
 import { writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
-
-const { getPackageManager, getPackageManagerName } =
-	jest.requireActual("../package-manager");
 
 function mockUserAgent(userAgent = "npm") {
 	let original: string | undefined;
@@ -239,7 +237,12 @@ describe("getPackageManager()", () => {
 		mockNpm(false);
 		mockPnpm(false);
 
-		it("should throw an error", async () => {
+		it("should throw an error", async ({ expect }) => {
+			const { getPackageManager } =
+				// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+				await vi.importActual<typeof import("../package-manager")>(
+					"../package-manager"
+				);
 			await expect(() =>
 				getPackageManager(process.cwd())
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -272,7 +275,14 @@ describe("getPackageManager()", () => {
 				mockPnpm(pnpm);
 				mockLockFiles(npmLockFile, yarnLockFile, pnpmLockFile);
 
-				it(`should return the ${expectedPackageManager} package manager`, async () => {
+				it(`should return the ${expectedPackageManager} package manager`, async ({
+					expect,
+				}) => {
+					const { getPackageManager, getPackageManagerName } =
+						// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+						await vi.importActual<typeof import("../package-manager")>(
+							"../package-manager"
+						);
 					const actualPackageManager = await getPackageManager(process.cwd());
 					expect(getPackageManagerName(actualPackageManager)).toEqual(
 						expectedPackageManager

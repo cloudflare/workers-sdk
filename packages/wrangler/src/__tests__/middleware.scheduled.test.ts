@@ -1,9 +1,10 @@
 import * as fs from "node:fs";
+import { beforeEach, describe, it, vi } from "vitest";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 describe("run scheduled events with middleware", () => {
 	describe("module workers", () => {
@@ -27,7 +28,9 @@ describe("run scheduled events with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 		});
 
-		it("should not intercept when middleware is not enabled", async () => {
+		it("should not intercept when middleware is not enabled", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -45,7 +48,7 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should intercept when middleware is enabled", async () => {
+		it("should intercept when middleware is enabled", async ({ expect }) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -64,7 +67,9 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should not trigger scheduled event on wrong route", async () => {
+		it("should not trigger scheduled event on wrong route", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -105,7 +110,9 @@ describe("run scheduled events with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 		});
 
-		it("should not intercept when middleware is not enabled", async () => {
+		it("should not intercept when middleware is not enabled", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -123,7 +130,7 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should intercept when middleware is enabled", async () => {
+		it("should intercept when middleware is enabled", async ({ expect }) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -142,7 +149,9 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should not trigger scheduled event on wrong route", async () => {
+		it("should not trigger scheduled event on wrong route", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {

@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert } from "vitest";
 import { msw } from "./msw";
 
 /**
@@ -13,7 +14,7 @@ export function mockGetUploadTokenRequest(
 		rest.get(
 			`*/accounts/:accountId/pages/projects/${projectName}/upload-token`,
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(accountId);
+				assert(req.params.accountId == accountId);
 
 				return res(
 					ctx.status(200),

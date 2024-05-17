@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { join } from "path";
+import { describe, it } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -11,7 +12,7 @@ describe("execute", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should require login when running against prod", async () => {
+	it("should require login when running against prod", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -26,7 +27,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should expect either --command or --file", async () => {
+	it("should expect either --command or --file", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -39,7 +40,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject the use of --remote with --local", async () => {
+	it("should reject the use of --remote with --local", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -54,7 +55,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject the use of --preview with --local", async () => {
+	it("should reject the use of --preview with --local", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -67,7 +68,9 @@ describe("execute", () => {
 		).rejects.toThrowError(`Error: can't use --preview without --remote`);
 	});
 
-	it("should reject the use of --preview with --local with --json", async () => {
+	it("should reject the use of --preview with --local with --json", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [
@@ -90,7 +93,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject a binary SQLite DB", async () => {
+	it("should reject a binary SQLite DB", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerToml({
 			d1_databases: [

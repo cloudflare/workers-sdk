@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -12,7 +13,7 @@ describe("vectorize help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help when no argument is passed", async () => {
+	it("should show help when no argument is passed", async ({ expect }) => {
 		await runWrangler("vectorize");
 		await endEventLoop();
 
@@ -44,7 +45,9 @@ describe("vectorize help", () => {
 	`);
 	});
 
-	it("should show help when an invalid argument is passed", async () => {
+	it("should show help when an invalid argument is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("vectorize foobarfofum")).rejects.toThrow(
 			"Unknown argument: foobarfofum"
 		);
@@ -83,7 +86,9 @@ describe("vectorize help", () => {
 	`);
 	});
 
-	it("should show help when the get command is passed without an index", async () => {
+	it("should show help when the get command is passed without an index", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("vectorize get")).rejects.toThrow(
 			"Not enough non-option arguments: got 0, need at least 1"
 		);
@@ -132,7 +137,7 @@ describe("vectorize commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -142,7 +147,7 @@ describe("vectorize commands", () => {
 		clearDialogs();
 	});
 
-	it("should handle creating a vectorize index", async () => {
+	it("should handle creating a vectorize index", async ({ expect }) => {
 		mockVectorizeRequest();
 		await runWrangler(
 			"vectorize create some-index --dimensions=768 --metric=cosine"
@@ -160,7 +165,7 @@ describe("vectorize commands", () => {
 	`);
 	});
 
-	it("should handle listing vectorize indexes", async () => {
+	it("should handle listing vectorize indexes", async ({ expect }) => {
 		mockVectorizeRequest();
 		await runWrangler("vectorize list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -175,7 +180,7 @@ describe("vectorize commands", () => {
 	`);
 	});
 
-	it("should handle a get on a vectorize index", async () => {
+	it("should handle a get on a vectorize index", async ({ expect }) => {
 		mockVectorizeRequest();
 		await runWrangler("vectorize get test-index");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -187,7 +192,7 @@ describe("vectorize commands", () => {
 	`);
 	});
 
-	it("should handle a delete on a vectorize index", async () => {
+	it("should handle a delete on a vectorize index", async ({ expect }) => {
 		mockVectorizeRequest();
 		mockConfirm({
 			text: "OK to delete the index 'test-index'?",

@@ -1,3 +1,4 @@
+import { afterEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -13,7 +14,9 @@ describe("pages", () => {
 		await endEventLoop();
 	});
 
-	it("should display a list of available subcommands, for pages with no subcommand", async () => {
+	it("should display a list of available subcommands, for pages with no subcommand", async ({
+		expect,
+	}) => {
 		await runWrangler("pages");
 		await endEventLoop();
 
@@ -37,7 +40,7 @@ describe("pages", () => {
 	});
 
 	describe("deprecation message for deprecated options", () => {
-		it("should display for 'pages dev -- <command>'", async () => {
+		it("should display for 'pages dev -- <command>'", async ({ expect }) => {
 			await expect(
 				runWrangler("pages dev -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -53,7 +56,7 @@ describe("pages", () => {
 			"
 		`);
 		});
-		it("should display for 'pages dev --script-path'", async () => {
+		it("should display for 'pages dev --script-path'", async ({ expect }) => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -78,7 +81,7 @@ describe("pages", () => {
 	});
 
 	describe("beta message for subcommands", () => {
-		it("should display for pages:dev", async () => {
+		it("should display for pages:dev", async ({ expect }) => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -88,13 +91,15 @@ describe("pages", () => {
 			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should display for pages:functions:build", async () => {
+		it("should display for pages:functions:build", async ({ expect }) => {
 			await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should display for pages:functions:optimize-routes", async () => {
+		it("should display for pages:functions:optimize-routes", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					'pages functions optimize-routes --routes-path="/build/_routes.json" --output-routes-path="/build/_optimized-routes.json"'

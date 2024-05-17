@@ -2,6 +2,7 @@ import { Blob } from "node:buffer";
 import { writeFileSync } from "node:fs";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
+import { assert, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
@@ -48,7 +49,7 @@ describe("dataset upsert", () => {
 		},
 	];
 
-	it("should batch uploads in ndjson format", async () => {
+	it("should batch uploads in ndjson format", async ({ expect }) => {
 		writeFileSync(
 			"vectors.ndjson",
 			testVectors.map((v) => JSON.stringify(v)).join(`\n`)
@@ -147,7 +148,7 @@ function mockFormDataToString(this: FormData) {
 
 async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
 	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
+	assert(__formdata instanceof Array);
 
 	const form = new FormData();
 	for (const [key, value] of __formdata) {

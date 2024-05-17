@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { describe, it, vi } from "vitest";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -10,7 +11,9 @@ describe("getHttpsOptions()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should use cached values if they have not expired", async () => {
+	it("should use cached values if they have not expired", async ({
+		expect,
+	}) => {
 		fs.mkdirSync(path.resolve(getGlobalWranglerConfigPath(), "local-cert"), {
 			recursive: true,
 		});
@@ -30,7 +33,9 @@ describe("getHttpsOptions()", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should generate and cache new keys if none are cached", async () => {
+	it("should generate and cache new keys if none are cached", async ({
+		expect,
+	}) => {
 		const result = await getHttpsOptions();
 		const key = fs.readFileSync(
 			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
@@ -49,7 +54,9 @@ describe("getHttpsOptions()", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should generate and cache new keys if cached files have expired", async () => {
+	it("should generate and cache new keys if cached files have expired", async ({
+		expect,
+	}) => {
 		fs.mkdirSync(path.resolve(getGlobalWranglerConfigPath(), "local-cert"), {
 			recursive: true,
 		});
@@ -85,7 +92,9 @@ describe("getHttpsOptions()", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should warn if not able to write to the cache (legacy config path)", async () => {
+	it("should warn if not able to write to the cache (legacy config path)", async ({
+		expect,
+	}) => {
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
 		mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
@@ -113,7 +122,7 @@ describe("getHttpsOptions()", () => {
 		fs.rmSync(path.join(os.homedir(), ".wrangler"), { recursive: true });
 	});
 
-	it("should warn if not able to write to the cache", async () => {
+	it("should warn if not able to write to the cache", async ({ expect }) => {
 		mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(
@@ -140,24 +149,24 @@ describe("getHttpsOptions()", () => {
 	});
 });
 
+const originalStatSync = fs.statSync;
 function mockStatSync(matcher: RegExp, stats: Partial<fs.Stats>) {
-	const originalStatSync = jest.requireActual("node:fs").statSync;
-	jest.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
+	vi.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
 		return matcher.test(statPath.toString())
 			? (stats as fs.Stats)
 			: originalStatSync(statPath, options);
 	});
 }
 
+const originalWriteFileSync = fs.writeFileSync;
 function mockWriteFileSyncThrow(matcher: RegExp) {
-	const originalWriteFileSync = jest.requireActual("node:fs").writeFileSync;
-	jest
-		.spyOn(fs, "writeFileSync")
-		.mockImplementation((filePath, data, options) => {
+	vi.spyOn(fs, "writeFileSync").mockImplementation(
+		(filePath, data, options) => {
 			if (matcher.test(filePath.toString())) {
 				throw new Error("ERROR: Cannot write file");
 			} else {
 				return originalWriteFileSync(filePath, data, options);
 			}
-		});
+		}
+	);
 }

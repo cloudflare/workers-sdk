@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -29,7 +30,7 @@ describe("pages project delete", () => {
 		clearDialogs();
 	});
 
-	it("should delete a project with the given name", async () => {
+	it("should delete a project with the given name", async ({ expect }) => {
 		msw.use(
 			rest.delete(
 				"*/accounts/:accountId/pages/projects/:projectName",
@@ -62,7 +63,9 @@ describe("pages project delete", () => {
 	`);
 	});
 
-	it("should not delete a project if confirmation refused", async () => {
+	it("should not delete a project if confirmation refused", async ({
+		expect,
+	}) => {
 		mockConfirm({
 			text: `Are you sure you want to delete "some-project-name-2"? This action cannot be undone.`,
 			result: false,
@@ -73,7 +76,9 @@ describe("pages project delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should delete a project without asking if --yes provided", async () => {
+	it("should delete a project without asking if --yes provided", async ({
+		expect,
+	}) => {
 		msw.use(
 			rest.delete(
 				"*/accounts/:accountId/pages/projects/:projectName",

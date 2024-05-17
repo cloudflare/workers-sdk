@@ -45,12 +45,12 @@
 				"WRANGLER_SEND_METRICS",
 				"https_proxy",
 				"HTTPS_PROXY",
-				"JEST_WORKER_ID",
 				"http_proxy",
 				"HTTP_PROXY",
 				"CI_OS",
 				"SENTRY_DSN",
 				"SYSTEMROOT",
+				"VITEST_WORKER_ID",
 				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
 				"WRANGLER_WORKER_REGISTRY_PORT"
 			]

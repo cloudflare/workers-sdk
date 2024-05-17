@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { USER_AUTH_CONFIG_FILE, writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -12,12 +13,16 @@ describe("logout", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should exit with a message stating the user is not logged in", async () => {
+	it("should exit with a message stating the user is not logged in", async ({
+		expect,
+	}) => {
 		await runWrangler("logout");
 		expect(std.out).toMatchInlineSnapshot(`"Not logged in, exiting..."`);
 	});
 
-	it("should logout user that has been properly logged in", async () => {
+	it("should logout user that has been properly logged in", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({
 			oauth_token: "some-oauth-tok",
 			refresh_token: "some-refresh-tok",

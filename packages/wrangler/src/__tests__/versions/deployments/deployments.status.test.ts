@@ -1,3 +1,4 @@
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
@@ -19,7 +20,7 @@ describe("deployments list", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler(
 				"deployments status  --experimental-gradual-rollouts"
 			);
@@ -33,7 +34,7 @@ describe("deployments list", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints latest deployment to stdout", async () => {
+		test("prints latest deployment to stdout", async ({ expect }) => {
 			const result = runWrangler(
 				"deployments status --name test-name  --experimental-gradual-rollouts"
 			);
@@ -60,7 +61,7 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints latest deployment to stdout as --json", async () => {
+		test("prints latest deployment to stdout as --json", async ({ expect }) => {
 			const result = runWrangler(
 				"deployments status --name test-name --json  --experimental-versions"
 			);
@@ -95,9 +96,9 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
-		test("prints latest deployment to stdout", async () => {
+		test("prints latest deployment to stdout", async ({ expect }) => {
 			const result = runWrangler(
 				"deployments status  --experimental-gradual-rollouts"
 			);
@@ -124,7 +125,7 @@ describe("deployments list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints latest deployment to stdout as --json", async () => {
+		test("prints latest deployment to stdout as --json", async ({ expect }) => {
 			const result = runWrangler(
 				"deployments status --json  --experimental-versions"
 			);

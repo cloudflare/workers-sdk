@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, assert, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -21,7 +22,7 @@ describe("pages deployment list", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should make request to list deployments", async () => {
+	it("should make request to list deployments", async ({ expect }) => {
 		const deployments: Deployment[] = [
 			{
 				id: "87bbc8fe-16be-45cd-81e0-63d722e82cdf",
@@ -61,8 +62,8 @@ function mockDeploymentListRequest(deployments: unknown[]) {
 			(req, res, ctx) => {
 				requests.count++;
 
-				expect(req.params.project).toEqual("images");
-				expect(req.params.accountId).toEqual("some-account-id");
+				assert(req.params.project == "images");
+				assert(req.params.accountId == "some-account-id");
 
 				return res.once(
 					ctx.status(200),

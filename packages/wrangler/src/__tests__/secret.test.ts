@@ -5,6 +5,7 @@ import readline from "node:readline";
 import * as TOML from "@iarna/toml";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -59,17 +60,18 @@ describe("wrangler secret", () => {
 				rest.put(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					async (req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						expect(req.params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+						assert(req.params.accountId == "some-account-id");
+						assert(
+							req.params.scriptName ==
+								(legacyEnv && env ? `script-name-${env}` : "script-name")
 						);
 						if (!legacyEnv) {
-							expect(req.params.envName).toEqual(env);
+							assert(req.params.envName == env);
 						}
 						const { name, text, type } = await req.json();
-						expect(type).toEqual("secret_text");
-						expect(name).toEqual(input.name);
-						expect(text).toEqual(input.text);
+						assert(type == "secret_text");
+						assert(name == input.name);
+						assert(text == input.text);
 
 						return res.once(ctx.json(createFetchResult({ name, type })));
 					}
@@ -82,7 +84,7 @@ describe("wrangler secret", () => {
 				setIsTTY(true);
 			});
 
-			it("should trim stdin secret value", async () => {
+			it("should trim stdin secret value", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -98,7 +100,7 @@ describe("wrangler secret", () => {
 		`);
 			});
 
-			it("should create a secret", async () => {
+			it("should create a secret", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -115,7 +117,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret: legacy envs", async () => {
+			it("should create a secret: legacy envs", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -138,7 +140,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret: service envs", async () => {
+			it("should create a secret: service envs", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -161,7 +163,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error without a script name", async () => {
+			it("should error without a script name", async ({ expect }) => {
 				let error: Error | undefined;
 				try {
 					await runWrangler("secret put the-key");
@@ -186,7 +188,9 @@ describe("wrangler secret", () => {
 			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should trim stdin secret value, from piped input", async () => {
+			it("should trim stdin secret value, from piped input", async ({
+				expect,
+			}) => {
 				mockPutRequest({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
@@ -205,7 +209,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret, from piped input", async () => {
+			it("should create a secret, from piped input", async ({ expect }) => {
 				mockPutRequest({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send("the", "-", "secret");
@@ -219,7 +223,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the piped input fails", async () => {
+			it("should error if the piped input fails", async ({ expect }) => {
 				mockPutRequest({ name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
@@ -236,7 +240,9 @@ describe("wrangler secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async () => {
+				it("should error if request for memberships fails", async ({
+					expect,
+				}) => {
 					mockGetMembershipsFail();
 					await expect(
 						runWrangler("secret put the-key --name script-name")
@@ -245,7 +251,7 @@ describe("wrangler secret", () => {
 					);
 				});
 
-				it("should error if a user has no account", async () => {
+				it("should error if a user has no account", async ({ expect }) => {
 					mockGetMemberships([]);
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -254,7 +260,7 @@ describe("wrangler secret", () => {
 			                `);
 				});
 
-				it("should use the account from wrangler.toml", async () => {
+				it("should use the account from wrangler.toml", async ({ expect }) => {
 					fs.writeFileSync(
 						"wrangler.toml",
 						TOML.stringify({
@@ -273,7 +279,9 @@ describe("wrangler secret", () => {
 					expect(std.err).toMatchInlineSnapshot(`""`);
 				});
 
-				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async () => {
+				it("should error if a user has multiple accounts, and has not specified an account in wrangler.toml", async ({
+					expect,
+				}) => {
 					mockGetMemberships([
 						{
 							id: "1",
@@ -321,13 +329,14 @@ describe("wrangler secret", () => {
 				rest.delete(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
 					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						expect(req.params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+						assert(req.params.accountId == "some-account-id");
+						assert(
+							req.params.scriptName ==
+								(legacyEnv && env ? `script-name-${env}` : "script-name")
 						);
 						if (!legacyEnv) {
 							if (env) {
-								expect(req.params.secretName).toEqual(input.secretName);
+								assert(req.params.secretName == input.secretName);
 							}
 						}
 						return res.once(ctx.json(createFetchResult(null)));
@@ -336,7 +345,7 @@ describe("wrangler secret", () => {
 			);
 		}
 
-		it("should delete a secret", async () => {
+		it("should delete a secret", async ({ expect }) => {
 			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Worker script-name?",
@@ -350,7 +359,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret: legacy envs", async () => {
+		it("should delete a secret: legacy envs", async ({ expect }) => {
 			mockDeleteRequest(
 				{ scriptName: "script-name", secretName: "the-key" },
 				"some-env",
@@ -370,7 +379,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret: service envs", async () => {
+		it("should delete a secret: service envs", async ({ expect }) => {
 			mockDeleteRequest(
 				{ scriptName: "script-name", secretName: "the-key" },
 				"some-env"
@@ -389,7 +398,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error without a script name", async () => {
+		it("should error without a script name", async ({ expect }) => {
 			let error: Error | undefined;
 
 			try {
@@ -424,12 +433,13 @@ describe("wrangler secret", () => {
 				rest.get(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						expect(req.params.scriptName).toEqual(
-							legacyEnv && env ? `script-name-${env}` : "script-name"
+						assert(req.params.accountId == "some-account-id");
+						assert(
+							req.params.scriptName ==
+								(legacyEnv && env ? `script-name-${env}` : "script-name")
 						);
 						if (!legacyEnv) {
-							expect(req.params.envName).toEqual(env);
+							assert(req.params.envName == env);
 						}
 
 						return res.once(
@@ -447,7 +457,7 @@ describe("wrangler secret", () => {
 			);
 		}
 
-		it("should list secrets", async () => {
+		it("should list secrets", async ({ expect }) => {
 			mockListRequest({ scriptName: "script-name" });
 			await runWrangler("secret list --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -461,7 +471,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: legacy envs", async () => {
+		it("should list secrets: legacy envs", async ({ expect }) => {
 			mockListRequest({ scriptName: "script-name" }, "some-env", true);
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env"
@@ -477,7 +487,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: service envs", async () => {
+		it("should list secrets: service envs", async ({ expect }) => {
 			mockListRequest({ scriptName: "script-name" }, "some-env");
 			await runWrangler(
 				"secret list --name script-name --env some-env --legacy-env false"
@@ -493,7 +503,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error without a script name", async () => {
+		it("should error without a script name", async ({ expect }) => {
 			let error: Error | undefined;
 			try {
 				await runWrangler("secret list");
@@ -513,10 +523,12 @@ describe("wrangler secret", () => {
 	});
 
 	describe("secret:bulk", () => {
-		it("should fail secret:bulk w/ no pipe or JSON input", async () => {
-			jest
-				.spyOn(readline, "createInterface")
-				.mockImplementation(() => null as unknown as Interface);
+		it("should fail secret:bulk w/ no pipe or JSON input", async ({
+			expect,
+		}) => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() => null as unknown as Interface
+			);
 			await runWrangler(`secret:bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(
 				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
@@ -528,8 +540,8 @@ describe("wrangler secret", () => {
 		`);
 		});
 
-		it("should use secret:bulk w/ pipe input", async () => {
-			jest.spyOn(readline, "createInterface").mockImplementation(
+		it("should use secret:bulk w/ pipe input", async ({ expect }) => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
 					JSON.stringify({
@@ -571,7 +583,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secrets from JSON file", async () => {
+		it("should create secrets from JSON file", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -614,7 +626,7 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail if file is not valid JSON", async () => {
+		it("should fail if file is not valid JSON", async ({ expect }) => {
 			writeFileSync("secret.json", "bad file content");
 
 			await expect(
@@ -624,7 +636,9 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should fail if JSON file contains a record with non-string values", async () => {
+		it("should fail if JSON file contains a record with non-string values", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -639,7 +653,9 @@ describe("wrangler secret", () => {
 			);
 		});
 
-		it("should count success and network failure on secret:bulk", async () => {
+		it("should count success and network failure on secret:bulk", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -695,7 +711,7 @@ describe("wrangler secret", () => {
 		`);
 		});
 
-		it("should handle network failure on secret:bulk", async () => {
+		it("should handle network failure on secret:bulk", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -746,7 +762,9 @@ describe("wrangler secret", () => {
 		`);
 		});
 
-		it("should merge existing bindings and secrets when patching", async () => {
+		it("should merge existing bindings and secrets when patching", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -866,7 +884,7 @@ function mockFormDataToString(this: FormData) {
 
 async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
 	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
+	assert(__formdata instanceof Array);
 
 	const form = new FormData();
 	for (const [key, value] of __formdata) {

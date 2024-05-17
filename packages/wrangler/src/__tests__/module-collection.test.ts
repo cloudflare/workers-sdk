@@ -1,3 +1,4 @@
+import { describe, test } from "vitest";
 import { extractPackageName } from "../deployment-bundle/module-collection";
 
 describe("Module Collection", () => {
@@ -13,8 +14,11 @@ describe("Module Collection", () => {
 			${"./some/file"}                       | ${null}
 			${"../some/file"}                      | ${null}
 			${"/some/file"}                        | ${null}
-		`("$importString --> $packageName", ({ importString, packageName }) => {
-			expect(extractPackageName(importString)).toBe(packageName);
-		});
+		`(
+			"$importString --> $packageName",
+			({ importString, packageName, expect }) => {
+				expect(extractPackageName(importString)).toBe(packageName);
+			}
+		);
 	});
 });

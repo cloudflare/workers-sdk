@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -19,7 +20,7 @@ describe("wrangler", () => {
 
 	describe("pubsub", () => {
 		describe("help menu", () => {
-			it("shows usage details", async () => {
+			it("shows usage details", async ({ expect }) => {
 				await runWrangler("pubsub --help");
 				expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -50,7 +51,7 @@ describe("wrangler", () => {
 
 		describe("namespaces", () => {
 			describe("help menu", () => {
-				it("shows usage details", async () => {
+				it("shows usage details", async ({ expect }) => {
 					await runWrangler("pubsub namespace --help");
 					expect(std).toMatchInlineSnapshot(`
 				Object {
@@ -88,9 +89,9 @@ describe("wrangler", () => {
 						rest.post(
 							"*/accounts/:accountId/pubsub/namespaces",
 							async (req, res, ctx) => {
-								expect(req.params.accountId).toEqual("some-account-id");
+								assert(req.params.accountId == "some-account-id");
 								const namespace = await req.json();
-								expect(namespace.name).toEqual(expectedNamespaceName);
+								assert(namespace.name == expectedNamespaceName);
 								requests.count++;
 								return res.once(
 									ctx.status(200),
@@ -112,7 +113,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should create a namespace", async () => {
+				it("should create a namespace", async ({ expect }) => {
 					const requests = mockCreateRequest("my-namespace");
 					await runWrangler("pubsub namespace create my-namespace");
 					// TODO: check returned object
@@ -128,7 +129,7 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/pubsub/namespaces",
 							async (req, res, ctx) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
+								assert(req.params.accountId == "some-account-id");
 
 								return res.once(
 									ctx.status(200),
@@ -145,7 +146,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should list namespaces", async () => {
+				it("should list namespaces", async ({ expect }) => {
 					const expectedNamespaces: PubSubNamespace[] = [
 						{ name: "namespace-1", created_on: "01-01-2001" },
 						{ name: "namespace-2", created_on: "01-01-2001" },
@@ -167,7 +168,7 @@ describe("wrangler", () => {
 
 		describe("brokers", () => {
 			describe("help menu", () => {
-				it("shows usage details", async () => {
+				it("shows usage details", async ({ expect }) => {
 					await runWrangler("pubsub broker --help");
 					expect(std).toMatchInlineSnapshot(`
 				Object {
@@ -211,10 +212,10 @@ describe("wrangler", () => {
 						rest.post(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
 							async (req, res, ctx) => {
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
+								assert(req.params.accountId == "some-account-id");
+								assert(req.params.namespaceName == "some-namespace");
 								const broker = await req.json();
-								expect(broker.name).toEqual(expectedBrokerName);
+								assert(broker.name == expectedBrokerName);
 								requests.count++;
 								return res.once(
 									ctx.status(200),
@@ -234,7 +235,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should create a broker", async () => {
+				it("should create a broker", async ({ expect }) => {
 					const requests = mockCreateRequest("my-broker");
 					await runWrangler(
 						"pubsub broker create my-broker --namespace=some-namespace"
@@ -247,7 +248,9 @@ describe("wrangler", () => {
 					expect(requests.count).toEqual(1);
 				});
 
-				it("fail to create broker when no namespace is set", async () => {
+				it("fail to create broker when no namespace is set", async ({
+					expect,
+				}) => {
 					await expect(
 						runWrangler("pubsub broker create my-broker")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -269,15 +272,15 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
 							async (req, res, cxt) => {
 								requests.count += 1;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(expectedBrokerName);
+								assert(req.params.accountId == "some-account-id");
+								assert(req.params.namespaceName == "some-namespace");
+								assert(req.params.brokerName == expectedBrokerName);
 
 								const patchBody: PubSubBrokerUpdate = await req.json();
 
-								expect(patchBody.expiration).toEqual(expectedExpiration);
-								expect(patchBody.description).toEqual(expectedDescription);
-								expect(patchBody.on_publish).toEqual(expectedOnPublishConfig);
+								assert(patchBody.expiration == expectedExpiration);
+								assert(patchBody.description == expectedDescription);
+								assert(patchBody.on_publish == expectedOnPublishConfig);
 								return res.once(
 									cxt.status(200),
 									cxt.json({
@@ -296,7 +299,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should update a broker's properties", async () => {
+				it("should update a broker's properties", async ({ expect }) => {
 					const expectedOnPublish: PubSubBrokerOnPublish = {
 						url: "https://foo.bar.example.com",
 					};
@@ -327,8 +330,8 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
 							async (req, res, cxt) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
+								assert(req.params.accountId == "some-account-id");
+								assert(req.params.namespaceName == "some-namespace");
 								return res.once(
 									cxt.status(200),
 									cxt.json({
@@ -344,7 +347,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should list brokers", async () => {
+				it("should list brokers", async ({ expect }) => {
 					const expectedBrokers: PubSubBroker[] = [
 						{ name: "broker-1", created_on: "01-01-2001" },
 						{ name: "broker-2", created_on: "01-01-2001" },
@@ -363,7 +366,7 @@ describe("wrangler", () => {
 				});
 			});
 
-			describe("describe", () => {
+			describe("", () => {
 				function mockGetRequest(broker: PubSubBroker) {
 					const requests = { count: 0 };
 					msw.use(
@@ -371,9 +374,9 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
 							(req, res, cxt) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(broker.name);
+								assert(req.params.accountId == "some-account-id");
+								assert(req.params.namespaceName == "some-namespace");
+								assert(req.params.brokerName == broker.name);
 								return res.once(
 									cxt.status(200),
 									cxt.json({
@@ -389,7 +392,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should describe a single broker", async () => {
+				it("should describe a single broker", async ({ expect }) => {
 					const requests = mockGetRequest({ id: "1234", name: "my-broker" });
 					await runWrangler(
 						"pubsub broker describe my-broker --namespace=some-namespace"
@@ -411,9 +414,9 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
 							(req, res, cxt) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(expectedBrokerName);
+								assert(req.params.accountId == "some-account-id");
+								assert(req.params.namespaceName == "some-namespace");
+								assert(req.params.brokerName == expectedBrokerName);
 								return res.once(
 									cxt.status(200),
 									cxt.json({
@@ -432,7 +435,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should issue a token for the broker", async () => {
+				it("should issue a token for the broker", async ({ expect }) => {
 					const requests = mockIssueRequest("my-broker");
 					await runWrangler(
 						"pubsub broker issue my-broker --namespace=some-namespace"
@@ -458,9 +461,9 @@ describe("wrangler", () => {
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
 							(req, res, cxt) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(expectedBrokerName);
+								assert(req.params.accountId == "some-account-id");
+								assert(req.params.namespaceName == "some-namespace");
+								assert(req.params.brokerName == expectedBrokerName);
 								return res.once(
 									cxt.status(200),
 									cxt.json({
@@ -478,7 +481,7 @@ describe("wrangler", () => {
 					return requests;
 				}
 
-				it("should return the public keys for a broker", async () => {
+				it("should return the public keys for a broker", async ({ expect }) => {
 					const requests = mockIssueRequest("my-broker");
 					await runWrangler(
 						"pubsub broker public-keys my-broker --namespace=some-namespace"

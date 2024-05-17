@@ -1,10 +1,13 @@
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { Logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 
 describe("logger", () => {
 	const std = mockConsoleMethods();
 
-	it("should add colored markers to error and warning messages", () => {
+	it("should add colored markers to error and warning messages", ({
+		expect,
+	}) => {
 		const logger = new Logger();
 		logger.loggerLevel = "debug";
 		logger.debug("This is a debug message");
@@ -27,7 +30,9 @@ describe("logger", () => {
 	});
 
 	describe("loggerLevel=debug", () => {
-		it("should render messages that are at or above the log level set in the logger", () => {
+		it("should render messages that are at or above the log level set in the logger", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.loggerLevel = "debug";
 			logger.debug("This is a debug message");
@@ -51,7 +56,9 @@ describe("logger", () => {
 	});
 
 	describe("loggerLevel=log", () => {
-		it("should render messages that are at or above the log level set in the logger", () => {
+		it("should render messages that are at or above the log level set in the logger", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.loggerLevel = "log";
 			logger.debug("This is a debug message");
@@ -75,7 +82,9 @@ describe("logger", () => {
 	});
 
 	describe("loggerLevel=warn", () => {
-		it("should render messages that are at or above the log level set in the logger", () => {
+		it("should render messages that are at or above the log level set in the logger", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.loggerLevel = "warn";
 			logger.debug("This is a debug message");
@@ -99,7 +108,9 @@ describe("logger", () => {
 	});
 
 	describe("loggerLevel=error", () => {
-		it("should render messages that are at or above the log level set in the logger", () => {
+		it("should render messages that are at or above the log level set in the logger", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.loggerLevel = "error";
 			logger.debug("This is a debug message");
@@ -126,7 +137,9 @@ describe("logger", () => {
 			process.env.WRANGLER_LOG = undefined;
 		});
 
-		it("should render messages that are at or above the log level set in the env var", () => {
+		it("should render messages that are at or above the log level set in the env var", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.debug("This is a debug message");
 			logger.log("This is a log message");
@@ -152,7 +165,9 @@ describe("logger", () => {
 			process.env.WRANGLER_LOG = undefined;
 		});
 
-		it("should render messages that are at or above the log level set in the env var", () => {
+		it("should render messages that are at or above the log level set in the env var", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.debug("This is a debug message");
 			logger.log("This is a log message");
@@ -182,7 +197,9 @@ describe("logger", () => {
 			process.env.WRANGLER_LOG = undefined;
 		});
 
-		it("should render messages that are at or above the log level set in the env var", () => {
+		it("should render messages that are at or above the log level set in the env var", ({
+			expect,
+		}) => {
 			const logger = new Logger();
 			logger.debug("This is a debug message");
 			logger.log("This is a log message");

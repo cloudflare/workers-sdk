@@ -1,16 +1,18 @@
 import * as util from "node:util";
+import { afterEach, beforeEach, vi } from "vitest";
 import { logger } from "../../logger";
+import type { MockInstance } from "vitest";
 
 /**
  * We use this module to mock console methods, and optionally
  * assert on the values they're called with in our tests.
  */
 
-let debugSpy: jest.SpyInstance,
-	logSpy: jest.SpyInstance,
-	infoSpy: jest.SpyInstance,
-	errorSpy: jest.SpyInstance,
-	warnSpy: jest.SpyInstance;
+let debugSpy: MockInstance,
+	logSpy: MockInstance,
+	infoSpy: MockInstance,
+	errorSpy: MockInstance,
+	warnSpy: MockInstance;
 
 const std = {
 	get debug() {
@@ -30,7 +32,7 @@ const std = {
 	},
 };
 
-function normalizeOutput(spy: jest.SpyInstance): string {
+function normalizeOutput(spy: MockInstance): string {
 	return normalizeErrorMarkers(
 		replaceByte(
 			stripTrailingWhitespace(
@@ -40,7 +42,7 @@ function normalizeOutput(spy: jest.SpyInstance): string {
 	);
 }
 
-function captureCalls(spy: jest.SpyInstance): string {
+function captureCalls(spy: MockInstance): string {
 	return spy.mock.calls
 		.map((args: unknown[]) => util.format("%s", ...args))
 		.join("\n");
@@ -49,11 +51,11 @@ function captureCalls(spy: jest.SpyInstance): string {
 export function mockConsoleMethods() {
 	beforeEach(() => {
 		logger.columns = 100;
-		debugSpy = jest.spyOn(console, "debug").mockImplementation();
-		logSpy = jest.spyOn(console, "log").mockImplementation();
-		infoSpy = jest.spyOn(console, "info").mockImplementation();
-		errorSpy = jest.spyOn(console, "error").mockImplementation();
-		warnSpy = jest.spyOn(console, "warn").mockImplementation();
+		debugSpy = vi.spyOn(console, "debug");
+		logSpy = vi.spyOn(console, "log");
+		infoSpy = vi.spyOn(console, "info");
+		errorSpy = vi.spyOn(console, "error");
+		warnSpy = vi.spyOn(console, "warn");
 	});
 	afterEach(() => {
 		debugSpy.mockRestore();

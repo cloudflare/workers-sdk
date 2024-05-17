@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert } from "vitest";
 import { createFetchResult } from "../index";
 
 const latestDeployment = (scriptTag: string) => ({
@@ -131,7 +132,7 @@ export const mswSuccessDeploymentDetails = [
 				];
 			}
 
-			expect(req.url.toString().includes("1701-E"));
+			assert(req.url.toString().includes("1701-E"));
 			return res.once(
 				ctx.json(
 					createFetchResult({

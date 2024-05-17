@@ -1,6 +1,15 @@
 import MockWebSocket from "jest-websocket-mock";
 import { rest } from "msw";
 import { Headers, Request } from "undici";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	it,
+	vi,
+} from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -40,11 +49,8 @@ describe("pages deployment tail", () => {
 		process.env.CF_PAGES = "1";
 	});
 
-	beforeEach(() => {
-		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
-		// dare you... Have fun fixing this tests :)
-		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
-		const mockWs = jest["requireMock"]("ws");
+	beforeEach(async () => {
+		const mockWs = await vi.importMock("ws");
 		mockWs.useOriginal = false;
 	});
 	afterAll(() => {
@@ -56,7 +62,9 @@ describe("pages deployment tail", () => {
 	 * deletion, and connection.
 	 */
 	describe("API interaction", () => {
-		it("should throw an error if deployment isn't provided", async () => {
+		it("should throw an error if deployment isn't provided", async ({
+			expect,
+		}) => {
 			const api = mockTailAPIs();
 			await expect(
 				runWrangler("pages deployment tail")
@@ -66,7 +74,7 @@ describe("pages deployment tail", () => {
 			expect(api.requests.deployments.count).toStrictEqual(0);
 		});
 
-		it("creates and then delete tails by deployment ID", async () => {
+		it("creates and then delete tails by deployment ID", async ({ expect }) => {
 			const api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -82,7 +90,9 @@ describe("pages deployment tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("creates and then deletes tails by deployment URL", async () => {
+		it("creates and then deletes tails by deployment URL", async ({
+			expect,
+		}) => {
 			const api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -98,7 +108,9 @@ describe("pages deployment tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("errors when passing in a deployment without a project", async () => {
+		it("errors when passing in a deployment without a project", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("pages deployment tail foo")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -106,7 +118,7 @@ describe("pages deployment tail", () => {
 			);
 		});
 
-		it("creates and then delete tails by project name", async () => {
+		it("creates and then delete tails by project name", async ({ expect }) => {
 			const api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -122,7 +134,7 @@ describe("pages deployment tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("errors when the websocket closes unexpectedly", async () => {
+		it("errors when the websocket closes unexpectedly", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await api.closeHelper();
 
@@ -135,7 +147,9 @@ describe("pages deployment tail", () => {
 			);
 		});
 
-		it("activates debug mode when the cli arg is passed in", async () => {
+		it("activates debug mode when the cli arg is passed in", async ({
+			expect,
+		}) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --debug"
@@ -148,7 +162,9 @@ describe("pages deployment tail", () => {
 	});
 
 	describe("filtering", () => {
-		it("should throw for bad sampling rate filters ranges", async () => {
+		it("should throw for bad sampling rate filters ranges", async ({
+			expect,
+		}) => {
 			const tooHigh = runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --sampling-rate 10"
 			);
@@ -161,7 +177,7 @@ describe("pages deployment tail", () => {
 			await expect(tooLow).rejects.toThrow();
 		});
 
-		it("should send sampling rate filter", async () => {
+		it("should send sampling rate filter", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --sampling-rate 0.25"
@@ -171,7 +187,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends single status filters", async () => {
+		it("sends single status filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --status error"
@@ -185,7 +201,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends multiple status filters", async () => {
+		it("sends multiple status filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --status error --status canceled"
@@ -205,7 +221,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends single HTTP method filters", async () => {
+		it("sends single HTTP method filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST"
@@ -215,7 +231,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends multiple HTTP method filters", async () => {
+		it("sends multiple HTTP method filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST --method GET"
@@ -225,7 +241,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends header filters without a query", async () => {
+		it("sends header filters without a query", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --header X-CUSTOM-HEADER"
@@ -235,7 +251,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends header filters with a query", async () => {
+		it("sends header filters with a query", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --header X-CUSTOM-HEADER:some-value"
@@ -245,7 +261,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends single IP filters", async () => {
+		it("sends single IP filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			const fakeIp = "192.0.2.1";
 
@@ -257,7 +273,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends multiple IP filters", async () => {
+		it("sends multiple IP filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			const fakeIp = "192.0.2.1";
 
@@ -269,7 +285,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends search filters", async () => {
+		it("sends search filters", async ({ expect }) => {
 			const api = mockTailAPIs();
 			const search = "filterMe";
 
@@ -281,7 +297,7 @@ describe("pages deployment tail", () => {
 			});
 		});
 
-		it("sends everything but the kitchen sink", async () => {
+		it("sends everything but the kitchen sink", async ({ expect }) => {
 			const api = mockTailAPIs();
 			const sampling_rate = 0.69;
 			const status = ["ok", "error"];
@@ -328,7 +344,7 @@ describe("pages deployment tail", () => {
 	describe("printing", () => {
 		const { setIsTTY } = useMockIsTTY();
 
-		it("logs request messages in JSON format", async () => {
+		it("logs request messages in JSON format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
@@ -342,7 +358,7 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs scheduled messages in JSON format", async () => {
+		it("logs scheduled messages in JSON format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
@@ -356,7 +372,7 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs alarm messages in json format", async () => {
+		it("logs alarm messages in json format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
@@ -370,7 +386,7 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs email messages in json format", async () => {
+		it("logs email messages in json format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
@@ -384,7 +400,7 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs queue messages in json format", async () => {
+		it("logs queue messages in json format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
@@ -398,7 +414,7 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs request messages in pretty format", async () => {
+		it("logs request messages in pretty format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
@@ -425,7 +441,7 @@ describe("pages deployment tail", () => {
 			`);
 		});
 
-		it("logs scheduled messages in pretty format", async () => {
+		it("logs scheduled messages in pretty format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
@@ -452,7 +468,7 @@ describe("pages deployment tail", () => {
 			`);
 		});
 
-		it("logs alarm messages in pretty format", async () => {
+		it("logs alarm messages in pretty format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
@@ -479,7 +495,7 @@ describe("pages deployment tail", () => {
 			`);
 		});
 
-		it("logs email messages in pretty format", async () => {
+		it("logs email messages in pretty format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
@@ -506,7 +522,7 @@ describe("pages deployment tail", () => {
 			`);
 		});
 
-		it("logs queue messages in pretty format", async () => {
+		it("logs queue messages in pretty format", async ({ expect }) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
@@ -533,7 +549,9 @@ describe("pages deployment tail", () => {
 			`);
 		});
 
-		it("should not crash when the tail message has a void event", async () => {
+		it("should not crash when the tail message has a void event", async ({
+			expect,
+		}) => {
 			const api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
@@ -559,7 +577,9 @@ describe("pages deployment tail", () => {
 		`);
 		});
 
-		it("defaults to logging in pretty format when the output is a TTY", async () => {
+		it("defaults to logging in pretty format when the output is a TTY", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const api = mockTailAPIs();
 			await runWrangler(
@@ -587,7 +607,9 @@ describe("pages deployment tail", () => {
 		      `);
 		});
 
-		it("defaults to logging in json format when the output is not a TTY", async () => {
+		it("defaults to logging in json format when the output is not a TTY", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			const api = mockTailAPIs();
@@ -603,7 +625,7 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs console messages and exceptions", async () => {
+		it("logs console messages and exceptions", async ({ expect }) => {
 			setIsTTY(true);
 			const api = mockTailAPIs();
 

@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -21,7 +22,7 @@ describe("cloudchamber image", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber registries --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -45,7 +46,9 @@ describe("cloudchamber image", () => {
 	`);
 	});
 
-	it("should create an image registry (no interactivity)", async () => {
+	it("should create an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -75,7 +78,9 @@ describe("cloudchamber image", () => {
 	`);
 	});
 
-	it("should create an image registry (no interactivity)", async () => {
+	it("should create an image registry (no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(

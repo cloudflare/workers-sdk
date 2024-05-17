@@ -1,4 +1,5 @@
 import path from "node:path";
+import { describe, it, test } from "vitest";
 import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
 import type {
@@ -9,7 +10,7 @@ import type {
 } from "../config";
 
 describe("normalizeAndValidateConfig()", () => {
-	it("should use defaults for empty configuration", () => {
+	it("should use defaults for empty configuration", ({ expect }) => {
 		const { config, diagnostics } = normalizeAndValidateConfig({}, undefined, {
 			env: undefined,
 		});
@@ -100,7 +101,7 @@ describe("normalizeAndValidateConfig()", () => {
 	});
 
 	describe("top-level non-environment configuration", () => {
-		it("should override config defaults with provided values", () => {
+		it("should override config defaults with provided values", ({ expect }) => {
 			const expectedConfig: Partial<ConfigFields<RawDevConfig>> = {
 				legacy_env: true,
 				send_metrics: false,
@@ -123,7 +124,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should error on invalid top level fields", () => {
+		it("should error on invalid top level fields", ({ expect }) => {
 			const expectedConfig = {
 				legacy_env: "FOO",
 				send_metrics: "BAD",
@@ -158,7 +159,9 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 		});
 
-		it("should warn on and remove unexpected top level fields", () => {
+		it("should warn on and remove unexpected top level fields", ({
+			expect,
+		}) => {
 			const expectedConfig = {
 				unexpected: {
 					subkey: "some-value",
@@ -179,7 +182,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should report a deprecation warning if `miniflare` appears at the top level", () => {
+		it("should report a deprecation warning if `miniflare` appears at the top level", ({
+			expect,
+		}) => {
 			const expectedConfig = {
 				miniflare: {
 					host: "localhost",
@@ -201,7 +206,7 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should normalise a blank route value to be undefined", () => {
+		it("should normalise a blank route value to be undefined", ({ expect }) => {
 			const expectedConfig = {
 				route: "",
 			};
@@ -222,7 +227,9 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 		});
 
-		it("should normalise a blank account_id value to be undefined", () => {
+		it("should normalise a blank account_id value to be undefined", ({
+			expect,
+		}) => {
 			const expectedConfig = {
 				account_id: "",
 			};
@@ -244,7 +251,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[migrations]", () => {
-			it("should override `migrations` config defaults with provided values", () => {
+			it("should override `migrations` config defaults with provided values", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					migrations: [
 						{
@@ -272,7 +281,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error on invalid `migrations` values", () => {
+			it("should error on invalid `migrations` values", ({ expect }) => {
 				const expectedConfig = {
 					migrations: [
 						{
@@ -308,7 +317,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should warn/error on unexpected fields on `migrations`", async () => {
+			it("should warn/error on unexpected fields on `migrations`", async ({
+				expect,
+			}) => {
 				const expectedConfig = {
 					migrations: [
 						{
@@ -350,7 +361,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[site]", () => {
-			it("should override `site` config defaults with provided values", () => {
+			it("should override `site` config defaults with provided values", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					site: {
 						bucket: "BUCKET",
@@ -381,7 +394,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if `site` config is missing `bucket`", () => {
+			it("should error if `site` config is missing `bucket`", ({ expect }) => {
 				const expectedConfig: RawConfig = {
 					// @ts-expect-error we're intentionally passing an invalid configuration here
 					site: {
@@ -417,7 +430,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error on invalid `site` values", () => {
+			it("should error on invalid `site` values", ({ expect }) => {
 				const expectedConfig = {
 					site: {
 						bucket: "BUCKET",
@@ -455,7 +468,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should log a deprecation warning if entry-point is defined", async () => {
+			it("should log a deprecation warning if entry-point is defined", async ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						site: {
@@ -491,7 +506,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[assets]", () => {
-			it("normalizes a string input to an object", () => {
+			it("normalizes a string input to an object", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						assets: "path/to/assets",
@@ -518,7 +533,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("errors when input is not a string or object", () => {
+			it("errors when input is not a string or object", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						assets: 123,
@@ -541,7 +556,9 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if `assets` config is missing `bucket`", () => {
+			it("should error if `assets` config is missing `bucket`", ({
+				expect,
+			}) => {
 				const expectedConfig: RawConfig = {
 					// @ts-expect-error we're intentionally passing an invalid configuration here
 					assets: {
@@ -572,7 +589,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error on invalid `assets` values", () => {
+			it("should error on invalid `assets` values", ({ expect }) => {
 				const expectedConfig = {
 					assets: {
 						bucket: "BUCKET",
@@ -607,7 +624,9 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should map `wasm_module` paths from relative to the config path to relative to the cwd", () => {
+		it("should map `wasm_module` paths from relative to the config path to relative to the cwd", ({
+			expect,
+		}) => {
 			const expectedConfig: RawConfig = {
 				wasm_modules: {
 					MODULE_1: "path/to/module_1.mjs",
@@ -633,7 +652,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should warn on unexpected fields on `triggers`", async () => {
+		it("should warn on unexpected fields on `triggers`", async ({ expect }) => {
 			const expectedConfig: RawConfig = {
 				triggers: {
 					crons: ["1 * * * *"],
@@ -667,7 +686,7 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should error on invalid `wasm_modules` paths", () => {
+		it("should error on invalid `wasm_modules` paths", ({ expect }) => {
 			const expectedConfig = {
 				wasm_modules: {
 					MODULE_1: 111,
@@ -694,7 +713,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should map `text_blobs` paths from relative to the config path to relative to the cwd", () => {
+		it("should map `text_blobs` paths from relative to the config path to relative to the cwd", ({
+			expect,
+		}) => {
 			const expectedConfig: RawConfig = {
 				text_blobs: {
 					BLOB_1: "path/to/text1.txt",
@@ -720,7 +741,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should error on invalid `text_blob` paths", () => {
+		it("should error on invalid `text_blob` paths", ({ expect }) => {
 			const expectedConfig = {
 				text_blobs: {
 					MODULE_1: 111,
@@ -747,7 +768,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should map `data_blobs` paths from relative to the config path to relative to the cwd", () => {
+		it("should map `data_blobs` paths from relative to the config path to relative to the cwd", ({
+			expect,
+		}) => {
 			const expectedConfig: RawConfig = {
 				data_blobs: {
 					BLOB_1: "path/to/data1.bin",
@@ -773,7 +796,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should error on invalid `data_blob` paths", () => {
+		it("should error on invalid `data_blob` paths", ({ expect }) => {
 			const expectedConfig = {
 				data_blobs: {
 					MODULE_1: 111,
@@ -800,7 +823,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should resolve tsconfig relative to wrangler.toml", async () => {
+		it("should resolve tsconfig relative to wrangler.toml", async ({
+			expect,
+		}) => {
 			const expectedConfig: RawEnvironment = {
 				tsconfig: "path/to/some-tsconfig.json",
 			};
@@ -822,7 +847,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("(deprecated)", () => {
-			it("should remove and warn about deprecated properties", () => {
+			it("should remove and warn about deprecated properties", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					type: "webpack",
 					webpack_config: "CONFIG",
@@ -853,7 +878,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should warn on unsafe binding metadata usage", () => {
+		it("should warn on unsafe binding metadata usage", ({ expect }) => {
 			const expectedConfig: RawConfig = {
 				unsafe: {
 					bindings: [
@@ -897,7 +922,7 @@ describe("normalizeAndValidateConfig()", () => {
 	});
 
 	describe("top-level environment configuration", () => {
-		it("should override config defaults with provided values", () => {
+		it("should override config defaults with provided values", ({ expect }) => {
 			const main = "src/index.ts";
 			const resolvedMain = path.resolve(process.cwd(), main);
 
@@ -1040,7 +1065,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 		});
 
-		it("should error on invalid environment values", () => {
+		it("should error on invalid environment values", ({ expect }) => {
 			const expectedConfig: RawEnvironment = {
 				name: 111,
 				account_id: 222,
@@ -1166,7 +1191,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("name", () => {
-			it("should error on invalid `name` value with spaces", () => {
+			it("should error on invalid `name` value with spaces", ({ expect }) => {
 				const expectedConfig: RawEnvironment = {
 					name: "NCC 1701 D",
 				} as unknown as RawEnvironment;
@@ -1185,7 +1210,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should be valid `name` with underscores", () => {
+			it("should be valid `name` with underscores", ({ expect }) => {
 				const expectedConfig: RawEnvironment = {
 					name: "enterprise_nx_01",
 				} as unknown as RawEnvironment;
@@ -1201,7 +1226,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error on invalid `name` value with special characters", () => {
+			it("should error on invalid `name` value with special characters", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					name: "Thy'lek-Shran",
 				} as unknown as RawEnvironment;
@@ -1220,7 +1247,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error on invalid `name` value with only special characters", () => {
+			it("should error on invalid `name` value with only special characters", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					name: "!@#$%^&*(()",
 				} as unknown as RawEnvironment;
@@ -1239,7 +1268,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should accept any Worker name if the dispatch-namespace flag is used", () => {
+			it("should accept any Worker name if the dispatch-namespace flag is used", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						name: "example.com",
@@ -1254,7 +1285,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[build]", () => {
-			it("should override build.upload config defaults with provided values and warn about deprecations", () => {
+			it("should override build.upload config defaults with provided values and warn about deprecations", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						upload: {
@@ -1299,7 +1332,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should default custom build watch directories to src", () => {
+			it("should default custom build watch directories to src", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1323,7 +1358,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should resolve custom build watch directories relative to wrangler.toml", async () => {
+			it("should resolve custom build watch directories relative to wrangler.toml", async ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1348,7 +1385,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should allow watch_dir to be an array of paths", () => {
+			it("should allow watch_dir to be an array of paths", ({ expect }) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1377,7 +1414,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should error when the watch_dir array isn't an array of strings", () => {
+			it("should error when the watch_dir array isn't an array of strings", ({
+				expect,
+			}) => {
 				const expectedConfig: RawEnvironment = {
 					build: {
 						command: "execute some --build",
@@ -1425,7 +1464,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[durable_objects]", () => {
-			it("should error if durable_objects is an array", () => {
+			it("should error if durable_objects is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: [] } as unknown as RawConfig,
 					undefined,
@@ -1439,7 +1478,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects is a string", () => {
+			it("should error if durable_objects is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1453,7 +1492,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects is a number", () => {
+			it("should error if durable_objects is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: 999 } as unknown as RawConfig,
 					undefined,
@@ -1467,7 +1506,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects is null", () => {
+			it("should error if durable_objects is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: null } as unknown as RawConfig,
 					undefined,
@@ -1481,7 +1520,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings is not defined", () => {
+			it("should error if durable_objects.bindings is not defined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: {} } as unknown as RawConfig,
 					undefined,
@@ -1495,7 +1536,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings is an object", () => {
+			it("should error if durable_objects.bindings is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: {} } } as unknown as RawConfig,
 					undefined,
@@ -1509,7 +1552,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings is a string", () => {
+			it("should error if durable_objects.bindings is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
@@ -1523,7 +1568,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings is a number", () => {
+			it("should error if durable_objects.bindings is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
@@ -1537,7 +1584,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings is null", () => {
+			it("should error if durable_objects.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ durable_objects: { bindings: null } } as unknown as RawConfig,
 					undefined,
@@ -1551,7 +1598,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings are not valid", () => {
+			it("should error if durable_objects.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						durable_objects: {
@@ -1628,7 +1677,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[browser]", () => {
-			it("should error if browser is an array", () => {
+			it("should error if browser is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: [] } as unknown as RawConfig,
 					undefined,
@@ -1642,7 +1691,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if browser is a string", () => {
+			it("should error if browser is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1656,7 +1705,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if browser is a number", () => {
+			it("should error if browser is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: 999 } as unknown as RawConfig,
 					undefined,
@@ -1670,7 +1719,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if browser is null", () => {
+			it("should error if browser is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ browser: null } as unknown as RawConfig,
 					undefined,
@@ -1687,7 +1736,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 		// Vectorize
 		describe("[vectorize]", () => {
-			it("should error if vectorize is an object", () => {
+			it("should error if vectorize is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: {} } as unknown as RawConfig,
 					undefined,
@@ -1701,7 +1750,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if vectorize bindings are not valid", () => {
+			it("should error if vectorize bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						vectorize: [
@@ -1730,7 +1779,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if vectorize is a string", () => {
+			it("should error if vectorize is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1744,7 +1793,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if vectorize is a number", () => {
+			it("should error if vectorize is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: 999 } as unknown as RawConfig,
 					undefined,
@@ -1758,7 +1807,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if vectorize is null", () => {
+			it("should error if vectorize is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ vectorize: null } as unknown as RawConfig,
 					undefined,
@@ -1775,7 +1824,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 		// AI
 		describe("[ai]", () => {
-			it("should error if ai is an array", () => {
+			it("should error if ai is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: [] } as unknown as RawConfig,
 					undefined,
@@ -1789,7 +1838,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if ai is a string", () => {
+			it("should error if ai is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1803,7 +1852,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if ai is a number", () => {
+			it("should error if ai is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: 999 } as unknown as RawConfig,
 					undefined,
@@ -1817,7 +1866,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if ai is null", () => {
+			it("should error if ai is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ ai: null } as unknown as RawConfig,
 					undefined,
@@ -1834,7 +1883,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 		// Worker Version Metadata
 		describe("[version_metadata]", () => {
-			it("should error if version_metadata is an array", () => {
+			it("should error if version_metadata is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: [] } as unknown as RawConfig,
 					undefined,
@@ -1848,7 +1897,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if version_metadata is a string", () => {
+			it("should error if version_metadata is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1862,7 +1911,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if version_metadata is a number", () => {
+			it("should error if version_metadata is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: 999 } as unknown as RawConfig,
 					undefined,
@@ -1876,7 +1925,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if version_metadata is null", () => {
+			it("should error if version_metadata is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ version_metadata: null } as unknown as RawConfig,
 					undefined,
@@ -1892,7 +1941,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[kv_namespaces]", () => {
-			it("should error if kv_namespaces is an object", () => {
+			it("should error if kv_namespaces is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: {} } as unknown as RawConfig,
 					undefined,
@@ -1906,7 +1955,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if kv_namespaces is a string", () => {
+			it("should error if kv_namespaces is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -1920,7 +1969,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if kv_namespaces is a number", () => {
+			it("should error if kv_namespaces is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: 999 } as unknown as RawConfig,
 					undefined,
@@ -1934,7 +1983,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if kv_namespaces is null", () => {
+			it("should error if kv_namespaces is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ kv_namespaces: null } as unknown as RawConfig,
 					undefined,
@@ -1948,7 +1997,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if kv_namespaces.bindings are not valid", () => {
+			it("should error if kv_namespaces.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						kv_namespaces: [
@@ -1981,7 +2032,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should error if send_email.bindings are not valid", () => {
+		it("should error if send_email.bindings are not valid", ({ expect }) => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				{
 					send_email: [
@@ -2015,7 +2066,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[d1_databases]", () => {
-			it("should error if d1_databases is an object", () => {
+			it("should error if d1_databases is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: {} } as unknown as RawConfig,
 					undefined,
@@ -2029,7 +2080,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if d1_databases is a string", () => {
+			it("should error if d1_databases is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2043,7 +2094,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if d1_databases is a number", () => {
+			it("should error if d1_databases is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: 999 } as unknown as RawConfig,
 					undefined,
@@ -2057,7 +2108,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if d1_databases is null", () => {
+			it("should error if d1_databases is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ d1_databases: null } as unknown as RawConfig,
 					undefined,
@@ -2071,7 +2122,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if d1_databases.bindings are not valid", () => {
+			it("should error if d1_databases.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						d1_databases: [
@@ -2110,7 +2163,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[constellation]", () => {
-			it("should error if constellation is an object", () => {
+			it("should error if constellation is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ constellation: {} } as unknown as RawConfig,
 					undefined,
@@ -2124,7 +2177,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if constellation is a string", () => {
+			it("should error if constellation is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ constellation: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2138,7 +2191,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if constellation is a number", () => {
+			it("should error if constellation is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ constellation: 999 } as unknown as RawConfig,
 					undefined,
@@ -2152,7 +2205,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if constellation is null", () => {
+			it("should error if constellation is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ constellation: null } as unknown as RawConfig,
 					undefined,
@@ -2166,7 +2219,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						constellation: [{ binding: "VALID", project_id: "ID" }],
@@ -2178,7 +2231,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if constellation.bindings are not valid", () => {
+			it("should error if constellation.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						constellation: [
@@ -2207,7 +2262,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[hyperdrive]", () => {
-			it("should error if hyperdrive is an object", () => {
+			it("should error if hyperdrive is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: {} } as unknown as RawConfig,
 					undefined,
@@ -2221,7 +2276,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if hyperdrive is a string", () => {
+			it("should error if hyperdrive is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2235,7 +2290,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if hyperdrive is a number", () => {
+			it("should error if hyperdrive is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: 999 } as unknown as RawConfig,
 					undefined,
@@ -2249,7 +2304,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if hyperdrive is null", () => {
+			it("should error if hyperdrive is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ hyperdrive: null } as unknown as RawConfig,
 					undefined,
@@ -2263,7 +2318,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should accept valid bindings", () => {
+			it("should accept valid bindings", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						hyperdrive: [
@@ -2277,7 +2332,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if hyperdrive.bindings are not valid", () => {
+			it("should error if hyperdrive.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						hyperdrive: [
@@ -2305,7 +2360,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[queues]", () => {
-			it("should error if queues is not an object", () => {
+			it("should error if queues is not an object", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{ queues: [] } as unknown as RawConfig,
 					undefined,
@@ -2322,7 +2377,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if queues producer bindings are not valid", () => {
+			it("should error if queues producer bindings are not valid", ({
+				expect,
+			}) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						queues: {
@@ -2361,7 +2418,7 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should error if queues consumers are not valid", () => {
+			it("should error if queues consumers are not valid", ({ expect }) => {
 				const { config, diagnostics } = normalizeAndValidateConfig(
 					{
 						queues: {
@@ -2411,7 +2468,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[r2_buckets]", () => {
-			it("should error if r2_buckets is an object", () => {
+			it("should error if r2_buckets is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: {} } as unknown as RawConfig,
 					undefined,
@@ -2425,7 +2482,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if r2_buckets is a string", () => {
+			it("should error if r2_buckets is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2439,7 +2496,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if r2_buckets is a number", () => {
+			it("should error if r2_buckets is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: 999 } as unknown as RawConfig,
 					undefined,
@@ -2453,7 +2510,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if r2_buckets is null", () => {
+			it("should error if r2_buckets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ r2_buckets: null } as unknown as RawConfig,
 					undefined,
@@ -2467,7 +2524,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if r2_buckets.bindings are not valid", () => {
+			it("should error if r2_buckets.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						r2_buckets: [
@@ -2501,7 +2558,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[services]", () => {
-			it("should error if services is an object", () => {
+			it("should error if services is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: {} } as unknown as RawConfig,
 					undefined,
@@ -2520,7 +2577,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if services is a string", () => {
+			it("should error if services is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2539,7 +2596,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if services is a number", () => {
+			it("should error if services is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: 999 } as unknown as RawConfig,
 					undefined,
@@ -2558,7 +2615,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if services is null", () => {
+			it("should error if services is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ services: null } as unknown as RawConfig,
 					undefined,
@@ -2577,7 +2634,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if services bindings are not valid", () => {
+			it("should error if services bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						services: [
@@ -2642,7 +2699,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[analytics_engine_datasets]", () => {
-			it("should error if analytics_engine_datasets is an object", () => {
+			it("should error if analytics_engine_datasets is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: {} } as unknown as RawConfig,
 					undefined,
@@ -2656,7 +2715,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if analytics_engine_datasets is a string", () => {
+			it("should error if analytics_engine_datasets is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -2670,7 +2731,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if analytics_engine_datasets is a number", () => {
+			it("should error if analytics_engine_datasets is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: 999 } as unknown as RawConfig,
 					undefined,
@@ -2684,7 +2747,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if analytics_engine_datasets is null", () => {
+			it("should error if analytics_engine_datasets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ analytics_engine_datasets: null } as unknown as RawConfig,
 					undefined,
@@ -2698,7 +2761,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if analytics_engine_datasets.bindings are not valid", () => {
+			it("should error if analytics_engine_datasets.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						analytics_engine_datasets: [
@@ -2728,7 +2793,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[dispatch_namespaces]", () => {
-			it("should error if dispatch_namespaces is not an array", () => {
+			it("should error if dispatch_namespaces is not an array", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: "just a string",
@@ -2745,7 +2812,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error on non valid dispatch_namespaces", () => {
+			it("should error on non valid dispatch_namespaces", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: [
@@ -2792,7 +2859,9 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			test("should error on invalid outbounds for a namespace", () => {
+			test("should error on invalid outbounds for a namespace", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						dispatch_namespaces: [
@@ -2901,7 +2970,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[mtls_certificates]", () => {
-			it("should error if mtls_certificates is not an array", () => {
+			it("should error if mtls_certificates is not an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						mtls_certificates: "just a string",
@@ -2918,7 +2987,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error on non valid mtls_certificates", () => {
+			it("should error on non valid mtls_certificates", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						mtls_certificates: [
@@ -2976,7 +3045,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[unsafe.bindings]", () => {
-			it("should error if unsafe is an array", () => {
+			it("should error if unsafe is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: [] } as unknown as RawConfig,
 					undefined,
@@ -2993,7 +3062,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe is a string", () => {
+			it("should error if unsafe is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: "BAD" } as unknown as RawConfig,
 					undefined,
@@ -3010,7 +3079,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe is a number", () => {
+			it("should error if unsafe is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: 999 } as unknown as RawConfig,
 					undefined,
@@ -3027,7 +3096,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe is null", () => {
+			it("should error if unsafe is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: null } as unknown as RawConfig,
 					undefined,
@@ -3044,7 +3113,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", () => {
+			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } as unknown as RawConfig,
 					undefined,
@@ -3061,7 +3132,9 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should not error if at least unsafe.bindings is defined", () => {
+			it("should not error if at least unsafe.bindings is defined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: [] } } as unknown as RawConfig,
 					undefined,
@@ -3075,7 +3148,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should not error if at least unsafe.metadata is defined", () => {
+			it("should not error if at least unsafe.metadata is defined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: {} } } as unknown as RawConfig,
 					undefined,
@@ -3089,7 +3164,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if unsafe.bindings is an object", () => {
+			it("should error if unsafe.bindings is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: {} } } as unknown as RawConfig,
 					undefined,
@@ -3106,7 +3181,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.bindings is a string", () => {
+			it("should error if unsafe.bindings is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: "BAD" } } as unknown as RawConfig,
 					undefined,
@@ -3123,7 +3198,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.bindings is a number", () => {
+			it("should error if unsafe.bindings is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: 999 } } as unknown as RawConfig,
 					undefined,
@@ -3140,7 +3215,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.bindings is null", () => {
+			it("should error if unsafe.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { bindings: null } } as unknown as RawConfig,
 					undefined,
@@ -3157,7 +3232,9 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if durable_objects.bindings are not valid", () => {
+			it("should error if durable_objects.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						unsafe: {
@@ -3197,7 +3274,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.metadata is an array", () => {
+			it("should error if unsafe.metadata is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: [] } } as unknown as RawConfig,
 					undefined,
@@ -3214,7 +3291,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if unsafe.metadata is a string", () => {
+			it("should error if unsafe.metadata is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: "BAD" } } as unknown as RawConfig,
 					undefined,
@@ -3231,7 +3308,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.metadata is a number", () => {
+			it("should error if unsafe.metadata is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: 999 } } as unknown as RawConfig,
 					undefined,
@@ -3248,7 +3325,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.metadata is null", () => {
+			it("should error if unsafe.metadata is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: { metadata: null } } as unknown as RawConfig,
 					undefined,
@@ -3267,7 +3344,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("(deprecated)", () => {
-			it("should remove and warn about deprecated properties", () => {
+			it("should remove and warn about deprecated properties", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					zone_id: "ZONE_ID",
 					experimental_services: [
@@ -3301,7 +3378,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("route & routes fields", () => {
-			it("should error if both route and routes are specified", () => {
+			it("should error if both route and routes are specified", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					route: "route1",
 					routes: ["route2", "route3"],
@@ -3322,7 +3401,9 @@ describe("normalizeAndValidateConfig()", () => {
 	});
 
 	describe("named environments", () => {
-		it("should warn if we specify an environment but there are no named environments", () => {
+		it("should warn if we specify an environment but there are no named environments", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {};
 			const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
 				env: "DEV",
@@ -3344,7 +3425,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should error if we specify an environment that does not match the named environments", () => {
+		it("should error if we specify an environment that does not match the named environments", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = { env: { ENV1: {} } };
 			const { diagnostics } = normalizeAndValidateConfig(rawConfig, undefined, {
 				env: "DEV",
@@ -3367,7 +3450,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should use top-level values for inheritable config fields", () => {
+		it("should use top-level values for inheritable config fields", ({
+			expect,
+		}) => {
 			const main = "src/index.ts";
 			const resolvedMain = path.resolve(process.cwd(), main);
 			const rawConfig: RawConfig = {
@@ -3413,7 +3498,9 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBe(false);
 		});
 
-		it("should override top-level values for inheritable config fields", () => {
+		it("should override top-level values for inheritable config fields", ({
+			expect,
+		}) => {
 			const main = "src/index.ts";
 			const resolvedMain = path.resolve(process.cwd(), main);
 			const rawEnv: RawEnvironment = {
@@ -3484,7 +3571,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("non-legacy", () => {
-			it("should use top-level `name` field", () => {
+			it("should use top-level `name` field", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					name: "mock-name",
 					legacy_env: false,
@@ -3506,7 +3593,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
+			it("should error if named environment contains a `name` field, even if there is no top-level name", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					legacy_env: false,
 					env: {
@@ -3538,7 +3627,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if top-level config and a named environment both contain a `name` field", () => {
+			it("should error if top-level config and a named environment both contain a `name` field", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					name: "mock-name",
 					legacy_env: false,
@@ -3572,7 +3663,9 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
-		it("should error if named environment contains a `account_id` field, even if there is no top-level name", () => {
+		it("should error if named environment contains a `account_id` field, even if there is no top-level name", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {
 				legacy_env: false,
 				env: {
@@ -3603,7 +3696,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should error if top-level config and a named environment both contain a `account_id` field", () => {
+		it("should error if top-level config and a named environment both contain a `account_id` field", ({
+			expect,
+		}) => {
 			const rawConfig: RawConfig = {
 				account_id: "ACCOUNT_ID",
 				legacy_env: false,
@@ -3636,7 +3731,9 @@ describe("normalizeAndValidateConfig()", () => {
 		      `);
 		});
 
-		it("should warn for non-inherited fields that are missing in environments", () => {
+		it("should warn for non-inherited fields that are missing in environments", ({
+			expect,
+		}) => {
 			const define: RawConfig["define"] = {
 				abc: "123",
 			};
@@ -3713,7 +3810,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 		});
 
-		it("should error on invalid environment values", () => {
+		it("should error on invalid environment values", ({ expect }) => {
 			const expectedConfig: RawEnvironment = {
 				name: 111,
 				account_id: 222,
@@ -3782,7 +3879,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[define]", () => {
-			it("should accept valid values for config.define", () => {
+			it("should accept valid values for config.define", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					define: {
 						abc: "def",
@@ -3800,7 +3897,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if config.define is not an object", () => {
+			it("should error if config.define is not an object", ({ expect }) => {
 				const rawConfig: RawConfig = {
 					// @ts-expect-error purposely using an invalid value
 					define: 123,
@@ -3822,7 +3919,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if the values on config.define are not strings", () => {
+			it("should error if the values on config.define are not strings", ({
+				expect,
+			}) => {
 				const rawConfig: RawConfig = {
 					define: {
 						// @ts-expect-error purposely using an invalid value
@@ -3856,7 +3955,9 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			describe("named environments", () => {
-				it("should accept valid values for config.define inside an environment", () => {
+				it("should accept valid values for config.define inside an environment", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "def",
@@ -3883,7 +3984,9 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 				});
 
-				it("should error if config.define is not an object inside an environment", () => {
+				it("should error if config.define is not an object inside an environment", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "def",
@@ -3916,7 +4019,9 @@ describe("normalizeAndValidateConfig()", () => {
 			          `);
 				});
 
-				it("should warn if if the shape of .define inside an environment doesn't match the shape of the top level .define", () => {
+				it("should warn if if the shape of .define inside an environment doesn't match the shape of the top level .define", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "def",
@@ -3955,7 +4060,9 @@ describe("normalizeAndValidateConfig()", () => {
 			          `);
 				});
 
-				it("should error if the values on config.define in an environment are not strings", () => {
+				it("should error if the values on config.define in an environment are not strings", ({
+					expect,
+				}) => {
 					const rawConfig: RawConfig = {
 						define: {
 							abc: "123",
@@ -4004,7 +4111,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[durable_objects]", () => {
-			it("should error if durable_objects is an array", () => {
+			it("should error if durable_objects is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: [] } } } as unknown as RawConfig,
 					undefined,
@@ -4020,7 +4127,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects is a string", () => {
+			it("should error if durable_objects is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -4036,7 +4143,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects is a number", () => {
+			it("should error if durable_objects is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -4052,7 +4159,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects is null", () => {
+			it("should error if durable_objects is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: null } } } as unknown as RawConfig,
 					undefined,
@@ -4068,7 +4175,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects.bindings is not defined", () => {
+			it("should error if durable_objects.bindings is not defined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { durable_objects: {} } } } as unknown as RawConfig,
 					undefined,
@@ -4084,7 +4193,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects.bindings is an object", () => {
+			it("should error if durable_objects.bindings is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: {} } } },
@@ -4102,7 +4213,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects.bindings is a string", () => {
+			it("should error if durable_objects.bindings is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: "BAD" } } },
@@ -4120,7 +4233,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects.bindings is a number", () => {
+			it("should error if durable_objects.bindings is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: 999 } } },
@@ -4138,7 +4253,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects.bindings is null", () => {
+			it("should error if durable_objects.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { durable_objects: { bindings: null } } },
@@ -4156,7 +4271,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if durable_objects.bindings are not valid", () => {
+			it("should error if durable_objects.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -4207,7 +4324,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[kv_namespaces]", () => {
-			it("should error if kv_namespaces is an object", () => {
+			it("should error if kv_namespaces is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: {} } } } as unknown as RawConfig,
 					undefined,
@@ -4223,7 +4340,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if kv_namespaces is a string", () => {
+			it("should error if kv_namespaces is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -4239,7 +4356,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if kv_namespaces is a number", () => {
+			it("should error if kv_namespaces is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -4255,7 +4372,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if kv_namespaces is null", () => {
+			it("should error if kv_namespaces is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { kv_namespaces: null } } } as unknown as RawConfig,
 					undefined,
@@ -4271,7 +4388,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if kv_namespaces.bindings are not valid", () => {
+			it("should error if kv_namespaces.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -4309,7 +4428,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[r2_buckets]", () => {
-			it("should error if r2_buckets is an object", () => {
+			it("should error if r2_buckets is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: {} } } } as unknown as RawConfig,
 					undefined,
@@ -4325,7 +4444,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if r2_buckets is a string", () => {
+			it("should error if r2_buckets is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -4341,7 +4460,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if r2_buckets is a number", () => {
+			it("should error if r2_buckets is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -4357,7 +4476,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if r2_buckets is null", () => {
+			it("should error if r2_buckets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { r2_buckets: null } } } as unknown as RawConfig,
 					undefined,
@@ -4373,7 +4492,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if r2_buckets.bindings are not valid", () => {
+			it("should error if r2_buckets.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -4411,7 +4530,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[analytics_engine_datasets]", () => {
-			it("should error if analytics_engine_datasets is an object", () => {
+			it("should error if analytics_engine_datasets is an object", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: {} } },
@@ -4429,7 +4550,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if analytics_engine_datasets is a string", () => {
+			it("should error if analytics_engine_datasets is a string", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: "BAD" } },
@@ -4447,7 +4570,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if analytics_engine_datasets is a number", () => {
+			it("should error if analytics_engine_datasets is a number", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: 999 } },
@@ -4465,7 +4590,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if analytics_engine_datasets is null", () => {
+			it("should error if analytics_engine_datasets is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { analytics_engine_datasets: null } },
@@ -4483,7 +4608,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if analytics_engine_datasets.bindings are not valid", () => {
+			it("should error if analytics_engine_datasets.bindings are not valid", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -4519,7 +4646,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[unsafe.bindings]", () => {
-			it("should error if unsafe is an array", () => {
+			it("should error if unsafe is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: [] } } } as unknown as RawConfig,
 					undefined,
@@ -4540,7 +4667,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe is a string", () => {
+			it("should error if unsafe is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: "BAD" } } } as unknown as RawConfig,
 					undefined,
@@ -4561,7 +4688,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe is a number", () => {
+			it("should error if unsafe is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: 999 } } } as unknown as RawConfig,
 					undefined,
@@ -4582,7 +4709,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe is null", () => {
+			it("should error if unsafe is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: null } } } as unknown as RawConfig,
 					undefined,
@@ -4603,7 +4730,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", () => {
+			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
 					undefined,
@@ -4624,7 +4753,9 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should not error if at least unsafe.bindings is undefined", () => {
+			it("should not error if at least unsafe.bindings is undefined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: [] } } },
@@ -4642,7 +4773,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should not error if at least unsafe.metadata is undefined", () => {
+			it("should not error if at least unsafe.metadata is undefined", ({
+				expect,
+			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: {} } } },
@@ -4660,7 +4793,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
-			it("should error if unsafe.bindings is an object", () => {
+			it("should error if unsafe.bindings is an object", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: {} } } },
@@ -4683,7 +4816,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings is a string", () => {
+			it("should error if unsafe.bindings is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: "BAD" } } },
@@ -4706,7 +4839,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings is a number", () => {
+			it("should error if unsafe.bindings is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: 999 } } },
@@ -4729,7 +4862,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings is null", () => {
+			it("should error if unsafe.bindings is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { bindings: null } } },
@@ -4752,7 +4885,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings are not valid", () => {
+			it("should error if unsafe.bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: {
@@ -4800,7 +4933,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.metadata is an array", () => {
+			it("should error if unsafe.metadata is an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: [] } } },
@@ -4823,7 +4956,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.metadata is a string", () => {
+			it("should error if unsafe.metadata is a string", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: "BAD" } } },
@@ -4846,7 +4979,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if unsafe.metadata is a number", () => {
+			it("should error if unsafe.metadata is a number", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: 999 } } },
@@ -4869,7 +5002,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error if unsafe.metadata is null", () => {
+			it("should error if unsafe.metadata is null", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						env: { ENV1: { unsafe: { metadata: null } } },
@@ -4894,7 +5027,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[tail_consumers]", () => {
-			it("should error if tail_consumers is not an array", () => {
+			it("should error if tail_consumers is not an array", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						tail_consumers: "this sure isn't an array",
@@ -4911,7 +5044,7 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 			});
 
-			it("should error on invalid tail_consumers", () => {
+			it("should error on invalid tail_consumers", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						tail_consumers: [
@@ -4949,7 +5082,7 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("(deprecated)", () => {
-			it("should remove and warn about deprecated properties", () => {
+			it("should remove and warn about deprecated properties", ({ expect }) => {
 				const environment: RawEnvironment = {
 					zone_id: "ZONE_ID",
 					"kv-namespaces": "BAD_KV_NAMESPACE",
@@ -4992,7 +5125,9 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("route & routes fields", () => {
-			it("should error if both route and routes are specified in the same environment", () => {
+			it("should error if both route and routes are specified in the same environment", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -5040,7 +5175,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if both route and routes are specified in the top-level environment", () => {
+			it("should error if both route and routes are specified in the top-level environment", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -5086,7 +5223,9 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should not error if <env>.route and <top-level>.routes are specified", () => {
+			it("should not error if <env>.route and <top-level>.routes are specified", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -5126,7 +5265,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should not error if <env>.routes and <top-level>.route are specified", () => {
+			it("should not error if <env>.routes and <top-level>.route are specified", ({
+				expect,
+			}) => {
 				const environment: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",
@@ -5166,7 +5307,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
 
-			it("should not error if <env1>.route and <env2>.routes are specified", () => {
+			it("should not error if <env1>.route and <env2>.routes are specified", ({
+				expect,
+			}) => {
 				const environment1: RawEnvironment = {
 					name: "mock-env-name",
 					account_id: "ENV_ACCOUNT_ID",

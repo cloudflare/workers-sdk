@@ -410,7 +410,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) {
+		if (process.env.VITEST_WORKER_ID !== undefined) {
 			await bundleSizePromise;
 		} else {
 			void bundleSizePromise;

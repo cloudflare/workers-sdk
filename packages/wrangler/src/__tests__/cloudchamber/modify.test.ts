@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -22,7 +23,7 @@ describe("cloudchamber modify", () => {
 		msw.resetHandlers();
 	});
 
-	it("should help", async () => {
+	it("should help", async ({ expect }) => {
 		await runWrangler("cloudchamber modify --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -52,7 +53,9 @@ describe("cloudchamber modify", () => {
 	`);
 	});
 
-	it("should modify deployment (detects no interactivity)", async () => {
+	it("should modify deployment (detects no interactivity)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -95,7 +98,9 @@ describe("cloudchamber modify", () => {
 	`);
 	});
 
-	it("can't modify deployment due to lack of deploymentId (json)", async () => {
+	it("can't modify deployment due to lack of deploymentId (json)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		expect(std.err).toMatchInlineSnapshot(`""`);

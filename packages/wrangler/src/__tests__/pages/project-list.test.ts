@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, assert, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
@@ -21,7 +22,7 @@ describe("pages project list", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should make request to list projects", async () => {
+	it("should make request to list projects", async ({ expect }) => {
 		const projects: Project[] = [
 			{
 				name: "dogs",
@@ -54,7 +55,9 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
-	it("should make multiple requests for paginated results", async () => {
+	it("should make multiple requests for paginated results", async ({
+		expect,
+	}) => {
 		const projects: Project[] = [];
 		for (let i = 0; i < 15; i++) {
 			projects.push({
@@ -90,10 +93,10 @@ function mockProjectListRequest(projects: unknown[]) {
 			const page = Number(req.url.searchParams.get("page"));
 			const expectedPageSize = 10;
 			const expectedPage = requests.count;
-			expect(req.params.accountId).toEqual("some-account-id");
-			expect(pageSize).toEqual(expectedPageSize);
-			expect(page).toEqual(expectedPage);
-			expect(await req.text()).toEqual("");
+			assert(req.params.accountId == "some-account-id");
+			assert(pageSize == expectedPageSize);
+			assert(page == expectedPage);
+			assert((await req.text()) == "");
 
 			return res(
 				ctx.status(200),

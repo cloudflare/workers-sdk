@@ -227,3 +227,9 @@ runtime-versions.md
 /worker-rust/target/
 
 .e2e-test-report/
+packages/wrangler/.test-report/bg.png
+packages/wrangler/.test-report/favicon.svg
+packages/wrangler/.test-report/html.meta.json.gz
+packages/wrangler/.test-report/index.html
+packages/wrangler/.test-report/assets/index-fUmMsp0O.css
+packages/wrangler/.test-report/assets/index-TpLatVz2.js

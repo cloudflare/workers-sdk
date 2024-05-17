@@ -2,6 +2,7 @@
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
 import { rest } from "msw";
+import { afterAll, assert, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -19,7 +20,7 @@ function mockSupportingDashRequests(
 		rest.get(
 			`*/accounts/:accountId/pages/projects/NOT_REAL`,
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+				assert(req.params.accountId == expectedAccountId);
 
 				return res.once(
 					ctx.status(404),
@@ -40,8 +41,8 @@ function mockSupportingDashRequests(
 		rest.get(
 			`*/accounts/:accountId/pages/projects/:projectName`,
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
-				expect(req.params.projectName).toEqual(expectedProjectName);
+				assert(req.params.accountId == expectedAccountId);
+				assert(req.params.projectName == expectedProjectName);
 
 				return res.once(
 					ctx.status(200),
@@ -255,7 +256,7 @@ function mockSupportingDashRequests(
 		rest.get(
 			`*/accounts/:accountId/workers/durable_objects/namespaces/:doId`,
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+				assert(req.params.accountId == expectedAccountId);
 
 				return res(
 					ctx.status(200),
@@ -292,7 +293,7 @@ describe("pages download config", () => {
 		clearDialogs();
 	});
 
-	it("should download full config correctly", async () => {
+	it("should download full config correctly", async ({ expect }) => {
 		await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
 
 		await expect(
@@ -430,14 +431,14 @@ describe("pages download config", () => {
 		"
 	`);
 	});
-	it("should fail if not given a project name", async () => {
+	it("should fail if not given a project name", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`"Must specify a project name."`
 		);
 	});
-	it("should fail if project does not exist", async () => {
+	it("should fail if project does not exist", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config NOT_REAL`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -457,7 +458,7 @@ describe("pages download config", () => {
 	`);
 	});
 	describe("overwrite existing file", () => {
-		it("should overwrite existing file w/ --force", async () => {
+		it("should overwrite existing file w/ --force", async ({ expect }) => {
 			await writeWranglerToml({ name: "some-project" });
 			await runWrangler(`pages download config ${MOCK_PROJECT_NAME} --force`);
 
@@ -599,7 +600,9 @@ describe("pages download config", () => {
 					"
 			`);
 		});
-		it("should not overwrite existing file w/o --force (non-interactive)", async () => {
+		it("should not overwrite existing file w/o --force (non-interactive)", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			await writeWranglerToml({ name: "some-project" });
 			await expect(
@@ -624,7 +627,7 @@ describe("pages download config", () => {
 			"
 		`);
 		});
-		it("should overwrite existing file w/ prompt", async () => {
+		it("should overwrite existing file w/ prompt", async ({ expect }) => {
 			await writeWranglerToml({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",
@@ -770,7 +773,7 @@ describe("pages download config", () => {
 			"
 		`);
 		});
-		it("should not overwrite existing file w/ prompt", async () => {
+		it("should not overwrite existing file w/ prompt", async ({ expect }) => {
 			await writeWranglerToml({ name: "some-project" });
 			await mockConfirm({
 				text: "Your existing `wrangler.toml` file will be overwritten. Continue?",

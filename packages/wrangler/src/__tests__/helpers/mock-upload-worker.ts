@@ -1,6 +1,7 @@
 import { Blob } from "node:buffer";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
+import { assert } from "vitest";
 import { createFetchResult, msw } from "./msw";
 import { FileReaderSync } from "./msw/read-file-sync";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
@@ -80,12 +81,13 @@ export function mockUploadWorkerRequest(
 				? `*/accounts/:accountId/workers/services/:scriptName/environments/:envName/subdomain`
 				: `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+				assert(req.params.accountId == "some-account-id");
+				assert(
+					req.params.scriptName ==
+						(legacyEnv && env ? `test-name-${env}` : "test-name")
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					assert(req.params.envName == env);
 				}
 
 				return res(
@@ -100,78 +102,77 @@ export function mockUploadWorkerRequest(
 		res: ResponseComposition,
 		ctx: RestContext
 	) {
-		expect(req.params.accountId).toEqual("some-account-id");
-		expect(req.params.scriptName).toEqual(
-			legacyEnv && env ? `test-name-${env}` : "test-name"
+		assert(req.params.accountId == "some-account-id");
+		assert(
+			req.params.scriptName ==
+				(legacyEnv && env ? `test-name-${env}` : "test-name")
 		);
 		if (!legacyEnv) {
-			expect(req.params.envName).toEqual(env);
+			assert(req.params.envName == env);
 		}
-		expect(req.url.searchParams.get("include_subdomain_availability")).toEqual(
-			"true"
+		assert(
+			req.url.searchParams.get("include_subdomain_availability") == "true"
 		);
-		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
+		assert(req.url.searchParams.get("excludeScript") == "true");
 		if (expectedDispatchNamespace) {
-			expect(req.params.dispatchNamespace).toEqual(expectedDispatchNamespace);
+			assert(req.params.dispatchNamespace == expectedDispatchNamespace);
 		}
 
 		const formBody = await (
 			req as MockedRequest as RestRequestWithFormData
 		).formData();
 		if (expectedEntry !== undefined) {
-			expect(formBody.get("index.js")).toMatch(expectedEntry);
+			const indexJs = formBody.get("index.js") as string;
+			assert.match(indexJs, new RegExp(expectedEntry));
 		}
 		const metadata = JSON.parse(
 			formBody.get("metadata") as string
 		) as WorkerMetadata;
 		if (expectedType === "esm") {
-			expect(metadata.main_module).toEqual(expectedMainModule);
+			assert(metadata.main_module == expectedMainModule);
 		} else {
-			expect(metadata.body_part).toEqual("index.js");
+			assert(metadata.body_part == "index.js");
 		}
 
 		if (keepVars) {
-			expect(metadata.keep_bindings).toEqual(
-				expect.arrayContaining(["plain_text", "json"])
-			);
+			assert.containSubset(metadata.keep_bindings, ["plain_text", "json"]);
 		} else if (keepSecrets) {
-			expect(metadata.keep_bindings).toEqual(
-				expect.arrayContaining(["secret_text", "secret_key"])
-			);
+			assert.containSubset(metadata.keep_bindings, [
+				"secret_text",
+				"secret_key",
+			]);
 		} else {
-			expect(metadata.keep_bindings).toBeFalsy();
+			assert.isFalse(metadata.keep_bindings);
 		}
 
 		if ("expectedBindings" in options) {
-			expect(metadata.bindings).toEqual(expectedBindings);
+			assert(metadata.bindings == expectedBindings);
 		}
 		if ("expectedCompatibilityDate" in options) {
-			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
+			assert(metadata.compatibility_date == expectedCompatibilityDate);
 		}
 		if ("expectedCompatibilityFlags" in options) {
-			expect(metadata.compatibility_flags).toEqual(expectedCompatibilityFlags);
+			assert(metadata.compatibility_flags == expectedCompatibilityFlags);
 		}
 		if ("expectedMigrations" in options) {
-			expect(metadata.migrations).toEqual(expectedMigrations);
+			assert(metadata.migrations == expectedMigrations);
 		}
 		if ("expectedTailConsumers" in options) {
-			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
+			assert(metadata.tail_consumers == expectedTailConsumers);
 		}
 		if ("expectedCapnpSchema" in options) {
-			expect(formBody.get(metadata.capnp_schema ?? "")).toEqual(
-				expectedCapnpSchema
-			);
+			assert(formBody.get(metadata.capnp_schema ?? "") == expectedCapnpSchema);
 		}
 		if ("expectedLimits" in options) {
-			expect(metadata.limits).toEqual(expectedLimits);
+			assert(metadata.limits == expectedLimits);
 		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
-				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
+				assert(metadata[key] == expectedUnsafeMetaData[key]);
 			});
 		}
 		for (const [name, content] of Object.entries(expectedModules)) {
-			expect(formBody.get(name)).toEqual(content);
+			assert(formBody.get(name) == content);
 		}
 
 		return res(
@@ -210,7 +211,7 @@ function mockFormDataToString(this: FormData) {
 
 async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
 	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
+	assert(__formdata instanceof Array);
 
 	const form = new FormData();
 	for (const [key, value] of __formdata) {

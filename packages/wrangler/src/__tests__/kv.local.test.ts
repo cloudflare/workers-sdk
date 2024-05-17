@@ -1,18 +1,19 @@
 import { writeFileSync } from "node:fs";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // Miniflare's use of undici doesn't play well with jest-mock-fetch
 // and it is not needed here anyway.
-jest.unmock("undici");
+vi.unmock("undici");
 
 describe("wrangler", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
 	describe("local", () => {
-		it("should put local kv storage", async () => {
+		it("should put local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv:key get val --namespace-id some-namespace-id --local --text`
 			);
@@ -36,7 +37,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should list local kv storage", async () => {
+		it("should list local kv storage", async ({ expect }) => {
 			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`"[]"`);
 			const keyValues = [
@@ -129,7 +130,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should delete local kv storage", async () => {
+		it("should delete local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv:key put val value --namespace-id some-namespace-id --local`
 			);
@@ -160,7 +161,7 @@ describe("wrangler", () => {
 			`);
 		});
 
-		it("should put local bulk kv storage", async () => {
+		it("should put local bulk kv storage", async ({ expect }) => {
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`"[]"`);
 
@@ -208,7 +209,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should delete local bulk kv storage", async () => {
+		it("should delete local bulk kv storage", async ({ expect }) => {
 			const keyValues = [
 				{
 					key: "hello",
@@ -269,7 +270,7 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("should follow persist-to for local kv storage", async () => {
+		it("should follow persist-to for local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv:key put val value --namespace-id some-namespace-id --local`
 			);

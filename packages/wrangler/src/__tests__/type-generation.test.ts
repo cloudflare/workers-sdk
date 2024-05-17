@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as TOML from "@iarna/toml";
+import { describe, it } from "vitest";
 import {
 	constructType,
 	constructTypeKey,
@@ -12,7 +13,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "../config/environment";
 
 describe("isValidIdentifier", () => {
-	it("should return true for valid identifiers", () => {
+	it("should return true for valid identifiers", ({ expect }) => {
 		expect(isValidIdentifier("valid")).toBe(true);
 		expect(isValidIdentifier("valid123")).toBe(true);
 		expect(isValidIdentifier("valid_123")).toBe(true);
@@ -23,7 +24,7 @@ describe("isValidIdentifier", () => {
 		expect(isValidIdentifier("$valid$")).toBe(true);
 	});
 
-	it("should return false for invalid identifiers", () => {
+	it("should return false for invalid identifiers", ({ expect }) => {
 		expect(isValidIdentifier("123invalid")).toBe(false);
 		expect(isValidIdentifier("invalid-123")).toBe(false);
 		expect(isValidIdentifier("invalid 123")).toBe(false);
@@ -31,7 +32,7 @@ describe("isValidIdentifier", () => {
 });
 
 describe("constructTypeKey", () => {
-	it("should return a valid type key", () => {
+	it("should return a valid type key", ({ expect }) => {
 		expect(constructTypeKey("valid")).toBe("valid");
 		expect(constructTypeKey("valid123")).toBe("valid123");
 		expect(constructTypeKey("valid_123")).toBe("valid_123");
@@ -48,7 +49,7 @@ describe("constructTypeKey", () => {
 });
 
 describe("constructType", () => {
-	it("should return a valid type", () => {
+	it("should return a valid type", ({ expect }) => {
 		expect(constructType("valid", "string")).toBe("valid: string;");
 		expect(constructType("valid123", "string")).toBe("valid123: string;");
 		expect(constructType("valid_123", "string")).toBe("valid_123: string;");
@@ -187,7 +188,9 @@ describe("generateTypes()", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show a warning when no config file is detected", async () => {
+	it("should show a warning when no config file is detected", async ({
+		expect,
+	}) => {
 		await runWrangler("types");
 		expect(std.warn).toMatchInlineSnapshot(`
 		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected, aborting[0m
@@ -196,7 +199,9 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should show a warning when no custom config file is detected", async () => {
+	it("should show a warning when no custom config file is detected", async ({
+		expect,
+	}) => {
 		await runWrangler("types -c hello.toml");
 		expect(std.warn).toMatchInlineSnapshot(`
 		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected (at hello.toml), aborting[0m
@@ -205,7 +210,7 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should respect the top level -c|--config flag", async () => {
+	it("should respect the top level -c|--config flag", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -256,7 +261,9 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should log the interface type generated and declare modules", async () => {
+	it("should log the interface type generated and declare modules", async ({
+		expect,
+	}) => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -315,7 +322,9 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should create a DTS file at the location that the command is executed from", async () => {
+	it("should create a DTS file at the location that the command is executed from", async ({
+		expect,
+	}) => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(
 			"./wrangler.toml",
@@ -333,7 +342,9 @@ describe("generateTypes()", () => {
 	});
 
 	describe("when nothing was found", () => {
-		it("should not create DTS file for service syntax workers", async () => {
+		it("should not create DTS file for service syntax workers", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./index.ts",
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
@@ -353,7 +364,9 @@ describe("generateTypes()", () => {
 			expect(std.out).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
+		it("should create a DTS file with an empty env interface for module syntax workers", async ({
+			expect,
+		}) => {
 			fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 			fs.writeFileSync(
 				"./wrangler.toml",
@@ -377,7 +390,9 @@ describe("generateTypes()", () => {
 		});
 	});
 
-	it("should create a DTS file at the location that the command is executed from", async () => {
+	it("should create a DTS file at the location that the command is executed from", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./worker-configuration.d.ts",
 			"NOT THE CONTENTS OF THE GENERATED FILE"
@@ -400,7 +415,9 @@ describe("generateTypes()", () => {
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
 
-	it("should log the declare global type generated and declare modules", async () => {
+	it("should log the declare global type generated and declare modules", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./index.ts",
 			`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
@@ -432,7 +449,9 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async () => {
+	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async ({
+		expect,
+	}) => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -453,7 +472,7 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should include secret keys from .dev.vars", async () => {
+	it("should include secret keys from .dev.vars", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -488,7 +507,7 @@ describe("generateTypes()", () => {
 	`);
 	});
 
-	it("should override vars with secrets", async () => {
+	it("should override vars with secrets", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -520,7 +539,9 @@ describe("generateTypes()", () => {
 
 	describe("customization", () => {
 		describe("env", () => {
-			it("should allow the user to customize the interface name", async () => {
+			it("should allow the user to customize the interface name", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.toml",
 					TOML.stringify({
@@ -541,7 +562,9 @@ describe("generateTypes()", () => {
 		`);
 			});
 
-			it("should error if --env-interface is specified with no argument", async () => {
+			it("should error if --env-interface is specified with no argument", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.toml",
 					TOML.stringify({
@@ -555,7 +578,9 @@ describe("generateTypes()", () => {
 				);
 			});
 
-			it("should error if an invalid interface identifier is provided to --env-interface", async () => {
+			it("should error if an invalid interface identifier is provided to --env-interface", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.toml",
 					TOML.stringify({
@@ -582,7 +607,9 @@ describe("generateTypes()", () => {
 				}
 			});
 
-			it("should warn if --env-interface is used with a service-syntax worker", async () => {
+			it("should warn if --env-interface is used with a service-syntax worker", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./index.ts",
 					`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
@@ -607,7 +634,9 @@ describe("generateTypes()", () => {
 		});
 
 		describe("output file", () => {
-			it("should allow the user to specify where to write the result", async () => {
+			it("should allow the user to specify where to write the result", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.toml",
 					TOML.stringify({
@@ -625,7 +654,9 @@ describe("generateTypes()", () => {
 				);
 			});
 
-			it("should error if the user points to a non-d.ts file", async () => {
+			it("should error if the user points to a non-d.ts file", async ({
+				expect,
+			}) => {
 				fs.writeFileSync(
 					"./wrangler.toml",
 					TOML.stringify({
@@ -650,7 +681,9 @@ describe("generateTypes()", () => {
 			});
 		});
 
-		it("should allow multiple customization to be applied together", async () => {
+		it("should allow multiple customization to be applied together", async ({
+			expect,
+		}) => {
 			fs.writeFileSync(
 				"./wrangler.toml",
 				TOML.stringify({

@@ -1,3 +1,4 @@
+import { beforeEach, describe, test } from "vitest";
 import yargs from "yargs";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
@@ -41,7 +42,7 @@ describe("versions deploy", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("succeeds with --name arg", async () => {
+		test("succeeds with --name arg", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --name named-worker --yes --experimental-gradual-rollouts"
 			);
@@ -89,7 +90,7 @@ describe("versions deploy", () => {
 			);
 		});
 
-		test("fails without --name arg", async () => {
+		test("fails without --name arg", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
 			);
@@ -101,9 +102,9 @@ describe("versions deploy", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
-		test("no args", async () => {
+		test("no args", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy --yes --experimental-gradual-rollouts"
 			);
@@ -135,7 +136,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("1 version @ (implicit) 100%", async () => {
+		test("1 version @ (implicit) 100%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
 			);
@@ -179,7 +180,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("1 version @ (explicit) 100%", async () => {
+		test("1 version @ (explicit) 100%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
 			);
@@ -223,7 +224,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("2 versions @ (implicit) 50% each", async () => {
+		test("2 versions @ (implicit) 50% each", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
 			);
@@ -275,7 +276,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("1 version @ (explicit) 100%", async () => {
+		test("1 version @ (explicit) 100%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
 			);
@@ -319,7 +320,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("2 versions @ (explicit) 30% + (implicit) 70%", async () => {
+		test("2 versions @ (explicit) 30% + (implicit) 70%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000@30% 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
 			);
@@ -371,7 +372,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("2 versions @ (explicit) 40% + (explicit) 60%", async () => {
+		test("2 versions @ (explicit) 40% + (explicit) 60%", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60% --yes --experimental-gradual-rollouts"
 			);
@@ -424,7 +425,7 @@ describe("versions deploy", () => {
 		});
 
 		describe("max versions restrictions (temp)", () => {
-			test("2+ versions fails", async () => {
+			test("2+ versions fails", async ({ expect }) => {
 				const result = runWrangler(
 					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
 				);
@@ -471,7 +472,7 @@ describe("versions deploy", () => {
 		`);
 			});
 
-			test("--max-versions allows > 2 versions", async () => {
+			test("--max-versions allows > 2 versions", async ({ expect }) => {
 				const result = runWrangler(
 					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes --experimental-gradual-rollouts"
 				);
@@ -534,7 +535,7 @@ describe("versions deploy", () => {
 			});
 		});
 
-		test("with a message", async () => {
+		test("with a message", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --message 'My versioned deployment message' --yes --experimental-gradual-rollouts"
 			);
@@ -579,7 +580,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("with logpush in wrangler.toml", async () => {
+		test("with logpush in wrangler.toml", async ({ expect }) => {
 			writeWranglerToml({
 				logpush: true,
 			});
@@ -632,7 +633,9 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toContain("logpush:  true");
 		});
 
-		test("with logpush and tail_consumers in wrangler.toml", async () => {
+		test("with logpush and tail_consumers in wrangler.toml", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				logpush: false,
 				tail_consumers: [
@@ -690,7 +693,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("fails for non-existent versionId", async () => {
+		test("fails for non-existent versionId", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy ffffffff-ffff-ffff-ffff-ffffffffffff --yes --experimental-gradual-rollouts"
 			);
@@ -720,7 +723,7 @@ describe("versions deploy", () => {
 		`);
 		});
 
-		test("fails if --percentage > 100", async () => {
+		test("fails if --percentage > 100", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
 			);
@@ -732,7 +735,7 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails if --percentage < 0", async () => {
+		test("fails if --percentage < 0", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
 			);
@@ -744,7 +747,7 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails if version-spec percentage > 100", async () => {
+		test("fails if version-spec percentage > 100", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
 			);
@@ -756,7 +759,7 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails if version-spec percentage < 0", async () => {
+		test("fails if version-spec percentage < 0", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
 			);
@@ -780,7 +783,7 @@ describe("units", () => {
 			() => {}
 		);
 
-		test("no args", () => {
+		test("no args", ({ expect }) => {
 			const input = "versions deploy";
 
 			const args = options.parse(input) as VersionsDeployArgs;
@@ -789,7 +792,7 @@ describe("units", () => {
 			expect(result).toMatchObject(new Map());
 		});
 
-		test("1 positional arg", () => {
+		test("1 positional arg", ({ expect }) => {
 			const input = "versions deploy 10000000-0000-0000-0000-000000000000@10%";
 
 			const args = options.parse(input) as VersionsDeployArgs;
@@ -799,7 +802,7 @@ describe("units", () => {
 				"10000000-0000-0000-0000-000000000000": 10,
 			});
 		});
-		test("2 positional args", () => {
+		test("2 positional args", ({ expect }) => {
 			const input =
 				"versions deploy 10000000-0000-0000-0000-000000000000@10% 20000000-0000-0000-0000-000000000000@90%";
 
@@ -812,7 +815,7 @@ describe("units", () => {
 			});
 		});
 
-		test("1 pair of named args", () => {
+		test("1 pair of named args", ({ expect }) => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10";
 
@@ -823,7 +826,7 @@ describe("units", () => {
 				"10000000-0000-0000-0000-000000000000": 10,
 			});
 		});
-		test("2 pairs of named args", () => {
+		test("2 pairs of named args", ({ expect }) => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000 --percentage 90";
 
@@ -835,7 +838,7 @@ describe("units", () => {
 				"20000000-0000-0000-0000-000000000000": 90,
 			});
 		});
-		test("unordered named args", () => {
+		test("unordered named args", ({ expect }) => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10 --percentage 90";
 
@@ -847,7 +850,7 @@ describe("units", () => {
 				"20000000-0000-0000-0000-000000000000": 90,
 			});
 		});
-		test("unpaired named args", () => {
+		test("unpaired named args", ({ expect }) => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000";
 
@@ -859,7 +862,7 @@ describe("units", () => {
 				"20000000-0000-0000-0000-000000000000": null,
 			});
 		});
-		test("unpaired, unordered named args", () => {
+		test("unpaired, unordered named args", ({ expect }) => {
 			const input =
 				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10";
 
@@ -884,18 +887,21 @@ describe("units", () => {
 			${"zero when no share remains"}                          | ${["v1", "v2", "v3"]}       | ${{ v1: 10, v2: 90 }}  | ${{ v1: 10, v2: 90, v3: 0 }}
 			${"unchanged when fully specified (adding to 100)"}      | ${["v1", "v2"]}             | ${{ v1: 10, v2: 90 }}  | ${{ v1: 10, v2: 90 }}
 			${"unchanged when fully specified (adding to < 100)"}    | ${["v1", "v2"]}             | ${{ v1: 10, v2: 20 }}  | ${{ v1: 10, v2: 20 }}
-		`(" $description", ({ versionIds, optionalVersionTraffic, expected }) => {
-			const result = assignAndDistributePercentages(
-				versionIds,
-				new Map(Object.entries(optionalVersionTraffic))
-			);
+		`(
+			" $description",
+			({ versionIds, optionalVersionTraffic, expected, expect }) => {
+				const result = assignAndDistributePercentages(
+					versionIds,
+					new Map(Object.entries(optionalVersionTraffic))
+				);
 
-			expect(Object.fromEntries(result)).toMatchObject(expected);
-		});
+				expect(Object.fromEntries(result)).toMatchObject(expected);
+			}
+		);
 	});
 
 	describe("summariseVersionTraffic", () => {
-		test("none unspecified", () => {
+		test("none unspecified", ({ expect }) => {
 			const result = summariseVersionTraffic(
 				new Map(
 					Object.entries({
@@ -912,7 +918,7 @@ describe("units", () => {
 			});
 		});
 
-		test("subtotal above 100", () => {
+		test("subtotal above 100", ({ expect }) => {
 			const result = summariseVersionTraffic(
 				new Map(
 					Object.entries({
@@ -929,7 +935,7 @@ describe("units", () => {
 			});
 		});
 
-		test("subtotal below 100", () => {
+		test("subtotal below 100", ({ expect }) => {
 			const result = summariseVersionTraffic(
 				new Map(
 					Object.entries({
@@ -946,7 +952,7 @@ describe("units", () => {
 			});
 		});
 
-		test("counts unspecified", () => {
+		test("counts unspecified", ({ expect }) => {
 			const result = summariseVersionTraffic(
 				new Map(
 					Object.entries({
@@ -965,28 +971,30 @@ describe("units", () => {
 	});
 
 	describe("validateTrafficSubtotal", () => {
-		test("errors if subtotal above max", () => {
+		test("errors if subtotal above max", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
 				`"Sum of specified percentages (101%) must be at most 100%"`
 			);
 		});
-		test("errors if subtotal below min", () => {
+		test("errors if subtotal below min", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(-1, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
 				`"Sum of specified percentages (-1%) must be at least 0%"`
 			);
 		});
-		test("different error message if min === max", () => {
+		test("different error message if min === max", ({ expect }) => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 100, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
 				`"Sum of specified percentages (101%) must be 100%"`
 			);
 		});
-		test("no error if subtotal above max but not above max + EPSILON", () => {
+		test("no error if subtotal above max but not above max + EPSILON", ({
+			expect,
+		}) => {
 			expect(() => validateTrafficSubtotal(100.001)).not.toThrow();
 
 			expect(() =>
@@ -995,7 +1003,9 @@ describe("units", () => {
 				`"Sum of specified percentages (100.01%) must be 100%"`
 			);
 		});
-		test("no error if subtotal below min but not below min - EPSILON", () => {
+		test("no error if subtotal below min but not below min - EPSILON", ({
+			expect,
+		}) => {
 			expect(() => validateTrafficSubtotal(99.999)).not.toThrow();
 
 			expect(() =>

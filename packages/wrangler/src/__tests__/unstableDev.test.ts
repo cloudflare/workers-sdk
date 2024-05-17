@@ -1,21 +1,24 @@
 import { fetch } from "undici";
+/**
+ * Sometimes the devRegistry killed by some reason, the register worker will to restart it.
+ */
+import { afterAll, describe, it, vi } from "vitest";
 import {
 	registerWorker,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
 
-jest.unmock("undici");
+vi.unmock("undici");
 
-/**
- * Sometimes the devRegistry killed by some reason, the register worker will to restart it.
- */
 describe("unstable devRegistry testing", () => {
 	afterAll(async () => {
 		await stopWorkerRegistry();
 	});
 
-	it("should start the devRegistry if the devRegistry not start", async () => {
+	it("should start the devRegistry if the devRegistry not start", async ({
+		expect,
+	}) => {
 		await registerWorker("test", {
 			port: 6789,
 			protocol: "http",
@@ -32,7 +35,9 @@ describe("unstable devRegistry testing", () => {
 		}
 	});
 
-	it("should not restart the devRegistry if the devRegistry already start", async () => {
+	it("should not restart the devRegistry if the devRegistry already start", async ({
+		expect,
+	}) => {
 		await startWorkerRegistry();
 
 		await fetch("http://127.0.0.1:6284/workers/init", {

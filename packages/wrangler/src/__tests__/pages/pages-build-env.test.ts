@@ -1,5 +1,6 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import { readFileSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
@@ -24,7 +25,7 @@ describe("pages build env", () => {
 		process.env.PAGES_ENVIRONMENT = "production";
 	});
 
-	it("should render empty object", async () => {
+	it("should render empty object", async ({ expect }) => {
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",
 			vars: {},
@@ -42,7 +43,7 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should fail with no project dir", async () => {
+	it("should fail with no project dir", async ({ expect }) => {
 		await expect(
 			runWrangler("pages functions build-env")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -50,13 +51,15 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should fail with no outfile", async () => {
+	it("should fail with no outfile", async ({ expect }) => {
 		await expect(
 			runWrangler("pages functions build-env .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(`"No outfile specified"`);
 	});
 
-	it("should exit with specific exit code if no config file is found", async () => {
+	it("should exit with specific exit code if no config file is found", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 		await runWrangler("pages functions build-env . --outfile out.json");
 
@@ -71,7 +74,9 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should exit with specific code if a non-pages config file is found", async () => {
+	it("should exit with specific code if a non-pages config file is found", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 		writeWranglerToml({
 			vars: {
@@ -112,7 +117,9 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should exit correctly with an unparseable non-pages config file", async () => {
+	it("should exit correctly with an unparseable non-pages config file", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 
 		writeFileSync("./wrangler.toml", 'INVALID "FILE');
@@ -129,7 +136,9 @@ describe("pages build env", () => {
 		expect(std.debug).toContain("wrangler.toml file is invalid. Exiting.");
 	});
 
-	it("should exit correctly with a non-pages config file w/ invalid environment", async () => {
+	it("should exit correctly with a non-pages config file w/ invalid environment", async ({
+		expect,
+	}) => {
 		logger.loggerLevel = "debug";
 		writeWranglerToml({
 			vars: {
@@ -170,7 +179,9 @@ describe("pages build env", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should throw an error if an invalid pages confg file is found", async () => {
+	it("should throw an error if an invalid pages confg file is found", async ({
+		expect,
+	}) => {
 		writeWranglerToml({
 			pages_build_output_dir: "dist",
 			vars: {
@@ -194,7 +205,9 @@ describe("pages build env", () => {
 	`);
 	});
 
-	it("should exit if an unparseable pages confg file is found", async () => {
+	it("should exit if an unparseable pages confg file is found", async ({
+		expect,
+	}) => {
 		writeFileSync(
 			"./wrangler.toml",
 			`
@@ -215,7 +228,7 @@ describe("pages build env", () => {
 	`);
 	});
 
-	it("should return top-level by default", async () => {
+	it("should return top-level by default", async ({ expect }) => {
 		process.env.PAGES_ENVIRONMENT = "";
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",
@@ -258,7 +271,7 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should return production", async () => {
+	it("should return production", async ({ expect }) => {
 		process.env.PAGES_ENVIRONMENT = "production";
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",
@@ -302,7 +315,7 @@ describe("pages build env", () => {
 		);
 	});
 
-	it("should return preview", async () => {
+	it("should return preview", async ({ expect }) => {
 		process.env.PAGES_ENVIRONMENT = "preview";
 		writeWranglerToml({
 			pages_build_output_dir: "./dist",

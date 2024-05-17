@@ -1,14 +1,16 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
+import { describe, it, vi } from "vitest";
 import { unstable_dev } from "../api";
 import { printWranglerBanner } from "../update-check";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { Mock } from "vitest";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 describe("unstable_dev", () => {
-	it("should return Hello World", async () => {
+	it("should return Hello World", async ({ expect }) => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
@@ -27,7 +29,9 @@ describe("unstable_dev", () => {
 		await worker.stop();
 	});
 
-	it("should return the port that the server started on (1)", async () => {
+	it("should return the port that the server started on (1)", async ({
+		expect,
+	}) => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
@@ -42,7 +46,9 @@ describe("unstable_dev", () => {
 		await worker.stop();
 	});
 
-	it("should return the port that the server started on (2)", async () => {
+	it("should return the port that the server started on (2)", async ({
+		expect,
+	}) => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
@@ -58,7 +64,9 @@ describe("unstable_dev", () => {
 	});
 
 	describe("unstable_dev network calls", () => {
-		it("should not make a request to NPM without `updateCheck` being true", async () => {
+		it("should not make a request to NPM without `updateCheck` being true", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev(
 				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 				{
@@ -72,12 +80,14 @@ describe("unstable_dev", () => {
 			const resp = await worker.fetch();
 			expect(resp.status).toBe(200);
 
-			expect((printWranglerBanner as jest.Mock).mock.calls[0][0]).toBe(false);
+			expect((printWranglerBanner as Mock).mock.calls[0][0]).toBe(false);
 
 			await worker.stop();
 		});
 
-		it("should make a request to NPM when `updateCheck` is true", async () => {
+		it("should make a request to NPM when `updateCheck` is true", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev(
 				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 				{
@@ -92,7 +102,7 @@ describe("unstable_dev", () => {
 			const resp = await worker.fetch();
 			expect(resp.status).toBe(200);
 
-			expect((printWranglerBanner as jest.Mock).mock.calls[0][0]).toBe(true);
+			expect((printWranglerBanner as Mock).mock.calls[0][0]).toBe(true);
 
 			await worker.stop();
 		});
@@ -100,7 +110,7 @@ describe("unstable_dev", () => {
 });
 
 describe("unstable dev fetch input protocol", () => {
-	it("should use http localProtocol", async () => {
+	it("should use http localProtocol", async ({ expect }) => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
@@ -120,7 +130,7 @@ describe("unstable dev fetch input protocol", () => {
 		await worker.stop();
 	});
 
-	it("should use undefined localProtocol", async () => {
+	it("should use undefined localProtocol", async ({ expect }) => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
@@ -144,7 +154,7 @@ describe("unstable dev fetch input protocol", () => {
 describe("unstable dev fetch input parsing", () => {
 	runInTempDir();
 
-	it("should pass in a request object unchanged", async () => {
+	it("should pass in a request object unchanged", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -179,7 +189,7 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should strip back to pathname for URL objects", async () => {
+	it("should strip back to pathname for URL objects", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -209,7 +219,9 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow full url passed in string, and stripped back to pathname", async () => {
+	it("should allow full url passed in string, and stripped back to pathname", async ({
+		expect,
+	}) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -238,7 +250,7 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow pathname to be passed in", async () => {
+	it("should allow pathname to be passed in", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {
@@ -267,7 +279,7 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow no input be passed in", async () => {
+	it("should allow no input be passed in", async ({ expect }) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {

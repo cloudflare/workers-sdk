@@ -1,17 +1,18 @@
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { convertTimestampToISO } from "../../d1/timeTravel/utils";
 
 describe("convertTimestampToISO", () => {
 	beforeAll(() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		//lock time to 2023-08-01 UTC
-		jest.setSystemTime(new Date(2023, 7, 1));
+		vi.setSystemTime(new Date(2023, 7, 1));
 	});
 
 	afterAll(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
-	it("should reject invalid date strings", () => {
+	it("should reject invalid date strings", ({ expect }) => {
 		const timestamp = "asdf";
 		let error = "";
 		try {
@@ -28,20 +29,22 @@ describe("convertTimestampToISO", () => {
 	`);
 	});
 
-	it("should convert a JS timestamp to an ISO string", () => {
+	it("should convert a JS timestamp to an ISO string", ({ expect }) => {
 		const now = +new Date();
 		const converted = convertTimestampToISO(String(now));
 		expect(converted).toEqual(new Date(now).toISOString());
 	});
 
-	it("should automagically convert a unix timestamp to an ISO string", () => {
+	it("should automagically convert a unix timestamp to an ISO string", ({
+		expect,
+	}) => {
 		const date = "1689355284"; // 2023-07-14T17:21:24.000Z
 		const convertedDate = new Date(1689355284000);
 		const output = convertTimestampToISO(String(date));
 		expect(output).toEqual(convertedDate.toISOString());
 	});
 
-	it("should reject unix timestamps older than 30 days", () => {
+	it("should reject unix timestamps older than 30 days", ({ expect }) => {
 		const timestamp = "1626168000";
 		expect(() =>
 			convertTimestampToISO(timestamp)
@@ -50,7 +53,7 @@ describe("convertTimestampToISO", () => {
 		);
 	});
 
-	it("should reject JS timestamps from the future", () => {
+	it("should reject JS timestamps from the future", ({ expect }) => {
 		const date = String(+new Date() + 10000);
 
 		let error = "";
@@ -64,14 +67,16 @@ describe("convertTimestampToISO", () => {
 		);
 	});
 
-	it("should return an ISO string when provided an ISO string", () => {
+	it("should return an ISO string when provided an ISO string", ({
+		expect,
+	}) => {
 		const date = "2023-07-15T11:45:11.522Z";
 
 		const iso = convertTimestampToISO(date);
 		expect(iso).toEqual(date);
 	});
 
-	it("should reject ISO strings older than 30 days", () => {
+	it("should reject ISO strings older than 30 days", ({ expect }) => {
 		const date = "1975-07-17T11:45:11.522Z";
 
 		expect(() =>
@@ -81,7 +86,7 @@ describe("convertTimestampToISO", () => {
 		);
 	});
 
-	it("should reject ISO strings from the future", () => {
+	it("should reject ISO strings from the future", ({ expect }) => {
 		// TODO: fix Y3k bug
 		const date = "3000-01-01T00:00:00.001Z";
 

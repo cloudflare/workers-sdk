@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { rest } from "msw";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -51,14 +52,16 @@ describe("wrangler pages secret", () => {
 				rest.patch(
 					`*/accounts/:accountId/pages/projects/:project`,
 					async (req, res, ctx) => {
-						expect(req.params.project).toEqual("some-project-name");
+						assert(req.params.project == "some-project-name");
 						const project = await req.json<PagesProject>();
-						expect(
-							project.deployment_configs[env].env_vars?.[input.name]
-						).toEqual({ type: "secret_text", value: input.text });
-						expect(
-							project.deployment_configs[env].wrangler_config_hash
-						).toEqual(env === "production" ? "wch" : undefined);
+						assert.deepEqual(
+							project.deployment_configs[env].env_vars?.[input.name],
+							{ type: "secret_text", value: input.text }
+						);
+						assert(
+							project.deployment_configs[env].wrangler_config_hash ==
+								(env === "production" ? "wch" : undefined)
+						);
 						return res.once(ctx.json(createFetchResult(project)));
 					}
 				),
@@ -90,7 +93,7 @@ describe("wrangler pages secret", () => {
 				setIsTTY(true);
 			});
 
-			it("should trim stdin secret value", async () => {
+			it("should trim stdin secret value", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -108,7 +111,7 @@ describe("wrangler pages secret", () => {
 		`);
 			});
 
-			it("should create a secret", async () => {
+			it("should create a secret", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -127,7 +130,7 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret: preview", async () => {
+			it("should create a secret: preview", async ({ expect }) => {
 				mockPrompt({
 					text: "Enter a secret value:",
 					options: { isSecret: true },
@@ -146,7 +149,7 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error with invalid env", async () => {
+			it("should error with invalid env", async ({ expect }) => {
 				mockProjectRequests(
 					{ name: "the-key", text: "the-secret" },
 					// @ts-expect-error This is intentionally invalid
@@ -161,7 +164,7 @@ describe("wrangler pages secret", () => {
 				);
 			});
 
-			it("should error without a project name", async () => {
+			it("should error without a project name", async ({ expect }) => {
 				await expect(
 					runWrangler("pages secret put the-key")
 				).rejects.toMatchInlineSnapshot(
@@ -176,7 +179,9 @@ describe("wrangler pages secret", () => {
 			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should trim stdin secret value, from piped input", async () => {
+			it("should trim stdin secret value, from piped input", async ({
+				expect,
+			}) => {
 				mockProjectRequests({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send(
@@ -197,7 +202,7 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should create a secret, from piped input", async () => {
+			it("should create a secret, from piped input", async ({ expect }) => {
 				mockProjectRequests({ name: "the-key", text: "the-secret" });
 				// Pipe the secret in as three chunks to test that we reconstitute it correctly.
 				mockStdIn.send("the", "-", "secret");
@@ -213,7 +218,7 @@ describe("wrangler pages secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error if the piped input fails", async () => {
+			it("should error if the piped input fails", async ({ expect }) => {
 				mockProjectRequests({ name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
@@ -230,7 +235,9 @@ describe("wrangler pages secret", () => {
 			describe("with accountId", () => {
 				mockAccountId({ accountId: null });
 
-				it("should error if request for memberships fails", async () => {
+				it("should error if request for memberships fails", async ({
+					expect,
+				}) => {
 					mockGetMembershipsFail();
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
@@ -239,7 +246,7 @@ describe("wrangler pages secret", () => {
 					);
 				});
 
-				it("should error if a user has no account", async () => {
+				it("should error if a user has no account", async ({ expect }) => {
 					mockGetMemberships([]);
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
@@ -249,7 +256,9 @@ describe("wrangler pages secret", () => {
 			                `);
 				});
 
-				it("should error if a user has multiple accounts, and has not specified an account", async () => {
+				it("should error if a user has multiple accounts, and has not specified an account", async ({
+					expect,
+				}) => {
 					mockGetMemberships([
 						{
 							id: "1",
@@ -292,14 +301,13 @@ describe("wrangler pages secret", () => {
 				rest.patch(
 					`*/accounts/:accountId/pages/projects/:project`,
 					async (req, res, ctx) => {
-						expect(req.params.project).toEqual("some-project-name");
+						assert(req.params.project == "some-project-name");
 						const project = await req.json<PagesProject>();
-						expect(project.deployment_configs[env].env_vars?.[name]).toEqual(
-							null
+						assert(project.deployment_configs[env].env_vars?.[name] == null);
+						assert(
+							project.deployment_configs[env].wrangler_config_hash ==
+								(env === "production" ? "wch" : undefined)
 						);
-						expect(
-							project.deployment_configs[env].wrangler_config_hash
-						).toEqual(env === "production" ? "wch" : undefined);
 
 						return res.once(ctx.json(createFetchResult(project)));
 					}
@@ -327,7 +335,7 @@ describe("wrangler pages secret", () => {
 			);
 		}
 
-		it("should delete a secret", async () => {
+		it("should delete a secret", async ({ expect }) => {
 			mockDeleteRequest("the-key");
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Pages project some-project-name (production)?",
@@ -343,7 +351,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should delete a secret: preview", async () => {
+		it("should delete a secret: preview", async ({ expect }) => {
 			mockDeleteRequest("the-key", "preview");
 			mockConfirm({
 				text: "Are you sure you want to permanently delete the secret the-key on the Pages project some-project-name (preview)?",
@@ -359,7 +367,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail to delete with invalid env", async () => {
+		it("should fail to delete with invalid env", async ({ expect }) => {
 			await expect(
 				runWrangler(
 					"pages secret delete the-key --project some-project-name --env some-env"
@@ -369,7 +377,7 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
-		it("should error without a project name", async () => {
+		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret delete the-key")
 			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
@@ -421,7 +429,7 @@ describe("wrangler pages secret", () => {
 			);
 		}
 
-		it("should list secrets", async () => {
+		it("should list secrets", async ({ expect }) => {
 			mockListRequest();
 			await runWrangler("pages secret list --project some-project-name");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -432,7 +440,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should list secrets: preview", async () => {
+		it("should list secrets: preview", async ({ expect }) => {
 			mockListRequest();
 			await runWrangler(
 				"pages secret list --project some-project-name --env preview"
@@ -444,7 +452,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail with invalid env", async () => {
+		it("should fail with invalid env", async ({ expect }) => {
 			mockListRequest();
 			await expect(
 				runWrangler(
@@ -455,7 +463,7 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
-		it("should error without a project name", async () => {
+		it("should error without a project name", async ({ expect }) => {
 			await expect(
 				runWrangler("pages secret list")
 			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
@@ -471,17 +479,19 @@ describe("wrangler pages secret", () => {
 				rest.patch(
 					`*/accounts/:accountId/pages/projects/:project`,
 					async (req, res, ctx) => {
-						expect(req.params.project).toEqual("some-project-name");
+						assert(req.params.project == "some-project-name");
 						const project = await req.json<PagesProject>();
 						for (const variable of vars) {
-							expect(
-								project.deployment_configs[env].env_vars?.[variable.name]
-							).toEqual({ type: "secret_text", value: variable.text });
+							assert.deepEqual(
+								project.deployment_configs[env].env_vars?.[variable.name],
+								{ type: "secret_text", value: variable.text }
+							);
 						}
 
-						expect(
-							project.deployment_configs[env].wrangler_config_hash
-						).toEqual(env === "production" ? "wch" : undefined);
+						assert(
+							project.deployment_configs[env].wrangler_config_hash ==
+								(env === "production" ? "wch" : undefined)
+						);
 						return res.once(ctx.json(createFetchResult(project)));
 					}
 				),
@@ -507,11 +517,13 @@ describe("wrangler pages secret", () => {
 				)
 			);
 		}
-		it("should fail secret bulk w/ no pipe or JSON input", async () => {
+		it("should fail secret bulk w/ no pipe or JSON input", async ({
+			expect,
+		}) => {
 			mockProjectRequests([]);
-			jest
-				.spyOn(readline, "createInterface")
-				.mockImplementation(() => null as unknown as Interface);
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() => null as unknown as Interface
+			);
 			await expect(
 				runWrangler(`pages secret bulk --project some-project-name`)
 			).rejects.toMatchInlineSnapshot(
@@ -519,8 +531,8 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
-		it("should use secret bulk w/ pipe input", async () => {
-			jest.spyOn(readline, "createInterface").mockImplementation(
+		it("should use secret bulk w/ pipe input", async ({ expect }) => {
+			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
 					JSON.stringify({
@@ -549,7 +561,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secret bulk", async () => {
+		it("should create secret bulk", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -581,7 +593,7 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should create secret bulk: preview", async () => {
+		it("should create secret bulk: preview", async ({ expect }) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -616,7 +628,9 @@ describe("wrangler pages secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should count success and network failure on secret bulk", async () => {
+		it("should count success and network failure on secret bulk", async ({
+			expect,
+		}) => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({

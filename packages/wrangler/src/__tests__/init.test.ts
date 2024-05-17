@@ -5,6 +5,7 @@ import { execa, execaSync } from "execa";
 import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
 import { File, FormData, Response } from "undici";
+import { afterEach, assert, beforeEach, describe, it, test, vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
@@ -18,15 +19,18 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
 import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { ExpectStatic, Mock } from "vitest";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
  */
-const MINIMAL_WRANGLER_TOML = {
-	compatibility_date: expect.any(String),
-	name: expect.stringContaining("wrangler-tests"),
-	main: "src/index.ts",
-};
+function createMinimalWranglerToml(expect: ExpectStatic) {
+	return {
+		compatibility_date: expect.any(String),
+		name: expect.stringContaining("wrangler-tests"),
+		main: "src/index.ts",
+	};
+}
 
 describe("init", () => {
 	let mockPackageManager: PackageManager;
@@ -40,10 +44,10 @@ describe("init", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	afterEach(() => {
@@ -53,7 +57,9 @@ describe("init", () => {
 	const std = mockConsoleMethods();
 
 	describe("`wrangler init` is now a deprecated command", () => {
-		test("shows deprecation message and delegates to C3", async () => {
+		test("shows deprecation message and delegates to C3", async ({
+			expect,
+		}) => {
 			await runWrangler("init");
 
 			checkFiles({
@@ -89,7 +95,9 @@ describe("init", () => {
 			);
 		});
 
-		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async ({
+			expect,
+		}) => {
 			await runWrangler("init -y");
 
 			expect(execa).toHaveBeenCalledWith(
@@ -113,7 +121,9 @@ describe("init", () => {
 				process.env = ORIGINAL_ENV;
 			});
 
-			test("shows deprecation message and delegates to C3", async () => {
+			test("shows deprecation message and delegates to C3", async ({
+				expect,
+			}) => {
 				await runWrangler("init");
 
 				checkFiles({
@@ -149,7 +159,9 @@ describe("init", () => {
 				);
 			});
 
-			it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+			it("if `-y` is used, delegate to c3 with --wrangler-defaults", async ({
+				expect,
+			}) => {
 				await runWrangler("init -y");
 
 				expect(execa).toHaveBeenCalledWith(
@@ -163,7 +175,9 @@ describe("init", () => {
 
 	describe("deprecated behavior is retained with --no-delegate-c3", () => {
 		describe("options", () => {
-			it("should initialize with no interactive prompts if `--yes` is used", async () => {
+			it("should initialize with no interactive prompts if `--yes` is used", async ({
+				expect,
+			}) => {
 				await runWrangler("init --yes --no-delegate-c3");
 
 				checkFiles({
@@ -199,7 +213,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
+			it("should initialize with no interactive prompts if `--yes` is used (named worker)", async ({
+				expect,
+			}) => {
 				await runWrangler("init my-worker --yes --no-delegate-c3");
 
 				checkFiles({
@@ -209,7 +225,7 @@ describe("init", () => {
 						"./my-worker/tsconfig.json": true,
 						"./my-worker/package.json": true,
 						"./my-worker/wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: "my-worker",
 						}),
 					},
@@ -238,7 +254,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should initialize with no interactive prompts if `-y` is used", async () => {
+			it("should initialize with no interactive prompts if `-y` is used", async ({
+				expect,
+			}) => {
 				await runWrangler("init -y --no-delegate-c3");
 
 				checkFiles({
@@ -276,7 +294,7 @@ describe("init", () => {
 		`);
 			});
 
-			it("should error if `--type javascript` is used", async () => {
+			it("should error if `--type javascript` is used", async ({ expect }) => {
 				await expect(
 					runWrangler("init --type javascript")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -284,7 +302,7 @@ describe("init", () => {
 				);
 			});
 
-			it("should error if `--type rust` is used", async () => {
+			it("should error if `--type rust` is used", async ({ expect }) => {
 				await expect(
 					runWrangler("init --type rust")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -292,7 +310,7 @@ describe("init", () => {
 				);
 			});
 
-			it("should error if `--type webpack` is used", async () => {
+			it("should error if `--type webpack` is used", async ({ expect }) => {
 				await expect(runWrangler("init --type webpack")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
               "The --type option is no longer supported.
@@ -300,7 +318,7 @@ describe("init", () => {
             `);
 			});
 
-			it("should error if `--site` is used", async () => {
+			it("should error if `--site` is used", async ({ expect }) => {
 				await expect(runWrangler("init --site")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
               "The --site option is no longer supported.
@@ -318,7 +336,7 @@ describe("init", () => {
 		});
 
 		describe("wrangler.toml", () => {
-			it("should create a wrangler.toml", async () => {
+			it("should create a wrangler.toml", async ({ expect }) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -356,7 +374,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should create a wrangler.toml and a directory for a named Worker ", async () => {
+			it("should create a wrangler.toml and a directory for a named Worker ", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -395,7 +415,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
+			it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async ({
+				expect,
+			}) => {
 				writeFiles({
 					items: {
 						"wrangler.toml": wranglerToml({
@@ -436,7 +458,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async () => {
+			it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async ({
+				expect,
+			}) => {
 				writeFiles({
 					items: {
 						"path/to/worker/wrangler.toml": wranglerToml({
@@ -524,7 +548,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
+			it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async ({
+				expect,
+			}) => {
 				writeFiles({
 					items: {
 						"wrangler.toml": wranglerToml({
@@ -620,7 +646,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should add a Cron Trigger to wrangler.toml when creating a Scheduled Worker, but only if wrangler.toml is being created during init", async () => {
+			it("should add a Cron Trigger to wrangler.toml when creating a Scheduled Worker, but only if wrangler.toml is being created during init", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -651,7 +679,7 @@ describe("init", () => {
 				checkFiles({
 					items: {
 						"wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							triggers: { crons: ["1 * * * *"] },
 						}),
 					},
@@ -660,7 +688,7 @@ describe("init", () => {
 		});
 
 		describe("git init", () => {
-			it("should offer to initialize a git repository", async () => {
+			it("should offer to initialize a git repository", async ({ expect }) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -703,7 +731,9 @@ describe("init", () => {
 				).toEqual(getDefaultBranchName());
 			});
 
-			it("should not offer to initialize a git repo if it's already inside one", async () => {
+			it("should not offer to initialize a git repo if it's already inside one", async ({
+				expect,
+			}) => {
 				await execa("git", ["init"]);
 				setWorkingDirectory("some-folder");
 
@@ -712,7 +742,7 @@ describe("init", () => {
 				checkFiles({
 					items: {
 						"wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: "some-folder",
 						}),
 						".git": { items: {} },
@@ -745,7 +775,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
+			it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("path/to/worker", { recursive: true });
 				await execa("git", ["init"], { cwd: "path/to/worker" });
 				expect(fs.lstatSync("path/to/worker/.git").isDirectory()).toBe(true);
@@ -782,7 +814,9 @@ describe("init", () => {
 				"should not offer to initialize a git repo if git is not installed"
 			);
 
-			it("should initialize git repo with the user's default branch", async () => {
+			it("should initialize git repo with the user's default branch", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -816,7 +850,9 @@ describe("init", () => {
 		});
 
 		describe("package.json", () => {
-			it("should create a package.json if none is found and user confirms", async () => {
+			it("should create a package.json if none is found and user confirms", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -872,7 +908,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should create a package.json, with the specified name, if none is found and user confirms", async () => {
+			it("should create a package.json, with the specified name, if none is found and user confirms", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -928,7 +966,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not touch an existing package.json in the same directory", async () => {
+			it("should not touch an existing package.json in the same directory", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -978,7 +1018,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
+			it("should not touch an existing package.json in an ancestor directory, when a name is passed", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1037,7 +1079,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should offer to install wrangler into an existing package.json", async () => {
+			it("should offer to install wrangler into an existing package.json", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1095,7 +1139,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
+			it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1160,7 +1206,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not touch an existing package.json in an ancestor directory", async () => {
+			it("should not touch an existing package.json in an ancestor directory", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1222,7 +1270,9 @@ describe("init", () => {
 		});
 
 		describe("typescript", () => {
-			it("should offer to create a worker in a non-typescript project", async () => {
+			it("should offer to create a worker in a non-typescript project", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1261,7 +1311,7 @@ describe("init", () => {
 				checkFiles({
 					items: {
 						"wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							main: "src/index.js",
 						}),
 						"src/index.js": true,
@@ -1287,7 +1337,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should offer to create a worker in a typescript project", async () => {
+			it("should offer to create a worker in a typescript project", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1351,7 +1403,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should add scripts for a typescript project with .ts extension", async () => {
+			it("should add scripts for a typescript project with .ts extension", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1415,7 +1469,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not overwrite package.json scripts for a typescript project", async () => {
+			it("should not overwrite package.json scripts for a typescript project", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1482,7 +1538,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
+			it("should not offer to create a worker in a ts project if a file already exists at the location", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1530,7 +1588,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
+			it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1580,7 +1640,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
+			it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1641,7 +1703,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not touch an existing tsconfig.json in the same directory", async () => {
+			it("should not touch an existing tsconfig.json in the same directory", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Would you like to use git to manage this Worker?",
 					result: false,
@@ -1703,7 +1767,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
+			it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1784,7 +1850,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should offer to install type definitions in an existing typescript project", async () => {
+			it("should offer to install type definitions in an existing typescript project", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1846,7 +1914,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
+			it("should not touch an existing tsconfig.json in an ancestor directory", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "Would you like to use git to manage this Worker?",
 					result: false,
@@ -1912,7 +1982,9 @@ describe("init", () => {
 		});
 
 		describe("javascript", () => {
-			it("should add missing scripts for a non-ts project with .js extension", async () => {
+			it("should add missing scripts for a non-ts project with .js extension", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -1966,7 +2038,9 @@ describe("init", () => {
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 			});
-			it("should add a jest test for a non-ts project with .js extension", async () => {
+			it("should add a jest test for a non-ts project with .js extension", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2029,7 +2103,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should add a vitest test for a non-ts project with .js extension", async () => {
+			it("should add a vitest test for a non-ts project with .js extension", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2092,7 +2168,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
+			it("should not overwrite package.json scripts for a non-ts project with .js extension", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2156,7 +2234,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
+			it("should not offer to create a worker in a non-ts project if a file already exists at the location", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2202,7 +2282,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should not offer to create a worker in a non-ts named worker project if a file already exists at the location", async () => {
+			it("should not offer to create a worker in a non-ts named worker project if a file already exists at the location", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2255,27 +2337,29 @@ describe("init", () => {
 		});
 
 		describe("worker names", () => {
-			it("should create a worker with a given name", async () => {
+			it("should create a worker with a given name", async ({ expect }) => {
 				await runWrangler("init my-worker -y --no-delegate-c3");
 
 				checkFiles({
 					items: {
 						"my-worker/wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: "my-worker",
 						}),
 					},
 				});
 			});
 
-			it('should create a worker with the name of the current directory if "name" is .', async () => {
+			it('should create a worker with the name of the current directory if "name" is .', async ({
+				expect,
+			}) => {
 				await runWrangler("init . -y --no-delegate-c3");
 
 				const workerName = path.basename(process.cwd()).toLowerCase();
 				checkFiles({
 					items: {
 						"wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: workerName,
 						}),
 						"package.json": {
@@ -2319,13 +2403,15 @@ describe("init", () => {
 		`);
 			});
 
-			it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
+			it('should create a worker in a nested directory if "name" is path/to/worker', async ({
+				expect,
+			}) => {
 				await runWrangler("init path/to/worker -y --no-delegate-c3");
 
 				checkFiles({
 					items: {
 						"path/to/worker/wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: "worker",
 						}),
 					},
@@ -2355,7 +2441,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
+			it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async ({
+				expect,
+			}) => {
 				await runWrangler(
 					"init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y --no-delegate-c3"
 				);
@@ -2363,7 +2451,7 @@ describe("init", () => {
 				checkFiles({
 					items: {
 						"WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: "weird_w0rkr_n4m3-js-tsx-tar-gz",
 						}),
 					},
@@ -2393,7 +2481,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
+			it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -2458,7 +2548,7 @@ describe("init", () => {
 						},
 						"sub/folder/worker/tsconfig.json": true,
 						"sub/folder/worker/wrangler.toml": wranglerToml({
-							...MINIMAL_WRANGLER_TOML,
+							...createMinimalWranglerToml(expect),
 							name: "worker",
 						}),
 					},
@@ -2746,8 +2836,8 @@ describe("init", () => {
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
 
 							return res.once(
 								ctx.status(200),
@@ -2763,8 +2853,8 @@ describe("init", () => {
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
 
 							return res.once(
 								ctx.status(200),
@@ -2780,10 +2870,11 @@ describe("init", () => {
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
-								worker.service.default_environment.environment
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
+							assert(
+								req.params.environment ==
+									worker.service.default_environment.environment
 							);
 
 							return res(
@@ -2800,10 +2891,11 @@ describe("init", () => {
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
-								worker.service.default_environment.environment
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
+							assert(
+								req.params.environment ==
+									worker.service.default_environment.environment
 							);
 
 							return res.once(
@@ -2834,10 +2926,11 @@ describe("init", () => {
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
-								worker.service.default_environment.environment
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
+							assert(
+								req.params.environment ==
+									worker.service.default_environment.environment
 							);
 
 							return res.once(
@@ -2855,10 +2948,11 @@ describe("init", () => {
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
-								worker.service.default_environment.environment
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
+							assert(
+								req.params.environment ==
+									worker.service.default_environment.environment
 							);
 
 							return res.once(
@@ -2875,8 +2969,8 @@ describe("init", () => {
 					rest.get(
 						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
 						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+							assert(req.params.accountId == expectedAccountId);
+							assert(req.params.scriptName == worker.service.id);
 
 							return res.once(
 								ctx.status(200),
@@ -2931,7 +3025,9 @@ describe("init", () => {
 				);
 			}
 
-			test("shows deprecation warning and delegates to C3 --type pre-existing", async () => {
+			test("shows deprecation warning and delegates to C3 --type pre-existing", async ({
+				expect,
+			}) => {
 				await runWrangler("init --from-dash existing-memory-crystal");
 
 				checkFiles({
@@ -2971,7 +3067,9 @@ describe("init", () => {
 					{ stdio: "inherit" }
 				);
 			});
-			it("should download routes + custom domains + workers dev", async () => {
+			it("should download routes + custom domains + workers dev", async ({
+				expect,
+			}) => {
 				worker = makeWorker({
 					customDomains: [
 						{
@@ -3026,7 +3124,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
+			it("should download source script from dashboard w/ positional <name> in TypeScript project", async ({
+				expect,
+			}) => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -3061,7 +3161,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should fail on init --from-dash on non-existent worker name", async () => {
+			it("should fail on init --from-dash on non-existent worker name", async ({
+				expect,
+			}) => {
 				msw.use(
 					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
@@ -3098,7 +3200,9 @@ describe("init", () => {
 		`);
 			});
 
-			it("should download source script from dashboard w/ out positional <name>", async () => {
+			it("should download source script from dashboard w/ out positional <name>", async ({
+				expect,
+			}) => {
 				worker = makeWorker({
 					id: "isolinear-optical-chip",
 				});
@@ -3221,7 +3325,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should download source script from dashboard as plain JavaScript", async () => {
+			it("should download source script from dashboard as plain JavaScript", async ({
+				expect,
+			}) => {
 				worker = makeWorker({ id: "isolinear-optical-chip" });
 				mockConfirm(
 					{
@@ -3259,7 +3365,7 @@ describe("init", () => {
 				});
 			});
 
-			it("should include user limits", async () => {
+			it("should include user limits", async ({ expect }) => {
 				worker = makeWorker({
 					id: "isolinear-optical-chip",
 					limits: {
@@ -3280,9 +3386,14 @@ describe("init", () => {
 				});
 			});
 
-			it.each(["bundled", "unbound", "standard"])(
-				"should ignore usage_model = %s",
-				async (usage_model) => {
+			test.each`
+				usage_model
+				${"bundled"}
+				${"unbound"}
+				${"standard"}
+			`(
+				"should ignore usage_model = $usage_mdel",
+				async ({ usage_model, expect }) => {
 					worker = makeWorker({
 						id: "isolinear-optical-chip",
 						usage_model,
@@ -3300,16 +3411,18 @@ describe("init", () => {
 				}
 			);
 
-			it("should use fallback compatibility date if none is upstream", async () => {
+			it("should use fallback compatibility date if none is upstream", async ({
+				expect,
+			}) => {
 				worker = makeWorker({
 					id: "isolinear-optical-chip",
 					compatibility_date: null,
 				});
 
 				const mockDate = "2000-01-01";
-				jest
-					.spyOn(Date.prototype, "toISOString")
-					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+				vi.spyOn(Date.prototype, "toISOString").mockImplementation(
+					() => `${mockDate}T00:00:00.000Z`
+				);
 
 				mockConfirm(
 					{
@@ -3345,7 +3458,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should throw an error to retry if a request fails", async () => {
+			it("should throw an error to retry if a request fails", async ({
+				expect,
+			}) => {
 				worker = makeWorker({
 					id: "isolinear-optical-chip",
 				});
@@ -3420,7 +3535,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should not continue if no worker name is provided", async () => {
+			it("should not continue if no worker name is provided", async ({
+				expect,
+			}) => {
 				await expect(
 					runWrangler("init --from-dash")
 				).rejects.toMatchInlineSnapshot(
@@ -3437,7 +3554,9 @@ describe("init", () => {
 				});
 			});
 
-			it("should download multi-module source scripts from dashboard", async () => {
+			it("should download multi-module source scripts from dashboard", async ({
+				expect,
+			}) => {
 				const fd = new FormData();
 				fd.set(
 					"index.js",
@@ -3575,7 +3694,7 @@ function checkFiles(folder: TestFolder, cwd = process.cwd()) {
 			}
 		} else if ("contents" in item) {
 			const actualContents = parse(name, fs.readFileSync(itemPath, "utf-8"));
-			expect(actualContents).toEqual(item.contents);
+			assert(actualContents == item.contents);
 		} else if ("items" in item) {
 			checkFiles(item, itemPath);
 		} else {

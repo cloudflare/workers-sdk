@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -13,7 +14,9 @@ describe("hyperdrive help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help text when no arguments are passed", async () => {
+	it("should show help text when no arguments are passed", async ({
+		expect,
+	}) => {
 		await runWrangler("hyperdrive");
 		await endEventLoop();
 
@@ -39,7 +42,9 @@ describe("hyperdrive help", () => {
 	`);
 	});
 
-	it("should show help when an invalid argument is pased", async () => {
+	it("should show help when an invalid argument is pased", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("hyperdrive qwer")).rejects.toThrow(
 			"Unknown argument: qwer"
 		);
@@ -82,7 +87,7 @@ describe("hyperdrive commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -92,7 +97,7 @@ describe("hyperdrive commands", () => {
 		clearDialogs();
 	});
 
-	it("should handle creating a hyperdrive config", async () => {
+	it("should handle creating a hyperdrive config", async ({ expect }) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
@@ -116,7 +121,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+	it("should handle creating a hyperdrive config for postgres without a port specified", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb'"
@@ -140,7 +147,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle creating a hyperdrive config with caching options", async () => {
+	it("should handle creating a hyperdrive config with caching options", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --max-age=30 --swr=15"
@@ -166,7 +175,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle creating a hyperdrive config if the user is URL encoded", async () => {
+	it("should handle creating a hyperdrive config if the user is URL encoded", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://user%3Aname:password@example.com/neondb'"
@@ -190,7 +201,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle creating a hyperdrive config if the password is URL encoded", async () => {
+	it("should handle creating a hyperdrive config if the password is URL encoded", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:a%23%3F81n%287@example.com/neondb'"
@@ -214,7 +227,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle creating a hyperdrive config if the database name is URL encoded", async () => {
+	it("should handle creating a hyperdrive config if the database name is URL encoded", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/%22weird%22%20dbname'"
@@ -238,7 +253,7 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle listing configs", async () => {
+	it("should handle listing configs", async ({ expect }) => {
 		mockHyperdriveRequest();
 		await runWrangler("hyperdrive list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -253,7 +268,7 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle displaying a config", async () => {
+	it("should handle displaying a config", async ({ expect }) => {
 		mockHyperdriveRequest();
 		await runWrangler("hyperdrive get xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -273,7 +288,7 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle deleting a config", async () => {
+	it("should handle deleting a config", async ({ expect }) => {
 		mockHyperdriveRequest();
 		await runWrangler("hyperdrive delete xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -282,7 +297,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle updating a hyperdrive config's origin", async () => {
+	it("should handle updating a hyperdrive config's origin", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --origin-port=1234 --database=mydb --origin-user=newuser --origin-password='passw0rd!'"
@@ -306,7 +323,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should throw an exception when updating a hyperdrive config's origin but not all fields are set", async () => {
+	it("should throw an exception when updating a hyperdrive config's origin but not all fields are set", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await expect(() =>
 			runWrangler(
@@ -321,7 +340,9 @@ describe("hyperdrive commands", () => {
 		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should handle updating a hyperdrive config's caching settings", async () => {
+	it("should handle updating a hyperdrive config's caching settings", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --max-age=30 --swr=15"
@@ -347,7 +368,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle disabling caching for a hyperdrive config", async () => {
+	it("should handle disabling caching for a hyperdrive config", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --caching-disabled=true"
@@ -371,7 +394,9 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
-	it("should handle updating a hyperdrive config's name", async () => {
+	it("should handle updating a hyperdrive config's name", async ({
+		expect,
+	}) => {
 		mockHyperdriveRequest();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --name='new-name'"

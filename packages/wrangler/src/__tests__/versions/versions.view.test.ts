@@ -1,3 +1,4 @@
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -19,7 +20,7 @@ describe("versions view", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view  --experimental-gradual-rollouts"
 			);
@@ -33,7 +34,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails with --name arg only", async () => {
+		test("fails with --name arg only", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view --name test-name  --experimental-gradual-rollouts"
 			);
@@ -47,7 +48,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails with positional version-id arg only", async () => {
+		test("fails with positional version-id arg only", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000  --experimental-gradual-rollouts"
 			);
@@ -61,7 +62,9 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("succeeds with positional version-id arg and --name arg", async () => {
+		test("succeeds with positional version-id arg and --name arg", async ({
+			expect,
+		}) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --name test-name  --experimental-gradual-rollouts"
 			);
@@ -81,7 +84,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints version to stdout as --json", async () => {
+		test("prints version to stdout as --json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --name test-name --json  --experimental-versions"
 			);
@@ -109,9 +112,9 @@ describe("versions view", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view  --experimental-gradual-rollouts"
 			);
@@ -125,7 +128,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("succeeds with positional version-id arg only", async () => {
+		test("succeeds with positional version-id arg only", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000  --experimental-gradual-rollouts"
 			);
@@ -145,7 +148,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("fails with non-existent version-id", async () => {
+		test("fails with non-existent version-id", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view ffffffff-ffff-ffff-ffff-ffffffffffff  --experimental-gradual-rollouts"
 			);
@@ -159,7 +162,7 @@ describe("versions view", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints version to stdout as --json", async () => {
+		test("prints version to stdout as --json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions view 10000000-0000-0000-0000-000000000000 --json  --experimental-versions"
 			);

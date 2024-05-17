@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert } from "vitest";
 import { createFetchResult, msw } from "./msw";
 import type { NamespaceKeyInfo } from "../../kv/helpers";
 
@@ -15,8 +16,8 @@ export function mockKeyListRequest(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
 			(req, res, ctx) => {
 				requests.count++;
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.namespaceId == expectedNamespaceId);
 				let response: undefined | NamespaceKeyInfo[];
 				if (expectedKeys.length <= keysPerRequest) {
 					response = expectedKeys;

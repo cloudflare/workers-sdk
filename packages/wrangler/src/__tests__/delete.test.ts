@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -20,7 +21,7 @@ describe("delete", () => {
 	});
 	const std = mockConsoleMethods();
 
-	it("should delete an entire service by name", async () => {
+	it("should delete an entire service by name", async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
 			result: true,
@@ -42,7 +43,7 @@ describe("delete", () => {
 	`);
 	});
 
-	it("should delete a script by configuration", async () => {
+	it("should delete a script by configuration", async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 			result: true,
@@ -65,7 +66,9 @@ describe("delete", () => {
 	`);
 	});
 
-	it("shouldn't delete a service when doing a --dry-run", async () => {
+	it("shouldn't delete a service when doing a --dry-run", async ({
+		expect,
+	}) => {
 		await runWrangler("delete --name xyz --dry-run");
 
 		expect(std).toMatchInlineSnapshot(`
@@ -79,7 +82,7 @@ describe("delete", () => {
 	`);
 	});
 
-	it('shouldn\'t delete when the user says "no"', async () => {
+	it('shouldn\'t delete when the user says "no"', async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete xyz? This action cannot be undone.`,
 			result: false,
@@ -98,7 +101,9 @@ describe("delete", () => {
 	`);
 	});
 
-	it("should delete a site namespace associated with a worker", async () => {
+	it("should delete a site namespace associated with a worker", async ({
+		expect,
+	}) => {
 		const kvNamespaces = [
 			{
 				title: "__my-script-workers_sites_assets",
@@ -146,7 +151,9 @@ describe("delete", () => {
 	`);
 	});
 
-	it("should delete a site namespace associated with a worker, including it's preview namespace", async () => {
+	it("should delete a site namespace associated with a worker, including it's preview namespace", async ({
+		expect,
+	}) => {
 		// This is the same test as the previous one, but it includes a preview namespace
 		const kvNamespaces = [
 			{
@@ -227,7 +234,9 @@ describe("delete", () => {
 	});
 
 	describe("force deletes", () => {
-		it("should prompt for extra confirmation when service is depended on and use force", async () => {
+		it("should prompt for extra confirmation when service is depended on and use force", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 				result: true,
@@ -312,7 +321,9 @@ Are you sure you want to continue?`,
 		    `);
 		});
 
-		it("should not delete when extra confirmation to use force is denied", async () => {
+		it("should not delete when extra confirmation to use force is denied", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: `Are you sure you want to delete test-name? This action cannot be undone.`,
 				result: true,
@@ -354,7 +365,9 @@ Are you sure you want to continue?`,
 		    `);
 		});
 
-		it("should not require confirmation when --force is used", async () => {
+		it("should not require confirmation when --force is used", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			mockListKVNamespacesRequest();
 			mockDeleteWorkerRequest({ force: true });
@@ -387,15 +400,17 @@ function mockDeleteWorkerRequest(
 		rest.delete(
 			"*/accounts/:accountId/workers/services/:scriptName",
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
-					legacyEnv && env
-						? `${name ?? "test-name"}-${env}`
-						: `${name ?? "test-name"}`
+				assert(req.params.accountId == "some-account-id");
+				assert(
+					req.params.scriptName ==
+						(legacyEnv && env
+							? `${name ?? "test-name"}-${env}`
+							: `${name ?? "test-name"}`)
 				);
 
-				expect(req.url.searchParams.get("force")).toEqual(
-					options.force ? "true" : "false"
+				assert(
+					req.url.searchParams.get("force") ==
+						(options.force ? "true" : "false")
 				);
 
 				return res.once(
@@ -416,7 +431,7 @@ function mockDeleteWorkerRequest(
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 	msw.use(
 		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
+			assert(req.params.accountId == "some-account-id");
 			return res.once(
 				ctx.status(200),
 				ctx.json({
@@ -438,8 +453,8 @@ function mockListReferencesRequest(
 		rest.get(
 			"*/accounts/:accountId/workers/scripts/:scriptName/references",
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(forScript);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.scriptName == forScript);
 				return res.once(
 					ctx.status(200),
 					ctx.json({
@@ -459,8 +474,8 @@ function mockListTailsByConsumerRequest(forScript: string, tails: Tail[] = []) {
 		rest.get(
 			"*/accounts/:accountId/workers/tails/by-consumer/:scriptName",
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(forScript);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.scriptName == forScript);
 				return res.once(
 					ctx.status(200),
 					ctx.json({

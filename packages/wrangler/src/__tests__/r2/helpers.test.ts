@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { describe, test, vi } from "vitest";
 import { logger } from "../../logger";
 import {
 	eventNotificationHeaders,
@@ -12,7 +13,7 @@ import type { ApiCredentials } from "../../user";
 describe("event notifications", () => {
 	const std = mockConsoleMethods();
 
-	test("tableFromNotificationsGetResponse", async () => {
+	test("tableFromNotificationsGetResponse", async ({ expect }) => {
 		const bucketName = "my-bucket";
 		const config = { account_id: "my-account" };
 		const queueMap: Record<string, string> = {
@@ -54,7 +55,7 @@ describe("event notifications", () => {
 		const tableOutput = await tableFromNotificationGetResponse(
 			config,
 			response[bucketName],
-			jest
+			vi
 				.fn()
 				.mockImplementation((_: Pick<Config, "account_id">, queue: string) => ({
 					queue_name: queueMap[queue],
@@ -74,7 +75,7 @@ describe("event notifications", () => {
 		└────────────┴────────┴────────┴─────────────────────────────┘"
 	`);
 	});
-	test("auth email eventNotificationHeaders", () => {
+	test("auth email eventNotificationHeaders", ({ expect }) => {
 		const creds: ApiCredentials = {
 			authEmail: "test@example.com",
 			authKey: "some-big-secret",
@@ -86,7 +87,7 @@ describe("event notifications", () => {
 		});
 	});
 
-	test("API token eventNotificationHeaders", () => {
+	test("API token eventNotificationHeaders", ({ expect }) => {
 		const creds: ApiCredentials = { apiToken: "some-api-token" };
 		const result = eventNotificationHeaders(creds);
 		expect(result).toMatchObject({

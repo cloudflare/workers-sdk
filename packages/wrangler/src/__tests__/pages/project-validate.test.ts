@@ -1,12 +1,14 @@
 // /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
+import { afterEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
-jest.mock("../../pages/constants", () => ({
-	...jest.requireActual("../../pages/constants"),
+vi.mock("../../pages/constants", async (importOriginal) => ({
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	...(await importOriginal<typeof import("../../pages/constants")>()),
 	MAX_ASSET_SIZE: 1 * 1024 * 1024,
 	MAX_ASSET_COUNT: 10,
 }));
@@ -21,7 +23,7 @@ describe("pages project validate", () => {
 		await endEventLoop();
 	});
 
-	it("should exit cleanly for a good directory", async () => {
+	it("should exit cleanly for a good directory", async ({ expect }) => {
 		writeFileSync("logo.png", "foobar");
 
 		await runWrangler("pages project validate .");
@@ -30,7 +32,7 @@ describe("pages project validate", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should error for a large file", async () => {
+	it("should error for a large file", async ({ expect }) => {
 		writeFileSync("logo.png", Buffer.alloc(1 * 1024 * 1024 + 1));
 
 		await expect(() => runWrangler("pages project validate .")).rejects
@@ -40,7 +42,7 @@ describe("pages project validate", () => {
 	`);
 	});
 
-	it("should error for a large directory", async () => {
+	it("should error for a large directory", async ({ expect }) => {
 		for (let i = 0; i < 10 + 1; i++) {
 			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
 		}

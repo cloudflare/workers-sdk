@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { fetchGraphqlResult } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
@@ -9,7 +10,9 @@ describe("fetchGraphqlResult", () => {
 	mockApiToken();
 	const { mockOAuthServerCallback } = mockOAuthFlow();
 
-	it("should make a request against the graphql endpoint by default", async () => {
+	it("should make a request against the graphql endpoint by default", async ({
+		expect,
+	}) => {
 		mockOAuthServerCallback();
 		msw.use(
 			rest.post("*/graphql", async (req, res, ctx) => {
@@ -39,7 +42,9 @@ describe("fetchGraphqlResult", () => {
 		).toEqual({ data: { viewer: { __typename: "viewer" } }, errors: null });
 	});
 
-	it("should accept a request with no init, but return no data", async () => {
+	it("should accept a request with no init, but return no data", async ({
+		expect,
+	}) => {
 		mockOAuthServerCallback();
 		const now = new Date().toISOString();
 		msw.use(

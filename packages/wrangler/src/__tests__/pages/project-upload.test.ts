@@ -1,6 +1,7 @@
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { rest } from "msw";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -36,7 +37,9 @@ describe("pages project upload", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should upload a directory of files with a provided JWT", async () => {
+	it("should upload a directory of files with a provided JWT", async ({
+		expect,
+	}) => {
 		writeFileSync("logo.png", "foobar");
 
 		msw.use(
@@ -99,7 +102,7 @@ describe("pages project upload", () => {
 	`);
 	});
 
-	it("should avoid uploading some files", async () => {
+	it("should avoid uploading some files", async ({ expect }) => {
 		mkdirSync("some_dir/node_modules", { recursive: true });
 		mkdirSync("some_dir/functions", { recursive: true });
 
@@ -216,7 +219,7 @@ describe("pages project upload", () => {
 	`);
 	});
 
-	it("should retry uploads", async () => {
+	it("should retry uploads", async ({ expect }) => {
 		writeFileSync("logo.txt", "foobar");
 
 		// Accumulate multiple requests then assert afterwards
@@ -303,7 +306,7 @@ describe("pages project upload", () => {
 	`);
 	});
 
-	it("should retry uploads after gateway failures", async () => {
+	it("should retry uploads after gateway failures", async ({ expect }) => {
 		writeFileSync("logo.txt", "foobar");
 
 		// Accumulate multiple requests then assert afterwards
@@ -377,7 +380,9 @@ describe("pages project upload", () => {
 	`);
 	});
 
-	it("should try to use multiple buckets (up to the max concurrency)", async () => {
+	it("should try to use multiple buckets (up to the max concurrency)", async ({
+		expect,
+	}) => {
 		writeFileSync("logo.txt", "foobar");
 		writeFileSync("logo.png", "foobar");
 		writeFileSync("logo.html", "foobar");
@@ -483,7 +488,9 @@ describe("pages project upload", () => {
 	`);
 	});
 
-	it("should not error when directory names contain periods and houses a extensionless file", async () => {
+	it("should not error when directory names contain periods and houses a extensionless file", async ({
+		expect,
+	}) => {
 		mkdirSync(".well-known");
 		// Note: same content as previous test, but since it's a different extension,
 		// it hashes to a different value

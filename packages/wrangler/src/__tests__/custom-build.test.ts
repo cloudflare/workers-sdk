@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { describe, it } from "vitest";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import { UserError } from "../errors";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -8,7 +9,9 @@ describe("Custom Builds", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("runCustomBuild throws UserError when a command fails", async () => {
+	it("runCustomBuild throws UserError when a command fails", async ({
+		expect,
+	}) => {
 		try {
 			await runCustomBuild("/", "/", { command: `node -e "process.exit(1)"` });
 			assert(false, "Unreachable");

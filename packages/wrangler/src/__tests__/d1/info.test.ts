@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -17,7 +18,7 @@ describe("info", () => {
 	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should display version when alpha", async () => {
+	it("should display version when alpha", async ({ expect }) => {
 		setIsTTY(false);
 		mockOAuthServerCallback();
 		mockGetMemberships([
@@ -70,7 +71,7 @@ describe("info", () => {
 	`);
 	});
 
-	it("should not display version when not alpha", async () => {
+	it("should not display version when not alpha", async ({ expect }) => {
 		setIsTTY(false);
 		mockOAuthServerCallback();
 		mockGetMemberships([

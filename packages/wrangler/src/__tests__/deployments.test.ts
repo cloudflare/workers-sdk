@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { rest } from "msw";
+import { afterAll, afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -52,7 +53,9 @@ describe("deployments", () => {
 		}
 	});
 
-	it("should log a help message for deployments command", async () => {
+	it("should log a help message for deployments command", async ({
+		expect,
+	}) => {
 		await runWrangler("deployments --help");
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler deployments
@@ -79,7 +82,7 @@ describe("deployments", () => {
 
 	describe("deployments subcommands", () => {
 		describe("deployments list", () => {
-			it("should log deployments", async () => {
+			it("should log deployments", async ({ expect }) => {
 				writeWranglerToml();
 
 				await runWrangler("deployments list");
@@ -120,7 +123,9 @@ describe("deployments", () => {
 		`);
 			});
 
-			it("should log deployments for script with passed in name option", async () => {
+			it("should log deployments for script with passed in name option", async ({
+				expect,
+			}) => {
 				await runWrangler("deployments list --name something-else");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
@@ -159,7 +164,7 @@ describe("deployments", () => {
 		`);
 			});
 
-			it("should error on missing script name", async () => {
+			it("should error on missing script name", async ({ expect }) => {
 				await expect(
 					runWrangler("deployments list")
 				).rejects.toMatchInlineSnapshot(
@@ -168,7 +173,7 @@ describe("deployments", () => {
 			});
 		});
 		describe("deployment view", () => {
-			it("should log deployment details", async () => {
+			it("should log deployment details", async ({ expect }) => {
 				writeWranglerToml();
 
 				await runWrangler("deployments view 1701-E");
@@ -195,7 +200,7 @@ describe("deployments", () => {
 		`);
 			});
 
-			it("should log deployment details with bindings", async () => {
+			it("should log deployment details with bindings", async ({ expect }) => {
 				writeWranglerToml();
 
 				await runWrangler("deployments view bindings-tag");
@@ -224,7 +229,9 @@ describe("deployments", () => {
 			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
 		`);
 			});
-			it("should automatically log latest deployment details", async () => {
+			it("should automatically log latest deployment details", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 
 				await runWrangler("deployments view");
@@ -255,7 +262,7 @@ describe("deployments", () => {
 		describe("rollback", () => {
 			const { setIsTTY } = useMockIsTTY();
 			const requests = { count: 0 };
-			beforeEach(() => {
+			beforeEach(({ expect }) => {
 				setIsTTY(true);
 				requests.count = 0;
 				msw.use(
@@ -297,7 +304,9 @@ describe("deployments", () => {
 				);
 			});
 
-			it("should successfully rollback and output a success message", async () => {
+			it("should successfully rollback and output a success message", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).",
 					result: true,
@@ -325,7 +334,9 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should early exit from rollback if user denies continuing", async () => {
+			it("should early exit from rollback if user denies continuing", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).",
 					result: false,
@@ -341,7 +352,9 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
+			it("should skip prompt automatically in rollback if in a non-TTY environment", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 
 				writeWranglerToml();
@@ -365,7 +378,9 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should skip prompt automatically in rollback if message flag is provided", async () => {
+			it("should skip prompt automatically in rollback if message flag is provided", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				await runWrangler(
 					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
@@ -385,7 +400,9 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should skip prompt automatically in rollback with empty message", async () => {
+			it("should skip prompt automatically in rollback with empty message", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				await runWrangler(
 					`rollback 3mEgaU1T-Intrepid-someThing-tag:test-name --message "test"`
@@ -405,7 +422,9 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should automatically rollback to previous deployment when id is not specified", async () => {
+			it("should automatically rollback to previous deployment when id is not specified", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).",
 					result: true,
@@ -433,7 +452,7 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it("should require a worker name", async () => {
+			it("should require a worker name", async ({ expect }) => {
 				await expect(runWrangler("rollback")).rejects.toMatchInlineSnapshot(
 					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
 				);
@@ -441,7 +460,9 @@ describe("deployments", () => {
 				expect(requests.count).toEqual(0);
 			});
 
-			it("should automatically rollback to previous deployment with specified name", async () => {
+			it("should automatically rollback to previous deployment with specified name", async ({
+				expect,
+			}) => {
 				mockConfirm({
 					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).",
 					result: true,

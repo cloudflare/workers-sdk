@@ -1,3 +1,4 @@
+import { describe, it } from "vitest";
 import {
 	formatMessage,
 	indexLocation,
@@ -14,7 +15,7 @@ describe("formatMessage", () => {
 		return formatMessage(input, false).substring(2);
 	};
 
-	it("should format message without location", () => {
+	it("should format message without location", ({ expect }) => {
 		expect(
 			format({
 				text: "Invalid argument",
@@ -27,7 +28,7 @@ describe("formatMessage", () => {
     `);
 	});
 
-	it("should format message with location", () => {
+	it("should format message with location", ({ expect }) => {
 		expect(
 			format({
 				text: "Missing property: main",
@@ -50,7 +51,7 @@ describe("formatMessage", () => {
     `);
 	});
 
-	it("should format message with location and notes", () => {
+	it("should format message with location and notes", ({ expect }) => {
 		expect(
 			format({
 				text: "Invalid property: type",
@@ -85,11 +86,11 @@ describe("formatMessage", () => {
 });
 
 describe("parseTOML", () => {
-	it("should parse toml that is empty", () => {
+	it("should parse toml that is empty", ({ expect }) => {
 		expect(parseTOML("")).toStrictEqual({});
 	});
 
-	it("should parse toml with basic values", () => {
+	it("should parse toml with basic values", ({ expect }) => {
 		expect(
 			parseTOML(`
         name = "basic"
@@ -101,7 +102,7 @@ describe("parseTOML", () => {
 		});
 	});
 
-	it("should parse toml with complex values", () => {
+	it("should parse toml with complex values", ({ expect }) => {
 		expect(
 			parseTOML(`
         name = 'complex'
@@ -125,10 +126,10 @@ describe("parseTOML", () => {
 		});
 	});
 
-	it("should fail to parse toml with invalid string", () => {
+	it("should fail to parse toml with invalid string", ({ expect }) => {
 		try {
 			parseTOML(`name = 'fail"`);
-			fail("parseTOML did not throw");
+			expect.fail("parseTOML did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -146,10 +147,10 @@ describe("parseTOML", () => {
 		}
 	});
 
-	it("should fail to parse toml with invalid header", () => {
+	it("should fail to parse toml with invalid header", ({ expect }) => {
 		try {
 			parseTOML(`\n[name`, "config.toml");
-			fail("parseTOML did not throw");
+			expect.fail("parseTOML did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -167,7 +168,7 @@ describe("parseTOML", () => {
 		}
 	});
 
-	it("should cope with Windows line-endings", () => {
+	it("should cope with Windows line-endings", ({ expect }) => {
 		expect(
 			parseTOML(
 				"# A comment with a Windows line-ending\r\n# Another comment with a Windows line-ending\r\n"
@@ -177,11 +178,11 @@ describe("parseTOML", () => {
 });
 
 describe("parseJSON", () => {
-	it("should parse json that is empty", () => {
+	it("should parse json that is empty", ({ expect }) => {
 		expect(parseJSON("{}")).toStrictEqual({});
 	});
 
-	it("should parse json with basic values", () => {
+	it("should parse json with basic values", ({ expect }) => {
 		expect(
 			parseJSON(`
       {
@@ -194,7 +195,7 @@ describe("parseJSON", () => {
 		});
 	});
 
-	it("should parse json with complex values", () => {
+	it("should parse json with complex values", ({ expect }) => {
 		expect(
 			parseJSON(
 				`{
@@ -214,10 +215,10 @@ describe("parseJSON", () => {
 		});
 	});
 
-	it("should fail to parse json with invalid string", () => {
+	it("should fail to parse json with invalid string", ({ expect }) => {
 		try {
 			parseJSON(`\n{\n"version" "1\n}\n`);
-			fail("parseJSON did not throw");
+			expect.fail("parseJSON did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -235,12 +236,12 @@ describe("parseJSON", () => {
 		}
 	});
 
-	it("should fail to parse json with invalid number", () => {
+	it("should fail to parse json with invalid number", ({ expect }) => {
 		const file = "config.json",
 			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
 		try {
 			parseJSON(fileText, file);
-			fail("parseJSON did not throw");
+			expect.fail("parseJSON did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -259,11 +260,11 @@ describe("parseJSON", () => {
 	});
 });
 describe("parseJSONC", () => {
-	it("should parse jsonc that is empty", () => {
+	it("should parse jsonc that is empty", ({ expect }) => {
 		expect(parseJSONC("{}")).toStrictEqual({});
 	});
 
-	it("should parse jsonc with basic values", () => {
+	it("should parse jsonc with basic values", ({ expect }) => {
 		expect(
 			parseJSONC(`
       {
@@ -276,7 +277,7 @@ describe("parseJSONC", () => {
 		});
 	});
 
-	it("should parse jsonc with complex values", () => {
+	it("should parse jsonc with complex values", ({ expect }) => {
 		expect(
 			parseJSONC(
 				`{
@@ -296,7 +297,7 @@ describe("parseJSONC", () => {
 		});
 	});
 
-	it("should parse jsonc with comments", () => {
+	it("should parse jsonc with comments", ({ expect }) => {
 		expect(
 			parseJSONC(
 				`{
@@ -318,10 +319,10 @@ describe("parseJSONC", () => {
 		});
 	});
 
-	it("should fail to parse jsonc with invalid string", () => {
+	it("should fail to parse jsonc with invalid string", ({ expect }) => {
 		try {
 			parseJSONC(`\n{\n"version" "1\n}\n`);
-			fail("parseJSONC did not throw");
+			expect.fail("parseJSONC did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -340,12 +341,12 @@ describe("parseJSONC", () => {
 		}
 	});
 
-	it("should fail to parse jsonc with invalid number", () => {
+	it("should fail to parse jsonc with invalid number", ({ expect }) => {
 		const file = "config.json",
 			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
 		try {
 			parseJSONC(fileText, file);
-			fail("parseJSONC did not throw");
+			expect.fail("parseJSONC did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -365,7 +366,7 @@ describe("parseJSONC", () => {
 	});
 });
 describe("indexLocation", () => {
-	it("should calculate location from one-line input", () => {
+	it("should calculate location from one-line input", ({ expect }) => {
 		const fileText = "";
 		expect(indexLocation({ fileText }, 1)).toStrictEqual({
 			fileText,
@@ -375,7 +376,7 @@ describe("indexLocation", () => {
 		});
 	});
 
-	it("should calculate location from multi-line input", () => {
+	it("should calculate location from multi-line input", ({ expect }) => {
 		const file = "package.json",
 			fileText = `\n{\n\t"hello":"world"\n}\n`;
 		expect(indexLocation({ file, fileText }, 11)).toStrictEqual({
@@ -387,7 +388,7 @@ describe("indexLocation", () => {
 		});
 	});
 
-	it("should calculate location when index is out of bounds", () => {
+	it("should calculate location when index is out of bounds", ({ expect }) => {
 		const fileText = `\n\n\n\n`;
 		expect(indexLocation({ fileText }, 10)).toStrictEqual({
 			fileText,
@@ -399,7 +400,7 @@ describe("indexLocation", () => {
 });
 
 describe("searchLocation", () => {
-	it("should calculate location from one-line match", () => {
+	it("should calculate location from one-line match", ({ expect }) => {
 		const file = "config.toml",
 			fileText = `name = 'coolthing'`;
 		expect(searchLocation({ file, fileText }, "coolthing")).toStrictEqual({
@@ -412,7 +413,7 @@ describe("searchLocation", () => {
 		});
 	});
 
-	it("should calculate location from multi-line match", () => {
+	it("should calculate location from multi-line match", ({ expect }) => {
 		const fileText = `\n{"versions":[\n\t"1.2.3",\n\t"1.2.4",\n\t"1.2.5"\n]}\n`;
 		expect(searchLocation({ fileText }, "1.2.4")).toStrictEqual({
 			fileText,
@@ -423,7 +424,7 @@ describe("searchLocation", () => {
 		});
 	});
 
-	it("should calculate location from no match", () => {
+	it("should calculate location from no match", ({ expect }) => {
 		const fileText = `\n{}\n`;
 		expect(searchLocation({ fileText }, "apple")).toStrictEqual({
 			fileText,

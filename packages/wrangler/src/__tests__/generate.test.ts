@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -7,6 +8,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 describe("generate", () => {
 	runInTempDir();
@@ -19,16 +21,18 @@ describe("generate", () => {
 		mockPackageManager = {
 			cwd: process.cwd(),
 			type: "mockpm" as "npm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	describe("cli functionality", () => {
 		afterEach(() => {});
 
-		it("defers to `wrangler init` when no template is given", async () => {
+		it("defers to `wrangler init` when no template is given", async ({
+			expect,
+		}) => {
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -52,7 +56,7 @@ describe("generate", () => {
 		`);
 		});
 
-		it("complains when given the --type argument", async () => {
+		it("complains when given the --type argument", async ({ expect }) => {
 			await expect(
 				runWrangler("generate worker-name worker-template --type rust")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -60,7 +64,7 @@ describe("generate", () => {
 			);
 		});
 
-		it("complains when given the --site argument", async () => {
+		it("complains when given the --site argument", async ({ expect }) => {
 			await expect(runWrangler("generate worker-name worker-template --site"))
 				.rejects.toThrowErrorMatchingInlineSnapshot(`
 					"The --site option is no longer supported.
@@ -76,7 +80,7 @@ describe("generate", () => {
 				`);
 		});
 
-		it.skip("auto-increments the worker directory name", async () => {
+		it.skip("auto-increments the worker directory name", async ({ expect }) => {
 			fs.mkdirSync("my-worker");
 
 			expect(fs.existsSync("my-worker-1")).toBe(false);
@@ -125,7 +129,9 @@ describe("generate", () => {
 	});
 
 	describe("cloning", () => {
-		it("clones a cloudflare template with sparse checkouts", async () => {
+		it("clones a cloudflare template with sparse checkouts", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
@@ -148,7 +154,7 @@ describe("generate", () => {
 		// was harder than i thought, leaving this for now.
 		it.todo("clones a cloudflare template with full checkouts");
 
-		it.skip("clones a user/repo template", async () => {
+		it.skip("clones a user/repo template", async ({ expect }) => {
 			await expect(
 				runWrangler("generate my-worker caass/wrangler-generate-test-template")
 			).resolves.toBeUndefined();
@@ -163,7 +169,9 @@ describe("generate", () => {
 			});
 		});
 
-		it.skip("clones a user/repo/path/to/subdirectory template", async () => {
+		it.skip("clones a user/repo/path/to/subdirectory template", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler("generate my-worker cloudflare/templates/worker-typescript")
 			).resolves.toBeUndefined();
@@ -183,7 +191,9 @@ describe("generate", () => {
 			});
 		});
 
-		it.skip("clones a git@github.com/user/repo template", async () => {
+		it.skip("clones a git@github.com/user/repo template", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"generate my-worker git@github.com:caass/wrangler-generate-test-template"
@@ -200,7 +210,9 @@ describe("generate", () => {
 			});
 		});
 
-		it.skip("clones a git@github.com/user/repo/path/to/subdirectory template", async () => {
+		it.skip("clones a git@github.com/user/repo/path/to/subdirectory template", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					"generate my-worker git@github.com:cloudflare/templates/worker-typescript"
@@ -222,8 +234,8 @@ describe("generate", () => {
 			});
 		});
 
-		it("clones a cloudflare template across drives", async () => {
-			const fsMock = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+		it("clones a cloudflare template across drives", async ({ expect }) => {
+			const fsMock = vi.spyOn(fs, "renameSync").mockImplementation(() => {
 				// Simulate the error we get if we use renameSync across different Windows drives (e.g. C: to D:).
 				const error = new Error("EXDEV: cross-device link not permitted");
 				// @ts-expect-error non standard property on Error
@@ -250,8 +262,8 @@ describe("generate", () => {
 			fsMock.mockRestore();
 		});
 
-		it("mocks an error thrown", async () => {
-			const fsMock = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+		it("mocks an error thrown", async ({ expect }) => {
+			const fsMock = vi.spyOn(fs, "renameSync").mockImplementation(() => {
 				// Simulate a different error to what we get if we use renameSync across different Windows drives.
 				const error = new Error("something");
 				// @ts-expect-error non standard property on Error

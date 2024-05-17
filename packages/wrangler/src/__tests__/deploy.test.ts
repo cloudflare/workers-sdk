@@ -9,6 +9,7 @@ import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
 import dedent from "ts-dedent";
 import { FormData } from "undici";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -72,7 +73,7 @@ describe("deploy", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -86,7 +87,9 @@ describe("deploy", () => {
 	});
 
 	describe("output additional script information", () => {
-		it("for first party workers, it should print worker information at log level", async () => {
+		it("for first party workers, it should print worker information at log level", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			fs.writeFileSync(
 				"./wrangler.toml",
@@ -139,7 +142,9 @@ describe("deploy", () => {
 			global.setTimeout.mockRestore();
 		});
 
-		it("drops a user into the login flow if they're unauthenticated", async () => {
+		it("drops a user into the login flow if they're unauthenticated", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			writeWranglerToml();
 			writeWorkerSource();
@@ -173,7 +178,9 @@ describe("deploy", () => {
 		describe("with an alternative auth domain", () => {
 			mockAuthDomain({ domain: "dash.staging.cloudflare.com" });
 
-			it("drops a user into the login flow if they're unauthenticated", async () => {
+			it("drops a user into the login flow if they're unauthenticated", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				writeWorkerSource();
 				mockDomainUsesAccess({
@@ -215,7 +222,9 @@ describe("deploy", () => {
 			});
 		});
 
-		it("warns a user when they're authenticated with an API token in wrangler config file", async () => {
+		it("warns a user when they're authenticated with an API token in wrangler config file", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -256,7 +265,9 @@ describe("deploy", () => {
 				process.env = ENV_COPY;
 			});
 
-			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async () => {
+			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async ({
+				expect,
+			}) => {
 				process.env = {
 					CLOUDFLARE_API_TOKEN: "123456789",
 				};
@@ -285,7 +296,9 @@ describe("deploy", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async () => {
+			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async ({
+				expect,
+			}) => {
 				process.env = {
 					CLOUDFLARE_API_TOKEN: "hunter2",
 					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
@@ -314,7 +327,9 @@ describe("deploy", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
+			it("should throw an error in non-TTY & there is more than one account associated with API token", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				process.env = {
 					CLOUDFLARE_API_TOKEN: "hunter2",
@@ -342,7 +357,9 @@ describe("deploy", () => {
 		`);
 			});
 
-			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async () => {
+			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				writeWranglerToml({
 					account_id: undefined,
@@ -368,7 +385,9 @@ describe("deploy", () => {
 			          "
 		        `);
 			});
-			it("should throw error with no account ID provided and no members retrieved", async () => {
+			it("should throw error with no account ID provided and no members retrieved", async ({
+				expect,
+			}) => {
 				setIsTTY(false);
 				writeWranglerToml({
 					account_id: undefined,
@@ -398,7 +417,9 @@ describe("deploy", () => {
 	});
 
 	describe("warnings", () => {
-		it("should warn user when worker was last deployed from api", async () => {
+		it("should warn user when worker was last deployed from api", async ({
+			expect,
+		}) => {
 			msw.use(...mswSuccessDeploymentScriptAPI);
 			writeWranglerToml();
 			writeWorkerSource();
@@ -420,7 +441,9 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should warn user when additional properties are passed to a services config", async () => {
+		it("should warn user when additional properties are passed to a services config", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				d1_databases: [
 					{
@@ -450,7 +473,7 @@ describe("deploy", () => {
 	});
 
 	describe("environments", () => {
-		it("should use legacy environments by default", async () => {
+		it("should use legacy environments by default", async ({ expect }) => {
 			writeWranglerToml({ env: { "some-env": {} } });
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -476,7 +499,9 @@ describe("deploy", () => {
 		});
 
 		describe("legacy", () => {
-			it("uses the script name when no environment is specified", async () => {
+			it("uses the script name when no environment is specified", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -500,7 +525,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("appends the environment name when provided, and there is associated config", async () => {
+			it("appends the environment name when provided, and there is associated config", async ({
+				expect,
+			}) => {
 				writeWranglerToml({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -525,7 +552,9 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("appends the environment name when provided (with a warning), if there are no configured environments", async () => {
+			it("appends the environment name when provided (with a warning), if there are no configured environments", async ({
+				expect,
+			}) => {
 				writeWranglerToml({});
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -564,7 +593,9 @@ describe("deploy", () => {
 		`);
 			});
 
-			it("should throw an error when an environment name when provided, which doesn't match those in the config", async () => {
+			it("should throw an error when an environment name when provided, which doesn't match those in the config", async ({
+				expect,
+			}) => {
 				writeWranglerToml({ env: { "other-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -584,7 +615,9 @@ describe("deploy", () => {
 		              `);
 			});
 
-			it("should throw an error w/ helpful message when using --env --name", async () => {
+			it("should throw an error w/ helpful message when using --env --name", async ({
+				expect,
+			}) => {
 				writeWranglerToml({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -602,7 +635,9 @@ describe("deploy", () => {
 		});
 
 		describe("services", () => {
-			it("uses the script name when no environment is specified", async () => {
+			it("uses the script name when no environment is specified", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -633,7 +668,7 @@ describe("deploy", () => {
 		`);
 			});
 
-			it("publishes as an environment when provided", async () => {
+			it("publishes as an environment when provided", async ({ expect }) => {
 				writeWranglerToml({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -667,7 +702,9 @@ describe("deploy", () => {
 		});
 	});
 
-	it("should resolve wrangler.toml relative to the entrypoint", async () => {
+	it("should resolve wrangler.toml relative to the entrypoint", async ({
+		expect,
+	}) => {
 		fs.mkdirSync("./some-path/worker", { recursive: true });
 		fs.writeFileSync(
 			"./some-path/wrangler.toml",
@@ -720,7 +757,7 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 		});
 
-		it("should deploy with an empty string route", async () => {
+		it("should deploy with an empty string route", async ({ expect }) => {
 			writeWranglerToml({
 				route: "",
 			});
@@ -753,7 +790,9 @@ describe("deploy", () => {
 			}
 		`);
 		});
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				routes: [
 					"some-example.com/some-route/*",
@@ -805,7 +844,7 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should deploy to a route with a SaaS domain", async () => {
+		it("should deploy to a route with a SaaS domain", async ({ expect }) => {
 			writeWranglerToml({
 				workers_dev: false,
 				routes: [
@@ -848,7 +887,7 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should deploy to a route with a SaaS subdomain", async () => {
+		it("should deploy to a route with a SaaS subdomain", async ({ expect }) => {
 			writeWranglerToml({
 				workers_dev: false,
 				routes: [
@@ -891,7 +930,9 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				env: {
 					staging: {
@@ -1009,7 +1050,9 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 		});
 
-		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async () => {
+		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 			});
@@ -1063,7 +1106,9 @@ describe("deploy", () => {
 		`);
 		});
 
-		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async () => {
+		it("should error if the bulk-routes API fails and trying to push to a non-production environment", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 				legacy_env: false,
@@ -1093,7 +1138,9 @@ describe("deploy", () => {
 		});
 
 		describe("custom domains", () => {
-			it("should deploy routes marked with 'custom_domain' as separate custom domains", async () => {
+			it("should deploy routes marked with 'custom_domain' as separate custom domains", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -1113,7 +1160,9 @@ describe("deploy", () => {
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain deploy would override an existing domain", async () => {
+			it("should confirm override if custom domain deploy would override an existing domain", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -1158,7 +1207,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain deploy contains a conflicting DNS record", async () => {
+			it("should confirm override if custom domain deploy contains a conflicting DNS record", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -1195,7 +1246,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm for conflicting custom domains and then again for conflicting dns", async () => {
+			it("should confirm for conflicting custom domains and then again for conflicting dns", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -1259,7 +1312,9 @@ Update them to point to this script instead?`,
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should throw if an invalid custom domain is requested", async () => {
+			it("should throw if an invalid custom domain is requested", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					routes: [{ pattern: "*.example.com", custom_domain: true }],
 				});
@@ -1285,7 +1340,9 @@ Update them to point to this script instead?`,
 				);
 			});
 
-			it("should not continue with publishing an override if user does not confirm", async () => {
+			it("should not continue with publishing an override if user does not confirm", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -1329,7 +1386,9 @@ Update them to point to this script instead?`,
 	});
 
 	describe("entry-points", () => {
-		it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
+		it("should be able to use `index` with no extension as the entry-point (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockUploadWorkerRequest({ expectedType: "esm" });
@@ -1351,7 +1410,9 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use `index` with no extension as the entry-point (sw)", async () => {
+		it("should be able to use `index` with no extension as the entry-point (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource({ type: "sw" });
 			mockUploadWorkerRequest({ expectedType: "sw" });
@@ -1373,7 +1434,9 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use the `main` config as the entry-point for ESM sources", async () => {
+		it("should be able to use the `main` config as the entry-point for ESM sources", async ({
+			expect,
+		}) => {
 			writeWranglerToml({ main: "./index.js" });
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -1395,7 +1458,9 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use `main` relative to the wrangler.toml not cwd", async () => {
+		it("should use `main` relative to the wrangler.toml not cwd", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./foo/index.js",
 			});
@@ -1419,7 +1484,9 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it('should use `build.upload.main` as an entry point, where `build.upload.dir` defaults to "./dist", and log a deprecation warning', async () => {
+		it('should use `build.upload.main` as an entry point, where `build.upload.dir` defaults to "./dist", and log a deprecation warning', async ({
+			expect,
+		}) => {
 			writeWranglerToml({ build: { upload: { main: "./index.js" } } });
 			writeWorkerSource({ basePath: "./dist" });
 			mockUploadWorkerRequest();
@@ -1453,7 +1520,9 @@ Update them to point to this script instead?`,
 		`);
 		});
 
-		it("should use `build.upload.main` relative to `build.upload.dir`", async () => {
+		it("should use `build.upload.main` relative to `build.upload.dir`", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				build: {
 					upload: {
@@ -1497,7 +1566,9 @@ Update them to point to this script instead?`,
 		`);
 		});
 
-		it("should error when both `main` and `build.upload.main` are used", async () => {
+		it("should error when both `main` and `build.upload.main` are used", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 				build: {
@@ -1516,7 +1587,7 @@ Update them to point to this script instead?`,
 		            `);
 		});
 
-		it("should be able to transpile TypeScript (esm)", async () => {
+		it("should be able to transpile TypeScript (esm)", async ({ expect }) => {
 			writeWranglerToml();
 			writeWorkerSource({ format: "ts" });
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
@@ -1537,7 +1608,7 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to transpile TypeScript (sw)", async () => {
+		it("should be able to transpile TypeScript (sw)", async ({ expect }) => {
 			writeWranglerToml();
 			writeWorkerSource({ format: "ts", type: "sw" });
 			mockUploadWorkerRequest({
@@ -1561,7 +1632,9 @@ Update them to point to this script instead?`,
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should add referenced text modules into the form upload", async () => {
+		it("should add referenced text modules into the form upload", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"./index.js",
@@ -1597,7 +1670,7 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should allow cloudflare module import", async () => {
+		it("should allow cloudflare module import", async ({ expect }) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"./index.js",
@@ -1627,7 +1700,9 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to transpile entry-points in sub-directories (esm)", async () => {
+		it("should be able to transpile entry-points in sub-directories (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource({ basePath: "./src" });
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
@@ -1649,7 +1724,9 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should preserve exports on a module format worker", async () => {
+		it("should preserve exports on a module format worker", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -1689,7 +1766,9 @@ export default {};`
 		`);
 		});
 
-		it("should not preserve exports on a service-worker format worker", async () => {
+		it("should not preserve exports on a service-worker format worker", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -1725,7 +1804,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should be able to transpile entry-points in sub-directories (sw)", async () => {
+		it("should be able to transpile entry-points in sub-directories (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource({ basePath: "./src", type: "sw" });
 			mockUploadWorkerRequest({
@@ -1750,7 +1831,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it('should error if a site definition doesn\'t have a "bucket" field', async () => {
+		it('should error if a site definition doesn\'t have a "bucket" field', async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				// @ts-expect-error we're intentionally setting an invalid config
 				site: {},
@@ -1787,7 +1870,9 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should warn if there is a `site.entry-point` configuration", async () => {
+		it("should warn if there is a `site.entry-point` configuration", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -1846,7 +1931,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should resolve site.entry-point relative to wrangler.toml", async () => {
+		it("should resolve site.entry-point relative to wrangler.toml", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -1909,7 +1996,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error if both main and site.entry-point are specified", async () => {
+		it("should error if both main and site.entry-point are specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "some-entry",
 				site: {
@@ -1927,7 +2016,9 @@ addEventListener('fetch', event => {});`
 		            `);
 		});
 
-		it("should error if there is no entry-point specified", async () => {
+		it("should error if there is no entry-point specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -1946,7 +2037,9 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should not require an explicit entry point when using --assets", async () => {
+		it("should not require an explicit entry point when using --assets", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2012,7 +2105,7 @@ addEventListener('fetch', event => {});`
 				msw.use(handler);
 			}
 
-			it("with TypeScript source file", async () => {
+			it("with TypeScript source file", async ({ expect }) => {
 				writeWranglerToml();
 				fs.writeFileSync(
 					`index.ts`,
@@ -2036,7 +2129,7 @@ addEventListener('fetch', event => {});`
 				});
 			});
 
-			it("with additional modules", async () => {
+			it("with additional modules", async ({ expect }) => {
 				writeWranglerToml({
 					no_bundle: true,
 					rules: [{ type: "ESModule", globs: ["**/*.js"] }],
@@ -2077,7 +2170,7 @@ addEventListener('fetch', event => {});`
 				});
 			});
 
-			it("with inline source map", async () => {
+			it("with inline source map", async ({ expect }) => {
 				writeWranglerToml({
 					no_bundle: true,
 				});
@@ -2113,7 +2206,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("asset upload", () => {
-		it("should upload all the files in the directory specified by `config.site.bucket`", async () => {
+		it("should upload all the files in the directory specified by `config.site.bucket`", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2160,7 +2255,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload all the files in the directory specified by `--assets`", async () => {
+		it("should upload all the files in the directory specified by `--assets`", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2210,7 +2307,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error when trying to use --assets with a service-worker Worker", async () => {
+		it("should error when trying to use --assets with a service-worker Worker", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -2236,7 +2335,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error if --assets and --site are used together", async () => {
+		it("should error if --assets and --site are used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -2260,7 +2361,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error if --assets and config.site are used together", async () => {
+		it("should error if --assets and config.site are used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 				site: {
@@ -2287,7 +2390,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error if config.assets and --site are used together", async () => {
+		it("should error if config.assets and --site are used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 				// @ts-expect-error we allow string inputs here
@@ -2317,7 +2422,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error if config.assets and config.site are used together", async () => {
+		it("should error if config.assets and config.site are used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 				// @ts-expect-error we allow string inputs here
@@ -2350,7 +2457,7 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should warn if --assets is used", async () => {
+		it("should warn if --assets is used", async ({ expect }) => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -2401,7 +2508,7 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should warn if config.assets is used", async () => {
+		it("should warn if config.assets is used", async ({ expect }) => {
 			writeWranglerToml({
 				main: "./index.js",
 				// @ts-expect-error we allow string inputs here
@@ -2456,7 +2563,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should not contain backslash for assets with nested directories", async () => {
+		it("should not contain backslash for assets with nested directories", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
 				{ filePath: "subdir/file-2.txt", content: "Content of file-2" },
@@ -2516,7 +2625,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async () => {
+		it("when using a service-worker type, it should add an asset manifest as a text_blob, and bind to a namespace", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2582,7 +2693,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async () => {
+		it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async ({
+			expect,
+		}) => {
 			const assets = [
 				// Using `.text` extension instead of `.txt` means files won't be
 				// treated as additional modules
@@ -2681,7 +2794,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should make environment specific kv namespace for assets, even for service envs", async () => {
+		it("should make environment specific kv namespace for assets, even for service envs", async ({
+			expect,
+		}) => {
 			// This is the same test as the one before this, but with an env arg
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -2739,7 +2854,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should make environment specific kv namespace for assets, even for legacy envs", async () => {
+		it("should make environment specific kv namespace for assets, even for legacy envs", async ({
+			expect,
+		}) => {
 			// And this is the same test as the one before this, but with legacyEnv:true
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -2798,7 +2915,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should only upload files that are not already in the KV namespace", async () => {
+		it("should only upload files that are not already in the KV namespace", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2842,7 +2961,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should only upload files that match the `site-include` arg", async () => {
+		it("should only upload files that match the `site-include` arg", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2892,7 +3013,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not upload files that match the `site-exclude` arg", async () => {
+		it("should not upload files that match the `site-exclude` arg", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2942,7 +3065,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should only upload files that match the `site.include` config", async () => {
+		it("should only upload files that match the `site.include` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -2993,7 +3118,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not upload files that match the `site.exclude` config", async () => {
+		it("should not upload files that match the `site.exclude` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3044,7 +3171,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use `site-include` arg over `site.include` config", async () => {
+		it("should use `site-include` arg over `site.include` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3095,7 +3224,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use `site-exclude` arg over `site.exclude` config", async () => {
+		it("should use `site-exclude` arg over `site.exclude` config", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3146,7 +3277,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should walk directories except node_modules", async () => {
+		it("should walk directories except node_modules", async ({ expect }) => {
 			const assets = [
 				{
 					filePath: "directory-1/file-1.txt",
@@ -3199,7 +3330,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should skip hidden files and directories except `.well-known`", async () => {
+		it("should skip hidden files and directories except `.well-known`", async ({
+			expect,
+		}) => {
 			const assets = [
 				{
 					filePath: ".hidden-file.txt",
@@ -3256,7 +3389,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error if the asset is over 25Mb", async () => {
+		it("should error if the asset is over 25Mb", async ({ expect }) => {
 			const assets = [
 				{
 					filePath: "large-file.txt",
@@ -3305,7 +3438,7 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should batch assets in groups <100 mb", async () => {
+		it("should batch assets in groups <100 mb", async ({ expect }) => {
 			// Let's have 20 files, from size 1 - 20 mb
 			const assets = Array.from({ length: 20 }, (_, index) => ({
 				filePath: `file-${`${index}`.padStart(2, "0")}.txt`,
@@ -3402,7 +3535,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error if the asset key is over 512 characters", async () => {
+		it("should error if the asset key is over 512 characters", async ({
+			expect,
+		}) => {
 			const longFilePathAsset = {
 				filePath: "folder/".repeat(100) + "file.txt",
 				content: "content of file",
@@ -3442,7 +3577,9 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should delete uploaded assets that aren't included anymore", async () => {
+		it("should delete uploaded assets that aren't included anymore", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3511,7 +3648,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should generate an asset manifest with keys relative to site.bucket", async () => {
+		it("should generate an asset manifest with keys relative to site.bucket", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3574,7 +3713,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the relative path from current working directory to Worker directory when using `--site`", async () => {
+		it("should use the relative path from current working directory to Worker directory when using `--site`", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -3623,7 +3764,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should use the relative path from current working directory to Worker directory when using `--assets`", async () => {
+		it("should use the relative path from current working directory to Worker directory when using `--assets`", async ({
+			expect,
+		}) => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.txt", content: "Content of file-2" },
@@ -3674,7 +3817,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should abort other bucket uploads if one bucket upload fails", async () => {
+		it("should abort other bucket uploads if one bucket upload fails", async ({
+			expect,
+		}) => {
 			// Write 9 20MiB files, should end up with 3 buckets
 			const content = "X".repeat(20 * 1024 * 1024);
 			const assets = Array.from({ length: 9 }, (_, index) => ({
@@ -3704,8 +3849,8 @@ addEventListener('fetch', event => {});`
 				"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk";
 			msw.use(
 				rest.put(bulkUrl, async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.namespaceId).toEqual(kvNamespace.id);
+					assert(req.params.accountId == "some-account-id");
+					assert(req.params.namespaceId == kvNamespace.id);
 					requestCount++;
 					return res(
 						ctx.status(500),
@@ -3768,7 +3913,7 @@ addEventListener('fetch', event => {});`
 				mockUploadAssetsToKVRequest(kvNamespace.id);
 			});
 
-			it("default log level", async () => {
+			it("default log level", async ({ expect }) => {
 				await runWrangler("deploy");
 				expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -3894,7 +4039,7 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("debug log level", async () => {
+			it("debug log level", async ({ expect }) => {
 				logger.loggerLevel = "debug";
 				await runWrangler("deploy");
 
@@ -4026,7 +4171,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("workers_dev setting", () => {
-		it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
+		it("should deploy to a workers.dev domain if workers_dev is undefined", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -4048,7 +4195,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to the workers.dev domain if workers_dev is `true`", async () => {
+		it("should deploy to the workers.dev domain if workers_dev is `true`", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: true,
 			});
@@ -4073,7 +4222,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not try to enable the workers.dev domain if it has been enabled before", async () => {
+		it("should not try to enable the workers.dev domain if it has been enabled before", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: true,
 			});
@@ -4097,7 +4248,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should disable the workers.dev domain if workers_dev is `false`", async () => {
+		it("should disable the workers.dev domain if workers_dev is `false`", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: false,
 			});
@@ -4120,7 +4273,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not try to disable the workers.dev domain if it is not already available", async () => {
+		it("should not try to disable the workers.dev domain if it is not already available", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: false,
 			});
@@ -4145,7 +4300,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should disable the workers.dev domain if workers_dev is undefined but overwritten to `false` in environment", async () => {
+		it("should disable the workers.dev domain if workers_dev is undefined but overwritten to `false` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				env: {
 					dev: {
@@ -4174,7 +4331,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should disable the workers.dev domain if workers_dev is `true` but overwritten to `false` in environment", async () => {
+		it("should disable the workers.dev domain if workers_dev is `true` but overwritten to `false` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: true,
 				env: {
@@ -4204,7 +4363,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async () => {
+		it("should deploy to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				env: {
 					dev: {
@@ -4235,7 +4396,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async () => {
+		it("should deploy to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: false,
 				env: {
@@ -4267,7 +4430,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the global compatibility_date and compatibility_flags if they are not overwritten by the environment", async () => {
+		it("should use the global compatibility_date and compatibility_flags if they are not overwritten by the environment", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["no_global_navigator"],
@@ -4300,7 +4465,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the environment specific compatibility_date and compatibility_flags", async () => {
+		it("should use the environment specific compatibility_date and compatibility_flags", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["no_global_navigator"],
@@ -4336,7 +4503,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use the command line --compatibility-date and --compatibility-flags if they are specified", async () => {
+		it("should use the command line --compatibility-date and --compatibility-flags if they are specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["no_global_navigator"],
@@ -4374,7 +4543,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should error if a compatibility_date is not available in wrangler.toml or cli args", async () => {
+		it("should error if a compatibility_date is not available in wrangler.toml or cli args", async ({
+			expect,
+		}) => {
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
@@ -4393,10 +4564,12 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
-			jest.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
-			jest.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
-			jest.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+		it("should error if a compatibility_date is missing and suggest the correct month", async ({
+			expect,
+		}) => {
+			vi.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
+			vi.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
+			vi.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
 
 			writeWorkerSource();
 			let err: undefined | Error;
@@ -4416,7 +4589,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async () => {
+		it("should enable the workers.dev domain if workers_dev is undefined and subdomain is not already available", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockUploadWorkerRequest({ available_on_subdomain: false });
@@ -4439,7 +4614,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should enable the workers.dev domain if workers_dev is true and subdomain is not already available", async () => {
+		it("should enable the workers.dev domain if workers_dev is true and subdomain is not already available", async ({
+			expect,
+		}) => {
 			writeWranglerToml({ workers_dev: true });
 			writeWorkerSource();
 			mockUploadWorkerRequest({ available_on_subdomain: false });
@@ -4462,7 +4639,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail to deploy to the workers.dev domain if email is unverified", async () => {
+		it("should fail to deploy to the workers.dev domain if email is unverified", async ({
+			expect,
+		}) => {
 			writeWranglerToml({ workers_dev: true });
 			writeWorkerSource();
 			mockUploadWorkerRequest({ available_on_subdomain: false });
@@ -4496,7 +4675,9 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
-		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async () => {
+		it("should offer to create a new workers.dev subdomain when publishing to workers_dev without one", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: true,
 			});
@@ -4516,7 +4697,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should not deploy to workers.dev if there are any routes defined", async () => {
+		it("should not deploy to workers.dev if there are any routes defined", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				routes: ["http://example.com/*"],
 			});
@@ -4544,7 +4727,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not deploy to workers.dev if there are any routes defined (environments)", async () => {
+		it("should not deploy to workers.dev if there are any routes defined (environments)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				routes: ["http://example.com/*"],
 				env: {
@@ -4583,7 +4768,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not deploy to workers.dev if there are any routes defined (only in environments)", async () => {
+		it("should not deploy to workers.dev if there are any routes defined (only in environments)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				env: {
 					production: {
@@ -4621,7 +4808,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined ", async () => {
+		it("can deploy to both workers.dev and routes if both defined ", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: true,
 				routes: ["http://example.com/*"],
@@ -4653,7 +4842,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined (environments: 1)", async () => {
+		it("can deploy to both workers.dev and routes if both defined (environments: 1)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: true,
 				env: {
@@ -4693,7 +4884,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("can deploy to both workers.dev and routes if both defined (environments: 2)", async () => {
+		it("can deploy to both workers.dev and routes if both defined (environments: 2)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				env: {
 					production: {
@@ -4733,7 +4926,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("will deploy only to routes when workers_dev is false (environments 1) ", async () => {
+		it("will deploy only to routes when workers_dev is false (environments 1) ", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				workers_dev: false,
 				env: {
@@ -4772,7 +4967,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("will deploy only to routes when workers_dev is false (environments 2) ", async () => {
+		it("will deploy only to routes when workers_dev is false (environments 2) ", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				env: {
 					production: {
@@ -4813,7 +5010,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("[define]", () => {
-		it("should be able to define values that will be substituted into top-level identifiers", async () => {
+		it("should be able to define values that will be substituted into top-level identifiers", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "index.js",
 				define: {
@@ -4853,7 +5052,7 @@ addEventListener('fetch', event => {});`
 			expect(outFile).toContain("console.log(foo);");
 		});
 
-		it("can be overriden in environments", async () => {
+		it("can be overriden in environments", async ({ expect }) => {
 			writeWranglerToml({
 				main: "index.js",
 				define: {
@@ -4885,7 +5084,7 @@ addEventListener('fetch', event => {});`
 			expect(outFile).toContain("console.log(456);");
 		});
 
-		it("can be overridden with cli args", async () => {
+		it("can be overridden with cli args", async ({ expect }) => {
 			writeWranglerToml({
 				main: "index.js",
 				define: {
@@ -4907,7 +5106,9 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
-		it("can be overridden with cli args containing colons", async () => {
+		it("can be overridden with cli args containing colons", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "index.js",
 				define: {
@@ -4938,7 +5139,7 @@ addEventListener('fetch', event => {});`
 			// or else custom builds will timeout immediately
 			global.setTimeout.mockRestore();
 		});
-		it("should run a custom build before publishing", async () => {
+		it("should run a custom build before publishing", async ({ expect }) => {
 			writeWranglerToml({
 				build: {
 					command: `node -e "4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
@@ -4968,7 +5169,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		if (process.platform !== "win32") {
-			it("should run a custom build of multiple steps combined by && before publishing", async () => {
+			it("should run a custom build of multiple steps combined by && before publishing", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					build: {
 						command: `echo "export default { fetch(){ return new Response(123) } }" > index.js`,
@@ -4998,7 +5201,9 @@ addEventListener('fetch', event => {});`
 			});
 		}
 
-		it("should throw an error if the entry doesn't exist after the build finishes", async () => {
+		it("should throw an error if the entry doesn't exist after the build finishes", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "index.js",
 				build: {
@@ -5025,7 +5230,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should throw an error if the entry is a directory after the build finishes", async () => {
+		it("should throw an error if the entry is a directory after the build finishes", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./",
 				build: {
@@ -5070,7 +5277,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should minify the script when `--minify` is true (sw)", async () => {
+		it("should minify the script when `--minify` is true (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -5105,7 +5314,9 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should minify the script when `minify` in config is true (esm)", async () => {
+		it("should minify the script when `minify` in config is true (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "./index.js",
 				legacy_env: false,
@@ -5151,7 +5362,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to deploy durable objects without migrations", async () => {
+		it("should warn when you try to deploy durable objects without migrations", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [{ name: "SOMENAME", class_name: "SomeClass" }],
@@ -5200,7 +5413,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("does not warn if all the durable object bindings are to external classes", async () => {
+		it("does not warn if all the durable object bindings are to external classes", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -5237,7 +5452,7 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should deploy all migrations on first deploy", async () => {
+		it("should deploy all migrations on first deploy", async ({ expect }) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -5286,7 +5501,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload migrations past a previously uploaded tag", async () => {
+		it("should upload migrations past a previously uploaded tag", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -5343,7 +5560,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should not send migrations if they've all already been sent", async () => {
+		it("should not send migrations if they've all already been sent", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -5394,7 +5613,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("service environments", () => {
-			it("should deploy all migrations on first deploy", async () => {
+			it("should deploy all migrations on first deploy", async ({ expect }) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -5451,7 +5670,9 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("should deploy all migrations on first deploy (--env)", async () => {
+			it("should deploy all migrations on first deploy (--env)", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -5519,7 +5740,9 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("should use a script's current migration tag when publishing migrations", async () => {
+			it("should use a script's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -5584,7 +5807,9 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("should use an environment's current migration tag when publishing migrations", async () => {
+			it("should use an environment's current migration tag when publishing migrations", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -5662,7 +5887,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("tail consumers", () => {
-		it("should allow specifying workers as tail consumers", async () => {
+		it("should allow specifying workers as tail consumers", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				tail_consumers: [
 					{ service: "listener " },
@@ -5694,7 +5921,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("user limits", () => {
-		it("should allow specifying a cpu millisecond limit", async () => {
+		it("should allow specifying a cpu millisecond limit", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				limits: { cpu_ms: 15_000 },
 			});
@@ -5721,7 +5950,7 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("bindings", () => {
-		it("should allow bindings with different names", async () => {
+		it("should allow bindings with different names", async ({ expect }) => {
 			writeWranglerToml({
 				migrations: [
 					{
@@ -5991,7 +6220,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should error when bindings of different types have the same name", async () => {
+		it("should error when bindings of different types have the same name", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -6102,7 +6333,9 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should error when bindings of the same type have the same name", async () => {
+		it("should error when bindings of the same type have the same name", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -6210,7 +6443,9 @@ addEventListener('fetch', event => {});`
 		      `);
 		});
 
-		it("should error correctly when bindings of the same and different types use the same name", async () => {
+		it("should error correctly when bindings of the same and different types use the same name", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -6367,7 +6602,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[wasm_modules]", () => {
-			it("should be able to define wasm modules for service-worker format workers", async () => {
+			it("should be able to define wasm modules for service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					wasm_modules: {
 						TESTWASMNAME: "./path/to/test.wasm",
@@ -6404,7 +6641,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining wasm modules for modules format workers", async () => {
+			it("should error when defining wasm modules for modules format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					wasm_modules: {
 						TESTWASMNAME: "./path/to/test.wasm",
@@ -6428,7 +6667,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should resolve wasm modules relative to the wrangler.toml file", async () => {
+			it("should resolve wasm modules relative to the wrangler.toml file", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
 				fs.writeFileSync(
 					"./path/to/wrangler.toml",
@@ -6476,7 +6717,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should be able to import .wasm modules from service-worker format workers", async () => {
+			it("should be able to import .wasm modules from service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				fs.writeFileSync(
 					"./index.js",
@@ -6516,7 +6759,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[text_blobs]", () => {
-			it("should be able to define text blobs for service-worker format workers", async () => {
+			it("should be able to define text blobs for service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					text_blobs: {
 						TESTTEXTBLOBNAME: "./path/to/text.file",
@@ -6556,7 +6801,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining text blobs for modules format workers", async () => {
+			it("should error when defining text blobs for modules format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					text_blobs: {
 						TESTTEXTBLOBNAME: "./path/to/text.file",
@@ -6580,7 +6827,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should resolve text blobs relative to the wrangler.toml file", async () => {
+			it("should resolve text blobs relative to the wrangler.toml file", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
 				fs.writeFileSync(
 					"./path/to/wrangler.toml",
@@ -6634,7 +6883,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[data_blobs]", () => {
-			it("should be able to define data blobs for service-worker format workers", async () => {
+			it("should be able to define data blobs for service-worker format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					data_blobs: {
 						TESTDATABLOBNAME: "./path/to/data.bin",
@@ -6674,7 +6925,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when defining data blobs for modules format workers", async () => {
+			it("should error when defining data blobs for modules format workers", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					data_blobs: {
 						TESTDATABLOBNAME: "./path/to/data.bin",
@@ -6698,7 +6951,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should resolve data blobs relative to the wrangler.toml file", async () => {
+			it("should resolve data blobs relative to the wrangler.toml file", async ({
+				expect,
+			}) => {
 				fs.mkdirSync("./path/to/and/the/path/to/", { recursive: true });
 				fs.writeFileSync(
 					"./path/to/wrangler.toml",
@@ -6752,7 +7007,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[vars]", () => {
-			it("should support json bindings", async () => {
+			it("should support json bindings", async ({ expect }) => {
 				writeWranglerToml({
 					vars: {
 						text: "plain ol' string",
@@ -6798,7 +7053,7 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should read vars passed as cli arguments", async () => {
+			it("should read vars passed as cli arguments", async ({ expect }) => {
 				writeWranglerToml();
 				writeWorkerSource();
 				mockSubDomainRequest();
@@ -6829,7 +7084,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[r2_buckets]", () => {
-			it("should support r2 bucket bindings", async () => {
+			it("should support r2 bucket bindings", async ({ expect }) => {
 				writeWranglerToml({
 					r2_buckets: [{ binding: "FOO", bucket_name: "foo-bucket" }],
 				});
@@ -6862,7 +7117,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[logfwdr]", () => {
-			it("should support logfwdr bindings", async () => {
+			it("should support logfwdr bindings", async ({ expect }) => {
 				writeWranglerToml({
 					logfwdr: {
 						bindings: [
@@ -6914,7 +7169,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error when logfwdr schemas are specified", async () => {
+			it("should error when logfwdr schemas are specified", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					logfwdr: {
 						// @ts-expect-error this property been replaced with the unsafe.capnp section
@@ -6941,7 +7198,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[durable_objects]", () => {
-			it("should support durable object bindings", async () => {
+			it("should support durable object bindings", async ({ expect }) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -6990,7 +7247,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support service-workers binding to external durable objects", async () => {
+			it("should support service-workers binding to external durable objects", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -7035,7 +7294,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support module workers implementing durable objects", async () => {
+			it("should support module workers implementing durable objects", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -7085,7 +7346,7 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support durable objects and D1", async () => {
+			it("should support durable objects and D1", async ({ expect }) => {
 				writeWranglerToml({
 					main: "index.js",
 					durable_objects: {
@@ -7143,7 +7404,9 @@ addEventListener('fetch', event => {});`
 				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
-			it("should error when detecting a service-worker worker implementing durable objects", async () => {
+			it("should error when detecting a service-worker worker implementing durable objects", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -7169,7 +7432,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[services]", () => {
-			it("should support service bindings", async () => {
+			it("should support service bindings", async ({ expect }) => {
 				writeWranglerToml({
 					services: [
 						{
@@ -7211,7 +7474,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support service bindings with entrypoints", async () => {
+			it("should support service bindings with entrypoints", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					services: [
 						{
@@ -7257,7 +7522,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[analytics_engine_datasets]", () => {
-			it("should support analytics engine bindings", async () => {
+			it("should support analytics engine bindings", async ({ expect }) => {
 				writeWranglerToml({
 					analytics_engine_datasets: [
 						{ binding: "FOO", dataset: "foo-dataset" },
@@ -7292,7 +7557,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[dispatch_namespaces]", () => {
-			it("should support bindings to a dispatch namespace", async () => {
+			it("should support bindings to a dispatch namespace", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					dispatch_namespaces: [
 						{
@@ -7331,7 +7598,9 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should support dispatch namespace bindings with an outbound worker", async () => {
+			it("should support dispatch namespace bindings with an outbound worker", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					dispatch_namespaces: [
 						{
@@ -7399,7 +7668,9 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("should support dispatch namespace bindings with parameterized outbounds", async () => {
+			it("should support dispatch namespace bindings with parameterized outbounds", async ({
+				expect,
+			}) => {
 				writeWranglerToml({
 					dispatch_namespaces: [
 						{
@@ -7461,7 +7732,7 @@ addEventListener('fetch', event => {});`
 
 		describe("[unsafe]", () => {
 			describe("[unsafe.bindings]", () => {
-				it("should stringify object in unsafe metadata", async () => {
+				it("should stringify object in unsafe metadata", async ({ expect }) => {
 					writeWranglerToml({
 						unsafe: {
 							metadata: {
@@ -7505,7 +7776,7 @@ addEventListener('fetch', event => {});`
 			`);
 				});
 
-				it("should warn if using unsafe bindings", async () => {
+				it("should warn if using unsafe bindings", async ({ expect }) => {
 					writeWranglerToml({
 						unsafe: {
 							bindings: [
@@ -7555,7 +7826,9 @@ addEventListener('fetch', event => {});`
 			`);
 				});
 
-				it("should warn if using unsafe bindings already handled by wrangler", async () => {
+				it("should warn if using unsafe bindings already handled by wrangler", async ({
+					expect,
+				}) => {
 					writeWranglerToml({
 						unsafe: {
 							bindings: [
@@ -7611,7 +7884,7 @@ addEventListener('fetch', event => {});`
 				});
 			});
 			describe("[unsafe.capnp]", () => {
-				it("should accept a pre-compiled capnp schema", async () => {
+				it("should accept a pre-compiled capnp schema", async ({ expect }) => {
 					writeWranglerToml({
 						unsafe: {
 							capnp: {
@@ -7647,7 +7920,9 @@ addEventListener('fetch', event => {});`
 				"
 			`);
 				});
-				it("should error when both pre-compiled and uncompiled-capnp schemas are used", async () => {
+				it("should error when both pre-compiled and uncompiled-capnp schemas are used", async ({
+					expect,
+				}) => {
 					writeWranglerToml({
 						unsafe: {
 							capnp: {
@@ -7665,7 +7940,7 @@ addEventListener('fetch', event => {});`
 				  - The field \\"unsafe.capnp\\" cannot contain both \\"compiled_schema\\" and one of \\"base_path\\" or \\"source_schemas\\"."
 			`);
 				});
-				it("should error when no schemas are specified", async () => {
+				it("should error when no schemas are specified", async ({ expect }) => {
 					writeWranglerToml({
 						unsafe: {
 							// @ts-expect-error This should error as the types expect something to be present
@@ -7681,8 +7956,10 @@ addEventListener('fetch', event => {});`
 				  - Expected \\"unsafe.capnp.source_schemas\\" to be an array of strings but got undefined"
 			`);
 				});
-				it("should error when the capnp compiler is not present, but is required", async () => {
-					jest.spyOn(commandExists, "sync").mockReturnValue(false);
+				it("should error when the capnp compiler is not present, but is required", async ({
+					expect,
+				}) => {
+					vi.spyOn(commandExists, "sync").mockReturnValue(false);
 					writeWranglerToml({
 						unsafe: {
 							capnp: {
@@ -7699,11 +7976,10 @@ addEventListener('fetch', event => {});`
 						`"The capnp compiler is required to upload capnp schemas, but is not present."`
 					);
 				});
-				it("should accept an uncompiled capnp schema", async () => {
-					jest.spyOn(commandExists, "sync").mockReturnValue(true);
-					jest
-						.spyOn(childProcess, "spawnSync")
-						.mockImplementation((cmd, args) => {
+				it("should accept an uncompiled capnp schema", async ({ expect }) => {
+					vi.spyOn(commandExists, "sync").mockReturnValue(true);
+					vi.spyOn(childProcess, "spawnSync").mockImplementation(
+						(cmd, args) => {
 							expect(cmd).toBe("capnp");
 							expect(args?.[0]).toBe("compile");
 							expect(args?.[1]).toBe("-o-");
@@ -7718,7 +7994,8 @@ addEventListener('fetch', event => {});`
 								signal: null,
 								output: [null],
 							};
-						});
+						}
+					);
 
 					writeWranglerToml({
 						unsafe: {
@@ -7761,7 +8038,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("upload rules", () => {
-		it("should be able to define rules for uploading non-js modules (sw)", async () => {
+		it("should be able to define rules for uploading non-js modules (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 			});
@@ -7798,7 +8077,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to define rules for uploading non-js modules (esm)", async () => {
+		it("should be able to define rules for uploading non-js modules (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 			});
@@ -7832,7 +8113,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should log a deprecation warning when using `build.upload.rules`", async () => {
+		it("should log a deprecation warning when using `build.upload.rules`", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				build: {
 					upload: {
@@ -7884,7 +8167,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should be able to use fallthrough:true for multiple rules", async () => {
+		it("should be able to use fallthrough:true for multiple rules", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [
 					{ type: "Text", globs: ["**/*.file"], fallthrough: true },
@@ -7924,7 +8209,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to use fallthrough:false for multiple rules", async () => {
+		it("should be able to use fallthrough:false for multiple rules", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [
 					{ type: "Text", globs: ["**/*.file"], fallthrough: false },
@@ -7951,7 +8238,9 @@ addEventListener('fetch', event => {});`
 			);
 		});
 
-		it("should warn when multiple rules for the same type do not have fallback defined", async () => {
+		it("should warn when multiple rules for the same type do not have fallback defined", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [
 					{ type: "Text", globs: ["**/*.file"] },
@@ -7990,7 +8279,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should be able to preserve file names when defining rules for uploading non-js modules (sw)", async () => {
+		it("should be able to preserve file names when defining rules for uploading non-js modules (sw)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 				preserve_file_names: true,
@@ -8027,7 +8318,9 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should be able to preserve file names when defining rules for uploading non-js modules (esm)", async () => {
+		it("should be able to preserve file names when defining rules for uploading non-js modules (esm)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
 				preserve_file_names: true,
@@ -8070,7 +8363,9 @@ addEventListener('fetch', event => {});`
 			afterEach(() => {
 				process.env.NODE_ENV = actualProcessEnvNodeEnv;
 			});
-			it("should replace `process.env.NODE_ENV` in scripts", async () => {
+			it("should replace `process.env.NODE_ENV` in scripts", async ({
+				expect,
+			}) => {
 				writeWranglerToml();
 				fs.writeFileSync(
 					"./index.js",
@@ -8103,7 +8398,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("legacy module specifiers", () => {
-		it("should work with legacy module specifiers, with a deprecation warning (1)", async () => {
+		it("should work with legacy module specifiers, with a deprecation warning (1)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: false }],
 			});
@@ -8139,7 +8436,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
+		it("should work with legacy module specifiers, with a deprecation warning (2)", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"./index.js",
@@ -8173,7 +8472,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should work with legacy module specifiers, with a deprecation warning (3)", async () => {
+		it("should work with legacy module specifiers, with a deprecation warning (3)", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: false }],
 			});
@@ -8209,7 +8510,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
+		it("should not match regular module specifiers when there aren't any possible legacy module matches", async ({
+			expect,
+		}) => {
 			// see https://github.com/cloudflare/workers-sdk/issues/655 for bug details
 
 			fs.writeFileSync(
@@ -8241,7 +8544,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("tsconfig", () => {
-		it("should use compilerOptions.paths to resolve modules", async () => {
+		it("should use compilerOptions.paths to resolve modules", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "index.ts",
 			});
@@ -8286,7 +8591,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should output to target es2022 even if tsconfig says otherwise", async () => {
+		it("should output to target es2022 even if tsconfig says otherwise", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			fs.writeFileSync(
@@ -8343,7 +8650,9 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("--outdir", () => {
-		it("should generate built assets at --outdir if specified", async () => {
+		it("should generate built assets at --outdir if specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -8370,7 +8679,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should preserve the entry point file name, even when using a facade", async () => {
+		it("should preserve the entry point file name, even when using a facade", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -8417,7 +8728,9 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should copy any module imports related assets to --outdir if specified", async () => {
+		it("should copy any module imports related assets to --outdir if specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"./index.js",
@@ -8479,7 +8792,9 @@ export default{
 	});
 
 	describe("--dry-run", () => {
-		it("should not deploy the worker if --dry-run is specified", async () => {
+		it("should not deploy the worker if --dry-run is specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				// add a durable object with migrations
 				// to make sure we _don't_ fetch migration status
@@ -8516,7 +8831,7 @@ export default{
 	});
 
 	describe("--node-compat", () => {
-		it("should warn when using node compatibility mode", async () => {
+		it("should warn when using node compatibility mode", async ({ expect }) => {
 			writeWranglerToml();
 			writeWorkerSource();
 			await runWrangler("deploy index.js --node-compat --dry-run");
@@ -8534,7 +8849,9 @@ export default{
 		`);
 		});
 
-		it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async () => {
+		it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -8557,7 +8874,7 @@ export default{
 			);
 		});
 
-		it("should polyfill node builtins when enabled", async () => {
+		it("should polyfill node builtins when enabled", async ({ expect }) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -8584,7 +8901,9 @@ export default{
 	});
 
 	describe("`nodejs_compat` compatibility flag", () => {
-		it('when absent, should warn on any "external" `node:*` imports', async () => {
+		it('when absent, should warn on any "external" `node:*` imports', async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -8608,7 +8927,9 @@ export default{
 		`);
 		});
 
-		it('when present, should support any "external" `node:*` imports', async () => {
+		it('when present, should support any "external" `node:*` imports', async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -8638,7 +8959,7 @@ export default{
 			);
 		});
 
-		it("should conflict with the --node-compat option", async () => {
+		it("should conflict with the --node-compat option", async ({ expect }) => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"index.js",
@@ -8660,7 +8981,7 @@ export default{
 	});
 
 	describe("bundle reporter", () => {
-		it("should print the bundle size", async () => {
+		it("should print the bundle size", async ({ expect }) => {
 			fs.writeFileSync(
 				"./text.txt",
 				`${new Array(100)
@@ -8715,7 +9036,7 @@ export default{
 		`);
 		});
 
-		it("should print the bundle size, with API errors", async () => {
+		it("should print the bundle size, with API errors", async ({ expect }) => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
@@ -8787,7 +9108,9 @@ export default{
 		`);
 		});
 
-		test("should check biggest dependencies when upload fails with script size error", async () => {
+		it("should check biggest dependencies when upload fails with script size error", async ({
+			expect,
+		}) => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
@@ -8868,7 +9191,9 @@ export default{
 		`);
 		});
 
-		test("should offer some helpful advice when upload fails with script startup error", async () => {
+		it("should offer some helpful advice when upload fails with script startup error", async ({
+			expect,
+		}) => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
@@ -8941,7 +9266,9 @@ export default{
 			// keeping these as unit tests to try and keep them snappy, as they often deal with
 			// big files that would take a while to deal with in a full wrangler test
 
-			test("should print the bundle size and warn about large scripts when > 1MiB", async () => {
+			it("should print the bundle size and warn about large scripts when > 1MiB", async ({
+				expect,
+			}) => {
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
@@ -8966,7 +9293,9 @@ export default{
 		`);
 			});
 
-			test("should not warn about bundle sizes when NO_SCRIPT_SIZE_WARNING is set", async () => {
+			it("should not warn about bundle sizes when NO_SCRIPT_SIZE_WARNING is set", async ({
+				expect,
+			}) => {
 				const previousValue = process.env.NO_SCRIPT_SIZE_WARNING;
 				process.env.NO_SCRIPT_SIZE_WARNING = "true";
 
@@ -8994,7 +9323,9 @@ export default{
 				process.env.NO_SCRIPT_SIZE_WARNING = previousValue;
 			});
 
-			test("should print the top biggest dependencies in the bundle when upload fails", () => {
+			it("should print the top biggest dependencies in the bundle when upload fails", ({
+				expect,
+			}) => {
 				const deps = {
 					"node_modules/a-mod/module.js": { bytesInOutput: 450 },
 					"node_modules/b-mod/module.js": { bytesInOutput: 10 },
@@ -9033,7 +9364,9 @@ export default{
 	});
 
 	describe("--no-bundle", () => {
-		it("(cli) should not transform the source code before publishing it", async () => {
+		it("(cli) should not transform the source code before publishing it", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			const scriptContent = `
       import X from '@cloudflare/no-such-package'; // let's add an import that doesn't exist
@@ -9044,7 +9377,9 @@ export default{
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 
-		it("(config) should not transform the source code before publishing it", async () => {
+		it("(config) should not transform the source code before publishing it", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				no_bundle: true,
 			});
@@ -9059,7 +9394,9 @@ export default{
 	});
 
 	describe("--no-bundle --minify", () => {
-		it("should warn that no-bundle and minify can't be used together", async () => {
+		it("should warn that no-bundle and minify can't be used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			const scriptContent = `
 			const xyz = 123; // a statement that would otherwise be compiled out
@@ -9075,7 +9412,9 @@ export default{
 		`);
 		});
 
-		it("should warn that no-bundle and minify can't be used together", async () => {
+		it("should warn that no-bundle and minify can't be used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				no_bundle: true,
 				minify: true,
@@ -9094,7 +9433,9 @@ export default{
 	});
 
 	describe("--no-bundle --node-compat", () => {
-		it("should warn that no-bundle and node-compat can't be used together", async () => {
+		it("should warn that no-bundle and node-compat can't be used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			const scriptContent = `
 			const xyz = 123; // a statement that would otherwise be compiled out
@@ -9113,7 +9454,9 @@ export default{
 		`);
 		});
 
-		it("should warn that no-bundle and node-compat can't be used together", async () => {
+		it("should warn that no-bundle and node-compat can't be used together", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				no_bundle: true,
 				node_compat: true,
@@ -9134,7 +9477,9 @@ export default{
 		});
 	});
 
-	it("should not deploy if there's any other kind of error when checking deployment source", async () => {
+	it("should not deploy if there's any other kind of error when checking deployment source", async ({
+		expect,
+	}) => {
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
@@ -9200,7 +9545,7 @@ export default{
 	describe("queues", () => {
 		const queueId = "queue-id";
 		const queueName = "queue1";
-		it("should upload producer bindings", async () => {
+		it("should upload producer bindings", async ({ expect }) => {
 			writeWranglerToml({
 				queues: {
 					producers: [{ binding: "QUEUE_ONE", queue: "queue1" }],
@@ -9251,7 +9596,7 @@ export default{
 		`);
 		});
 
-		it("should update queue producers on deploy", async () => {
+		it("should update queue producers on deploy", async ({ expect }) => {
 			writeWranglerToml({
 				queues: {
 					producers: [
@@ -9301,7 +9646,7 @@ export default{
 		`);
 		});
 
-		it("should post worker queue consumers on deploy", async () => {
+		it("should post worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9356,7 +9701,7 @@ export default{
 		`);
 		});
 
-		it("should update worker queue consumers on deploy", async () => {
+		it("should update worker queue consumers on deploy", async ({ expect }) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9419,7 +9764,9 @@ export default{
 		`);
 		});
 
-		it("should update worker (service) queue consumers with default environment on deploy", async () => {
+		it("should update worker (service) queue consumers with default environment on deploy", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9487,7 +9834,7 @@ export default{
 		`);
 		});
 
-		it("should post queue http consumers on deploy", async () => {
+		it("should post queue http consumers on deploy", async ({ expect }) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9542,7 +9889,9 @@ export default{
 		`);
 		});
 
-		it("should update queue http consumers when one already exists for queue", async () => {
+		it("should update queue http consumers when one already exists for queue", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9578,9 +9927,9 @@ export default{
 				rest.put(
 					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
 					async (req, res, ctx) => {
-						expect(req.params.queueId).toEqual(queueId);
-						expect(req.params.consumerId).toEqual("queue1-consumer-id");
-						expect(req.params.accountId).toEqual("some-account-id");
+						assert(req.params.queueId == queueId);
+						assert(req.params.consumerId == "queue1-consumer-id");
+						assert(req.params.accountId == "some-account-id");
 						return res(
 							ctx.json({
 								success: true,
@@ -9607,7 +9956,9 @@ export default{
 		`);
 		});
 
-		it("should support queue consumer concurrency with a max concurrency specified", async () => {
+		it("should support queue consumer concurrency with a max concurrency specified", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9670,7 +10021,9 @@ export default{
 		`);
 		});
 
-		it("should support queue consumer concurrency with a null max concurrency", async () => {
+		it("should support queue consumer concurrency with a null max concurrency", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -9734,7 +10087,9 @@ export default{
 		`);
 		});
 
-		it("consumer should error when a queue doesn't exist", async () => {
+		it("consumer should error when a queue doesn't exist", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				queues: {
 					producers: [],
@@ -9761,7 +10116,9 @@ export default{
 			);
 		});
 
-		it("producer should error when a queue doesn't exist", async () => {
+		it("producer should error when a queue doesn't exist", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				queues: {
 					producers: [{ queue: queueName, binding: "QUEUE_ONE" }],
@@ -9782,7 +10139,9 @@ export default{
 	});
 
 	describe("source maps", () => {
-		it("should include source map with bundle when upload_source_maps = true", async () => {
+		it("should include source map with bundle when upload_source_maps = true", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "index.ts",
 				upload_source_maps: true,
@@ -9820,7 +10179,9 @@ export default{
 			await runWrangler("deploy");
 		});
 
-		it("should include source maps emitted by custom build when upload_source_maps = true", async () => {
+		it("should include source maps emitted by custom build when upload_source_maps = true", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				no_bundle: true,
 				main: "index.js",
@@ -9891,7 +10252,9 @@ export default{
 
 			await runWrangler("deploy");
 		});
-		it("should correctly read sourcemaps with custom wrangler.toml location", async () => {
+		it("should correctly read sourcemaps with custom wrangler.toml location", async ({
+			expect,
+		}) => {
 			fs.mkdirSync("some/dir", { recursive: true });
 			writeWranglerToml(
 				{
@@ -9917,7 +10280,7 @@ export default{
 	});
 
 	describe("ai", () => {
-		it("should upload ai bindings", async () => {
+		it("should upload ai bindings", async ({ expect }) => {
 			writeWranglerToml({
 				ai: { binding: "AI_BIND" },
 				browser: { binding: "MYBROWSER" },
@@ -9958,7 +10321,9 @@ export default{
 	});
 
 	describe("python", () => {
-		it("should upload python module defined in wrangler.toml", async () => {
+		it("should upload python module defined in wrangler.toml", async ({
+			expect,
+		}) => {
 			writeWranglerToml({
 				main: "index.py",
 			});
@@ -9995,7 +10360,9 @@ export default{
 		`);
 		});
 
-		it("should upload python module specified in CLI args", async () => {
+		it("should upload python module specified in CLI args", async ({
+			expect,
+		}) => {
 			writeWranglerToml();
 			await fs.promises.writeFile(
 				"index.py",
@@ -10032,7 +10399,7 @@ export default{
 	});
 
 	describe("hyperdrive", () => {
-		it("should upload hyperdrive bindings", async () => {
+		it("should upload hyperdrive bindings", async ({ expect }) => {
 			writeWranglerToml({
 				hyperdrive: [
 					{
@@ -10072,7 +10439,7 @@ export default{
 	});
 
 	describe("mtls_certificates", () => {
-		it("should upload mtls_certificate bindings", async () => {
+		it("should upload mtls_certificate bindings", async ({ expect }) => {
 			writeWranglerToml({
 				mtls_certificates: [{ binding: "CERT_ONE", certificate_id: "1234" }],
 			});
@@ -10107,7 +10474,9 @@ export default{
 	});
 
 	describe("--keep-vars", () => {
-		it("should send keepVars when keep-vars is passed in", async () => {
+		it("should send keepVars when keep-vars is passed in", async ({
+			expect,
+		}) => {
 			process.env = {
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
@@ -10136,7 +10505,7 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should not send keepVars by default", async () => {
+		it("should not send keepVars by default", async ({ expect }) => {
 			process.env = {
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
@@ -10165,7 +10534,7 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should send keepVars when `keep_vars = true`", async () => {
+		it("should send keepVars when `keep_vars = true`", async ({ expect }) => {
 			process.env = {
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
@@ -10198,7 +10567,7 @@ export default{
 	});
 
 	describe("--dispatch-namespace", () => {
-		it("should upload to dispatch namespace", async () => {
+		it("should upload to dispatch namespace", async ({ expect }) => {
 			writeWranglerToml();
 			const scriptContent = `
       export default {
@@ -10273,15 +10642,16 @@ function mockUpdateWorkerRequest({
 		rest.post(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
 			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+				assert(req.params.accountId == "some-account-id");
+				assert(
+					req.params.scriptName ==
+						(legacyEnv && env ? `test-name-${env}` : "test-name")
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					assert(req.params.envName == env);
 				}
 				const body = await req.json();
-				expect(body).toEqual({ enabled });
+				assert.deepEqual(body, { enabled });
 				return res.once(ctx.json(createFetchResult(null)));
 			}
 		)
@@ -10305,15 +10675,17 @@ function mockPublishRoutesRequest({
 		rest.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
 			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+				assert(req.params.accountId == "some-account-id");
+				assert(
+					req.params.scriptName ==
+						(legacyEnv && env ? `test-name-${env}` : "test-name")
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					assert(req.params.envName == env);
 				}
 				const body = await req.json();
-				expect(body).toEqual(
+				assert.deepEqual(
+					body,
 					routes.map((route) =>
 						typeof route !== "object" ? { pattern: route } : route
 					)
@@ -10353,7 +10725,7 @@ function mockUnauthorizedPublishRoutesRequest({
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
 		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+			assert.deepEqual([...req.url.searchParams.entries()], [["name", domain]]);
 
 			return res(
 				ctx.status(200),
@@ -10371,7 +10743,7 @@ function mockGetZones(domain: string, zones: { id: string }[] = []) {
 function mockGetWorkerRoutes(zoneId: string) {
 	msw.use(
 		rest.get("*/zones/:zoneId/workers/routes", (req, res, ctx) => {
-			expect(req.params.zoneId).toEqual(zoneId);
+			assert(req.params.zoneId == zoneId);
 
 			return res(
 				ctx.status(200),
@@ -10393,7 +10765,7 @@ function mockPublishRoutesFallbackRequest(route: {
 	msw.use(
 		rest.post(`*/zones/:zoneId/workers/routes`, async (req, res, ctx) => {
 			const body = await req.json();
-			expect(body).toEqual(route);
+			assert.deepEqual(body, route);
 			return res.once(ctx.json(createFetchResult(route.pattern)));
 		})
 	);
@@ -10405,8 +10777,8 @@ function mockCustomDomainLookup(origin: CustomDomain) {
 			`*/accounts/:accountId/workers/domains/records/:domainTag`,
 
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.domainTag).toEqual(origin.id);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.domainTag == origin.id);
 
 				return res.once(ctx.json(createFetchResult(origin)));
 			}
@@ -10431,12 +10803,13 @@ function mockCustomDomainsChangesetRequest({
 		rest.post(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
 			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+				assert(req.params.accountId == "some-account-id");
+				assert(
+					req.params.scriptName ==
+						(legacyEnv && env ? `test-name-${env}` : "test-name")
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					assert(req.params.envName == env);
 				}
 
 				const domains: Array<
@@ -10495,15 +10868,16 @@ function mockPublishCustomDomainsRequest({
 		rest.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
 			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
-					legacyEnv && env ? `test-name-${env}` : "test-name"
+				assert(req.params.accountId == "some-account-id");
+				assert(
+					req.params.scriptName ==
+						(legacyEnv && env ? `test-name-${env}` : "test-name")
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					assert(req.params.envName == env);
 				}
 				const body = await req.json();
-				expect(body).toEqual({
+				assert.deepEqual(body, {
 					...publishFlags,
 					origins: domains,
 				});
@@ -10518,7 +10892,7 @@ function mockPublishCustomDomainsRequest({
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 	msw.use(
 		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
+			assert(req.params.accountId == "some-account-id");
 			return res.once(ctx.json(createFetchResult(namespaces)));
 		})
 	);
@@ -10551,11 +10925,11 @@ function mockUploadAssetsToKVRequest(
 		rest.put(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
 			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.namespaceId == expectedNamespaceId);
 				const uploads = await req.json();
 				if (assets) {
-					expect(assets.length).toEqual(uploads.length);
+					assert(assets.length == uploads.length);
 					for (let i = 0; i < uploads.length; i++) {
 						checkAssetUpload(assets[i], uploads[i]);
 					}
@@ -10575,12 +10949,12 @@ function checkAssetUpload(asset: ExpectedAsset, upload: StaticAssetUpload) {
 		"^" +
 			asset.filePath.replace(/(\.[^.]+)$/, ".[a-z0-9]+$1").replace(/\./g, "\\.")
 	);
-	expect(upload.key).toMatch(keyMatcher);
+	assert.match(upload.key, keyMatcher);
 	// The asset value is base64 encoded.
-	expect(upload.base64).toBe(true);
-	expect(Buffer.from(upload.value, "base64").toString()).toEqual(asset.content);
-	expect(upload.expiration).toEqual(asset.expiration);
-	expect(upload.expiration_ttl).toEqual(asset.expiration_ttl);
+	assert(upload.base64 === true);
+	assert(Buffer.from(upload.value, "base64").toString() == asset.content);
+	assert(upload.expiration == asset.expiration);
+	assert(upload.expiration_ttl == asset.expiration_ttl);
 }
 
 /** Create a mock handler for thr request that does a bulk delete of unused assets */
@@ -10592,10 +10966,10 @@ function mockDeleteUnusedAssetsRequest(
 		rest.delete(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
 			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.namespaceId == expectedNamespaceId);
 				const deletes = await req.json();
-				expect(assets).toEqual(deletes);
+				assert.deepEqual(assets, deletes);
 				return res.once(
 					ctx.json({
 						success: true,
@@ -10615,7 +10989,7 @@ function mockLegacyScriptData(options: { scripts: LegacyScriptInfo[] }) {
 	const { scripts } = options;
 	msw.use(
 		rest.get("*/accounts/:accountId/workers/scripts", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
+			assert(req.params.accountId == "some-account-id");
 			return res.once(
 				ctx.json({
 					success: true,
@@ -10664,11 +11038,9 @@ function mockServiceScriptData(options: {
 			rest.get(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
 				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.scriptName).toEqual(
-						options.scriptName || "test-name"
-					);
-					expect(req.params.envName).toEqual(options.env);
+					assert(req.params.accountId == "some-account-id");
+					assert(req.params.scriptName == options.scriptName || "test-name");
+					assert(req.params.envName == options.env);
 					return res.once(
 						ctx.json({
 							success: true,
@@ -10708,10 +11080,8 @@ function mockServiceScriptData(options: {
 			rest.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
 				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.scriptName).toEqual(
-						options.scriptName || "test-name"
-					);
+					assert(req.params.accountId == "some-account-id");
+					assert(req.params.scriptName == options.scriptName || "test-name");
 					return res.once(
 						ctx.json({
 							success: true,
@@ -10733,11 +11103,11 @@ function mockGetQueueByName(queueName: string, queue: QueueResponse | null) {
 			"*/accounts/:accountId/queues?*",
 			async (request, response, context) => {
 				requests.count += 1;
-				expect(await request.text()).toEqual("");
+				assert((await request.text()) == "");
 				if (queue) {
 					const nameParam = request.url.searchParams.getAll("name");
-					expect(nameParam.length).toBeGreaterThan(0);
-					expect(nameParam[0]).toEqual(queueName);
+					assert(nameParam.length > 0);
+					assert(nameParam[0] == queueName);
 				}
 				return response(
 					context.json({
@@ -10759,8 +11129,8 @@ function mockGetServiceByName(serviceName: string, defaultEnvironment: string) {
 	msw.use(
 		rest.get(resource, async (request, response, context) => {
 			requests.count += 1;
-			expect(request.params.accountId).toEqual("some-account-id");
-			expect(request.params.serviceName).toEqual(serviceName);
+			assert(request.params.accountId == "some-account-id");
+			assert(request.params.serviceName == serviceName);
 
 			return response(
 				context.json({
@@ -10795,8 +11165,8 @@ function mockPutQueueConsumerById(
 			`*/accounts/:accountId/queues/${expectedQueueId}/consumers/${expectedConsumerId}`,
 			async (req, res, ctx) => {
 				const body = await req.json();
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
+				assert(req.params.accountId == "some-account-id");
+				assert.deepEqual(body, expectedBody);
 				requests.count += 1;
 				return res(
 					ctx.json({
@@ -10822,9 +11192,9 @@ function mockPostConsumerById(
 			"*/accounts/:accountId/queues/:queueId/consumers",
 			async (request, response, context) => {
 				requests.count += 1;
-				expect(request.params.queueId).toEqual(expectedQueueId);
-				expect(request.params.accountId).toEqual("some-account-id");
-				expect(await request.json()).toEqual(expectedBody);
+				assert(request.params.queueId == expectedQueueId);
+				assert(request.params.accountId == "some-account-id");
+				assert.deepEqual(await request.json(), expectedBody);
 				return response.once(
 					context.json({
 						success: true,
@@ -10847,9 +11217,9 @@ function mockPutQueueById(
 	msw.use(
 		rest.put(`*/accounts/:accountId/queues/:queueId`, async (req, res, ctx) => {
 			const body = await req.json();
-			expect(req.params.queueId).toEqual(expectedQueueId);
-			expect(req.params.accountId).toEqual("some-account-id");
-			expect(body).toEqual(expectedBody);
+			assert(req.params.queueId == expectedQueueId);
+			assert(req.params.accountId == "some-account-id");
+			assert.deepEqual(body, expectedBody);
 			requests.count += 1;
 			return res(
 				ctx.json({
@@ -10879,9 +11249,9 @@ function mockPostQueueHTTPConsumer(
 			`*/accounts/:accountId/queues/:queueId/consumers`,
 			async (req, res, ctx) => {
 				const body = await req.json();
-				expect(req.params.queueId).toEqual(expectedQueueId);
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(body).toEqual(expectedBody);
+				assert(req.params.queueId == expectedQueueId);
+				assert(req.params.accountId == "some-account-id");
+				assert.deepEqual(body, expectedBody);
 				requests.count += 1;
 				return res(
 					ctx.json({
@@ -10917,7 +11287,7 @@ function mockFormDataToString(this: FormData) {
 
 async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
 	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
+	assert(__formdata instanceof Array);
 
 	const form = new FormData();
 	for (const [key, value] of __formdata) {

@@ -1,6 +1,7 @@
 import MockWebSocket from "jest-websocket-mock";
 import { rest } from "msw";
 import { Headers, Request } from "undici";
+import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -23,11 +24,8 @@ import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
 describe("tail", () => {
-	beforeEach(() => {
-		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
-		// dare you... Have fun fixing this tests :)
-		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
-		const mockWs = jest["requireMock"]("ws");
+	beforeEach(async () => {
+		const mockWs = await vi.importMock("ws");
 		mockWs.useOriginal = false;
 	});
 
@@ -53,14 +51,14 @@ describe("tail", () => {
 	 */
 	describe("API interaction", () => {
 		const { setIsTTY } = useMockIsTTY();
-		it("should throw an error if name isn't provided", async () => {
+		it("should throw an error if name isn't provided", async ({ expect }) => {
 			await expect(
 				runWrangler("tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`"`
 			);
 		});
-		it("warns about durable object restarts for tty", async () => {
+		it("warns about durable object restarts for tty", async ({ expect }) => {
 			setIsTTY(true);
 			mockConfirm({
 				text: "Would you like to continue?",
@@ -77,7 +75,7 @@ describe("tail", () => {
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
-		it("creates and then delete tails", async () => {
+		it("creates and then delete tails", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -90,7 +88,9 @@ describe("tail", () => {
 			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
-		it("should connect to the worker assigned to a given route", async () => {
+		it("should connect to the worker assigned to a given route", async ({
+			expect,
+		}) => {
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -136,7 +136,9 @@ describe("tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("should error if a given route is not assigned to the user's zone", async () => {
+		it("should error if a given route is not assigned to the user's zone", async ({
+			expect,
+		}) => {
 			msw.use(
 				rest.get(`*/zones`, (req, res, ctx) => {
 					expect(req.url.searchParams.get("name")).toBe("example.com");
@@ -167,7 +169,9 @@ describe("tail", () => {
 
 			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
 		});
-		it("should error if a given route is not within the user's zone", async () => {
+		it("should error if a given route is not within the user's zone", async ({
+			expect,
+		}) => {
 			msw.use(
 				rest.get(`*/zones`, (req, res, ctx) => {
 					expect(req.url.searchParams.get("name")).toBe("example.com");
@@ -186,7 +190,7 @@ describe("tail", () => {
 			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
 		});
 
-		it("creates and then delete tails: legacy envs", async () => {
+		it("creates and then delete tails: legacy envs", async ({ expect }) => {
 			const api = mockWebsocketAPIs("some-env", true);
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -200,7 +204,7 @@ describe("tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("creates and then delete tails: service envs", async () => {
+		it("creates and then delete tails: service envs", async ({ expect }) => {
 			const api = mockWebsocketAPIs("some-env");
 			expect(api.requests.creation.length).toStrictEqual(0);
 
@@ -214,7 +218,9 @@ describe("tail", () => {
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
-		it("activates debug mode when the cli arg is passed in", async () => {
+		it("activates debug mode when the cli arg is passed in", async ({
+			expect,
+		}) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --debug");
 			await expect(api.nextMessageJson()).resolves.toHaveProperty(
@@ -225,7 +231,7 @@ describe("tail", () => {
 	});
 
 	describe("filtering", () => {
-		it("sends sampling rate filters", async () => {
+		it("sends sampling rate filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			const tooHigh = runWrangler("tail test-worker --sampling-rate 10");
 			await expect(tooHigh).rejects.toThrow();
@@ -240,7 +246,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends single status filters", async () => {
+		it("sends single status filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error");
 			expect(api.requests.creation[0]).toEqual({
@@ -252,7 +258,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends multiple status filters", async () => {
+		it("sends multiple status filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error --status canceled");
 			expect(api.requests.creation[0]).toEqual({
@@ -270,7 +276,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends single HTTP method filters", async () => {
+		it("sends single HTTP method filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --method POST");
 			expect(api.requests.creation[0]).toEqual({
@@ -278,7 +284,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends multiple HTTP method filters", async () => {
+		it("sends multiple HTTP method filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --method POST --method GET");
 			expect(api.requests.creation[0]).toEqual({
@@ -286,7 +292,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends header filters without a query", async () => {
+		it("sends header filters without a query", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --header X-CUSTOM-HEADER");
 			expect(api.requests.creation[0]).toEqual({
@@ -294,7 +300,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends header filters with a query", async () => {
+		it("sends header filters with a query", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value");
 			expect(api.requests.creation[0]).toEqual({
@@ -302,7 +308,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends single IP filters", async () => {
+		it("sends single IP filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			const fakeIp = "192.0.2.1";
 
@@ -312,7 +318,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends multiple IP filters", async () => {
+		it("sends multiple IP filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			const fakeIp = "192.0.2.1";
 
@@ -322,7 +328,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends search filters", async () => {
+		it("sends search filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			const search = "filterMe";
 
@@ -332,7 +338,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends version id filters", async () => {
+		it("sends version id filters", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			const versionId = "87501bef-3ef2-4464-a3d6-35e548695742";
 
@@ -342,7 +348,7 @@ describe("tail", () => {
 			});
 		});
 
-		it("sends everything but the kitchen sink", async () => {
+		it("sends everything but the kitchen sink", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			const sampling_rate = 0.69;
 			const status = ["ok", "error"];
@@ -390,7 +396,7 @@ describe("tail", () => {
 	describe("printing", () => {
 		const { setIsTTY } = useMockIsTTY();
 
-		it("logs request messages in JSON format", async () => {
+		it("logs request messages in JSON format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format json");
 
@@ -402,7 +408,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs scheduled messages in JSON format", async () => {
+		it("logs scheduled messages in JSON format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format json");
 
@@ -414,7 +420,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs alarm messages in json format", async () => {
+		it("logs alarm messages in json format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format json");
 
@@ -426,7 +432,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs email messages in json format", async () => {
+		it("logs email messages in json format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format json");
 
@@ -438,7 +444,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs tail messages in json format", async () => {
+		it("logs tail messages in json format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format json");
 
@@ -450,7 +456,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs queue messages in json format", async () => {
+		it("logs queue messages in json format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format json");
 
@@ -462,7 +468,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs request messages in pretty format", async () => {
+		it("logs request messages in pretty format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -485,7 +491,7 @@ describe("tail", () => {
 		      `);
 		});
 
-		it("logs scheduled messages in pretty format", async () => {
+		it("logs scheduled messages in pretty format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -508,7 +514,7 @@ describe("tail", () => {
 		      `);
 		});
 
-		it("logs alarm messages in pretty format", async () => {
+		it("logs alarm messages in pretty format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -531,7 +537,7 @@ describe("tail", () => {
 		      `);
 		});
 
-		it("logs email messages in pretty format", async () => {
+		it("logs email messages in pretty format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -554,7 +560,7 @@ describe("tail", () => {
 		`);
 		});
 
-		it("logs tail messages in pretty format", async () => {
+		it("logs tail messages in pretty format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -580,7 +586,7 @@ describe("tail", () => {
 		`);
 		});
 
-		it("logs tail overload message", async () => {
+		it("logs tail overload message", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -606,7 +612,7 @@ describe("tail", () => {
 		`);
 		});
 
-		it("logs queue messages in pretty format", async () => {
+		it("logs queue messages in pretty format", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -629,7 +635,9 @@ describe("tail", () => {
 		      `);
 		});
 
-		it("should not crash when the tail message has a void event", async () => {
+		it("should not crash when the tail message has a void event", async ({
+			expect,
+		}) => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
@@ -651,7 +659,9 @@ describe("tail", () => {
 		`);
 		});
 
-		it("defaults to logging in pretty format when the output is a TTY", async () => {
+		it("defaults to logging in pretty format when the output is a TTY", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker");
@@ -675,7 +685,9 @@ describe("tail", () => {
 		      `);
 		});
 
-		it("defaults to logging in json format when the output is not a TTY", async () => {
+		it("defaults to logging in json format when the output is not a TTY", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			const api = mockWebsocketAPIs();
@@ -689,7 +701,7 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs console messages and exceptions", async () => {
+		it("logs console messages and exceptions", async ({ expect }) => {
 			setIsTTY(true);
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker");
@@ -742,44 +754,60 @@ describe("tail", () => {
 	});
 
 	describe("disconnects", () => {
-		it("errors when the websocket is already closed", async () => {
+		it("errors when the websocket is already closed", async ({ expect }) => {
 			const api = mockWebsocketAPIs();
 			await api.closeHelper();
 
 			await expect(runWrangler("tail test-worker")).rejects.toThrow();
 		});
 
-		it("errors when the websocket stops reacting to pings (pretty format)", async () => {
+		it("errors when the websocket stops reacting to pings (pretty format)", async ({
+			expect,
+		}) => {
 			const api = mockWebsocketAPIs();
-			jest.useFakeTimers({
-				doNotFake: ["setTimeout"],
+			vi.useFakeTimers({
+				toFake: [
+					"setImmediate",
+					"clearImmediate",
+					"setInterval",
+					"clearInterval",
+					"Date",
+				],
 			});
 			// Block the websocket from replying to the ping
-			jest.spyOn(MockWebSocket2.prototype, "ping").mockImplementation();
+			vi.spyOn(MockWebSocket2.prototype, "ping");
 			await runWrangler("tail test-worker --format=pretty");
 			await api.ws.connected;
 			// The ping is sent every 2 secs, so it should not fail until the second ping is due.
-			await jest.advanceTimersByTimeAsync(10000);
+			await vi.advanceTimersByTimeAsync(10000);
 			await expect(
-				jest.advanceTimersByTimeAsync(10000)
+				vi.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Tail disconnected, exiting."`
 			);
 		});
 
-		it("errors when the websocket stops reacting to pings (json format)", async () => {
+		it("errors when the websocket stops reacting to pings (json format)", async ({
+			expect,
+		}) => {
 			const api = mockWebsocketAPIs();
-			jest.useFakeTimers({
-				doNotFake: ["setTimeout"],
+			vi.useFakeTimers({
+				toFake: [
+					"setImmediate",
+					"clearImmediate",
+					"setInterval",
+					"clearInterval",
+					"Date",
+				],
 			});
 			// Block the websocket from replying to the ping
-			jest.spyOn(MockWebSocket2.prototype, "ping").mockImplementation();
+			vi.spyOn(MockWebSocket2.prototype, "ping");
 			await runWrangler("tail test-worker --format=json");
 			await api.ws.connected;
 			// The ping is sent every 10 secs, so it should not fail until the second ping is due.
-			await jest.advanceTimersByTimeAsync(10000);
+			await vi.advanceTimersByTimeAsync(10000);
 			await expect(
-				jest.advanceTimersByTimeAsync(10000)
+				vi.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"\\"Tail disconnected, exiting.\\""`
 			);
@@ -905,10 +933,10 @@ function mockCreateTailRequest(
 			async (req, res, ctx) => {
 				const request = await req.json();
 				requests.push(request);
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(expectedScriptName);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.scriptName == expectedScriptName);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					assert(req.params.envName == env);
 				}
 				return res.once(
 					ctx.json(
@@ -974,14 +1002,14 @@ function mockDeleteTailRequest(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails/:tailId`,
 			async (req, res, ctx) => {
 				requests.count++;
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(expectedScriptName);
+				assert(req.params.accountId == "some-account-id");
+				assert(req.params.scriptName == expectedScriptName);
 				if (!legacyEnv) {
 					if (env) {
-						expect(req.params.tailId).toEqual("tail-id");
+						assert(req.params.tailId == "tail-id");
 					}
 				}
-				expect(req.params.tailId).toEqual("tail-id");
+				assert(req.params.tailId == "tail-id");
 				return res(ctx.json(createFetchResult(null)));
 			}
 		)

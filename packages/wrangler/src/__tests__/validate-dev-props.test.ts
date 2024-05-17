@@ -1,8 +1,11 @@
+import { describe, it } from "vitest";
 import { validateDevProps } from "../dev/validate-dev-props";
 import type { DevProps } from "../dev/dev";
 
 describe("validateDevProps", () => {
-	it("should throw if the user tries to use the service-worker format with an `assets` directory", () => {
+	it("should throw if the user tries to use the service-worker format with an `assets` directory", ({
+		expect,
+	}) => {
 		const props = {
 			isWorkersSite: false,
 			assetPaths: ["assets"],
@@ -15,7 +18,9 @@ describe("validateDevProps", () => {
 		);
 	});
 
-	it("should throw if the user tries to configure [wasm_modules] with an ES module worker", () => {
+	it("should throw if the user tries to configure [wasm_modules] with an ES module worker", ({
+		expect,
+	}) => {
 		const props = {
 			isWorkersSite: false,
 			assetPaths: [],
@@ -28,7 +33,9 @@ describe("validateDevProps", () => {
 		);
 	});
 
-	it("should throw if the user tries to configure [text_blobs] with an ES module worker", () => {
+	it("should throw if the user tries to configure [text_blobs] with an ES module worker", ({
+		expect,
+	}) => {
 		const props = {
 			isWorkersSite: false,
 			assetPaths: [],
@@ -41,7 +48,9 @@ describe("validateDevProps", () => {
 		);
 	});
 
-	it("should throw if the user tries to configure [data_blobs] with an ES module worker", () => {
+	it("should throw if the user tries to configure [data_blobs] with an ES module worker", ({
+		expect,
+	}) => {
 		const props = {
 			isWorkersSite: false,
 			assetPaths: [],

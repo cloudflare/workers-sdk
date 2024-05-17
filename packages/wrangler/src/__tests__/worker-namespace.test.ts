@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { assert, beforeEach, describe, it } from "vitest";
 import { printWranglerBanner } from "../update-check";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9,6 +10,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Mock } from "vitest";
 
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();
@@ -18,7 +20,9 @@ describe("dispatch-namespace", () => {
 	mockAccountId();
 	mockApiToken();
 
-	it("should display a list of available subcommands, for dispatch-namespace with no subcommand", async () => {
+	it("should display a list of available subcommands, for dispatch-namespace with no subcommand", async ({
+		expect,
+	}) => {
 		await runWrangler("dispatch-namespace");
 
 		// wait a tick for the help menu to be printed
@@ -60,8 +64,8 @@ describe("dispatch-namespace", () => {
 				(req, res, ctx) => {
 					counter++;
 					const { namespaceNameParam } = req.params;
-					expect(counter).toBe(1);
-					expect(namespaceNameParam).toBe(namespaceName);
+					assert(counter === 1);
+					assert(namespaceNameParam === namespaceName);
 					return res.once(
 						ctx.json(
 							createFetchResult({
@@ -78,7 +82,7 @@ describe("dispatch-namespace", () => {
 			)
 		);
 
-		it("should display help for create", async () => {
+		it("should display help for create", async ({ expect }) => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -103,7 +107,7 @@ describe("dispatch-namespace", () => {
 		`);
 		});
 
-		it("should attempt to create the given namespace", async () => {
+		it("should attempt to create the given namespace", async ({ expect }) => {
 			await runWrangler(`dispatch-namespace create ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
@@ -121,14 +125,14 @@ describe("dispatch-namespace", () => {
 				(req, res, ctx) => {
 					counter++;
 					const { namespaceNameParam } = req.params;
-					expect(counter).toBe(1);
-					expect(namespaceNameParam).toBe(namespaceName);
+					assert(counter === 1);
+					assert(namespaceNameParam === namespaceName);
 					return res.once(ctx.json(null));
 				}
 			)
 		);
 
-		it("should display help for delete", async () => {
+		it("should display help for delete", async ({ expect }) => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -153,7 +157,7 @@ describe("dispatch-namespace", () => {
 		`);
 		});
 
-		it("should try to delete the given namespace", async () => {
+		it("should try to delete the given namespace", async ({ expect }) => {
 			await runWrangler(`dispatch-namespace delete ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(
@@ -171,8 +175,8 @@ describe("dispatch-namespace", () => {
 				(req, res, ctx) => {
 					counter++;
 					const { namespaceNameParam } = req.params;
-					expect(counter).toBe(1);
-					expect(namespaceNameParam).toBe(namespaceName);
+					assert(counter === 1);
+					assert(namespaceNameParam === namespaceName);
 					return res.once(
 						ctx.json(
 							createFetchResult({
@@ -189,7 +193,7 @@ describe("dispatch-namespace", () => {
 			)
 		);
 
-		it("should display help for get", async () => {
+		it("should display help for get", async ({ expect }) => {
 			await expect(
 				runWrangler("dispatch-namespace get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -214,7 +218,9 @@ describe("dispatch-namespace", () => {
 		`);
 		});
 
-		it("should attempt to get info for the given namespace", async () => {
+		it("should attempt to get info for the given namespace", async ({
+			expect,
+		}) => {
 			await runWrangler(`dispatch-namespace get ${namespaceName}`);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -239,8 +245,8 @@ describe("dispatch-namespace", () => {
 				(req, res, ctx) => {
 					counter++;
 					const { namespaceNameParam } = req.params;
-					expect(counter).toBe(1);
-					expect(namespaceNameParam).toBe(namespaceName);
+					assert(counter === 1);
+					assert(namespaceNameParam === namespaceName);
 					return res.once(
 						ctx.json(
 							createFetchResult({
@@ -257,7 +263,7 @@ describe("dispatch-namespace", () => {
 			)
 		);
 
-		it("should list all namespaces", async () => {
+		it("should list all namespaces", async ({ expect }) => {
 			await runWrangler("dispatch-namespace list");
 			expect(std.out).toMatchInlineSnapshot(`
 			"[
@@ -283,8 +289,8 @@ describe("dispatch-namespace", () => {
 				(req, res, ctx) => {
 					counter++;
 					const { namespaceNameParam } = req.params;
-					expect(counter).toBe(1);
-					expect(namespaceNameParam).toBe(namespaceName);
+					assert(counter === 1);
+					assert(namespaceNameParam === namespaceName);
 					return res.once(
 						ctx.json(
 							createFetchResult({
@@ -301,7 +307,7 @@ describe("dispatch-namespace", () => {
 			)
 		);
 
-		it("should display help for rename", async () => {
+		it("should display help for rename", async ({ expect }) => {
 			await expect(
 				runWrangler("dispatch-namespace rename")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -327,7 +333,7 @@ describe("dispatch-namespace", () => {
 		`);
 		});
 
-		it("should attempt to rename the given namespace", async () => {
+		it("should attempt to rename the given namespace", async ({ expect }) => {
 			const newName = "new-namespace";
 			await runWrangler(
 				`dispatch-namespace rename ${namespaceName} ${newName}`
@@ -336,7 +342,7 @@ describe("dispatch-namespace", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
-			expect((printWranglerBanner as jest.Mock).mock.calls.length).toEqual(1);
+			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});
 	});
 });

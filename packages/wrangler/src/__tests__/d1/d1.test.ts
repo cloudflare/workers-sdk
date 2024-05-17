@@ -1,3 +1,4 @@
+import { describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -7,7 +8,7 @@ describe("d1", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help when no argument is passed", async () => {
+	it("should show help when no argument is passed", async ({ expect }) => {
 		await runWrangler("d1");
 		await endEventLoop();
 
@@ -37,7 +38,9 @@ describe("d1", () => {
 	`);
 	});
 
-	it("should show help when an invalid argument is passed", async () => {
+	it("should show help when an invalid argument is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("d1 asdf")).rejects.toThrow(
 			"Unknown argument: asdf"
 		);
@@ -74,7 +77,9 @@ describe("d1", () => {
 	`);
 	});
 
-	it("should show help when the migrations command is passed", async () => {
+	it("should show help when the migrations command is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("d1 migrations")).rejects.toThrow(
 			"Not enough non-option arguments: got 0, need at least 1"
 		);
@@ -104,7 +109,9 @@ describe("d1", () => {
 	`);
 	});
 
-	it("should show help when the time travel command is passed", async () => {
+	it("should show help when the time travel command is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("d1 time-travel")).rejects.toThrow(
 			"Not enough non-option arguments: got 0, need at least 1"
 		);

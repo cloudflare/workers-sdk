@@ -1,5 +1,14 @@
+/* eslint-disable @typescript-eslint/consistent-type-imports */
+import path, { resolve } from "node:path";
+import { PassThrough } from "node:stream";
 import chalk from "chalk";
+import { useApp } from "ink";
 import fetchMock from "jest-fetch-mock";
+import jestFetchMock from "jest-fetch-mock";
+import { useEffect } from "react";
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { MetricsConfigOptions } from "../metrics/metrics-config";
+import { getBasePath } from "../paths";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
 
@@ -22,37 +31,39 @@ chalk.level = 0;
 // Set `LC_ALL` to fix the language as English for the messages thrown by Yargs.
 process.env.LC_ALL = "en";
 
-jest.mock("ansi-escapes", () => {
+vi.mock("ansi-escapes", () => {
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(async (options) => options.port),
+		default: vi.fn().mockImplementation(async (options) => options.port),
 	};
 });
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
-jest.mock("get-port", () => {
-	const { default: getPort } = jest.requireActual("get-port");
+vi.mock("get-port", async (importOriginal) => {
+	const { default: getPort } =
+		await importOriginal<typeof import("get-port")>();
 	return {
 		__esModule: true,
-		default: jest.fn(getPort),
+		default: vi.fn(getPort),
 	};
 });
 
-jest.mock("child_process", () => {
+vi.mock("child_process", async (importOriginal) => {
+	const cp = await importOriginal<typeof import("child_process")>();
 	return {
 		__esModule: true,
-		...jest.requireActual("child_process"),
-		default: jest.requireActual("child_process"),
-		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
+		...cp,
+		default: cp,
+		spawnSync: vi.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") {
 				return { error: true };
 			}
-			return jest.requireActual("child_process").spawnSync(binary, ...args);
+			return cp.spawnSync(binary, ...args);
 		}),
 	};
 });
 
-jest.mock("log-update", () => {
+vi.mock("log-update", () => {
 	const fn = function (..._: string[]) {};
 	fn["clear"] = () => {};
 	fn["done"] = () => {};
@@ -60,12 +71,12 @@ jest.mock("log-update", () => {
 	return fn;
 });
 
-jest.mock("ws", () => {
+vi.mock("ws", async (importOriginal) => {
 	// `miniflare` needs to use the real `ws` module, but tail tests require us
 	// to mock `ws`. `esbuild-jest` won't let us use type annotations in our tests
-	// if those files contain `jest.mock()` calls, so we mock here, pass-through
+	// if those files contain `vi.mock()` calls, so we mock here, pass-through
 	// by default, and allow mocking conditionally.
-	const realModule = jest.requireActual("ws");
+	const realModule = await importOriginal<typeof import("ws")>();
 	const module = {
 		__esModule: true,
 		useOriginal: true,
@@ -73,7 +84,7 @@ jest.mock("ws", () => {
 	Object.defineProperties(module, {
 		default: {
 			get() {
-				return module.useOriginal ? realModule.default : MockWebSocket;
+				return module.useOriginal ? realModule : MockWebSocket;
 			},
 		},
 		WebSocket: {
@@ -90,10 +101,10 @@ jest.mock("ws", () => {
 	return module;
 });
 
-jest.mock("undici", () => {
+vi.mock("undici", async (importOriginal) => {
 	return {
-		...jest.requireActual("undici"),
-		fetch: jest.requireActual("jest-fetch-mock"),
+		...(await importOriginal<typeof import("undici")>()),
+		fetch: jestFetchMock,
 	};
 });
 
@@ -102,9 +113,9 @@ fetchMock.doMock(() => {
 	throw new Error("Unexpected fetch request");
 });
 
-jest.mock("../package-manager");
+vi.mock("../package-manager");
 
-jest.mock("../update-check");
+vi.mock("../update-check");
 
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
@@ -131,10 +142,8 @@ afterEach(() => {
 });
 afterAll(() => msw.close());
 
-jest.mock("../dev/dev", () => {
-	const { useApp } = jest.requireActual("ink");
-	const { useEffect } = jest.requireActual("react");
-	return jest.fn().mockImplementation(() => {
+vi.mock("../dev/dev", () => {
+	return vi.fn().mockImplementation(() => {
 		const { exit } = useApp();
 		useEffect(() => {
 			exit();
@@ -145,13 +154,13 @@ jest.mock("../dev/dev", () => {
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
-jest.mock("../open-in-browser");
+vi.mock("../open-in-browser");
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-jest.mock("../user/generate-auth-url", () => {
+vi.mock("../user/generate-auth-url", () => {
 	return {
-		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-		generateAuthUrl: jest
+		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		generateAuthUrl: vi
 			.fn()
 			.mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
 				return (
@@ -171,40 +180,41 @@ jest.mock("../user/generate-auth-url", () => {
 	};
 });
 
-jest.mock("../is-ci", () => {
-	return { CI: { isCI: jest.fn().mockImplementation(() => false) } };
+vi.mock("../is-ci", () => {
+	return { CI: { isCI: vi.fn().mockImplementation(() => false) } };
 });
 
-jest.mock("../user/generate-random-state", () => {
+vi.mock("../user/generate-random-state", () => {
 	return {
-		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 	};
 });
 
-jest.mock("xdg-app-paths", () => {
+vi.mock("xdg-app-paths", () => {
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(() => {
+		default: vi.fn().mockImplementation(() => {
 			return {
 				config() {
-					return jest.requireActual("node:path").resolve("test-xdg-config");
+					return resolve("test-xdg-config");
 				},
 			};
 		}),
 	};
 });
 
-jest.mock("../metrics/metrics-config", () => {
-	const realModule = jest.requireActual("../metrics/metrics-config");
+vi.mock("../metrics/metrics-config", async (importOriginal) => {
+	const realModule =
+		await importOriginal<typeof import("../metrics/metrics-config")>();
 	const fakeModule = {
 		...realModule,
 		// Although we mock out the getMetricsConfig() function in most tests,
 		// we need a way to reinstate it for the metrics specific tests.
 		// This is what `useOriginal` is for.
 		useOriginal: false,
-		getMetricsConfig: (...args: unknown[]) =>
+		getMetricsConfig: (options: MetricsConfigOptions) =>
 			fakeModule.useOriginal
-				? realModule.getMetricsConfig(...args)
+				? realModule.getMetricsConfig(options)
 				: async () => {
 						return {
 							enabled: false,
@@ -215,10 +225,10 @@ jest.mock("../metrics/metrics-config", () => {
 	};
 	return fakeModule;
 });
-jest.mock("prompts", () => {
+vi.mock("prompts", () => {
 	return {
 		__esModule: true,
-		default: jest.fn((...args) => {
+		default: vi.fn((...args) => {
 			throw new Error(
 				`Unexpected call to \`prompts("${JSON.stringify(
 					args
@@ -228,12 +238,12 @@ jest.mock("prompts", () => {
 	};
 });
 
-jest.mock("execa", () => {
-	const realModule = jest.requireActual("execa");
+vi.mock("execa", async (importOriginal) => {
+	const realModule = await importOriginal<typeof import("execa")>();
 
 	return {
 		...realModule,
-		execa: jest.fn((...args: unknown[]) => {
+		execa: vi.fn<Parameters<typeof realModule.execa>>((...args) => {
 			return args[0] === "mockpm"
 				? Promise.resolve()
 				: realModule.execa(...args);
@@ -243,42 +253,27 @@ jest.mock("execa", () => {
 
 afterEach(() => {
 	// It is important that we clear mocks between tests to avoid leakage.
-	jest.clearAllMocks();
+	vi.clearAllMocks();
 });
 
 // make jest understand virtual `worker:` imports
-jest.mock(
-	"worker:startDevWorker/ProxyWorker",
-	() => {
-		const path = jest.requireActual("path");
-		const { getBasePath } = jest.requireActual("../paths");
+vi.mock("worker:startDevWorker/ProxyWorker", () => {
+	return {
+		__esModule: true,
+		default: path.resolve(getBasePath(), `wrangler-dist/ProxyWorker.js`),
+	};
+});
+vi.mock("worker:startDevWorker/InspectorProxyWorker", () => {
+	return {
+		__esModule: true,
+		default: path.resolve(
+			getBasePath(),
+			`wrangler-dist/InspectorProxyWorker.js`
+		),
+	};
+});
 
-		return {
-			__esModule: true,
-			default: path.resolve(getBasePath(), `wrangler-dist/ProxyWorker.js`),
-		};
-	},
-	{ virtual: true }
-);
-jest.mock(
-	"worker:startDevWorker/InspectorProxyWorker",
-	() => {
-		const path = jest.requireActual("path");
-		const { getBasePath } = jest.requireActual("../paths");
-
-		return {
-			__esModule: true,
-			default: path.resolve(
-				getBasePath(),
-				`wrangler-dist/InspectorProxyWorker.js`
-			),
-		};
-	},
-	{ virtual: true }
-);
-
-jest.mock("@cloudflare/cli/streams", () => {
-	const { PassThrough } = jest.requireActual("node:stream");
+vi.mock("@cloudflare/cli/streams", async () => {
 	const stdout = new PassThrough();
 	const stderr = new PassThrough();
 

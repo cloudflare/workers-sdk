@@ -1,4 +1,5 @@
 import { stderr, stdout } from "@cloudflare/cli/streams";
+import { afterEach, beforeEach } from "vitest";
 
 export function collectCLIOutput() {
 	const std = { out: "", err: "" };

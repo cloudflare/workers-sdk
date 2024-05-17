@@ -1,11 +1,14 @@
 import { setImmediate } from "node:timers/promises";
+import { describe, test } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 
 describe("versions --help", () => {
 	const std = mockConsoleMethods();
 
-	test("shows generic help w/ --help flag but w/o --experimental-versions flag", async () => {
+	test("shows generic help w/ --help flag but w/o --experimental-versions flag", async ({
+		expect,
+	}) => {
 		const result = runWrangler("versions --help");
 
 		await expect(result).resolves.toBeUndefined();
@@ -52,7 +55,9 @@ describe("versions --help", () => {
 	`);
 	});
 
-	test("shows versions help w/ --help and --experimental-versions flag", async () => {
+	test("shows versions help w/ --help and --experimental-versions flag", async ({
+		expect,
+	}) => {
 		const result = runWrangler("versions --help --experimental-versions");
 
 		await expect(result).resolves.toBeUndefined();
@@ -81,7 +86,7 @@ describe("versions --help", () => {
 describe("versions subhelp", () => {
 	const std = mockConsoleMethods();
 
-	test("fails without --experimental-versions flag", async () => {
+	test("fails without --experimental-versions flag", async ({ expect }) => {
 		const result = runWrangler("versions");
 
 		await expect(result).rejects.toMatchInlineSnapshot(
@@ -89,7 +94,9 @@ describe("versions subhelp", () => {
 		);
 	});
 
-	test("shows implicit subhelp with --experimental-versions flag", async () => {
+	test("shows implicit subhelp with --experimental-versions flag", async ({
+		expect,
+	}) => {
 		const result = runWrangler("versions --experimental-versions");
 
 		await expect(result).resolves.toBeUndefined();
@@ -115,7 +122,7 @@ describe("versions subhelp", () => {
 	`);
 	});
 
-	test("shows implicit subhelp with --x-versions flag", async () => {
+	test("shows implicit subhelp with --x-versions flag", async ({ expect }) => {
 		const result = runWrangler("versions --x-versions");
 
 		await expect(result).resolves.toBeUndefined();
@@ -141,7 +148,9 @@ describe("versions subhelp", () => {
 	`);
 	});
 
-	test("shows implicit subhelp with --experimental-gradual-rollouts flag", async () => {
+	test("shows implicit subhelp with --experimental-gradual-rollouts flag", async ({
+		expect,
+	}) => {
 		const result = runWrangler("versions --experimental-gradual-rollouts");
 
 		await expect(result).resolves.toBeUndefined();

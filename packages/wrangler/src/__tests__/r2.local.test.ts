@@ -1,11 +1,12 @@
 import * as fs from "node:fs";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // Miniflare's use of undici doesn't play well with jest-mock-fetch
 // and it is not needed here anyway.
-jest.unmock("undici");
+vi.unmock("undici");
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -13,7 +14,7 @@ describe("r2", () => {
 
 	describe("r2 object", () => {
 		describe("local", () => {
-			it("should put R2 object from local bucket", async () => {
+			it("should put R2 object from local bucket", async ({ expect }) => {
 				await expect(() =>
 					runWrangler(
 						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
@@ -46,7 +47,7 @@ describe("r2", () => {
 		`);
 			});
 
-			it("should delete R2 object from local bucket", async () => {
+			it("should delete R2 object from local bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
@@ -83,7 +84,7 @@ describe("r2", () => {
 				);
 			});
 
-			it("should follow persist-to for object bucket", async () => {
+			it("should follow persist-to for object bucket", async ({ expect }) => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/file-one --file ./wormhole-img.png --local`

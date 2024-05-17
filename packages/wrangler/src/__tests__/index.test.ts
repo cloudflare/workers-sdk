@@ -1,3 +1,4 @@
+import { beforeEach, describe, it, vi } from "vitest";
 import { logPossibleBugMessage } from "..";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
@@ -8,6 +9,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 describe("wrangler", () => {
 	let mockPackageManager: PackageManager;
@@ -18,16 +20,16 @@ describe("wrangler", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	const std = mockConsoleMethods();
 
 	describe("no command", () => {
-		it("should display a list of available commands", async () => {
+		it("should display a list of available commands", async ({ expect }) => {
 			await runWrangler();
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -76,7 +78,7 @@ describe("wrangler", () => {
 	});
 
 	describe("invalid command", () => {
-		it("should display an error", async () => {
+		it("should display an error", async ({ expect }) => {
 			await expect(
 				runWrangler("invalid-command")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -133,7 +135,9 @@ describe("wrangler", () => {
 	});
 
 	describe("preview", () => {
-		it("should throw an error if the deprecated command is used with positional arguments", async () => {
+		it("should throw an error if the deprecated command is used with positional arguments", async ({
+			expect,
+		}) => {
 			await expect(runWrangler("preview GET")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
               "Deprecation:
@@ -152,7 +156,9 @@ describe("wrangler", () => {
 	});
 
 	describe("subcommand implicit help ran on incomplete command execution", () => {
-		it("no subcommand for 'secret' should display a list of available subcommands", async () => {
+		it("no subcommand for 'secret' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("secret");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -174,7 +180,9 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("no subcommand 'kv:namespace' should display a list of available subcommands", async () => {
+		it("no subcommand 'kv:namespace' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("kv:namespace");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -196,7 +204,9 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("no subcommand 'kv:key' should display a list of available subcommands", async () => {
+		it("no subcommand 'kv:key' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("kv:key");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -219,7 +229,9 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
+		it("no subcommand 'kv:bulk' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("kv:bulk");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -240,7 +252,9 @@ describe("wrangler", () => {
 		`);
 		});
 
-		it("no subcommand 'r2' should display a list of available subcommands", async () => {
+		it("no subcommand 'r2' should display a list of available subcommands", async ({
+			expect,
+		}) => {
 			await runWrangler("r2");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
@@ -262,7 +276,9 @@ describe("wrangler", () => {
 		});
 	});
 
-	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async () => {
+	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async ({
+		expect,
+	}) => {
 		writeWranglerToml({
 			main: "index.js",
 		});
@@ -283,15 +299,17 @@ describe("wrangler", () => {
 	});
 
 	describe("logPossibleBugMessage()", () => {
-		it("should display a 'possible bug' message", async () => {
+		it("should display a 'possible bug' message", async ({ expect }) => {
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(
 				`"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"`
 			);
 		});
 
-		it("should display a 'try updating' message if there is one available", async () => {
-			(updateCheck as jest.Mock).mockImplementation(async () => "123.123.123");
+		it("should display a 'try updating' message if there is one available", async ({
+			expect,
+		}) => {
+			(updateCheck as Mock).mockImplementation(async () => "123.123.123");
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(`
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m

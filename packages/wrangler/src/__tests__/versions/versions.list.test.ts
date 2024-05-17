@@ -1,3 +1,4 @@
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -19,7 +20,7 @@ describe("versions list", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler(
 				"versions list --json  --experimental-versions"
 			);
@@ -33,7 +34,7 @@ describe("versions list", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to stdout", async () => {
+		test("prints versions to stdout", async ({ expect }) => {
 			const result = runWrangler(
 				"versions list --name test-name  --experimental-versions"
 			);
@@ -75,7 +76,7 @@ describe("versions list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to stdout as --json", async () => {
+		test("prints versions to stdout as --json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions list --name test-name --json  --experimental-versions"
 			);
@@ -153,9 +154,9 @@ describe("versions list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
-		test("prints versions to stdout", async () => {
+		test("prints versions to stdout", async ({ expect }) => {
 			const result = runWrangler("versions list  --experimental-versions");
 
 			await expect(result).resolves.toBeUndefined();
@@ -195,7 +196,7 @@ describe("versions list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to as --json", async () => {
+		test("prints versions to as --json", async ({ expect }) => {
 			const result = runWrangler(
 				"versions list --json  --experimental-versions"
 			);
