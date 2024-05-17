@@ -39,7 +39,7 @@ jobs:
     # Note: please keep this job in sync with the e2e one
     #       in .github/workflows/c3-e2e.yml
     needs: [get-dependabot-bumped-framework]
-    name: ${{ format('Dependabot E2E ({0})', matrix.pm) }}
+    name: ${{ format('Dependabot E2E ({0}@{1})', matrix.pm.name, matrix.pm.version) }}
     strategy:
       fail-fast: false
       matrix:

@@ -1,5 +1,11 @@
 # workers-playground
 
+## 0.0.5
+
+### Patch Changes
+
+- [#5838](https://github.com/cloudflare/workers-sdk/pull/5838) [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update undici to the latest version to avoid a potential vulnerability
+
 ## 0.0.4
 
 ### Patch Changes

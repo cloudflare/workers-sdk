@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.21.2
+
+### Patch Changes
+
+- [#5602](https://github.com/cloudflare/workers-sdk/pull/5602) [`93cd7ae`](https://github.com/cloudflare/workers-sdk/commit/93cd7ae5a0c59ecb85df3890e4e49f461bb8563c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.3 | 5.13.4 |
+
+- [#5835](https://github.com/cloudflare/workers-sdk/pull/5835) [`717e13e`](https://github.com/cloudflare/workers-sdk/commit/717e13e12365be01d2b825f6b27a23c8949b4bf7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 17.2.3 | 17.3.7 |
+
+- [#5836](https://github.com/cloudflare/workers-sdk/pull/5836) [`b3b4d3a`](https://github.com/cloudflare/workers-sdk/commit/b3b4d3a432878ca334d65f0cc8c7e6d326be80e9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.4.5 | 1.5.4 |
+
+- [#5547](https://github.com/cloudflare/workers-sdk/pull/5547) [`e6ecf8c`](https://github.com/cloudflare/workers-sdk/commit/e6ecf8c86dd4638fe90bc7d92b01af659408fff1) Thanks [@connorads](https://github.com/connorads)! - fix: provide a simple fetch handler to the scheduled template to avoid confusing error messages.
+
+  Fixes #4560
+
+- [#5855](https://github.com/cloudflare/workers-sdk/pull/5855) [`3a65060`](https://github.com/cloudflare/workers-sdk/commit/3a65060eb8b044b060186c2c219ac06d52b2d3bc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: bump undici to 5.28.4
+
 ## 2.21.1
 
 ### Patch Changes
