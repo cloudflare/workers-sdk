@@ -1,5 +1,7 @@
 import type { RawConfig } from "../../config";
+// import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DispatchFetch, Json, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
@@ -108,23 +110,27 @@ export type Module<Type extends ModuleRule["type"] = ModuleRule["type"]> = File<
 	/** How this module should be interpreted */
 	type: Type;
 };
-export type Bundle = {
-	/** Files that were used in the creation of this bundle, and how much they contributed to the output */
-	inputs?: Record<string, { bytesInOutput: number }>;
-} & (
-	| {
-			type: "service-worker";
-			/** Service worker style entrypoint */
-			serviceWorker: File;
-			/** Additional modules to add as global variables */
-			modules?: Module<"Text" | "Data" | "CompiledWasm">[];
-	  }
-	| {
-			type: "modules";
-			/** ESModule entrypoint and additional modules to include */
-			modules: [Module<"ESModule">, ...Module[]];
-	  }
-);
+
+// TODO: revisit this type
+export type Bundle = EsbuildBundle;
+
+// {
+// 	/** Files that were used in the creation of this bundle, and how much they contributed to the output */
+// 	inputs?: Record<string, { bytesInOutput: number }>;
+// } & (
+// 	| {
+// 			type: "service-worker";
+// 			/** Service worker style entrypoint */
+// 			serviceWorker: File;
+// 			/** Additional modules to add as global variables */
+// 			modules?: Module<"Text" | "Data" | "CompiledWasm">[];
+// 	  }
+// 	| {
+// 			type: "modules";
+// 			/** ESModule entrypoint and additional modules to include */
+// 			modules: [Module<"ESModule">, ...Module[]];
+// 	  }
+// );
 
 export type Hook<T, Args extends unknown[] = unknown[]> =
 	| T
