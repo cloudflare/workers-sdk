@@ -1,5 +1,65 @@
 # wrangler
 
+## 3.57.0
+
+### Minor Changes
+
+- [#5696](https://github.com/cloudflare/workers-sdk/pull/5696) [`7e97ba8`](https://github.com/cloudflare/workers-sdk/commit/7e97ba8778be3cf1d93d44ed191748853c6661e0) Thanks [@geelen](https://github.com/geelen)! - feature: Improved `d1 execute --file --remote` performance & added support for much larger SQL files within a single transaction.
+
+- [#5819](https://github.com/cloudflare/workers-sdk/pull/5819) [`63f7acb`](https://github.com/cloudflare/workers-sdk/commit/63f7acb37e7e7ceb60594ac91baf95cd30037d76) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Show feedback on Pages project deployment failure
+
+  Today, if uploading a Pages Function, or deploying a Pages project fails for whatever reason, there’s no feedback shown to the user. Worse yet, the shown message is misleading, saying the deployment was successful, when in fact it was not:
+
+  ```
+  ✨ Deployment complete!
+  ```
+
+  This commit ensures that we provide users with:
+
+  - the correct feedback with respect to their Pages deployment
+  - the appropriate messaging depending on the status of their project's deployment status
+  - the appropriate logs in case of a deployment failure
+
+- [#5814](https://github.com/cloudflare/workers-sdk/pull/5814) [`2869e03`](https://github.com/cloudflare/workers-sdk/commit/2869e0379667d755d1de5543cb80886cc42c211f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Display correct global flags in `wrangler pages --help`
+
+  Running `wrangler pages --help` will list, amongst others, the following global flags:
+
+  ```
+  -j, --experimental-json-config
+  -c, --config
+  -e, --env
+  -h, --help
+  -v, --version
+  ```
+
+  This is not accurate, since flags such as `--config`, `--experimental-json-config`, or `env` are not supported by Pages.
+
+  This commit ensures we display the correct global flags that apply to Pages.
+
+- [#5818](https://github.com/cloudflare/workers-sdk/pull/5818) [`df2daf2`](https://github.com/cloudflare/workers-sdk/commit/df2daf2c858229fd812bf1fe818b206ef1345a00) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: Deprecate usage of the deployment object on the unsafe metadata binding in favor of the new version_metadata binding.
+
+  If you're currently using the old binding, please move over to the new version_metadata binding by adding:
+
+  ```toml
+  [version_metadata]
+  binding = "CF_VERSION_METADATA"
+  ```
+
+  and updating your usage accordingly. You can find the docs for the new binding here: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata
+
+### Patch Changes
+
+- [#5838](https://github.com/cloudflare/workers-sdk/pull/5838) [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update undici to the latest version to avoid a potential vulnerability
+
+- [#5832](https://github.com/cloudflare/workers-sdk/pull/5832) [`86a6e09`](https://github.com/cloudflare/workers-sdk/commit/86a6e09d8a369a3bb8aee8c252174bd01e090c54) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not allow non-string values in bulk secret uploads
+
+  Prior to Wrangler 3.4.0 we displayed an error if the user tried to upload a
+  JSON file that contained non-string secrets, since these are not supported
+  by the Cloudflare backend.
+
+  This change reintroduces that check to give the user a helpful error message
+  rather than a cryptic `workers.api.error.invalid_script_config` error code.
+
 ## 3.56.0
 
 ### Minor Changes
@@ -59,7 +119,7 @@
 
   ```typescript
   interface Env {
-  	"some-var": "foobar";
+    "some-var": "foobar";
   }
   ```
 
@@ -81,7 +141,7 @@
 
   ```js
   const { env } = await getPlatformProxy({
-  	environment: "production",
+    environment: "production",
   });
   ```
 
@@ -258,21 +318,21 @@
   import { WorkerEntrypoint } from "cloudflare:workers";
 
   export class EntrypointA extends WorkerEntrypoint {
-  	fetch(request) {
-  		return new Response("Hello from entrypoint A!");
-  	}
+    fetch(request) {
+      return new Response("Hello from entrypoint A!");
+    }
   }
 
   export const entrypointB: ExportedHandler = {
-  	fetch(request, env, ctx) {
-  		return new Response("Hello from entrypoint B!");
-  	}
+    fetch(request, env, ctx) {
+      return new Response("Hello from entrypoint B!");
+    },
   };
 
   export default <ExportedHandler>{
-  	fetch(request, env, ctx) {
-  		return new Response("Hello from the default entrypoint!");
-  	}
+    fetch(request, env, ctx) {
+      return new Response("Hello from the default entrypoint!");
+    },
   };
   ```
 
@@ -632,12 +692,12 @@
 
   ```ts
   interface Env {
-  	SEND_EMAIL: SendEmail;
-  	VECTORIZE: VectorizeIndex;
-  	HYPERDRIVE: Hyperdrive;
-  	MTLS: Fetcher;
-  	BROWSER: Fetcher;
-  	AI: Fetcher;
+    SEND_EMAIL: SendEmail;
+    VECTORIZE: VectorizeIndex;
+    HYPERDRIVE: Hyperdrive;
+    MTLS: Fetcher;
+    BROWSER: Fetcher;
+    AI: Fetcher;
   }
   ```
 
@@ -660,7 +720,7 @@
 
   ```js
   const worker = await unstable_dev("path/to/script.js", {
-  	logLevel: "none",
+    logLevel: "none",
   });
   ```
 
@@ -895,11 +955,11 @@
 
   ```ts
   export function randomBytes(length: number) {
-  	if (navigator.userAgent !== "Cloudflare-Workers") {
-  		return new Uint8Array(require("node:crypto").randomBytes(length));
-  	} else {
-  		return crypto.getRandomValues(new Uint8Array(length));
-  	}
+    if (navigator.userAgent !== "Cloudflare-Workers") {
+      return new Uint8Array(require("node:crypto").randomBytes(length));
+    } else {
+      return crypto.getRandomValues(new Uint8Array(length));
+    }
   }
   ```
 
@@ -1024,17 +1084,17 @@
 
   ```json
   {
-  	"error": {
-  		"text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
-  		"notes": [
-  			{
-  				"text": "no such column: asdf at offset 7 [code: 7500]"
-  			}
-  		],
-  		"kind": "error",
-  		"name": "APIError",
-  		"code": 7500
-  	}
+    "error": {
+      "text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
+      "notes": [
+        {
+          "text": "no such column: asdf at offset 7 [code: 7500]"
+        }
+      ],
+      "kind": "error",
+      "name": "APIError",
+      "code": 7500
+    }
   }
   ```
 
@@ -1198,12 +1258,12 @@
   const { bindings, dispose } = await getBindingsProxy();
 
   try {
-  	const myKv = bindings.MY_KV;
-  	const kvValue = await myKv.get("my-kv-key");
+    const myKv = bindings.MY_KV;
+    const kvValue = await myKv.get("my-kv-key");
 
-  	console.log(`KV Value = ${kvValue}`);
+    console.log(`KV Value = ${kvValue}`);
   } finally {
-  	await dispose();
+    await dispose();
   }
   ```
 
@@ -1594,17 +1654,17 @@
 
   ```jsonc
   {
-  	"configurations": [
-  		{
-  			"name": "Wrangler",
-  			"type": "node",
-  			"request": "attach",
-  			"port": 9229,
-  			// These can be omitted, but doing so causes silent errors in the runtime
-  			"attachExistingChildren": false,
-  			"autoAttachChildProcesses": false
-  		}
-  	]
+    "configurations": [
+      {
+        "name": "Wrangler",
+        "type": "node",
+        "request": "attach",
+        "port": 9229,
+        // These can be omitted, but doing so causes silent errors in the runtime
+        "attachExistingChildren": false,
+        "autoAttachChildProcesses": false,
+      },
+    ],
   }
   ```
 
@@ -1718,7 +1778,7 @@
 
   Wrangler can operate in two modes: the default bundling mode and `--no-bundle` mode. In bundling mode, dynamic imports
   (e.g. `await import("./large-dep.mjs")`) would be bundled into your entrypoint, making lazy loading less effective.
-  Additionally, variable dynamic imports (e.g. `` await import(`./lang/${language}.mjs`) ``) would always fail at runtime,
+  Additionally, variable dynamic imports (e.g. ``await import(`./lang/${language}.mjs`)``) would always fail at runtime,
   as Wrangler would have no way of knowing which modules to upload. The `--no-bundle` mode sought to address these issues
   by disabling Wrangler's bundling entirely, and just deploying code as is. Unfortunately, this also disabled Wrangler's
   code transformations (e.g. TypeScript compilation, `--assets`, `--test-scheduled`, etc).
@@ -1862,18 +1922,18 @@
 
   ```json
   {
-  	"configurations": [
-  		{
-  			"name": "Wrangler",
-  			"type": "node",
-  			"request": "attach",
-  			"port": 9229,
-  			"cwd": "/",
-  			"resolveSourceMapLocations": null,
-  			"attachExistingChildren": false,
-  			"autoAttachChildProcesses": false
-  		}
-  	]
+    "configurations": [
+      {
+        "name": "Wrangler",
+        "type": "node",
+        "request": "attach",
+        "port": 9229,
+        "cwd": "/",
+        "resolveSourceMapLocations": null,
+        "attachExistingChildren": false,
+        "autoAttachChildProcesses": false
+      }
+    ]
   }
   ```
 
@@ -2475,11 +2535,11 @@
 
   ```js
   export default {
-  	fetch(req) {
-  		const url = new URL(req.url);
-  		const name = url.searchParams.get("name");
-  		return new Response("Hello, " + name);
-  	},
+    fetch(req) {
+      const url = new URL(req.url);
+      const name = url.searchParams.get("name");
+      return new Response("Hello, " + name);
+    },
   };
   ```
 
@@ -3146,9 +3206,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev(
-  	"src/index.js",
-  	{},
-  	{ disableExperimentalWarning: true }
+    "src/index.js",
+    {},
+    { disableExperimentalWarning: true },
   );
   ```
 
@@ -3156,7 +3216,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev("src/index.js", {
-  	experimental: { disableExperimentalWarning: true },
+    experimental: { disableExperimentalWarning: true },
   });
   ```
 
@@ -3429,9 +3489,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   export const onRequest = ({ passThroughOnException }) => {
-  	passThroughOnException();
+    passThroughOnException();
 
-  	x; // Would ordinarily throw an error, but instead, static assets are served.
+    x; // Would ordinarily throw an error, but instead, static assets are served.
   };
   ```
 
@@ -3450,8 +3510,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.wasm" {
-  	const value: WebAssembly.Module;
-  	export default value;
+    const value: WebAssembly.Module;
+    export default value;
   }
   ```
 
@@ -3459,8 +3519,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.webp" {
-  	const value: ArrayBuffer;
-  	export default value;
+    const value: ArrayBuffer;
+    export default value;
   }
   ```
 
@@ -3468,8 +3528,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.text" {
-  	const value: string;
-  	export default value;
+    const value: string;
+    export default value;
   }
   ```
 
@@ -3664,7 +3724,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   await unstable_dev("src/index.ts", {
-  	local: false,
+    local: false,
   });
   ```
 
@@ -3776,42 +3836,42 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   import { unstable_dev } from "wrangler";
 
   describe("multi-worker testing", () => {
-  	let childWorker;
-  	let parentWorker;
+    let childWorker;
+    let parentWorker;
 
-  	beforeAll(async () => {
-  		childWorker = await unstable_dev(
-  			"src/child-worker.js",
-  			{ config: "src/child-wrangler.toml" },
-  			{ disableExperimentalWarning: true }
-  		);
-  		parentWorker = await unstable_dev(
-  			"src/parent-worker.js",
-  			{ config: "src/parent-wrangler.toml" },
-  			{ disableExperimentalWarning: true }
-  		);
-  	});
+    beforeAll(async () => {
+      childWorker = await unstable_dev(
+        "src/child-worker.js",
+        { config: "src/child-wrangler.toml" },
+        { disableExperimentalWarning: true },
+      );
+      parentWorker = await unstable_dev(
+        "src/parent-worker.js",
+        { config: "src/parent-wrangler.toml" },
+        { disableExperimentalWarning: true },
+      );
+    });
 
-  	afterAll(async () => {
-  		await childWorker.stop();
-  		await parentWorker.stop();
-  	});
+    afterAll(async () => {
+      await childWorker.stop();
+      await parentWorker.stop();
+    });
 
-  	it("childWorker should return Hello World itself", async () => {
-  		const resp = await childWorker.fetch();
-  		if (resp) {
-  			const text = await resp.text();
-  			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-  		}
-  	});
+    it("childWorker should return Hello World itself", async () => {
+      const resp = await childWorker.fetch();
+      if (resp) {
+        const text = await resp.text();
+        expect(text).toMatchInlineSnapshot(`"Hello World!"`);
+      }
+    });
 
-  	it("parentWorker should return Hello World by invoking the child worker", async () => {
-  		const resp = await parentWorker.fetch();
-  		if (resp) {
-  			const parsedResp = await resp.text();
-  			expect(parsedResp).toEqual("Parent worker sees: Hello World!");
-  		}
-  	});
+    it("parentWorker should return Hello World by invoking the child worker", async () => {
+      const resp = await parentWorker.fetch();
+      if (resp) {
+        const parsedResp = await resp.text();
+        expect(parsedResp).toEqual("Parent worker sees: Hello World!");
+      }
+    });
   });
   ```
 
@@ -4300,9 +4360,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   export default {
-  	fetch(req, env) {
-  		return env.Bee.fetch(req);
-  	},
+    fetch(req, env) {
+      return env.Bee.fetch(req);
+    },
   };
   ```
 
@@ -4316,9 +4376,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   export default {
-  	fetch(req, env) {
-  		return new Response("Hello World");
-  	},
+    fetch(req, env) {
+      return new Response("Hello World");
+    },
   };
   ```
 
@@ -5297,9 +5357,9 @@ And in your worker, you can call it like so:
 
 ```js
 export default {
-	fetch(req, env, ctx) {
-		return env.MYWORKER.fetch(new Request("http://domain/some-path"));
-	},
+  fetch(req, env, ctx) {
+    return env.MYWORKER.fetch(new Request("http://domain/some-path"));
+  },
 };
 ```
 
