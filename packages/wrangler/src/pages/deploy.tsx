@@ -409,10 +409,15 @@ export const Handler = async (args: PagesDeployArgs) => {
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
 		);
 		// last log entry will be the most relevant for Direct Uploads
-		const failureMessage = logs.data[logs.total - 1].line;
+		const failureMessage = logs.data[logs.total - 1].line
+			.replace("Error:", "")
+			.trim();
 
-		logger.error(failureMessage.replace("Error:", "").trim());
-		logger.log("❌ Deployment failed!");
+		throw new FatalError(
+			`Deployment failed!
+${failureMessage}`,
+			1
+		);
 	} else {
 		logger.log(
 			`✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.\n\n` +

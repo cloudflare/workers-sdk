@@ -2478,7 +2478,7 @@ and that at least one include rule is provided.
 			expect(getProjectRequestCount).toEqual(2);
 		});
 
-		it("should show a failure message, and appropriate logs, if the deployment of a Functions project failed", async () => {
+		it("should fail with the appropriate error message, if the deployment of the project failed", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -2502,8 +2502,6 @@ and that at least one include rule is provided.
 				"some-account-id",
 				"foo"
 			);
-
-			let getProjectRequestCount = 0;
 
 			msw.use(
 				rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
@@ -2657,8 +2655,6 @@ and that at least one include rule is provided.
 				rest.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
-						getProjectRequestCount++;
-
 						expect(req.params.accountId).toEqual("some-account-id");
 
 						return res(
@@ -2676,25 +2672,10 @@ and that at least one include rule is provided.
 				)
 			);
 
-			await runWrangler("pages deploy public --project-name=foo");
-
-			expect(getProjectRequestCount).toEqual(2);
-			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Compiled Worker successfully
-			✨ Success! Uploaded 1 files (TIMINGS)
-
-			✨ Uploading Functions bundle
-			🌎 Deploying...
-			❌ Deployment failed!"
-		`);
-
-			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to publish your Function. Got error: Uncaught TypeError: a is not a function[0m
-
-			    at functionsWorker-0.11031665179307093.js:41:1
-
-			"
-		`);
+			await expect(runWrangler("pages deploy public --project-name=foo"))
+				.rejects.toThrow(`Deployment failed!
+Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+  at functionsWorker-0.11031665179307093.js:41:1`);
 		});
 	});
 
@@ -4071,7 +4052,7 @@ and that at least one include rule is provided.
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
-		it("should show a failure message, and appropriate logs, if the deployment of an Advanced Mode project failed", async () => {
+		it("should fail with the appropriate logs, if the deployment of the project failed", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -4099,7 +4080,6 @@ and that at least one include rule is provided.
 				"foo"
 			);
 
-			let getProjectRequestCount = 0;
 			msw.use(
 				rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
 					const body = (await req.json()) as {
@@ -4236,8 +4216,6 @@ and that at least one include rule is provided.
 				rest.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
-						getProjectRequestCount++;
-
 						expect(req.params.accountId).toEqual("some-account-id");
 
 						return res(
@@ -4262,25 +4240,10 @@ and that at least one include rule is provided.
 				)
 			);
 
-			await runWrangler("pages deploy public --project-name=foo");
-
-			expect(getProjectRequestCount).toEqual(2);
-			expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
-			"✨ Success! Uploaded 1 files (TIMINGS)
-
-			✨ Compiled Worker successfully
-			✨ Uploading Worker bundle
-			🌎 Deploying...
-			❌ Deployment failed!"
-		`);
-
-			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to publish your Function. Got error: Uncaught TypeError: a is not a function[0m
-
-			    at functionsWorker-0.11031665179307093.js:41:1
-
-			"
-		`);
+			await expect(runWrangler("pages deploy public --project-name=foo"))
+				.rejects.toThrow(`Deployment failed!
+Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+  at functionsWorker-0.11031665179307093.js:41:1`);
 		});
 	});
 
