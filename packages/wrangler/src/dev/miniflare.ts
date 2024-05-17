@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import * as esmLexer from "es-module-lexer";
 import {
@@ -267,20 +266,21 @@ async function getEntrypointNames(entrypointSource: string) {
 async function buildSourceOptions(
 	config: Omit<ConfigBundle, "rules">
 ): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
-	const scriptPath = realpathSync(config.bundle.path);
+	const scriptPath = config.bundle.path;
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
 
-		const { entrypointSource, modules } = isPython
-			? {
-					entrypointSource: readFileSync(scriptPath, "utf8"),
-					modules: config.bundle.modules,
-				}
-			: withSourceURLs(scriptPath, config.bundle.modules);
+		const modules = isPython
+			? config.bundle.modules
+			: withSourceURLs(
+					scriptPath,
+					config.bundle.entrypointSource,
+					config.bundle.modules
+				);
 
 		const entrypointNames = isPython
 			? []
-			: await getEntrypointNames(entrypointSource);
+			: await getEntrypointNames(config.bundle.entrypointSource);
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
@@ -291,7 +291,7 @@ async function buildSourceOptions(
 				{
 					type: ModuleTypeToRuleType[config.bundle.type],
 					path: scriptPath,
-					contents: entrypointSource,
+					contents: config.bundle.entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
@@ -387,7 +387,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const wasmBindings = { ...bindings.wasm_modules };
 	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
-		const scriptPath = realpathSync(config.bundle.path);
+		const scriptPath = config.bundle.path;
 		const modulesRoot = path.dirname(scriptPath);
 		for (const { type, name } of config.bundle.modules) {
 			if (type === "text") {

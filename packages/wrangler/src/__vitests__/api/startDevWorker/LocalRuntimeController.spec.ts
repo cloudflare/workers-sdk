@@ -74,34 +74,6 @@ describe("Core", () => {
 			type: "esm",
 			modules: [
 				{
-					type: "esm",
-					name: "index.mjs",
-					filePath: "/virtual/esm/index.mjs",
-					content: `
-					import add from "./add.cjs";
-					import base64 from "./base64.cjs";
-					import wave1 from "./data/wave.txt";
-					import wave2 from "./data/wave.bin";
-					export default {
-						fetch(request, env, ctx) {
-							const { pathname } = new URL(request.url);
-							if (pathname === "/") {
-								const wave2Text = new TextDecoder().decode(wave2);
-								return Response.json({
-									message: base64.decode(base64.encode(wave1 + wave2Text)),
-									sum: add.add(1, 2),
-								});
-							} else if (pathname === "/throw-commonjs") {
-								try { add.throw(); } catch (e) { return new Response(e.stack); }
-							} else if (pathname === "/throw-nodejs-compat-module") {
-								try { base64.throw(); } catch (e) { return new Response(e.stack); }
-							} else {
-								return new Response(null, { status: 404 });
-							}
-						}
-					}`,
-				},
-				{
 					type: "commonjs",
 					name: "add.cjs",
 					filePath: "/virtual/cjs/add.cjs",
@@ -153,6 +125,29 @@ describe("Core", () => {
 			],
 			id: 0,
 			path: "/virtual/index.mjs",
+			entrypointSource: `
+			import add from "./add.cjs";
+			import base64 from "./base64.cjs";
+			import wave1 from "./data/wave.txt";
+			import wave2 from "./data/wave.bin";
+			export default {
+				fetch(request, env, ctx) {
+					const { pathname } = new URL(request.url);
+					if (pathname === "/") {
+						const wave2Text = new TextDecoder().decode(wave2);
+						return Response.json({
+							message: base64.decode(base64.encode(wave1 + wave2Text)),
+							sum: add.add(1, 2),
+						});
+					} else if (pathname === "/throw-commonjs") {
+						try { add.throw(); } catch (e) { return new Response(e.stack); }
+					} else if (pathname === "/throw-nodejs-compat-module") {
+						try { base64.throw(); } catch (e) { return new Response(e.stack); }
+					} else {
+						return new Response(null, { status: 404 });
+					}
+				}
+			}`,
 			entry: {
 				file: "index.mjs",
 				directory: "/virtual/",

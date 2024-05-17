@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
+import getPort from "get-port";
 import { Miniflare, Mutex } from "miniflare";
+import { DEFAULT_INSPECTOR_PORT } from "../..";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import * as MF from "../../dev/miniflare";
 import { RuntimeController } from "./BaseController";
@@ -43,7 +45,9 @@ function getName(config: StartDevWorkerOptions) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
 
-function convertToConfigBundle(event: BundleCompleteEvent): MF.ConfigBundle {
+async function convertToConfigBundle(
+	event: BundleCompleteEvent
+): Promise<MF.ConfigBundle> {
 	const bindings: CfWorkerInit["bindings"] = {
 		vars: undefined,
 		kv_namespaces: undefined,
@@ -198,7 +202,9 @@ function convertToConfigBundle(event: BundleCompleteEvent): MF.ConfigBundle {
 		initialIp: "127.0.0.1",
 		rules: [],
 		// TODO: should we resolve this port?
-		inspectorPort: event.config.dev?.inspector?.port,
+		inspectorPort:
+			event.config.dev?.inspector?.port ??
+			(await getPort({ port: DEFAULT_INSPECTOR_PORT })),
 		localPersistencePath: persistence,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
@@ -243,7 +249,7 @@ export class LocalRuntimeController extends RuntimeController {
 			const { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
-					convertToConfigBundle(data),
+					await convertToConfigBundle(data),
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
 			if (this.#mf === undefined) {
