@@ -24,6 +24,7 @@ import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import type { ServiceFetch } from "../api";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -43,13 +44,7 @@ import type {
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type {
-	MiniflareOptions,
-	Request,
-	Response,
-	SourceOptions,
-	WorkerOptions,
-} from "miniflare";
+import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
@@ -176,14 +171,13 @@ export interface ConfigBundle {
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
-	usageModel: "bundled" | "unbound" | undefined; // TODO: do we need this?
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
-	inspectorPort: number;
+	inspectorPort: number | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
@@ -195,7 +189,7 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	services: Config["services"] | undefined;
-	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
+	serviceBindings: Record<string, ServiceFetch>;
 }
 
 export class WranglerLog extends Log {
@@ -251,7 +245,7 @@ export function castLogLevel(level: LoggerLevel): LogLevel {
 	return LogLevel[key];
 }
 
-function buildLog(): Log {
+export function buildLog(): Log {
 	let level = castLogLevel(logger.loggerLevel);
 
 	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
@@ -271,7 +265,7 @@ async function getEntrypointNames(entrypointSource: string) {
 }
 
 async function buildSourceOptions(
-	config: ConfigBundle
+	config: Omit<ConfigBundle, "rules">
 ): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
@@ -787,9 +781,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	});
 }
 
-async function buildMiniflareOptions(
+export async function buildMiniflareOptions(
 	log: Log,
-	config: ConfigBundle,
+	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{
 	options: MiniflareOptions;

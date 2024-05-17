@@ -1,5 +1,27 @@
-import type { RawConfig } from "../../config";
-// import type { WorkerDefinition } from "../../dev-registry";
+import type { Config, RawConfig } from "../../config";
+import type {
+	CustomDomainRoute,
+	SimpleRoute,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "../../config/environment";
+import type {
+	CfAnalyticsEngineDataset,
+	CfConstellation,
+	CfD1Database,
+	CfDispatchNamespace,
+	CfDurableObject,
+	CfHyperdrive,
+	CfKvNamespace,
+	CfLogfwdrBinding,
+	CfMTlsCertificate,
+	CfQueue,
+	CfR2Bucket,
+	CfSendEmailBindings,
+	CfService,
+	CfVectorize,
+} from "../../deployment-bundle/worker";
+import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DispatchFetch, Json, Request, Response } from "miniflare";
@@ -18,7 +40,7 @@ export interface DevWorker {
 
 export interface StartDevWorkerOptions {
 	/** The name of the worker. */
-	name: string;
+	name: string | undefined;
 	/**
 	 * The javascript or typescript entry-point of the worker.
 	 * This is the `main` property of a wrangler.toml.
@@ -98,7 +120,7 @@ export interface StartDevWorkerOptions {
 		mockFetch?: undici.MockAgent;
 
 		/** Gets a fetcher to a specific worker, used for multi-worker development */
-		getRegisteredWorker?(name: string): ServiceFetch | undefined;
+		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
 	};
 }
 
@@ -113,24 +135,6 @@ export type Module<Type extends ModuleRule["type"] = ModuleRule["type"]> = File<
 
 // TODO: revisit this type
 export type Bundle = EsbuildBundle;
-
-// {
-// 	/** Files that were used in the creation of this bundle, and how much they contributed to the output */
-// 	inputs?: Record<string, { bytesInOutput: number }>;
-// } & (
-// 	| {
-// 			type: "service-worker";
-// 			/** Service worker style entrypoint */
-// 			serviceWorker: File;
-// 			/** Additional modules to add as global variables */
-// 			modules?: Module<"Text" | "Data" | "CompiledWasm">[];
-// 	  }
-// 	| {
-// 			type: "modules";
-// 			/** ESModule entrypoint and additional modules to include */
-// 			modules: [Module<"ESModule">, ...Module[]];
-// 	  }
-// );
 
 export type Hook<T, Args extends unknown[] = unknown[]> =
 	| T
@@ -172,63 +176,56 @@ export interface ModuleRule {
 	fallthrough?: boolean;
 }
 
+type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
+
 export type Trigger =
 	| { type: "workers.dev" }
-	| { type: "route"; pattern: string; customDomain: true }
-	| {
+	| ({
 			type: "route";
-			pattern: string;
-			zoneId: string;
-			customDomain?: true;
-			zoneName?: never;
-	  }
-	| {
+	  } & SimpleRoute)
+	| ({
 			type: "route";
-			pattern: string;
-			zoneName: string;
-			customDomain?: true;
-			zoneId?: never;
-	  }
-	| { type: "schedule"; schedule: string }
-	| {
+	  } & ZoneIdRoute)
+	| ({
+			type: "route";
+	  } & ZoneNameRoute)
+	| ({
+			type: "route";
+	  } & CustomDomainRoute)
+	| { type: "cron"; cron: string }
+	| ({
 			type: "queue-consumer";
-			name: string;
-			maxBatchSize?: number;
-			maxBatchTimeout?: number;
-			maxRetries?: number;
-			deadLetterQueue?: string;
-	  };
+	  } & QueueConsumer);
 
 export type Binding =
-	| { type: "kv"; id: string }
-	| { type: "r2"; bucket_name: string }
-	| {
+	| { type: "plain_text"; value: string }
+	| { type: "json"; value: Json }
+	| ({ type: "kv_namespace" } & Omit<CfKvNamespace, "binding">)
+	| ({ type: "send_email" } & Omit<CfSendEmailBindings, "name">)
+	| { type: "wasm_module"; source: BinaryFile }
+	| { type: "text_blob"; source: File }
+	| { type: "browser" }
+	| { type: "ai" }
+	| { type: "version_metadata" }
+	| { type: "data_blob"; source: BinaryFile }
+	| ({
+			type: "durable_object_namespace";
+	  } & Omit<CfDurableObject, "name">)
+	| ({ type: "queue" } & Omit<CfQueue, "binding">)
+	| ({ type: "r2_bucket" } & Omit<CfR2Bucket, "binding">)
+	| ({
 			type: "d1";
-			/** The name of this D1 database. */
-			database_name: string;
-			/** The UUID of this D1 database (not required). */
-			database_id: string;
-			/** The UUID of this D1 database for Wrangler Dev (if specified). */
-			preview_database_id?: string;
-			/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
-			migrations_table?: string;
-			/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
-			migrations_dir?: string;
-			/** Internal use only. */
-			database_internal_env?: string;
-	  }
-	| {
-			type: "durable-object";
-			className: string;
-			service?: ServiceDesignator;
-	  }
-	| { type: "service"; service: ServiceDesignator | ServiceFetch }
-	| { type: "queue-producer"; name: string }
-	| { type: "constellation"; project_id: string }
-	| { type: "var"; value: string | Json | Uint8Array }
-	| { type: "wasm-module"; source: BinaryFile }
-	| { type: "hyperdrive"; id: string; localConnectionString?: string }
-	| { type: `unsafe-${string}`; [key: string]: unknown };
+	  } & Omit<CfD1Database, "binding">)
+	| ({ type: "vectorize" } & Omit<CfVectorize, "binding">)
+	| ({ type: "constellation" } & Omit<CfConstellation, "binding">)
+	| ({ type: "hyperdrive" } & Omit<CfHyperdrive, "binding">)
+	| ({ type: "service" } & Omit<CfService, "binding">)
+	| { type: "fetcher"; fetcher: ServiceFetch }
+	| ({ type: "analytics_engine" } & Omit<CfAnalyticsEngineDataset, "binding">)
+	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
+	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
+	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
+	| { type: `unsafe_${string}` };
 
 export type ServiceFetch = (request: Request) => Promise<Response> | Response;
 

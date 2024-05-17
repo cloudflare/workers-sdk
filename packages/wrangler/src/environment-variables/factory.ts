@@ -42,7 +42,6 @@ export function getEnvironmentVariableFactory({
 	variableName: VariableNames;
 	deprecatedName?: DeprecatedNames;
 }): () => string | undefined;
-
 /**
  * Create a function used to access an environment variable, with a default value.
  *
@@ -58,7 +57,6 @@ export function getEnvironmentVariableFactory({
 	deprecatedName?: DeprecatedNames;
 	defaultValue: () => string;
 }): () => string;
-
 /**
  * Create a function used to access an environment variable.
  *
