@@ -68,6 +68,8 @@ interface RemoteProps {
 		| undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
+
+	setAccountId: (accountId: string) => void;
 }
 
 export function Remote(props: RemoteProps) {
@@ -559,7 +561,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 	});
 }
 
-async function createRemoteWorkerInit(props: {
+export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
 	accountId: string;
