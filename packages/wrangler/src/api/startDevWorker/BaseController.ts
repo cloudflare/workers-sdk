@@ -55,7 +55,8 @@ export interface TypedEventEmitter<
 		listener: (...args: EventMap[Name]) => void
 	): this;
 }
-const TypedEventEmitter = EventEmitter as unknown as {
+
+const TypedEventEmitterImpl = EventEmitter as unknown as {
 	new <
 		EventMap extends Record<string | symbol, unknown[]>,
 	>(): TypedEventEmitter<EventMap>;
@@ -66,7 +67,7 @@ export type ControllerEventMap = {
 };
 export abstract class Controller<
 	EventMap extends ControllerEventMap = ControllerEventMap,
-> extends TypedEventEmitter<EventMap> {
+> extends TypedEventEmitterImpl<EventMap> {
 	emitErrorEvent(data: ErrorEvent) {
 		this.emit("error", data);
 	}

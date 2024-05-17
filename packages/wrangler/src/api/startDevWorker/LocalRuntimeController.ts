@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { Log, LogLevel, Miniflare, Mutex, Response } from "miniflare";
-import { withSourceURL } from "../../deployment-bundle/source-url";
+// import { withSourceURL } from "../../deployment-bundle/source-url";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { logger } from "../../logger";
 import { updateCheck } from "../../update-check";
@@ -48,18 +48,18 @@ function getBinaryFileContents(file: File<string | Uint8Array>) {
 	}
 	return fs.readFileSync(file.path);
 }
-function getTextFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (typeof file.contents === "string") {
-			return file.contents;
-		}
-		if (file.contents instanceof Buffer) {
-			return file.contents.toString();
-		}
-		return Buffer.from(file.contents).toString();
-	}
-	return fs.readFileSync(file.path, "utf8");
-}
+// function getTextFileContents(file: File<string | Uint8Array>) {
+// 	if ("contents" in file) {
+// 		if (typeof file.contents === "string") {
+// 			return file.contents;
+// 		}
+// 		if (file.contents instanceof Buffer) {
+// 			return file.contents.toString();
+// 		}
+// 		return Buffer.from(file.contents).toString();
+// 	}
+// 	return fs.readFileSync(file.path, "utf8");
+// }
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -194,34 +194,32 @@ function buildLog(): Log {
 }
 
 function buildSourceOptions(bundle: Bundle): SourceOptions {
-	if (bundle.type === "service-worker") {
+	if (bundle.entry.format === "service-worker") {
 		// Miniflare will handle adding `//# sourceURL` comments if they're missing
-		const script = getTextFileContents(bundle.serviceWorker);
-		return { script, scriptPath: bundle.serviceWorker.path };
+		const script = "getTextFileContents(bundle.serviceWorker);";
+		return { script, scriptPath: "bundle.serviceWorker.path " };
 	} else {
 		const modulesRoot = path.dirname(bundle.modules[0].name);
-		type Module = Extract<SourceOptions["modules"], unknown[]>[number];
-		const modules = bundle.modules.map((module) => {
+		// type Module = Extract<SourceOptions["modules"], unknown[]>[number];
+		const _modules = bundle.modules.map((module) => {
 			let contents: string | Uint8Array | undefined;
-			if (
-				module.type === "ESModule" ||
-				module.type === "CommonJS" ||
-				module.type === "NodeJsCompatModule"
-			) {
-				contents = getTextFileContents(module);
-				if (module.path !== undefined) {
-					contents = withSourceURL(contents, module.path);
-				}
-			} else {
-				contents = getBinaryFileContents(module);
-			}
-			return <Module>{
+			// if (
+			// 	true
+			// ) {
+			// 	contents = getTextFileContents(module);
+			// 	if (module.path !== undefined) {
+			// 		contents = withSourceURL(contents, module.path);
+			// 	}
+			// } else {
+			// 	contents = getBinaryFileContents(module);
+			// }
+			return {
 				type: module.type,
 				path: path.resolve(modulesRoot, module.name),
 				contents,
 			};
 		});
-		return { modulesRoot, modules };
+		return { modulesRoot, modules: [] };
 	}
 }
 
@@ -310,20 +308,20 @@ function buildBindingOptions(event: BundleCompleteEvent) {
 		}
 	}
 
-	// Setup blob and module bindings
-	if (event.bundle.type === "service-worker") {
-		// For the service-worker format, blobs are accessible on the global scope
-		for (const module of event.bundle.modules ?? []) {
-			const identifier = getIdentifier(module.name);
-			if (module.type === "Text") {
-				jsonBindings[identifier] = getTextFileContents(module);
-			} else if (module.type === "Data") {
-				dataBlobBindings[identifier] = getBinaryFileContents(module);
-			} else if (module.type === "CompiledWasm") {
-				wasmBindings[identifier] = getBinaryFileContents(module);
-			}
-		}
-	}
+	// // Setup blob and module bindings
+	// if (event.bundle.entry.format === "service-worker") {
+	// 	// For the service-worker format, blobs are accessible on the global scope
+	// 	for (const module of event.bundle.modules ?? []) {
+	// 		const identifier = getIdentifier(module.name);
+	// 		if (module.type === "text") {
+	// 			jsonBindings[identifier] = module.filePath;
+	// 		} else if (module.type === "Data") {
+	// 			dataBlobBindings[identifier] = getBinaryFileContents(module);
+	// 		} else if (module.type === "CompiledWasm") {
+	// 			wasmBindings[identifier] = getBinaryFileContents(module);
+	// 		}
+	// 	}
+	// }
 
 	// Setup Durable Object bindings and proxy worker
 	const externalDurableObjectWorker: WorkerOptions = {
@@ -569,7 +567,9 @@ export class LocalRuntimeController extends RuntimeController {
 					},
 					headers: {},
 					liveReload: data.config.dev?.liveReload,
-					proxyLogsToController: data.bundle.type === "service-worker",
+					proxyLogsToController: data.bundle.entry.format === "service-worker",
+					entrypointAddresses: undefined,
+					internalDurableObjects: undefined,
 				},
 			});
 		} catch (error) {
@@ -578,6 +578,7 @@ export class LocalRuntimeController extends RuntimeController {
 				reason: "Error reloading local server",
 				cause: castErrorCause(error),
 				source: "LocalRuntimeController",
+				data: undefined,
 			});
 		}
 	}
