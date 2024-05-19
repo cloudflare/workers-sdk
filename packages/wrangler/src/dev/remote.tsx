@@ -70,13 +70,14 @@ interface RemoteProps {
 	sendMetrics: boolean | undefined;
 
 	setAccountId: (accountId: string) => void;
+	experimentalDevenvRuntime: boolean;
 }
 
 export function Remote(props: RemoteProps) {
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
-	if (false) {
+	if (!props.experimentalDevenvRuntime) {
 		// this condition WILL be static and therefore safe to wrap around a hook
 		// eslint-disable-next-line react-hooks/rules-of-hooks
 		useWorker({

@@ -186,6 +186,8 @@ export type DevProps = {
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
+
+	experimentalDevenvRuntime: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -383,15 +385,23 @@ function DevSession(props: DevSessionProps) {
 	}, [devEnv, startDevWorkerOptions]);
 	const onBundleComplete = useCallback(
 		(bundle: EsbuildBundle) => {
-			devEnv.runtimes.forEach((runtime) =>
-				runtime.onBundleComplete({
-					type: "bundleComplete",
+			if (props.experimentalDevenvRuntime) {
+				devEnv.runtimes.forEach((runtime) =>
+					runtime.onBundleComplete({
+						type: "bundleComplete",
+						config: startDevWorkerOptions,
+						bundle,
+					})
+				);
+			} else {
+				devEnv.proxy.onReloadStart({
+					type: "reloadStart",
 					config: startDevWorkerOptions,
 					bundle,
-				})
-			);
+				});
+			}
 		},
-		[devEnv, startDevWorkerOptions]
+		[devEnv, startDevWorkerOptions, props.experimentalDevenvRuntime]
 	);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
@@ -604,6 +614,7 @@ function DevSession(props: DevSessionProps) {
 			// startDevWorker
 			accountId={accountId}
 			setAccountId={setAccountIdAndResolveDeferred}
+			experimentalDevenvRuntime={props.experimentalDevenvRuntime}
 		/>
 	);
 }

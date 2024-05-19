@@ -287,6 +287,13 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			})
+			.option("experimental-devenv-runtime", {
+				alias: ["x-devenv-runtime"],
+				type: "boolean",
+				describe:
+					"Use the experimental DevEnv runtime instantiation (unified across wrangler dev and unstable_dev)",
+				default: false,
+			})
 	);
 }
 
@@ -512,6 +519,7 @@ export async function startDev(args: StartDevOptions) {
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args.testScheduled}
 					projectRoot={projectRoot}
+					experimentalDevenvRuntime={args.experimentalDevenvRuntime}
 				/>
 			);
 		}
@@ -639,6 +647,7 @@ export async function startApiDev(args: StartDevOptions) {
 			testScheduled: args.testScheduled,
 			disableDevRegistry: args.disableDevRegistry ?? false,
 			projectRoot,
+			experimentalDevenvRuntime: args.experimentalDevenvRuntime,
 		});
 	}
 
@@ -881,7 +890,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 					args.site,
 					args.siteInclude,
 					args.siteExclude
-			  );
+				);
 	return { assetPaths, bindings };
 }
 
