@@ -28,6 +28,7 @@ import {
 } from "../user";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
+import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
@@ -170,25 +171,31 @@ export async function startDevServer(
 		),
 	});
 
-	devEnv.runtimes.forEach((runtime) => {
-		console.log("devEnv.runtimes.onBundleComplete()");
-		runtime.onBundleComplete({
-			type: "bundleComplete",
-			config: startDevWorkerOptions,
-			bundle,
-		});
-	});
+	console.log({ experimentalDevenvRuntime: props.experimentalDevenvRuntime });
 
-	// to comply with the current contract of this function, call props.onReady on reloadComplete
-	devEnv.runtimes.forEach((runtime) => {
-		runtime.on("reloadComplete", async (ev) => {
-			console.log("devEnv.runtimes.onReloadComplete");
-			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			const url = await proxyWorker.ready;
+	if (props.experimentalDevenvRuntime) {
+		console.log("UNSTABLE_DEV Experimental-DevEnv-Runtime MODE");
 
-			props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+		devEnv.runtimes.forEach((runtime) => {
+			console.log("devEnv.runtimes.onBundleComplete()");
+			runtime.onBundleComplete({
+				type: "bundleComplete",
+				config: startDevWorkerOptions,
+				bundle,
+			});
 		});
-	});
+
+		// to comply with the current contract of this function, call props.onReady on reloadComplete
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (ev) => {
+				console.log("devEnv.runtimes.onReloadComplete");
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+
+				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+			});
+		});
+	}
 
 	if (props.local) {
 		console.log("UNSTABLE_DEV LOCAL MODE");
@@ -258,16 +265,62 @@ export async function startDevServer(
 			stop: async () => {
 				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
-			// TODO: inspectorUrl,
+		};
+	} else {
+		console.log("UNSTABLE_DEV REMOTE MODE");
+
+		const { stop } = await startRemoteServer({
+			name: props.name,
+			bundle: bundle,
+			format: props.entry.format,
+			accountId: props.accountId,
+			bindings: props.bindings,
+			assetPaths: props.assetPaths,
+			isWorkersSite: props.isWorkersSite,
+			port: props.initialPort,
+			ip: props.initialIp,
+			localProtocol: props.localProtocol,
+			httpsKeyPath: props.httpsKeyPath,
+			httpsCertPath: props.httpsCertPath,
+			inspectorPort: props.inspectorPort,
+			inspect: props.inspect,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			usageModel: props.usageModel,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			host: props.host,
+			routes: props.routes,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
+			sourceMapPath: bundle?.sourceMapPath,
+			sendMetrics: props.sendMetrics,
+			experimentalDevenvRuntime: props.experimentalDevenvRuntime,
+			setAccountId: /* noop */ () => {},
+		});
+
+		return {
+			stop: async () => {
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+			},
 		};
 	}
-	return {
-		stop: async () => {
-			await stopWorkerRegistry();
-			await devEnv.teardown();
-		},
-		// TODO: inspectorUrl,
-	};
 }
 
 function setupTempDir(projectRoot: string | undefined): string | undefined {
@@ -342,7 +395,7 @@ async function runEsbuild({
 				entry,
 				findAdditionalModules: findAdditionalModules ?? false,
 				rules,
-		  });
+			});
 
 	const bundleResult =
 		processEntrypoint || !noBundle
@@ -368,7 +421,7 @@ async function runEsbuild({
 					doBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
-			  })
+				})
 			: undefined;
 
 	return {
