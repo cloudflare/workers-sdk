@@ -668,6 +668,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/unstable_dev:
+    dependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/vitest-pool-workers-examples:
     devDependencies:
       '@cloudflare/vitest-pool-workers':
@@ -729,8 +735,6 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/workers-chat-demo: {}
-
-  fixtures/wrangler-dev-api-app: {}
 
   packages/cli:
     devDependencies:
