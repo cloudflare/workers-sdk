@@ -395,7 +395,6 @@ function DevSession(props: DevSessionProps) {
 	);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
-	const bundle = useRef<ReturnType<typeof useEsbuild>>();
 	const onCustomBuildEnd = useCallback(() => {
 		const TIMEOUT = 300; // TODO: find a lower bound for this value
 
@@ -445,7 +444,7 @@ function DevSession(props: DevSessionProps) {
 		});
 	}, [devEnv, startDevWorkerOptions]);
 
-	bundle.current = useEsbuild({
+	const bundle = useEsbuild({
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
@@ -522,11 +521,11 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
-		if (bundle.current) {
+		if (bundle) {
 			latestReloadCompleteEvent.current = {
 				type: "reloadComplete",
 				config: startDevWorkerOptions,
-				bundle: bundle.current,
+				bundle: bundle,
 				proxyData,
 			};
 
@@ -541,7 +540,7 @@ function DevSession(props: DevSessionProps) {
 	return props.local ? (
 		<Local
 			name={props.name}
-			bundle={bundle.current}
+			bundle={bundle}
 			format={props.entry.format}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
@@ -566,13 +565,13 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-			sourceMapPath={bundle.current?.sourceMapPath}
+			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
 		/>
 	) : (
 		<Remote
 			name={props.name}
-			bundle={bundle.current}
+			bundle={bundle}
 			format={props.entry.format}
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
@@ -594,7 +593,7 @@ function DevSession(props: DevSessionProps) {
 			host={props.host}
 			routes={props.routes}
 			onReady={announceAndOnReady}
-			sourceMapPath={bundle.current?.sourceMapPath}
+			sourceMapPath={bundle?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
 			// startDevWorker
 			accountId={accountId}
