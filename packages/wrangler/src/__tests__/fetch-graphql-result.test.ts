@@ -1,9 +1,9 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { fetchGraphqlResult } from "../cfetch";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
-import { msw } from "./helpers/msw";
 
 describe("fetchGraphqlResult", () => {
 	mockAccountId({ accountId: null });

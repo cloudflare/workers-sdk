@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -8,11 +9,11 @@ export default defineConfig({
 				singleThread: true,
 			},
 		},
-		retry: 2,
+		retry: 0,
 		include: ["**/__tests__/**/*.test.ts"],
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		outputFile: process.env.TEST_REPORT_PATH ?? ".test-report/index.html",
-		// globalSetup: path.resolve(__dirname, "./validate-environment.ts"),
+		setupFiles: path.resolve(__dirname, "src/__tests__/vitest.setup.ts"),
 		reporters: ["verbose", "html"],
 	},
 });

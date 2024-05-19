@@ -1,11 +1,11 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -51,7 +51,7 @@ describe("time-travel", () => {
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 			]);
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/d1/database/*",
 					async (_req, res, ctx) => {
 						return res(
@@ -91,7 +91,7 @@ describe("time-travel", () => {
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 			]);
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/d1/database/*",
 					async (_req, res, ctx) => {
 						return res(

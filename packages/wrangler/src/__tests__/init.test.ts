@@ -2,18 +2,18 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
 import { File, FormData, Response } from "undici";
 import { afterEach, assert, beforeEach, describe, it, test, vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
@@ -2833,7 +2833,7 @@ describe("init", () => {
 			function mockSupportingDashRequests(expectedAccountId: string) {
 				msw.use(
 					// This is fetched twice in normal usage
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
 							assert(req.params.accountId == expectedAccountId);
@@ -2850,7 +2850,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
 							assert(req.params.accountId == expectedAccountId);
@@ -2867,7 +2867,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
 						(req, res, ctx) => {
 							assert(req.params.accountId == expectedAccountId);
@@ -2888,7 +2888,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
 						(req, res, ctx) => {
 							assert(req.params.accountId == expectedAccountId);
@@ -2909,7 +2909,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/domains/records`,
 						(req, res, ctx) => {
 							return res.once(
@@ -2923,7 +2923,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
 						(req, res, ctx) => {
 							assert(req.params.accountId == expectedAccountId);
@@ -2944,7 +2944,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
 						(req, res, ctx) => {
@@ -2966,7 +2966,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
 						(req, res, ctx) => {
 							assert(req.params.accountId == expectedAccountId);
@@ -2985,7 +2985,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
 						async (_, res, ctx) => {
 							if (typeof worker.content === "string") {
@@ -3004,7 +3004,7 @@ describe("init", () => {
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/standard`,
 						(req, res, ctx) => {
 							return res.once(
@@ -3165,7 +3165,7 @@ describe("init", () => {
 				expect,
 			}) => {
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
 						(req, res, ctx) => {
 							return res.once(
@@ -3465,7 +3465,7 @@ describe("init", () => {
 					id: "isolinear-optical-chip",
 				});
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
 						(req, res) => {
 							return res.networkError("Mock Network Error");

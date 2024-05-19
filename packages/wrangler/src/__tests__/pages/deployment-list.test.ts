@@ -1,9 +1,9 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { afterEach, assert, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
+import { msw } from "../helpers/http-mocks";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
-import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Deployment } from "./../../pages/types";
@@ -57,7 +57,7 @@ describe("pages deployment list", () => {
 function mockDeploymentListRequest(deployments: unknown[]) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/pages/projects/:project/deployments",
 			(req, res, ctx) => {
 				requests.count++;

@@ -1,13 +1,13 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { afterAll, assert, beforeEach, describe, it } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -17,7 +17,7 @@ function mockSupportingDashRequests(
 	expectedProjectName: string
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/NOT_REAL`,
 			(req, res, ctx) => {
 				assert(req.params.accountId == expectedAccountId);
@@ -38,7 +38,7 @@ function mockSupportingDashRequests(
 				);
 			}
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName`,
 			(req, res, ctx) => {
 				assert(req.params.accountId == expectedAccountId);
@@ -253,7 +253,7 @@ function mockSupportingDashRequests(
 				);
 			}
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/durable_objects/namespaces/:doId`,
 			(req, res, ctx) => {
 				assert(req.params.accountId == expectedAccountId);

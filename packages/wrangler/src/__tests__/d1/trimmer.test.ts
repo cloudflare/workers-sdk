@@ -60,16 +60,16 @@ describe("trimSqlQuery()", () => {
 		INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
 		COMMIT;`)
 		).toMatchInlineSnapshot(`
-		"PRAGMA foreign_keys=OFF;
-
-				CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-				CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
-				INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
-				INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy');
-				INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth');
-				INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
-				"
-	`);
+			"PRAGMA foreign_keys=OFF;
+					
+					CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+					CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
+					INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
+					INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy');
+					INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth');
+					INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
+					"
+		`);
 	});
 	it("should throw when provided multiple transactions", ({ expect }) => {
 		expect(() =>
@@ -85,17 +85,17 @@ describe("trimSqlQuery()", () => {
 		INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
 		COMMIT;`)
 		).toThrowErrorMatchingInlineSnapshot(`
-		"Wrangler could not process the provided SQL file, as it contains several transactions.
-		D1 runs your SQL in a transaction for you.
-		Please export an SQL file from your SQLite database and try again."
-	`);
+			[Error: Wrangler could not process the provided SQL file, as it contains several transactions.
+			D1 runs your SQL in a transaction for you.
+			Please export an SQL file from your SQLite database and try again.]
+		`);
 	});
 
 	it("should handle strings", ({ expect }) => {
 		expect(
 			trimSqlQuery(`SELECT * FROM my_table WHERE val = "foo;bar";`)
 		).toMatchInlineSnapshot(
-			`"SELECT * FROM my_table WHERE val = \\"foo;bar\\";"`
+			`"SELECT * FROM my_table WHERE val = "foo;bar";"`
 		);
 	});
 
@@ -107,10 +107,10 @@ describe("trimSqlQuery()", () => {
         AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)`
 			)
 		).toMatchInlineSnapshot(`
-		"SELECT * FROM my_table -- semicolons; in; comments; don't count;
-		        WHERE val = 'foo;bar'
-		        AND \\"col;name\\" = \`other;col\`; -- or identifiers (Postgres or MySQL style)"
-	`);
+			"SELECT * FROM my_table -- semicolons; in; comments; don't count;
+			        WHERE val = 'foo;bar'
+			        AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)"
+		`);
 	});
 
 	it("should handle block comments", ({ expect }) => {

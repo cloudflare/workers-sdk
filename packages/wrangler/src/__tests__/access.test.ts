@@ -1,6 +1,6 @@
 import { beforeEach, describe, it } from "vitest";
 import { domainUsesAccess, getAccessToken } from "../user/access";
-import { msw, mswAccessHandlers } from "./helpers/msw";
+import { msw, mswAccessHandlers } from "./helpers/http-mocks";
 
 describe("access", () => {
 	beforeEach(() => {

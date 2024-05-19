@@ -1,9 +1,9 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { afterEach, assert, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
+import { msw } from "../helpers/http-mocks";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
-import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
 import type { Project } from "./../../pages/types";
@@ -87,7 +87,7 @@ describe("pages project list", () => {
 function mockProjectListRequest(projects: unknown[]) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get("*/accounts/:accountId/pages/projects", async (req, res, ctx) => {
+		http.get("*/accounts/:accountId/pages/projects", async (req, res, ctx) => {
 			requests.count++;
 			const pageSize = Number(req.url.searchParams.get("per_page"));
 			const page = Number(req.url.searchParams.get("page"));

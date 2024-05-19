@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as TOML from "@iarna/toml";
-import { rest } from "msw";
-import { msw } from "../helpers/msw";
+import { http, HttpResponse } from "msw";
+import { msw } from "../helpers/http-mocks";
 import type { CloudchamberConfig } from "../../config/environment";
 
 export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
@@ -18,7 +18,7 @@ export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 
 export function mockAccount() {
 	msw.use(
-		rest.get("*/me", async (request, response, context) => {
+		http.get("*/me", async (request, response, context) => {
 			return response.once(context.json({}));
 		})
 	);

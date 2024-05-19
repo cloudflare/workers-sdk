@@ -17,11 +17,11 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file cannot contain both both \\"main\\" and \\"pages_build_output_dir\\" configuration keys.
-			    Please use \\"main\\" if you are deploying a Worker, or \\"pages_build_output_dir\\" if you are deploying a Pages project.
-			  - Configuration file for Pages projects does not support \\"main\\""
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file cannot contain both both "main" and "pages_build_output_dir" configuration keys.
+				    Please use "main" if you are deploying a Worker, or "pages_build_output_dir" if you are deploying a Pages project.
+				  - Configuration file for Pages projects does not support "main""
+			`);
 		});
 	});
 
@@ -36,10 +36,10 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Missing top-level field \\"name\\" in configuration file.
-			    Pages requires the name of your project to be configured at the top-level of your \`wrangler.toml\` file. This is because, in Pages, environments target the same project."
-		`);
+				"Running configuration file validation for Pages:
+				  - Missing top-level field "name" in configuration file.
+				    Pages requires the name of your project to be configured at the top-level of your \`wrangler.toml\` file. This is because, in Pages, environments target the same project."
+			`);
 		});
 	});
 
@@ -99,11 +99,11 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file contains the following environment names that are not supported by Pages projects:
-			    \\"unsupported-env-name-1\\",\\"unsupported-env-name-2\\".
-			    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file contains the following environment names that are not supported by Pages projects:
+				    "unsupported-env-name-1","unsupported-env-name-2".
+				    The supported named-environments for Pages are "preview" and "production"."
+			`);
 
 			diagnostics = validatePagesConfig(
 				config,
@@ -113,11 +113,11 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file contains the following environment names that are not supported by Pages projects:
-			    \\"unsupported-env-name\\".
-			    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file contains the following environment names that are not supported by Pages projects:
+				    "unsupported-env-name".
+				    The supported named-environments for Pages are "preview" and "production"."
+			`);
 		});
 	});
 
@@ -229,10 +229,10 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file for Pages projects does not support \\"wasm_modules\\"
-			  - Configuration file for Pages projects does not support \\"text_blobs\\""
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file for Pages projects does not support "wasm_modules"
+				  - Configuration file for Pages projects does not support "text_blobs""
+			`);
 
 			// test with inheritable environment config fields
 			config = {
@@ -254,12 +254,12 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file for Pages projects does not support \\"triggers\\"
-			  - Configuration file for Pages projects does not support \\"usage_model\\"
-			  - Configuration file for Pages projects does not support \\"build\\"
-			  - Configuration file for Pages projects does not support \\"node_compat\\""
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file for Pages projects does not support "triggers"
+				  - Configuration file for Pages projects does not support "usage_model"
+				  - Configuration file for Pages projects does not support "build"
+				  - Configuration file for Pages projects does not support "node_compat""
+			`);
 
 			// test with non-inheritable environment config fields
 			// (incl. `queues.consumers`)
@@ -279,10 +279,10 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Configuration file for Pages projects does not support \\"queues.consumers\\"
-			  - Configuration file for Pages projects does not support \\"cloudchamber\\""
-		`);
+				"Running configuration file validation for Pages:
+				  - Configuration file for Pages projects does not support "queues.consumers"
+				  - Configuration file for Pages projects does not support "cloudchamber""
+			`);
 		});
 	});
 
@@ -333,10 +333,10 @@ describe("validatePagesConfig()", () => {
 			expect(diagnostics.hasWarnings()).toBeFalsy();
 			expect(diagnostics.hasErrors()).toBeTruthy();
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Running configuration file validation for Pages:
-			  - Durable Objects bindings should specify a \\"script_name\\".
-			    Pages requires Durable Object bindings to specify the name of the Worker where the Durable Object is defined."
-		`);
+				"Running configuration file validation for Pages:
+				  - Durable Objects bindings should specify a "script_name".
+				    Pages requires Durable Object bindings to specify the name of the Worker where the Durable Object is defined."
+			`);
 		});
 	});
 });

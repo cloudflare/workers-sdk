@@ -3,14 +3,14 @@ import path, { resolve } from "node:path";
 import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { useApp } from "ink";
-import fetchMock from "jest-fetch-mock";
-import jestFetchMock from "jest-fetch-mock";
+// import fetchMock from "jest-fetch-mock";
+// import jestFetchMock from "jest-fetch-mock";
 import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { MetricsConfigOptions } from "../metrics/metrics-config";
 import { getBasePath } from "../paths";
-import { MockWebSocket } from "./helpers/mock-web-socket";
-import { msw } from "./helpers/msw";
+// import { MockWebSocket } from "./helpers/mock-web-socket";
+import { msw } from "./helpers/http-mocks";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
@@ -101,17 +101,17 @@ vi.mock("ws", async (importOriginal) => {
 	return module;
 });
 
-vi.mock("undici", async (importOriginal) => {
-	return {
-		...(await importOriginal<typeof import("undici")>()),
-		fetch: jestFetchMock,
-	};
-});
+// vi.mock("undici", async (importOriginal) => {
+// 	return {
+// 		...(await importOriginal<typeof import("undici")>()),
+// 		fetch: jestFetchMock,
+// 	};
+// });
 
-fetchMock.doMock(() => {
-	// Any un-mocked fetches should throw
-	throw new Error("Unexpected fetch request");
-});
+// fetchMock.doMock(() => {
+// 	// Any un-mocked fetches should throw
+// 	throw new Error("Unexpected fetch request");
+// });
 
 vi.mock("../package-manager");
 
@@ -119,7 +119,7 @@ vi.mock("../update-check");
 
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
-fetchMock.dontMock();
+// fetchMock.dontMock();
 beforeAll(() => {
 	msw.listen({
 		onUnhandledRequest: (request) => {

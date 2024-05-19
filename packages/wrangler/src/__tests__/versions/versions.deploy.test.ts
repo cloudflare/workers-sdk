@@ -9,8 +9,6 @@ import {
 	versionsDeployOptions,
 } from "../../versions/deploy";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
-import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockConsoleMethods } from "../helpers/mock-console";
 import {
 	msw,
 	mswGetVersion,
@@ -18,7 +16,9 @@ import {
 	mswListVersions,
 	mswPatchNonVersionedScriptSettings,
 	mswPostNewDeployment,
-} from "../helpers/msw";
+} from "../helpers/http-mocks";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";

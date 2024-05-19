@@ -9,12 +9,12 @@ import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
+import { msw } from "../helpers/http-mocks";
+import { FileReaderSync } from "../helpers/http-mocks/read-file-sync";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
-import { msw } from "../helpers/msw";
-import { FileReaderSync } from "../helpers/msw/read-file-sync";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { normalizeProgressSteps } from "./project-upload.test";
@@ -201,7 +201,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -224,7 +224,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -362,7 +362,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -384,7 +384,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -523,7 +523,7 @@ describe("pages deploy", () => {
 					}
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -545,7 +545,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -706,7 +706,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					getDeploymentDetailsRequestCount++;
@@ -749,7 +749,7 @@ describe("pages deploy", () => {
 					}
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -896,7 +896,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -918,7 +918,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -1051,7 +1051,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -1074,7 +1074,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -1236,7 +1236,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -1258,7 +1258,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -1421,7 +1421,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -1443,7 +1443,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -1596,7 +1596,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 				async (req, res, ctx) => {
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -1618,7 +1618,7 @@ describe("pages deploy", () => {
 					);
 				}
 			),
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/pages/projects/foo",
 				async (req, res, ctx) => {
 					getProjectRequestCount++;
@@ -1820,7 +1820,7 @@ describe("pages deploy", () => {
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -1842,7 +1842,7 @@ describe("pages deploy", () => {
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -2063,7 +2063,7 @@ async function onRequest() {
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -2087,7 +2087,7 @@ async function onRequest() {
 				),
 
 				// /accounts/:accountId/pages/projects/<project-name>
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -2319,7 +2319,7 @@ async function onRequest() {
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -2341,7 +2341,7 @@ async function onRequest() {
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -2466,7 +2466,7 @@ async function onRequest() {
 						})
 					);
 				}),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -2632,7 +2632,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -2654,7 +2654,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId/history/logs?size=10000000",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -2679,7 +2679,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -2836,7 +2836,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -2858,7 +2858,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -3101,7 +3101,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -3125,7 +3125,7 @@ and that at least one include rule is provided.
 				),
 
 				// /accounts/:accountId/pages/projects/<project-name>
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -3355,7 +3355,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -3377,7 +3377,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -3505,7 +3505,7 @@ and that at least one include rule is provided.
 					);
 				}),
 
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -3701,7 +3701,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -3723,7 +3723,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -3872,7 +3872,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -3894,7 +3894,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4046,7 +4046,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4068,7 +4068,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4225,7 +4225,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4247,7 +4247,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId/history/logs?size=10000000",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4272,7 +4272,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -4455,7 +4455,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/pages-is-awesome/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4477,7 +4477,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/pages-is-awesome",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -4719,7 +4719,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/pages-project/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -4741,7 +4741,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/pages-project",
 					async (req, res, ctx) => {
 						getProjectRequestCount++;
@@ -4859,7 +4859,7 @@ and that at least one include rule is provided.
 						);
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
 					async (req, res, ctx) => {
 						assert(req.params.accountId == "some-account-id");
@@ -5058,7 +5058,7 @@ function mockGetProjectHandler(
 	projectName: string,
 	compatibility_flags: string[] | undefined
 ) {
-	return rest.get(
+	return http.get(
 		`*/accounts/:accountId/pages/projects/${projectName}`,
 		async (_req, res, ctx) =>
 			res.once(

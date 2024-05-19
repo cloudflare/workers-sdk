@@ -6,14 +6,14 @@ import * as TOML from "@iarna/toml";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
+import { msw } from "./helpers/http-mocks";
+import { FileReaderSync } from "./helpers/http-mocks/read-file-sync";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
-import { msw } from "./helpers/msw";
-import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { RestRequest } from "msw";
@@ -32,7 +32,7 @@ export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
+		http.get("*/memberships", (req, res, ctx) => {
 			return res.once(ctx.json(createFetchResult(accounts)));
 		})
 	);
@@ -430,7 +430,7 @@ describe("wrangler secret", () => {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
 					(req, res, ctx) => {
 						assert(req.params.accountId == "some-account-id");
@@ -551,7 +551,7 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -593,7 +593,7 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -670,7 +670,7 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -721,7 +721,7 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
@@ -775,7 +775,7 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");

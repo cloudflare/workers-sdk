@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
@@ -7,17 +7,17 @@ import {
 	requireAuth,
 	writeAuthConfigFile,
 } from "../user";
+import {
+	msw,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
+} from "./helpers/http-mocks";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
-import {
-	msw,
-	mswSuccessOauthHandlers,
-	mswSuccessUserHandlers,
-} from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";

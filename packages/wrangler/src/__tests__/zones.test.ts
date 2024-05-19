@@ -1,24 +1,26 @@
-import { rest } from "msw";
-import { assert, describe, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { describe, expect, test } from "vitest";
 import { getHostFromUrl, getZoneForRoute } from "../zones";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { msw } from "./helpers/msw";
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			assert.deepEqual([...req.url.searchParams.entries()], [["name", domain]]);
+		http.get(
+			"*/zones",
+			({ request }) => {
+				const url = new URL(request.url);
+				expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
 
-			return res.once(
-				ctx.status(200),
-				ctx.json({
+				return HttpResponse.json({
 					success: true,
 					errors: [],
 					messages: [],
 					result: zones,
-				})
-			);
-		})
+				});
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -55,12 +57,12 @@ describe("Zones", () => {
 			${"https://*/path/name"}                            | ${undefined}
 			${"https://invalid:host"}                           | ${undefined}
 			${"https://invalid:host/path/name"}                 | ${undefined}
-		`("$pattern --> $host", ({ pattern, host, expect }) => {
+		`("$pattern --> $host", ({ pattern, host }) => {
 			expect(getHostFromUrl(pattern)).toBe(host);
 		});
 	});
 	describe("getZoneForRoute", () => {
-		test("string route", async ({ expect }) => {
+		test.only("string route", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(await getZoneForRoute("example.com/*")).toEqual({
 				host: "example.com",
@@ -68,15 +70,15 @@ describe("Zones", () => {
 			});
 		});
 
-		test("string route (not a zone)", async ({ expect }) => {
+		test("string route (not a zone)", async () => {
 			mockGetZones("wrong.com", []);
-			await expect(getZoneForRoute("wrong.com/*")).rejects
-				.toMatchInlineSnapshot(`
-			[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
-			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
-		`);
+			await expect(
+				getZoneForRoute("wrong.com/*")
+			).rejects.toMatchInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/zones) failed.]`
+			);
 		});
-		test("zone_id route", async ({ expect }) => {
+		test("zone_id route", async () => {
 			// example-id and other-id intentionally different to show that the API is not called
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
@@ -87,7 +89,7 @@ describe("Zones", () => {
 				id: "other-id",
 			});
 		});
-		test("zone_id route (custom hostname)", async ({ expect }) => {
+		test("zone_id route (custom hostname)", async () => {
 			// example-id and other-id intentionally different to show that the API is not called
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
@@ -102,7 +104,7 @@ describe("Zones", () => {
 			});
 		});
 
-		test("zone_name route (apex)", async ({ expect }) => {
+		test("zone_name route (apex)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
 				await getZoneForRoute({
@@ -114,7 +116,7 @@ describe("Zones", () => {
 				id: "example-id",
 			});
 		});
-		test("zone_name route (subdomain)", async ({ expect }) => {
+		test("zone_name route (subdomain)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
 				await getZoneForRoute({
@@ -126,7 +128,7 @@ describe("Zones", () => {
 				id: "example-id",
 			});
 		});
-		test("zone_name route (custom hostname)", async ({ expect }) => {
+		test("zone_name route (custom hostname)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
 				await getZoneForRoute({

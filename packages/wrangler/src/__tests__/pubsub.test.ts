@@ -1,8 +1,8 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { assert, describe, it } from "vitest";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -125,7 +125,7 @@ describe("wrangler", () => {
 				function mockListRequest(namespaces: PubSubNamespace[]) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces",
 							async (req, res, ctx) => {
 								requests.count++;
@@ -326,7 +326,7 @@ describe("wrangler", () => {
 				function mockListRequest(brokers: PubSubBroker[]) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
 							async (req, res, cxt) => {
 								requests.count++;
@@ -370,7 +370,7 @@ describe("wrangler", () => {
 				function mockGetRequest(broker: PubSubBroker) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
 							(req, res, cxt) => {
 								requests.count++;
@@ -410,7 +410,7 @@ describe("wrangler", () => {
 				function mockIssueRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
 							(req, res, cxt) => {
 								requests.count++;
@@ -457,7 +457,7 @@ describe("wrangler", () => {
 				function mockIssueRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
 							(req, res, cxt) => {
 								requests.count++;

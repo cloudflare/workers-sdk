@@ -1,5 +1,5 @@
 import { writeFileSync } from "fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it } from "vitest";
 import {
 	deleteMTlsCertificate,
@@ -9,11 +9,11 @@ import {
 	uploadMTlsCertificate,
 	uploadMTlsCertificateFromFs,
 } from "../api";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { MTlsCertificateResponse } from "../api/mtls-certificate";
@@ -68,7 +68,7 @@ describe("wrangler", () => {
 	) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/mtls_certificates",
 				async (request, response, context) => {
 					config.calls++;
@@ -110,7 +110,7 @@ describe("wrangler", () => {
 	function mockGetMTlsCertificate(resp: Partial<MTlsCertificateResponse> = {}) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/mtls_certificates/:certId",
 				async (request, response, context) => {
 					config.calls++;

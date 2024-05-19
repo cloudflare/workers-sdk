@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, it, vi } from "vitest";
+import { msw, mswSuccessDeploymentScriptMetadata } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
 import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
-import { msw, mswSuccessDeploymentScriptMetadata } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";

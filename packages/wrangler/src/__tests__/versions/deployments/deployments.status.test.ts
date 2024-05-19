@@ -1,9 +1,13 @@
 import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../../helpers/collect-cli-output";
+import {
+	msw,
+	mswGetVersion,
+	mswListNewDeployments,
+} from "../../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
-import { msw, mswGetVersion, mswListNewDeployments } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
 import writeWranglerToml from "../../helpers/write-wrangler-toml";

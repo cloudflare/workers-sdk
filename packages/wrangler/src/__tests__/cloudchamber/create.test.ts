@@ -1,11 +1,11 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
@@ -59,7 +59,7 @@ describe("cloudchamber create", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.get("*/ssh-public-keys", async (request, response, context) => {
+			http.get("*/ssh-public-keys", async (request, response, context) => {
 				const keys = [
 					{ id: "1", name: "hello", public_key: "hello-world" },
 				] as SSHPublicKeyItem[];
@@ -112,12 +112,16 @@ describe("cloudchamber create", () => {
 			memory: "300MB",
 		});
 		msw.use(
-			rest.get("*/ssh-public-keys", async (request, response, context) => {
-				const keys = [
-					{ id: "1", name: "hello", public_key: "hello-world" },
-				] as SSHPublicKeyItem[];
-				return response.once(context.json(keys));
-			})
+			http.get(
+				"*/ssh-public-keys",
+				async () => {
+					const keys = [
+						{ id: "1", name: "hello", public_key: "hello-world" },
+					] as SSHPublicKeyItem[];
+					return HttpResponse.json(keys);
+				},
+				{ once: true }
+			)
 		);
 		msw.use(
 			rest.post("*/deployments/v2", async (request, response, context) => {

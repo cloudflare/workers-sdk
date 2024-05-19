@@ -1,6 +1,6 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { assert } from "vitest";
-import { msw } from "./msw";
+import { msw } from "./http-mocks";
 
 /**
  * Mocks the `/accounts/:accountId/pages/projects/:projectName/upload-token` GET request
@@ -11,7 +11,7 @@ export function mockGetUploadTokenRequest(
 	projectName: string
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/${projectName}/upload-token`,
 			(req, res, ctx) => {
 				assert(req.params.accountId == accountId);

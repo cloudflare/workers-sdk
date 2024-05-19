@@ -1,10 +1,10 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -34,7 +34,7 @@ describe("info", () => {
 			],
 		});
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/d1/database/*",
 				async (_req, res, ctx) => {
 					return res(
@@ -87,7 +87,7 @@ describe("info", () => {
 			],
 		});
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/d1/database/*",
 				async (_req, res, ctx) => {
 					return res(

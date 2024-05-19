@@ -1,14 +1,14 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMembershipsFail } from "../helpers/mock-oauth-flow";
 import { useMockStdin } from "../helpers/mock-stdin";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
@@ -27,7 +27,7 @@ export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
+		http.get("*/memberships", (req, res, ctx) => {
 			return res.once(ctx.json(createFetchResult(accounts)));
 		})
 	);
@@ -65,7 +65,7 @@ describe("wrangler pages secret", () => {
 						return res.once(ctx.json(createFetchResult(project)));
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/:project",
 					async (req, res, ctx) => {
 						return res(
@@ -312,7 +312,7 @@ describe("wrangler pages secret", () => {
 						return res.once(ctx.json(createFetchResult(project)));
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/:project",
 					async (req, res, ctx) => {
 						return res(
@@ -390,7 +390,7 @@ describe("wrangler pages secret", () => {
 		});
 		function mockListRequest() {
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/:project",
 					async (req, res, ctx) => {
 						return res(
@@ -495,7 +495,7 @@ describe("wrangler pages secret", () => {
 						return res.once(ctx.json(createFetchResult(project)));
 					}
 				),
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/:project",
 					async (req, res, ctx) => {
 						return res(
@@ -645,7 +645,7 @@ describe("wrangler pages secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/pages/projects/:project",
 					async (req, res, ctx) => {
 						return res(

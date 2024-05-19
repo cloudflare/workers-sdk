@@ -1,14 +1,14 @@
 import { cwd } from "process";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { reinitialiseAuthTokens } from "../../user";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -159,7 +159,7 @@ Your database may not be available to serve requests during the migration, conti
 				)
 			);
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/d1/database/:databaseId",
 					async (req, res, ctx) => {
 						return res(

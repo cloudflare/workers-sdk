@@ -1,5 +1,5 @@
 import { mkdirSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
@@ -13,10 +13,10 @@ import {
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
 import { writeAuthConfigFile } from "../user";
+import { msw, mswSuccessOauthHandlers } from "./helpers/http-mocks";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { MockInstance } from "vitest";
 
@@ -489,7 +489,7 @@ function mockUserRequest() {
 	beforeEach(() => {
 		msw.use(
 			...mswSuccessOauthHandlers,
-			rest.get("*/user", (_, res, cxt) => {
+			http.get("*/user", (_, res, cxt) => {
 				requests.count++;
 				return res(
 					cxt.status(200),

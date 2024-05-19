@@ -1,12 +1,12 @@
 import { writeFileSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it } from "vitest";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockProcess } from "./helpers/mock-process";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -173,7 +173,7 @@ describe("wrangler", () => {
 			function mockListRequest(namespaces: KVNamespaceInfo[]) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/storage/kv/namespaces",
 						async (req, res, ctx) => {
 							requests.count++;
@@ -1314,7 +1314,7 @@ describe("wrangler", () => {
 					expect,
 				}) => {
 					msw.use(
-						rest.get("*/memberships", (req, res, ctx) => {
+						http.get("*/memberships", (req, res, ctx) => {
 							return res.once(
 								ctx.status(200),
 								ctx.json(
@@ -1811,7 +1811,7 @@ function setMockFetchKVGetValue(
 	value: string | Buffer
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
 			(req, res, ctx) => {
 				assert(req.params.accountId == accountId);
@@ -1842,7 +1842,7 @@ function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
+		http.get("*/memberships", (req, res, ctx) => {
 			return res.once(ctx.json(createFetchResult(accounts)));
 		})
 	);
@@ -1857,7 +1857,7 @@ function mockKeyListRequest(
 	const requests = { count: 0 };
 	// See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
 			(req, res, ctx) => {
 				requests.count++;

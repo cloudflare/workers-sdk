@@ -1,21 +1,21 @@
 import * as fs from "node:fs";
 import module from "node:module";
 import getPort from "get-port";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import Dev from "../dev/dev";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { CI } from "../is-ci";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockConsoleMethods } from "./helpers/mock-console";
 import {
 	msw,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 	mswZoneHandlers,
-} from "./helpers/msw";
+} from "./helpers/http-mocks";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
@@ -494,7 +494,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 
 			msw.use(
-				rest.get("*/zones", (req, res, ctx) => {
+				http.get("*/zones", (req, res, ctx) => {
 					let zone: [] | [{ id: "some-zone-id" }] = [];
 					if (
 						req.url.searchParams.get("name") === "111.222.333.some-host.com"
@@ -1689,7 +1689,7 @@ describe("wrangler dev", () => {
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
+		http.get("*/zones", (req, res, ctx) => {
 			assert.deepEqual([...req.url.searchParams.entries()], [["name", domain]]);
 
 			return res(

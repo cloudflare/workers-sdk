@@ -1,13 +1,13 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { type Config } from "../../config";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "../../d1/utils";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockGetMemberships } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
 
 describe("getDatabaseInfoFromConfig", () => {
 	it("should handle no database", ({ expect }) => {
@@ -121,7 +121,7 @@ describe("getDatabaseByNameOrBinding", () => {
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
 		msw.use(
-			rest.get("*/accounts/:accountId/d1/database", async (req, res, ctx) => {
+			http.get("*/accounts/:accountId/d1/database", async (req, res, ctx) => {
 				return res(
 					ctx.status(200),
 					ctx.json({
@@ -161,7 +161,7 @@ describe("getDatabaseByNameOrBinding", () => {
 			version: "alpha",
 		};
 		msw.use(
-			rest.get("*/accounts/:accountId/d1/database", async (req, res, ctx) => {
+			http.get("*/accounts/:accountId/d1/database", async (req, res, ctx) => {
 				return res(
 					ctx.status(200),
 					ctx.json({

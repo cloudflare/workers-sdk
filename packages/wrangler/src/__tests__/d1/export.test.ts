@@ -1,11 +1,11 @@
 import fs from "fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
@@ -98,7 +98,7 @@ describe("execute", () => {
 			)
 		);
 		msw.use(
-			rest.get("https://example.com/xxxx-yyyy.sql", async (req, res, ctx) => {
+			http.get("https://example.com/xxxx-yyyy.sql", async (req, res, ctx) => {
 				return res(ctx.status(200), ctx.text(mockSqlContent));
 			})
 		);

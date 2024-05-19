@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { USER_AUTH_CONFIG_FILE, writeAuthConfigFile } from "../user";
+import { msw } from "./helpers/http-mocks";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 

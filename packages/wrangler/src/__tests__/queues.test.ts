@@ -1,8 +1,8 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { assert, describe, it } from "vitest";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
@@ -47,7 +47,7 @@ describe("wrangler", () => {
 		) {
 			const requests = { count: 0 };
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/queues?*",
 					async (request, response, context) => {
 						requests.count += 1;
@@ -75,7 +75,7 @@ describe("wrangler", () => {
 			function mockListRequest(queues: QueueResponse[], page: number) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/queues?*",
 						async (request, response, context) => {
 							requests.count += 1;
@@ -726,7 +726,7 @@ describe("wrangler", () => {
 					const resource = `accounts/:accountId/workers/services/:serviceName`;
 
 					msw.use(
-						rest.get(`*/${resource}`, async (request, response, context) => {
+						http.get(`*/${resource}`, async (request, response, context) => {
 							requests.count++;
 							assert(request.params.accountId === "some-account-id");
 							assert(request.params.serviceName === serviceName);

@@ -1,5 +1,5 @@
 import MockWebSocket from "jest-websocket-mock";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import {
 	afterAll,
@@ -10,10 +10,10 @@ import {
 	it,
 	vi,
 } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type {
@@ -776,7 +776,7 @@ type MockAPI = {
 function mockListDeployments(): RequestCounter {
 	const requests: RequestCounter = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments`,
 			(_, res, ctx) => {
 				requests.count++;

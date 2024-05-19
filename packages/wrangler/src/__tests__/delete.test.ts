@@ -1,10 +1,10 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { assert, beforeEach, describe, it } from "vitest";
+import { msw } from "./helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
@@ -430,7 +430,7 @@ function mockDeleteWorkerRequest(
 /** Create a mock handler for the request to get a list of all KV namespaces. */
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 	msw.use(
-		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
+		http.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
 			assert(req.params.accountId == "some-account-id");
 			return res.once(
 				ctx.status(200),
@@ -450,7 +450,7 @@ function mockListReferencesRequest(
 	references: ServiceReferenceResponse = {}
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/workers/scripts/:scriptName/references",
 			(req, res, ctx) => {
 				assert(req.params.accountId == "some-account-id");
@@ -471,7 +471,7 @@ function mockListReferencesRequest(
 
 function mockListTailsByConsumerRequest(forScript: string, tails: Tail[] = []) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/workers/tails/by-consumer/:scriptName",
 			(req, res, ctx) => {
 				assert(req.params.accountId == "some-account-id");

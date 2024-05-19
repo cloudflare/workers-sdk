@@ -1,11 +1,11 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import { msw } from "../helpers/http-mocks";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
@@ -57,7 +57,7 @@ describe("cloudchamber list", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.get("*/deployments/v2", async (request, response, context) => {
+			http.get("*/deployments/v2", async (request, response, context) => {
 				expect(await request.text()).toEqual("");
 				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX));
 			})
