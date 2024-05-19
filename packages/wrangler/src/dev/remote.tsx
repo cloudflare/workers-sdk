@@ -73,30 +73,33 @@ interface RemoteProps {
 }
 
 export function Remote(props: RemoteProps) {
-	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
-	useWorker({
-		name: props.name,
-		bundle: props.bundle,
-		format: props.format,
-		modules: props.bundle ? props.bundle.modules : [],
-		accountId,
-		bindings: props.bindings,
-		assetPaths: props.assetPaths,
-		isWorkersSite: props.isWorkersSite,
-		compatibilityDate: props.compatibilityDate,
-		compatibilityFlags: props.compatibilityFlags,
-		usageModel: props.usageModel,
-		env: props.env,
-		legacyEnv: props.legacyEnv,
-		host: props.host,
-		routes: props.routes,
-		onReady: props.onReady,
-		sendMetrics: props.sendMetrics,
-		port: props.port,
-	});
+	if (false) {
+		// this condition WILL be static and therefore safe to wrap around a hook
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		useWorker({
+			name: props.name,
+			bundle: props.bundle,
+			format: props.format,
+			modules: props.bundle ? props.bundle.modules : [],
+			accountId: props.accountId,
+			bindings: props.bindings,
+			assetPaths: props.assetPaths,
+			isWorkersSite: props.isWorkersSite,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			usageModel: props.usageModel,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			host: props.host,
+			routes: props.routes,
+			onReady: props.onReady,
+			sendMetrics: props.sendMetrics,
+			port: props.port,
+		});
+	}
 
 	const errorHandler = useErrorHandler();
 
@@ -117,7 +120,7 @@ export function Remote(props: RemoteProps) {
 						id: accounts[0].id,
 						name: accounts[0].name,
 					});
-					setAccountId(accounts[0].id);
+					props.setAccountId(accounts[0].id);
 				} else {
 					setAccountChoices(accounts);
 				}
@@ -130,12 +133,12 @@ export function Remote(props: RemoteProps) {
 
 	// If we have not already chosen an account and there are multiple accounts available
 	// allow the users to select one.
-	return accountId === undefined && accountChoices !== undefined ? (
+	return props.accountId === undefined && accountChoices !== undefined ? (
 		<ChooseAccount
 			accounts={accountChoices}
 			onSelect={(selectedAccount) => {
 				saveAccountToCache(selectedAccount);
-				setAccountId(selectedAccount.id);
+				props.setAccountId(selectedAccount.id);
 			}}
 			onError={(err) => errorHandler(err)}
 		></ChooseAccount>

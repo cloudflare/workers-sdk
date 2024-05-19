@@ -277,15 +277,24 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
-	const [accountId, setAccountId] = useState(props.accountId);
-	const accountIdDeferred = useMemo(createDeferred<string>, []);
+	const [accountId, setAccountIdStateOnly] = useState(props.accountId);
+	const accountIdDeferred = useMemo(() => createDeferred<string>(), []);
 	const setAccountIdAndResolveDeferred = useCallback(
 		(newAccountId: string) => {
-			setAccountId(newAccountId);
+			setAccountIdStateOnly(newAccountId);
 			accountIdDeferred.resolve(newAccountId);
 		},
-		[setAccountId, accountIdDeferred]
+		[setAccountIdStateOnly, accountIdDeferred]
 	);
+
+	useEffect(() => {
+		if (props.accountId) {
+			setAccountIdAndResolveDeferred(props.accountId);
+		}
+
+		// run once on mount only (to synchronize the deferred value with the pre-selected props.accountId)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const [devEnv] = useState(() => new DevEnv());
 	useEffect(() => {
@@ -317,9 +326,11 @@ function DevSession(props: DevSessionProps) {
 						}
 					: undefined,
 			dev: {
-				auth: () => {
-					assert(accountId);
-					return { accountId, apiToken: requireApiToken() };
+				auth: async () => {
+					return {
+						accountId: await accountIdDeferred.promise,
+						apiToken: requireApiToken(),
+					};
 				},
 				remote: !props.local,
 				server: {
@@ -351,7 +362,7 @@ function DevSession(props: DevSessionProps) {
 			props.usageModel,
 			props.isWorkersSite,
 			props.assetPaths,
-			accountId,
+			accountIdDeferred,
 			props.local,
 			props.initialIp,
 			props.initialPort,
@@ -563,7 +574,6 @@ function DevSession(props: DevSessionProps) {
 			name={props.name}
 			bundle={bundle.current}
 			format={props.entry.format}
-			accountId={props.accountId}
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
 			isWorkersSite={props.isWorkersSite}
@@ -587,6 +597,7 @@ function DevSession(props: DevSessionProps) {
 			sourceMapPath={bundle.current?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
 			// startDevWorker
+			accountId={accountId}
 			setAccountId={setAccountIdAndResolveDeferred}
 		/>
 	);
