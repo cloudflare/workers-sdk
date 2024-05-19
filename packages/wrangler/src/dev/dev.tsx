@@ -370,6 +370,18 @@ function DevSession(props: DevSessionProps) {
 			config: startDevWorkerOptions,
 		});
 	}, [devEnv, startDevWorkerOptions]);
+	const onBundleComplete = useCallback(
+		(bundle: EsbuildBundle) => {
+			devEnv.runtimes.forEach((runtime) =>
+				runtime.onBundleComplete({
+					type: "bundleComplete",
+					config: startDevWorkerOptions,
+					bundle,
+				})
+			);
+		},
+		[devEnv, startDevWorkerOptions]
+	);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
 	const bundle = useRef<ReturnType<typeof useEsbuild>>();
@@ -451,25 +463,12 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onStart: onEsbuildStart,
+		onComplete: onBundleComplete,
 		defineNavigatorUserAgent: isNavigatorDefined(
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),
 	});
-
-	// this suffices as an onEsbuildEnd callback
-	useEffect(() => {
-		const currentBundle = bundle.current;
-		if (currentBundle) {
-			devEnv.runtimes.forEach((runtime) =>
-				runtime.onBundleComplete({
-					type: "bundleComplete",
-					config: startDevWorkerOptions,
-					bundle: currentBundle,
-				})
-			);
-		}
-	}, [devEnv, startDevWorkerOptions, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
