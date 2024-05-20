@@ -494,6 +494,7 @@ describe("asset-server handler", () => {
 									<link rel="preload" as="image" href="/a.png" />
 									<link rel="preload" as="image" href="/b.png" />
 									<link rel="modulepreload" href="lib.js" />
+									<link rel="preconnect" href="cloudflare.com" />
 								</body>
 							</html>`),
 							{ contentType: "text/html" }
@@ -518,7 +519,7 @@ describe("asset-server handler", () => {
 		}
 
 		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload""`
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
 		);
 
 		// Do it again, but this time ensure that we didn't write to cache again
