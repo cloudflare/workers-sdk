@@ -605,7 +605,7 @@ describe("asset-server handler", () => {
 			);
 
 			// Delete the asset from the manifest and ensure it's served from preservation cache
-			findAssetEntryForPath = async (path: string) => {
+			findAssetEntryForPath = async (_path: string) => {
 				return null;
 			};
 			const { response: response2 } = await getTestResponse({
@@ -677,7 +677,7 @@ describe("asset-server handler", () => {
 			);
 
 			// Delete the asset from the manifest and ensure it's served from V1 preservation cache
-			const findAssetEntryForPath = async (path: string) => {
+			const findAssetEntryForPath = async (_path: string) => {
 				return null;
 			};
 			const { response, spies } = await getTestResponse({
@@ -801,16 +801,14 @@ describe("asset-server handler", () => {
 			},
 		}) as Metadata;
 
-		const findAssetEntryForPath = async (path: string) => {
-			if (path.startsWith("/asset")) return "some-asset";
-			return null;
-		};
+		const findAssetEntryForPath = async (path: string) =>
+			path.startsWith("/asset") ? "some-asset" : null;
 
 		test("500 skips headers", async () => {
 			const { response } = await getTestResponse({
 				request: "https://foo.com/asset",
 				metadata,
-				fetchAsset: async (...args) => {
+				fetchAsset: async () => {
 					throw "uh oh";
 				},
 				findAssetEntryForPath: findAssetEntryForPath,

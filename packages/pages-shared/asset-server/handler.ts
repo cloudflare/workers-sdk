@@ -356,12 +356,18 @@ export async function generateHandler<
 				const earlyHintsLinkHeader = earlyHintsResponse.headers.get("Link");
 				if (earlyHintsLinkHeader) {
 					headers.set("Link", earlyHintsLinkHeader);
-					if (setMetrics) setMetrics({ earlyHintsResult: "used-hit" });
+					if (setMetrics) {
+						setMetrics({ earlyHintsResult: "used-hit" });
+					}
 				} else {
-					if (setMetrics) setMetrics({ earlyHintsResult: "notused-hit" });
+					if (setMetrics) {
+						setMetrics({ earlyHintsResult: "notused-hit" });
+					}
 				}
 			} else {
-				if (setMetrics) setMetrics({ earlyHintsResult: "notused-miss" });
+				if (setMetrics) {
+					setMetrics({ earlyHintsResult: "notused-miss" });
+				}
 
 				const clonedResponse = response.clone();
 
@@ -431,7 +437,9 @@ export async function generateHandler<
 				}
 			}
 		} else {
-			if (setMetrics) setMetrics({ earlyHintsResult: "disabled" });
+			if (setMetrics) {
+				setMetrics({ earlyHintsResult: "disabled" });
+			}
 		}
 
 		// Iterate through rules and find rules that match the path
@@ -677,7 +685,9 @@ export async function generateHandler<
 				logError(err as Error);
 			}
 		} else {
-			if (setMetrics) setMetrics({ preservationCacheResult: "disabled" });
+			if (setMetrics) {
+				setMetrics({ preservationCacheResult: "disabled" });
+			}
 		}
 
 		// Traverse upwards from the current path looking for a custom 404 page
@@ -750,13 +760,17 @@ export function isPreservationCacheResponseExpiring(
 	response: Response
 ): boolean {
 	const ageHeader = response.headers.get("age");
-	if (!ageHeader) return false;
+	if (!ageHeader) {
+		return false;
+	}
 	try {
 		const age = parseInt(ageHeader);
 		// Add up to 12 hours of jitter to help prevent a
 		// thundering heard when a lot of assets expire at once.
 		const jitter = Math.floor(Math.random() * 43_200);
-		if (age > CACHE_PRESERVATION_WRITE_FREQUENCY + jitter) return true;
+		if (age > CACHE_PRESERVATION_WRITE_FREQUENCY + jitter) {
+			return true;
+		}
 	} catch {
 		return false;
 	}

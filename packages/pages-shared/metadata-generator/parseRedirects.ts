@@ -26,7 +26,9 @@ export function parseRedirects(input: string): ParsedRedirects {
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i].trim();
-		if (line.length === 0 || line.startsWith("#")) continue;
+		if (line.length === 0 || line.startsWith("#")) {
+			continue;
+		}
 
 		if (line.length > MAX_LINE_LENGTH) {
 			invalid.push({

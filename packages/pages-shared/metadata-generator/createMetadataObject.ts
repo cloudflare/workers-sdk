@@ -54,7 +54,9 @@ function constructRedirects({
 	redirects?: ParsedRedirects;
 	logger: Logger;
 }): Metadata {
-	if (!redirects) return {};
+	if (!redirects) {
+		return {};
+	}
 
 	const num_valid = redirects.rules.length;
 	const num_invalid = redirects.invalid.length;
@@ -117,7 +119,9 @@ function constructHeaders({
 	headers?: ParsedHeaders;
 	logger: Logger;
 }): Metadata {
-	if (!headers) return {};
+	if (!headers) {
+		return {};
+	}
 
 	const num_valid = headers.rules.length;
 	const num_invalid = headers.invalid.length;
@@ -167,7 +171,9 @@ function constructWebAnalytics({
 	webAnalyticsToken?: string;
 	logger: Logger;
 }) {
-	if (!webAnalyticsToken) return {};
+	if (!webAnalyticsToken) {
+		return {};
+	}
 
 	return {
 		analytics: {
