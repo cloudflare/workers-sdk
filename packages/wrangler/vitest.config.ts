@@ -8,53 +8,6 @@ import type { Plugin } from "vite";
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 
 const workersContexts = new Map<string, BuildContext>();
-// const embedWorkersPlugin: Plugin = {
-// 	name: "embed-workers",
-// 	setup(build) {
-// 		const namespace = "embed-worker";
-// 		build.onResolve({ filter: /^worker:/ }, async (args) => {
-// 			const name = args.path.substring("worker:".length);
-// 			// Use `build.resolve()` API so Workers can be written as `m?[jt]s` files
-// 			const result = await build.resolve("./" + name, {
-// 				kind: "import-statement",
-// 				resolveDir: TEMPLATES_DIR,
-// 			});
-// 			if (result.errors.length > 0) {
-// 				return { errors: result.errors };
-// 			}
-// 			return { path: result.path, namespace };
-// 		});
-// 		build.onLoad({ filter: /.*/, namespace }, async (args) => {
-// 			const ctx =
-// 				workersContexts.get(args.path) ??
-// 				(await esbuild.context({
-// 					platform: "node", // Marks `node:*` imports as external
-// 					format: "esm",
-// 					target: "esnext",
-// 					bundle: true,
-// 					sourcemap: true,
-// 					sourcesContent: false,
-// 					metafile: true,
-// 					entryPoints: [args.path],
-// 					outdir: build.initialOptions.outdir,
-// 				}));
-// 			const result = await ctx.rebuild();
-// 			workersContexts.set(args.path, ctx);
-// 			const watchFiles = Object.keys(result?.metafile?.inputs ?? {});
-// 			const scriptPath = Object.keys(result?.metafile?.outputs ?? {}).find(
-// 				(filepath) => filepath.endsWith(".js")
-// 			);
-
-// 			const contents = `
-// 				import path from "node:path";
-// 				const scriptPath = path.resolve(__dirname, "..", "${scriptPath}");
-// 				export default scriptPath;
-//             `;
-
-// 			return { contents, loader: "js", watchFiles };
-// 		});
-// 	},
-// };
 
 function embedWorkersPlugin(): Plugin {
 	return {

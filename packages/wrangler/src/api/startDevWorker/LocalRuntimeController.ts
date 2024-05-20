@@ -220,7 +220,6 @@ async function convertToConfigBundle(
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
-		// TODO: should we resolve this port?
 		inspectorPort:
 			event.config.dev?.inspector?.port ??
 			(await getPort({ port: DEFAULT_INSPECTOR_PORT })),
@@ -233,7 +232,6 @@ async function convertToConfigBundle(
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.urlOverrides?.hostname,
 		upstreamProtocol: event.config.dev?.urlOverrides?.secure ? "https" : "http",
-		// TODO: is this a change?
 		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,

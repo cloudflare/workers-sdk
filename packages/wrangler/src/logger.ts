@@ -4,7 +4,7 @@ import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getSanitizeLogs } from "./environment-variables/misc-variables";
-// import { appendToDebugLogFile } from "./utils/log-file";
+import { appendToDebugLogFile } from "./utils/log-file";
 import type { Message } from "esbuild";
 
 export const LOGGER_LEVELS = {
@@ -27,7 +27,9 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 	debug: undefined,
 } as const;
 
-const getLogLevelFromEnv = () => "debug";
+const getLogLevelFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_LOG",
+});
 
 function getLoggerLevel(): LoggerLevel {
 	const fromEnv = getLogLevelFromEnv()?.toLowerCase();
@@ -90,7 +92,7 @@ export class Logger {
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
 		const inUnitTests = typeof vitest !== "undefined";
 		if (!inUnitTests) {
-			// void appendToDebugLogFile(messageLevel, message);
+			void appendToDebugLogFile(messageLevel, message);
 		}
 
 		// only send logs to the terminal if their level is at least the configured log-level
