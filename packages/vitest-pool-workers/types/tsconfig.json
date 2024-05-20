@@ -3,6 +3,5 @@
 	"compilerOptions": {
 		"types": ["@cloudflare/workers-types/experimental"]
 	},
-	"include": ["./**/*.ts"],
-	"exclude": ["./*/vitest.config.ts"]
+	"include": ["./**/*.ts"]
 }

@@ -1,23 +1,24 @@
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { Response } from "miniflare";
 
 export default defineWorkersProject({
+	define: {
+		CONFIG_DEFINED_THING: '"thing"',
+		"CONFIG_NESTED.DEFINED.THING": "[1,2,3]",
+	},
 	test: {
-		// @ts-expect-error `defineWorkersProject()` expects `pool` to be
-		//  `@cloudflare/vitest-pool-workers"` which won't work for us
-		pool: "../..",
 		poolOptions: {
 			workers: {
+				singleWorker: true,
 				miniflare: {
-					serviceBindings: {
-						SEED_NURSERY: {
-							disk: { path: __dirname, writable: false },
-						},
+					outboundService(request) {
+						return new Response(`fallthrough:${request.method} ${request.url}`);
 					},
 					workers: [
 						{
 							name: "other",
 							modules: true,
-							scriptPath: "other-worker.mjs",
+							scriptPath: "./src/other-worker.mjs",
 						},
 					],
 				},
