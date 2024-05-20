@@ -717,6 +717,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isWarning(chunk: string) {
 			return /\.c\+\+:\d+: warning:/.test(chunk);
 		},
+		isCodeMovedWarning(chunk: string) {
+			return /CODE_MOVED for unknown code block/.test(chunk);
+		},
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
@@ -778,6 +781,11 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		// known case: warnings are not errors, log them as such
 		else if (classifiers.isWarning(chunk)) {
 			logger.warn(chunk);
+		}
+
+		// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
+		else if (classifiers.isCodeMovedWarning(chunk)) {
+			// ignore entirely, don't even send it to the debug log file
 		}
 
 		// anything not exlicitly handled above should be logged as an error (via stderr)
