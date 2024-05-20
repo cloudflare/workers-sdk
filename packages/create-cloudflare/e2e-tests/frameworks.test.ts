@@ -1,7 +1,8 @@
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
-import { readFile } from "helpers/files";
+import { runCommand } from "helpers/command";
+import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
@@ -19,8 +20,10 @@ import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
+	getDiffsPath,
 	isQuarantineMode,
 	keys,
+	recreateDiffsFolder,
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
@@ -134,6 +137,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	angular: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Congratulations! Your app is running.",
@@ -157,6 +161,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	},
 	hono: {
 		testCommitMessage: false,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello Hono!",
@@ -353,6 +358,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	beforeAll(async (ctx) => {
 		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
+		recreateDiffsFolder();
 	});
 
 	beforeEach(async (ctx) => {
@@ -440,6 +446,11 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await verifyDevScript(framework, projectPath, logStream);
 					await verifyBuildCfTypesScript(framework, projectPath, logStream);
 					await verifyBuildScript(framework, projectPath, logStream);
+					await storeDiff(framework, projectPath);
+				} catch (e) {
+					expect.fail(
+						"Failed due to an exception while running C3. See logs for more details",
+					);
 				} finally {
 					clean(framework);
 					// Cleanup the project in case we need to retry it
@@ -458,6 +469,21 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	});
 });
 
+const storeDiff = async (framework: string, projectPath: string) => {
+	if (!process.env.SAVE_DIFFS) {
+		return;
+	}
+
+	const outputPath = join(getDiffsPath(), `${framework}.diff`);
+
+	const output = await runCommand(["git", "diff"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	writeFile(outputPath, output);
+};
+
 const runCli = async (
 	framework: string,
 	projectPath: string,
@@ -472,7 +498,7 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		"--no-git",
+		process.env.SAVE_DIFFS ? "--git" : "--no-git",
 	];
 
 	args.push(...argv);

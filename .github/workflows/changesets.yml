@@ -64,3 +64,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID }}
           WORKERS_NEW_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_NEW_CLOUDFLARE_API_TOKEN }}
+
+      - name: Create C3 Diffs PR
+        if: steps.changesets.outputs.published == 'true'
+        uses: ./.github/actions/create-c3-docs-pr
+        with:
+          token: ${{ secrets.C3_DIFF_TOOL_GH_TOKEN }}
+          releaseBranch: "changeset-release/main"
+          targetHeadBranch: c3-diffs-${{ github.sha }}
+          targetBaseBranch: master
