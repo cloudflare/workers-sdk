@@ -30,7 +30,7 @@ export interface Env {
 interface HeliconeRequest {
 	request_id?: string;
 	request_body?: Record<string, any>;
-	response_body?: any;
+	response_body?: any; // LLM response body
 }
 
 export default {
