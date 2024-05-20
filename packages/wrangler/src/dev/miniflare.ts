@@ -168,7 +168,7 @@ export interface ConfigBundle {
 	name: string | undefined;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
-	compatibilityDate: string;
+	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
@@ -231,7 +231,7 @@ function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
-function getIdentifier(name: string) {
+export function getIdentifier(name: string) {
 	return name.replace(IDENTIFIER_UNSAFE_REGEXP, "_");
 }
 
@@ -304,7 +304,10 @@ async function buildSourceOptions(
 		return { sourceOptions, entrypointNames };
 	} else {
 		// Miniflare will handle adding `//# sourceURL` comments if they're missing
-		return { sourceOptions: { scriptPath }, entrypointNames: [] };
+		return {
+			sourceOptions: { script: config.bundle.entrypointSource, scriptPath },
+			entrypointNames: [],
+		};
 	}
 }
 

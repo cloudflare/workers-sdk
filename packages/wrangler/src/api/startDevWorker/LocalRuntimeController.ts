@@ -1,5 +1,5 @@
-import assert from "node:assert";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import getPort from "get-port";
 import { Miniflare, Mutex } from "miniflare";
 import { DEFAULT_INSPECTOR_PORT } from "../..";
@@ -16,29 +16,29 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { ServiceFetch, StartDevWorkerOptions } from "./types";
+import type { File, ServiceFetch, StartDevWorkerOptions } from "./types";
 
-// function getBinaryFileContents(file: File<string | Uint8Array>) {
-// 	if ("contents" in file) {
-// 		if (file.contents instanceof Buffer) {
-// 			return file.contents;
-// 		}
-// 		return Buffer.from(file.contents);
-// 	}
-// 	return fs.readFileSync(file.path);
-// }
-// function getTextFileContents(file: File<string | Uint8Array>) {
-// 	if ("contents" in file) {
-// 		if (typeof file.contents === "string") {
-// 			return file.contents;
-// 		}
-// 		if (file.contents instanceof Buffer) {
-// 			return file.contents.toString();
-// 		}
-// 		return Buffer.from(file.contents).toString();
-// 	}
-// 	return fs.readFileSync(file.path, "utf8");
-// }
+async function getBinaryFileContents(file: File<string | Uint8Array>) {
+	if ("contents" in file) {
+		if (file.contents instanceof Buffer) {
+			return file.contents;
+		}
+		return Buffer.from(file.contents);
+	}
+	return readFile(file.path);
+}
+async function getTextFileContents(file: File<string | Uint8Array>) {
+	if ("contents" in file) {
+		if (typeof file.contents === "string") {
+			return file.contents;
+		}
+		if (file.contents instanceof Buffer) {
+			return file.contents.toString();
+		}
+		return Buffer.from(file.contents).toString();
+	}
+	return readFile(file.path, "utf8");
+}
 
 export const DEFAULT_WORKER_NAME = "worker";
 function getName(config: StartDevWorkerOptions) {
@@ -91,16 +91,13 @@ async function convertToConfigBundle(
 			bindings.send_email.push({ ...binding, name: name });
 		} else if (binding.type === "wasm_module") {
 			bindings.wasm_modules ??= {};
-			// TODO handle direct sources
-			bindings.wasm_modules[name] = binding.source.path as string;
+			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "text_blob") {
 			bindings.text_blobs ??= {};
-			// TODO handle direct sources
 			bindings.text_blobs[name] = binding.source.path as string;
 		} else if (binding.type === "data_blob") {
 			bindings.data_blobs ??= {};
-			// TODO handle direct sources
-			bindings.data_blobs[name] = binding.source.path as string;
+			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
 			bindings.browser = { binding: name };
 		} else if (binding.type === "ai") {
@@ -173,8 +170,30 @@ async function convertToConfigBundle(
 			queueConsumers.push(trigger);
 		}
 	}
+	if (event.bundle.entry.format === "service-worker") {
+		// For the service-worker format, blobs are accessible on the global scope
+		for (const module of event.bundle.modules ?? []) {
+			const identifier = MF.getIdentifier(module.name);
+			if (module.type === "text") {
+				bindings.vars ??= {};
+				bindings.vars[identifier] = await getTextFileContents({
+					contents: module.content,
+				});
+			} else if (module.type === "buffer") {
+				bindings.data_blobs ??= {};
+				bindings.data_blobs[identifier] = await getBinaryFileContents({
+					contents: module.content,
+				});
+			} else if (module.type === "compiled-wasm") {
+				bindings.wasm_modules ??= {};
+				bindings.wasm_modules[identifier] = await getBinaryFileContents({
+					contents: module.content,
+				});
+			}
+		}
+		event.bundle = { ...event.bundle, modules: [] };
+	}
 
-	assert(event.config.compatibilityDate);
 	return {
 		name: event.config.name,
 		bundle: event.bundle,

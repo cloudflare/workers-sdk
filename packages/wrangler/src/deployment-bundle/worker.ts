@@ -16,7 +16,8 @@ export type CfModuleType =
 	| "text"
 	| "buffer"
 	| "python"
-	| "python-requirement";
+	| "python-requirement"
+	| "nodejs-compat-module";
 
 /**
  * An imported module.
@@ -86,7 +87,7 @@ export interface CfSendEmailBindings {
  */
 
 export interface CfWasmModuleBindings {
-	[key: string]: string;
+	[key: string]: string | Uint8Array;
 }
 
 /**
@@ -127,7 +128,7 @@ export interface CfVersionMetadataBinding {
  */
 
 export interface CfDataBlobBindings {
-	[key: string]: string;
+	[key: string]: string | Uint8Array;
 }
 
 /**
