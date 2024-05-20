@@ -574,14 +574,18 @@ async function createRemoteWorkerInit(props: {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 }) {
-	const { entrypointSource: content, modules } = withSourceURLs(
+	const modules = withSourceURLs(
 		props.bundle.path,
+		props.bundle.entrypointSource,
 		props.modules
 	);
 
 	// TODO: For Dev we could show the reporter message in the interactive box.
 	void printBundleSize(
-		{ name: path.basename(props.bundle.path), content: content },
+		{
+			name: path.basename(props.bundle.path),
+			content: props.bundle.entrypointSource,
+		},
 		props.modules
 	);
 
@@ -613,7 +617,7 @@ async function createRemoteWorkerInit(props: {
 			name: path.basename(props.bundle.path),
 			filePath: props.bundle.path,
 			type: getBundleType(props.format, path.basename(props.bundle.path)),
-			content,
+			content: props.bundle.entrypointSource,
 		},
 		modules,
 		bindings: {
