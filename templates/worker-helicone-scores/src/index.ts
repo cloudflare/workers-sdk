@@ -47,7 +47,7 @@ export default {
 
 			// Post the scores to the scoring API.
 			const result = await postScore(
-				`http://localhost:8585/v1/request/${requestId}/score`,
+				`https://jawn.helicone.ai/v1/request/${requestId}/score`,
 				scores,
 				env
 			);
@@ -74,7 +74,7 @@ async function postScore(url: string, scoreData: Record<string, number>, env: En
 				'Authorization': heliconeAuth,
 				'Content-Type': 'application/json',
 			},
-			body: JSON.stringify(scoreData),
+			body: JSON.stringify({ scores: scoreData }),
 		});
 		return {
 			status: 'Success',
