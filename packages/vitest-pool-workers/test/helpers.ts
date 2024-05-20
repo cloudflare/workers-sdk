@@ -4,6 +4,7 @@ import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
+import { stripAnsi } from "miniflare";
 import { test as baseTest, inject, vi } from "vitest";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");
@@ -65,10 +66,10 @@ function wrap(proc: childProcess.ChildProcessWithoutNullStreams): Process {
 	const closePromise = events.once(proc, "close");
 	return {
 		get stdout() {
-			return stdout;
+			return stripAnsi(stdout);
 		},
 		get stderr() {
-			return stderr;
+			return stripAnsi(stderr);
 		},
 		get exitCode() {
 			return closePromise.then(([exitCode]) => exitCode ?? -1);
