@@ -1,7 +1,29 @@
-import type { Config } from "../../config/config";
-import type { Route } from "../../config/environment";
-import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import type { Config } from "../../config";
+import type {
+	CustomDomainRoute,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "../../config/environment";
+import type {
+	CfAnalyticsEngineDataset,
+	CfConstellation,
+	CfD1Database,
+	CfDispatchNamespace,
+	CfDurableObject,
+	CfHyperdrive,
+	CfKvNamespace,
+	CfLogfwdrBinding,
+	CfMTlsCertificate,
+	CfQueue,
+	CfR2Bucket,
+	CfSendEmailBindings,
+	CfService,
+	CfVectorize,
+	CfWorkerInit,
+} from "../../deployment-bundle/worker";
+import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DispatchFetch, Json, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
@@ -18,7 +40,7 @@ export interface DevWorker {
 
 export interface StartDevWorkerOptions {
 	/** The name of the worker. */
-	name: string;
+	name?: string;
 	/**
 	 * The javascript or typescript entry-point of the worker.
 	 * This is the `main` property of a wrangler.toml.
@@ -112,6 +134,9 @@ export interface StartDevWorkerOptions {
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
+
+		/** Gets a fetcher to a specific worker, used for multi-worker development */
+		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
 	};
 }
 
@@ -119,6 +144,17 @@ export type Hook<T extends string | number | object> =
 	| T
 	| Promise<T>
 	| (() => T | Promise<T>);
+
+export type Module<ModuleType extends ModuleRule["type"] = ModuleRule["type"]> =
+	File<string | Uint8Array> & {
+		/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
+		name: string;
+		/** How this module should be interpreted */
+		type: ModuleType;
+	};
+
+// TODO: revisit this type
+export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
@@ -133,21 +169,21 @@ export interface Location {
 	secure?: boolean; // Usually `https`, but could be `wss` for inspector
 }
 
-// export type PatternRoute = {
-// 	pattern: string;
-// } & (
-// 	| { pattern: string; customDomain: true }
-// 	| { pattern: string; zoneId: string; customDomain?: true; zoneName?: never }
-// 	| { pattern: string; zoneName: string; customDomain?: true; zoneId?: never }
-// );
-// export type WorkersDevRoute = { workersDev: true };
-// export type Route = PatternRoute | WorkersDevRoute;
+export type PatternRoute = {
+	pattern: string;
+} & (
+	| { pattern: string; customDomain: true }
+	| { pattern: string; zoneId: string; customDomain?: true; zoneName?: never }
+	| { pattern: string; zoneName: string; customDomain?: true; zoneId?: never }
+);
+export type WorkersDevRoute = { workersDev: true };
+export type Route = PatternRoute | WorkersDevRoute;
 
 export interface ModuleRule {
 	type:
 		| "ESModule"
 		| "CommonJS"
-		| "NodeJSCompat"
+		| "NodeJsCompatModule"
 		| "CompiledWasm"
 		| "Text"
 		| "Data";
@@ -155,56 +191,45 @@ export interface ModuleRule {
 	fallthrough?: boolean;
 }
 
+type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
+
 export type Trigger =
 	| { type: "workers.dev" }
-	| ({ type: "route" } & Exclude<Route, string>) // TODO: what should the previous string route be now?
-	| { type: "schedule"; schedule: string }
-	| {
-			type: "queue-consumer";
-			name: string;
-			maxBatchSize?: number;
-			maxBatchTimeout?: number;
-			maxRetries?: string;
-			deadLetterQueue?: string;
-	  };
+	| { type: "route"; pattern: "string" } // SimpleRoute
+	| ({ type: "route" } & ZoneIdRoute)
+	| ({ type: "route" } & ZoneNameRoute)
+	| ({ type: "route" } & CustomDomainRoute)
+	| { type: "cron"; cron: string }
+	| ({ type: "queue-consumer" } & QueueConsumer);
 
+type BindingOmit<T> = Omit<T, "binding" | "name">;
 export type Binding =
-	| { type: "kv"; id: string }
-	| { type: "r2"; bucket_name: string }
-	| {
-			type: "d1";
-			/** The binding name used to refer to the D1 database in the worker. */
-			binding: string;
-			/** The name of this D1 database. */
-			database_name: string;
-			/** The UUID of this D1 database (not required). */
-			database_id: string;
-			/** The UUID of this D1 database for Wrangler Dev (if specified). */
-			preview_database_id?: string;
-			/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
-			migrations_table?: string;
-			/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
-			migrations_dir?: string;
-			/** Internal use only. */
-			database_internal_env?: string;
-	  }
-	| {
-			type: "durable-object";
-			className: string;
-			service?: ServiceDesignator;
-	  }
-	| {
-			type: "service";
-			name?: string;
-			env?: string;
-			override?: ServiceFetch;
-	  }
-	| { type: "queue"; name: string }
-	| { type: "ai"; project_id: string }
-	| { type: "var"; value: Json }
-	| { type: `unsafe-${string}`; [key: string]: unknown };
+	| { type: "plain_text"; value: string }
+	| { type: "json"; value: Json }
+	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
+	| ({ type: "send_email" } & BindingOmit<CfSendEmailBindings>)
+	| { type: "wasm_module"; source: BinaryFile }
+	| { type: "text_blob"; source: File }
+	| { type: "browser" }
+	| { type: "ai" }
+	| { type: "version_metadata" }
+	| { type: "data_blob"; source: BinaryFile }
+	| ({ type: "durable_object_namespace" } & BindingOmit<CfDurableObject>)
+	| ({ type: "queue" } & BindingOmit<CfQueue>)
+	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
+	| ({ type: "d1" } & Omit<CfD1Database, "binding">)
+	| ({ type: "vectorize" } & Omit<CfVectorize, "binding">)
+	| ({ type: "constellation" } & Omit<CfConstellation, "binding">)
+	| ({ type: "hyperdrive" } & Omit<CfHyperdrive, "binding">)
+	| ({ type: "service" } & Omit<CfService, "binding">)
+	| { type: "fetcher"; fetcher: ServiceFetch }
+	| ({ type: "analytics_engine" } & Omit<CfAnalyticsEngineDataset, "binding">)
+	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
+	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
+	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
+	| { type: `unsafe_${string}` };
 
-export type ServiceFetch = (request: Request) => Promise<Response>;
+export type ServiceFetch = (request: Request) => Promise<Response> | Response;
 
 export interface ServiceDesignator {
 	name: string;
