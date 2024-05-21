@@ -2,7 +2,8 @@
 	"name": "nodejs-hybrid-app",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler dev"
+		"dev": "wrangler dev",
+		"build": "wrangler deploy --dry-run --outdir=./dist"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20240222.0",
