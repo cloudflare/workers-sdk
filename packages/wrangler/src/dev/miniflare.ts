@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import * as esmLexer from "es-module-lexer";
 import {
@@ -24,6 +23,7 @@ import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import type { ServiceFetch } from "../api";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -43,13 +43,7 @@ import type {
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type {
-	MiniflareOptions,
-	Request,
-	Response,
-	SourceOptions,
-	WorkerOptions,
-} from "miniflare";
+import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
@@ -174,16 +168,15 @@ export interface ConfigBundle {
 	name: string | undefined;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
-	compatibilityDate: string;
+	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	usageModel: "bundled" | "unbound" | undefined; // TODO: do we need this?
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
-	inspectorPort: number;
+	inspectorPort: number | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
@@ -195,7 +188,7 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	services: Config["services"] | undefined;
-	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
+	serviceBindings: Record<string, ServiceFetch>;
 }
 
 export class WranglerLog extends Log {
@@ -238,7 +231,7 @@ function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
-function getIdentifier(name: string) {
+export function getIdentifier(name: string) {
 	return name.replace(IDENTIFIER_UNSAFE_REGEXP, "_");
 }
 
@@ -251,7 +244,7 @@ export function castLogLevel(level: LoggerLevel): LogLevel {
 	return LogLevel[key];
 }
 
-function buildLog(): Log {
+export function buildLog(): Log {
 	let level = castLogLevel(logger.loggerLevel);
 
 	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
@@ -271,22 +264,23 @@ async function getEntrypointNames(entrypointSource: string) {
 }
 
 async function buildSourceOptions(
-	config: ConfigBundle
+	config: Omit<ConfigBundle, "rules">
 ): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
-	const scriptPath = realpathSync(config.bundle.path);
+	const scriptPath = config.bundle.path;
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
 
-		const { entrypointSource, modules } = isPython
-			? {
-					entrypointSource: readFileSync(scriptPath, "utf8"),
-					modules: config.bundle.modules,
-				}
-			: withSourceURLs(scriptPath, config.bundle.modules);
+		const modules = isPython
+			? config.bundle.modules
+			: withSourceURLs(
+					scriptPath,
+					config.bundle.entrypointSource,
+					config.bundle.modules
+				);
 
 		const entrypointNames = isPython
 			? []
-			: await getEntrypointNames(entrypointSource);
+			: await getEntrypointNames(config.bundle.entrypointSource);
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
@@ -297,7 +291,7 @@ async function buildSourceOptions(
 				{
 					type: ModuleTypeToRuleType[config.bundle.type],
 					path: scriptPath,
-					contents: entrypointSource,
+					contents: config.bundle.entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
@@ -310,7 +304,10 @@ async function buildSourceOptions(
 		return { sourceOptions, entrypointNames };
 	} else {
 		// Miniflare will handle adding `//# sourceURL` comments if they're missing
-		return { sourceOptions: { scriptPath }, entrypointNames: [] };
+		return {
+			sourceOptions: { script: config.bundle.entrypointSource, scriptPath },
+			entrypointNames: [],
+		};
 	}
 }
 
@@ -393,7 +390,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const wasmBindings = { ...bindings.wasm_modules };
 	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
-		const scriptPath = realpathSync(config.bundle.path);
+		const scriptPath = config.bundle.path;
 		const modulesRoot = path.dirname(scriptPath);
 		for (const { type, name } of config.bundle.modules) {
 			if (type === "text") {
@@ -795,9 +792,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	});
 }
 
-async function buildMiniflareOptions(
+export async function buildMiniflareOptions(
 	log: Log,
-	config: ConfigBundle,
+	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{
 	options: MiniflareOptions;
