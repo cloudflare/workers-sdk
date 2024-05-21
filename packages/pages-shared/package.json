@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.11.36",
+	"version": "0.11.37",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -14,6 +14,7 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
+		"check:lint": "eslint .",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},

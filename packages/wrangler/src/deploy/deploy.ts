@@ -1098,9 +1098,10 @@ export async function updateQueueConsumers(
 				settings: {
 					batch_size: consumer.max_batch_size,
 					max_retries: consumer.max_retries,
-					max_wait_time_ms: consumer.max_batch_timeout
-						? 1000 * consumer.max_batch_timeout
-						: undefined,
+					max_wait_time_ms:
+						consumer.max_batch_timeout !== undefined
+							? 1000 * consumer.max_batch_timeout
+							: undefined,
 					max_concurrency: consumer.max_concurrency,
 					retry_delay: consumer.retry_delay,
 				},

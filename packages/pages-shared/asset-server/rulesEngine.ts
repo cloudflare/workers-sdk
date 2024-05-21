@@ -28,7 +28,9 @@ export const generateRulesMatcher = <T>(
 	rules?: Record<string, T>,
 	replacerFn: (match: T, replacements: Replacements) => T = (match) => match
 ) => {
-	if (!rules) return () => [];
+	if (!rules) {
+		return () => [];
+	}
 
 	const compiledRules = Object.entries(rules)
 		.map(([rule, match]) => {

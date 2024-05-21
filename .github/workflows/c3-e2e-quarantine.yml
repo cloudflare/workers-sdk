@@ -51,3 +51,4 @@ jobs:
           quarantine: true
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          saveDiffs: false

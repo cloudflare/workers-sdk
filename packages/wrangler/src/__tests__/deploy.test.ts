@@ -9734,6 +9734,70 @@ export default{
 		`);
 		});
 
+		it("should support queue consumer with max_batch_timeout of 0", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: queueName,
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 0,
+							max_retries: 10,
+							max_concurrency: null,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			const consumerId = "consumer-id";
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						type: "worker",
+						script: "test-name",
+						consumer_id: consumerId,
+						settings: {},
+					},
+				],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueConsumerById(queueId, queueName, consumerId, {
+				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 0,
+				},
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Consumer for queue1
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		});
+
 		it("consumer should error when a queue doesn't exist", async () => {
 			writeWranglerToml({
 				queues: {

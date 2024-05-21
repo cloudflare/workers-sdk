@@ -493,6 +493,8 @@ describe("asset-server handler", () => {
 								<body>
 									<link rel="preload" as="image" href="/a.png" />
 									<link rel="preload" as="image" href="/b.png" />
+									<link rel="modulepreload" href="lib.js" />
+									<link rel="preconnect" href="cloudflare.com" />
 								</body>
 							</html>`),
 							{ contentType: "text/html" }
@@ -517,7 +519,7 @@ describe("asset-server handler", () => {
 		}
 
 		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image"`
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
 		);
 
 		// Do it again, but this time ensure that we didn't write to cache again
@@ -538,7 +540,7 @@ describe("asset-server handler", () => {
 		}
 
 		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image"`
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
 		);
 	});
 
@@ -605,7 +607,7 @@ describe("asset-server handler", () => {
 			);
 
 			// Delete the asset from the manifest and ensure it's served from preservation cache
-			findAssetEntryForPath = async (path: string) => {
+			findAssetEntryForPath = async (_path: string) => {
 				return null;
 			};
 			const { response: response2 } = await getTestResponse({
@@ -638,6 +640,7 @@ describe("asset-server handler", () => {
 			expect(Object.fromEntries(response3.headers)).toMatchInlineSnapshot(`
 				{
 				  "access-control-allow-origin": "*",
+				  "cache-control": "no-store",
 				  "referrer-policy": "strict-origin-when-cross-origin",
 				}
 			`);
@@ -677,7 +680,7 @@ describe("asset-server handler", () => {
 			);
 
 			// Delete the asset from the manifest and ensure it's served from V1 preservation cache
-			const findAssetEntryForPath = async (path: string) => {
+			const findAssetEntryForPath = async (_path: string) => {
 				return null;
 			};
 			const { response, spies } = await getTestResponse({
@@ -719,6 +722,7 @@ describe("asset-server handler", () => {
 			expect(Object.fromEntries(response2.headers)).toMatchInlineSnapshot(`
 				{
 				  "access-control-allow-origin": "*",
+				  "cache-control": "no-store",
 				  "referrer-policy": "strict-origin-when-cross-origin",
 				}
 			`);
@@ -801,16 +805,14 @@ describe("asset-server handler", () => {
 			},
 		}) as Metadata;
 
-		const findAssetEntryForPath = async (path: string) => {
-			if (path.startsWith("/asset")) return "some-asset";
-			return null;
-		};
+		const findAssetEntryForPath = async (path: string) =>
+			path.startsWith("/asset") ? "some-asset" : null;
 
 		test("500 skips headers", async () => {
 			const { response } = await getTestResponse({
 				request: "https://foo.com/asset",
 				metadata,
-				fetchAsset: async (...args) => {
+				fetchAsset: async () => {
 					throw "uh oh";
 				},
 				findAssetEntryForPath: findAssetEntryForPath,
@@ -845,6 +847,76 @@ describe("asset-server handler", () => {
 			expect(response.status).toBe(301);
 			expect(Object.fromEntries(response.headers)).toHaveProperty(
 				"x-unwanted-header"
+			);
+		});
+	});
+
+	describe("404 responses from our asset serving should not cache", () => {
+		const metadata = createMetadataObject({
+			deploymentId: "mock-deployment-id",
+			headers: {
+				invalid: [],
+				rules: [
+					{
+						path: "/*",
+						headers: { "cache-control": "public, max-age=604800" },
+						unsetHeaders: [],
+					},
+				],
+			},
+		}) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path.startsWith("/asset")) {
+				return "some-asset";
+			}
+			return null;
+		};
+
+		test("404 adds cache-control: no-store", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/404",
+				metadata: createMetadataObject({
+					deploymentId: "mock-deployment-id",
+				}) as Metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(404);
+			expect(Object.fromEntries(response.headers)).toEqual(
+				expect.objectContaining({
+					"cache-control": "no-store",
+				})
+			);
+		});
+
+		test("404 removes user-controlled cache-control", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/404",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(404);
+			expect(Object.fromEntries(response.headers)).toEqual(
+				expect.objectContaining({
+					"cache-control": "no-store",
+				})
+			);
+		});
+
+		test("200 continues having the user's cache-control header", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/asset",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(200);
+			expect(Object.fromEntries(response.headers)).toEqual(
+				expect.objectContaining({
+					"cache-control": "public, max-age=604800",
+				})
 			);
 		});
 	});
