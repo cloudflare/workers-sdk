@@ -28,8 +28,8 @@ export interface Env {
 }
 
 interface HeliconeRequest {
-	request_id?: string;
-	request_body?: Record<string, any>;
+	request_id?: string; // Helicone request ID
+	request_body?: any; // LLM request body
 	response_body?: any; // LLM response body
 }
 
@@ -43,6 +43,7 @@ export default {
 			// Execute the scoring function
 			const scores = calculateScore(data);
 
+			// Extract the request ID
 			const requestId = data['request_id'];
 
 			// Post the scores to the scoring API.
@@ -90,13 +91,11 @@ async function postScore(url: string, scoreData: Record<string, number>, env: En
 }
 
 function calculateScore(data: HeliconeRequest): Record<string, number> {
-	const response_body = data.response_body;
-
 	let scores: Record<string, number> = {};
 
-	if (response_body) {
-		const response_body_score = countWordsInResponse(response_body);
-		scores['response_body'] = response_body_score;
+	if (data.response_body) {
+		const response_body_score = countWordsInResponse(data.response_body);
+		scores['response_words_count'] = response_body_score;
 	}
 
 	return scores;
