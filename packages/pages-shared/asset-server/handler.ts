@@ -492,7 +492,19 @@ export async function generateHandler<
 	if (responseWithoutHeaders.status >= 500) {
 		return responseWithoutHeaders;
 	}
-	return await attachHeaders(responseWithoutHeaders);
+
+	const responseWithHeaders = await attachHeaders(responseWithoutHeaders);
+	if (responseWithHeaders.status === 404) {
+		// Remove any user-controlled cache-control headers
+		// This is to prevent the footgun of potentionally caching this 404 for a long time
+		if (responseWithHeaders.headers.has("cache-control")) {
+			responseWithHeaders.headers.delete("cache-control");
+		}
+		// Add cache-control: no-store to prevent this from being cached on the responding zones.
+		responseWithHeaders.headers.append("cache-control", "no-store");
+	}
+
+	return responseWithHeaders;
 
 	async function serveAsset(
 		servingAssetEntry: AssetEntry,

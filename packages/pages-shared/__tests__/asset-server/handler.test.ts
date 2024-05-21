@@ -640,6 +640,7 @@ describe("asset-server handler", () => {
 			expect(Object.fromEntries(response3.headers)).toMatchInlineSnapshot(`
 				{
 				  "access-control-allow-origin": "*",
+				  "cache-control": "no-store",
 				  "referrer-policy": "strict-origin-when-cross-origin",
 				}
 			`);
@@ -721,6 +722,7 @@ describe("asset-server handler", () => {
 			expect(Object.fromEntries(response2.headers)).toMatchInlineSnapshot(`
 				{
 				  "access-control-allow-origin": "*",
+				  "cache-control": "no-store",
 				  "referrer-policy": "strict-origin-when-cross-origin",
 				}
 			`);
@@ -845,6 +847,76 @@ describe("asset-server handler", () => {
 			expect(response.status).toBe(301);
 			expect(Object.fromEntries(response.headers)).toHaveProperty(
 				"x-unwanted-header"
+			);
+		});
+	});
+
+	describe("404 responses from our asset serving should not cache", () => {
+		const metadata = createMetadataObject({
+			deploymentId: "mock-deployment-id",
+			headers: {
+				invalid: [],
+				rules: [
+					{
+						path: "/*",
+						headers: { "cache-control": "public, max-age=604800" },
+						unsetHeaders: [],
+					},
+				],
+			},
+		}) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path.startsWith("/asset")) {
+				return "some-asset";
+			}
+			return null;
+		};
+
+		test("404 adds cache-control: no-store", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/404",
+				metadata: createMetadataObject({
+					deploymentId: "mock-deployment-id",
+				}) as Metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(404);
+			expect(Object.fromEntries(response.headers)).toEqual(
+				expect.objectContaining({
+					"cache-control": "no-store",
+				})
+			);
+		});
+
+		test("404 removes user-controlled cache-control", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/404",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(404);
+			expect(Object.fromEntries(response.headers)).toEqual(
+				expect.objectContaining({
+					"cache-control": "no-store",
+				})
+			);
+		});
+
+		test("200 continues having the user's cache-control header", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/asset",
+				metadata,
+				findAssetEntryForPath: findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(200);
+			expect(Object.fromEntries(response.headers)).toEqual(
+				expect.objectContaining({
+					"cache-control": "public, max-age=604800",
+				})
 			);
 		});
 	});
