@@ -540,7 +540,7 @@ describe("asset-server handler", () => {
 		}
 
 		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload""`
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
 		);
 	});
 
