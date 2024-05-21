@@ -14,6 +14,7 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
+		"check:lint": "eslint .",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},
