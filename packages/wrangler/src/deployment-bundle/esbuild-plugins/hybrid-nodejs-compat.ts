@@ -6,27 +6,12 @@ import type { Plugin } from "esbuild";
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
 
 export const nodejsHybridPlugin: () => Plugin = () => {
-	const { alias, /* inject, */ polyfill, external } = env(nodeless, cloudflare);
+	const { alias, inject, /* polyfill, */ external } = env(nodeless, cloudflare);
 
 	return {
 		name: "unenv-cloudflare",
 		setup(build) {
-			const re = new RegExp(`^(${Object.keys(alias).join("|")})$`);
-
-			// HACK: We need to inject the global polyfills.
-			// It seems that unenv doesn't do this for Buffer
-			polyfill.push(resolve(getBasePath(), "templates/_buffer.js"));
-			// HACK: esbuild wants to rename the exported `Buffer` in `_buffer.js` (e.g. to `Buffer2`)
-			// so we actually export it as _Buffer and then "define" `Buffer` to be `_Buffer`.
-			build.initialOptions.define = {
-				...build.initialOptions.define,
-				Buffer: "_Buffer",
-			};
-
-			build.initialOptions.inject = [
-				...(build.initialOptions.inject ?? []),
-				...polyfill,
-			];
+			const UNENV_ALIAS_RE = new RegExp(`^(${Object.keys(alias).join("|")})$`);
 
 			// esbuild expects alias paths to be absolute
 			const aliasAbsolute = Object.fromEntries(
@@ -38,7 +23,7 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 
 			build.onResolve(
 				{
-					filter: re,
+					filter: UNENV_ALIAS_RE,
 				},
 				(args) => {
 					const result = aliasAbsolute[args.path];
@@ -69,6 +54,42 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 					};
 				}
 			);
+
+
+			// Inject node globals defined in unenv's `inject` config via virtual modules
+			const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^\.]+)\.js$/;
+
+			build.initialOptions.inject = [
+				...(build.initialOptions.inject ?? []),
+				// convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
+				...Object.keys(inject).map(globalName => require('path').resolve(__dirname, `_virtual_unenv_global_polyfill-${globalName}.js`)),
+			];
+
+			build.onResolve({ filter: UNENV_GLOBALS_RE}, ({path}) => {
+				const globalName = path.match(UNENV_GLOBALS_RE)![1];
+				const globalMapping = inject[globalName];
+				return {
+						path: (typeof globalMapping === "string") ?
+								require.resolve(globalMapping).replace(/\.cjs$/, '.mjs') :
+								path
+				};
+			});
+
+			build.onLoad({ filter: UNENV_GLOBALS_RE }, ({path}) => {
+				const globalName = path.match(UNENV_GLOBALS_RE)![1];
+				const [moduleName, exportName] = inject[globalName];
+
+				return {
+					contents: `
+						import { ${exportName} } from "${moduleName}";
+						export {
+							${exportName} as '${globalName}',
+							${exportName} as 'global.${globalName}',
+							${exportName} as 'globalThis.${globalName}'
+						}
+					`,
+				};
+			});
 		},
 	};
 };
