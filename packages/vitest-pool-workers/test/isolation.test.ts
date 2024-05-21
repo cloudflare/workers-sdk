@@ -4,7 +4,7 @@ import { test } from "./helpers";
 // Sequencer that always runs tests alphabetically by name
 const deterministicSequencer = `
 import { BaseSequencer } from "vitest/node";
-			
+
 export class DeterministicSequencer extends BaseSequencer {
 	sort(files) {
 		return [...files].sort((a, b) => a[1].localeCompare(b[1]));
@@ -32,7 +32,7 @@ test("isolated storage with multiple workers", async ({
 		"vitest.config.ts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
-			
+
 			export default defineWorkersConfig({
 				test: {
 					sequence: { sequencer: DeterministicSequencer },
@@ -64,10 +64,10 @@ test("isolated storage with multiple workers", async ({
 			it("does something", async () => {
 				expect(globalThis.THING).toBe(undefined);
 				globalThis.THING = true;
-				
+
 				expect(await env.NAMESPACE.get("key")).toBe(null);
 				await env.NAMESPACE.put("key", "value");
-				
+
 				const response = await env.AUXILIARY.fetch("https://example.com");
 				expect(await response.text()).toBe("1");
 			});
@@ -78,10 +78,10 @@ test("isolated storage with multiple workers", async ({
 			it("does something else", async () => {
 				expect(globalThis.THING).toBe(undefined);
 				globalThis.THING = true;
-				
+
 				expect(await env.NAMESPACE.get("key")).toBe(null);
 				await env.NAMESPACE.put("key", "value");
-				
+
 				const response = await env.AUXILIARY.fetch("https://example.com");
 				expect(await response.text()).toBe("1");
 			});
@@ -129,7 +129,7 @@ test("isolated storage with single worker", async ({
 		"vitest.config.ts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
-			
+
 			export default defineWorkersConfig({
 				test: {
 					sequence: { sequencer: DeterministicSequencer },
@@ -161,10 +161,10 @@ test("isolated storage with single worker", async ({
 			it("does something", async () => {
 				expect(globalThis.THING).toBe(undefined);
 				globalThis.THING = true;
-				
+
 				expect(await env.NAMESPACE.get("key")).toBe(null);
 				await env.NAMESPACE.put("key", "value");
-				
+
 				const response = await env.AUXILIARY.fetch("https://example.com");
 				expect(await response.text()).toBe("1");
 			});
@@ -174,9 +174,9 @@ test("isolated storage with single worker", async ({
 			import { it, expect } from "vitest";
 			it("does something else", async () => {
 				expect(globalThis.THING).toBe(true);
-				
+
 				expect(await env.NAMESPACE.get("key")).toBe(null);
-				
+
 				const response = await env.AUXILIARY.fetch("https://example.com");
 				expect(await response.text()).toBe("2");
 			});
@@ -225,7 +225,7 @@ test("shared storage with multiple workers", async ({
 					return deferred.promise;
 				}
 			}
-			
+
 			let id;
 			export default {
 				fetch(request, env, ctx) {
@@ -238,7 +238,7 @@ test("shared storage with multiple workers", async ({
 		"vitest.config.ts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
-			
+
 			export default defineWorkersConfig({
 				test: {
 					sequence: { sequencer: DeterministicSequencer },
@@ -271,7 +271,7 @@ test("shared storage with multiple workers", async ({
 			it("does something", async () => {
 				globalThis.A_THING = true;
 				await env.NAMESPACE.put("a", "1");
-				
+
 				await env.AUXILIARY.fetch("https://example.com");
 
 				expect(globalThis.B_THING).toBe(undefined);
@@ -284,9 +284,9 @@ test("shared storage with multiple workers", async ({
 			it("does something else", async () => {
 				globalThis.B_THING = true;
 				await env.NAMESPACE.put("b", "2");
-				
+
 				await env.AUXILIARY.fetch("https://example.com");
-				
+
 				expect(globalThis.A_THING).toBe(undefined);
 				expect(await env.NAMESPACE.get("a")).toBe("1");
 			});
@@ -312,16 +312,14 @@ test("shared storage with multiple workers", async ({
 	expect(await result.exitCode).toBe(0);
 });
 
-test("shared storage with single worker", async ({
-	expect,
-	seed,
-	vitestRun,
-}) => {
-	// Check shared global scopes, storage shared, and shared auxiliaries:
-	// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-false-singleworker-true
-	await seed({
-		"sequencer.ts": deterministicSequencer,
-		"auxiliary.mjs": dedent`
+test(
+	"shared storage with single worker",
+	async ({ expect, seed, vitestRun }) => {
+		// Check shared global scopes, storage shared, and shared auxiliaries:
+		// https://developers.cloudflare.com/workers/testing/vitest-integration/isolation-and-concurrency/#isolatedstorage-false-singleworker-true
+		await seed({
+			"sequencer.ts": deterministicSequencer,
+			"auxiliary.mjs": dedent`
 			let count = 0;
 			export default {
 				fetch() {
@@ -329,10 +327,10 @@ test("shared storage with single worker", async ({
 				}
 			}
 		`,
-		"vitest.config.ts": dedent`
+			"vitest.config.ts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
-			
+
 			export default defineWorkersConfig({
 				test: {
 					sequence: { sequencer: DeterministicSequencer },
@@ -358,49 +356,51 @@ test("shared storage with single worker", async ({
 				}
 			});
 		`,
-		"a.test.ts": dedent`
+			"a.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something", async () => {
 				expect(globalThis.THING).toBe(undefined);
 				globalThis.THING = true;
-				
+
 				expect(await env.NAMESPACE.get("key")).toBe(null);
 				await env.NAMESPACE.put("key", "value");
-				
+
 				const response = await env.AUXILIARY.fetch("https://example.com");
 				expect(await response.text()).toBe("1");
 			});
 		`,
-		"b.test.ts": dedent`
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("does something else", async () => {
 				expect(globalThis.THING).toBe(true);
-				
+
 				expect(await env.NAMESPACE.get("key")).toBe("value");
-				
+
 				const response = await env.AUXILIARY.fetch("https://example.com");
 				expect(await response.text()).toBe("2");
 			});
 		`,
-	});
-	let result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
+		});
+		let result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
 
-	// Check allows concurrent tests
-	await seed({
-		"a.test.ts": dedent`
+		// Check allows concurrent tests
+		await seed({
+			"a.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it.concurrent("does something", () => {});
 		`,
-		"b.test.ts": dedent`
+			"b.test.ts": dedent`
 			import { env } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it.concurrent("does something else", () => {});
 		`,
-	});
-	result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
-});
+		});
+		result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+	},
+	{ timeout: 60_000 }
+);

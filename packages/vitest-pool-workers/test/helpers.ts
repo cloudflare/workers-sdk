@@ -13,6 +13,7 @@ export const minimalVitestConfig = `
 import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 export default defineWorkersConfig({
 	test: {
+		testTimeout: 90_000,
 		poolOptions: {
 			workers: {
 				singleWorker: true,

@@ -38,8 +38,8 @@ test("chunks large WebSocket messages bi-directionally", async ({
 		`,
 	});
 	const result = await vitestRun();
-	expect(await result.exitCode).toBe(0);
-
+	await result.exitCode;
 	// ...and logs it back
 	expect(result.stdout).toMatch(bigText);
+	expect(await result.exitCode).toBe(0);
 });
