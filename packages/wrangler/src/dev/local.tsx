@@ -87,7 +87,6 @@ export async function localPropsToConfigBundle(
 		compatibilityDate: props.compatibilityDate,
 		compatibilityFlags: props.compatibilityFlags,
 		inspectorPort: props.runtimeInspectorPort,
-		usageModel: props.usageModel,
 		bindings: props.bindings,
 		workerDefinitions: props.workerDefinitions,
 		assetPaths: props.assetPaths,
