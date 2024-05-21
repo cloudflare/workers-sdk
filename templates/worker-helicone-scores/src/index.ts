@@ -9,28 +9,13 @@
  */
 
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
-
 	HELICONE_AUTH: string;
 }
 
 interface HeliconeRequest {
 	request_id?: string; // Helicone request ID
-	request_body?: any; // LLM request body
-	response_body?: any; // LLM response body
+	request_body?: any; // request body (ex: GPT-4, Gemini, etc.)
+	response_body?: any; // LLM response body (ex: GPT-4, Gemini, etc.)
 }
 
 export default {
@@ -44,9 +29,10 @@ export default {
 			const scores = calculateScore(data);
 
 			// Extract the request ID
-			const requestId = data['request_id'];
+			const requestId = data.request_id;
 
 			// Post the scores to the scoring API.
+			// Is it ok if we hardcode the scoring API URL here?
 			const result = await postScore(
 				`https://jawn.helicone.ai/v1/request/${requestId}/score`,
 				scores,
@@ -66,6 +52,7 @@ export default {
 	},
 };
 
+//Post score data back to Helicone
 async function postScore(url: string, scoreData: Record<string, number>, env: Env) {
 	const heliconeAuth = `Bearer ${env.HELICONE_AUTH}`;
 	try {
@@ -90,15 +77,15 @@ async function postScore(url: string, scoreData: Record<string, number>, env: En
 	}
 }
 
+// You can customize the scoring function below and add more scores as needed.
 function calculateScore(data: HeliconeRequest): Record<string, number> {
-	let scores: Record<string, number> = {};
-
 	if (data.response_body) {
-		const response_body_score = countWordsInResponse(data.response_body);
-		scores['response_words_count'] = response_body_score;
+		return {
+			vocabulary_diversity: calculateVocabularyDiversity(data.response_body),
+		};
 	}
 
-	return scores;
+	return {};
 }
 
 function countWordsInResponse(response_body: any): number {
@@ -116,4 +103,17 @@ function countWordsInResponse(response_body: any): number {
 	}
 
 	return total_words;
+}
+
+function calculateVocabularyDiversity(response_body: any): number {
+	const uniqueWords = new Set<string>();
+	response_body.choices.forEach((choice: any) => {
+		if (choice.message && choice.message.content) {
+			const words = choice.message.content.toLowerCase().split(/\s+/) as string[];
+			words.forEach(word => uniqueWords.add(word));
+		}
+	});
+	const totalWords = countWordsInResponse(response_body);
+	if (totalWords === 0) return 0;
+	return Math.round((uniqueWords.size / totalWords) * 100);
 }
