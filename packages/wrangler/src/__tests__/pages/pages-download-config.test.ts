@@ -1,7 +1,7 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -16,14 +16,13 @@ function mockSupportingDashRequests(
 	expectedProjectName: string
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/NOT_REAL`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res.once(
-					ctx.status(404),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: false,
 						errors: [
 							{
@@ -33,19 +32,20 @@ function mockSupportingDashRequests(
 							},
 						],
 						result: null,
-					})
+					},
+					{ status: 404 }
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
-				expect(req.params.projectName).toEqual(expectedProjectName);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
+				expect(params.projectName).toEqual(expectedProjectName);
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						result: {
@@ -248,26 +248,28 @@ function mockSupportingDashRequests(
 								},
 							},
 						},
-					})
+					},
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/durable_objects/namespaces/:doId`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						result: {
-							script: `some-script-${req.params.doId}`,
-							class: `some-class-${req.params.doId}`,
-							environment: `some-environment-${req.params.doId}`,
+							script: `some-script-${params.doId}`,
+							class: `some-class-${params.doId}`,
+							environment: `some-environment-${params.doId}`,
 						},
-					})
+					},
+					{ status: 200 }
 				);
 			}
 		)

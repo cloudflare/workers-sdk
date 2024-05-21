@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -56,14 +56,15 @@ describe("cloudchamber modify", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.patch(
+			http.patch(
 				"*/deployments/1234/v2",
-				async (request, response, context) => {
+				async ({ request }) => {
 					expect(await request.text()).toMatchInlineSnapshot(
 						`"{\\"image\\":\\"hello:modify\\",\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"40MB\\"}"`
 					);
-					return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-				}
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+				},
+				{ once: true }
 			)
 		);
 		await runWrangler(

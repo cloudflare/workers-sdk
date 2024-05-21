@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import fetchMock from "jest-fetch-mock";
+import { passthrough } from "msw";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
 
@@ -93,33 +93,36 @@ jest.mock("ws", () => {
 jest.mock("undici", () => {
 	return {
 		...jest.requireActual("undici"),
-		fetch: jest.requireActual("jest-fetch-mock"),
+		/**
+		 * So... Why do we have this hacky mock?
+		 * First, the requirements that necessitated it (if you're looking at this code in horror at some point in the future and these no longer apply, feel free to adjust this implementation!)
+		 * - Wrangler supports Node v16. Once Wrangler only supports Node v18 we can use globalThis.fetch directly and remove this hack
+		 * - MSW makes it difficult to use custom interceptors, and _really_ wants you to use globalThis.fetch. In particular, it doesn't support intercepting undici.fetch
+		 * Because Wrangler supports Node v16, we have to use undici's fetch directly rather than using globalThis.fetch. We'd also like to intercept requests with MSW
+		 * Therefore, we mock undici in tests to replace the imported fetch with globalThis.fetch (which MSW will replace with a mocked version—hence the getter, so that we always get the up to date mocked version)
+		 */
+		get fetch() {
+			// @ts-expect-error Here be dragons (see above)
+			return globalThis.fetch;
+		},
 	};
-});
-
-fetchMock.doMock(() => {
-	// Any un-mocked fetches should throw
-	throw new Error("Unexpected fetch request");
 });
 
 jest.mock("../package-manager");
 
 jest.mock("../update-check");
 
-// requests not mocked with `jest-fetch-mock` fall through
-// to `mock-service-worker`
-fetchMock.dontMock();
 beforeAll(() => {
 	msw.listen({
 		onUnhandledRequest: (request) => {
-			const { hostname } = request.url;
+			const { hostname, href } = new URL(request.url);
 			const localHostnames = ["localhost", "127.0.0.1"]; // TODO: add other local hostnames if you need them
 			if (localHostnames.includes(hostname)) {
-				return request.passthrough();
+				return passthrough();
 			}
 
 			throw new Error(
-				`No mock found for ${request.method} ${request.url.href}
+				`No mock found for ${request.method} ${href}
 				`
 			);
 		},

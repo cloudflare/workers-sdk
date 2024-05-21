@@ -1,6 +1,6 @@
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -10,7 +10,7 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { UploadPayloadFile } from "../../pages/types";
-import type { RestRequest } from "msw";
+import type { StrictRequest } from "msw";
 
 describe("pages project upload", () => {
 	const ENV_COPY = process.env;
@@ -40,34 +40,38 @@ describe("pages project upload", () => {
 		writeFileSync("logo.png", "foobar");
 
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
 
-				expect(req.headers.get("Authorization")).toBe(
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["2082190357cfd3617ccfe04f340c6247"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post("*/pages/assets/upload", async ({ request }) => {
+				expect(request.headers.get("Authorization")).toBe(
 					"Bearer <<funfetti-auth-jwt>>"
 				);
-				expect(body).toMatchObject({
-					hashes: ["2082190357cfd3617ccfe04f340c6247"],
-				});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-
-				expect(await req.json()).toMatchObject([
+				expect(await request.json()).toMatchObject([
 					{
 						base64: true,
 						key: "2082190357cfd3617ccfe04f340c6247",
@@ -78,14 +82,14 @@ describe("pages project upload", () => {
 					},
 				]);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
 						result: null,
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);
@@ -118,47 +122,54 @@ describe("pages project upload", () => {
 		writeFileSync("functions/foo.js", "func");
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: StrictRequest<UploadPayloadFile[]>[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as {
-					hashes: string[];
-				};
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as {
+						hashes: string[];
+					};
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: [
-						"2082190357cfd3617ccfe04f340c6247",
-						"95dedb64e6d4940fc2e0f11f711cc2f4",
-						"09a79777abda8ccc8bdd51dd3ff8e9e9",
-					],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: [
+							"2082190357cfd3617ccfe04f340c6247",
+							"95dedb64e6d4940fc2e0f11f711cc2f4",
+							"09a79777abda8ccc8bdd51dd3ff8e9e9",
+						],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", (req, res, ctx) => {
-				requests.push(req);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				({ request }) => {
+					requests.push(request);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			})
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}
+			)
 		);
 
 		await runWrangler("pages project upload .");
@@ -166,7 +177,7 @@ describe("pages project upload", () => {
 
 		const resolvedRequests = (
 			await Promise.all(
-				requests.map(async (req) => await req.json<UploadPayloadFile[]>())
+				requests.map(async (req) => (await req.json()) as UploadPayloadFile[])
 			)
 		).flat();
 
@@ -220,58 +231,65 @@ describe("pages project upload", () => {
 		writeFileSync("logo.txt", "foobar");
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: StrictRequest<UploadPayloadFile[]>[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as { hashes: string[] };
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
-
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
-
-				if (requests.length < 2) {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							success: false,
-							errors: [
-								{
-									code: 800000,
-									message: "Something exploded, please retry",
-								},
-							],
-							messages: [],
-							result: null,
-						})
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
 					);
-				} else {
-					return res(
-						ctx.status(200),
-						ctx.json({
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
+
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: null,
-						})
+							result: body.hashes,
+						},
+						{ status: 200 }
 					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					requests.push(request);
+
+					if (requests.length < 2) {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [
+									{
+										code: 800000,
+										message: "Something exploded, please retry",
+									},
+								],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					} else {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					}
 				}
-			})
+			)
 		);
 
 		await runWrangler("pages project upload .");
@@ -307,45 +325,52 @@ describe("pages project upload", () => {
 		writeFileSync("logo.txt", "foobar");
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: StrictRequest<UploadPayloadFile[]>[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as { hashes: string[] };
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
-
-				if (requests.length < 7) {
-					return res(ctx.status(524), ctx.text(`<html>bang!</html>`));
-				} else {
-					return res(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
-							result: null,
-						})
+							result: body.hashes,
+						},
+						{ status: 200 }
 					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					requests.push(request);
+
+					if (requests.length < 7) {
+						return HttpResponse.text(`<html>bang!</html>`, { status: 524 });
+					} else {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: null,
+							},
+							{ status: 200 }
+						);
+					}
 				}
-			})
+			)
 		);
 
 		await runWrangler("pages project upload .");
@@ -390,50 +415,57 @@ describe("pages project upload", () => {
 		);
 
 		// Accumulate multiple requests then assert afterwards
-		const requests: RestRequest[] = [];
+		const requests: StrictRequest<UploadPayloadFile[]>[] = [];
 		msw.use(
-			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
-				const body = (await req.json()) as { hashes: string[] };
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				expect(body).toMatchObject({
-					hashes: expect.arrayContaining([
-						"d96fef225537c9f5e44a3cb27fd0b492",
-						"2082190357cfd3617ccfe04f340c6247",
-						"6be321bef99e758250dac034474ddbb8",
-						"1a98fb08af91aca4a7df1764a2c4ddb0",
-					]),
-				});
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
+					});
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: body.hashes,
-					})
-				);
-			}),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				requests.push(req);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					requests.push(request);
 
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			})
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}
+			)
 		);
 
 		await runWrangler("pages project upload .");
@@ -496,56 +528,61 @@ describe("pages project upload", () => {
 		);
 
 		msw.use(
-			rest.post(
+			http.post(
 				"*/pages/assets/check-missing",
 
-				async (req, res, ctx) => {
-					const body = (await req.json()) as { hashes: string[] };
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
 
-					expect(req.headers.get("Authorization")).toBe(
+					expect(request.headers.get("Authorization")).toBe(
 						"Bearer <<funfetti-auth-jwt>>"
 					);
 					expect(body).toMatchObject({
 						hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
 					});
 
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+					return HttpResponse.json(
+						{
 							success: true,
 							errors: [],
 							messages: [],
 							result: body.hashes,
-						})
-					);
-				}
-			),
-			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
-				expect(req.headers.get("Authorization")).toBe(
-					"Bearer <<funfetti-auth-jwt>>"
-				);
-				const body = (await req.json()) as UploadPayloadFile[];
-				expect(body).toMatchObject([
-					{
-						key: "7b764dacfd211bebd8077828a7ddefd7",
-						value: Buffer.from("foobar").toString("base64"),
-						metadata: {
-							contentType: "application/octet-stream",
 						},
-						base64: true,
-					},
-				]);
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					const body = (await request.json()) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "7b764dacfd211bebd8077828a7ddefd7",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "application/octet-stream",
+							},
+							base64: true,
+						},
+					]);
 
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			})
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			)
 		);
 
 		await runWrangler("pages project upload .");

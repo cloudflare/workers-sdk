@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -46,25 +46,26 @@ describe("wrangler", () => {
 		) {
 			const requests = { count: 0 };
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/queues?*",
-					async (request, response, context) => {
+					async ({ request }) => {
+						const url = new URL(request.url);
+
 						requests.count += 1;
 						if (queue) {
-							const nameParam = request.url.searchParams.getAll("name");
+							const nameParam = url.searchParams.getAll("name");
 							expect(nameParam.length).toBeGreaterThan(0);
 							expect(nameParam[0]).toEqual(queueName);
 						}
 						expect(await request.text()).toEqual("");
-						return response.once(
-							context.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: queue ? [queue] : [],
-							})
-						);
-					}
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: queue ? [queue] : [],
+						});
+					},
+					{ once: true }
 				)
 			);
 			return requests;
@@ -74,22 +75,23 @@ describe("wrangler", () => {
 			function mockListRequest(queues: QueueResponse[], page: number) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/queues?*",
-						async (request, response, context) => {
+						async ({ request }) => {
+							const url = new URL(request.url);
+
 							requests.count += 1;
-							const query = request.url.searchParams;
+							const query = url.searchParams;
 							expect(Number(query.get("page"))).toEqual(page);
 							expect(await request.text()).toEqual("");
-							return response.once(
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: queues,
-								})
-							);
-						}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: queues,
+							});
+						},
+						{ once: true }
 					)
 				);
 				return requests;
@@ -199,9 +201,9 @@ describe("wrangler", () => {
 				const requests = { count: 0 };
 
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/queues",
-						async (request, response, context) => {
+						async ({ request }) => {
 							requests.count += 1;
 
 							const body = (await request.json()) as {
@@ -212,19 +214,18 @@ describe("wrangler", () => {
 							};
 							expect(body.queue_name).toEqual(queueName);
 							expect(body.settings).toEqual(queueSettings);
-							return response.once(
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {
-										queue_name: queueName,
-										created_on: "01-01-2001",
-										modified_on: "01-01-2001",
-									},
-								})
-							);
-						}
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									queue_name: queueName,
+									created_on: "01-01-2001",
+									modified_on: "01-01-2001",
+								},
+							});
+						},
+						{ once: true }
 					)
 				);
 				return requests;
@@ -266,21 +267,22 @@ describe("wrangler", () => {
 			it("should show link to dash when not enabled", async () => {
 				const queueName = "testQueue";
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/queues",
-						async (request, response, context) => {
-							expect(request.params.accountId).toEqual("some-account-id");
-							return response.once(
-								context.status(403),
-								context.json({
+						async ({ params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							return HttpResponse.json(
+								{
 									success: false,
 									errors: [
 										{ message: "workers.api.error.unauthorized", code: 10023 },
 									],
 									messages: [],
-								})
+								},
+								{ status: 403 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 
@@ -331,21 +333,20 @@ describe("wrangler", () => {
 			function mockDeleteRequest(queueId: string) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/queues/:queueId",
-						async (request, response, context) => {
+						async ({ params }) => {
 							requests.count += 1;
-							expect(request.params.queueId).toEqual(queueId);
-							expect(request.params.accountId).toEqual("some-account-id");
-							return response.once(
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {},
-								})
-							);
-						}
+							expect(params.queueId).toEqual(queueId);
+							expect(params.accountId).toEqual("some-account-id");
+							return HttpResponse.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {},
+							});
+						},
+						{ once: true }
 					)
 				);
 				return requests;
@@ -447,22 +448,21 @@ describe("wrangler", () => {
 				) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.post(
+						http.post(
 							"*/accounts/:accountId/queues/:queueName/consumers",
-							async (request, response, context) => {
+							async ({ request, params }) => {
 								requests.count += 1;
-								expect(request.params.queueName).toEqual(queueName);
-								expect(request.params.accountId).toEqual("some-account-id");
+								expect(params.queueName).toEqual(queueName);
+								expect(params.accountId).toEqual("some-account-id");
 								expect(await request.json()).toEqual(expectedBody);
-								return response.once(
-									context.json({
-										success: true,
-										errors: [],
-										messages: [],
-										result: {},
-									})
-								);
-							}
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {},
+								});
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -685,14 +685,13 @@ describe("wrangler", () => {
 				xit("should show link to dash when not enabled", async () => {
 					const queueName = "testQueueId";
 					msw.use(
-						rest.post(
+						http.post(
 							"*/accounts/:accountId/queues/:testQueueId/consumers",
-							async (request, response, context) => {
-								expect(request.params.queueName).toEqual(queueName);
-								expect(request.params.accountId).toEqual("some-account-id");
-								return response.once(
-									context.status(403),
-									context.json({
+							async ({ params }) => {
+								expect(params.queueName).toEqual(queueName);
+								expect(params.accountId).toEqual("some-account-id");
+								return HttpResponse.json(
+									{
 										success: false,
 										errors: [
 											{
@@ -702,9 +701,11 @@ describe("wrangler", () => {
 										],
 										messages: [],
 										result: {},
-									})
+									},
+									{ status: 403 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 
@@ -733,21 +734,25 @@ describe("wrangler", () => {
 					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
 
 					msw.use(
-						rest.delete(`*/${resource}`, async (request, response, context) => {
-							requests.count++;
-							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.expectedQueueId).toBe(queueId);
-							expect(request.params.expectedConsumerId).toBe(consumerId);
-							return response.once(
-								context.status(200),
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {},
-								})
-							);
-						})
+						http.delete(
+							`*/${resource}`,
+							async ({ params }) => {
+								requests.count++;
+								expect(params.accountId).toBe("some-account-id");
+								expect(params.expectedQueueId).toBe(queueId);
+								expect(params.expectedConsumerId).toBe(consumerId);
+								return HttpResponse.json(
+									{
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									},
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
 					);
 
 					return requests;
@@ -758,25 +763,29 @@ describe("wrangler", () => {
 					const resource = `accounts/:accountId/workers/services/:serviceName`;
 
 					msw.use(
-						rest.get(`*/${resource}`, async (request, response, context) => {
-							requests.count++;
-							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.serviceName).toBe(serviceName);
-							return response.once(
-								context.status(200),
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {
-										id: serviceName,
-										default_environment: {
-											environment: defaultEnv,
+						http.get(
+							`*/${resource}`,
+							async ({ params }) => {
+								requests.count++;
+								expect(params.accountId).toBe("some-account-id");
+								expect(params.serviceName).toBe(serviceName);
+								return HttpResponse.json(
+									{
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											id: serviceName,
+											default_environment: {
+												environment: defaultEnv,
+											},
 										},
 									},
-								})
-							);
-						})
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
 					);
 					return requests;
 				}
@@ -1197,22 +1206,21 @@ describe("wrangler", () => {
 				) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.post(
+						http.post(
 							"*/accounts/:accountId/queues/:queueId/consumers",
-							async (request, response, context) => {
+							async ({ request, params }) => {
 								requests.count += 1;
-								expect(request.params.queueId).toEqual(queueId);
-								expect(request.params.accountId).toEqual("some-account-id");
+								expect(params.queueId).toEqual(queueId);
+								expect(params.accountId).toEqual("some-account-id");
 								expect(await request.json()).toEqual(expectedBody);
-								return response.once(
-									context.json({
-										success: true,
-										errors: [],
-										messages: [],
-										result: {},
-									})
-								);
-							}
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {},
+								});
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -1325,21 +1333,25 @@ describe("wrangler", () => {
 					const requests = { count: 0 };
 					const resource = `accounts/:accountId/queues/:expectedQueueId/consumers/:expectedConsumerId`;
 					msw.use(
-						rest.delete(`*/${resource}`, async (request, response, context) => {
-							requests.count++;
-							expect(request.params.accountId).toBe("some-account-id");
-							expect(request.params.expectedQueueId).toBe(queueId);
-							expect(request.params.expectedConsumerId).toBe(consumerId);
-							return response.once(
-								context.status(200),
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {},
-								})
-							);
-						})
+						http.delete(
+							`*/${resource}`,
+							async ({ params }) => {
+								requests.count++;
+								expect(params.accountId).toBe("some-account-id");
+								expect(params.expectedQueueId).toBe(queueId);
+								expect(params.expectedConsumerId).toBe(consumerId);
+								return HttpResponse.json(
+									{
+										success: true,
+										errors: [],
+										messages: [],
+										result: {},
+									},
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
 					);
 
 					return requests;

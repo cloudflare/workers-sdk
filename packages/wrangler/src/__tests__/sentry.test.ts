@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import * as Sentry from "@sentry/node";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -45,10 +45,19 @@ describe("sentry", () => {
 		});
 
 		it("should not hit sentry after error", async () => {
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
-			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
-							]
-		`);
+			// Trigger an API error
+			msw.use(
+				http.get(
+					`https://api.cloudflare.com/client/v4/user`,
+					async () => {
+						return HttpResponse.error();
+					},
+					{ once: true }
+				)
+			);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
+				`[TypeError: Failed to fetch]`
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
 
@@ -81,14 +90,23 @@ describe("sentry", () => {
 		});
 
 		it("should not hit sentry after reportable error when permission denied", async () => {
+			// Trigger an API error
+			msw.use(
+				http.get(
+					`https://api.cloudflare.com/client/v4/user`,
+					async () => {
+						return HttpResponse.error();
+					},
+					{ once: true }
+				)
+			);
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare?",
 				result: false,
 			});
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
-			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
-							]
-		`);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
+				`[TypeError: Failed to fetch]`
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
 
@@ -98,14 +116,23 @@ describe("sentry", () => {
 		});
 
 		it("should hit sentry after reportable error when permission provided", async () => {
+			// Trigger an API error
+			msw.use(
+				http.get(
+					`https://api.cloudflare.com/client/v4/user`,
+					async () => {
+						return HttpResponse.error();
+					},
+					{ once: true }
+				)
+			);
 			mockConfirm({
 				text: "Would you like to report this error to Cloudflare?",
 				result: true,
 			});
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
-			[FetchError: request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
-							]
-		`);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
+				`[TypeError: Failed to fetch]`
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
 
@@ -164,150 +191,193 @@ describe("sentry", () => {
 			// If more data is included in the Sentry request, we'll need to verify it
 			// couldn't contain PII and update this snapshot
 			expect(event).toMatchInlineSnapshot(`
-			Object {
-			  "data": Object {
-			    "breadcrumbs": Array [
-			      Object {
-			        "level": "log",
-			        "message": "wrangler whoami",
-			        "timestamp": 0,
-			      },
-			    ],
-			    "contexts": Object {
-			      "app": Object {
-			        "app_memory": 0,
-			        "app_start_time": "",
-			      },
-			      "cloud_resource": Object {},
-			      "device": Object {},
-			      "os": Object {},
-			      "runtime": Object {
-			        "name": "node",
-			        "version": "",
-			      },
-			      "trace": Object {
-			        "span_id": "",
-			        "trace_id": "",
-			      },
-			    },
-			    "environment": "production",
-			    "event_id": "",
-			    "exception": Object {
-			      "values": Array [
-			        Object {
-			          "mechanism": Object {
-			            "handled": true,
-			            "type": "generic",
-			          },
-			          "stacktrace": Object {
-			            "frames": Array [
-			              Object {
-			                "colno": 0,
-			                "context_line": "",
-			                "filename": "/project/...",
-			                "function": "",
-			                "in_app": false,
-			                "lineno": 0,
-			                "module": "@mswjs.interceptors.src.interceptors.ClientRequest:NodeClientRequest.ts",
-			                "post_context": Array [],
-			                "pre_context": Array [],
-			              },
-			              Object {
-			                "colno": 0,
-			                "context_line": "",
-			                "filename": "/project/...",
-			                "function": "",
-			                "in_app": false,
-			                "lineno": 0,
-			                "module": "@mswjs.interceptors.src.interceptors.ClientRequest:NodeClientRequest.ts",
-			                "post_context": Array [],
-			                "pre_context": Array [],
-			              },
-			              Object {
-			                "colno": 0,
-			                "context_line": "",
-			                "filename": "node:domain",
-			                "function": "",
-			                "in_app": false,
-			                "lineno": 0,
-			                "module": "node:domain",
-			                "post_context": Array [],
-			                "pre_context": Array [],
-			              },
-			              Object {
-			                "colno": 0,
-			                "context_line": "",
-			                "filename": "node:events",
-			                "function": "",
-			                "in_app": false,
-			                "lineno": 0,
-			                "module": "node:events",
-			                "post_context": Array [],
-			                "pre_context": Array [],
-			              },
-			              Object {
-			                "colno": 0,
-			                "context_line": "",
-			                "filename": "/project/...",
-			                "function": "",
-			                "in_app": false,
-			                "lineno": 0,
-			                "module": "node-fetch.lib:index",
-			                "post_context": Array [],
-			                "pre_context": Array [],
-			              },
-			            ],
-			          },
-			          "type": "FetchError",
-			          "value": "request to https://api.cloudflare.com/client/v4/user failed, reason: No mock found for GET https://api.cloudflare.com/client/v4/user
-							",
-			        },
-			      ],
-			    },
-			    "modules": Object {},
-			    "platform": "node",
-			    "release": "",
-			    "sdk": Object {
-			      "integrations": Array [
-			        "InboundFilters",
-			        "FunctionToString",
-			        "LinkedErrors",
-			        "OnUncaughtException",
-			        "OnUnhandledRejection",
-			        "ContextLines",
-			        "Context",
-			        "Modules",
-			      ],
-			      "name": "sentry.javascript.node",
-			      "packages": Array [
-			        Object {
-			          "name": "npm:@sentry/node",
-			          "version": "7.87.0",
-			        },
-			      ],
-			      "version": "7.87.0",
-			    },
-			    "timestamp": 0,
-			  },
-			  "header": Object {
-			    "event_id": "",
-			    "sdk": Object {
-			      "name": "sentry.javascript.node",
-			      "version": "7.87.0",
-			    },
-			    "sent_at": "",
-			    "trace": Object {
-			      "environment": "production",
-			      "public_key": "9edbb8417b284aa2bbead9b4c318918b",
-			      "release": "",
-			      "trace_id": "",
-			    },
-			  },
-			  "type": Object {
-			    "type": "event",
-			  },
-			}
-		`);
+Object {
+  "data": Object {
+    "breadcrumbs": Array [
+      Object {
+        "level": "log",
+        "message": "wrangler whoami",
+        "timestamp": 0,
+      },
+    ],
+    "contexts": Object {
+      "app": Object {
+        "app_memory": 0,
+        "app_start_time": "",
+      },
+      "cloud_resource": Object {},
+      "device": Object {},
+      "os": Object {},
+      "runtime": Object {
+        "name": "node",
+        "version": "",
+      },
+      "trace": Object {
+        "span_id": "",
+        "trace_id": "",
+      },
+    },
+    "environment": "production",
+    "event_id": "",
+    "exception": Object {
+      "values": Array [
+        Object {
+          "mechanism": Object {
+            "handled": true,
+            "type": "generic",
+          },
+          "stacktrace": Object {
+            "frames": Array [
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "index.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "whoami.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "whoami.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "whoami.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "index.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "internal.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "internal.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "@mswjs.interceptors.src.interceptors.fetch:index.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+              Object {
+                "colno": 0,
+                "context_line": "",
+                "filename": "/project/...",
+                "function": "",
+                "in_app": false,
+                "lineno": 0,
+                "module": "@mswjs.interceptors.src.interceptors.fetch:index.ts",
+                "post_context": Array [],
+                "pre_context": Array [],
+              },
+            ],
+          },
+          "type": "TypeError",
+          "value": "Failed to fetch",
+        },
+      ],
+    },
+    "modules": Object {},
+    "platform": "node",
+    "release": "",
+    "sdk": Object {
+      "integrations": Array [
+        "InboundFilters",
+        "FunctionToString",
+        "LinkedErrors",
+        "OnUncaughtException",
+        "OnUnhandledRejection",
+        "ContextLines",
+        "Context",
+        "Modules",
+      ],
+      "name": "sentry.javascript.node",
+      "packages": Array [
+        Object {
+          "name": "npm:@sentry/node",
+          "version": "7.87.0",
+        },
+      ],
+      "version": "7.87.0",
+    },
+    "timestamp": 0,
+  },
+  "header": Object {
+    "event_id": "",
+    "sdk": Object {
+      "name": "sentry.javascript.node",
+      "version": "7.87.0",
+    },
+    "sent_at": "",
+    "trace": Object {
+      "environment": "production",
+      "public_key": "9edbb8417b284aa2bbead9b4c318918b",
+      "release": "",
+      "trace_id": "",
+    },
+  },
+  "type": Object {
+    "type": "event",
+  },
+}
+`);
 		});
 	});
 });
@@ -315,11 +385,11 @@ describe("sentry", () => {
 function mockSentryEndpoint() {
 	const requests: EnvelopeRequest[] = [];
 	msw.use(
-		rest.post(
+		http.post(
 			`https://platform.dash.cloudflare.com/sentry/envelope`,
-			async (req, res, cxt) => {
-				requests.push(await req.json());
-				return res(cxt.status(200), cxt.json({}));
+			async ({ request }) => {
+				requests.push((await request.json()) as EnvelopeRequest);
+				return HttpResponse.json({}, { status: 200 });
 			}
 		)
 	);

@@ -1,5 +1,5 @@
 import fs from "fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -44,16 +44,15 @@ describe("execute", () => {
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
 
 		msw.use(
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/d1/database/:databaseId/export",
-				async (req, res, ctx) => {
-					const body = await req.json();
+				async ({ request }) => {
+					const body = (await request.json()) as Record<string, unknown>;
 
 					// First request, initiates a new task
 					if (!body.currentBookmark) {
-						return res(
-							ctx.status(202),
-							ctx.json({
+						return HttpResponse.json(
+							{
 								success: true,
 								result: {
 									success: true,
@@ -66,14 +65,14 @@ describe("execute", () => {
 										"Uploaded part 1",
 									],
 								},
-							})
+							},
+							{ status: 202 }
 						);
 					}
 					// Subsequent request, sees that it is complete
 					else {
-						return res(
-							ctx.status(200),
-							ctx.json({
+						return HttpResponse.json(
+							{
 								success: true,
 								result: {
 									success: true,
@@ -90,15 +89,16 @@ describe("execute", () => {
 										"Finished uploading xxxx-yyyy.sql in 4 parts.",
 									],
 								},
-							})
+							},
+							{ status: 200 }
 						);
 					}
 				}
 			)
 		);
 		msw.use(
-			rest.get("https://example.com/xxxx-yyyy.sql", async (req, res, ctx) => {
-				return res(ctx.status(200), ctx.text(mockSqlContent));
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(mockSqlContent, { status: 200 });
 			})
 		);
 
