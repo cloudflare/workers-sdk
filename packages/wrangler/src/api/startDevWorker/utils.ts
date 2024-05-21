@@ -1,6 +1,7 @@
 import assert from "node:assert";
+import { readFile } from "node:fs/promises";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
-import type { Hook, StartDevWorkerOptions } from "./types";
+import type { File, Hook, ServiceFetch, StartDevWorkerOptions } from "./types";
 
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
@@ -60,10 +61,36 @@ export class MissingConfigError extends Error {
 	}
 }
 
-export function coerceBindingsToApiBindings(
-	bindings: StartDevWorkerOptions["bindings"]
-): CfWorkerInit["bindings"] {
-	const result: CfWorkerInit["bindings"] = {
+export async function getBinaryFileContents(file: File<string | Uint8Array>) {
+	if ("contents" in file) {
+		if (file.contents instanceof Buffer) {
+			return file.contents;
+		}
+		return Buffer.from(file.contents);
+	}
+	return readFile(file.path);
+}
+
+export async function getTextFileContents(file: File<string | Uint8Array>) {
+	if ("contents" in file) {
+		if (typeof file.contents === "string") {
+			return file.contents;
+		}
+		if (file.contents instanceof Buffer) {
+			return file.contents.toString();
+		}
+		return Buffer.from(file.contents).toString();
+	}
+	return readFile(file.path, "utf8");
+}
+
+export async function convertBindingsToCfWorkerInitBindings(
+	inputBindings: StartDevWorkerOptions["bindings"]
+): Promise<{
+	bindings: CfWorkerInit["bindings"];
+	fetchers: Record<string, ServiceFetch>;
+}> {
+	const bindings: CfWorkerInit["bindings"] = {
 		vars: {},
 		kv_namespaces: [],
 		send_email: [],
@@ -87,51 +114,143 @@ export function coerceBindingsToApiBindings(
 		hyperdrive: [],
 		vectorize: [],
 	};
+	const fetchers: Record<string, ServiceFetch> = {};
 
 	// TODO: handle all binding types
-	for (const [binding, info] of Object.entries(bindings ?? {})) {
+	for (const [binding, info] of Object.entries(inputBindings ?? {})) {
 		switch (info.type) {
-			case "kv":
-				result.kv_namespaces ??= [];
-				result.kv_namespaces.push({ binding, id: info.id });
+			case "plain_text": {
+				bindings.vars ??= {};
+				bindings.vars[binding] = info.value;
 				break;
-			case "var":
-				result.vars ??= {};
-				result.vars[binding] = JSON.stringify(info.value);
+			}
+			case "json": {
+				bindings.vars ??= {};
+				bindings.vars[binding] = info.value;
 				break;
-			case "r2":
-				result.r2_buckets ??= [];
-				result.r2_buckets.push({ binding, bucket_name: info.bucket_name });
+			}
+			case "kv_namespace": {
+				bindings.kv_namespaces ??= [];
+				bindings.kv_namespaces.push({ ...info, binding });
 				break;
-			case "d1":
+			}
+			case "send_email": {
+				bindings.send_email ??= [];
+				bindings.send_email.push({ ...info, name: binding });
 				break;
-			case "ai":
+			}
+			case "wasm_module": {
+				bindings.wasm_modules ??= {};
+				bindings.wasm_modules[binding] = await getBinaryFileContents(
+					info.source
+				);
 				break;
-			case "durable-object":
+			}
+			case "text_blob": {
+				bindings.text_blobs ??= {};
+				bindings.text_blobs[binding] = info.source.path as string;
 				break;
-			case "queue":
+			}
+			case "data_blob": {
+				bindings.data_blobs ??= {};
+				bindings.data_blobs[binding] = await getBinaryFileContents(info.source);
 				break;
-			case "service":
+			}
+			case "browser": {
+				bindings.browser = { binding };
 				break;
-			default:
+			}
+			case "ai": {
+				bindings.ai = { binding };
+				break;
+			}
+			case "version_metadata": {
+				bindings.version_metadata = { binding };
+				break;
+			}
+			case "durable_object_namespace": {
+				bindings.durable_objects ??= { bindings: [] };
+				bindings.durable_objects.bindings.push({ ...info, name: binding });
+				break;
+			}
+			case "queue": {
+				bindings.queues ??= [];
+				bindings.queues.push({ ...info, binding });
+				break;
+			}
+			case "r2_bucket": {
+				bindings.r2_buckets ??= [];
+				bindings.r2_buckets.push({ ...info, binding });
+				break;
+			}
+			case "d1": {
+				bindings.d1_databases ??= [];
+				bindings.d1_databases.push({ ...info, binding });
+				break;
+			}
+			case "vectorize": {
+				bindings.vectorize ??= [];
+				bindings.vectorize.push({ ...info, binding });
+				break;
+			}
+			case "constellation": {
+				bindings.constellation ??= [];
+				bindings.constellation.push({ ...info, binding });
+				break;
+			}
+			case "hyperdrive": {
+				bindings.hyperdrive ??= [];
+				bindings.hyperdrive.push({ ...info, binding });
+				break;
+			}
+			case "service": {
+				bindings.services ??= [];
+				bindings.services.push({ ...info, binding });
+				break;
+			}
+			case "fetcher": {
+				fetchers[binding] = info.fetcher;
+				break;
+			}
+			case "analytics_engine": {
+				bindings.analytics_engine_datasets ??= [];
+				bindings.analytics_engine_datasets.push({ ...info, binding });
+				break;
+			}
+			case "dispatch_namespace": {
+				bindings.dispatch_namespaces ??= [];
+				bindings.dispatch_namespaces.push({ ...info, binding });
+				break;
+			}
+			case "mtls_certificate": {
+				bindings.mtls_certificates ??= [];
+				bindings.mtls_certificates.push({ ...info, binding });
+				break;
+			}
+			case "logfwdr": {
+				bindings.logfwdr ??= { bindings: [] };
+				bindings.logfwdr.bindings.push({ ...info, name: binding });
+				break;
+			}
+			default: {
 				if (isUnsafeBindingType(info.type)) {
+					bindings.unsafe ??= {
+						bindings: [],
+						metadata: undefined,
+						capnp: undefined,
+					};
+					bindings.unsafe.bindings?.push({ ...info, name: binding });
 					break;
 				}
 
 				assertNever(info.type);
+			}
 		}
 	}
 
-	return result;
+	return { bindings, fetchers };
 }
 
-function isUnsafeBindingType(type: string): type is `unsafe-${string}` {
-	return type.startsWith("unsafe-");
+function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
+	return type.startsWith("unsafe_");
 }
-
-// function removeBindingTypeAndAddBindingName<T>(
-// 	bindingName: string,
-// 	binding: T
-// ): Omit<T, "type"> {
-// 	return binding;
-// }
