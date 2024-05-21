@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.11.37
+
+### Patch Changes
+
+- [#5674](https://github.com/cloudflare/workers-sdk/pull/5674) [`f461855`](https://github.com/cloudflare/workers-sdk/commit/f461855795dce7a12977bddffb238d075f827277) Thanks [@itsmatteomanf](https://github.com/itsmatteomanf)! - Add `modulepreload` to list of possible early hints links
+
 ## 0.11.36
 
 ### Patch Changes
