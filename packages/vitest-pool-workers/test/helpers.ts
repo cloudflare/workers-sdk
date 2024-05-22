@@ -104,7 +104,7 @@ export const test = baseTest.extend<{
 			const proc = childProcess.spawn(
 				"pnpm",
 				["exec", "vitest", "run", "--root", tmpPath, ...flags],
-				{ cwd: tmpPoolInstallationPath }
+				{ cwd: tmpPoolInstallationPath, env: getNoCIEnv() }
 			);
 			const wrapped = wrap(proc);
 			await wrapped.exitCode;
@@ -120,7 +120,7 @@ export const test = baseTest.extend<{
 			const proc = childProcess.spawn(
 				"pnpm",
 				["exec", "vitest", "dev", "--root", tmpPath, ...flags],
-				{ cwd: tmpPoolInstallationPath }
+				{ cwd: tmpPoolInstallationPath, env: getNoCIEnv() }
 			);
 			processes.push(proc);
 			return wrap(proc);
@@ -132,3 +132,18 @@ export const test = baseTest.extend<{
 		}
 	},
 });
+
+/**
+ * Get a copy of the process.env that will not be interpreted by Vitest as running in CI.
+ *
+ * This is important for the snapshot update tests to execute correctly.
+ * Vitest uses the `std-env` library's `isCI()` call to determine this.
+ * Since we currently use GitHub Actions to run our CI jobs, this is what we are turning off here.
+ * If we change CI provider then we should update this.
+ */
+function getNoCIEnv(): typeof process.env {
+	const env = { ...process.env };
+	env.CI = undefined;
+	env.GITHUB_ACTIONS = undefined;
+	return env;
+}
