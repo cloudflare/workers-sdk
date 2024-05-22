@@ -204,7 +204,9 @@ Your database may not be available to serve requests during the migration, conti
 
 			await expect(
 				runWrangler("d1 migrations apply db --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`"Failed to fetch"`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[TypeError: Failed to fetch]`
+			);
 		});
 	});
 

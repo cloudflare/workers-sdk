@@ -9,6 +9,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Mock } from "vitest";
 
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();
@@ -81,7 +82,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -132,7 +133,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -192,7 +193,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -302,7 +303,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace rename")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 2"`
+				`[Error: Not enough non-option arguments: got 0, need at least 2]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -333,7 +334,7 @@ describe("dispatch-namespace", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
-			expect((printWranglerBanner as jest.Mock).mock.calls.length).toEqual(1);
+			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});
 	});
 });

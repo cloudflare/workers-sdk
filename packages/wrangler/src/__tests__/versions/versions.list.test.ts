@@ -153,7 +153,7 @@ describe("versions list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("prints versions to stdout", async () => {
 			const result = runWrangler("versions list  --experimental-versions");

@@ -2,7 +2,9 @@ import TimeAgo from "javascript-time-ago";
 import en from "javascript-time-ago/locale/en";
 import prettyBytes from "pretty-bytes";
 
-TimeAgo.addDefaultLocale(en);
+TimeAgo.addLocale(en);
+TimeAgo.setDefaultLocale("en");
+
 const timeAgo = new TimeAgo("en-US");
 
 export const formatTimeAgo = (date: Date): string => {

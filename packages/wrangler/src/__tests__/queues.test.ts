@@ -322,7 +322,7 @@ describe("wrangler", () => {
 						"queues create testQueue --delivery-delay-secs=5 --delivery-delay-secs=10"
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Cannot specify --delivery-delay-secs multiple times"`
+					`[Error: Cannot specify --delivery-delay-secs multiple times]`
 				);
 
 				expect(requests.count).toEqual(0);
@@ -408,7 +408,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("queues delete testQueue")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Queue \\"testQueue\\" does not exist. To create it, run: wrangler queues create testQueue"`
+					`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
 				);
 
 				expect(queueNameResolveRequest.count).toEqual(1);
@@ -644,7 +644,7 @@ describe("wrangler", () => {
 							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ --retry-delay-secs=5 --retry-delay-secs=10"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Cannot specify --retry-delay-secs multiple times"`
+						`[Error: Cannot specify --retry-delay-secs multiple times]`
 					);
 
 					expect(requests.count).toEqual(0);
@@ -675,14 +675,14 @@ describe("wrangler", () => {
 							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Queue \\"testQueue\\" does not exist. To create it, run: wrangler queues create testQueue"`
+						`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
 					);
 
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(postRequest.count).toEqual(0);
 				});
 
-				xit("should show link to dash when not enabled", async () => {
+				it.skip("should show link to dash when not enabled", async () => {
 					const queueName = "testQueueId";
 					msw.use(
 						http.post(
@@ -826,7 +826,7 @@ describe("wrangler", () => {
 							"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Queue \\"testQueue\\" does not exist. To create it, run: wrangler queues create testQueue"`
+						`[Error: Queue "testQueue" does not exist. To create it, run: wrangler queues create testQueue]`
 					);
 
 					expect(queueNameResolveRequest.count).toEqual(1);
@@ -899,7 +899,7 @@ describe("wrangler", () => {
 						await expect(
 							runWrangler("queues consumer remove testQueue testScript")
 						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`"No worker consumer 'testScript' exists for queue testQueue"`
+							`[Error: No worker consumer 'testScript' exists for queue testQueue]`
 						);
 
 						expect(queueNameResolveRequest.count).toEqual(1);
@@ -979,7 +979,7 @@ describe("wrangler", () => {
 								"queues consumer remove testQueue testScript --env anotherEnvironment"
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
-							`"No worker consumer 'testScript' exists for queue testQueue"`
+							`[Error: No worker consumer 'testScript' exists for queue testQueue]`
 						);
 
 						expect(queueNameResolveRequest.count).toEqual(1);
@@ -1165,7 +1165,7 @@ describe("wrangler", () => {
 									"queues consumer remove testQueue testScript --env anotherEnvironment"
 								)
 							).rejects.toThrowErrorMatchingInlineSnapshot(
-								`"No worker consumer 'testScript' exists for queue testQueue"`
+								`[Error: No worker consumer 'testScript' exists for queue testQueue]`
 							);
 
 							expect(queueNameResolveRequest.count).toEqual(1);

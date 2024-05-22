@@ -1,9 +1,10 @@
 import { fetch } from "undici";
+import { vi } from "vitest";
 import { unstable_dev } from "../api";
 import { mockConsoleMethods } from "./helpers/mock-console";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 /**
  * a huge caveat to how testing multi-worker scripts works:
@@ -82,14 +83,14 @@ describe("multi-worker testing", () => {
 		// Spy on all the console methods
 		let logs = "";
 		// Resolve when we see `[mf:inf] GET / 200 OK` message. This log is sent in
-		// a `waitUntil()`, which may execute after tests complete. To stop Jest
+		// a `waitUntil()`, which may execute after tests complete. To stop Vitest
 		// complaining about logging after a test, wait for this log.
 		let requestResolve: () => void;
 		const requestPromise = new Promise<void>(
 			(resolve) => (requestResolve = resolve)
 		);
 		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
-			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+			vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
 				// Regexp ignores colour codes
 				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args))) {

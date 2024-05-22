@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -220,7 +221,9 @@ describe("wrangler pages secret", () => {
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("pages secret put the-key --project some-project-name")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Error in stdin stream"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Error in stdin stream]`
+				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
@@ -237,7 +240,7 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"A request to the Cloudflare API (/memberships) failed."`
+						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);
 				});
 
@@ -246,9 +249,9 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
-				                  "Failed to automatically retrieve account IDs for the logged in user.
-				                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
-			                `);
+						[Error: Failed to automatically retrieve account IDs for the logged in user.
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.]
+					`);
 				});
 
 				it("should error if a user has multiple accounts, and has not specified an account", async () => {
@@ -270,13 +273,13 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`account-name-1\`: \`account-id-1\`
-				  \`account-name-2\`: \`account-id-2\`
-				  \`account-name-3\`: \`account-id-3\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`account-name-1\`: \`account-id-1\`
+						  \`account-name-2\`: \`account-id-2\`
+						  \`account-name-3\`: \`account-id-3\`]
+					`);
 				});
 			});
 		});
@@ -504,9 +507,9 @@ describe("wrangler pages secret", () => {
 		}
 		it("should fail secret bulk w/ no pipe or JSON input", async () => {
 			mockProjectRequests([]);
-			jest
-				.spyOn(readline, "createInterface")
-				.mockImplementation(() => null as unknown as Interface);
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() => null as unknown as Interface
+			);
 			await expect(
 				runWrangler(`pages secret bulk --project some-project-name`)
 			).rejects.toMatchInlineSnapshot(
@@ -515,7 +518,7 @@ describe("wrangler pages secret", () => {
 		});
 
 		it("should use secret bulk w/ pipe input", async () => {
-			jest.spyOn(readline, "createInterface").mockImplementation(
+			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
 					JSON.stringify({
@@ -658,7 +661,7 @@ describe("wrangler pages secret", () => {
 					"pages secret bulk ./secret.json --project some-project-name"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"🚨 7 secrets failed to upload"`
+				`[Error: 🚨 7 secrets failed to upload]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`

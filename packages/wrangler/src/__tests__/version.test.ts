@@ -8,7 +8,7 @@ describe("version", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	// We cannot test output of version banner,
-	// as it is disabled in jest environments
+	// as it is disabled in testing environments
 
 	// it("should output version banner", async () => {
 	// 	await runWrangler("-v");

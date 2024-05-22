@@ -103,7 +103,7 @@ describe("cloudchamber modify", () => {
 		await expect(
 			runWrangler("cloudchamber modify --image hello:world")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"there needs to be a deploymentId when you can't interact with the wrangler cli"`
+			`[Error: there needs to be a deploymentId when you can't interact with the wrangler cli]`
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions

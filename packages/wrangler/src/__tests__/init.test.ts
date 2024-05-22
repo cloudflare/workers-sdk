@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { File, FormData } from "undici";
+import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
@@ -19,6 +20,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
 import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
@@ -41,10 +43,10 @@ describe("init", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	afterEach(() => {
@@ -281,7 +283,7 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --type javascript")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The --type option is no longer supported."`
+					`[Error: The --type option is no longer supported.]`
 				);
 			});
 
@@ -289,32 +291,32 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --type rust")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The --type option is no longer supported."`
+					`[Error: The --type option is no longer supported.]`
 				);
 			});
 
 			it("should error if `--type webpack` is used", async () => {
 				await expect(runWrangler("init --type webpack")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-              "The --type option is no longer supported.
-              If you wish to use webpack then you will need to create a custom build."
-            `);
+					[Error: The --type option is no longer supported.
+					If you wish to use webpack then you will need to create a custom build.]
+				`);
 			});
 
 			it("should error if `--site` is used", async () => {
 				await expect(runWrangler("init --site")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-              "The --site option is no longer supported.
-              If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
+					[Error: The --site option is no longer supported.
+					If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
 
-              \`\`\`
-              git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
-              cd my-site
-              \`\`\`
+					\`\`\`
+					git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
+					cd my-site
+					\`\`\`
 
-              Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
-              Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/."
-            `);
+					Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
+					Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.]
+				`);
 			});
 		});
 
@@ -3320,9 +3322,9 @@ describe("init", () => {
 				});
 
 				const mockDate = "2000-01-01";
-				jest
-					.spyOn(Date.prototype, "toISOString")
-					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+				vi.spyOn(Date.prototype, "toISOString").mockImplementation(
+					() => `${mockDate}T00:00:00.000Z`
+				);
 
 				mockConfirm(
 					{

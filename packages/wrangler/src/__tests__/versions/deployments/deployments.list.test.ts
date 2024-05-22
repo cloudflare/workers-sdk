@@ -196,7 +196,7 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("prints deployments to stdout", async () => {
 			const result = runWrangler("deployments list  --experimental-versions");

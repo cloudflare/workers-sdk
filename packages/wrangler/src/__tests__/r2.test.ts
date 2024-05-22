@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
-import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -29,7 +28,9 @@ describe("r2", () => {
 		it("should show the correct help when an invalid command is passed", async () => {
 			await expect(() =>
 				runWrangler("r2 bucket foo")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: foo]`
+			);
 			expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
@@ -102,7 +103,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -135,7 +136,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -217,7 +218,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create testBucket -s Foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed."`
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 				"Creating bucket testBucket with default storage class set to Foo.
@@ -238,7 +239,9 @@ describe("r2", () => {
 			it("should error if invalid command is passed", async () => {
 				await expect(
 					runWrangler("r2 bucket update foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
 			wrangler r2 bucket update
@@ -267,7 +270,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket update storage-class testBucket")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Missing required argument: storage-class"`
+						`[Error: Missing required argument: storage-class]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -300,7 +303,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket update storage-class testBucket -s Foo")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed."`
+						`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Updating bucket testBucket to Foo default storage class.
@@ -333,7 +336,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket delete")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -365,7 +368,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket delete abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -425,7 +428,9 @@ describe("r2", () => {
 			it("should show the correct help when an invalid command is passed", async () => {
 				await expect(() =>
 					runWrangler("r2 bucket sippy foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
@@ -523,7 +528,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy enable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -567,7 +572,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy disable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -619,7 +624,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy get")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1027,12 +1032,9 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-				"Error: Wrangler only supports uploading files up to ${prettyBytes(
-					MAX_UPLOAD_SIZE,
-					{ binary: true }
-				)} in size
-				wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
-			`);
+					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
+					wormhole-img.png is 301 MiB in size]
+				`);
 			});
 
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
@@ -1104,7 +1106,7 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Arguments pipe and file are mutually exclusive"`
+					`[Error: Arguments pipe and file are mutually exclusive]`
 				);
 
 				expect(std.err).toMatchInlineSnapshot(`

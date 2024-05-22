@@ -41,7 +41,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Could not automatically determine proxy port. Please specify the proxy port with --proxy."`
+				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -57,7 +57,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Could not automatically determine proxy port. Please specify the proxy port with --proxy."`
+				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -82,7 +82,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`."`
+				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

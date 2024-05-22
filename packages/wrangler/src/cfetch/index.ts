@@ -162,6 +162,10 @@ function throwFetchError(
 	resource: string,
 	response: FetchResult<unknown>
 ): never {
+	// This is an error from within an MSW handler
+	if (typeof vitest !== "undefined" && !("errors" in response)) {
+		throw response;
+	}
 	for (const error of response.errors) {
 		maybeThrowFriendlyError(error);
 	}

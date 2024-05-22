@@ -132,7 +132,7 @@ describe("vectorize commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -148,16 +148,15 @@ describe("vectorize commands", () => {
 			"vectorize create some-index --dimensions=768 --metric=cosine"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating index: 'some-index'
-		✅ Successfully created a new Vectorize index: 'test-index'
-		📋 To start querying from a Worker, add the following binding configuration into
-		 'wrangler.toml':
+			"🚧 Creating index: 'some-index'
+			✅ Successfully created a new Vectorize index: 'test-index'
+			📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':
 
-		[[vectorize]]
-		binding = \\"VECTORIZE_INDEX\\" # available within your Worker on
-		env.VECTORIZE_INDEX
-		index_name = \\"test-index\\""
-	`);
+			[[vectorize]]
+			binding = \\"VECTORIZE_INDEX\\"
+			index_name = \\"test-index\\"
+			"
+		`);
 	});
 
 	it("should handle listing vectorize indexes", async () => {

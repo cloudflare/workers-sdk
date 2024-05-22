@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -75,7 +76,7 @@ describe("constellation commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);

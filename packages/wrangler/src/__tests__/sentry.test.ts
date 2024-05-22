@@ -40,6 +40,7 @@ describe("sentry", () => {
 		msw.resetHandlers();
 	});
 	describe("non interactive", () => {
+		beforeEach(() => setIsTTY(false));
 		it("should not hit sentry in normal usage", async () => {
 			await runWrangler("version");
 			expect(sentryRequests?.length).toEqual(0);
@@ -60,12 +61,12 @@ describe("sentry", () => {
 				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-"Getting User settings...
+				"Getting User settings...
 
-[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-? Would you like to report this error to Cloudflare?
-🤖 Using fallback value in non-interactive context: no"
-`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				? Would you like to report this error to Cloudflare?
+				🤖 Using fallback value in non-interactive context: no"
+			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 	});
@@ -192,6 +193,10 @@ describe("sentry", () => {
 			const fakeInstallPath = "/wrangler/";
 			for (const exception of event.data.exception?.values ?? []) {
 				for (const frame of exception.stacktrace?.frames ?? []) {
+					if (frame.module.startsWith("@mswjs")) {
+						frame.module =
+							"@mswjs.interceptors.src.interceptors.fetch:index.ts";
+					}
 					if (frame.filename === undefined) {
 						continue;
 					}

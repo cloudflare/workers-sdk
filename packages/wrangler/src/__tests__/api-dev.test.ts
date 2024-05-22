@@ -1,11 +1,13 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
+import { vi } from "vitest";
 import { unstable_dev } from "../api";
 import { printWranglerBanner } from "../update-check";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { Mock } from "vitest";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 describe("unstable_dev", () => {
 	it("should return Hello World", async () => {
@@ -72,7 +74,7 @@ describe("unstable_dev", () => {
 			const resp = await worker.fetch();
 			expect(resp.status).toBe(200);
 
-			expect((printWranglerBanner as jest.Mock).mock.calls[0][0]).toBe(false);
+			expect((printWranglerBanner as Mock).mock.calls[0][0]).toBe(false);
 
 			await worker.stop();
 		});
@@ -92,7 +94,7 @@ describe("unstable_dev", () => {
 			const resp = await worker.fetch();
 			expect(resp.status).toBe(200);
 
-			expect((printWranglerBanner as jest.Mock).mock.calls[0][0]).toBe(true);
+			expect((printWranglerBanner as Mock).mock.calls[0][0]).toBe(true);
 
 			await worker.stop();
 		});

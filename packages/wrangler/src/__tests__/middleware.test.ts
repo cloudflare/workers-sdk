@@ -2,13 +2,14 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import * as fs from "node:fs";
 import path from "path";
 import dedent from "ts-dedent";
+import { vi } from "vitest";
 import { unstable_dev } from "../api";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 /*
  * This file contains inline comments with the word "javascript"
@@ -992,7 +993,6 @@ describe("middleware", () => {
 		`);
 		});
 		it("should respond correctly with D1 databases, scheduled testing, and formatted dev errors", async () => {
-			jest.setTimeout(5_000);
 			// Kitchen sink test to check interaction between multiple middlewares
 			const scriptContent = `
 			export default {
