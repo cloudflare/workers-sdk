@@ -6,6 +6,12 @@ import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
+vi.mock("node:fs", async (importOriginal) => {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	const fsOriginal = await importOriginal<typeof import("node:fs")>();
+	return { ...fsOriginal };
+});
+
 describe("getHttpsOptions()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
@@ -98,7 +104,7 @@ describe("getHttpsOptions()", () => {
 
 	it("should warn if not able to write to the cache (legacy config path)", async () => {
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
-		fs.chmodSync(path.join(os.homedir(), ".wrangler"), 0o444);
+		await mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(
 			fs.existsSync(
@@ -113,17 +119,19 @@ describe("getHttpsOptions()", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`"Generating new self-signed certificate..."`
 		);
-		expect(std.warn).toContain(
-			`Unable to cache generated self-signed certificate in home/.wrangler/local-cert`
-		);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in home/.wrangler/local-cert.[0m
+
+			  ERROR: Cannot write file
+
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		fs.rmSync(path.join(os.homedir(), ".wrangler"), { recursive: true });
 	});
 
 	it("should warn if not able to write to the cache", async () => {
-		fs.mkdirSync(getGlobalWranglerConfigPath());
-
-		fs.chmodSync(getGlobalWranglerConfigPath(), 0o444);
+		await mockWriteFileSyncThrow(/\.pem$/);
 
 		await getHttpsOptions();
 		expect(
@@ -139,9 +147,28 @@ describe("getHttpsOptions()", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`"Generating new self-signed certificate..."`
 		);
-		expect(std.warn).toContain(
-			`Unable to cache generated self-signed certificate in test-xdg-config/local-cert`
-		);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in test-xdg-config/local-cert.[0m
+
+			  ERROR: Cannot write file
+
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });
+
+async function mockWriteFileSyncThrow(matcher: RegExp) {
+	const originalWriteFileSync =
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		(await vi.importActual<typeof import("node:fs")>("node:fs")).writeFileSync;
+	vi.spyOn(fs, "writeFileSync").mockImplementation(
+		(filePath, data, options) => {
+			if (matcher.test(filePath.toString())) {
+				throw new Error("ERROR: Cannot write file");
+			} else {
+				return originalWriteFileSync(filePath, data, options);
+			}
+		}
+	);
+}
