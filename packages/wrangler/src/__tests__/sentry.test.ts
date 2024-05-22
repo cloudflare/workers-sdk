@@ -203,7 +203,10 @@ describe("sentry", () => {
 						continue;
 					}
 					frame.filename =
-						fakeInstallPath + frame.filename.substring(wranglerPackageIndex);
+						fakeInstallPath +
+						frame.filename
+							.substring(wranglerPackageIndex)
+							.replaceAll("\\", "/");
 					continue;
 				}
 			}
