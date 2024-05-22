@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -204,31 +204,10 @@ describe("vectorize commands", () => {
 /** Create a mock handler for the Vectorize API */
 function mockVectorizeRequest() {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/vectorize/indexes/test-index",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								created_on: "2023-09-25T13:02:18.00268Z",
-								modified_on: "2023-09-25T13:02:18.00268Z",
-								name: "test-index",
-								description: "",
-								config: {
-									dimensions: 768,
-									metric: "cosine",
-								},
-							},
-							true
-						)
-					)
-				);
-			}
-		),
-		rest.post("*/accounts/:accountId/vectorize/indexes", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						{
 							created_on: "2023-09-25T13:02:18.00268Z",
@@ -242,18 +221,42 @@ function mockVectorizeRequest() {
 						},
 						true
 					)
-				)
-			);
-		}),
-		rest.delete(
-			"*/accounts/:accountId/vectorize/indexes/test-index",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+				);
+			},
+			{ once: true }
 		),
-		rest.get("*/accounts/:accountId/vectorize/indexes", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.post(
+			"*/accounts/:accountId/vectorize/indexes",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							created_on: "2023-09-25T13:02:18.00268Z",
+							modified_on: "2023-09-25T13:02:18.00268Z",
+							name: "test-index",
+							description: "",
+							config: {
+								dimensions: 768,
+								metric: "cosine",
+							},
+						},
+						true
+					)
+				);
+			},
+			{ once: true }
+		),
+		http.delete(
+			"*/accounts/:accountId/vectorize/indexes/test-index",
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/vectorize/indexes",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -279,8 +282,9 @@ function mockVectorizeRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }

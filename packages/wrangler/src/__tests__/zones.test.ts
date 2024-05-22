@@ -1,23 +1,29 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { getHostFromUrl, getZoneForRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+		http.get(
+			"*/zones",
+			({ request }) => {
+				const url = new URL(request.url);
 
-			return res.once(
-				ctx.status(200),
-				ctx.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: zones,
-				})
-			);
-		})
+				expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
+
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: zones,
+					},
+					{ status: 200 }
+				);
+			},
+			{ once: true }
+		)
 	);
 }
 

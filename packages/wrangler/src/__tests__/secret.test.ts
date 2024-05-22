@@ -1,10 +1,8 @@
-import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import * as TOML from "@iarna/toml";
-import { MockedRequest, rest } from "msw";
-import { FormData } from "undici";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -12,10 +10,8 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
-import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { RestRequest } from "msw";
 import type { Interface } from "node:readline";
 
 function createFetchResult(result: unknown, success = true) {
@@ -31,9 +27,13 @@ export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(accounts)));
-		})
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult(accounts));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -56,23 +56,27 @@ describe("wrangler secret", () => {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
 			msw.use(
-				rest.put(
+				http.put(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
-					async (req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						expect(req.params.scriptName).toEqual(
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
 							legacyEnv && env ? `script-name-${env}` : "script-name"
 						);
 						if (!legacyEnv) {
-							expect(req.params.envName).toEqual(env);
+							expect(params.envName).toEqual(env);
 						}
-						const { name, text, type } = await req.json();
+						const { name, text, type } = (await request.json()) as Record<
+							string,
+							string
+						>;
 						expect(type).toEqual("secret_text");
 						expect(name).toEqual(input.name);
 						expect(text).toEqual(input.text);
 
-						return res.once(ctx.json(createFetchResult({ name, type })));
-					}
+						return HttpResponse.json(createFetchResult({ name, type }));
+					},
+					{ once: true }
 				)
 			);
 		}
@@ -318,20 +322,21 @@ describe("wrangler secret", () => {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
 			msw.use(
-				rest.delete(
+				http.delete(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						expect(req.params.scriptName).toEqual(
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
 							legacyEnv && env ? `script-name-${env}` : "script-name"
 						);
 						if (!legacyEnv) {
 							if (env) {
-								expect(req.params.secretName).toEqual(input.secretName);
+								expect(params.secretName).toEqual(input.secretName);
 							}
 						}
-						return res.once(ctx.json(createFetchResult(null)));
-					}
+						return HttpResponse.json(createFetchResult(null));
+					},
+					{ once: true }
 				)
 			);
 		}
@@ -421,28 +426,27 @@ describe("wrangler secret", () => {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
-						expect(req.params.scriptName).toEqual(
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(
 							legacyEnv && env ? `script-name-${env}` : "script-name"
 						);
 						if (!legacyEnv) {
-							expect(req.params.envName).toEqual(env);
+							expect(params.envName).toEqual(env);
 						}
 
-						return res.once(
-							ctx.json(
-								createFetchResult([
-									{
-										name: "the-secret-name",
-										type: "secret_text",
-									},
-								])
-							)
+						return HttpResponse.json(
+							createFetchResult([
+								{
+									name: "the-secret-name",
+									type: "secret_text",
+								},
+							])
 						);
-					}
+					},
+					{ once: true }
 				)
 			);
 		}
@@ -539,22 +543,22 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(ctx.json(createFetchResult({ bindings: [] })));
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
 					}
 				)
 			);
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(ctx.json(createFetchResult(null)));
+						return HttpResponse.json(createFetchResult(null));
 					}
 				)
 			);
@@ -581,22 +585,22 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(ctx.json(createFetchResult({ bindings: [] })));
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
 					}
 				)
 			);
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(ctx.json(createFetchResult(null)));
+						return HttpResponse.json(createFetchResult(null));
 					}
 				)
 			);
@@ -654,22 +658,22 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(ctx.json(createFetchResult({ bindings: [] })));
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
 					}
 				)
 			);
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res.networkError(`Failed to create secret`);
+						return HttpResponse.json(null);
 					}
 				)
 			);
@@ -705,22 +709,22 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(ctx.json(createFetchResult({ bindings: [] })));
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
 					}
 				)
 			);
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res.networkError(`Failed to create secret`);
+						return HttpResponse.json(null);
 					}
 				)
 			);
@@ -757,44 +761,40 @@ describe("wrangler secret", () => {
 			);
 
 			msw.use(
-				rest.get(
+				http.get(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						return res(
-							ctx.json(
-								createFetchResult({
-									bindings: [
-										{
-											type: "plain_text",
-											name: "env_var",
-											text: "the content",
-										},
-										{
-											type: "json",
-											name: "another_var",
-											json: { some: "stuff" },
-										},
-										{ type: "secret_text", name: "secret-name-1" },
-										{ type: "secret_text", name: "secret-name-2" },
-										{ type: "secret_text", name: "secret-name-4" },
-									],
-								})
-							)
+						return HttpResponse.json(
+							createFetchResult({
+								bindings: [
+									{
+										type: "plain_text",
+										name: "env_var",
+										text: "the content",
+									},
+									{
+										type: "json",
+										name: "another_var",
+										json: { some: "stuff" },
+									},
+									{ type: "secret_text", name: "secret-name-1" },
+									{ type: "secret_text", name: "secret-name-2" },
+									{ type: "secret_text", name: "secret-name-4" },
+								],
+							})
 						);
 					}
 				)
 			);
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
-					async (req, res, ctx) => {
-						expect(req.params.accountId).toEqual("some-account-id");
+					async ({ request, params }) => {
+						expect(params.accountId).toEqual("some-account-id");
 
-						const formBody = await (
-							req as MockedRequest as RestRequestWithFormData
-						).formData();
+						const formBody = await request.formData();
 						const settings = formBody.get("settings");
 						expect(settings).not.toBeNull();
 						const parsedSettings = JSON.parse(settings as string);
@@ -819,7 +819,7 @@ describe("wrangler secret", () => {
 						expect(parsedSettings).not.toHaveProperty(["bindings", 0, "text"]);
 						expect(parsedSettings).not.toHaveProperty(["bindings", 1, "json"]);
 
-						return res(ctx.json(createFetchResult(null)));
+						return HttpResponse.json(createFetchResult(null));
 					}
 				)
 			);
@@ -839,38 +839,3 @@ describe("wrangler secret", () => {
 		});
 	});
 });
-
-FormData.prototype.toString = mockFormDataToString;
-export interface RestRequestWithFormData extends MockedRequest, RestRequest {
-	formData(): Promise<FormData>;
-}
-(MockedRequest.prototype as RestRequestWithFormData).formData =
-	mockFormDataFromString;
-
-function mockFormDataToString(this: FormData) {
-	const entries = [];
-	for (const [key, value] of this.entries()) {
-		if (value instanceof Blob) {
-			const reader = new FileReaderSync();
-			reader.readAsText(value);
-			const result = reader.result;
-			entries.push([key, result]);
-		} else {
-			entries.push([key, value]);
-		}
-	}
-	return JSON.stringify({
-		__formdata: entries,
-	});
-}
-
-async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
-	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
-
-	const form = new FormData();
-	for (const [key, value] of __formdata) {
-		form.set(key, value);
-	}
-	return form;
-}

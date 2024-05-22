@@ -1,10 +1,11 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
 
 export const mswSuccessUserHandlers = [
-	rest.get("*/user", (_, response, cxt) => {
-		return response.once(
-			cxt.json(
+	http.get(
+		"*/user",
+		() => {
+			return HttpResponse.json(
 				createFetchResult({
 					id: "7c5dae5552338874e5053f2534d2767a",
 					email: "user@example.com",
@@ -19,23 +20,27 @@ export const mswSuccessUserHandlers = [
 					two_factor_authentication_enabled: false,
 					suspended: false,
 				})
-			)
-		);
-	}),
-	rest.get("*/accounts", (_, response, cxt) => {
-		return response.once(
-			cxt.json(
+			);
+		},
+		{ once: true }
+	),
+	http.get(
+		"*/accounts",
+		() => {
+			return HttpResponse.json(
 				createFetchResult([
 					{ name: "Account One", id: "account-1" },
 					{ name: "Account Two", id: "account-2" },
 					{ name: "Account Three", id: "account-3" },
 				])
-			)
-		);
-	}),
-	rest.get("*/memberships", (_, response, context) => {
-		return response.once(
-			context.json(
+			);
+		},
+		{ once: true }
+	),
+	http.get(
+		"*/memberships",
+		() => {
+			return HttpResponse.json(
 				createFetchResult([
 					{
 						id: "membership-id-1",
@@ -46,7 +51,8 @@ export const mswSuccessUserHandlers = [
 						account: { id: "account-id-2", name: "Enterprise Account" },
 					},
 				])
-			)
-		);
-	}),
+			);
+		},
+		{ once: true }
+	),
 ];

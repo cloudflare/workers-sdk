@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -49,11 +49,12 @@ describe("cloudchamber delete", () => {
 	it("should delete deployment (detects no interactivity)", async () => {
 		setIsTTY(false);
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/deployments/1234/v2",
-				async (_request, response, context) => {
-					return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-				}
+				async () => {
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+				},
+				{ once: true }
 			)
 		);
 		await runWrangler("cloudchamber delete 1234");

@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -56,10 +56,14 @@ describe("cloudchamber list", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.get("*/deployments/v2", async (request, response, context) => {
-				expect(await request.text()).toEqual("");
-				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX));
-			})
+			http.get(
+				"*/deployments/v2",
+				async ({ request }) => {
+					expect(await request.text()).toEqual("");
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX);
+				},
+				{ once: true }
+			)
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("cloudchamber list");

@@ -1,5 +1,5 @@
 import MockWebSocket from "jest-websocket-mock";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -754,13 +754,12 @@ type MockAPI = {
 function mockListDeployments(): RequestCounter {
 	const requests: RequestCounter = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments`,
-			(_, res, ctx) => {
+			() => {
 				requests.count++;
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
@@ -783,9 +782,11 @@ function mockListDeployments(): RequestCounter {
 								project_name: "mock-project",
 							},
 						],
-					})
+					},
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 
@@ -809,13 +810,12 @@ type RequestCounter = {
 function mockCreateTailRequest(): RequestInit[] {
 	const requests: RequestInit[] = [];
 	msw.use(
-		rest.post(
+		http.post(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails`,
-			async (req, res, ctx) => {
-				requests.push(await req.json());
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+			async ({ request }) => {
+				requests.push((await request.json()) as RequestInit);
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
@@ -824,9 +824,11 @@ function mockCreateTailRequest(): RequestInit[] {
 							url: websocketURL,
 							expires_at: mockTailExpiration,
 						},
-					})
+					},
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 
@@ -871,15 +873,16 @@ const mockEmailEventSize = 45416;
 function mockDeleteTailRequest(): RequestCounter {
 	const requests = { count: 0 };
 	msw.use(
-		rest.delete(
+		http.delete(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails/:tailId`,
-			(_, res, ctx) => {
+			() => {
 				requests.count++;
-				return res.once(
-					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: null })
+				return HttpResponse.json(
+					{ success: true, errors: [], messages: [], result: null },
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 

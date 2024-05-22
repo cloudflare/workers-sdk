@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { fetchGraphqlResult } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
@@ -12,17 +12,17 @@ describe("fetchGraphqlResult", () => {
 	it("should make a request against the graphql endpoint by default", async () => {
 		mockOAuthServerCallback();
 		msw.use(
-			rest.post("*/graphql", async (req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
+			http.post("*/graphql", async () => {
+				return HttpResponse.json(
+					{
 						data: {
 							viewer: {
 								__typename: "viewer",
 							},
 						},
 						errors: null,
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);
@@ -43,10 +43,9 @@ describe("fetchGraphqlResult", () => {
 		mockOAuthServerCallback();
 		const now = new Date().toISOString();
 		msw.use(
-			rest.post("*/graphql", async (req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
+			http.post("*/graphql", async () => {
+				return HttpResponse.json(
+					{
 						data: null,
 						errors: [
 							{
@@ -57,7 +56,8 @@ describe("fetchGraphqlResult", () => {
 								},
 							},
 						],
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);

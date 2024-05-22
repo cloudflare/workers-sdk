@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -49,17 +49,19 @@ describe("cloudchamber image", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.post("*/registries", async (request, response, context) => {
-				expect(await request.json()).toEqual({
-					domain: "docker.io",
-					is_public: false,
-				});
-				return response.once(
-					context.json({
+			http.post(
+				"*/registries",
+				async ({ request }) => {
+					expect(await request.json()).toEqual({
 						domain: "docker.io",
-					})
-				);
-			})
+						is_public: false,
+					});
+					return HttpResponse.json({
+						domain: "docker.io",
+					});
+				},
+				{ once: true }
+			)
 		);
 
 		await runWrangler(
@@ -79,15 +81,14 @@ describe("cloudchamber image", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.post(
+			http.post(
 				"*/registries/docker.io/credentials",
-				async (request, response, context) => {
-					return response.once(
-						context.json({
-							password: "jwt",
-						})
-					);
-				}
+				async () => {
+					return HttpResponse.json({
+						password: "jwt",
+					});
+				},
+				{ once: true }
 			)
 		);
 

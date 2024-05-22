@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -33,17 +33,19 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedTitle: string) {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/storage/kv/namespaces",
-						async (req, res, ctx) => {
-							expect(req.params.accountId).toEqual("some-account-id");
-							const title = (await req.json()).title as string;
+						async ({ request, params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							const title = ((await request.json()) as Record<string, string>)
+								.title;
 							expect(title).toEqual(expectedTitle);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult({ id: "some-namespace-id" }))
+							return HttpResponse.json(
+								createFetchResult({ id: "some-namespace-id" }),
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 			}
@@ -164,25 +166,23 @@ describe("wrangler", () => {
 			function mockListRequest(namespaces: KVNamespaceInfo[]) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/storage/kv/namespaces",
-						async (req, res, ctx) => {
-							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.url.searchParams.get("per_page")).toEqual("100");
-							expect(req.url.searchParams.get("order")).toEqual("title");
-							expect(req.url.searchParams.get("direction")).toEqual("asc");
-							expect(req.url.searchParams.get("page")).toEqual(
-								`${requests.count}`
-							);
+						async ({ request, params }) => {
+							const url = new URL(request.url);
 
-							const pageSize = Number(req.url.searchParams.get("per_page"));
-							const page = Number(req.url.searchParams.get("page"));
-							return res(
-								ctx.json(
-									createFetchResult(
-										namespaces.slice((page - 1) * pageSize, page * pageSize)
-									)
+							requests.count++;
+							expect(params.accountId).toEqual("some-account-id");
+							expect(url.searchParams.get("per_page")).toEqual("100");
+							expect(url.searchParams.get("order")).toEqual("title");
+							expect(url.searchParams.get("direction")).toEqual("asc");
+							expect(url.searchParams.get("page")).toEqual(`${requests.count}`);
+
+							const pageSize = Number(url.searchParams.get("per_page"));
+							const page = Number(url.searchParams.get("page"));
+							return HttpResponse.json(
+								createFetchResult(
+									namespaces.slice((page - 1) * pageSize, page * pageSize)
 								)
 							);
 						}
@@ -221,13 +221,15 @@ describe("wrangler", () => {
 			function mockDeleteRequest(expectedNamespaceId: string) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId",
-						(req, res, ctx) => {
+						({ params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -310,11 +312,13 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-						(req, res, ctx) => {
+						({ request, params }) => {
+							const url = new URL(request.url);
+
 							requests.count++;
-							const { accountId, namespaceId, key } = req.params;
+							const { accountId, namespaceId, key } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(namespaceId).toEqual(expectedNamespaceId);
 							expect(encodeURIComponent(key as string)).toEqual(expectedKV.key);
@@ -330,20 +334,22 @@ describe("wrangler", () => {
 							// 	expect(body).toEqual(expectedKV.value);
 							// }
 							if (expectedKV.expiration !== undefined) {
-								expect(req.url.searchParams.get("expiration")).toEqual(
+								expect(url.searchParams.get("expiration")).toEqual(
 									`${expectedKV.expiration}`
 								);
 							} else {
-								expect(req.url.searchParams.has("expiration")).toBe(false);
+								expect(url.searchParams.has("expiration")).toBe(false);
 							}
 							if (expectedKV.expiration_ttl) {
-								expect(req.url.searchParams.get("expiration_ttl")).toEqual(
+								expect(url.searchParams.get("expiration_ttl")).toEqual(
 									`${expectedKV.expiration_ttl}`
 								);
 							} else {
-								expect(req.url.searchParams.has("expiration_ttl")).toBe(false);
+								expect(url.searchParams.has("expiration_ttl")).toBe(false);
 							}
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -1232,19 +1238,21 @@ describe("wrangler", () => {
 
 				it("should recommend using a configuration if unable to fetch memberships", async () => {
 					msw.use(
-						rest.get("*/memberships", (req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json(
+						http.get(
+							"*/memberships",
+							() => {
+								return HttpResponse.json(
 									createFetchResult(null, false, [
 										{
 											code: 9109,
 											message: "Uauthorized to access requested resource",
 										},
-									])
-								)
-							);
-						})
+									]),
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
 					);
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
@@ -1278,18 +1286,18 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-						(req, res, ctx) => {
+						({ params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							expect(req.params.key).toEqual(expectedKey);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult(null))
-							);
-						}
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(params.key).toEqual(expectedKey);
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
+						},
+						{ once: true }
 					)
 				);
 				return requests;
@@ -1379,19 +1387,21 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-						async (req, res, ctx) => {
+						async ({ request, params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							expect(await req.json()).toEqual(
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(await request.json()).toEqual(
 								expectedKeyValues.slice(
 									(requests.count - 1) * 5000,
 									requests.count * 5000
 								)
 							);
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -1524,22 +1534,24 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-						async (req, res, ctx) => {
+						async ({ request, params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							expect(req.headers.get("Content-Type")).toEqual(
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(request.headers.get("Content-Type")).toEqual(
 								"application/json"
 							);
-							expect(await req.json()).toEqual(
+							expect(await request.json()).toEqual(
 								expectedKeys.slice(
 									(requests.count - 1) * 5000,
 									requests.count * 5000
 								)
 							);
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -1699,16 +1711,19 @@ function setMockFetchKVGetValue(
 	value: string | Buffer
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(accountId);
-				expect(req.params.namespaceId).toEqual(namespaceId);
-				// Getting the key from params decodes it so we need to grab the encoded key from the URL
-				expect(req.url.toString().split("/").pop()).toBe(key);
+			({ request, params }) => {
+				const url = new URL(request.url);
 
-				return res.once(ctx.status(200), ctx.body(value));
-			}
+				expect(params.accountId).toEqual(accountId);
+				expect(params.namespaceId).toEqual(namespaceId);
+				// Getting the key from params decodes it so we need to grab the encoded key from the URL
+				expect(url.toString().split("/").pop()).toBe(key);
+
+				return new HttpResponse(value, { status: 200 });
+			},
+			{ once: true }
 		)
 	);
 }
@@ -1730,9 +1745,13 @@ function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(accounts)));
-		})
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult(accounts));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -1745,36 +1764,35 @@ function mockKeyListRequest(
 	const requests = { count: 0 };
 	// See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
-			(req, res, ctx) => {
+			({ request, params }) => {
+				const url = new URL(request.url);
+
 				requests.count++;
 				let result;
 				let cursor;
 
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
 
 				if (expectedKeys.length <= keysPerRequest) {
 					result = expectedKeys;
 				} else {
-					const start =
-						parseInt(req.url.searchParams.get("cursor") ?? "0") || 0;
+					const start = parseInt(url.searchParams.get("cursor") ?? "0") || 0;
 					const end = start + keysPerRequest;
 					cursor = end < expectedKeys.length ? end : blankCursorValue;
 					result = expectedKeys.slice(start, end);
 				}
-				return res(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result,
-						result_info: {
-							cursor,
-						},
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result,
+					result_info: {
+						cursor,
+					},
+				});
 			}
 		)
 	);

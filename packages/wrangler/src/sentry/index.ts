@@ -118,6 +118,7 @@ export function setupSentry() {
 							continue;
 						}
 						const nodeModulesIndex = frame.filename.indexOf("node_modules");
+
 						if (nodeModulesIndex === -1) {
 							continue;
 						}

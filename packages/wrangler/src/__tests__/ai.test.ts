@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -248,9 +248,10 @@ describe("ai commands", () => {
 /** Create a mock handler for AI API */
 function mockAIListFinetuneRequest() {
 	msw.use(
-		rest.get("*/accounts/:accountId/ai/finetunes", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/ai/finetunes",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -286,17 +287,19 @@ function mockAIListFinetuneRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }
 
 function mockAISearchRequest() {
 	msw.use(
-		rest.get("*/accounts/:accountId/ai/models/search", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/ai/models/search",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -322,17 +325,19 @@ function mockAISearchRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }
 
 function mockAIOverflowRequest() {
 	msw.use(
-		rest.get("*/accounts/:accountId/ai/models/search", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/ai/models/search",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -359,528 +364,532 @@ function mockAIOverflowRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }
 
 function mockAIPaginatedRequest() {
 	msw.use(
-		rest.get("*/accounts/:accountId/ai/models/search", (req, res, ctx) => {
-			const json = ctx.json(
-				createFetchResult(
-					[
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+		http.get(
+			"*/accounts/:accountId/ai/models/search",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						[
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-						{
-							id: "429b9e8b-d99e-44de-91ad-706cf8183658",
-							source: 1,
-							task: null,
-							tags: [],
-							name: "@cloudflare/embeddings_bge_large_en",
-							description: null,
-						},
-						{
-							id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
-							source: 1,
-							task: {
-								id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
-								name: "Image Classification",
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
 								description: null,
 							},
-							tags: [],
-							name: "@cloudflare/resnet50",
-							description: null,
-						},
-					],
-					true
-				)
-			);
-			return res.once(json);
-		}),
-		rest.get(
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+							{
+								id: "429b9e8b-d99e-44de-91ad-706cf8183658",
+								source: 1,
+								task: null,
+								tags: [],
+								name: "@cloudflare/embeddings_bge_large_en",
+								description: null,
+							},
+							{
+								id: "7f9a76e1-d120-48dd-a565-101d328bbb02",
+								source: 1,
+								task: {
+									id: "00cd182b-bf30-4fc4-8481-84a3ab349657",
+									name: "Image Classification",
+									description: null,
+								},
+								tags: [],
+								name: "@cloudflare/resnet50",
+								description: null,
+							},
+						],
+						true
+					)
+				);
+			},
+			{ once: true }
+		),
+		http.get(
 			"*/accounts/:accountId/ai/models/search?per_page=50&page=2",
-			(req, res, ctx) => {
-				const json = ctx.json(
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -907,8 +916,8 @@ function mockAIPaginatedRequest() {
 						true
 					)
 				);
-				return res.once(json);
-			}
+			},
+			{ once: true }
 		)
 	);
 }

@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -238,9 +238,10 @@ describe("constellation commands", () => {
 /** Create a mock handler for Constellation API */
 function mockConstellationRequest() {
 	msw.use(
-		rest.get("*/accounts/:accountId/constellation/project", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/constellation/project",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -252,36 +253,38 @@ function mockConstellationRequest() {
 						],
 						true
 					)
-				)
-			);
-		}),
-		rest.post(
+				);
+			},
+			{ once: true }
+		),
+		http.post(
 			"*/accounts/:accountId/constellation/project",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
-								name: "new_project3",
-								runtime: "ONNX",
-								created_at: "2023-04-28T13:25:58.513105Z",
-							},
-							true
-						)
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
+							name: "new_project3",
+							runtime: "ONNX",
+							created_at: "2023-04-28T13:25:58.513105Z",
+						},
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
 		),
-		rest.get("*/accounts/:accountId/constellation/catalog", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/constellation/catalog",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -304,64 +307,68 @@ function mockConstellationRequest() {
 						],
 						true
 					)
-				)
-			);
-		}),
-		rest.get("*/accounts/:accountId/constellation/runtime", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(["ONNX", "XGBoost"], true)));
-		}),
-		rest.post(
+				);
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/constellation/runtime",
+			() => {
+				return HttpResponse.json(createFetchResult(["ONNX", "XGBoost"], true));
+			},
+			{ once: true }
+		),
+		http.post(
 			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
+							project_id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
+							name: "model2",
+							description: null,
+							created_at: "2023-04-28T13:50:37.494090Z",
+						},
+						true
+					)
+				);
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						[
+							{
+								id: "450bb086-3c09-4991-a0cc-eed48c504ae0",
+								project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
+								name: "model1",
+								description: null,
+								created_at: "2023-04-28T11:15:14.806217Z",
+							},
 							{
 								id: "2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
-								project_id: "4806cdcf-9aa7-4fa2-b6a1-77fe9e196680",
+								project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
 								name: "model2",
 								description: null,
 								created_at: "2023-04-28T13:50:37.494090Z",
 							},
-							true
-						)
+						],
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.get(
-			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							[
-								{
-									id: "450bb086-3c09-4991-a0cc-eed48c504ae0",
-									project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
-									name: "model1",
-									description: null,
-									created_at: "2023-04-28T11:15:14.806217Z",
-								},
-								{
-									id: "2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
-									project_id: "9d478427-dea6-4988-9b16-f6f8888d974c",
-									name: "model2",
-									description: null,
-									created_at: "2023-04-28T13:50:37.494090Z",
-								},
-							],
-							true
-						)
-					)
-				);
-			}
-		),
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/constellation/project/4806cdcf-9aa7-4fa2-b6a1-77fe9e196680/model/2dd35b4e-0c7a-4c7a-a9e2-e33c0e17bc02",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
 		)
 	);
 }
