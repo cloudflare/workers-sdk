@@ -129,7 +129,11 @@ export function useEsbuild({
 					...(moduleCollector?.modules ?? []),
 					...newAdditionalModules,
 				]);
-				return { ...previousBundle, id: previousBundle.id + 1 };
+				return {
+					...previousBundle,
+					entrypointSource: readFileSync(previousBundle.path, "utf8"),
+					id: previousBundle.id + 1,
+				};
 			});
 		}
 
