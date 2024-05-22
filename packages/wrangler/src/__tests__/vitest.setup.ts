@@ -6,10 +6,7 @@ import { useApp } from "ink";
 import { passthrough } from "msw";
 import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
-import MockWebSocket from "vitest-websocket-mock";
-import { MetricsConfigOptions } from "../metrics/metrics-config";
 import { getBasePath } from "../paths";
-// import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems

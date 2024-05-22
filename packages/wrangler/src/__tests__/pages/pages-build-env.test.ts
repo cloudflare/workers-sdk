@@ -53,7 +53,9 @@ describe("pages build env", () => {
 	it("should fail with no outfile", async () => {
 		await expect(
 			runWrangler("pages functions build-env .")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: No outfile specified]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: No outfile specified]`
+		);
 	});
 
 	it("should exit with specific exit code if no config file is found", async () => {

@@ -153,8 +153,9 @@ describe("vectorize commands", () => {
 			📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':
 
 			[[vectorize]]
-			binding = \\"VECTORIZE_INDEX\\" # available within your Worker on env.VECTORIZE_INDEX
-			index_name = \\"test-index\\""
+			binding = \\"VECTORIZE_INDEX\\"
+			index_name = \\"test-index\\"
+			"
 		`);
 	});
 

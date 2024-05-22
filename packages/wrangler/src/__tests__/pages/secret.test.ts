@@ -167,7 +167,9 @@ describe("wrangler pages secret", () => {
 			it("should error without a project name", async () => {
 				await expect(
 					runWrangler("pages secret put the-key")
-				).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+				).rejects.toMatchInlineSnapshot(
+					`[Error: Must specify a project name.]`
+				);
 			});
 		});
 
@@ -219,7 +221,9 @@ describe("wrangler pages secret", () => {
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("pages secret put the-key --project some-project-name")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Error in stdin stream]`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Error in stdin stream]`
+				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			          "

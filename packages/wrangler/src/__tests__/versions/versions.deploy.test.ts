@@ -10,6 +10,7 @@ import {
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { useMockIsTTY } from "../helpers/mock-istty";
 import {
 	msw,
 	mswGetVersion,
@@ -29,8 +30,10 @@ describe("versions deploy", () => {
 	runInTempDir();
 	mockConsoleMethods();
 	const std = collectCLIOutput();
+	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		setIsTTY(false);
 		msw.use(
 			mswListNewDeployments,
 			mswListVersions,
@@ -51,6 +54,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -62,6 +67,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -75,6 +82,8 @@ describe("versions deploy", () => {
 				├ 100% of traffic
 				├
 				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
 				│
 				│ No non-versioned settings to sync. Skipping...
 				│
@@ -112,6 +121,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -123,6 +134,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 0 Worker Version(s) selected
@@ -140,6 +153,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -151,6 +166,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -164,6 +181,8 @@ describe("versions deploy", () => {
 				├ 100% of traffic
 				├
 				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
 				│
 				│ No non-versioned settings to sync. Skipping...
 				│
@@ -181,6 +200,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -192,6 +213,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -205,6 +228,8 @@ describe("versions deploy", () => {
 				├ 100% of traffic
 				├
 				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
 				│
 				│ No non-versioned settings to sync. Skipping...
 				│
@@ -222,6 +247,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -233,6 +260,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 2 Worker Version(s) selected
@@ -255,6 +284,8 @@ describe("versions deploy", () => {
 				├
 				├ Add a deployment message (skipped)
 				│
+				├ Deploying 2 version(s)
+				│
 				│ No non-versioned settings to sync. Skipping...
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 50% and version 00000000-0000-0000-0000-000000000000 at 50% (TIMINGS)"
@@ -271,6 +302,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -282,6 +315,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -295,6 +330,8 @@ describe("versions deploy", () => {
 				├ 100% of traffic
 				├
 				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
 				│
 				│ No non-versioned settings to sync. Skipping...
 				│
@@ -312,6 +349,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -323,6 +362,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 2 Worker Version(s) selected
@@ -345,6 +386,8 @@ describe("versions deploy", () => {
 				├
 				├ Add a deployment message (skipped)
 				│
+				├ Deploying 2 version(s)
+				│
 				│ No non-versioned settings to sync. Skipping...
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 30% and version 00000000-0000-0000-0000-000000000000 at 70% (TIMINGS)"
@@ -361,6 +404,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -372,6 +417,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 2 Worker Version(s) selected
@@ -394,6 +441,8 @@ describe("versions deploy", () => {
 				├
 				├ Add a deployment message (skipped)
 				│
+				├ Deploying 2 version(s)
+				│
 				│ No non-versioned settings to sync. Skipping...
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
@@ -413,6 +462,8 @@ describe("versions deploy", () => {
 				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 					"╭ Deploy Worker Versions by splitting traffic between multiple versions
 					│
+					├ Fetching latest deployment
+					│
 					├ Your current deployment has 2 version(s):
 					│
 					│ (10%) 00000000-0000-0000-0000-000000000000
@@ -424,6 +475,8 @@ describe("versions deploy", () => {
 					│       Created:  TIMESTAMP
 					│           Tag:  -
 					│       Message:  -
+					│
+					├ Fetching deployable versions
 					│
 					├ Which version(s) do you want to deploy?
 					├ 3 Worker Version(s) selected
@@ -456,6 +509,8 @@ describe("versions deploy", () => {
 				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 					"╭ Deploy Worker Versions by splitting traffic between multiple versions
 					│
+					├ Fetching latest deployment
+					│
 					├ Your current deployment has 2 version(s):
 					│
 					│ (10%) 00000000-0000-0000-0000-000000000000
@@ -467,6 +522,8 @@ describe("versions deploy", () => {
 					│       Created:  TIMESTAMP
 					│           Tag:  -
 					│       Message:  -
+					│
+					├ Fetching deployable versions
 					│
 					├ Which version(s) do you want to deploy?
 					├ 3 Worker Version(s) selected
@@ -497,6 +554,8 @@ describe("versions deploy", () => {
 					├
 					├ Add a deployment message (skipped)
 					│
+					├ Deploying 3 version(s)
+					│
 					│ No non-versioned settings to sync. Skipping...
 					│
 					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
@@ -516,6 +575,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -527,6 +588,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -541,6 +604,8 @@ describe("versions deploy", () => {
 				├
 				├ Add a deployment message
 				│ Deployment message My versioned deployment message
+				│
+				├ Deploying 1 version(s)
 				│
 				│ No non-versioned settings to sync. Skipping...
 				│
@@ -562,6 +627,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -573,6 +640,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -586,6 +655,10 @@ describe("versions deploy", () => {
 				├ 100% of traffic
 				├
 				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
+				│
+				├ Syncing non-versioned settings
 				│
 				│ Synced non-versioned settings:
 				│            logpush:  true
@@ -616,6 +689,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -627,6 +702,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│
 				├ Which version(s) do you want to deploy?
 				├ 1 Worker Version(s) selected
@@ -640,6 +717,10 @@ describe("versions deploy", () => {
 				├ 100% of traffic
 				├
 				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
+				│
+				├ Syncing non-versioned settings
 				│
 				│ Synced non-versioned settings:
 				│            logpush:  false
@@ -664,6 +745,8 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
 				"╭ Deploy Worker Versions by splitting traffic between multiple versions
 				│
+				├ Fetching latest deployment
+				│
 				├ Your current deployment has 2 version(s):
 				│
 				│ (10%) 00000000-0000-0000-0000-000000000000
@@ -675,6 +758,8 @@ describe("versions deploy", () => {
 				│       Created:  TIMESTAMP
 				│           Tag:  -
 				│       Message:  -
+				│
+				├ Fetching deployable versions
 				│"
 			`);
 		});

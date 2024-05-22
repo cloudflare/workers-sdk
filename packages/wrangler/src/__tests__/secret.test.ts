@@ -229,7 +229,9 @@ describe("wrangler secret", () => {
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("secret put the-key --name script-name")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Error in stdin stream]`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Error in stdin stream]`
+				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			          "

@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
-import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -29,7 +28,9 @@ describe("r2", () => {
 		it("should show the correct help when an invalid command is passed", async () => {
 			await expect(() =>
 				runWrangler("r2 bucket foo")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Unknown argument: foo]`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: foo]`
+			);
 			expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
@@ -238,7 +239,9 @@ describe("r2", () => {
 			it("should error if invalid command is passed", async () => {
 				await expect(
 					runWrangler("r2 bucket update foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Unknown argument: foo]`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
 			wrangler r2 bucket update
@@ -425,7 +428,9 @@ describe("r2", () => {
 			it("should show the correct help when an invalid command is passed", async () => {
 				await expect(() =>
 					runWrangler("r2 bucket sippy foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Unknown argument: foo]`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 

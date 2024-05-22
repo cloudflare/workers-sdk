@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import { Mock } from "vitest";
 import { printWranglerBanner } from "../update-check";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -10,6 +9,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Mock } from "vitest";
 
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();

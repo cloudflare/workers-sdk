@@ -16,7 +16,6 @@ import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
-import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
