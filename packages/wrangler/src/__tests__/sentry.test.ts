@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import path from "node:path";
 import * as Sentry from "@sentry/node";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -55,16 +56,15 @@ describe("sentry", () => {
 					{ once: true }
 				)
 			);
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`[TypeError: Failed to fetch]`
-			);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
+[Error: Unexpected call to \`prompts("[{"type":"confirm","name":"value","message":"Would you like to report this error to Cloudflare?","initial":true}]")\`.
+You should use \`mockConfirm()/mockSelect()/mockPrompt()\` to mock calls to \`confirm()\` with expectations.]
+`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Getting User settings...
+"Getting User settings...
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-			? Would you like to report this error to Cloudflare?
-			🤖 Using fallback value in non-interactive context: no"
-		`);
+[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 	});
@@ -188,6 +188,25 @@ describe("sentry", () => {
 				breadcrumb.timestamp = 0;
 			}
 
+			const fakeInstallPath = "/wrangler/";
+			for (const exception of event.data.exception?.values ?? []) {
+				for (const frame of exception.stacktrace?.frames ?? []) {
+					if (frame.filename === undefined) {
+						continue;
+					}
+
+					const wranglerPackageIndex = frame.filename.indexOf(
+						path.join("packages", "wrangler", "src")
+					);
+					if (wranglerPackageIndex === -1) {
+						continue;
+					}
+					frame.filename =
+						fakeInstallPath + frame.filename.substring(wranglerPackageIndex);
+					continue;
+				}
+			}
+
 			// If more data is included in the Sentry request, we'll need to verify it
 			// couldn't contain PII and update this snapshot
 			expect(event).toMatchInlineSnapshot(`
@@ -231,7 +250,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/index.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,
@@ -242,7 +261,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/whoami.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,
@@ -253,7 +272,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/whoami.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,
@@ -264,7 +283,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/whoami.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,
@@ -275,7 +294,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/cfetch/index.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,
@@ -286,7 +305,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/cfetch/internal.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,
@@ -297,7 +316,7 @@ Object {
               Object {
                 "colno": 0,
                 "context_line": "",
-                "filename": "/project/...",
+                "filename": "/wrangler/packages/wrangler/src/cfetch/internal.ts",
                 "function": "",
                 "in_app": false,
                 "lineno": 0,

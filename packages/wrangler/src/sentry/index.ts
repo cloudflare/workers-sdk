@@ -1,4 +1,3 @@
-import path from "node:path";
 import * as Sentry from "@sentry/node";
 import { rejectedSyncPromise } from "@sentry/utils";
 import { fetch } from "undici";
@@ -120,18 +119,6 @@ export function setupSentry() {
 						}
 						const nodeModulesIndex = frame.filename.indexOf("node_modules");
 
-						if (typeof jest !== undefined && nodeModulesIndex === -1) {
-							const wranglerPackageIndex = frame.filename.indexOf(
-								path.join("packages", "wrangler", "src")
-							);
-							if (wranglerPackageIndex === -1) {
-								continue;
-							}
-							frame.filename =
-								fakeInstallPath +
-								frame.filename.substring(wranglerPackageIndex);
-							continue;
-						}
 						if (nodeModulesIndex === -1) {
 							continue;
 						}

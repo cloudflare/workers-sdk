@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult, msw } from "./msw";
-import { serialize } from "./serialize-form-data-entry";
+import { serialize, toString } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { HttpResponseResolver } from "msw";
@@ -51,7 +51,7 @@ export function mockUploadWorkerRequest(
 			expect(await serialize(formBody.get("index.js"))).toMatch(expectedEntry);
 		}
 		const metadata = JSON.parse(
-			await serialize(formBody.get("metadata"))
+			await toString(formBody.get("metadata"))
 		) as WorkerMetadata;
 		if (expectedType === "esm") {
 			expect(metadata.main_module).toEqual(expectedMainModule);

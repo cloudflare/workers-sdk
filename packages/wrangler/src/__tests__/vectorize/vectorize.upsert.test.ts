@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { serialize } from "../helpers/serialize-form-data-entry";
+import { toString } from "../helpers/serialize-form-data-entry";
 import type { VectorizeVector } from "@cloudflare/workers-types";
 
 describe("dataset upsert", () => {
@@ -60,7 +60,7 @@ describe("dataset upsert", () => {
 					expect(params.indexName).toEqual("my-index");
 
 					const formData = await request.formData();
-					const vectors = await serialize(formData.get("vectors"));
+					const vectors = await toString(formData.get("vectors"));
 
 					if (insertRequestCount === 0) {
 						expect(vectors).toMatchInlineSnapshot(`
