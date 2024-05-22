@@ -25,7 +25,7 @@ describe("deployments list", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`"You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -95,7 +95,7 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("prints latest deployment to stdout", async () => {
 			const result = runWrangler(

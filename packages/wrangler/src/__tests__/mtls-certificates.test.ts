@@ -191,7 +191,7 @@ describe("wrangler", () => {
 							name: "my_cert",
 						})
 					).rejects.toMatchInlineSnapshot(
-						`[ParseError: Could not read file: cert.pem]`
+						`"Could not read file: cert.pem"`
 					);
 				});
 
@@ -302,7 +302,7 @@ describe("wrangler", () => {
 					await expect(
 						getMTlsCertificateByName(accountId, "cert one")
 					).rejects.toMatchInlineSnapshot(
-						`[Error: certificate not found with name "cert one"]`
+						`"certificate not found with name \\"cert one\\""`
 					);
 
 					expect(mock.calls).toEqual(1);
@@ -331,7 +331,7 @@ describe("wrangler", () => {
 					await expect(
 						getMTlsCertificateByName(accountId, "cert one")
 					).rejects.toMatchInlineSnapshot(
-						`[Error: multiple certificates found with name "cert one"]`
+						`"multiple certificates found with name \\"cert one\\""`
 					);
 
 					expect(mock.calls).toEqual(1);
@@ -505,7 +505,7 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					await expect(
 						runWrangler("mtls-certificate delete --name my-cert")
 					).rejects.toMatchInlineSnapshot(
-						`[Error: certificate not found with name "my-cert"]`
+						`"certificate not found with name \\"my-cert\\""`
 					);
 					expect(std.out).toMatchInlineSnapshot(`""`);
 				});
@@ -533,7 +533,7 @@ Expires on: ${oneYearLater.toLocaleDateString()}
 					await expect(
 						runWrangler("mtls-certificate delete --name my-cert")
 					).rejects.toMatchInlineSnapshot(
-						`[Error: multiple certificates found with name "my-cert"]`
+						`"multiple certificates found with name \\"my-cert\\""`
 					);
 					expect(std.out).toMatchInlineSnapshot(`""`);
 				});

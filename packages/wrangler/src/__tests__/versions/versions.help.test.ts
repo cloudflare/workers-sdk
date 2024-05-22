@@ -85,7 +85,7 @@ describe("versions subhelp", () => {
 		const result = runWrangler("versions");
 
 		await expect(result).rejects.toMatchInlineSnapshot(
-			`[Error: Unknown argument: versions]`
+			`"Unknown argument: versions"`
 		);
 	});
 

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { vi } from "vitest";
 import { getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -7,6 +8,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 describe("generate", () => {
 	runInTempDir();
@@ -19,10 +21,10 @@ describe("generate", () => {
 		mockPackageManager = {
 			cwd: process.cwd(),
 			type: "mockpm" as "npm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	describe("cli functionality", () => {
@@ -223,7 +225,7 @@ describe("generate", () => {
 		});
 
 		it("clones a cloudflare template across drives", async () => {
-			const fsMock = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+			const fsMock = vi.spyOn(fs, "renameSync").mockImplementation(() => {
 				// Simulate the error we get if we use renameSync across different Windows drives (e.g. C: to D:).
 				const error = new Error("EXDEV: cross-device link not permitted");
 				// @ts-expect-error non standard property on Error
@@ -251,7 +253,7 @@ describe("generate", () => {
 		});
 
 		it("mocks an error thrown", async () => {
-			const fsMock = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+			const fsMock = vi.spyOn(fs, "renameSync").mockImplementation(() => {
 				// Simulate a different error to what we get if we use renameSync across different Windows drives.
 				const error = new Error("something");
 				// @ts-expect-error non standard property on Error

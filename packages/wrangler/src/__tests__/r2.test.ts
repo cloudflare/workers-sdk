@@ -745,7 +745,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler(`r2 bucket notification get`)
 					).rejects.toMatchInlineSnapshot(
-						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+						`"Not enough non-option arguments: got 0, need at least 1"`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -851,7 +851,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket notification create notification-test-001")
 					).rejects.toMatchInlineSnapshot(
-						`[Error: Missing required arguments: event-types, queue]`
+						`"Missing required arguments: event-types, queue"`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -943,7 +943,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket notification delete notification-test-001")
 					).rejects.toMatchInlineSnapshot(
-						`[Error: Missing required argument: queue]`
+						`"Missing required argument: queue"`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"

@@ -72,7 +72,7 @@ describe("isNavigatorDefined", () => {
 			assert(false, "Unreachable");
 		} catch (e) {
 			expect(e).toMatchInlineSnapshot(
-				`[Error: Can't both enable and disable a flag]`
+				`"Can't both enable and disable a flag"`
 			);
 		}
 	});

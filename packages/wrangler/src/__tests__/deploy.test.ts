@@ -1,13 +1,14 @@
 import { Buffer } from "node:buffer";
-import childProcess from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
-import commandExists from "command-exists";
+import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
+import { vi } from "vitest";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -54,6 +55,9 @@ import type {
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type { Mock } from "vitest";
+
+vi.mock("command-exists");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -68,8 +72,7 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 
 	beforeEach(() => {
-		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.stubGlobal("setTimeout", (fn: () => void) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -79,6 +82,7 @@ describe("deploy", () => {
 	});
 
 	afterEach(() => {
+		vi.unstubAllGlobals();
 		clearDialogs();
 	});
 
@@ -130,10 +134,7 @@ describe("deploy", () => {
 		mockApiToken({ apiToken: null });
 
 		beforeEach(() => {
-			// @ts-expect-error disable the mock we'd setup earlier
-			// or else our server won't bother listening for oauth requests
-			// and will timeout and fail
-			global.setTimeout.mockRestore();
+			vi.unstubAllGlobals();
 		});
 
 		it("drops a user into the login flow if they're unauthenticated", async () => {
@@ -331,12 +332,12 @@ describe("deploy", () => {
 
 				await expect(runWrangler("deploy index.js")).rejects
 					.toMatchInlineSnapshot(`
-			[Error: More than one account available but unable to select one in non-interactive mode.
-			Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-			Available accounts are (\`<name>\`: \`<account_id>\`):
-			  \`enterprise\`: \`1701\`
-			  \`enterprise-nx\`: \`nx01\`]
-		`);
+					"More than one account available but unable to select one in non-interactive mode.
+					Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+					Available accounts are (\`<name>\`: \`<account_id>\`):
+					  \`enterprise\`: \`1701\`
+					  \`enterprise-nx\`: \`nx01\`"
+				`);
 			});
 
 			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async () => {
@@ -589,11 +590,11 @@ describe("deploy", () => {
 					"deploy index.js --name voyager --env some-env --legacy-env true"
 				).catch((err) =>
 					expect(err).toMatchInlineSnapshot(`
-				            [Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
-				                [env.some-env]
-				                name = "voyager"
-				                ]
-			          `)
+						"In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
+						    [env.some-env]
+						    name = \\"voyager\\"
+						    "
+					`)
 				);
 			});
 		});
@@ -4389,9 +4390,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
-			jest.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
-			jest.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
-			jest.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+			vi.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
+			vi.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
+			vi.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
 
 			writeWorkerSource();
 			let err: undefined | Error;
@@ -4928,9 +4929,7 @@ addEventListener('fetch', event => {});`
 	});
 	describe("custom builds", () => {
 		beforeEach(() => {
-			// @ts-expect-error disable the mock we'd setup earlier
-			// or else custom builds will timeout immediately
-			global.setTimeout.mockRestore();
+			vi.unstubAllGlobals();
 		});
 		it("should run a custom build before publishing", async () => {
 			writeWranglerToml({
@@ -6065,14 +6064,14 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-						              [Error: Processing wrangler.toml configuration:
-						                - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-						                - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-						                - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-						                - Bindings must have unique names, so that they can all be referenced in the worker.
-						                  Please change your bindings to have unique names.]
-					            `);
+				"Processing wrangler.toml configuration:
+				  - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
+				  - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
+				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+				  - Bindings must have unique names, so that they can all be referenced in the worker.
+				    Please change your bindings to have unique names."
+			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6172,15 +6171,15 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-						              [Error: Processing wrangler.toml configuration:
-						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-						                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-						                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-						                - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-						                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-						                - Bindings must have unique names, so that they can all be referenced in the worker.
-						                  Please change your bindings to have unique names.]
-					            `);
+				"Processing wrangler.toml configuration:
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - Bindings must have unique names, so that they can all be referenced in the worker.
+				    Please change your bindings to have unique names."
+			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6322,17 +6321,17 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-						              [Error: Processing wrangler.toml configuration:
-						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-						                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-						                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-						                - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-						                - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-						                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-						                - Bindings must have unique names, so that they can all be referenced in the worker.
-						                  Please change your bindings to have unique names.]
-					            `);
+				"Processing wrangler.toml configuration:
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+				  - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - Bindings must have unique names, so that they can all be referenced in the worker.
+				    Please change your bindings to have unique names."
+			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -7676,7 +7675,7 @@ addEventListener('fetch', event => {});`
 			`);
 				});
 				it("should error when the capnp compiler is not present, but is required", async () => {
-					jest.spyOn(commandExists, "sync").mockReturnValue(false);
+					(sync as Mock).mockReturnValue(false);
 					writeWranglerToml({
 						unsafe: {
 							capnp: {
@@ -7694,25 +7693,23 @@ addEventListener('fetch', event => {});`
 					);
 				});
 				it("should accept an uncompiled capnp schema", async () => {
-					jest.spyOn(commandExists, "sync").mockReturnValue(true);
-					jest
-						.spyOn(childProcess, "spawnSync")
-						.mockImplementation((cmd, args) => {
-							expect(cmd).toBe("capnp");
-							expect(args?.[0]).toBe("compile");
-							expect(args?.[1]).toBe("-o-");
-							expect(args?.[2]).toContain("--src-prefix=");
-							expect(args?.[3]).toContain("my-compiled-schema");
-							return {
-								pid: -1,
-								error: undefined,
-								stderr: Buffer.from([]),
-								stdout: Buffer.from("my compiled capnp data"),
-								status: 0,
-								signal: null,
-								output: [null],
-							};
-						});
+					(sync as Mock).mockReturnValue(true);
+					(spawnSync as Mock).mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("capnp");
+						expect(args?.[0]).toBe("compile");
+						expect(args?.[1]).toBe("-o-");
+						expect(args?.[2]).toContain("--src-prefix=");
+						expect(args?.[3]).toContain("my-compiled-schema");
+						return {
+							pid: -1,
+							error: undefined,
+							stderr: Buffer.from([]),
+							stdout: Buffer.from("my compiled capnp data"),
+							status: 0,
+							signal: null,
+							output: [null],
+						};
+					});
 
 					writeWranglerToml({
 						unsafe: {
@@ -8753,7 +8750,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed."`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -8821,7 +8818,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed."`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -8886,7 +8883,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
+				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed."`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -9791,7 +9788,7 @@ export default{
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
+				`"Queue \\"queue1\\" does not exist. To create it, run: wrangler queues create queue1"`
 			);
 		});
 
@@ -9810,7 +9807,7 @@ export default{
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
+				`"Queue \\"queue1\\" does not exist. To create it, run: wrangler queues create queue1"`
 			);
 		});
 	});

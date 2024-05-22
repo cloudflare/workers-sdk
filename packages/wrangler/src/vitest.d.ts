@@ -1,4 +1,4 @@
 declare global {
-	const jest: unknown;
+	const vitest: unknown;
 }
 export {};

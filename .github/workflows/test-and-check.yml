@@ -85,7 +85,11 @@ jobs:
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ runner.os }}
+
+      - name: Run changeset version tests
+        run: node .github/changeset-version.test.js
 
       - name: Upload debug logs
         if: always()
@@ -94,5 +98,9 @@ jobs:
           name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
           path: ${{ runner.temp }}/wrangler-debug-logs/
 
-      - name: Run changeset version tests
-        run: node .github/changeset-version.test.js
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/test-report/

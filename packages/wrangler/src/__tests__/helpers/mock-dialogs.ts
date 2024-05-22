@@ -1,4 +1,5 @@
 import prompts from "prompts";
+import type { Mock } from "vitest";
 
 /**
  * The expected values for a confirmation request.
@@ -21,7 +22,7 @@ export interface ConfirmExpectation {
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
+		(prompts as unknown as Mock).mockImplementationOnce(
 			({ type, name, message, initial }) => {
 				expect({ type, name, message }).toStrictEqual({
 					type: "confirm",
@@ -62,7 +63,7 @@ export interface PromptExpectation {
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
+		(prompts as unknown as Mock).mockImplementationOnce(
 			({ type, name, message, initial, style }) => {
 				expect({ type, name, message }).toStrictEqual({
 					type: "text",
@@ -114,7 +115,7 @@ export function mockSelect<Values>(
 	...expectations: SelectExpectation<Values>[]
 ) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
+		(prompts as unknown as Mock).mockImplementationOnce(
 			({ type, name, message, choices, initial }) => {
 				expect({ type, name, message }).toStrictEqual({
 					type: "select",

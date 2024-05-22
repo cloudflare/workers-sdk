@@ -49,40 +49,37 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toMatchInlineSnapshot(`undefined`);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed named-worker version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed named-worker version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 
 			expect(normalizeOutput(std.out)).toContain(
 				"No non-versioned settings to sync. Skipping..."
@@ -95,13 +92,13 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`"You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
 			);
 		});
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("no args", async () => {
 			const result = runWrangler(
@@ -109,30 +106,28 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You must select at least 1 version to deploy.]`
+				`"You must select at least 1 version to deploy."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 0 Worker Version(s) selected
-			│"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 0 Worker Version(s) selected
+				│"
+			`);
 		});
 
 		test("1 version @ (implicit) 100%", async () => {
@@ -143,40 +138,37 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
 		test("1 version @ (explicit) 100%", async () => {
@@ -187,40 +179,37 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
 		test("2 versions @ (implicit) 50% each", async () => {
@@ -231,48 +220,45 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 2 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 50% of traffic
-			├
-			├ What percentage of traffic should Worker Version 2 receive?
-			├ 50% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 50% and version 00000000-0000-0000-0000-000000000000 at 50% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 2 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 50% of traffic
+				├
+				├ What percentage of traffic should Worker Version 2 receive?
+				├ 50% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 50% and version 00000000-0000-0000-0000-000000000000 at 50% (TIMINGS)"
+			`);
 		});
 
 		test("1 version @ (explicit) 100%", async () => {
@@ -283,40 +269,37 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
 		test("2 versions @ (explicit) 30% + (implicit) 70%", async () => {
@@ -327,48 +310,45 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 2 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 30% of traffic
-			├
-			├ What percentage of traffic should Worker Version 2 receive?
-			├ 70% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 30% and version 00000000-0000-0000-0000-000000000000 at 70% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 2 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 30% of traffic
+				├
+				├ What percentage of traffic should Worker Version 2 receive?
+				├ 70% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 30% and version 00000000-0000-0000-0000-000000000000 at 70% (TIMINGS)"
+			`);
 		});
 
 		test("2 versions @ (explicit) 40% + (explicit) 60%", async () => {
@@ -379,48 +359,45 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 2 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 40% of traffic
-			├
-			├ What percentage of traffic should Worker Version 2 receive?
-			├ 60% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 2 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 40% of traffic
+				├
+				├ What percentage of traffic should Worker Version 2 receive?
+				├ 60% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60% (TIMINGS)"
+			`);
 		});
 
 		describe("max versions restrictions (temp)", () => {
@@ -430,45 +407,43 @@ describe("versions deploy", () => {
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
-					`[Error: You must select at most 2 versions to deploy.]`
+					`"You must select at most 2 versions to deploy."`
 				);
 
 				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 3 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 3:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  Rolled back for this version
-			│"
-		`);
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (10%) 00000000-0000-0000-0000-000000000000
+					│       Created:  TIMESTAMP
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (90%) 00000000-0000-0000-0000-000000000000
+					│       Created:  TIMESTAMP
+					│           Tag:  -
+					│       Message:  -
+					│
+					├ Which version(s) do you want to deploy?
+					├ 3 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  TIMESTAMP
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+					│              Created:  TIMESTAMP
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 3:  00000000-0000-0000-0000-000000000000
+					│              Created:  TIMESTAMP
+					│                  Tag:  -
+					│              Message:  Rolled back for this version
+					│"
+				`);
 			});
 
 			test("--max-versions allows > 2 versions", async () => {
@@ -479,56 +454,53 @@ describe("versions deploy", () => {
 				await expect(result).resolves.toBeUndefined();
 
 				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 3 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 2:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├     Worker Version 3:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  Rolled back for this version
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 33.333% of traffic
-			├
-			├ What percentage of traffic should Worker Version 2 receive?
-			├ 33.334% of traffic
-			├
-			├ What percentage of traffic should Worker Version 3 receive?
-			├ 33.333% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
-		`);
+					"╭ Deploy Worker Versions by splitting traffic between multiple versions
+					│
+					├ Your current deployment has 2 version(s):
+					│
+					│ (10%) 00000000-0000-0000-0000-000000000000
+					│       Created:  TIMESTAMP
+					│           Tag:  -
+					│       Message:  -
+					│
+					│ (90%) 00000000-0000-0000-0000-000000000000
+					│       Created:  TIMESTAMP
+					│           Tag:  -
+					│       Message:  -
+					│
+					├ Which version(s) do you want to deploy?
+					├ 3 Worker Version(s) selected
+					│
+					├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+					│              Created:  TIMESTAMP
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 2:  00000000-0000-0000-0000-000000000000
+					│              Created:  TIMESTAMP
+					│                  Tag:  -
+					│              Message:  -
+					│
+					├     Worker Version 3:  00000000-0000-0000-0000-000000000000
+					│              Created:  TIMESTAMP
+					│                  Tag:  -
+					│              Message:  Rolled back for this version
+					│
+					├ What percentage of traffic should Worker Version 1 receive?
+					├ 33.333% of traffic
+					├
+					├ What percentage of traffic should Worker Version 2 receive?
+					├ 33.334% of traffic
+					├
+					├ What percentage of traffic should Worker Version 3 receive?
+					├ 33.333% of traffic
+					├
+					├ Add a deployment message (skipped)
+					│
+					│ No non-versioned settings to sync. Skipping...
+					│
+					╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 33.333%, version 00000000-0000-0000-0000-000000000000 at 33.334%, and version 00000000-0000-0000-0000-000000000000 at 33.333% (TIMINGS)"
+				`);
 
 				expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 			});
@@ -542,41 +514,38 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message
-			│ Deployment message My versioned deployment message
-			│
-			│
-			│ No non-versioned settings to sync. Skipping...
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message
+				│ Deployment message My versioned deployment message
+				│
+				│ No non-versioned settings to sync. Skipping...
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
 		test("with logpush in wrangler.toml", async () => {
@@ -591,43 +560,39 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│
-			│ Synced non-versioned settings:
-			│            logpush:  true
-			│     tail_consumers:  <skipped>
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ Synced non-versioned settings:
+				│            logpush:  true
+				│     tail_consumers:  <skipped>
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 
 			expect(normalizeOutput(std.out)).toContain("logpush:  true");
 		});
@@ -649,45 +614,41 @@ describe("versions deploy", () => {
 			await expect(result).resolves.toBeUndefined();
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│
-			├ Which version(s) do you want to deploy?
-			├ 1 Worker Version(s) selected
-			│
-			├     Worker Version 1:  00000000-0000-0000-0000-000000000000
-			│              Created:  TIMESTAMP
-			│                  Tag:  -
-			│              Message:  -
-			│
-			├ What percentage of traffic should Worker Version 1 receive?
-			├ 100% of traffic
-			├
-			├ Add a deployment message (skipped)
-			│
-			│
-			│
-			│ Synced non-versioned settings:
-			│            logpush:  false
-			│     tail_consumers:  worker-1
-			│                      worker-2 (preview)
-			│                      worker-3 (staging)
-			│
-			╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				│ Synced non-versioned settings:
+				│            logpush:  false
+				│     tail_consumers:  worker-1
+				│                      worker-2 (preview)
+				│                      worker-3 (staging)
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
 		});
 
 		test("fails for non-existent versionId", async () => {
@@ -697,27 +658,25 @@ describe("versions deploy", () => {
 
 			// TODO: could do with a better error message but this will suffice for now (this error isn't possible in the interactive flow)
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed.]`
+				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-			"╭ Deploy Worker Versions by splitting traffic between multiple versions
-			│
-			│
-			├ Your current deployment has 2 version(s):
-			│
-			│ (10%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│ (90%) 00000000-0000-0000-0000-000000000000
-			│       Created:  TIMESTAMP
-			│           Tag:  -
-			│       Message:  -
-			│
-			│"
-		`);
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│"
+			`);
 		});
 
 		test("fails if --percentage > 100", async () => {
@@ -726,7 +685,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`"Percentage value (101%) must be between 0 and 100."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -738,7 +697,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`"Percentage value (-1%) must be between 0 and 100."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -750,7 +709,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (101%) must be between 0 and 100.]`
+				`"Percentage value (101%) must be between 0 and 100."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -762,7 +721,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Percentage value (-1%) must be between 0 and 100.]`
+				`"Percentage value (-1%) must be between 0 and 100."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);

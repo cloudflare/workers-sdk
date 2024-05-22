@@ -1,14 +1,15 @@
+import { vi } from "vitest";
 import { convertTimestampToISO } from "../../d1/timeTravel/utils";
 
 describe("convertTimestampToISO", () => {
 	beforeAll(() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		//lock time to 2023-08-01 UTC
-		jest.setSystemTime(new Date(2023, 7, 1));
+		vi.setSystemTime(new Date(2023, 7, 1));
 	});
 
 	afterAll(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	it("should reject invalid date strings", () => {

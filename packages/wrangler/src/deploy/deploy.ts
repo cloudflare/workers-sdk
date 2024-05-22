@@ -676,17 +676,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			limits: config.limits,
 		};
 
-		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
-		// We do not care about the timing outside of testing
-		const bundleSizePromise = printBundleSize(
+		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) {
-			await bundleSizePromise;
-		} else {
-			void bundleSizePromise;
-		}
 
 		const withoutStaticAssets = {
 			...bindings,

@@ -25,7 +25,7 @@ describe("versions view", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Not enough non-option arguments: got 0, need at least 1]`
+				`"Not enough non-option arguments: got 0, need at least 1"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -39,7 +39,7 @@ describe("versions view", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Not enough non-option arguments: got 0, need at least 1]`
+				`"Not enough non-option arguments: got 0, need at least 1"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -53,7 +53,7 @@ describe("versions view", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`"You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -109,7 +109,7 @@ describe("versions view", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("fails with no args", async () => {
 			const result = runWrangler(
@@ -117,7 +117,7 @@ describe("versions view", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: Not enough non-option arguments: got 0, need at least 1]`
+				`"Not enough non-option arguments: got 0, need at least 1"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -151,7 +151,7 @@ describe("versions view", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed.]`
+				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed."`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);

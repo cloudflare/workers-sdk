@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { Request } from "undici";
+import { Mock } from "vitest";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
 import { createFetchResult, msw } from "./msw";
@@ -47,9 +48,7 @@ export const mockOAuthFlow = () => {
 	const mockOAuthServerCallback = (
 		respondWith?: "timeout" | "success" | "failure" | GrantResponseOptions
 	) => {
-		(
-			openInBrowser as jest.MockedFunction<typeof openInBrowser>
-		).mockImplementation(async (url: string) => {
+		(openInBrowser as Mock).mockImplementation(async (url: string) => {
 			if (respondWith) {
 				mockGrantAuthorization({ respondWith });
 			}

@@ -682,7 +682,7 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(0);
 				});
 
-				xit("should show link to dash when not enabled", async () => {
+				it.skip("should show link to dash when not enabled", async () => {
 					const queueName = "testQueueId";
 					msw.use(
 						http.post(

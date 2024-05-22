@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
@@ -16,12 +17,12 @@ describe("deprecated-usage-model", () => {
 
 	// TODO: remove the fake timers and irrelevant tests after March 1st
 	beforeAll(() => {
-		jest.useFakeTimers();
-		jest.setSystemTime(new Date(2024, 2, 2));
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2024, 2, 2));
 	});
 
 	afterAll(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	it("should warn user about ignored usage model if usage_model specified", async () => {

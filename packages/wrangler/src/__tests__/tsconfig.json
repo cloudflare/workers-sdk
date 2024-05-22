@@ -5,5 +5,5 @@
 		"jsx": "preserve"
 	},
 	"include": ["../*.d.ts", "**/*.ts", "**/*.tsx", "**/*.js"],
-	"exclude": ["../jest.d.ts"]
+	"exclude": ["../vitest.d.ts"]
 }

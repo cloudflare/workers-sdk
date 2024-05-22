@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { Mock } from "vitest";
 import { printWranglerBanner } from "../update-check";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -333,7 +334,7 @@ describe("dispatch-namespace", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
-			expect((printWranglerBanner as jest.Mock).mock.calls.length).toEqual(1);
+			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});
 	});
 });

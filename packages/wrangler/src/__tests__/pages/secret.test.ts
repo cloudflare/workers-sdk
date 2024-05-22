@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -159,16 +160,14 @@ describe("wrangler pages secret", () => {
 						"pages secret put the-key --project some-project-name --env some-env"
 					)
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+					`"Pages does not support the \\"some-env\\" named environment. Please specify \\"production\\" (default) or \\"preview\\""`
 				);
 			});
 
 			it("should error without a project name", async () => {
 				await expect(
 					runWrangler("pages secret put the-key")
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Must specify a project name.]`
-				);
+				).rejects.toMatchInlineSnapshot(`"Must specify a project name."`);
 			});
 		});
 
@@ -365,14 +364,14 @@ describe("wrangler pages secret", () => {
 					"pages secret delete the-key --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`"Pages does not support the \\"some-env\\" named environment. Please specify \\"production\\" (default) or \\"preview\\""`
 			);
 		});
 
 		it("should error without a project name", async () => {
 			await expect(
 				runWrangler("pages secret delete the-key")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(`"Must specify a project name."`);
 		});
 	});
 
@@ -448,14 +447,14 @@ describe("wrangler pages secret", () => {
 					"pages secret list --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
+				`"Pages does not support the \\"some-env\\" named environment. Please specify \\"production\\" (default) or \\"preview\\""`
 			);
 		});
 
 		it("should error without a project name", async () => {
 			await expect(
 				runWrangler("pages secret list")
-			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
+			).rejects.toMatchInlineSnapshot(`"Must specify a project name."`);
 		});
 	});
 
@@ -504,18 +503,18 @@ describe("wrangler pages secret", () => {
 		}
 		it("should fail secret bulk w/ no pipe or JSON input", async () => {
 			mockProjectRequests([]);
-			jest
-				.spyOn(readline, "createInterface")
-				.mockImplementation(() => null as unknown as Interface);
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() => null as unknown as Interface
+			);
 			await expect(
 				runWrangler(`pages secret bulk --project some-project-name`)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: 🚨 Please provide a JSON file or valid JSON pipe]`
+				`"🚨 Please provide a JSON file or valid JSON pipe"`
 			);
 		});
 
 		it("should use secret bulk w/ pipe input", async () => {
-			jest.spyOn(readline, "createInterface").mockImplementation(
+			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
 					JSON.stringify({

@@ -1,11 +1,11 @@
 import { writeFileSync } from "node:fs";
+import { vi } from "vitest";
+import { getPackageManager, getPackageManagerName } from "../package-manager";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-const { getPackageManager, getPackageManagerName } =
-	jest.requireActual("../package-manager");
-
+vi.unmock("../package-manager");
 function mockUserAgent(userAgent = "npm") {
 	let original: string | undefined;
 	beforeEach(() => {

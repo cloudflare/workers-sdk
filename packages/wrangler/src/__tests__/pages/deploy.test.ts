@@ -9,8 +9,10 @@ import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
+import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
+import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
@@ -21,6 +23,8 @@ import type { FormDataEntryValue } from "undici";
 
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+
 	const workerHasD1Shim = async (contents: FormDataEntryValue | null) =>
 		(await toString(contents)).includes("D1_ERROR");
 	let actualProcessEnvCI: string | undefined;
@@ -34,6 +38,7 @@ describe("pages deploy", () => {
 	beforeEach(() => {
 		actualProcessEnvCI = process.env.CI;
 		process.env.CI = "true";
+		setIsTTY(false);
 	});
 
 	afterEach(async () => {
@@ -3195,48 +3200,48 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 						// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 						// small enough, let's go ahead and snapshot test the whole thing
 						expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"metadata\\"
+							"------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-				Content-Type: application/javascript+module
+							{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+							Content-Type: application/javascript+module
 
-				// _worker.js
-				import wasm from \\"./test-hello.wasm\\";
-				import html from \\"./test-hello.html\\";
-				var worker_default = {
-				  async fetch(request, env) {
-				    const url = new URL(request.url);
-				    const helloModule = await WebAssembly.instantiate(wasm);
-				    const wasmGreeting = helloModule.exports.hello;
-				    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
-				      return new Response(wasmGreeting);
-				    }
-				    if (url.pathname.startsWith(\\"/hello-text\\")) {
-				      return new Response(html);
-				    }
-				    return env.ASSETS.fetch(request);
-				  }
-				};
-				export {
-				  worker_default as default
-				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+							// _worker.js
+							import wasm from \\"./test-hello.wasm\\";
+							import html from \\"./test-hello.html\\";
+							var worker_default = {
+							  async fetch(request, env) {
+							    const url = new URL(request.url);
+							    const helloModule = await WebAssembly.instantiate(wasm);
+							    const wasmGreeting = helloModule.exports.hello;
+							    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
+							      return new Response(wasmGreeting);
+							    }
+							    if (url.pathname.startsWith(\\"/hello-text\\")) {
+							      return new Response(html);
+							    }
+							    return env.ASSETS.fetch(request);
+							  }
+							};
+							export {
+							  worker_default as default
+							};
+							//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
-				Content-Type: application/wasm
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
+							Content-Type: application/wasm
 
-				Hello wasm modules
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
-				Content-Type: text/plain
+							Hello wasm modules
+							------formdata-undici-0.test
+							Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
+							Content-Type: text/plain
 
-				<html><body>Hello text modules</body></html>
-				------formdata-undici-0.test--"
-			`);
+							<html><body>Hello text modules</body></html>
+							------formdata-undici-0.test--"
+						`);
 
 						return HttpResponse.json(
 							{

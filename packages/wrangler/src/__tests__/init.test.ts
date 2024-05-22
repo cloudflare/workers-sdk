@@ -6,6 +6,7 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { File, FormData } from "undici";
+import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
@@ -19,6 +20,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
 import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
@@ -41,10 +43,10 @@ describe("init", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	afterEach(() => {
@@ -3320,9 +3322,9 @@ describe("init", () => {
 				});
 
 				const mockDate = "2000-01-01";
-				jest
-					.spyOn(Date.prototype, "toISOString")
-					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+				vi.spyOn(Date.prototype, "toISOString").mockImplementation(
+					() => `${mockDate}T00:00:00.000Z`
+				);
 
 				mockConfirm(
 					{
@@ -3437,7 +3439,7 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --from-dash")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Not enough arguments following: from-dash]`
+					`"Not enough arguments following: from-dash"`
 				);
 				checkFiles({
 					items: {

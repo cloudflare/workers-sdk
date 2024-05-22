@@ -163,7 +163,7 @@ describe("deployments", () => {
 				await expect(
 					runWrangler("deployments list")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
+					`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`"`
 				);
 			});
 		});
@@ -436,7 +436,7 @@ describe("deployments", () => {
 
 			it("should require a worker name", async () => {
 				await expect(runWrangler("rollback")).rejects.toMatchInlineSnapshot(
-					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
+					`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`"`
 				);
 
 				expect(requests.count).toEqual(0);

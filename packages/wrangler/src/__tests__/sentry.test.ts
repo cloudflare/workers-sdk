@@ -40,6 +40,7 @@ describe("sentry", () => {
 		msw.resetHandlers();
 	});
 	describe("non interactive", () => {
+		beforeEach(() => setIsTTY(false));
 		it("should not hit sentry in normal usage", async () => {
 			await runWrangler("version");
 			expect(sentryRequests?.length).toEqual(0);
@@ -57,15 +58,15 @@ describe("sentry", () => {
 				)
 			);
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`[TypeError: Failed to fetch]`
+				`"Failed to fetch"`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-"Getting User settings...
+				"Getting User settings...
 
-[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-? Would you like to report this error to Cloudflare?
-🤖 Using fallback value in non-interactive context: no"
-`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				? Would you like to report this error to Cloudflare?
+				🤖 Using fallback value in non-interactive context: no"
+			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 	});
@@ -84,7 +85,7 @@ describe("sentry", () => {
 
 		it("should not hit sentry with user error", async () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
+				`"A worker name must be defined, either via --name, or in wrangler.toml"`
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -106,7 +107,7 @@ describe("sentry", () => {
 				result: false,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`[TypeError: Failed to fetch]`
+				`"Failed to fetch"`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
@@ -132,7 +133,7 @@ describe("sentry", () => {
 				result: true,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`[TypeError: Failed to fetch]`
+				`"Failed to fetch"`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...

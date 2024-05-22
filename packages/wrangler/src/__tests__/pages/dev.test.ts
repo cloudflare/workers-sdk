@@ -4,7 +4,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 
 /**
  * Given that `runWrangler()` mocks out the underlying implementation
- * (see "jest.setup.ts") there's only so much worth testing here.
+ * (see "vitest.setup.ts") there's only so much worth testing here.
  */
 describe("pages dev", () => {
 	runInTempDir();

@@ -254,7 +254,7 @@ describe("traverse module graph", () => {
 				]
 			)
 		).rejects.toMatchInlineSnapshot(
-			`[Error: The file other.txt matched a module rule in your configuration ({"type":"Text","globs":["other.txt"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.]`
+			`"The file other.txt matched a module rule in your configuration ({\\"type\\":\\"Text\\",\\"globs\\":[\\"other.txt\\"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`."`
 		);
 	});
 });

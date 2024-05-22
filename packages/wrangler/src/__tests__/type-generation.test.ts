@@ -395,7 +395,7 @@ describe("generateTypes()", () => {
 		);
 
 		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
-			`[Error: A non-wrangler worker-configuration.d.ts already exists, please rename and try again.]`
+			`"A non-wrangler worker-configuration.d.ts already exists, please rename and try again."`
 		);
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});

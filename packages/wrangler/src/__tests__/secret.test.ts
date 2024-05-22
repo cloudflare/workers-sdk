@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -179,7 +180,7 @@ describe("wrangler secret", () => {
 			"
 		`);
 				expect(error).toMatchInlineSnapshot(
-					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
+					`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`"`
 				);
 			});
 		});
@@ -409,7 +410,7 @@ describe("wrangler secret", () => {
 			"
 		`);
 			expect(error).toMatchInlineSnapshot(
-				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
+				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`"`
 			);
 		});
 	});
@@ -511,16 +512,16 @@ describe("wrangler secret", () => {
 			"
 		`);
 			expect(error).toMatchInlineSnapshot(
-				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
+				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`"`
 			);
 		});
 	});
 
 	describe("secret:bulk", () => {
 		it("should fail secret:bulk w/ no pipe or JSON input", async () => {
-			jest
-				.spyOn(readline, "createInterface")
-				.mockImplementation(() => null as unknown as Interface);
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() => null as unknown as Interface
+			);
 			await runWrangler(`secret:bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(
 				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
@@ -533,7 +534,7 @@ describe("wrangler secret", () => {
 		});
 
 		it("should use secret:bulk w/ pipe input", async () => {
-			jest.spyOn(readline, "createInterface").mockImplementation(
+			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
 					JSON.stringify({

@@ -355,6 +355,13 @@ export const upload = async (
 
 // Decode and check that the current JWT has not expired
 function isJwtExpired(token: string): boolean | undefined {
+	// During testing we don't use valid JWTs, so don't try and parse them
+	if (
+		typeof vitest !== "undefined" &&
+		(token === "<<funfetti-auth-jwt>>" || token === "<<funfetti-auth-jwt2>>")
+	) {
+		return false;
+	}
 	try {
 		const decodedJwt = JSON.parse(
 			Buffer.from(token.split(".")[1], "base64").toString()

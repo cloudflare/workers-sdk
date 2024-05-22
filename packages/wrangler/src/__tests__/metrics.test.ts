@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
@@ -17,18 +18,17 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { MockInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
+vi.unmock("../metrics/metrics-config");
 
 describe("metrics", () => {
 	const ORIGINAL_SPARROW_SOURCE_KEY = global.SPARROW_SOURCE_KEY;
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	beforeEach(() => {
-		// Tell jest to use the original version of the `getMetricsConfig()` function in these tests.
-		const mockMetricsConfig = jest.requireMock("../metrics/metrics-config");
-		mockMetricsConfig.useOriginal = true;
+	beforeEach(async () => {
 		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
 		logger.loggerLevel = "debug";
 		// Create a node_modules directory to store config-cache files
@@ -216,13 +216,13 @@ Metrics dispatcher: Failed to send request: Failed to fetch"
 	});
 
 	describe("getMetricsConfig()", () => {
-		let isCISpy: jest.SpyInstance;
+		let isCISpy: MockInstance;
 
 		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
 			// Default the mock TTY to interactive for all these tests.
 			setIsTTY(true);
-			isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+			isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
 		describe("enabled", () => {

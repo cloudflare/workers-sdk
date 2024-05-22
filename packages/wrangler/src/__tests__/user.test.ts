@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	loginOrRefreshIfRequired,
@@ -21,9 +22,10 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
+import type { MockInstance } from "vitest";
 
 describe("User", () => {
-	let isCISpy: jest.SpyInstance;
+	let isCISpy: MockInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
 	// TODO: Implement these two mocks with MSW
@@ -32,7 +34,7 @@ describe("User", () => {
 
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
 	describe("login", () => {

@@ -90,7 +90,7 @@ export class Logger {
 		const message = this.formatMessage(messageLevel, format(...args));
 
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
-		const inUnitTests = typeof jest !== "undefined";
+		const inUnitTests = typeof vitest !== "undefined";
 		if (!inUnitTests) {
 			void appendToDebugLogFile(messageLevel, message);
 		}
