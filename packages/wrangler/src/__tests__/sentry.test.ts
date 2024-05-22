@@ -56,7 +56,9 @@ describe("sentry", () => {
 					{ once: true }
 				)
 			);
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
+				`[TypeError: Failed to fetch]`
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 "Getting User settings...
 
