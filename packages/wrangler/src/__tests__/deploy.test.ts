@@ -10169,6 +10169,7 @@ export default{
 
 		it("should not send keepVars by default", async () => {
 			process.env = {
+				...process.env,
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 			};
@@ -10198,6 +10199,7 @@ export default{
 
 		it("should send keepVars when `keep_vars = true`", async () => {
 			process.env = {
+				...process.env,
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 			};
@@ -10282,11 +10284,6 @@ function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
-//
-//
-//
-//
-//
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
 function mockUpdateWorkerRequest({
 	env,

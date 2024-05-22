@@ -193,6 +193,10 @@ describe("sentry", () => {
 			const fakeInstallPath = "/wrangler/";
 			for (const exception of event.data.exception?.values ?? []) {
 				for (const frame of exception.stacktrace?.frames ?? []) {
+					if (frame.module.startsWith("@mswjs")) {
+						frame.module =
+							"@mswjs.interceptors.src.interceptors.fetch:index.ts";
+					}
 					if (frame.filename === undefined) {
 						continue;
 					}
