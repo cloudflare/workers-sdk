@@ -21,8 +21,9 @@ test(
 		`,
 		});
 		let result = await vitestRun();
-		expect(await result.exitCode).toBe(0);
+		let exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 written");
+		expect(exitCode).toBe(0);
 		const snapshotPath = path.join(tmpPath, "__snapshots__/index.test.ts.snap");
 		let snapshot = await fs.readFile(snapshotPath, "utf8");
 		expect(snapshot).toMatchInlineSnapshot(`
@@ -47,7 +48,7 @@ test(
 		`,
 		});
 		result = await vitestRun();
-		expect(await result.exitCode).toBe(1);
+		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 failed");
 		expect(result.stderr).toMatch(
 			"Error: Snapshot `matches snapshot 1` mismatched"
@@ -55,11 +56,13 @@ test(
 		expect(result.stderr).toMatch(
 			"Error: Snapshot `matches another snapshot > two 1` mismatched"
 		);
+		expect(exitCode).toBe(1);
 
 		// Check updates snapshots
 		result = await vitestRun("--update");
-		expect(await result.exitCode).toBe(0);
+		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 updated");
+		expect(exitCode).toBe(0);
 		snapshot = await fs.readFile(snapshotPath, "utf8");
 		expect(snapshot).toMatchInlineSnapshot(`
 		"// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
@@ -80,8 +83,9 @@ test(
 		`,
 		});
 		result = await vitestRun("--update");
-		expect(await result.exitCode).toBe(0);
+		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  1 removed");
+		expect(exitCode).toBe(0);
 		snapshot = await fs.readFile(snapshotPath, "utf8");
 		expect(snapshot).toMatchInlineSnapshot(`
 		"// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
@@ -100,8 +104,9 @@ test(
 		`,
 		});
 		result = await vitestRun("--update");
-		expect(await result.exitCode).toBe(0);
+		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  1 files removed");
+		expect(exitCode).toBe(0);
 		expect(existsSync(snapshotPath)).toBe(false);
 	},
 	{ timeout: 90_000 }
@@ -124,8 +129,9 @@ test(
 		`,
 		});
 		let result = await vitestRun();
-		expect(await result.exitCode).toBe(0);
+		let exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 written");
+		expect(exitCode).toBe(0);
 		const snapshotPath = path.join(tmpPath, "index.test.ts");
 		let snapshot = await fs.readFile(snapshotPath, "utf8");
 		expect(snapshot).toMatchInlineSnapshot(`
@@ -152,7 +158,7 @@ test(
 		`,
 		});
 		result = await vitestRun();
-		expect(await result.exitCode).toBe(1);
+		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 failed");
 		expect(result.stderr).toMatch(
 			"Error: Snapshot `matches snapshot 1` mismatched"
@@ -160,11 +166,13 @@ test(
 		expect(result.stderr).toMatch(
 			"Error: Snapshot `matches another snapshot 1` mismatched"
 		);
+		expect(exitCode).toBe(1);
 
 		// Check updates snapshots
 		result = await vitestRun("--update");
-		expect(await result.exitCode).toBe(0);
 		expect(result.stdout).toMatch("Snapshots  2 updated");
+		exitCode = await result.exitCode;
+		expect(exitCode).toBe(0);
 		snapshot = await fs.readFile(snapshotPath, "utf8");
 		expect(snapshot).toMatchInlineSnapshot(`
 		"import { it, expect } from "vitest";
