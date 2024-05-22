@@ -59,24 +59,58 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 			// Inject node globals defined in unenv's `inject` config via virtual modules
 			const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^\.]+)\.js$/;
 
+
+
 			build.initialOptions.inject = [
 				...(build.initialOptions.inject ?? []),
 				// convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
 				...Object.keys(inject).map(globalName => require('path').resolve(__dirname, `_virtual_unenv_global_polyfill-${globalName}.js`)),
 			];
 
+			console.log('------xxxx> inject: ', inject,build.initialOptions.inject, build.initialOptions.define);
+
 			build.onResolve({ filter: UNENV_GLOBALS_RE}, ({path}) => {
 				const globalName = path.match(UNENV_GLOBALS_RE)![1];
 				const globalMapping = inject[globalName];
 				return {
-						path: (typeof globalMapping === "string") ?
-								require.resolve(globalMapping).replace(/\.cjs$/, '.mjs') :
-								path
+						path: path
 				};
 			});
 
 			build.onLoad({ filter: UNENV_GLOBALS_RE }, ({path}) => {
 				const globalName = path.match(UNENV_GLOBALS_RE)![1];
+				const globalMapping = inject[globalName];
+
+				if (typeof globalMapping === "string") {
+					const globalPolyfillSpecifier = globalMapping;
+
+					return {
+						contents: `
+							import globalVar from "${globalPolyfillSpecifier}";
+
+							// ESBuild's inject doesn't actually touch globalThis, so let's do it ourselves
+							// by creating an exportable so that we can preserve the globalThis assignment if
+							// the ${globalName} was found in the app, or tree-shake it, if it wasn't
+							// see https://esbuild.github.io/api/#inject
+							const exportable =
+								// mark this as a PURE call so it can be ignored and tree-shaken by ESBuild,
+								// when we don't detect 'process', 'global.process', or 'globalThis.process'
+								// in the app code
+								// see https://esbuild.github.io/api/#tree-shaking-and-side-effects
+								/* @__PURE__ */ (() => {
+									// TODO: should we try to preserve globalThis.${globalName} if it exists?
+									return globalThis.${globalName} = globalVar;
+								})();
+
+							export {
+								exportable as '${globalName}',
+								exportable as 'globalThis.${globalName}',
+							}
+						`
+					}
+
+				}
+
 				const [moduleName, exportName] = inject[globalName];
 
 				return {
@@ -93,7 +127,7 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 							// in the app code
 							// see https://esbuild.github.io/api/#tree-shaking-and-side-effects
 							/* @__PURE__ */ (() => {
-								// TODO: should we try to preserve globalThis.${globalName}
+								// TODO: should we try to preserve globalThis.${globalName} if it exists?
 								return globalThis.${globalName} = ${exportName};
 						})();
 
