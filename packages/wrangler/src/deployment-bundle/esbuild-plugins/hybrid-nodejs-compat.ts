@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import nodePath from "node:path";
 import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin } from "esbuild";
@@ -55,29 +55,28 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 				}
 			);
 
-
 			// Inject node globals defined in unenv's `inject` config via virtual modules
-			const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^\.]+)\.js$/;
-
-
+			const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^.]+)\.js$/;
 
 			build.initialOptions.inject = [
 				...(build.initialOptions.inject ?? []),
 				// convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
-				...Object.keys(inject).map(globalName => require('path').resolve(__dirname, `_virtual_unenv_global_polyfill-${globalName}.js`)),
+				...Object.keys(inject).map((globalName) =>
+					nodePath.resolve(
+						getBasePath(),
+						`_virtual_unenv_global_polyfill-${globalName}.js`
+					)
+				),
 			];
 
-			console.log('------xxxx> inject: ', inject,build.initialOptions.inject, build.initialOptions.define);
-
-			build.onResolve({ filter: UNENV_GLOBALS_RE}, ({path}) => {
-				const globalName = path.match(UNENV_GLOBALS_RE)![1];
-				const globalMapping = inject[globalName];
+			build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
 				return {
-						path: path
+					path: path,
 				};
 			});
 
-			build.onLoad({ filter: UNENV_GLOBALS_RE }, ({path}) => {
+			build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
+				// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
 				const globalName = path.match(UNENV_GLOBALS_RE)![1];
 				const globalMapping = inject[globalName];
 
@@ -106,9 +105,8 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 								exportable as '${globalName}',
 								exportable as 'globalThis.${globalName}',
 							}
-						`
-					}
-
+						`,
+					};
 				}
 
 				const [moduleName, exportName] = inject[globalName];
