@@ -113,7 +113,6 @@ export const mockOAuthFlow = () => {
 				async ({ request }) => {
 					const url = new URL(request.url);
 
-					// TODO: update Miniflare typings to match full undici Request
 					outcome.actual = url.toString();
 					return HttpResponse.json(makeTokenResponse(respondWith));
 				},

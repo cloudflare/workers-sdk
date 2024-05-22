@@ -100,6 +100,7 @@ jest.mock("undici", () => {
 		 * - MSW makes it difficult to use custom interceptors, and _really_ wants you to use globalThis.fetch. In particular, it doesn't support intercepting undici.fetch
 		 * Because Wrangler supports Node v16, we have to use undici's fetch directly rather than using globalThis.fetch. We'd also like to intercept requests with MSW
 		 * Therefore, we mock undici in tests to replace the imported fetch with globalThis.fetch (which MSW will replace with a mocked version—hence the getter, so that we always get the up to date mocked version)
+		 * We're able to delegate to globalThis.fetch in our tests because we run our test in Node v16
 		 */
 		get fetch() {
 			// @ts-expect-error Here be dragons (see above)

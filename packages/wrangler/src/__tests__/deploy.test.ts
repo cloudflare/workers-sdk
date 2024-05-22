@@ -10470,7 +10470,7 @@ function mockCustomDomainsChangesetRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		http.post(
+		http.post<{ accountId: string; scriptName: string; envName: string }>(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
 			async ({ request, params }) => {
 				expect(params.accountId).toEqual("some-account-id");
@@ -10490,8 +10490,8 @@ function mockCustomDomainsChangesetRequest({
 						return {
 							...domain,
 							id: "",
-							service: params.scriptName as string,
-							environment: params.envName as string,
+							service: params.scriptName,
+							environment: params.envName,
 							zone_name: "",
 							zone_id: "",
 						};

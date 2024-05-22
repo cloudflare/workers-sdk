@@ -1,16 +1,9 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult, msw } from "./msw";
+import { serialize } from "./serialize-form-data-entry";
 import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { HttpResponseResolver } from "msw";
-import type { FormDataEntryValue } from "undici";
-
-async function serialize(entry: FormDataEntryValue | null) {
-	if (!entry) {
-		return null;
-	}
-	return typeof entry === "string" ? entry : await entry.text();
-}
 
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
@@ -58,7 +51,7 @@ export function mockUploadWorkerRequest(
 			expect(await serialize(formBody.get("index.js"))).toMatch(expectedEntry);
 		}
 		const metadata = JSON.parse(
-			(await serialize(formBody.get("metadata"))) as string
+			await serialize(formBody.get("metadata"))
 		) as WorkerMetadata;
 		if (expectedType === "esm") {
 			expect(metadata.main_module).toEqual(expectedMainModule);

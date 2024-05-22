@@ -49,20 +49,17 @@ describe("create", () => {
 		]);
 		msw.use(
 			http.post("*/accounts/:accountId/d1/database", async () => {
-				return HttpResponse.json(
-					{
-						result: {
-							uuid: "51e7c314-456e-4167-b6c3-869ad188fc23",
-							name: "test",
-							primary_location_hint: "OC",
-							created_in_region: "OC",
-						},
-						success: true,
-						errors: [],
-						messages: [],
+				return HttpResponse.json({
+					result: {
+						uuid: "51e7c314-456e-4167-b6c3-869ad188fc23",
+						name: "test",
+						primary_location_hint: "OC",
+						created_in_region: "OC",
 					},
-					{ status: 200 }
-				);
+					success: true,
+					errors: [],
+					messages: [],
+				});
 			})
 		);
 		await runWrangler("d1 create test --location oc");
