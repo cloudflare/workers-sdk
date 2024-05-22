@@ -243,7 +243,7 @@ describe("getPackageManager()", () => {
 			await expect(() =>
 				getPackageManager(process.cwd())
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Unable to find a package manager. Supported managers are: npm, yarn, and pnpm."`
+				`[Error: Unable to find a package manager. Supported managers are: npm, yarn, and pnpm.]`
 			);
 		});
 	});

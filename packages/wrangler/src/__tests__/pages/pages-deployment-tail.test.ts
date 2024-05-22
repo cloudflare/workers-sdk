@@ -82,7 +82,7 @@ describe("pages deployment tail", () => {
 			await expect(
 				runWrangler("pages deployment tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a deployment in non-interactive mode."`
+				`[Error: Must specify a deployment in non-interactive mode.]`
 			);
 			expect(api.requests.deployments.count).toStrictEqual(0);
 			await api.closeHelper();
@@ -126,7 +126,7 @@ describe("pages deployment tail", () => {
 			await expect(
 				runWrangler("pages deployment tail foo")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a project name in non-interactive mode."`
+				`[Error: Must specify a project name in non-interactive mode.]`
 			);
 		});
 

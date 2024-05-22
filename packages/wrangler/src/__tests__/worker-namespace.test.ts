@@ -82,7 +82,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -133,7 +133,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -193,7 +193,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -303,7 +303,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace rename")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 2"`
+				`[Error: Not enough non-option arguments: got 0, need at least 2]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`

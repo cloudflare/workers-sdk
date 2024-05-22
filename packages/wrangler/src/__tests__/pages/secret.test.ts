@@ -160,14 +160,14 @@ describe("wrangler pages secret", () => {
 						"pages secret put the-key --project some-project-name --env some-env"
 					)
 				).rejects.toMatchInlineSnapshot(
-					`"Pages does not support the \\"some-env\\" named environment. Please specify \\"production\\" (default) or \\"preview\\""`
+					`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
 				);
 			});
 
 			it("should error without a project name", async () => {
 				await expect(
 					runWrangler("pages secret put the-key")
-				).rejects.toMatchInlineSnapshot(`"Must specify a project name."`);
+				).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
 			});
 		});
 
@@ -219,7 +219,7 @@ describe("wrangler pages secret", () => {
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("pages secret put the-key --project some-project-name")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Error in stdin stream"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Error in stdin stream]`);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
@@ -236,7 +236,7 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"A request to the Cloudflare API (/memberships) failed."`
+						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);
 				});
 
@@ -245,9 +245,9 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
-				                  "Failed to automatically retrieve account IDs for the logged in user.
-				                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
-			                `);
+						[Error: Failed to automatically retrieve account IDs for the logged in user.
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.]
+					`);
 				});
 
 				it("should error if a user has multiple accounts, and has not specified an account", async () => {
@@ -269,13 +269,13 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`account-name-1\`: \`account-id-1\`
-				  \`account-name-2\`: \`account-id-2\`
-				  \`account-name-3\`: \`account-id-3\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`account-name-1\`: \`account-id-1\`
+						  \`account-name-2\`: \`account-id-2\`
+						  \`account-name-3\`: \`account-id-3\`]
+					`);
 				});
 			});
 		});
@@ -364,14 +364,14 @@ describe("wrangler pages secret", () => {
 					"pages secret delete the-key --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`"Pages does not support the \\"some-env\\" named environment. Please specify \\"production\\" (default) or \\"preview\\""`
+				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
 			);
 		});
 
 		it("should error without a project name", async () => {
 			await expect(
 				runWrangler("pages secret delete the-key")
-			).rejects.toMatchInlineSnapshot(`"Must specify a project name."`);
+			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
 		});
 	});
 
@@ -447,14 +447,14 @@ describe("wrangler pages secret", () => {
 					"pages secret list --project some-project-name --env some-env"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`"Pages does not support the \\"some-env\\" named environment. Please specify \\"production\\" (default) or \\"preview\\""`
+				`[Error: Pages does not support the "some-env" named environment. Please specify "production" (default) or "preview"]`
 			);
 		});
 
 		it("should error without a project name", async () => {
 			await expect(
 				runWrangler("pages secret list")
-			).rejects.toMatchInlineSnapshot(`"Must specify a project name."`);
+			).rejects.toMatchInlineSnapshot(`[Error: Must specify a project name.]`);
 		});
 	});
 
@@ -509,7 +509,7 @@ describe("wrangler pages secret", () => {
 			await expect(
 				runWrangler(`pages secret bulk --project some-project-name`)
 			).rejects.toMatchInlineSnapshot(
-				`"🚨 Please provide a JSON file or valid JSON pipe"`
+				`[Error: 🚨 Please provide a JSON file or valid JSON pipe]`
 			);
 		});
 
@@ -657,7 +657,7 @@ describe("wrangler pages secret", () => {
 					"pages secret bulk ./secret.json --project some-project-name"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"🚨 7 secrets failed to upload"`
+				`[Error: 🚨 7 secrets failed to upload]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`

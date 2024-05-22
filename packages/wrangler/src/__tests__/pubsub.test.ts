@@ -257,7 +257,7 @@ describe("wrangler", () => {
 					await expect(
 						runWrangler("pubsub broker create my-broker")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Missing required argument: namespace"`
+						`[Error: Missing required argument: namespace]`
 					);
 				});
 			});

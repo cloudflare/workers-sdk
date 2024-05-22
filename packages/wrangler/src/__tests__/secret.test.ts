@@ -180,7 +180,7 @@ describe("wrangler secret", () => {
 			"
 		`);
 				expect(error).toMatchInlineSnapshot(
-					`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`"`
+					`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
 				);
 			});
 		});
@@ -229,7 +229,7 @@ describe("wrangler secret", () => {
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("secret put the-key --name script-name")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Error in stdin stream"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Error in stdin stream]`);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
@@ -246,7 +246,7 @@ describe("wrangler secret", () => {
 					await expect(
 						runWrangler("secret put the-key --name script-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"A request to the Cloudflare API (/memberships) failed."`
+						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);
 				});
 
@@ -254,9 +254,9 @@ describe("wrangler secret", () => {
 					mockGetMemberships([]);
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-				                  "Failed to automatically retrieve account IDs for the logged in user.
-				                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
-			                `);
+						[Error: Failed to automatically retrieve account IDs for the logged in user.
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.]
+					`);
 				});
 
 				it("should use the account from wrangler.toml", async () => {
@@ -296,13 +296,13 @@ describe("wrangler secret", () => {
 
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`account-name-1\`: \`account-id-1\`
-				  \`account-name-2\`: \`account-id-2\`
-				  \`account-name-3\`: \`account-id-3\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`account-name-1\`: \`account-id-1\`
+						  \`account-name-2\`: \`account-id-2\`
+						  \`account-name-3\`: \`account-id-3\`]
+					`);
 				});
 			});
 		});
@@ -410,7 +410,7 @@ describe("wrangler secret", () => {
 			"
 		`);
 			expect(error).toMatchInlineSnapshot(
-				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`"`
+				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
 			);
 		});
 	});
@@ -512,7 +512,7 @@ describe("wrangler secret", () => {
 			"
 		`);
 			expect(error).toMatchInlineSnapshot(
-				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`"`
+				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
 			);
 		});
 	});
@@ -625,7 +625,7 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret:bulk ./secret.json --name script-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The contents of \\"./secret.json\\" is not valid JSON: \\"ParseError: Unexpected token b\\""`
+				`[Error: The contents of "./secret.json" is not valid JSON: "ParseError: Unexpected token b"]`
 			);
 		});
 
@@ -640,7 +640,7 @@ describe("wrangler secret", () => {
 			await expect(
 				runWrangler("secret:bulk ./secret.json --name script-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The value for \\"invalid-secret\\" in \\"./secret.json\\" is not a \\"string\\" instead it is of type \\"number\\""`
+				`[Error: The value for "invalid-secret" in "./secret.json" is not a "string" instead it is of type "number"]`
 			);
 		});
 
@@ -682,7 +682,7 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret:bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"🚨 7 secrets failed to upload"`
+				`[Error: 🚨 7 secrets failed to upload]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -733,7 +733,7 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret:bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"🚨 2 secrets failed to upload"`
+				`[Error: 🚨 2 secrets failed to upload]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`

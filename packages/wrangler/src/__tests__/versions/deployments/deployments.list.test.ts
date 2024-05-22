@@ -23,7 +23,7 @@ describe("deployments list", () => {
 			const result = runWrangler("deployments list  --experimental-versions");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
+				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

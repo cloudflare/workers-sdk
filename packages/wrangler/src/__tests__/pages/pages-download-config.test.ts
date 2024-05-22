@@ -436,14 +436,14 @@ describe("pages download config", () => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Must specify a project name."`
+			`[Error: Must specify a project name.]`
 		);
 	});
 	it("should fail if project does not exist", async () => {
 		await expect(
 			runWrangler(`pages download config NOT_REAL`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"A request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed."`
+			`[APIError: A request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"
@@ -607,7 +607,7 @@ describe("pages download config", () => {
 			await expect(
 				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not overwriting existing \`wrangler.toml\` file"`
+				`[Error: Not overwriting existing \`wrangler.toml\` file]`
 			);
 
 			await expect(
@@ -781,7 +781,7 @@ describe("pages download config", () => {
 			await expect(
 				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not overwriting existing \`wrangler.toml\` file"`
+				`[Error: Not overwriting existing \`wrangler.toml\` file]`
 			);
 
 			await expect(

@@ -58,24 +58,24 @@ describe("generate", () => {
 			await expect(
 				runWrangler("generate worker-name worker-template --type rust")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The --type option is no longer supported."`
+				`[Error: The --type option is no longer supported.]`
 			);
 		});
 
 		it("complains when given the --site argument", async () => {
 			await expect(runWrangler("generate worker-name worker-template --site"))
 				.rejects.toThrowErrorMatchingInlineSnapshot(`
-					"The --site option is no longer supported.
-					If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
+				[Error: The --site option is no longer supported.
+				If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
 
-					\`\`\`
-					git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template worker-name
-					cd worker-name
-					\`\`\`
+				\`\`\`
+				git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template worker-name
+				cd worker-name
+				\`\`\`
 
-					Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
-					Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/."
-				`);
+				Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
+				Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.]
+			`);
 		});
 
 		it.skip("auto-increments the worker directory name", async () => {

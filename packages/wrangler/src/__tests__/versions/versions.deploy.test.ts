@@ -92,7 +92,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = \\"<name>\\"\`"`
+				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
 			);
 		});
 	});
@@ -106,7 +106,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"You must select at least 1 version to deploy."`
+				`[Error: You must select at least 1 version to deploy.]`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -407,7 +407,7 @@ describe("versions deploy", () => {
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
-					`"You must select at most 2 versions to deploy."`
+					`[Error: You must select at most 2 versions to deploy.]`
 				);
 
 				expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -658,7 +658,7 @@ describe("versions deploy", () => {
 
 			// TODO: could do with a better error message but this will suffice for now (this error isn't possible in the interactive flow)
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed."`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions/ffffffff-ffff-ffff-ffff-ffffffffffff) failed.]`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -685,7 +685,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"Percentage value (101%) must be between 0 and 100."`
+				`[Error: Percentage value (101%) must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -697,7 +697,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"Percentage value (-1%) must be between 0 and 100."`
+				`[Error: Percentage value (-1%) must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -709,7 +709,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"Percentage value (101%) must be between 0 and 100."`
+				`[Error: Percentage value (101%) must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -721,7 +721,7 @@ describe("versions deploy", () => {
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`"Percentage value (-1%) must be between 0 and 100."`
+				`[Error: Percentage value (-1%) must be between 0 and 100.]`
 			);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`""`);
@@ -928,21 +928,21 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`"Sum of specified percentages (101%) must be at most 100%"`
+				`[Error: Sum of specified percentages (101%) must be at most 100%]`
 			);
 		});
 		test("errors if subtotal below min", () => {
 			expect(() =>
 				validateTrafficSubtotal(-1, { min: 0, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`"Sum of specified percentages (-1%) must be at least 0%"`
+				`[Error: Sum of specified percentages (-1%) must be at least 0%]`
 			);
 		});
 		test("different error message if min === max", () => {
 			expect(() =>
 				validateTrafficSubtotal(101, { min: 100, max: 100 })
 			).toThrowErrorMatchingInlineSnapshot(
-				`"Sum of specified percentages (101%) must be 100%"`
+				`[Error: Sum of specified percentages (101%) must be 100%]`
 			);
 		});
 		test("no error if subtotal above max but not above max + EPSILON", () => {
@@ -951,7 +951,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(100.01)
 			).toThrowErrorMatchingInlineSnapshot(
-				`"Sum of specified percentages (100.01%) must be 100%"`
+				`[Error: Sum of specified percentages (100.01%) must be 100%]`
 			);
 		});
 		test("no error if subtotal below min but not below min - EPSILON", () => {
@@ -960,7 +960,7 @@ describe("units", () => {
 			expect(() =>
 				validateTrafficSubtotal(99.99)
 			).toThrowErrorMatchingInlineSnapshot(
-				`"Sum of specified percentages (99.99%) must be 100%"`
+				`[Error: Sum of specified percentages (99.99%) must be 100%]`
 			);
 		});
 	});

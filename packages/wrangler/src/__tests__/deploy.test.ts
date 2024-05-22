@@ -332,11 +332,11 @@ describe("deploy", () => {
 
 				await expect(runWrangler("deploy index.js")).rejects
 					.toMatchInlineSnapshot(`
-					"More than one account available but unable to select one in non-interactive mode.
+					[Error: More than one account available but unable to select one in non-interactive mode.
 					Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
 					  \`enterprise\`: \`1701\`
-					  \`enterprise-nx\`: \`nx01\`"
+					  \`enterprise-nx\`: \`nx01\`]
 				`);
 			});
 
@@ -569,17 +569,17 @@ describe("deploy", () => {
 				await expect(
 					runWrangler("deploy index.js --env some-env --legacy-env true")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-			                "Processing wrangler.toml configuration:
-			                  - No environment found in configuration with name \\"some-env\\".
-			                    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
-			                    The available configured environment names are: [\\"other-env\\"]
+					[Error: Processing wrangler.toml configuration:
+					  - No environment found in configuration with name "some-env".
+					    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
+					    The available configured environment names are: ["other-env"]
 
-			                    Consider adding an environment configuration section to the wrangler.toml file:
-			                    \`\`\`
-			                    [env.some-env]
-			                    \`\`\`
-			                "
-		              `);
+					    Consider adding an environment configuration section to the wrangler.toml file:
+					    \`\`\`
+					    [env.some-env]
+					    \`\`\`
+					]
+				`);
 			});
 
 			it("should throw an error w/ helpful message when using --env --name", async () => {
@@ -590,10 +590,10 @@ describe("deploy", () => {
 					"deploy index.js --name voyager --env some-env --legacy-env true"
 				).catch((err) =>
 					expect(err).toMatchInlineSnapshot(`
-						"In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
+						[Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
 						    [env.some-env]
-						    name = \\"voyager\\"
-						    "
+						    name = "voyager"
+						    ]
 					`)
 				);
 			});
@@ -1085,9 +1085,9 @@ describe("deploy", () => {
 			});
 			await expect(runWrangler("deploy ./index --env=staging")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
-			Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
-		`);
+				[Error: Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
+				Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth]
+			`);
 		});
 
 		describe("custom domains", () => {
@@ -1265,7 +1265,7 @@ Update them to point to this script instead?`,
 				await expect(
 					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Cannot use \\"*.example.com\\" as a Custom Domain; wildcard operators (*) are not allowed"`
+					`[Error: Cannot use "*.example.com" as a Custom Domain; wildcard operators (*) are not allowed]`
 				);
 
 				writeWranglerToml({
@@ -1279,7 +1279,7 @@ Update them to point to this script instead?`,
 				await expect(
 					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Cannot use \\"api.example.com/at/a/path\\" as a Custom Domain; paths are not allowed"`
+					`[Error: Cannot use "api.example.com/at/a/path" as a Custom Domain; paths are not allowed]`
 				);
 			});
 
@@ -1507,11 +1507,11 @@ Update them to point to this script instead?`,
 			});
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "Processing wrangler.toml configuration:
-			                - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
-			                  They serve the same purpose: to point to the entry-point of your worker.
-			                  Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config."
-		            `);
+				[Error: Processing wrangler.toml configuration:
+				  - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
+				    They serve the same purpose: to point to the entry-point of your worker.
+				    Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config.]
+			`);
 		});
 
 		it("should be able to transpile TypeScript (esm)", async () => {
@@ -1759,9 +1759,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy ./index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "Processing wrangler.toml configuration:
-			                - \\"site.bucket\\" is a required field."
-		            `);
+				[Error: Processing wrangler.toml configuration:
+				  - "site.bucket" is a required field.]
+			`);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1918,11 +1918,11 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "Processing wrangler.toml configuration:
-			                - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
-			                  They serve the same purpose: to point to the entry-point of your worker.
-			                  Delete the deprecated \`site.entry-point\` field from your config."
-		            `);
+				[Error: Processing wrangler.toml configuration:
+				  - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
+				    They serve the same purpose: to point to the entry-point of your worker.
+				    Delete the deprecated \`site.entry-point\` field from your config.]
+			`);
 		});
 
 		it("should error if there is no entry-point specified", async () => {
@@ -1933,7 +1933,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field."`
+				`[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -2216,7 +2216,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"`
+				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2242,7 +2242,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2269,7 +2269,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2295,7 +2295,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2328,7 +2328,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -3287,7 +3287,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits"`
+				`[Error: File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits]`
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
@@ -3425,7 +3425,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
+				`[Error: The asset path key "folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",]`
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
@@ -3717,7 +3717,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed."`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed.]`
 			);
 
 			expect(requestCount).toBeLessThan(3);
@@ -4506,9 +4506,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy ./index")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
-			https://dash.cloudflare.com/some-account-id/workers/onboarding"
-		`);
+				[Error: You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
+				https://dash.cloudflare.com/some-account-id/workers/onboarding]
+			`);
 		});
 
 		it("should not deploy to workers.dev if there are any routes defined", async () => {
@@ -5001,9 +5001,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".
-			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
-		            `);
+				[Error: The expected output file at "index.js" was not found after running custom build: node -e "4+4;".
+				The \`main\` property in wrangler.toml should point to the file generated by the custom build.]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
 			"
@@ -5032,16 +5032,16 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "The expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".
-			              The \`main\` property in wrangler.toml should point to the file generated by the custom build.
-			              The provided entry-point path, \\".\\", points to a directory, rather than a file.
+				[Error: The expected output file at "." was not found after running custom build: node -e "4+4;".
+				The \`main\` property in wrangler.toml should point to the file generated by the custom build.
+				The provided entry-point path, ".", points to a directory, rather than a file.
 
-			              Did you mean to set the main field to one of:
-			              \`\`\`
-			              main = \\"./worker.js\\"
-			              main = \\"./dist/index.ts\\"
-			              \`\`\`"
-		            `);
+				Did you mean to set the main field to one of:
+				\`\`\`
+				main = "./worker.js"
+				main = "./dist/index.ts"
+				\`\`\`]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
 			"
@@ -6064,13 +6064,13 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-				"Processing wrangler.toml configuration:
+				[Error: Processing wrangler.toml configuration:
 				  - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
 				  - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
 				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
 				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
-				    Please change your bindings to have unique names."
+				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -6171,14 +6171,14 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-				"Processing wrangler.toml configuration:
+				[Error: Processing wrangler.toml configuration:
 				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
 				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
 				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
 				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
 				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
-				    Please change your bindings to have unique names."
+				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -6321,7 +6321,7 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-				"Processing wrangler.toml configuration:
+				[Error: Processing wrangler.toml configuration:
 				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
 				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
 				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
@@ -6330,7 +6330,7 @@ addEventListener('fetch', event => {});`
 				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
 				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
 				  - Bindings must have unique names, so that they can all be referenced in the worker.
-				    Please change your bindings to have unique names."
+				    Please change your bindings to have unique names.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -6410,7 +6410,7 @@ addEventListener('fetch', event => {});`
 				await expect(
 					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
+					`[Error: You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -6562,7 +6562,7 @@ addEventListener('fetch', event => {});`
 				await expect(
 					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
+					`[Error: You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -6680,7 +6680,7 @@ addEventListener('fetch', event => {});`
 				await expect(
 					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
+					`[Error: You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -6927,9 +6927,9 @@ addEventListener('fetch', event => {});`
 
 				await expect(() => runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with the \\"unsafe.capnp\\" object, which expects a \\"base_path\\" and an array of \\"source_schemas\\" to compile, or a \\"compiled_schema\\" property."
-		`);
+					[Error: Processing wrangler.toml configuration:
+					  - "logfwdr" binding "schema" property has been replaced with the "unsafe.capnp" object, which expects a "base_path" and an array of "source_schemas" to compile, or a "compiled_schema" property.]
+				`);
 			});
 		});
 
@@ -7152,12 +7152,12 @@ addEventListener('fetch', event => {});`
 
 				await expect(runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-			                              "You seem to be trying to use Durable Objects in a Worker written as a service-worker.
-			                              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
-			                              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
-			                              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
-			                              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
-		                          `);
+					[Error: You seem to be trying to use Durable Objects in a Worker written as a service-worker.
+					You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
+					{ name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
+					Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
+					https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]
+				`);
 			});
 		});
 
@@ -7654,9 +7654,9 @@ addEventListener('fetch', event => {});`
 
 					await expect(() => runWrangler("deploy index.js")).rejects
 						.toThrowErrorMatchingInlineSnapshot(`
-				"Processing wrangler.toml configuration:
-				  - The field \\"unsafe.capnp\\" cannot contain both \\"compiled_schema\\" and one of \\"base_path\\" or \\"source_schemas\\"."
-			`);
+						[Error: Processing wrangler.toml configuration:
+						  - The field "unsafe.capnp" cannot contain both "compiled_schema" and one of "base_path" or "source_schemas".]
+					`);
 				});
 				it("should error when no schemas are specified", async () => {
 					writeWranglerToml({
@@ -7669,10 +7669,10 @@ addEventListener('fetch', event => {});`
 
 					await expect(() => runWrangler("deploy index.js")).rejects
 						.toThrowErrorMatchingInlineSnapshot(`
-				"Processing wrangler.toml configuration:
-				  - The field \\"unsafe.capnp.base_path\\", when present, should be a string but got undefined
-				  - Expected \\"unsafe.capnp.source_schemas\\" to be an array of strings but got undefined"
-			`);
+						[Error: Processing wrangler.toml configuration:
+						  - The field "unsafe.capnp.base_path", when present, should be a string but got undefined
+						  - Expected "unsafe.capnp.source_schemas" to be an array of strings but got undefined]
+					`);
 				});
 				it("should error when the capnp compiler is not present, but is required", async () => {
 					(sync as Mock).mockReturnValue(false);
@@ -7689,7 +7689,7 @@ addEventListener('fetch', event => {});`
 					await expect(() =>
 						runWrangler("deploy index.js")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"The capnp compiler is required to upload capnp schemas, but is not present."`
+						`[Error: The capnp compiler is required to upload capnp schemas, but is not present.]`
 					);
 				});
 				it("should accept an uncompiled capnp schema", async () => {
@@ -8645,7 +8645,7 @@ export default{
 					"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
+				`[AssertionError: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
 	});
@@ -8750,7 +8750,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed."`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -8818,7 +8818,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed."`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -8883,7 +8883,7 @@ export default{
 			});
 
 			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`"A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed."`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -9139,7 +9139,7 @@ export default{
 		await expect(
 			runWrangler("deploy index.js")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed."`
+			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"
@@ -9788,7 +9788,7 @@ export default{
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
-				`"Queue \\"queue1\\" does not exist. To create it, run: wrangler queues create queue1"`
+				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
 		});
 
@@ -9807,7 +9807,7 @@ export default{
 			await expect(
 				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
-				`"Queue \\"queue1\\" does not exist. To create it, run: wrangler queues create queue1"`
+				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
 		});
 	});

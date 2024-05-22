@@ -58,7 +58,7 @@ describe("sentry", () => {
 				)
 			);
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`"Failed to fetch"`
+				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Getting User settings...
@@ -85,7 +85,7 @@ describe("sentry", () => {
 
 		it("should not hit sentry with user error", async () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`"A worker name must be defined, either via --name, or in wrangler.toml"`
+				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -107,7 +107,7 @@ describe("sentry", () => {
 				result: false,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`"Failed to fetch"`
+				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...
@@ -133,7 +133,7 @@ describe("sentry", () => {
 				result: true,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`"Failed to fetch"`
+				`[TypeError: Failed to fetch]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Getting User settings...

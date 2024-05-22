@@ -82,7 +82,7 @@ describe("wrangler", () => {
 			await expect(
 				runWrangler("invalid-command")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Unknown argument: invalid-command"`
+				`[Error: Unknown argument: invalid-command]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -138,18 +138,18 @@ describe("wrangler", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
 			await expect(runWrangler("preview GET")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Deprecation:
-              The \`wrangler preview\` command has been deprecated.
-              Try using \`wrangler dev\` to to try out a worker during development.
-              "
-            `);
+				[Error: Deprecation:
+				The \`wrangler preview\` command has been deprecated.
+				Try using \`wrangler dev\` to to try out a worker during development.
+				]
+			`);
 			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Deprecation:
-              The \`wrangler preview\` command has been deprecated.
-              Try using \`wrangler dev\` to to try out a worker during development.
-              "
-            `);
+				[Error: Deprecation:
+				The \`wrangler preview\` command has been deprecated.
+				Try using \`wrangler dev\` to to try out a worker during development.
+				]
+			`);
 		});
 	});
 

@@ -74,7 +74,7 @@ describe("tail", () => {
 			await expect(
 				runWrangler("tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`"`
+				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`]`
 			);
 		});
 		it("warns about durable object restarts for tty", async () => {
@@ -837,7 +837,7 @@ describe("tail", () => {
 			await expect(
 				vi.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Tail disconnected, exiting."`
+				`[Error: Tail disconnected, exiting.]`
 			);
 			await api.closeHelper();
 		});
@@ -855,7 +855,7 @@ describe("tail", () => {
 			await expect(
 				vi.advanceTimersByTimeAsync(10000)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Tail disconnected, exiting."`
+				`[Error: Tail disconnected, exiting.]`
 			);
 			await api.closeHelper();
 		});

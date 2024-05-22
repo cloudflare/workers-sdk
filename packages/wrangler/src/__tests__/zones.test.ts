@@ -77,8 +77,8 @@ describe("Zones", () => {
 			mockGetZones("wrong.com", []);
 			await expect(getZoneForRoute("wrong.com/*")).rejects
 				.toMatchInlineSnapshot(`
-				"Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
-				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route"
+				[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
 			`);
 		});
 		test("zone_id route", async () => {

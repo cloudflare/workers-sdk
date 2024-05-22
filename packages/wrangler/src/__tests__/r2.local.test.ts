@@ -20,7 +20,7 @@ describe("r2", () => {
 						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The specified key does not exist."`
+					`[Error: The specified key does not exist.]`
 				);
 
 				fs.writeFileSync("wormhole-img.png", "passageway");
@@ -80,7 +80,7 @@ describe("r2", () => {
 						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The specified key does not exist."`
+					`[Error: The specified key does not exist.]`
 				);
 			});
 
@@ -99,7 +99,7 @@ describe("r2", () => {
 						`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png --local --persist-to ./different-dir`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The specified key does not exist."`
+					`[Error: The specified key does not exist.]`
 				);
 
 				await runWrangler(

@@ -81,7 +81,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your \`wrangler.toml\` configuration file."`
+			`[Error: Must specify a directory of assets to deploy. Please specify the [<directory>] argument in the \`pages deploy\` command, or configure \`pages_build_output_dir\` in your \`wrangler.toml\` configuration file.]`
 		);
 	});
 
@@ -89,7 +89,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Must specify a project name."`
+			`[Error: Must specify a project name.]`
 		);
 	});
 
@@ -97,7 +97,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
+			`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
 		);
 	});
 
@@ -105,7 +105,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public --experimental-json-config")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support \`wrangler.json\`"`
+			`[Error: Pages does not support \`wrangler.json\`]`
 		);
 	});
 
@@ -113,7 +113,7 @@ describe("pages deploy", () => {
 		await expect(
 			runWrangler("pages deploy public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch"`
+			`[Error: Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch]`
 		);
 	});
 
@@ -4730,7 +4730,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			await expect(
 				runWrangler("pages deploy --config foo.toml")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
+				`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
 			);
 		});
 
@@ -4765,7 +4765,7 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			await expect(
 				runWrangler("pages deploy public")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a project name."`
+				`[Error: Must specify a project name.]`
 			);
 
 			expect(

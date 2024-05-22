@@ -37,9 +37,9 @@ describe("pages project validate", () => {
 
 		await expect(() => runWrangler("pages project validate .")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
-		"Error: Pages only supports files up to 1 MiB in size
-		logo.png is 1 MiB in size"
-	`);
+			[Error: Error: Pages only supports files up to 1 MiB in size
+			logo.png is 1 MiB in size]
+		`);
 	});
 
 	it("should error for a large directory", async () => {
@@ -50,7 +50,7 @@ describe("pages project validate", () => {
 		await expect(() =>
 			runWrangler("pages project validate .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Error: Pages only supports up to 10 files in a deployment. Ensure you have specified your build output directory correctly."`
+			`[Error: Error: Pages only supports up to 10 files in a deployment. Ensure you have specified your build output directory correctly.]`
 		);
 	});
 });

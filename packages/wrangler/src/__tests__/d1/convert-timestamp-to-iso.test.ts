@@ -47,7 +47,7 @@ describe("convertTimestampToISO", () => {
 		expect(() =>
 			convertTimestampToISO(timestamp)
 		).toThrowErrorMatchingInlineSnapshot(
-			`"Invalid timestamp '1626168000'. Please provide a timestamp within the last 30 days"`
+			`[Error: Invalid timestamp '1626168000'. Please provide a timestamp within the last 30 days]`
 		);
 	});
 
@@ -78,7 +78,7 @@ describe("convertTimestampToISO", () => {
 		expect(() =>
 			convertTimestampToISO(date)
 		).toThrowErrorMatchingInlineSnapshot(
-			`"Invalid timestamp '1975-07-17T11:45:11.522Z'. Please provide a timestamp within the last 30 days"`
+			`[Error: Invalid timestamp '1975-07-17T11:45:11.522Z'. Please provide a timestamp within the last 30 days]`
 		);
 	});
 
@@ -89,7 +89,7 @@ describe("convertTimestampToISO", () => {
 		expect(() =>
 			convertTimestampToISO(date)
 		).toThrowErrorMatchingInlineSnapshot(
-			`"Invalid timestamp '3000-01-01T00:00:00.001Z'. Please provide a timestamp in the past"`
+			`[Error: Invalid timestamp '3000-01-01T00:00:00.001Z'. Please provide a timestamp in the past]`
 		);
 	});
 });

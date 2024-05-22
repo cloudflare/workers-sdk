@@ -171,7 +171,7 @@ describe("cloudchamber create", () => {
 		await expect(
 			runWrangler("cloudchamber create")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"image is required but it's not passed as an argument"`
+			`[Error: image is required but it's not passed as an argument]`
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
