@@ -56,14 +56,13 @@ describe("sentry", () => {
 					{ once: true }
 				)
 			);
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`
-[Error: Unexpected call to \`prompts("[{"type":"confirm","name":"value","message":"Would you like to report this error to Cloudflare?","initial":true}]")\`.
-You should use \`mockConfirm()/mockSelect()/mockPrompt()\` to mock calls to \`confirm()\` with expectations.]
-`);
+			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
 			expect(std.out).toMatchInlineSnapshot(`
 "Getting User settings...
 
-[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+? Would you like to report this error to Cloudflare?
+🤖 Using fallback value in non-interactive context: no"
 `);
 			expect(sentryRequests?.length).toEqual(0);
 		});
