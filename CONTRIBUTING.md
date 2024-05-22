@@ -156,7 +156,7 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 ### Testing
 
-Tests in a workspace are executed, by [Jest](https://jestjs.io/), which is configured to automatically compile and bundle the TypeScript before running the tests.
+Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is configured to automatically compile and bundle the TypeScript before running the tests.
 
 - Run the tests for all the workspaces
   ```sh
@@ -209,7 +209,7 @@ As a reviewer, it's important to be thoughtful about the proposed changes and co
 
 ## PR Tests
 
-Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Jest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
+Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
 
 If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.ts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. You should merge your own configuration with the default config from the root of the repo.
 
