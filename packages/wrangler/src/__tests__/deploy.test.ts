@@ -256,6 +256,7 @@ describe("deploy", () => {
 
 			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async () => {
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "123456789",
 				};
 				setIsTTY(false);
@@ -285,6 +286,7 @@ describe("deploy", () => {
 
 			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async () => {
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "hunter2",
 					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 				};
@@ -315,6 +317,7 @@ describe("deploy", () => {
 			it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
 				setIsTTY(false);
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "hunter2",
 					CLOUDFLARE_ACCOUNT_ID: undefined,
 				};
@@ -346,6 +349,7 @@ describe("deploy", () => {
 					account_id: undefined,
 				});
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: undefined,
 					CLOUDFLARE_ACCOUNT_ID: "badwolf",
 				};
@@ -372,6 +376,7 @@ describe("deploy", () => {
 					account_id: undefined,
 				});
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "picard",
 					CLOUDFLARE_ACCOUNT_ID: undefined,
 				};
@@ -10140,6 +10145,7 @@ export default{
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			process.env = {
+				...process.env,
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 			};
