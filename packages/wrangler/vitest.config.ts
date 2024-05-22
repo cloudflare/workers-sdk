@@ -16,6 +16,5 @@ export default defineConfig({
 			escapeString: true,
 			printBasicPrototype: true,
 		},
-		snapshotSerializers: ["src/__tests__/helpers/jest-error-snapshot.ts"],
 	},
 });
