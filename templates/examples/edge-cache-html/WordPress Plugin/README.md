@@ -19,7 +19,7 @@ From the gallery page click the "Upload Plugin" button to manually upload the pl
 
 ![Upload Plugin](docs/wp-plugin-upload-button.png)
 
-From the upload page select the "Choose File" button and select the [plugin zip file](https://github.com/cloudflare/worker-examples/raw/master/examples/edge-cache-html/WordPress%20Plugin/cloudflare-page-cache.zip) downloaded from this repository:
+From the upload page select the "Choose File" button and select the [plugin zip file](https://github.com/cloudflare/workers-sdk/tree/main/templates/examples/edge-cache-html/WordPress%20Plugin/cloudflare-page-cache.zip) downloaded from this repository:
 
 ![Select Plugin Zip File](docs/wp-plugin-upload-select.png)
 
