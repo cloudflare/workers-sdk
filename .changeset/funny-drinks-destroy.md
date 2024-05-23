@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-fix: Require user-specified exported middleware to be an array
+fix: Don't use `ExportedHandler["middleware"]` for injecting middleware
