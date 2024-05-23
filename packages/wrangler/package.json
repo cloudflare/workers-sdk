@@ -47,7 +47,6 @@
 		"wrangler-dist",
 		"templates",
 		"kv-asset-handler.js",
-		"Cloudflare_CA.pem",
 		"config-schema.json"
 	],
 	"scripts": {
