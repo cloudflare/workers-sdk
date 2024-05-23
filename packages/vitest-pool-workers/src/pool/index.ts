@@ -653,6 +653,7 @@ async function runTests(
 				filePath: workerPath,
 				name: "run",
 				data,
+				cwd: process.cwd(),
 			}),
 		},
 	});
