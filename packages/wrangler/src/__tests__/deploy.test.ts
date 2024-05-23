@@ -8477,7 +8477,6 @@ export default{
 	describe("--outfile", () => {
 		it("should generate worker bundle at --outfile if specified", async () => {
 			writeWranglerToml();
-			q;
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
