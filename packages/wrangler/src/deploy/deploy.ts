@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import { Response } from "undici";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -85,6 +86,7 @@ type Props = {
 	minify: boolean | undefined;
 	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
+	outFile: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
@@ -700,6 +702,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
+		const workerBundle = createWorkerUploadForm(worker);
+
+		if (props.outFile) {
+			// we're using a custom output file,
+			// so let's first ensure it's parent directory exists
+			mkdirSync(path.dirname(props.outFile), { recursive: true });
+
+			const serializedFormData = await new Response(workerBundle).arrayBuffer();
+
+			writeFileSync(props.outFile, Buffer.from(serializedFormData));
+		}
+
 		if (!props.dryRun) {
 			await ensureQueuesExistByConfig(config);
 
@@ -717,7 +731,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					workerUrl,
 					{
 						method: "PUT",
-						body: createWorkerUploadForm(worker),
+						body: workerBundle,
 						headers: await getMetricsUsageHeaders(config.send_metrics),
 					},
 					new URLSearchParams({

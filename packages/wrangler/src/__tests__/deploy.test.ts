@@ -8474,6 +8474,224 @@ export default{
 		});
 	});
 
+	describe("--outfile", () => {
+		it("should generate worker bundle at --outfile if specified", async () => {
+			writeWranglerToml();
+			q;
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should include any module imports related assets in the worker bundle", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+				Content-Type: application/javascript+module
+
+				// index.js
+				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
+				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
+				var wrangler_default = {
+				  async fetch() {
+				    const module = await WebAssembly.instantiate(hello);
+				    return new Response(txt + module.exports.hello);
+				  }
+				};
+				export {
+				  wrangler_default as default
+				};
+				//# sourceMappingURL=index.js.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
+				Content-Type: text/plain
+
+				Hello, World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
+				Content-Type: application/wasm
+
+				Hello wasm World!
+				------formdata-undici-0.test--"
+			`);
+
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should include bindings in the worker bundle", async () => {
+			writeWranglerToml({
+				kv_namespaces: [{ binding: "KV", id: "kv-namespace-id" }],
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[{\\"name\\":\\"KV\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-namespace-id\\"}],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+				Content-Type: application/javascript+module
+
+				// index.js
+				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
+				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
+				var wrangler_default = {
+				  async fetch() {
+				    const module = await WebAssembly.instantiate(hello);
+				    return new Response(txt + module.exports.hello);
+				  }
+				};
+				export {
+				  wrangler_default as default
+				};
+				//# sourceMappingURL=index.js.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
+				Content-Type: text/plain
+
+				Hello, World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
+				Content-Type: application/wasm
+
+				Hello wasm World!
+				------formdata-undici-0.test--"
+			`);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Your worker has access to the following bindings:
+				- KV Namespaces:
+				  - KV: kv-namespace-id
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
+
+
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
+				  "warn": "",
+				}
+			`);
+		});
+	});
+
 	describe("--dry-run", () => {
 		it("should not deploy the worker if --dry-run is specified", async () => {
 			writeWranglerToml({
