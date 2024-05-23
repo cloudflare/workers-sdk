@@ -37,7 +37,8 @@ test("chunks large WebSocket messages bi-directionally", async ({
 			});
 		`,
 	});
-	const result = await vitestRun();
+	// Increase buffer size to allow the `exec` command to receive this large output.
+	const result = await vitestRun({ maxBuffer: bigText.length + 1000 });
 	await result.exitCode;
 	// ...and logs it back
 	expect(result.stdout).toMatch(bigText);

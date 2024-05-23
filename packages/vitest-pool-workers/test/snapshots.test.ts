@@ -59,7 +59,7 @@ test(
 		expect(exitCode).toBe(1);
 
 		// Check updates snapshots
-		result = await vitestRun("--update");
+		result = await vitestRun({ flags: ["--update"] });
 		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 updated");
 		expect(exitCode).toBe(0);
@@ -82,7 +82,7 @@ test(
 			});
 		`,
 		});
-		result = await vitestRun("--update");
+		result = await vitestRun({ flags: ["--update"] });
 		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  1 removed");
 		expect(exitCode).toBe(0);
@@ -103,7 +103,7 @@ test(
 			});
 		`,
 		});
-		result = await vitestRun("--update");
+		result = await vitestRun({ flags: ["--update"] });
 		exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  1 files removed");
 		expect(exitCode).toBe(0);
@@ -169,7 +169,7 @@ test(
 		expect(exitCode).toBe(1);
 
 		// Check updates snapshots
-		result = await vitestRun("--update");
+		result = await vitestRun({ flags: ["--update"] });
 		expect(result.stdout).toMatch("Snapshots  2 updated");
 		exitCode = await result.exitCode;
 		expect(exitCode).toBe(0);

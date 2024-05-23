@@ -47,18 +47,18 @@ export interface Process {
 	readonly exitCode: Promise<number>;
 }
 
-function wrap(proc: childProcess.ChildProcessWithoutNullStreams): Process {
+function wrap(proc: childProcess.ChildProcess): Process {
 	let stdout = "";
 	let stderr = "";
-	proc.stdout.setEncoding("utf8");
-	proc.stderr.setEncoding("utf8");
-	proc.stdout.on("data", (chunk) => {
+	proc.stdout?.setEncoding("utf8");
+	proc.stderr?.setEncoding("utf8");
+	proc.stdout?.on("data", (chunk) => {
 		if (debuglog.enabled) {
 			process.stdout.write(chunk);
 		}
 		stdout += chunk;
 	});
-	proc.stderr.on("data", (chunk) => {
+	proc.stderr?.on("data", (chunk) => {
 		if (debuglog.enabled) {
 			process.stderr.write(chunk);
 		}
@@ -81,8 +81,11 @@ function wrap(proc: childProcess.ChildProcessWithoutNullStreams): Process {
 export const test = baseTest.extend<{
 	tmpPath: string;
 	seed: (files: Record<string, string>) => Promise<void>;
-	vitestRun: (...flags: string[]) => Promise<Process>;
-	vitestDev: (...flags: string[]) => Process;
+	vitestRun: (options?: {
+		flags?: string[];
+		maxBuffer?: number;
+	}) => Promise<Process>;
+	vitestDev: (options?: { flags?: string[]; maxBuffer?: number }) => Process;
 }>({
 	// Fixture for creating a temporary directory
 	async tmpPath({}, use) {
@@ -100,11 +103,14 @@ export const test = baseTest.extend<{
 	async vitestRun({ tmpPath }, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 
-		await use(async (...flags) => {
-			const proc = childProcess.spawn(
-				"pnpm",
-				["exec", "vitest", "run", "--root", tmpPath, ...flags],
-				{ cwd: tmpPoolInstallationPath, env: getNoCIEnv() }
+		await use(async ({ flags = [], maxBuffer } = {}) => {
+			const proc = childProcess.exec(
+				`pnpm exec vitest run --root="${tmpPath}" ` + flags.join(" "),
+				{
+					cwd: tmpPoolInstallationPath,
+					env: getNoCIEnv(),
+					maxBuffer,
+				}
 			);
 			const wrapped = wrap(proc);
 			await wrapped.exitCode;
@@ -116,11 +122,14 @@ export const test = baseTest.extend<{
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 		const processes: childProcess.ChildProcess[] = [];
 
-		await use((...flags) => {
-			const proc = childProcess.spawn(
-				"pnpm",
-				["exec", "vitest", "dev", "--root", tmpPath, ...flags],
-				{ cwd: tmpPoolInstallationPath, env: getNoCIEnv() }
+		await use(({ flags = [], maxBuffer } = {}) => {
+			const proc = childProcess.exec(
+				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
+				{
+					cwd: tmpPoolInstallationPath,
+					env: getNoCIEnv(),
+					maxBuffer,
+				}
 			);
 			processes.push(proc);
 			return wrap(proc);
