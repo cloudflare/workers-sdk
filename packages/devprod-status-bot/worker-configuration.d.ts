@@ -9,7 +9,7 @@ interface Env {
 	TEST_WEBHOOK: string;
 	AI: Ai;
 }
-declare module '*.png' {
+declare module "*.png" {
 	const value: ArrayBuffer;
 	export default value;
 }
