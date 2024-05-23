@@ -36,15 +36,6 @@ async function getPrs(pat: string) {
 			},
 		}
 	).then((r) => r.json<PRList>());
-	const miniflare = await fetch(
-		"https://api.github.com/repos/cloudflare/miniflare/pulls?state=open&per_page=100",
-		{
-			headers: {
-				"User-Agent": "Cloudflare ANT Status bot",
-				Authorization: `Bearer ${pat}`,
-			},
-		}
-	).then((r) => r.json<PRList>());
 	const wranglerAction = await fetch(
 		"https://api.github.com/repos/cloudflare/wrangler-action/pulls?state=open&per_page=100",
 		{
@@ -55,7 +46,7 @@ async function getPrs(pat: string) {
 		}
 	).then((r) => r.json<PRList>());
 
-	return [...workersSdk, ...miniflare, ...wranglerAction];
+	return [...workersSdk, ...wranglerAction];
 }
 
 async function getVersionPackagesPR(pat: string) {
