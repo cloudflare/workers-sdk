@@ -1,12 +1,12 @@
-import { Endpoints } from "@octokit/types";
-import {
+import type { Endpoints } from "@octokit/types";
+import type {
 	PullRequestOpenedEvent,
 	PullRequestReadyForReviewEvent,
 	WebhookEvent,
 } from "@octokit/webhooks-types";
 
 async function getBotMessage(ai: Ai, prompt: string) {
-	let chat = {
+	const chat = {
 		messages: [
 			{
 				role: "system",
@@ -20,8 +20,9 @@ async function getBotMessage(ai: Ai, prompt: string) {
 		],
 	};
 	const message = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
-	if (!("response" in message))
+	if (!("response" in message)) {
 		return "I'm feeling a bit poorly 🥲—try asking me for a message later!";
+	}
 	return message.response;
 }
 
@@ -311,7 +312,7 @@ function sendReviewMessage(webhookUrl: string, message: WebhookEvent) {
 		(isPullRequestOpenedEvent(message) ||
 			isPullRequestReadyForReviewEvent(message)) &&
 		message.pull_request.requested_teams.find((t) => t.name === "wrangler")
-	)
+	) {
 		return sendMessage(webhookUrl, {
 			cardsV2: [
 				{
@@ -355,6 +356,7 @@ function sendReviewMessage(webhookUrl: string, message: WebhookEvent) {
 				},
 			],
 		});
+	}
 }
 
 async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {

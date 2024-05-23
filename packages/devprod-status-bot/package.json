@@ -3,7 +3,9 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy"
+		"deploy": "wrangler deploy",
+		"check:lint": "eslint .",
+		"check:type": "tsc"
 	},
 	"devDependencies": {
 		"@octokit/types": "^13.5.0",
