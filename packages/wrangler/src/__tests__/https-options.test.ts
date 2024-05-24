@@ -1,10 +1,16 @@
-import fs from "node:fs";
+import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
+
+vi.mock("node:fs", async (importOriginal) => {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	const fsOriginal = await importOriginal<typeof import("node:fs")>();
+	return { ...fsOriginal };
+});
 
 describe("getHttpsOptions()", () => {
 	runInTempDir();
@@ -55,15 +61,26 @@ describe("getHttpsOptions()", () => {
 		});
 		const ORIGINAL_KEY = "EXPIRED PRIVATE KEY";
 		const ORIGINAL_CERT = "EXPIRED PUBLIC KEY";
+
+		const old = new Date(2000);
 		fs.writeFileSync(
 			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
 			ORIGINAL_KEY
+		);
+		fs.utimesSync(
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/key.pem"),
+			old,
+			old
 		);
 		fs.writeFileSync(
 			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
 			ORIGINAL_CERT
 		);
-		mockStatSync(/\.pem$/, { mtimeMs: new Date(2000).valueOf() });
+		fs.utimesSync(
+			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
+			old,
+			old
+		);
 
 		const result = await getHttpsOptions();
 		const key = fs.readFileSync(
@@ -87,7 +104,7 @@ describe("getHttpsOptions()", () => {
 
 	it("should warn if not able to write to the cache (legacy config path)", async () => {
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
-		mockWriteFileSyncThrow(/\.pem$/);
+		await mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(
 			fs.existsSync(
@@ -103,18 +120,19 @@ describe("getHttpsOptions()", () => {
 			`"Generating new self-signed certificate..."`
 		);
 		expect(std.warn).toMatchInlineSnapshot(`
-		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in home/.wrangler/local-cert.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in home/.wrangler/local-cert.[0m
 
-		        ERROR: Cannot write file
+			  ERROR: Cannot write file
 
-		      "
-	    `);
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		fs.rmSync(path.join(os.homedir(), ".wrangler"), { recursive: true });
 	});
 
 	it("should warn if not able to write to the cache", async () => {
-		mockWriteFileSyncThrow(/\.pem$/);
+		await mockWriteFileSyncThrow(/\.pem$/);
+
 		await getHttpsOptions();
 		expect(
 			fs.existsSync(
@@ -130,34 +148,27 @@ describe("getHttpsOptions()", () => {
 			`"Generating new self-signed certificate..."`
 		);
 		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in test-xdg-config/local-cert.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnable to cache generated self-signed certificate in test-xdg-config/local-cert.[0m
 
-		  ERROR: Cannot write file
+			  ERROR: Cannot write file
 
-		"
-	`);
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });
 
-function mockStatSync(matcher: RegExp, stats: Partial<fs.Stats>) {
-	const originalStatSync = jest.requireActual("node:fs").statSync;
-	jest.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
-		return matcher.test(statPath.toString())
-			? (stats as fs.Stats)
-			: originalStatSync(statPath, options);
-	});
-}
-
-function mockWriteFileSyncThrow(matcher: RegExp) {
-	const originalWriteFileSync = jest.requireActual("node:fs").writeFileSync;
-	jest
-		.spyOn(fs, "writeFileSync")
-		.mockImplementation((filePath, data, options) => {
+async function mockWriteFileSyncThrow(matcher: RegExp) {
+	const originalWriteFileSync =
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		(await vi.importActual<typeof import("node:fs")>("node:fs")).writeFileSync;
+	vi.spyOn(fs, "writeFileSync").mockImplementation(
+		(filePath, data, options) => {
 			if (matcher.test(filePath.toString())) {
 				throw new Error("ERROR: Cannot write file");
 			} else {
 				return originalWriteFileSync(filePath, data, options);
 			}
-		});
+		}
+	);
 }

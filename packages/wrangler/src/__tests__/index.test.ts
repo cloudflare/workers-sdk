@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { logPossibleBugMessage } from "..";
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
@@ -8,6 +9,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 describe("wrangler", () => {
 	let mockPackageManager: PackageManager;
@@ -18,10 +20,10 @@ describe("wrangler", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	const std = mockConsoleMethods();
@@ -80,7 +82,7 @@ describe("wrangler", () => {
 			await expect(
 				runWrangler("invalid-command")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Unknown argument: invalid-command"`
+				`[Error: Unknown argument: invalid-command]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -136,18 +138,18 @@ describe("wrangler", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
 			await expect(runWrangler("preview GET")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Deprecation:
-              The \`wrangler preview\` command has been deprecated.
-              Try using \`wrangler dev\` to to try out a worker during development.
-              "
-            `);
+				[Error: Deprecation:
+				The \`wrangler preview\` command has been deprecated.
+				Try using \`wrangler dev\` to to try out a worker during development.
+				]
+			`);
 			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-              "Deprecation:
-              The \`wrangler preview\` command has been deprecated.
-              Try using \`wrangler dev\` to to try out a worker during development.
-              "
-            `);
+				[Error: Deprecation:
+				The \`wrangler preview\` command has been deprecated.
+				Try using \`wrangler dev\` to to try out a worker during development.
+				]
+			`);
 		});
 	});
 
@@ -291,7 +293,7 @@ describe("wrangler", () => {
 		});
 
 		it("should display a 'try updating' message if there is one available", async () => {
-			(updateCheck as jest.Mock).mockImplementation(async () => "123.123.123");
+			(updateCheck as Mock).mockImplementation(async () => "123.123.123");
 			await logPossibleBugMessage();
 			expect(std.out).toMatchInlineSnapshot(`
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m

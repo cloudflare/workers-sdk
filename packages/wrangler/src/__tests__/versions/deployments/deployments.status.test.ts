@@ -95,7 +95,7 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("prints latest deployment to stdout", async () => {
 			const result = runWrangler(

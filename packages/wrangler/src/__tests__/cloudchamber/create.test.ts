@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
@@ -56,20 +56,28 @@ describe("cloudchamber create", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.get("*/ssh-public-keys", async (request, response, context) => {
-				const keys = [
-					{ id: "1", name: "hello", public_key: "hello-world" },
-				] as SSHPublicKeyItem[];
-				return response.once(context.json(keys));
-			})
+			http.get(
+				"*/ssh-public-keys",
+				async () => {
+					const keys = [
+						{ id: "1", name: "hello", public_key: "hello-world" },
+					] as SSHPublicKeyItem[];
+					return HttpResponse.json(keys);
+				},
+				{ once: true }
+			)
 		);
 		msw.use(
-			rest.post("*/deployments/v2", async (request, response, context) => {
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
-				);
-				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-			})
+			http.post(
+				"*/deployments/v2",
+				async ({ request }) => {
+					expect(await request.text()).toMatchInlineSnapshot(
+						`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
+					);
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+				},
+				{ once: true }
+			)
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler(
@@ -107,20 +115,28 @@ describe("cloudchamber create", () => {
 			memory: "300MB",
 		});
 		msw.use(
-			rest.get("*/ssh-public-keys", async (request, response, context) => {
-				const keys = [
-					{ id: "1", name: "hello", public_key: "hello-world" },
-				] as SSHPublicKeyItem[];
-				return response.once(context.json(keys));
-			})
+			http.get(
+				"*/ssh-public-keys",
+				async () => {
+					const keys = [
+						{ id: "1", name: "hello", public_key: "hello-world" },
+					] as SSHPublicKeyItem[];
+					return HttpResponse.json(keys);
+				},
+				{ once: true }
+			)
 		);
 		msw.use(
-			rest.post("*/deployments/v2", async (request, response, context) => {
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
-				);
-				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
-			})
+			http.post(
+				"*/deployments/v2",
+				async ({ request }) => {
+					expect(await request.text()).toMatchInlineSnapshot(
+						`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
+					);
+					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
+				},
+				{ once: true }
+			)
 		);
 		await runWrangler(
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --all-ssh-keys --ipv4"
@@ -155,7 +171,7 @@ describe("cloudchamber create", () => {
 		await expect(
 			runWrangler("cloudchamber create")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"image is required but it's not passed as an argument"`
+			`[Error: image is required but it's not passed as an argument]`
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions

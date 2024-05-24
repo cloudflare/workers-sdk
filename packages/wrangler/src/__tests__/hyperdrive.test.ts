@@ -1,4 +1,5 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -82,7 +83,7 @@ describe("hyperdrive commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -413,73 +414,75 @@ const defaultConfig: HyperdriveConfig = {
 /** Create a mock handler for Hyperdrive API */
 function mockHyperdriveRequest() {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/hyperdrive/configs/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(defaultConfig, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(defaultConfig, true));
+			},
+			{ once: true }
 		),
-		rest.post(
+		http.post(
 			"*/accounts/:accountId/hyperdrive/configs",
-			async (req, res, ctx) => {
-				const reqBody = await req.json();
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-								name: reqBody.name,
-								origin: {
-									host: reqBody.origin.host,
-									port: reqBody.origin.port,
-									database: reqBody.origin.database,
-									scheme: reqBody.origin.protocol,
-									user: reqBody.origin.user,
-								},
-								caching: reqBody.caching,
+			async ({ request }) => {
+				const reqBody = (await request.json()) as HyperdriveConfig;
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+							name: reqBody.name,
+							origin: {
+								host: reqBody.origin.host,
+								port: reqBody.origin.port,
+								database: reqBody.origin.database,
+								// @ts-expect-error This is a string
+								scheme: reqBody.origin.protocol,
+								user: reqBody.origin.user,
 							},
-							true
-						)
+							caching: reqBody.caching,
+						},
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.patch(
+		http.patch(
 			"*/accounts/:accountId/hyperdrive/configs/:configId",
-			async (req, res, ctx) => {
-				const reqBody = await req.json();
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-								name: reqBody.name ?? defaultConfig.name,
-								origin:
-									reqBody.origin !== undefined
-										? {
-												host: reqBody.origin.host,
-												port: reqBody.origin.port,
-												database: reqBody.origin.database,
-												user: reqBody.origin.user,
-											}
-										: defaultConfig.origin,
-								caching: reqBody.caching ?? defaultConfig.caching,
-							},
-							true
-						)
+			async ({ request }) => {
+				const reqBody = (await request.json()) as HyperdriveConfig;
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+							name: reqBody.name ?? defaultConfig.name,
+							origin:
+								reqBody.origin !== undefined
+									? {
+											host: reqBody.origin.host,
+											port: reqBody.origin.port,
+											database: reqBody.origin.database,
+											user: reqBody.origin.user,
+										}
+									: defaultConfig.origin,
+							caching: reqBody.caching ?? defaultConfig.caching,
+						},
+						true
 					)
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/hyperdrive/configs/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
 		),
-		rest.get("*/accounts/:accountId/hyperdrive/configs", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.get(
+			"*/accounts/:accountId/hyperdrive/configs",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							defaultConfig,
@@ -499,8 +502,9 @@ function mockHyperdriveRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }

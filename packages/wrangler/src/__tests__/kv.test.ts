@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
@@ -33,17 +33,19 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedTitle: string) {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/storage/kv/namespaces",
-						async (req, res, ctx) => {
-							expect(req.params.accountId).toEqual("some-account-id");
-							const title = (await req.json()).title as string;
+						async ({ request, params }) => {
+							expect(params.accountId).toEqual("some-account-id");
+							const title = ((await request.json()) as Record<string, string>)
+								.title;
 							expect(title).toEqual(expectedTitle);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult({ id: "some-namespace-id" }))
+							return HttpResponse.json(
+								createFetchResult({ id: "some-namespace-id" }),
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 			}
@@ -52,7 +54,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:namespace create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -84,7 +86,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:namespace create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -164,25 +166,23 @@ describe("wrangler", () => {
 			function mockListRequest(namespaces: KVNamespaceInfo[]) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/storage/kv/namespaces",
-						async (req, res, ctx) => {
-							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.url.searchParams.get("per_page")).toEqual("100");
-							expect(req.url.searchParams.get("order")).toEqual("title");
-							expect(req.url.searchParams.get("direction")).toEqual("asc");
-							expect(req.url.searchParams.get("page")).toEqual(
-								`${requests.count}`
-							);
+						async ({ request, params }) => {
+							const url = new URL(request.url);
 
-							const pageSize = Number(req.url.searchParams.get("per_page"));
-							const page = Number(req.url.searchParams.get("page"));
-							return res(
-								ctx.json(
-									createFetchResult(
-										namespaces.slice((page - 1) * pageSize, page * pageSize)
-									)
+							requests.count++;
+							expect(params.accountId).toEqual("some-account-id");
+							expect(url.searchParams.get("per_page")).toEqual("100");
+							expect(url.searchParams.get("order")).toEqual("title");
+							expect(url.searchParams.get("direction")).toEqual("asc");
+							expect(url.searchParams.get("page")).toEqual(`${requests.count}`);
+
+							const pageSize = Number(url.searchParams.get("per_page"));
+							const page = Number(url.searchParams.get("page"));
+							return HttpResponse.json(
+								createFetchResult(
+									namespaces.slice((page - 1) * pageSize, page * pageSize)
 								)
 							);
 						}
@@ -221,13 +221,15 @@ describe("wrangler", () => {
 			function mockDeleteRequest(expectedNamespaceId: string) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId",
-						(req, res, ctx) => {
+						({ params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -264,9 +266,9 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				await expect(runWrangler("kv:namespace delete --binding otherBinding"))
 					.rejects.toThrowErrorMatchingInlineSnapshot(`
-						                "Not able to delete namespace.
-						                A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."
-					              `);
+					[Error: Not able to delete namespace.
+					A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot able to delete namespace.[0m
 
@@ -310,11 +312,13 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-						(req, res, ctx) => {
+						({ request, params }) => {
+							const url = new URL(request.url);
+
 							requests.count++;
-							const { accountId, namespaceId, key } = req.params;
+							const { accountId, namespaceId, key } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(namespaceId).toEqual(expectedNamespaceId);
 							expect(encodeURIComponent(key as string)).toEqual(expectedKV.key);
@@ -330,20 +334,22 @@ describe("wrangler", () => {
 							// 	expect(body).toEqual(expectedKV.value);
 							// }
 							if (expectedKV.expiration !== undefined) {
-								expect(req.url.searchParams.get("expiration")).toEqual(
+								expect(url.searchParams.get("expiration")).toEqual(
 									`${expectedKV.expiration}`
 								);
 							} else {
-								expect(req.url.searchParams.has("expiration")).toBe(false);
+								expect(url.searchParams.has("expiration")).toBe(false);
 							}
 							if (expectedKV.expiration_ttl) {
-								expect(req.url.searchParams.get("expiration_ttl")).toEqual(
+								expect(url.searchParams.get("expiration_ttl")).toEqual(
 									`${expectedKV.expiration_ttl}`
 								);
 							} else {
-								expect(req.url.searchParams.has("expiration_ttl")).toBe(false);
+								expect(url.searchParams.has("expiration_ttl")).toBe(false);
 							}
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -532,7 +538,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -574,7 +580,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put foo bar")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Exactly one of the arguments binding and namespace-id is required"`
+					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -616,7 +622,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put foo bar --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Arguments binding and namespace-id are mutually exclusive"`
+					`[Error: Arguments binding and namespace-id are mutually exclusive]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -658,7 +664,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put key --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Exactly one of the arguments value and path is required"`
+					`[Error: Exactly one of the arguments value and path is required]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -700,7 +706,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put key value --path xyz --namespace-id 12345")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Arguments value and path are mutually exclusive"`
+					`[Error: Arguments value and path are mutually exclusive]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -743,7 +749,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put key value --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
+					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`""`);
@@ -763,7 +769,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key put my-key my-value --binding someBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"someBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace."`
+					`[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -926,7 +932,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key list --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
+					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
@@ -1072,7 +1078,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key get")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -1109,7 +1115,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key get foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Exactly one of the arguments binding and namespace-id is required"`
+					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -1146,7 +1152,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key get foo --binding x --namespace-id y")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Arguments binding and namespace-id are mutually exclusive"`
+					`[Error: Arguments binding and namespace-id are mutually exclusive]`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -1185,7 +1191,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler("kv:key get key --binding otherBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
+					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1206,12 +1212,12 @@ describe("wrangler", () => {
 					setIsTTY({ stdin: false, stdout: true });
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`one\`: \`1\`
-				  \`two\`: \`2\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`one\`: \`1\`
+						  \`two\`: \`2\`]
+					`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive on stdout", async () => {
@@ -1222,35 +1228,37 @@ describe("wrangler", () => {
 					setIsTTY({ stdin: true, stdout: false });
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`one\`: \`1\`
-				  \`two\`: \`2\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`one\`: \`1\`
+						  \`two\`: \`2\`]
+					`);
 				});
 
 				it("should recommend using a configuration if unable to fetch memberships", async () => {
 					msw.use(
-						rest.get("*/memberships", (req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json(
+						http.get(
+							"*/memberships",
+							() => {
+								return HttpResponse.json(
 									createFetchResult(null, false, [
 										{
 											code: 9109,
 											message: "Uauthorized to access requested resource",
 										},
-									])
-								)
-							);
-						})
+									]),
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
 					);
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-							"Failed to automatically retrieve account IDs for the logged in user.
-							You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID\\""
-						`);
+						[Error: Failed to automatically retrieve account IDs for the logged in user.
+						You may have incorrect permissions on your API token. You can skip this account check by adding an \`account_id\` in your \`wrangler.toml\`, or by setting the value of CLOUDFLARE_ACCOUNT_ID"]
+					`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive at all", async () => {
@@ -1261,12 +1269,12 @@ describe("wrangler", () => {
 					setIsTTY(false);
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`one\`: \`1\`
-				  \`two\`: \`2\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`one\`: \`1\`
+						  \`two\`: \`2\`]
+					`);
 				});
 			});
 		});
@@ -1278,18 +1286,18 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-						(req, res, ctx) => {
+						({ params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							expect(req.params.key).toEqual(expectedKey);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult(null))
-							);
-						}
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(params.key).toEqual(expectedKey);
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
+						},
+						{ once: true }
 					)
 				);
 				return requests;
@@ -1337,7 +1345,7 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler(`kv:key delete --binding otherBinding someKey`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"A namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\"."`
+					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
 
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1379,19 +1387,21 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-						async (req, res, ctx) => {
+						async ({ request, params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							expect(await req.json()).toEqual(
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(await request.json()).toEqual(
 								expectedKeyValues.slice(
 									(requests.count - 1) * 5000,
 									requests.count * 5000
 								)
 							);
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -1444,9 +1454,9 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-						                "Unexpected JSON input from \\"keys.json\\".
-						                Expected an array of key-value objects but got type \\"object\\"."
-					              `);
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of key-value objects but got type "object".]
+				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -1481,30 +1491,30 @@ describe("wrangler", () => {
 				await expect(
 					runWrangler(`kv:bulk put --namespace-id some-namespace-id keys.json`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-						                "Unexpected JSON input from \\"keys.json\\".
-						                Each item in the array should be an object that matches:
+					[Error: Unexpected JSON input from "keys.json".
+					Each item in the array should be an object that matches:
 
-						                interface KeyValue {
-						                  key: string;
-						                  value: string;
-						                  expiration?: number;
-						                  expiration_ttl?: number;
-						                  metadata?: object;
-						                  base64?: boolean;
-						                }
+					interface KeyValue {
+					  key: string;
+					  value: string;
+					  expiration?: number;
+					  expiration_ttl?: number;
+					  metadata?: object;
+					  base64?: boolean;
+					}
 
-						                The item at index 0 is 123
-						                The item at index 1 is \\"a string\\"
-						                The item at index 2 is {\\"key\\":\\"someKey\\"}
-						                The item at index 3 is {\\"value\\":\\"someValue\\"}
-						                The item at index 6 is {\\"key\\":123,\\"value\\":\\"somevalue\\"}
-						                The item at index 7 is {\\"key\\":\\"somekey\\",\\"value\\":123}
-						                The item at index 8 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration\\":\\"string\\"}
-						                The item at index 9 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"expiration_ttl\\":\\"string\\"}
-						                The item at index 10 is {\\"key\\":123,\\"value\\":{\\"a\\":{\\"nested\\":\\"object\\"}}}
-						                The item at index 11 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"metadata\\":123}
-						                The item at index 12 is {\\"key\\":\\"someKey1\\",\\"value\\":\\"someValue1\\",\\"base64\\":\\"string\\"}"
-					              `);
+					The item at index 0 is 123
+					The item at index 1 is "a string"
+					The item at index 2 is {"key":"someKey"}
+					The item at index 3 is {"value":"someValue"}
+					The item at index 6 is {"key":123,"value":"somevalue"}
+					The item at index 7 is {"key":"somekey","value":123}
+					The item at index 8 is {"key":"someKey1","value":"someValue1","expiration":"string"}
+					The item at index 9 is {"key":"someKey1","value":"someValue1","expiration_ttl":"string"}
+					The item at index 10 is {"key":123,"value":{"a":{"nested":"object"}}}
+					The item at index 11 is {"key":"someKey1","value":"someValue1","metadata":123}
+					The item at index 12 is {"key":"someKey1","value":"someValue1","base64":"string"}]
+				`);
 
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -1524,22 +1534,24 @@ describe("wrangler", () => {
 			) {
 				const requests = { count: 0 };
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-						async (req, res, ctx) => {
+						async ({ request, params }) => {
 							requests.count++;
-							expect(req.params.accountId).toEqual("some-account-id");
-							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							expect(req.headers.get("Content-Type")).toEqual(
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(request.headers.get("Content-Type")).toEqual(
 								"application/json"
 							);
-							expect(await req.json()).toEqual(
+							expect(await request.json()).toEqual(
 								expectedKeys.slice(
 									(requests.count - 1) * 5000,
 									requests.count * 5000
 								)
 							);
-							return res(ctx.status(200), ctx.json(createFetchResult(null)));
+							return HttpResponse.json(createFetchResult(null), {
+								status: 200,
+							});
 						}
 					)
 				);
@@ -1641,10 +1653,10 @@ describe("wrangler", () => {
 						`kv:bulk delete --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-						                "Unexpected JSON input from \\"keys.json\\".
-						                Expected an array of strings but got:
-						                12354"
-					              `);
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings but got:
+					12354]
+				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -1661,12 +1673,12 @@ describe("wrangler", () => {
 						`kv:bulk delete --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-						                "Unexpected JSON input from \\"keys.json\\".
-						                Expected an array of strings.
-						                The item at index 1 is type: \\"number\\" - 12354
-						                The item at index 2 is type: \\"object\\" - {\\"key\\":\\"someKey\\"}
-						                The item at index 3 is type: \\"object\\" - null"
-					              `);
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings.
+					The item at index 1 is type: "number" - 12354
+					The item at index 2 is type: "object" - {"key":"someKey"}
+					The item at index 3 is type: "object" - null]
+				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -1699,16 +1711,19 @@ function setMockFetchKVGetValue(
 	value: string | Buffer
 ) {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(accountId);
-				expect(req.params.namespaceId).toEqual(namespaceId);
-				// Getting the key from params decodes it so we need to grab the encoded key from the URL
-				expect(req.url.toString().split("/").pop()).toBe(key);
+			({ request, params }) => {
+				const url = new URL(request.url);
 
-				return res.once(ctx.status(200), ctx.body(value));
-			}
+				expect(params.accountId).toEqual(accountId);
+				expect(params.namespaceId).toEqual(namespaceId);
+				// Getting the key from params decodes it so we need to grab the encoded key from the URL
+				expect(url.toString().split("/").pop()).toBe(key);
+
+				return new HttpResponse(value, { status: 200 });
+			},
+			{ once: true }
 		)
 	);
 }
@@ -1730,9 +1745,13 @@ function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(accounts)));
-		})
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult(accounts));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -1745,36 +1764,35 @@ function mockKeyListRequest(
 	const requests = { count: 0 };
 	// See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
-			(req, res, ctx) => {
+			({ request, params }) => {
+				const url = new URL(request.url);
+
 				requests.count++;
 				let result;
 				let cursor;
 
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
 
 				if (expectedKeys.length <= keysPerRequest) {
 					result = expectedKeys;
 				} else {
-					const start =
-						parseInt(req.url.searchParams.get("cursor") ?? "0") || 0;
+					const start = parseInt(url.searchParams.get("cursor") ?? "0") || 0;
 					const end = start + keysPerRequest;
 					cursor = end < expectedKeys.length ? end : blankCursorValue;
 					result = expectedKeys.slice(start, end);
 				}
-				return res(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result,
-						result_info: {
-							cursor,
-						},
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result,
+					result_info: {
+						cursor,
+					},
+				});
 			}
 		)
 	);

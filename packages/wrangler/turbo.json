@@ -45,7 +45,6 @@
 				"WRANGLER_SEND_METRICS",
 				"https_proxy",
 				"HTTPS_PROXY",
-				"JEST_WORKER_ID",
 				"http_proxy",
 				"HTTP_PROXY",
 				"CI_OS",

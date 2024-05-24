@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { purgeConfigCaches, saveToConfigCache } from "../config-cache";
 import { CI } from "../is-ci";
@@ -17,18 +18,17 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { MockInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
+vi.unmock("../metrics/metrics-config");
 
 describe("metrics", () => {
 	const ORIGINAL_SPARROW_SOURCE_KEY = global.SPARROW_SOURCE_KEY;
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	beforeEach(() => {
-		// Tell jest to use the original version of the `getMetricsConfig()` function in these tests.
-		const mockMetricsConfig = jest.requireMock("../metrics/metrics-config");
-		mockMetricsConfig.useOriginal = true;
+	beforeEach(async () => {
 		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
 		logger.loggerLevel = "debug";
 		// Create a node_modules directory to store config-cache files
@@ -101,8 +101,8 @@ describe("metrics", () => {
 
 			it("should write a debug log if the request fails", async () => {
 				msw.use(
-					rest.post("*/identify", async (req, res) => {
-						return res.networkError("BAD REQUEST");
+					http.post("*/identify", async () => {
+						return HttpResponse.error();
 					})
 				);
 
@@ -110,9 +110,9 @@ describe("metrics", () => {
 				await dispatcher.identify({ a: 1, b: 2 });
 				await flushPromises();
 				expect(std.debug).toMatchInlineSnapshot(`
-			"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-			Metrics dispatcher: Failed to send request: request to https://sparrow.cloudflare.com/api/v1/identify failed, reason: BAD REQUEST"
-		`);
+"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+Metrics dispatcher: Failed to send request: Failed to fetch"
+`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -182,17 +182,17 @@ describe("metrics", () => {
 
 			it("should write a debug log if the request fails", async () => {
 				msw.use(
-					rest.post("*/event", async (_, res) => {
-						return res.networkError("BAD REQUEST");
+					http.post("*/event", async () => {
+						return HttpResponse.error();
 					})
 				);
 				const dispatcher = await getMetricsDispatcher(MOCK_DISPATCHER_OPTIONS);
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 				await flushPromises();
 				expect(std.debug).toMatchInlineSnapshot(`
-			"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-			Metrics dispatcher: Failed to send request: request to https://sparrow.cloudflare.com/api/v1/event failed, reason: BAD REQUEST"
-		`);
+"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+Metrics dispatcher: Failed to send request: Failed to fetch"
+`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -216,13 +216,13 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
-		let isCISpy: jest.SpyInstance;
+		let isCISpy: MockInstance;
 
 		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
 			// Default the mock TTY to interactive for all these tests.
 			setIsTTY(true);
-			isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+			isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
 		describe("enabled", () => {
@@ -449,16 +449,16 @@ function mockUserRequest() {
 	beforeEach(() => {
 		msw.use(
 			...mswSuccessOauthHandlers,
-			rest.get("*/user", (_, res, cxt) => {
+			http.get("*/user", () => {
 				requests.count++;
-				return res(
-					cxt.status(200),
-					cxt.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
 						result: { id: "MOCK_USER_ID" },
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);
@@ -476,12 +476,16 @@ function mockMetricRequest(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.post(`*/${endpoint}`, async (req, res, cxt) => {
-			requests.count++;
-			expect(await req.json()).toEqual(body);
-			expect(req.headers).toContain(header);
-			return res.once(cxt.status(200), cxt.json({}));
-		})
+		http.post(
+			`*/${endpoint}`,
+			async ({ request }) => {
+				requests.count++;
+				expect(await request.json()).toEqual(body);
+				expect(request.headers).toContain(header);
+				return HttpResponse.json({}, { status: 200 });
+			},
+			{ once: true }
+		)
 	);
 
 	return requests;

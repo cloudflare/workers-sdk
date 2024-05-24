@@ -1,9 +1,10 @@
 import * as fs from "node:fs";
+import { vi } from "vitest";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 describe("run scheduled events with middleware", () => {
 	describe("module workers", () => {

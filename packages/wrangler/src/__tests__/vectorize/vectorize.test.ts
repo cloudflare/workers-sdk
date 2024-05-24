@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -132,7 +132,7 @@ describe("vectorize commands", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -148,16 +148,15 @@ describe("vectorize commands", () => {
 			"vectorize create some-index --dimensions=768 --metric=cosine"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 Creating index: 'some-index'
-		✅ Successfully created a new Vectorize index: 'test-index'
-		📋 To start querying from a Worker, add the following binding configuration into
-		 'wrangler.toml':
+			"🚧 Creating index: 'some-index'
+			✅ Successfully created a new Vectorize index: 'test-index'
+			📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':
 
-		[[vectorize]]
-		binding = \\"VECTORIZE_INDEX\\" # available within your Worker on
-		env.VECTORIZE_INDEX
-		index_name = \\"test-index\\""
-	`);
+			[[vectorize]]
+			binding = \\"VECTORIZE_INDEX\\"
+			index_name = \\"test-index\\"
+			"
+		`);
 	});
 
 	it("should handle listing vectorize indexes", async () => {
@@ -204,31 +203,10 @@ describe("vectorize commands", () => {
 /** Create a mock handler for the Vectorize API */
 function mockVectorizeRequest() {
 	msw.use(
-		rest.get(
+		http.get(
 			"*/accounts/:accountId/vectorize/indexes/test-index",
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(
-							{
-								created_on: "2023-09-25T13:02:18.00268Z",
-								modified_on: "2023-09-25T13:02:18.00268Z",
-								name: "test-index",
-								description: "",
-								config: {
-									dimensions: 768,
-									metric: "cosine",
-								},
-							},
-							true
-						)
-					)
-				);
-			}
-		),
-		rest.post("*/accounts/:accountId/vectorize/indexes", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						{
 							created_on: "2023-09-25T13:02:18.00268Z",
@@ -242,18 +220,42 @@ function mockVectorizeRequest() {
 						},
 						true
 					)
-				)
-			);
-		}),
-		rest.delete(
-			"*/accounts/:accountId/vectorize/indexes/test-index",
-			(req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult(null, true)));
-			}
+				);
+			},
+			{ once: true }
 		),
-		rest.get("*/accounts/:accountId/vectorize/indexes", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
+		http.post(
+			"*/accounts/:accountId/vectorize/indexes",
+			() => {
+				return HttpResponse.json(
+					createFetchResult(
+						{
+							created_on: "2023-09-25T13:02:18.00268Z",
+							modified_on: "2023-09-25T13:02:18.00268Z",
+							name: "test-index",
+							description: "",
+							config: {
+								dimensions: 768,
+								metric: "cosine",
+							},
+						},
+						true
+					)
+				);
+			},
+			{ once: true }
+		),
+		http.delete(
+			"*/accounts/:accountId/vectorize/indexes/test-index",
+			() => {
+				return HttpResponse.json(createFetchResult(null, true));
+			},
+			{ once: true }
+		),
+		http.get(
+			"*/accounts/:accountId/vectorize/indexes",
+			() => {
+				return HttpResponse.json(
 					createFetchResult(
 						[
 							{
@@ -279,8 +281,9 @@ function mockVectorizeRequest() {
 						],
 						true
 					)
-				)
-			);
-		})
+				);
+			},
+			{ once: true }
+		)
 	);
 }

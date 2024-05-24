@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.11.38
+
+### Patch Changes
+
+- [#5875](https://github.com/cloudflare/workers-sdk/pull/5875) [`ddfeeef`](https://github.com/cloudflare/workers-sdk/commit/ddfeeef920f0b565ed7f39da40b5b75cb234db00) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: no longer allow zone caching for responses that returned 404. This is to prevent some files in a new deployment from returning and subsequently caching 404s while the deployment propagates across the network.
+
 ## 0.11.37
 
 ### Patch Changes

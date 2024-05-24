@@ -109,7 +109,7 @@ describe("versions view", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("fails with no args", async () => {
 			const result = runWrangler(

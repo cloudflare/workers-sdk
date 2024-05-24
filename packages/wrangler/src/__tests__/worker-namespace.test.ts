@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { printWranglerBanner } from "../update-check";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9,6 +9,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Mock } from "vitest";
 
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();
@@ -55,26 +56,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -82,7 +82,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -116,15 +116,16 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(ctx.json(null));
-				}
+					return HttpResponse.json(null);
+				},
+				{ once: true }
 			)
 		);
 
@@ -132,7 +133,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -166,26 +167,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -193,7 +193,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -234,26 +234,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -278,26 +277,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.put(
+			http.put(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -305,7 +303,7 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace rename")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 2"`
+				`[Error: Not enough non-option arguments: got 0, need at least 2]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -336,7 +334,7 @@ describe("dispatch-namespace", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
-			expect((printWranglerBanner as jest.Mock).mock.calls.length).toEqual(1);
+			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});
 	});
 });

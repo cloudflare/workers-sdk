@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
-import { rest } from "msw";
-import prettyBytes from "pretty-bytes";
+import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -29,7 +28,9 @@ describe("r2", () => {
 		it("should show the correct help when an invalid command is passed", async () => {
 			await expect(() =>
 				runWrangler("r2 bucket foo")
-			).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: foo]`
+			);
 			expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
@@ -65,29 +66,28 @@ describe("r2", () => {
 					{ name: "bucket-2-local-once", creation_date: "01-01-2001" },
 				];
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.text()).toEqual("");
-							return response.once(
-								context.json(
-									createFetchResult({
-										buckets: [
-											{
-												name: "bucket-1-local-once",
-												creation_date: "01-01-2001",
-											},
-											{
-												name: "bucket-2-local-once",
-												creation_date: "01-01-2001",
-											},
-										],
-									})
-								)
+							return HttpResponse.json(
+								createFetchResult({
+									buckets: [
+										{
+											name: "bucket-1-local-once",
+											creation_date: "01-01-2001",
+										},
+										{
+											name: "bucket-2-local-once",
+											creation_date: "01-01-2001",
+										},
+									],
+								})
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket list");
@@ -103,7 +103,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -136,7 +136,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -167,14 +167,15 @@ describe("r2", () => {
 
 			it("should create a bucket & check request inputs", async () => {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(context.json(createFetchResult({})));
-						}
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket create testBucket");
@@ -186,15 +187,16 @@ describe("r2", () => {
 
 			it("should create a bucket with the expected jurisdiction", async () => {
 				msw.use(
-					rest.post(
+					http.post(
 						"*/accounts/:accountId/r2/buckets",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(context.json(createFetchResult({})));
-						}
+							return HttpResponse.json(createFetchResult({}));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket create testBucket -J eu");
@@ -216,7 +218,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create testBucket -s Foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed."`
+					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 				"Creating bucket testBucket with default storage class set to Foo.
@@ -237,7 +239,9 @@ describe("r2", () => {
 			it("should error if invalid command is passed", async () => {
 				await expect(
 					runWrangler("r2 bucket update foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
 			wrangler r2 bucket update
@@ -266,7 +270,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket update storage-class testBucket")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Missing required argument: storage-class"`
+						`[Error: Missing required argument: storage-class]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -299,7 +303,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket update storage-class testBucket -s Foo")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed."`
+						`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets/testBucket) failed.]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"Updating bucket testBucket to Foo default storage class.
@@ -332,7 +336,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket delete")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Not enough non-option arguments: got 0, need at least 1"`
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -364,7 +368,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket delete abc def ghi")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Unknown arguments: def, ghi"`
+					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -394,10 +398,10 @@ describe("r2", () => {
 
 			it("should delete a bucket specified by name & check requests inputs", async () => {
 				msw.use(
-					rest.delete(
+					http.delete(
 						"*/accounts/:accountId/r2/buckets/:bucketName",
-						async (request, response, context) => {
-							const { accountId, bucketName } = request.params;
+						async ({ request, params }) => {
+							const { accountId, bucketName } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(bucketName).toEqual("some-bucket");
 							expect(await request.text()).toEqual("");
@@ -405,8 +409,9 @@ describe("r2", () => {
 								"Bearer some-api-token"
 							);
 
-							return response.once(context.json(createFetchResult(null)));
-						}
+							return HttpResponse.json(createFetchResult(null));
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler(`r2 bucket delete some-bucket`);
@@ -423,7 +428,9 @@ describe("r2", () => {
 			it("should show the correct help when an invalid command is passed", async () => {
 				await expect(() =>
 					runWrangler("r2 bucket sippy foo")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: foo"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
 
@@ -454,9 +461,9 @@ describe("r2", () => {
 					setIsTTY(false);
 
 					msw.use(
-						rest.put(
+						http.put(
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
-							async (request, response, context) => {
+							async ({ request }) => {
 								expect(await request.json()).toEqual({
 									source: {
 										provider: "aws",
@@ -471,8 +478,9 @@ describe("r2", () => {
 										secretAccessKey: "some-secret",
 									},
 								});
-								return response.once(context.json(createFetchResult({})));
-							}
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						)
 					);
 					await runWrangler(
@@ -487,9 +495,9 @@ describe("r2", () => {
 					setIsTTY(false);
 
 					msw.use(
-						rest.put(
+						http.put(
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
-							async (request, response, context) => {
+							async ({ request }) => {
 								expect(await request.json()).toEqual({
 									source: {
 										provider: "gcs",
@@ -503,8 +511,9 @@ describe("r2", () => {
 										secretAccessKey: "some-secret",
 									},
 								});
-								return response.once(context.json(createFetchResult({})));
-							}
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						)
 					);
 					await runWrangler(
@@ -519,7 +528,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy enable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -563,7 +572,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy disable")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -595,11 +604,12 @@ describe("r2", () => {
 					setIsTTY(false);
 
 					msw.use(
-						rest.delete(
+						http.delete(
 							"*/accounts/some-account-id/r2/buckets/testBucket/sippy",
-							async (request, response, context) => {
-								return response.once(context.json(createFetchResult({})));
-							}
+							async () => {
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						)
 					);
 					await runWrangler("r2 bucket sippy disable testBucket");
@@ -614,7 +624,7 @@ describe("r2", () => {
 					await expect(
 						runWrangler("r2 bucket sippy get")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Not enough non-option arguments: got 0, need at least 1"`
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -647,20 +657,19 @@ describe("r2", () => {
 				setIsTTY(false);
 
 				msw.use(
-					rest.get(
+					http.get(
 						"*/accounts/:accountId/r2/buckets/:bucketName/sippy",
-						async (request, response, context) => {
-							const { accountId } = request.params;
+						async ({ request, params }) => {
+							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.text()).toEqual("");
-							return response.once(
-								context.json(
-									createFetchResult(
-										"https://storage.googleapis.com/storage/v1/b/testBucket"
-									)
+							return HttpResponse.json(
+								createFetchResult(
+									"https://storage.googleapis.com/storage/v1/b/testBucket"
 								)
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await runWrangler("r2 bucket sippy get testBucket");
@@ -677,10 +686,10 @@ describe("r2", () => {
 					const queueId = "471537e8-6e5a-4163-a4d4-9478087c32c3";
 					const queueName = "my-queue";
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration",
-							async (request, response, context) => {
-								const { accountId, bucketName: bucketParam } = request.params;
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
 								expect(accountId).toEqual("some-account-id");
 								expect(bucketName).toEqual(bucketParam);
 								expect(request.headers.get("authorization")).toEqual(
@@ -704,24 +713,24 @@ describe("r2", () => {
 										},
 									},
 								};
-								return response.once(
-									context.json(createFetchResult(getResponse))
-								);
-							}
+								return HttpResponse.json(createFetchResult(getResponse));
+							},
+							{ once: true }
 						),
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/queues/:queueId",
-							async (request, response, context) => {
-								const { accountId, queueId: queueParam } = request.params;
+							async ({ request, params }) => {
+								const { accountId, queueId: queueParam } = params;
 								expect(accountId).toEqual("some-account-id");
 								expect(queueParam).toEqual(queueId);
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
-								return response.once(
-									context.json(createFetchResult({ queue_name: queueName }))
+								return HttpResponse.json(
+									createFetchResult({ queue_name: queueName })
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					await expect(
@@ -779,10 +788,10 @@ describe("r2", () => {
 						],
 					};
 					msw.use(
-						rest.put(
+						http.put(
 							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
-							async (request, response, context) => {
-								const { accountId } = request.params;
+							async ({ request, params }) => {
+								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
 								expect(await request.json()).toEqual({
 									...config,
@@ -793,40 +802,41 @@ describe("r2", () => {
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
-								return response.once(context.json(createFetchResult({})));
-							}
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						),
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/queues?*",
-							async (request, response, context) => {
-								const { accountId } = request.params;
-								const nameParams = request.url.searchParams.getAll("name");
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
 
 								expect(accountId).toEqual("some-account-id");
 								expect(nameParams[0]).toEqual(queue);
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
-								return response.once(
-									context.json({
-										success: true,
-										errors: [],
-										messages: [],
-										result: [
-											{
-												queue_id: "queue-id",
-												queue_name: queue,
-												created_on: "",
-												producers: [],
-												consumers: [],
-												producers_total_count: 1,
-												consumers_total_count: 0,
-												modified_on: "",
-											},
-										],
-									})
-								);
-							}
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
 						)
 					);
 					await expect(
@@ -878,48 +888,49 @@ describe("r2", () => {
 					const bucketName = "my-bucket";
 					const queue = "my-queue";
 					msw.use(
-						rest.delete(
+						http.delete(
 							"*/accounts/:accountId/event_notifications/r2/:bucketName/configuration/queues/:queueUUID",
-							async (request, response, context) => {
-								const { accountId } = request.params;
+							async ({ request, params }) => {
+								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
-								return response.once(context.json(createFetchResult({})));
-							}
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
 						),
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/queues?*",
-							async (request, response, context) => {
-								const { accountId } = request.params;
-								const nameParams = request.url.searchParams.getAll("name");
+							async ({ request, params }) => {
+								const url = new URL(request.url);
+								const { accountId } = params;
+								const nameParams = url.searchParams.getAll("name");
 
 								expect(accountId).toEqual("some-account-id");
 								expect(nameParams[0]).toEqual(queue);
 								expect(request.headers.get("authorization")).toEqual(
 									"Bearer some-api-token"
 								);
-								return response.once(
-									context.json({
-										success: true,
-										errors: [],
-										messages: [],
-										result: [
-											{
-												queue_id: "queue-id",
-												queue_name: queue,
-												created_on: "",
-												producers: [],
-												consumers: [],
-												producers_total_count: 1,
-												consumers_total_count: 0,
-												modified_on: "",
-											},
-										],
-									})
-								);
-							}
+								return HttpResponse.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [
+										{
+											queue_id: "queue-id",
+											queue_name: queue,
+											created_on: "",
+											producers: [],
+											consumers: [],
+											producers_total_count: 1,
+											consumers_total_count: 0,
+											modified_on: "",
+										},
+									],
+								});
+							},
+							{ once: true }
 						)
 					);
 					await expect(
@@ -1021,52 +1032,46 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-				"Error: Wrangler only supports uploading files up to ${prettyBytes(
-					MAX_UPLOAD_SIZE,
-					{ binary: true }
-				)} in size
-				wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
-			`);
+					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
+					wormhole-img.png is 301 MiB in size]
+				`);
 			});
 
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
 				msw.use(
-					rest.put(
+					http.put(
 						"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-						(request, response, context) => {
-							const { accountId, bucketName, objectName } = request.params;
+						({ request, params }) => {
+							const { accountId, bucketName, objectName } = params;
 							expect(accountId).toEqual("some-account-id");
 							expect(bucketName).toEqual("bucketName-object-test");
 							expect(objectName).toEqual("wormhole-img.png");
-							const headersObject = request.headers.all();
+							const headersObject = Object.fromEntries(
+								request.headers.entries()
+							);
 							delete headersObject["user-agent"];
 							//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
 							delete headersObject["content-length"];
 							expect(headersObject).toMatchInlineSnapshot(`
 					Object {
-					  "accept": "*/*",
-					  "accept-encoding": "gzip,deflate",
 					  "authorization": "Bearer some-api-token",
 					  "cache-control": "cache-control-mock",
-					  "connection": "close",
 					  "content-disposition": "content-disposition-mock",
 					  "content-encoding": "content-encoding-mock",
 					  "content-language": "content-lang-mock",
 					  "content-type": "content-type-mock",
 					  "expires": "expire-time-mock",
-					  "host": "api.cloudflare.com",
 					}
 				`);
-							return response.once(
-								context.json(
-									createFetchResult({
-										accountId: "some-account-id",
-										bucketName: "bucketName-object-test",
-										objectName: "wormhole-img.png",
-									})
-								)
+							return HttpResponse.json(
+								createFetchResult({
+									accountId: "some-account-id",
+									bucketName: "bucketName-object-test",
+									objectName: "wormhole-img.png",
+								})
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				fs.writeFileSync("wormhole-img.png", "passageway");
@@ -1101,7 +1106,7 @@ describe("r2", () => {
 						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Arguments pipe and file are mutually exclusive"`
+					`[Error: Arguments pipe and file are mutually exclusive]`
 				);
 
 				expect(std.err).toMatchInlineSnapshot(`

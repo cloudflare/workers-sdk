@@ -1,8 +1,6 @@
-import { Box, Text } from "ink";
-import React from "react";
+import { stringify } from "@iarna/toml";
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { renderToString } from "../utils/render";
 import { createIndex } from "./client";
 import { vectorizeBetaWarning } from "./common";
 import type {
@@ -101,24 +99,19 @@ export async function handler(
 	}
 
 	logger.log(
-		renderToString(
-			<Box flexDirection="column">
-				<Text>
-					✅ Successfully created a new Vectorize index: &apos;
-					{indexResult.name}&apos;
-				</Text>
-				<Text>
-					📋 To start querying from a Worker, add the following binding
-					configuration into &apos;wrangler.toml&apos;:
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>[[vectorize]]</Text>
-				<Text>
-					binding = &quot;VECTORIZE_INDEX&quot; # available within your Worker
-					on env.VECTORIZE_INDEX
-				</Text>
-				<Text>index_name = &quot;{indexResult.name}&quot;</Text>
-			</Box>
-		)
+		`✅ Successfully created a new Vectorize index: '${indexResult.name}'`
+	);
+	logger.log(
+		`📋 To start querying from a Worker, add the following binding configuration into 'wrangler.toml':\n`
+	);
+	logger.log(
+		stringify({
+			vectorize: [
+				{
+					binding: "VECTORIZE_INDEX",
+					index_name: indexResult.name,
+				},
+			],
+		})
 	);
 }

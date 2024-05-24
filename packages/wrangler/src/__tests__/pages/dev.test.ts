@@ -4,7 +4,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 
 /**
  * Given that `runWrangler()` mocks out the underlying implementation
- * (see "jest.setup.ts") there's only so much worth testing here.
+ * (see "vitest.setup.ts") there's only so much worth testing here.
  */
 describe("pages dev", () => {
 	runInTempDir();
@@ -14,7 +14,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`."`
+			`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
 		);
 	});
 
@@ -22,7 +22,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public -- yarn dev")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Specify either a directory OR a proxy command, not both."`
+			`[Error: Specify either a directory OR a proxy command, not both.]`
 		);
 	});
 
@@ -30,7 +30,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --config=/path/to/wrangler.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support custom paths for the \`wrangler.toml\` configuration file"`
+			`[Error: Pages does not support custom paths for the \`wrangler.toml\` configuration file]`
 		);
 	});
 
@@ -38,7 +38,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --experimental-json-config")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support \`wrangler.json\`"`
+			`[Error: Pages does not support \`wrangler.json\`]`
 		);
 	});
 
@@ -46,7 +46,7 @@ describe("pages dev", () => {
 		await expect(
 			runWrangler("pages dev public --env=production")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch"`
+			`[Error: Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch]`
 		);
 	});
 });

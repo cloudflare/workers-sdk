@@ -1,4 +1,5 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	loginOrRefreshIfRequired,
@@ -21,9 +22,10 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
+import type { MockInstance } from "vitest";
 
 describe("User", () => {
-	let isCISpy: jest.SpyInstance;
+	let isCISpy: MockInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
 	// TODO: Implement these two mocks with MSW
@@ -32,7 +34,7 @@ describe("User", () => {
 
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
 	describe("login", () => {
@@ -41,18 +43,20 @@ describe("User", () => {
 
 			let counter = 0;
 			msw.use(
-				rest.post("*/oauth2/token", async (_, response, context) => {
-					counter += 1;
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						counter += 1;
 
-					return response.once(
-						context.json({
+						return HttpResponse.json({
 							access_token: "test-access-token",
 							expires_in: 100000,
 							refresh_token: "test-refresh-token",
 							scope: "account:read",
-						})
-					);
-				})
+						});
+					},
+					{ once: true }
+				)
 			);
 
 			await runWrangler("login");
@@ -85,7 +89,7 @@ describe("User", () => {
 		await expect(
 			requireAuth({} as Config)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."`
+			`[Error: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.]`
 		);
 	});
 

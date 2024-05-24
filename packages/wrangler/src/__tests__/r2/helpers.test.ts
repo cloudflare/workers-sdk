@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { vi } from "vitest";
 import { logger } from "../../logger";
 import {
 	eventNotificationHeaders,
@@ -54,7 +55,7 @@ describe("event notifications", () => {
 		const tableOutput = await tableFromNotificationGetResponse(
 			config,
 			response[bucketName],
-			jest
+			vi
 				.fn()
 				.mockImplementation((_: Pick<Config, "account_id">, queue: string) => ({
 					queue_name: queueMap[queue],

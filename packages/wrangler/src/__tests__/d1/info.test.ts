@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -33,28 +33,25 @@ describe("info", () => {
 			],
 		});
 		msw.use(
-			rest.get(
-				"*/accounts/:accountId/d1/database/*",
-				async (_req, res, ctx) => {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							result: {
-								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-								name: "northwind",
-								created_at: "2023-05-23T08:33:54.590Z",
-								version: "alpha",
-								num_tables: 13,
-								file_size: 33067008,
-								running_in_region: "WEUR",
-							},
-							success: true,
-							errors: [],
-							messages: [],
-						})
-					);
-				}
-			)
+			http.get("*/accounts/:accountId/d1/database/*", async () => {
+				return HttpResponse.json(
+					{
+						result: {
+							uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+							name: "northwind",
+							created_at: "2023-05-23T08:33:54.590Z",
+							version: "alpha",
+							num_tables: 13,
+							file_size: 33067008,
+							running_in_region: "WEUR",
+						},
+						success: true,
+						errors: [],
+						messages: [],
+					},
+					{ status: 200 }
+				);
+			})
 		);
 		await runWrangler("d1 info northwind --json");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -86,39 +83,36 @@ describe("info", () => {
 			],
 		});
 		msw.use(
-			rest.get(
-				"*/accounts/:accountId/d1/database/*",
-				async (_req, res, ctx) => {
-					return res(
-						ctx.status(200),
-						ctx.json({
-							result: {
-								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-								name: "northwind",
-								created_at: "2023-05-23T08:33:54.590Z",
-								version: "beta",
-								num_tables: 13,
-								file_size: 33067008,
-								running_in_region: "WEUR",
-							},
-							success: true,
-							errors: [],
-							messages: [],
-						})
-					);
-				}
-			)
+			http.get("*/accounts/:accountId/d1/database/*", async () => {
+				return HttpResponse.json(
+					{
+						result: {
+							uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+							name: "northwind",
+							created_at: "2023-05-23T08:33:54.590Z",
+							version: "beta",
+							num_tables: 13,
+							file_size: 33067008,
+							running_in_region: "WEUR",
+						},
+						success: true,
+						errors: [],
+						messages: [],
+					},
+					{ status: 200 }
+				);
+			})
 		);
 		msw.use(
-			rest.post("*/graphql", async (_req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
+			http.post("*/graphql", async () => {
+				return HttpResponse.json(
+					{
 						result: null,
 						success: true,
 						errors: [],
 						messages: [],
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);

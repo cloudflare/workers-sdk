@@ -46,14 +46,16 @@ describe("pages build env", () => {
 		await expect(
 			runWrangler("pages functions build-env")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"No Pages project location specified"`
+			`[Error: No Pages project location specified]`
 		);
 	});
 
 	it("should fail with no outfile", async () => {
 		await expect(
 			runWrangler("pages functions build-env .")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`"No outfile specified"`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: No outfile specified]`
+		);
 	});
 
 	it("should exit with specific exit code if no config file is found", async () => {
@@ -187,11 +189,11 @@ describe("pages build env", () => {
 
 		await expect(runWrangler("pages functions build-env . --outfile data.json"))
 			.rejects.toThrowErrorMatchingInlineSnapshot(`
-		"Running configuration file validation for Pages:
-		  - Configuration file contains the following environment names that are not supported by Pages projects:
-		    \\"staging\\".
-		    The supported named-environments for Pages are \\"preview\\" and \\"production\\"."
-	`);
+			[Error: Running configuration file validation for Pages:
+			  - Configuration file contains the following environment names that are not supported by Pages projects:
+			    "staging".
+			    The supported named-environments for Pages are "preview" and "production".]
+		`);
 	});
 
 	it("should exit if an unparseable pages confg file is found", async () => {
