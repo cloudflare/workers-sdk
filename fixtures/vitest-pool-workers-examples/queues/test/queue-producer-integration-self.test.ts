@@ -1,6 +1,5 @@
 import { SELF } from "cloudflare:test";
 import { expect, it, vi } from "vitest";
-import "../src/index"; // Currently required to automatically rerun tests when `main` changes
 
 it("produces and consumers queue message", async () => {
 	// Enqueue job on queue
