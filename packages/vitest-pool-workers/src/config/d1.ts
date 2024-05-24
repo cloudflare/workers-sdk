@@ -9,6 +9,13 @@ import type { D1Migration } from "../shared/d1";
 export async function readD1Migrations(
 	migrationsPath: string
 ): Promise<D1Migration[]> {
+	// noinspection SuspiciousTypeOfGuard
+	if (typeof migrationsPath !== "string") {
+		throw new TypeError(
+			"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string'."
+		);
+	}
+
 	const { unstable_splitSqlQuery } = await import("wrangler"); // (lazy)
 	const names = fs
 		.readdirSync(migrationsPath)

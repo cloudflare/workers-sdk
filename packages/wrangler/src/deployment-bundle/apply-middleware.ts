@@ -54,7 +54,9 @@ export async function applyMiddlewareLoaderFacade(
 		)
 		.join("\n");
 
-	const middlewareFns = middlewareIdentifiers.map(([m]) => `${m}.default`);
+	const middlewareFns = middlewareIdentifiers
+		.map(([m]) => `${m}.default`)
+		.join(",");
 
 	if (entry.format === "modules") {
 		await fs.promises.writeFile(
@@ -62,13 +64,13 @@ export async function applyMiddlewareLoaderFacade(
 			dedent/*javascript*/ `
 				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
 				${imports}
-				
-				worker.middleware = [
-					${middlewareFns.join(",")},
-					...(worker.middleware ?? []),
-				].filter(Boolean);
-				
+
 				export * from "${prepareFilePath(entry.file)}";
+
+				export const __INTERNAL_WRANGLER_MIDDLEWARE__ = [
+					...(OTHER_EXPORTS.__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ ?? []),
+					${middlewareFns}
+				]
 				export default worker;
 			`
 		);

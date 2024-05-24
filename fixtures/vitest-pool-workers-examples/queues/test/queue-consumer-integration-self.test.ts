@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { env, SELF } from "cloudflare:test";
 import { expect, it } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 it("consumes queue messages", async () => {
 	// `SELF` here points to the worker running in the current isolate.

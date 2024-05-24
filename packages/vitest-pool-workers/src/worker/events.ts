@@ -1,3 +1,6 @@
+import { env } from "./env";
+import { registerGlobalWaitUntil, waitForWaitUntil } from "./wait-until";
+
 // `workerd` doesn't allow these internal classes to be constructed directly.
 // To replicate this behaviour require this unique symbol to be specified as the
 // first constructor argument. If this is missing, throw `Illegal invocation`.
@@ -8,49 +11,6 @@ const kConstructFlag = Symbol("kConstructFlag");
 // =============================================================================
 // `ExecutionContext`
 // =============================================================================
-
-/**
- * Empty array and wait for all promises to resolve until no more added.
- * If a single promise rejects, the rejection will be passed-through.
- * If multiple promises reject, the rejections will be aggregated.
- */
-async function waitForWaitUntil(/* mut */ waitUntil: unknown[]): Promise<void> {
-	const errors: unknown[] = [];
-
-	while (waitUntil.length > 0) {
-		const results = await Promise.allSettled(waitUntil.splice(0));
-		// Record all rejected promises
-		for (const result of results) {
-			if (result.status === "rejected") {
-				errors.push(result.reason);
-			}
-		}
-	}
-
-	if (errors.length === 1) {
-		// If there was only one rejection, rethrow it
-		throw errors[0];
-	} else if (errors.length > 1) {
-		// If there were more rejections, rethrow them all
-		throw new AggregateError(errors);
-	}
-}
-
-// If isolated storage is enabled, we ensure all `waitUntil()`s are `await`ed at
-// the end of each test, as these may contain storage calls (e.g. caching
-// responses). Note we can't wait at the end of `.concurrent` tests, as we can't
-// track which `waitUntil()`s belong to which tests.
-//
-// If isolated storage is disabled, we ensure all `waitUntil()`s are `await`ed
-// at the end of each test *file*. This ensures we don't try to dispose the
-// runtime until all `waitUntil()`s complete.
-const globalWaitUntil: unknown[] = [];
-export function registerGlobalWaitUntil(promise: unknown) {
-	globalWaitUntil.push(promise);
-}
-export function waitForGlobalWaitUntil(): Promise<void> {
-	return waitForWaitUntil(globalWaitUntil);
-}
 
 const kWaitUntil = Symbol("kWaitUntil");
 class ExecutionContext {
@@ -76,14 +36,20 @@ class ExecutionContext {
 export function createExecutionContext(): ExecutionContext {
 	return new ExecutionContext(kConstructFlag);
 }
-export async function waitOnExecutionContext(
-	ctx: ExecutionContext
-): Promise<void> {
-	// noinspection SuspiciousTypeOfGuard
-	if (!(ctx instanceof ExecutionContext)) {
+
+function isExecutionContextLike(v: unknown): v is { [kWaitUntil]: unknown[] } {
+	return (
+		typeof v === "object" &&
+		v !== null &&
+		kWaitUntil in v &&
+		Array.isArray(v[kWaitUntil])
+	);
+}
+export async function waitOnExecutionContext(ctx: unknown): Promise<void> {
+	if (!isExecutionContextLike(ctx)) {
 		throw new TypeError(
 			"Failed to execute 'getWaitUntil': parameter 1 is not of type 'ExecutionContext'.\n" +
-				"You must call 'createExecutionContext()' to get an 'ExecutionContext' instance."
+				"You must call 'createExecutionContext()' or 'createPagesEventContext()' to get an 'ExecutionContext' instance."
 		);
 	}
 	return waitForWaitUntil(ctx[kWaitUntil]);
@@ -341,12 +307,12 @@ export function createMessageBatch<Body = unknown>(
 	if (arguments.length === 0) {
 		// `queueName` will be coerced to a `string`, but it must be defined
 		throw new TypeError(
-			"TypeError: Failed to execute 'createMessageBatch': parameter 1 is not of type 'string'."
+			"Failed to execute 'createMessageBatch': parameter 1 is not of type 'string'."
 		);
 	}
 	if (!Array.isArray(messages)) {
 		throw new TypeError(
-			"TypeError: Failed to execute 'createMessageBatch': parameter 2 is not of type 'Array'."
+			"Failed to execute 'createMessageBatch': parameter 2 is not of type 'Array'."
 		);
 	}
 	return new QueueController(kConstructFlag, queueName, messages);
@@ -389,5 +355,109 @@ export async function getQueueResult(
 		ackAll: batch[kAckAll],
 		retryMessages,
 		explicitAcks,
+	};
+}
+
+// =============================================================================
+// Pages Functions `EventContext`
+// =============================================================================
+
+function hasASSETSServiceBinding(
+	value: Record<string, unknown>
+): value is Record<string, unknown> & { ASSETS: Fetcher } {
+	return (
+		"ASSETS" in value &&
+		typeof value.ASSETS === "object" &&
+		value.ASSETS !== null &&
+		"fetch" in value.ASSETS &&
+		typeof value.ASSETS.fetch === "function"
+	);
+}
+
+interface EventContextInit {
+	request: Request<unknown, IncomingRequestCfProperties>;
+	functionPath?: string;
+	next?(request: Request): Response | Promise<Response>;
+	params?: Record<string, string | string[]>;
+	data?: Record<string, unknown>;
+}
+
+export function createPagesEventContext<F extends PagesFunction>(
+	opts: EventContextInit
+): Parameters<F>[0] & { [kWaitUntil]: unknown[] } {
+	if (typeof opts !== "object" || opts === null) {
+		throw new TypeError(
+			"Failed to execute 'createPagesEventContext': parameter 1 is not of type 'EventContextInit'."
+		);
+	}
+	if (!(opts.request instanceof Request)) {
+		throw new TypeError(
+			"Incorrect type for the 'request' field on 'EventContextInit': the provided value is not of type 'Request'."
+		);
+	}
+	// noinspection SuspiciousTypeOfGuard
+	if (
+		opts.functionPath !== undefined &&
+		typeof opts.functionPath !== "string"
+	) {
+		throw new TypeError(
+			"Incorrect type for the 'functionPath' field on 'EventContextInit': the provided value is not of type 'string'."
+		);
+	}
+	if (opts.next !== undefined && typeof opts.next !== "function") {
+		throw new TypeError(
+			"Incorrect type for the 'next' field on 'EventContextInit': the provided value is not of type 'function'."
+		);
+	}
+	if (
+		opts.params !== undefined &&
+		!(typeof opts.params === "object" && opts.params !== null)
+	) {
+		throw new TypeError(
+			"Incorrect type for the 'params' field on 'EventContextInit': the provided value is not of type 'object'."
+		);
+	}
+	if (
+		opts.data !== undefined &&
+		!(typeof opts.data === "object" && opts.data !== null)
+	) {
+		throw new TypeError(
+			"Incorrect type for the 'data' field on 'EventContextInit': the provided value is not of type 'object'."
+		);
+	}
+
+	if (!hasASSETSServiceBinding(env)) {
+		throw new TypeError(
+			"Cannot call `createPagesEventContext()` without defining `ASSETS` service binding"
+		);
+	}
+
+	const ctx = createExecutionContext();
+	return {
+		// If we might need to re-use this request, clone it
+		request: opts.next ? opts.request.clone() : opts.request,
+		functionPath: opts.functionPath ?? "",
+		[kWaitUntil]: ctx[kWaitUntil],
+		waitUntil: ctx.waitUntil.bind(ctx),
+		passThroughOnException: ctx.passThroughOnException.bind(ctx),
+		async next(nextInput, nextInit) {
+			if (opts.next === undefined) {
+				throw new TypeError(
+					"Cannot call `EventContext#next()` without including `next` property in 2nd argument to `createPagesEventContext()`"
+				);
+			}
+			if (nextInput === undefined) {
+				return opts.next(opts.request);
+			} else {
+				if (typeof nextInput === "string") {
+					nextInput = new URL(nextInput, opts.request.url).toString();
+				}
+				const nextRequest = new Request(nextInput, nextInit);
+				return opts.next(nextRequest);
+			}
+		},
+		env,
+		params: opts.params ?? {},
+		data: opts.data ?? {},
 	};
 }
