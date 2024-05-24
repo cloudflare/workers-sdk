@@ -72,4 +72,4 @@ jobs:
           token: ${{ secrets.C3_DIFF_TOOL_GH_TOKEN }}
           releaseBranch: "changeset-release/main"
           targetHeadBranch: c3-diffs-${{ github.sha }}
-          targetBaseBranch: master
+          targetBaseBranch: production
