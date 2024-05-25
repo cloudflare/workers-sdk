@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import {
-	all,
 	get,
 	HttpError,
 	MiniflareDurableObject,
