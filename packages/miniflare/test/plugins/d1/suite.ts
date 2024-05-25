@@ -4,12 +4,18 @@ import { Miniflare, MiniflareOptions } from "miniflare";
 import { useTmp, utf8Encode } from "../../test-shared";
 import { binding, getDatabase, opts, test } from "./test";
 
-export const SCHEMA = (tableColours: string, tableKitchenSink: string) => `
+export const SCHEMA = (
+	tableColours: string,
+	tableKitchenSink: string,
+	tablePalettes: string
+) => `
 CREATE TABLE ${tableColours} (id INTEGER PRIMARY KEY, name TEXT NOT NULL, rgb INTEGER NOT NULL);
 CREATE TABLE ${tableKitchenSink} (id INTEGER PRIMARY KEY, int INTEGER, real REAL, text TEXT, blob BLOB);
+CREATE TABLE ${tablePalettes} (id INTEGER PRIMARY KEY, name TEXT NOT NULL, colour_id INTEGER NOT NULL, FOREIGN KEY (colour_id) REFERENCES ${tableColours}(id));
 INSERT INTO ${tableColours} (id, name, rgb) VALUES (1, 'red', 0xff0000);
 INSERT INTO ${tableColours} (id, name, rgb) VALUES (2, 'green', 0x00ff00);
 INSERT INTO ${tableColours} (id, name, rgb) VALUES (3, 'blue', 0x0000ff);
+INSERT INTO ${tablePalettes} (id, name, colour_id) VALUES (1, 'Night', 3);
 `;
 
 export interface ColourRow {
@@ -32,13 +38,15 @@ test.beforeEach(async (t) => {
 	)}`;
 	const tableColours = `colours_${ns}`;
 	const tableKitchenSink = `kitchen_sink_${ns}`;
+	const tablePalettes = `palettes_${ns}`;
 
 	const db = await getDatabase(t.context.mf);
-	await db.exec(SCHEMA(tableColours, tableKitchenSink));
+	await db.exec(SCHEMA(tableColours, tableKitchenSink, tablePalettes));
 
 	t.context.db = db;
 	t.context.tableColours = tableColours;
 	t.context.tableKitchenSink = tableKitchenSink;
+	t.context.tablePalettes = tablePalettes;
 });
 
 function throwCause<T>(promise: Promise<T>): Promise<T> {
@@ -215,11 +223,6 @@ test("D1PreparedStatement: run", async (t) => {
 	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
 		success: true,
-		results: [
-			{ id: 1, name: "red", rgb: 16711680 },
-			{ id: 2, name: "green", rgb: 65280 },
-			{ id: 3, name: "blue", rgb: 255 },
-		],
 		meta: {
 			changed_db: false,
 			changes: 0,
@@ -243,7 +246,6 @@ test("D1PreparedStatement: run", async (t) => {
 		.run();
 	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
-		results: [{ id: 4, name: "yellow", rgb: 16776960 }],
 		success: true,
 		meta: {
 			changed_db: true,
@@ -276,7 +278,6 @@ test("D1PreparedStatement: run", async (t) => {
 		.run();
 	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
-		results: [],
 		success: true,
 		meta: {
 			changed_db: true,
@@ -395,7 +396,7 @@ test("D1PreparedStatement: raw", async (t) => {
 });
 
 test("operations persist D1 data", async (t) => {
-	const { tableColours, tableKitchenSink } = t.context;
+	const { tableColours, tableKitchenSink, tablePalettes } = t.context;
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
@@ -405,7 +406,7 @@ test("operations persist D1 data", async (t) => {
 	let db = await getDatabase(mf);
 
 	// Check execute respects persist
-	await db.exec(SCHEMA(tableColours, tableKitchenSink));
+	await db.exec(SCHEMA(tableColours, tableKitchenSink, tablePalettes));
 	await db
 		.prepare(
 			`INSERT INTO ${tableColours} (id, name, rgb) VALUES (4, 'purple', 0xff00ff);`
@@ -431,7 +432,7 @@ test("operations persist D1 data", async (t) => {
 });
 
 test.serial("operations permit strange database names", async (t) => {
-	const { tableColours, tableKitchenSink } = t.context;
+	const { tableColours, tableKitchenSink, tablePalettes } = t.context;
 
 	// Set option, then reset after test
 	const id = "my/ Database";
@@ -441,7 +442,7 @@ test.serial("operations permit strange database names", async (t) => {
 
 	// Check basic operations work
 
-	await db.exec(SCHEMA(tableColours, tableKitchenSink));
+	await db.exec(SCHEMA(tableColours, tableKitchenSink, tablePalettes));
 
 	await db
 		.prepare(
@@ -452,4 +453,32 @@ test.serial("operations permit strange database names", async (t) => {
 		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
 		.first<Pick<ColourRow, "name">>();
 	t.deepEqual(result, { name: "pink" });
+});
+
+test("it properly handles ROWS_AND_COLUMNS results format", async (t) => {
+	const { tableColours, tablePalettes } = t.context;
+	const db = await getDatabase(t.context.mf);
+
+	const results = await db
+		.prepare(
+			`SELECT ${tableColours}.name, ${tablePalettes}.name FROM ${tableColours} JOIN ${tablePalettes} ON ${tableColours}.id = ${tablePalettes}.colour_id`
+		)
+		.raw();
+
+	const expectedResults = [["blue", "Night"]];
+	t.deepEqual(results, expectedResults);
+});
+
+test("it properly handles NONE results format", async (t) => {
+	const { tablePalettes } = t.context;
+	const db = await getDatabase(t.context.mf);
+
+	const response = await db
+		.prepare(
+			`INSERT INTO ${tablePalettes} (id, name, colour_id) VALUES (2, 'Sunset', 3)`
+		)
+		.run();
+
+	// @ts-expect-error: `results` where [] before we started handling "NONE"
+	t.deepEqual(response.results, undefined);
 });

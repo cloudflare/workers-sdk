@@ -18,6 +18,7 @@ export interface Context extends MiniflareTestContext {
 	db: D1Database;
 	tableColours: string;
 	tableKitchenSink: string;
+	tablePalettes: string
 }
 
 export let binding: string;
