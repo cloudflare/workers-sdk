@@ -1554,6 +1554,52 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 
 	t.is(helloWorld, "Hello World from a nested function");
 });
+test("Miniflare: getBindings() handles wrapped bindings returning functions returning functions", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					GreetFactory: {
+						scriptName: "greet-factory-obj-implementation",
+					},
+				},
+				modules: true,
+				script: "",
+			},
+			{
+				modules: true,
+				name: "greet-factory-obj-implementation",
+				script: `
+					export default function (env) {
+						const factory = {
+							getGreetFunction(name) {
+								return (name) => {
+									return this.greeting + ' ' + name;
+								}
+							},
+							greeting: "Salutations",
+						};
+						return factory;
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	interface Env {
+		GreetFactory: {
+			greeting: string;
+			getGreetFunction: () => (str: string) => string;
+		};
+	}
+	const { GreetFactory } = await mf.getBindings<Env>();
+
+	const greetFunction = GreetFactory.getGreetFunction();
+
+	t.is(greetFunction("Esteemed World"), "Salutations Esteemed World");
+	t.is(GreetFactory.greeting, "Salutations");
+});
 test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
