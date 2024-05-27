@@ -44,6 +44,7 @@ export const offerGit = async (ctx: C3Context) => {
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
 	if (insideGitRepo) {
+		ctx.args.git = true;
 		return;
 	}
 
