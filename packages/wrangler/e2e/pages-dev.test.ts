@@ -27,9 +27,18 @@ describe("pages dev", () => {
 			const worker = run(`wrangler pages dev --port ${port} .`);
 			const { url } = await waitForReady(worker);
 			const text = await fetchText(url);
+			const currentDate = new Date().toISOString().substring(0, 10);
+			const output = worker.output.replaceAll(currentDate, "<current-date>");
+
 			expect(text).toMatchInlineSnapshot('"Testing [--compatibility_date]"');
-			expect(worker.output).toContain(
-				`No compatibility_date was specified. Using today's date`
+			expect(output).toContain(
+				`No compatibility_date was specified. Using today's date: <current-date>.`
+			);
+			expect(output).toContain(
+				`❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or`
+			);
+			expect(output).toContain(
+				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`
 			);
 		}
 	);

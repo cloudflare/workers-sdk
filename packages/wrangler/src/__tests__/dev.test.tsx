@@ -113,20 +113,15 @@ describe("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
+"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
-			          Add one to your wrangler.toml file:
-			          \`\`\`
-			          compatibility_date = \\"<current-date>\\"
-			          \`\`\`
-			          or pass it in your terminal:
-			          \`\`\`
-			          --compatibility-date=<current-date>
-			          \`\`\`
-			          See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
+  ❯❯ Add one to your wrangler.toml file: compatibility_date = \\"<current-date>\\", or
+  ❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=<current-date>
 
-			        "
-		      `);
+  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
+
+"
+`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 

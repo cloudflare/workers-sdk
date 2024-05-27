@@ -927,14 +927,8 @@ export function getDevCompatibilityDate(
 	if (config.configPath !== undefined && compatibilityDate === undefined) {
 		logger.warn(
 			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
-				"Add one to your wrangler.toml file:\n" +
-				"```\n" +
-				`compatibility_date = "${currentDate}"\n` +
-				"```\n" +
-				"or pass it in your terminal:\n" +
-				"```\n" +
-				`--compatibility-date=${currentDate}\n` +
-				"```\n" +
+				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 	}
