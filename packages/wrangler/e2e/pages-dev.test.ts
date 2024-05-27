@@ -572,7 +572,8 @@ describe("pages dev", () => {
 			);
 
 			expect(prestartOutput).toMatchInlineSnapshot(`
-				"▲ [WARNING] WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
+				"✨ Compiled Worker successfully
+				▲ [WARNING] WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
 				  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
 				  Remote Durable Objects that are affected:
 				  - {"name":"DO_BINDING_1_TOML","class_name":"DO_1_TOML","script_name":"DO_SCRIPT_1_TOML"}

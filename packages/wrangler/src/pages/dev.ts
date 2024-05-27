@@ -13,6 +13,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
+import { printWranglerBanner } from "../update-check";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
@@ -250,6 +251,8 @@ export const Handler = async (args: PagesDevArguments) => {
 	if (args.logLevel) {
 		logger.loggerLevel = args.logLevel;
 	}
+
+	await printWranglerBanner();
 
 	if (args.experimentalLocal) {
 		logger.warn(
@@ -665,7 +668,6 @@ export const Handler = async (args: PagesDevArguments) => {
 		persistTo: args.persistTo,
 		inspect: undefined,
 		logLevel: args.logLevel,
-		updateCheck: true,
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,

@@ -301,6 +301,8 @@ export function devOptions(yargs: CommonYargsArgv) {
 type DevArguments = StrictYargsOptionsToInterface<typeof devOptions>;
 
 export async function devHandler(args: DevArguments) {
+	await printWranglerBanner();
+
 	if (isWebContainer()) {
 		logger.error(
 			`Oh no! 😟 You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
@@ -379,7 +381,6 @@ export type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
-		updateCheck?: boolean;
 	};
 
 export async function startDev(args: StartDevOptions) {
@@ -389,7 +390,7 @@ export async function startDev(args: StartDevOptions) {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
-		await printWranglerBanner(args.updateCheck);
+
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
@@ -549,7 +550,6 @@ export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
 		logger.loggerLevel = args.logLevel;
 	}
-	await printWranglerBanner(args.updateCheck);
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
