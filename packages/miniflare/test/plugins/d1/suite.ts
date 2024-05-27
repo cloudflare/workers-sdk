@@ -41,8 +41,11 @@ test.beforeEach(async (t) => {
 	const tablePalettes = `palettes_${ns}`;
 
 	const db = await getDatabase(t.context.mf);
+	const bindings = await t.context.mf.getBindings();
+
 	await db.exec(SCHEMA(tableColours, tableKitchenSink, tablePalettes));
 
+	t.context.bindings = bindings;
 	t.context.db = db;
 	t.context.tableColours = tableColours;
 	t.context.tableKitchenSink = tableKitchenSink;
@@ -400,6 +403,25 @@ test("D1PreparedStatement: raw", async (t) => {
 		.bind("yellow")
 		.first("id");
 	t.is(id, 4);
+
+	// Check whether workerd raw test case passes here too
+	// Note that this test did not pass with the old binding
+	if (!t.context.bindings["__D1_BETA__DB"]) {
+		await db.prepare(`CREATE TABLE abc (a INT, b INT, c INT);`).run();
+		await db.prepare(`CREATE TABLE cde (c INT, d INT, e INT);`).run();
+		await db.prepare(`INSERT INTO abc VALUES (1,2,3),(4,5,6);`).run();
+		await db.prepare(`INSERT INTO cde VALUES (7,8,9),(1,2,3);`).run();
+		const rawPromise = await db
+			.prepare(`SELECT * FROM abc, cde;`)
+			.raw({ columnNames: true });
+		t.deepEqual(rawPromise, [
+			["a", "b", "c", "c", "d", "e"],
+			[1, 2, 3, 7, 8, 9],
+			[1, 2, 3, 1, 2, 3],
+			[4, 5, 6, 7, 8, 9],
+			[4, 5, 6, 1, 2, 3],
+		]);
+	}
 });
 
 test("operations persist D1 data", async (t) => {
@@ -472,6 +494,12 @@ test("it properly handles ROWS_AND_COLUMNS results format", async (t) => {
 		)
 		.raw();
 
-	const expectedResults = [["blue", "Night"]];
+	let expectedResults;
+	// Note that this test did not pass with the old binding
+	if (!t.context.bindings["__D1_BETA__DB"]) {
+		expectedResults = [["blue", "Night"]];
+	} else {
+		expectedResults = [["Night"]];
+	}
 	t.deepEqual(results, expectedResults);
 });

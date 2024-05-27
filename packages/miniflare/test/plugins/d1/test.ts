@@ -19,6 +19,7 @@ export interface Context extends MiniflareTestContext {
 	tableColours: string;
 	tableKitchenSink: string;
 	tablePalettes: string;
+	bindings: Record<string, unknown>;
 }
 
 export let binding: string;
