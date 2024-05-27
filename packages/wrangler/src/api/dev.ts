@@ -64,7 +64,6 @@ export interface UnstableDevOptions {
 	inspect?: boolean;
 	local?: boolean;
 	accountId?: string;
-	updateCheck?: boolean;
 	experimental?: {
 		processEntrypoint?: boolean;
 		additionalModules?: CfModule[];
@@ -213,7 +212,6 @@ export async function unstable_dev(
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
-		updateCheck: options?.updateCheck ?? false,
 		experimentalVersions: undefined,
 		experimentalDevEnv: devEnv,
 	};
