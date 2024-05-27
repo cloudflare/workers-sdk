@@ -856,10 +856,8 @@ function resolvePagesDevServerSettings(
 		const currentDate = new Date().toISOString().substring(0, 10);
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				"Pass it in your terminal:\n" +
-				"```\n" +
-				`--compatibility-date=${currentDate}\n` +
-				"```\n" +
+				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 		compatibilityDate = currentDate;
