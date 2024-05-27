@@ -223,6 +223,11 @@ test("D1PreparedStatement: run", async (t) => {
 	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
 		success: true,
+		results: [
+			{ id: 1, name: "red", rgb: 16711680 },
+			{ id: 2, name: "green", rgb: 65280 },
+			{ id: 3, name: "blue", rgb: 255 },
+		],
 		meta: {
 			changed_db: false,
 			changes: 0,
@@ -246,6 +251,7 @@ test("D1PreparedStatement: run", async (t) => {
 		.run();
 	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
+		results: [{ id: 4, name: "yellow", rgb: 16776960 }],
 		success: true,
 		meta: {
 			changed_db: true,
@@ -278,6 +284,7 @@ test("D1PreparedStatement: run", async (t) => {
 		.run();
 	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
+		results: [],
 		success: true,
 		meta: {
 			changed_db: true,
@@ -467,18 +474,4 @@ test("it properly handles ROWS_AND_COLUMNS results format", async (t) => {
 
 	const expectedResults = [["blue", "Night"]];
 	t.deepEqual(results, expectedResults);
-});
-
-test("it properly handles NONE results format", async (t) => {
-	const { tablePalettes } = t.context;
-	const db = await getDatabase(t.context.mf);
-
-	const response = await db
-		.prepare(
-			`INSERT INTO ${tablePalettes} (id, name, colour_id) VALUES (2, 'Sunset', 3)`
-		)
-		.run();
-
-	// @ts-expect-error: `results` where [] before we started handling "NONE"
-	t.deepEqual(response.results, undefined);
 });

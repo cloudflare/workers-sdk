@@ -143,8 +143,10 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		const rows = convertRows(Array.from(cursor.raw()));
 
 		let results = undefined;
-		if (format === "ARRAY_OF_OBJECTS") results = rowsToObjects(columns, rows);
-		else if (format === "ROWS_AND_COLUMNS") results = { columns, rows };
+		if (format === "ROWS_AND_COLUMNS") results = { columns, rows };
+		else results = rowsToObjects(columns, rows);
+		// Note that the "NONE" format behaviour here is inconsistent with workerd.
+		// See comment: https://github.com/cloudflare/workers-sdk/pull/5917#issuecomment-2133313156
 
 		const afterTime = performance.now();
 		const afterSize = this.state.storage.sql.databaseSize;
