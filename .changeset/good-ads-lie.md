@@ -2,4 +2,4 @@
 "miniflare": minor
 ---
 
-update workerd to latest version
+chore: update workerd to latest version
