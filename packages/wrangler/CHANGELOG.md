@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.57.2
+
+### Patch Changes
+
+- [#5905](https://github.com/cloudflare/workers-sdk/pull/5905) [`53f22a0`](https://github.com/cloudflare/workers-sdk/commit/53f22a086837df7130d165fe9243f2d1f1559d73) Thanks [@penalosa](https://github.com/penalosa)! - fix: Remove WARP certificate injection. Instead, you should ensure that any custom certificates that are needed are included in `NODE_EXTRA_CA_CERTS`.
+
+- [#5930](https://github.com/cloudflare/workers-sdk/pull/5930) [`57daae0`](https://github.com/cloudflare/workers-sdk/commit/57daae0b2bd70c4f25b2abcabfc7fb03dba0c878) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: improve error message when updating secret for a non-deployed latest version.
+
+- [#5703](https://github.com/cloudflare/workers-sdk/pull/5703) [`a905f31`](https://github.com/cloudflare/workers-sdk/commit/a905f318166a9ceac1fb70487b3a47e5f4158780) Thanks [@penalosa](https://github.com/penalosa)! - fix: Don't use `ExportedHandler["middleware"]` for injecting middleware
+
+- Updated dependencies [[`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d), [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b)]:
+  - miniflare@3.20240524.0
+
 ## 3.57.1
 
 ### Patch Changes
