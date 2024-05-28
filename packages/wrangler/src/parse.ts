@@ -72,6 +72,8 @@ export class ParseError extends UserError implements Message {
 // Therefore, allow particular `ParseError`s to be marked `reportable`.
 export class APIError extends ParseError {
 	#status?: number;
+	code?: number;
+
 	constructor({ status, ...rest }: Message & { status?: number }) {
 		super(rest);
 		this.name = this.constructor.name;
