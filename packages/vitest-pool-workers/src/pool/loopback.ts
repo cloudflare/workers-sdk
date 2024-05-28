@@ -326,11 +326,11 @@ function checkAllStorageOperationsResolved(
 			"",
 			separator,
 			`Failed to ${action} isolated storage stack frame in ${source}.`,
-			"This usually means your Worker tried to access storage outside of a test.",
+			"This usually means your Worker tried to access storage outside of a test, or failed to cleanup storage passed across an RPC boundary.",
 			`In particular, we were unable to ${action} ${LIST_FORMAT.format(
 				failedProducts
 			)} storage.`,
-			"Ensure you `await` all `Promise`s that read or write to these services.",
+			"Ensure you `await` all `Promise`s that read or write to these services, and make sure you use the `using` keyword when passing data across JSRPC. See https://developers.cloudflare.com/workers/runtime-apis/rpc/lifecycle#explicit-resource-management for more details.",
 			"\x1b[2m"
 		);
 		lines.push("\x1b[22m" + separator, "");

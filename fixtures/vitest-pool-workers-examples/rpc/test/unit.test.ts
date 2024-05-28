@@ -49,6 +49,24 @@ describe("named entrypoints", () => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
 		expect(result).toBe("pong");
 	});
+
+	it("receives RpcTarget over RPC", async () => {
+		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
+		expect(await result.value).toBe(0);
+		result.increment();
+		result.increment();
+		expect(await result.value).toBe(2);
+		const counter2 = result.clone();
+		counter2.increment();
+		expect(await counter2.value).toBe(3);
+		expect(await result.value).toBe(2);
+	});
+
+	it("receives plain objects over RPC", async () => {
+		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
+		result.increment();
+		expect(await result.asObject()).toMatchObject({ val: 1 });
+	});
 });
 
 describe("Durable Object", () => {
@@ -130,6 +148,27 @@ describe("Durable Object", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: The RPC receiver does not implement "nonExistentProperty".]`
 		);
+	});
+	it("receives RpcTarget over RPC", async () => {
+		const id = env.TEST_OBJECT.newUniqueId();
+		const stub = env.TEST_OBJECT.get(id);
+		using result = await stub.getCounter();
+		expect(await result.value).toBe(0);
+		await result.increment();
+		await result.increment();
+		expect(await result.value).toBe(2);
+		// TODO: Improve RPC types so this casting isn't required
+		using counter2 = (await result.clone()) as unknown as Counter & Disposable;
+		await counter2.increment();
+		expect(await counter2.value).toBe(3);
+		expect(await result.value).toBe(2);
+	});
+
+	it("receives plain objects over RPC", async () => {
+		const id = env.TEST_OBJECT.newUniqueId();
+		const stub = env.TEST_OBJECT.get(id);
+		using result = await stub.getObject();
+		expect(result).toMatchObject({ hello: "world" });
 	});
 });
 

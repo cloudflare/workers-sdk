@@ -19,6 +19,10 @@ export class Counter extends RpcTarget {
 	clone() {
 		return new Counter(this.#value);
 	}
+
+	asObject() {
+		return { val: this.#value };
+	}
 }
 
 export class TestObject extends DurableObject<Env> {
@@ -55,6 +59,14 @@ export class TestObject extends DurableObject<Env> {
 		});
 	}
 
+	getCounter() {
+		return new Counter(0);
+	}
+
+	getObject() {
+		return { hello: "world" };
+	}
+
 	alarm() {
 		this.#value = 0;
 		void this.ctx.storage.put("count", this.#value);
@@ -88,6 +100,10 @@ export class TestNamedEntrypoint extends WorkerEntrypoint<Env> {
 
 	ping() {
 		return "pong";
+	}
+
+	getCounter() {
+		return new Counter(0);
 	}
 }
 
