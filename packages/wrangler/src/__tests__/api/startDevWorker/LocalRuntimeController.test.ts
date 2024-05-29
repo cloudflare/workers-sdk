@@ -22,6 +22,7 @@ import type {
 	UrlOriginParts,
 } from "../../../api";
 
+const isWindows = process.platform === "win32";
 function getTextFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (typeof file.contents === "string") {
@@ -228,20 +229,37 @@ describe("Core", () => {
 		// Check stack traces from ESModule and CommonJS modules include file path
 		res = await fetch(new URL("/throw-commonjs", url));
 		expect(res.status).toBe(200);
-		expect(await res.text()).toMatchInlineSnapshot(`
+		if (isWindows) {
+			expect(await res.text()).toMatchInlineSnapshot(`
+			"Error: Oops!
+			    at Object.throw (file:///D:/virtual/cjs/add.cjs:7:14)
+			    at Object.fetch (file:///D:/virtual/esm/index.mjs:15:19)"
+			`);
+
+			// Check stack traces from NodeJsCompatModule modules include file path
+			res = await fetch(new URL("/throw-nodejs-compat-module", url));
+			expect(res.status).toBe(200);
+			expect(await res.text()).toMatchInlineSnapshot(`
+			"Error: Oops!
+			    at Object.throw (file:///D:/virtual/esm/base64.cjs:9:14)
+			    at Object.fetch (file:///D:/virtual/esm/index.mjs:17:22)"
+			`);
+		} else {
+			expect(await res.text()).toMatchInlineSnapshot(`
 			"Error: Oops!
 			    at Object.throw (file:///virtual/cjs/add.cjs:7:14)
 			    at Object.fetch (file:///virtual/esm/index.mjs:15:19)"
-		`);
+			`);
 
-		// Check stack traces from NodeJsCompatModule modules include file path
-		res = await fetch(new URL("/throw-nodejs-compat-module", url));
-		expect(res.status).toBe(200);
-		expect(await res.text()).toMatchInlineSnapshot(`
+			// Check stack traces from NodeJsCompatModule modules include file path
+			res = await fetch(new URL("/throw-nodejs-compat-module", url));
+			expect(res.status).toBe(200);
+			expect(await res.text()).toMatchInlineSnapshot(`
 			"Error: Oops!
 			    at Object.throw (file:///virtual/esm/base64.cjs:9:14)
 			    at Object.fetch (file:///virtual/esm/index.mjs:17:22)"
-		`);
+			`);
+		}
 	});
 	it("should start Miniflare with service worker", async () => {
 		const controller = new LocalRuntimeController();
@@ -317,10 +335,17 @@ describe("Core", () => {
 		// Check stack traces include file path
 		res = await fetch(new URL("/throw", url));
 		expect(res.status).toBe(200);
-		expect(await res.text()).toMatchInlineSnapshot(`
+		if (isWindows) {
+			expect(await res.text()).toMatchInlineSnapshot(`
+			"Error: Oops!
+			    at file:///D:/virtual/index.js:12:15"
+			`);
+		} else {
+			expect(await res.text()).toMatchInlineSnapshot(`
 			"Error: Oops!
 			    at file:///virtual/index.js:12:15"
-		`);
+			`);
+		}
 	});
 	it("should update the running Miniflare instance", async () => {
 		const controller = new LocalRuntimeController();
@@ -442,10 +467,17 @@ describe("Core", () => {
 		// Enable `Debugger` domain
 		await events.once(ws, "open");
 		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
-		expect(await nextMessage()).toMatchObject({
-			method: "Debugger.scriptParsed",
-			params: { url: "file:///virtual/index.mjs" },
-		});
+		if (isWindows) {
+			expect(await nextMessage()).toMatchObject({
+				method: "Debugger.scriptParsed",
+				params: { url: "file:///D:/virtual/index.mjs" },
+			});
+		} else {
+			expect(await nextMessage()).toMatchObject({
+				method: "Debugger.scriptParsed",
+				params: { url: "file:///virtual/index.mjs" },
+			});
+		}
 		expect(await nextMessage()).toMatchObject({ id: 0 });
 
 		// Send request and hit `debugger;` statement
