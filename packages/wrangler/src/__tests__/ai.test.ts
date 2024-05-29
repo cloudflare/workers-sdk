@@ -136,6 +136,9 @@ describe("ai commands", () => {
 	});
 
 	it("should paginate results", async () => {
+		const original = process.stdout.columns;
+		// Arbitrary fixed value for testing
+		process.stdout.columns = 186;
 		mockAIPaginatedRequest();
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -247,6 +250,7 @@ describe("ai commands", () => {
 		│ 7f9a76e1-d120-48dd-a565-101d328bbb02 │ @cloudflare/resnet50                │ second page │ Image Classification │
 		└──────────────────────────────────────┴─────────────────────────────────────┴─────────────┴──────────────────────┘"
 	`);
+		process.stdout.columns = original;
 	});
 });
 

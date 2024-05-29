@@ -3,13 +3,13 @@ import * as esbuild from "esbuild";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
 import type { BuildContext } from "esbuild";
-import type { Plugin } from "vite";
+import type { PluginOption } from "vite";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 
 const workersContexts = new Map<string, BuildContext>();
 
-function embedWorkersPlugin(): Plugin {
+function embedWorkersPlugin() {
 	return {
 		name: "embed-workers",
 
@@ -53,7 +53,7 @@ function embedWorkersPlugin(): Plugin {
 			const scriptPath = path.resolve(__dirname, "..", "${scriptPath}");
 			export default scriptPath;`;
 		},
-	};
+	} satisfies PluginOption;
 }
 
 export default defineConfig({
