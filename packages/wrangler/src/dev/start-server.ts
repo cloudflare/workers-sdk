@@ -260,6 +260,7 @@ export async function startDevServer(
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
+			experimentalDevenvRuntime: props.experimentalDevenvRuntime,
 		});
 
 		return {

@@ -220,9 +220,7 @@ async function convertToConfigBundle(
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
-		inspectorPort:
-			event.config.dev?.inspector?.port ??
-			(await getPort({ port: DEFAULT_INSPECTOR_PORT })),
+		inspectorPort: 0,
 		localPersistencePath: persistence,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,

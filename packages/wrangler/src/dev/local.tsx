@@ -53,6 +53,7 @@ export interface LocalProps {
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
 	services: Config["services"] | undefined;
+	experimentalDevenvRuntime: boolean;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -141,7 +142,10 @@ export function maybeRegisterLocalWorker(
 }
 
 export function Local(props: LocalProps) {
-	useLocalWorker(props);
+	if (!props.experimentalDevenvRuntime) {
+		// this condition WILL be static and therefore safe to wrap around a hook
+		useLocalWorker(props);
+	}
 
 	return null;
 }

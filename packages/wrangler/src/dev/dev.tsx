@@ -303,14 +303,40 @@ function DevSession(props: DevSessionProps) {
 			void devEnv.teardown();
 		};
 	}, [devEnv]);
-	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
-		() => ({
+	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(() => {
+		const routes =
+			props.routes?.map((r) =>
+				typeof r === "string"
+					? ({
+							type: "route",
+							pattern: r,
+						} as const)
+					: ({ type: "route", ...r } as const)
+			) ?? [];
+		const queueConsumers =
+			props.queueConsumers?.map(
+				(c) =>
+					({
+						...c,
+						type: "queue-consumer",
+					}) as const
+			) ?? [];
+
+		const crons =
+			props.crons?.map(
+				(c) =>
+					({
+						cron: c,
+						type: "cron",
+					}) as const
+			) ?? [];
+		return {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
 			_bindings: props.bindings,
-			routes: props.routes,
+			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
 			legacyEnv: props.legacyEnv,
 			sendMetrics: props.sendMetrics,
@@ -344,37 +370,38 @@ function DevSession(props: DevSessionProps) {
 				inspector: {
 					port: props.inspectorPort,
 				},
-				urlOverrides: {
+				origin: {
 					secure: props.localProtocol === "https",
 					hostname: props.localUpstream,
 				},
 				liveReload: props.liveReload,
 			},
-		}),
-		[
-			props.name,
-			props.compatibilityDate,
-			props.compatibilityFlags,
-			props.bindings,
-			props.routes,
-			props.env,
-			props.legacyEnv,
-			props.sendMetrics,
-			props.usageModel,
-			props.isWorkersSite,
-			props.assetPaths,
-			accountIdDeferred,
-			props.local,
-			props.initialIp,
-			props.initialPort,
-			props.localProtocol,
-			props.httpsKeyPath,
-			props.httpsCertPath,
-			props.localUpstream,
-			props.inspectorPort,
-			props.liveReload,
-		]
-	);
+		} satisfies StartDevWorkerOptions;
+	}, [
+		props.name,
+		props.compatibilityDate,
+		props.compatibilityFlags,
+		props.bindings,
+		props.routes,
+		props.env,
+		props.legacyEnv,
+		props.sendMetrics,
+		props.usageModel,
+		props.isWorkersSite,
+		props.assetPaths,
+		accountIdDeferred,
+		props.local,
+		props.initialIp,
+		props.initialPort,
+		props.localProtocol,
+		props.httpsKeyPath,
+		props.httpsCertPath,
+		props.localUpstream,
+		props.inspectorPort,
+		props.liveReload,
+		props.queueConsumers,
+		props.crons,
+	]);
 
 	const onBundleStart = useCallback(() => {
 		devEnv.proxy.onBundleStart({
@@ -576,6 +603,7 @@ function DevSession(props: DevSessionProps) {
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
+			experimentalDevenvRuntime={props.experimentalDevenvRuntime}
 		/>
 	) : (
 		<Remote
