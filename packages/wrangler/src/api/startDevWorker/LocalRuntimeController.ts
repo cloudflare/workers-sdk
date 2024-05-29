@@ -230,8 +230,8 @@ async function convertToConfigBundle(
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		httpsCertPath: event.config.dev?.server?.httpsCertPath,
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
-		localUpstream: event.config.dev?.urlOverrides?.hostname,
-		upstreamProtocol: event.config.dev?.urlOverrides?.secure ? "https" : "http",
+		localUpstream: event.config.dev?.origin?.hostname,
+		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,
@@ -309,10 +309,8 @@ export class LocalRuntimeController extends RuntimeController {
 						pathname: `/core:user:${getName(data.config)}`,
 					},
 					userWorkerInnerUrlOverrides: {
-						protocol: data.config?.dev?.urlOverrides?.secure
-							? "https:"
-							: "http:",
-						hostname: data.config?.dev?.urlOverrides?.hostname,
+						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
+						hostname: data.config?.dev?.origin?.hostname,
 					},
 					headers: {
 						// Passing this signature from Proxy Worker allows the User Worker to trust the request.

@@ -1,4 +1,4 @@
-import type { Config, RawConfig } from "../../config";
+import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
 	ZoneIdRoute,
@@ -19,6 +19,7 @@ import type {
 	CfSendEmailBindings,
 	CfService,
 	CfVectorize,
+	CfWorkerInit,
 } from "../../deployment-bundle/worker";
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -138,7 +139,6 @@ export interface StartDevWorkerOptions {
 		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
 	};
 }
-
 
 export type Hook<T extends string | number | object> =
 	| T

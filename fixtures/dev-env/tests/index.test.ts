@@ -181,8 +181,8 @@ function fakeReloadComplete(
 			pathname: `/core:user:${config.name}`,
 		},
 		userWorkerInnerUrlOverrides: {
-			protocol: config?.dev?.urlOverrides?.secure ? "https:" : "http:",
-			hostname: config?.dev?.urlOverrides?.hostname,
+			protocol: config?.dev?.origin?.secure ? "https:" : "http:",
+			hostname: config?.dev?.origin?.hostname,
 		},
 		headers: {},
 		liveReload: config.dev?.liveReload,

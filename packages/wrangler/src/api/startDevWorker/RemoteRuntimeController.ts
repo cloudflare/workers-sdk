@@ -13,7 +13,7 @@ import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { notImplemented } from "./NotImplementedError";
 import {
-	coerceBindingsToApiBindings,
+	convertBindingsToCfWorkerInitBindings,
 	MissingConfigError,
 	unwrapHook,
 } from "./utils";
@@ -46,9 +46,12 @@ export class RemoteRuntimeController extends RuntimeController {
 				)
 				.map((trigger) => {
 					const { type: _, ...route } = trigger;
+					if (!("custom_domain" in route)) {
+						return route.pattern;
+					}
 					return route;
 				});
-			const workersDev = config.triggers?.some(
+			const _workersDev = config.triggers?.some(
 				(trigger) => trigger.type === "workers.dev"
 			);
 
@@ -84,7 +87,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				isWorkersSite: config.site !== undefined,
 				assetPaths: undefined, // TODO: config.site.assetPaths ?
 				format: "modules", // TODO: do we need to support format: service-worker?
-				bindings: coerceBindingsToApiBindings(config.bindings),
+				bindings: (await convertBindingsToCfWorkerInitBindings(config.bindings))
+					.bindings,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				usageModel: config.usageModel,
@@ -98,7 +102,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.abortController.signal
 			);
 
-			this.emitReloadCompletetEvent({
+			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
 				bundle,
 				config,
@@ -160,7 +164,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	onBundleStart(_: BundleStartEvent) {}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const { remote = false } = ev.config.dev ?? {};
-		if (!remote) return;
+		if (!remote) {
+			return;
+		}
 
 		return this.mutex.runWith(() => this.#onBundleComplete(ev));
 	}

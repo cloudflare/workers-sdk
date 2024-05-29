@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import * as util from "node:util";
