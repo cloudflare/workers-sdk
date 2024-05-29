@@ -42,7 +42,7 @@ function embedWorkersPlugin() {
 			assert(scriptPath);
 			const absoluteScriptPath = path.resolve(
 				__dirname,
-				scriptPath.replaceAll("\\", "/")
+				scriptPath.replaceAll("/", "\\")
 			);
 
 			for (const file of watchFiles) {
