@@ -1,7 +1,6 @@
 import type { Config, RawConfig } from "../../config";
 import type {
 	CustomDomainRoute,
-	SimpleRoute,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../../config/environment";
