@@ -1,8 +1,6 @@
 import fs from "node:fs";
-import path from "node:path";
 import { http, HttpResponse } from "msw";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { USER_AUTH_CONFIG_FILE, writeAuthConfigFile } from "../user";
+import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -23,10 +21,7 @@ describe("logout", () => {
 			refresh_token: "some-refresh-tok",
 		});
 		// Make sure that logout removed the config file containing the auth tokens.
-		const config = path.join(
-			getGlobalWranglerConfigPath(),
-			USER_AUTH_CONFIG_FILE
-		);
+		const config = getAuthConfigFilePath();
 		let counter = 0;
 		msw.use(
 			http.post(
