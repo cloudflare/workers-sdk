@@ -40,9 +40,8 @@ function embedWorkersPlugin() {
 				(filepath) => filepath.endsWith(".js")
 			);
 			assert(scriptPath);
-			const absoluteScriptPath = path.resolve(
-				__dirname,
-				scriptPath.replaceAll("/", "\\")
+			const absoluteScriptPath = JSON.stringify(
+				path.resolve(__dirname, scriptPath)
 			);
 
 			for (const file of watchFiles) {
@@ -50,7 +49,7 @@ function embedWorkersPlugin() {
 			}
 
 			return dedent/*javascript*/ `
-				export default "${absoluteScriptPath}";
+				export default ${absoluteScriptPath};
 			`;
 		},
 	} satisfies PluginOption;
