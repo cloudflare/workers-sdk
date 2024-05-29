@@ -40,7 +40,10 @@ function embedWorkersPlugin() {
 				(filepath) => filepath.endsWith(".js")
 			);
 			assert(scriptPath);
-			const absoluteScriptPath = path.resolve(__dirname, scriptPath);
+			const absoluteScriptPath = path.resolve(
+				__dirname,
+				scriptPath.replaceAll("\\", "/")
+			);
 
 			for (const file of watchFiles) {
 				this.addWatchFile(file);
