@@ -121,7 +121,9 @@ describe("wrangler", () => {
 			          "🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
 			          ✨ Success!
 			          Add the following to your configuration file in your kv_namespaces array:
-			          { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
+					  [[kv_namespaces]]
+			          binding = \\"UnitTestNamespace\\",
+					  id = \\"some-namespace-id\\""
 		        `);
 			});
 
