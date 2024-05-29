@@ -580,7 +580,7 @@ export async function createRemoteWorkerInit(props: {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 }) {
-	const modules = withSourceURLs(
+	const { entrypointSource: content, modules } = withSourceURLs(
 		props.bundle.path,
 		props.bundle.entrypointSource,
 		props.modules
@@ -590,7 +590,7 @@ export async function createRemoteWorkerInit(props: {
 	void printBundleSize(
 		{
 			name: path.basename(props.bundle.path),
-			content: props.bundle.entrypointSource,
+			content,
 		},
 		props.modules
 	);

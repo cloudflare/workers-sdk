@@ -318,7 +318,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				[typeof source === "string" ? readFileSync(source) : source],
 				typeof source === "string" ? source : name,
 				{
-					type: "application/octet-stream",
+					type: "application/wasm",
 				}
 			)
 		);

@@ -179,7 +179,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	emitReloadStartEvent(data: ReloadStartEvent) {
 		this.emit("reloadStart", data);
 	}
-	emitReloadCompletetEvent(data: ReloadCompleteEvent) {
+	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
 }

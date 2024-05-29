@@ -1,6 +1,7 @@
-import type { Config } from "../../config";
+import type { Config, RawConfig } from "../../config";
 import type {
 	CustomDomainRoute,
+	SimpleRoute,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../../config/environment";
@@ -19,7 +20,6 @@ import type {
 	CfSendEmailBindings,
 	CfService,
 	CfVectorize,
-	CfWorkerInit,
 } from "../../deployment-bundle/worker";
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -140,7 +140,7 @@ export interface StartDevWorkerOptions {
 	};
 }
 
-export type Hook<T extends string | number | object> =
+export type Hook<T, Args extends unknown[] = unknown[]> =
 	| T
 	| Promise<T>
 	| (() => T | Promise<T>);
@@ -195,7 +195,7 @@ type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
 export type Trigger =
 	| { type: "workers.dev" }
-	| { type: "route"; pattern: "string" } // SimpleRoute
+	| { type: "route"; pattern: string } // SimpleRoute
 	| ({ type: "route" } & ZoneIdRoute)
 	| ({ type: "route" } & ZoneNameRoute)
 	| ({ type: "route" } & CustomDomainRoute)

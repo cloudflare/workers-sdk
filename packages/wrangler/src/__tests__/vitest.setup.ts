@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import path, { resolve } from "path";
+import { resolve } from "path";
 import { PassThrough } from "stream";
 import chalk from "chalk";
 import { useApp } from "ink";
 import { passthrough } from "msw";
 import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
-import { getBasePath } from "../paths";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
@@ -220,23 +219,6 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
-// make vitest understand virtual `worker:` imports
-// TODO: Actual build these with Vite
-vi.mock("worker:startDevWorker/ProxyWorker", () => {
-	return {
-		__esModule: true,
-		default: path.resolve(getBasePath(), `wrangler-dist/ProxyWorker.js`),
-	};
-});
-vi.mock("worker:startDevWorker/InspectorProxyWorker", () => {
-	return {
-		__esModule: true,
-		default: path.resolve(
-			getBasePath(),
-			`wrangler-dist/InspectorProxyWorker.js`
-		),
-	};
-});
 vi.mock("@cloudflare/cli/streams", async () => {
 	const stdout = new PassThrough();
 	const stderr = new PassThrough();

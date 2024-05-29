@@ -270,8 +270,11 @@ async function buildSourceOptions(
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
 
-		const modules = isPython
-			? config.bundle.modules
+		const { entrypointSource, modules } = isPython
+			? {
+					entrypointSource: config.bundle.entrypointSource,
+					modules: config.bundle.modules,
+				}
 			: withSourceURLs(
 					scriptPath,
 					config.bundle.entrypointSource,
