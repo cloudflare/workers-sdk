@@ -15,7 +15,7 @@ export function withSourceURLs(
 	entrypointPath: string,
 	entrypointSource: string,
 	modules: CfModule[]
-): CfModule[] {
+): { entrypointSource: string; modules: CfModule[] } {
 	if (!entrypointPath.endsWith(".py")) {
 		entrypointSource = withSourceURL(entrypointSource, entrypointPath);
 	}
@@ -34,5 +34,5 @@ export function withSourceURLs(
 		}
 	});
 
-	return modules;
+	return { entrypointSource, modules };
 }

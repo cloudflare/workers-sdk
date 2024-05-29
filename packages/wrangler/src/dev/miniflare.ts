@@ -270,8 +270,11 @@ async function buildSourceOptions(
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
 
-		const modules = isPython
-			? config.bundle.modules
+		const { entrypointSource, modules } = isPython
+			? {
+					entrypointSource: config.bundle.entrypointSource,
+					modules: config.bundle.modules,
+				}
 			: withSourceURLs(
 					scriptPath,
 					config.bundle.entrypointSource,
@@ -280,7 +283,7 @@ async function buildSourceOptions(
 
 		const entrypointNames = isPython
 			? []
-			: await getEntrypointNames(config.bundle.entrypointSource);
+			: await getEntrypointNames(entrypointSource);
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
@@ -291,7 +294,7 @@ async function buildSourceOptions(
 				{
 					type: ModuleTypeToRuleType[config.bundle.type],
 					path: scriptPath,
-					contents: config.bundle.entrypointSource,
+					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
 				...modules.map((module) => ({
