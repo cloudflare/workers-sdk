@@ -40,7 +40,7 @@ export interface DevWorker {
 
 export interface StartDevWorkerOptions {
 	/** The name of the worker. */
-	name: string | undefined;
+	name?: string;
 	/**
 	 * The javascript or typescript entry-point of the worker.
 	 * This is the `main` property of a wrangler.toml.
@@ -124,22 +124,21 @@ export interface StartDevWorkerOptions {
 	};
 }
 
-export type Module<Type extends ModuleRule["type"] = ModuleRule["type"]> = File<
-	string | Uint8Array
-> & {
-	/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
-	name: string;
-	/** How this module should be interpreted */
-	type: Type;
-};
+export type Hook<T extends string | number | object> =
+	| T
+	| Promise<T>
+	| (() => T | Promise<T>);
+
+export type Module<ModuleType extends ModuleRule["type"] = ModuleRule["type"]> =
+	File<string | Uint8Array> & {
+		/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
+		name: string;
+		/** How this module should be interpreted */
+		type: ModuleType;
+	};
 
 // TODO: revisit this type
 export type Bundle = EsbuildBundle;
-
-export type Hook<T, Args extends unknown[] = unknown[]> =
-	| T
-	| Promise<T>
-	| ((...args: Args) => T | Promise<T>);
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
@@ -180,42 +179,29 @@ type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
 export type Trigger =
 	| { type: "workers.dev" }
-	| ({
-			type: "route";
-	  } & SimpleRoute)
-	| ({
-			type: "route";
-	  } & ZoneIdRoute)
-	| ({
-			type: "route";
-	  } & ZoneNameRoute)
-	| ({
-			type: "route";
-	  } & CustomDomainRoute)
+	| { type: "route"; pattern: string } // SimpleRoute
+	| ({ type: "route" } & ZoneIdRoute)
+	| ({ type: "route" } & ZoneNameRoute)
+	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
-	| ({
-			type: "queue-consumer";
-	  } & QueueConsumer);
+	| ({ type: "queue-consumer" } & QueueConsumer);
 
+type BindingOmit<T> = Omit<T, "binding" | "name">;
 export type Binding =
 	| { type: "plain_text"; value: string }
 	| { type: "json"; value: Json }
-	| ({ type: "kv_namespace" } & Omit<CfKvNamespace, "binding">)
-	| ({ type: "send_email" } & Omit<CfSendEmailBindings, "name">)
+	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
+	| ({ type: "send_email" } & BindingOmit<CfSendEmailBindings>)
 	| { type: "wasm_module"; source: BinaryFile }
 	| { type: "text_blob"; source: File }
 	| { type: "browser" }
 	| { type: "ai" }
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
-	| ({
-			type: "durable_object_namespace";
-	  } & Omit<CfDurableObject, "name">)
-	| ({ type: "queue" } & Omit<CfQueue, "binding">)
-	| ({ type: "r2_bucket" } & Omit<CfR2Bucket, "binding">)
-	| ({
-			type: "d1";
-	  } & Omit<CfD1Database, "binding">)
+	| ({ type: "durable_object_namespace" } & BindingOmit<CfDurableObject>)
+	| ({ type: "queue" } & BindingOmit<CfQueue>)
+	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
+	| ({ type: "d1" } & Omit<CfD1Database, "binding">)
 	| ({ type: "vectorize" } & Omit<CfVectorize, "binding">)
 	| ({ type: "constellation" } & Omit<CfConstellation, "binding">)
 	| ({ type: "hyperdrive" } & Omit<CfHyperdrive, "binding">)

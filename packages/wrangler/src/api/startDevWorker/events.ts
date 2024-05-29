@@ -1,6 +1,5 @@
 import type { CfDurableObject } from "../../deployment-bundle/worker";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
@@ -19,7 +18,7 @@ export type ErrorEvent =
 	  >
 	| BaseErrorEvent<
 			"ProxyController",
-			{ config?: StartDevWorkerOptions; bundle?: EsbuildBundle }
+			{ config?: StartDevWorkerOptions; bundle?: Bundle }
 	  >;
 export type BaseErrorEvent<Source = string, Data = undefined> = {
 	type: "error";
