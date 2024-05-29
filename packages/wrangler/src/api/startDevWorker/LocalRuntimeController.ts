@@ -335,6 +335,11 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 	onBundleComplete(data: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
+
+		if (data.config.dev?.remote) {
+			return;
+		}
+
 		this.emitReloadStartEvent({
 			type: "reloadStart",
 			config: data.config,

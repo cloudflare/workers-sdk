@@ -1,14 +1,18 @@
-// import { readFileSync } from "../../parse";
 import { Mutex } from "miniflare";
 import {
+	CfPreviewSession,
+	CfPreviewToken,
 	createPreviewSession,
 	createWorkerPreview,
 } from "../../dev/create-worker-preview";
 import {
 	createRemoteWorkerInit,
 	getWorkerAccountAndContext,
+	handleUserFriendlyError,
 } from "../../dev/remote";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { notImplemented } from "./NotImplementedError";
@@ -27,18 +31,122 @@ import type {
 import type { Trigger } from "./types";
 
 export class RemoteRuntimeController extends RuntimeController {
-	abortController = new AbortController();
-	mutex = new Mutex();
+	#abortController = new AbortController();
 
-	async #onBundleComplete({ config, bundle }: BundleCompleteEvent) {
+	#currentBundleId = 0;
+	#mutex = new Mutex();
+
+	#session?: CfPreviewSession;
+
+	async #previewSession(
+		props: Parameters<typeof getWorkerAccountAndContext>[0]
+	): Promise<CfPreviewSession | undefined> {
 		try {
-			this.abortController.abort();
-			this.abortController = new AbortController();
+			const { workerAccount, workerContext } =
+				await getWorkerAccountAndContext(props);
 
-			logger.log("#onBundleComplete start");
+			return await createPreviewSession(
+				workerAccount,
+				workerContext,
+				this.#abortController.signal
+			);
+		} catch (err: any) {
+			// instead of logging the raw API error to the user,
+			// give them friendly instructions
+			// for error 10063 (workers.dev subdomain required)
+			if (err.code === 10063) {
+				const errorMessage =
+					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
+				const solutionMessage =
+					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
+				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
+				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+			} else if (
+				(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
+			) {
+				logger.error(
+					`Could not access \`${err.cause.hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+				);
+			} else if (err instanceof UserError) {
+				logger.error(err.message);
+			}
+			// we want to log the error, but not end the process
+			// since it could recover after the developer fixes whatever's wrong
+			else if ((err as { code: string }).code !== "ABORT_ERR") {
+				logger.error("Error while creating remote dev session:", err);
+			} else {
+				throw err;
+			}
+		}
+	}
 
-			this.emitReloadStartEvent({ type: "reloadStart", config, bundle });
+	async #previewToken(
+		props: Parameters<typeof createRemoteWorkerInit>[0] &
+			Parameters<typeof getWorkerAccountAndContext>[0]
+	): Promise<CfPreviewToken | undefined> {
+		try {
+			const init = await createRemoteWorkerInit({
+				bundle: props.bundle,
+				modules: props.modules,
+				accountId: props.accountId,
+				name: props.name,
+				legacyEnv: props.legacyEnv,
+				env: props.env,
+				isWorkersSite: props.isWorkersSite,
+				assetPaths: props.assetPaths,
+				format: props.format,
+				bindings: props.bindings,
+				compatibilityDate: props.compatibilityDate,
+				compatibilityFlags: props.compatibilityFlags,
+				usageModel: props.usageModel,
+			});
 
+			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
+				{
+					accountId: props.accountId,
+					env: props.env,
+					legacyEnv: props.legacyEnv,
+					host: props.host,
+					routes: props.routes,
+					sendMetrics: props.sendMetrics,
+				}
+			);
+			if (!this.#session) {
+				return;
+			}
+
+			const workerPreviewToken = await createWorkerPreview(
+				init,
+				workerAccount,
+				workerContext,
+				this.#session,
+				this.#abortController.signal
+			);
+
+			return workerPreviewToken;
+		} catch (err: any) {
+			// we want to log the error, but not end the process
+			// since it could recover after the developer fixes whatever's wrong
+			// instead of logging the raw API error to the user,
+			// give them friendly instructions
+			if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
+				// code 10049 happens when the preview token expires
+				if (err.code === 10049) {
+					logger.log("Preview session expired, fetching a new one");
+
+					this.#session = await this.#previewSession(props);
+					return this.#previewToken(props);
+				} else if (!handleUserFriendlyError(err, props.accountId)) {
+					logger.error("Error on remote worker:", err);
+				}
+			} else {
+				throw err;
+			}
+		}
+	}
+
+	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
+		try {
 			const routes = config.triggers
 				?.filter(
 					(trigger): trigger is Extract<Trigger, { type: "route" }> =>
@@ -51,33 +159,22 @@ export class RemoteRuntimeController extends RuntimeController {
 					}
 					return route;
 				});
-			const _workersDev = config.triggers?.some(
-				(trigger) => trigger.type === "workers.dev"
-			);
 
 			if (!config.dev?.auth) {
 				throw new MissingConfigError("config.dev.auth");
 			}
 			const auth = await unwrapHook(config.dev.auth);
 
-			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
-				{
-					accountId: auth.accountId,
-					env: config.env, // deprecated service environments -- just pass it through for now
-					legacyEnv: config.legacyEnv, // wrangler environment -- just pass it through for now
-					host: config.dev.origin?.hostname,
-					routes,
-					sendMetrics: config.sendMetrics,
-				}
-			);
+			this.#session ??= await this.#previewSession({
+				accountId: auth.accountId,
+				env: config.env, // deprecated service environments -- just pass it through for now
+				legacyEnv: config.legacyEnv, // wrangler environment -- just pass it through for now
+				host: config.dev.origin?.hostname,
+				routes,
+				sendMetrics: config.sendMetrics,
+			});
 
-			const session = await createPreviewSession(
-				workerAccount,
-				workerContext,
-				this.abortController.signal
-			);
-
-			const init = await createRemoteWorkerInit({
+			const token = await this.#previewToken({
 				bundle,
 				modules: bundle.modules,
 				accountId: auth.accountId,
@@ -85,22 +182,31 @@ export class RemoteRuntimeController extends RuntimeController {
 				legacyEnv: config.legacyEnv,
 				env: config.env,
 				isWorkersSite: config.site !== undefined,
-				assetPaths: undefined, // TODO: config.site.assetPaths ?
-				format: "modules", // TODO: do we need to support format: service-worker?
+				assetPaths: config.site?.path
+					? {
+							baseDirectory: config.site.path,
+							assetDirectory: "",
+							excludePatterns: config.site.exclude ?? [],
+							includePatterns: config.site.include ?? [],
+						}
+					: undefined,
+				format: bundle.entry.format,
 				bindings: (await convertBindingsToCfWorkerInitBindings(config.bindings))
 					.bindings,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				usageModel: config.usageModel,
+				routes,
 			});
 
-			const workerPreviewToken = await createWorkerPreview(
-				init,
-				workerAccount,
-				workerContext,
-				session,
-				this.abortController.signal
-			);
+			// If we received a new `bundleComplete` event before we were able to
+			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
+			// If `token` is undefined, we've surfaced a relevant error to the user above, so ignore this bundle
+			if (id !== this.#currentBundleId || !token) {
+				return;
+			}
+
+			const accessToken = await getAccessToken(token.host);
 
 			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
@@ -108,52 +214,39 @@ export class RemoteRuntimeController extends RuntimeController {
 				config,
 				proxyData: {
 					userWorkerUrl: {
-						protocol: config.dev.server?.secure ? "https:" : "http:",
-						hostname: workerPreviewToken.host,
-						port: config.dev.server?.secure ? "443" : "80",
+						protocol: "https:",
+						hostname: token.host,
+						port: "443",
 					},
-					userWorkerInspectorUrl: workerPreviewToken.inspectorUrl,
+					userWorkerInspectorUrl: {
+						protocol: token.inspectorUrl.protocol,
+						hostname: token.inspectorUrl.hostname,
+						port: token.inspectorUrl.port.toString(),
+						pathname: token.inspectorUrl.pathname,
+					},
 					userWorkerInnerUrlOverrides: {
-						hostname: config.dev.origin?.hostname,
-						protocol: config.dev.origin?.secure ? "https" : "http",
-						port: "",
+						hostname: token.host,
 					},
-					headers: { "cf-workers-preview-token": workerPreviewToken.value },
+					headers: {
+						"cf-workers-preview-token": token.value,
+						...(accessToken
+							? { Cookie: `CF_Authorization=${accessToken}` }
+							: {}),
+					},
 					liveReload: config.dev.liveReload,
+					proxyLogsToController: true,
 					internalDurableObjects: [],
 					entrypointAddresses: {},
 				},
 			});
-
-			console.log("#onBundleComplete end");
-		} catch (_error) {
-			// throw _error;
-			const error = castErrorCause(_error);
-
-			if (error && "code" in error && error.code !== "ABORT_ERR") {
-				// instead of logging the raw API error to the user,
-				// give them friendly instructions
-				// for error 10063 (workers.dev subdomain required)
-				if (error.code === 10063) {
-					const errorMessage =
-						"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-					const solutionMessage =
-						"You can either enable local mode by pressing l";
-
-					const auth = await unwrapHook(config.dev?.auth);
-					const onboardingLink = auth?.accountId
-						? `, or register a workers.dev subdomain here: https://dash.cloudflare.com/<${auth.accountId}>/workers/onboarding`
-						: "";
-					logger.error(
-						`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
-					);
-				} else if (error.code === 10049) {
-					logger.log("Preview token expired, fetching a new one");
-					// TODO: retry
-				} else {
-					logger.error("Error on remote worker:", error);
-				}
-			}
+		} catch (error) {
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Error reloading remote server",
+				cause: castErrorCause(error),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
 		}
 	}
 
@@ -161,21 +254,32 @@ export class RemoteRuntimeController extends RuntimeController {
 	//   Event Handlers
 	// ******************
 
-	onBundleStart(_: BundleStartEvent) {}
+	onBundleStart(_: BundleStartEvent) {
+		// Abort any previous operations when a new bundle is started
+		this.#abortController.abort();
+		this.#abortController = new AbortController();
+	}
 	onBundleComplete(ev: BundleCompleteEvent) {
-		const { remote = false } = ev.config.dev ?? {};
-		if (!remote) {
+		const id = ++this.#currentBundleId;
+
+		if (!ev.config.dev?.remote) {
 			return;
 		}
 
-		return this.mutex.runWith(() => this.#onBundleComplete(ev));
+		this.emitReloadStartEvent({
+			type: "reloadStart",
+			config: ev.config,
+			bundle: ev.bundle,
+		});
+
+		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
 		notImplemented(this.onPreviewTokenExpired.name, this.constructor.name);
 	}
 
 	async teardown() {
-		notImplemented(this.teardown.name, this.constructor.name);
+		// There's no way to teardown remote preview sessions, and so this is ignored in remote mode
 	}
 
 	// *********************

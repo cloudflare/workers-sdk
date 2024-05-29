@@ -623,7 +623,7 @@ export async function createRemoteWorkerInit(props: {
 			name: path.basename(props.bundle.path),
 			filePath: props.bundle.path,
 			type: getBundleType(props.format, path.basename(props.bundle.path)),
-			content: props.bundle.entrypointSource,
+			content,
 		},
 		modules,
 		bindings: {
@@ -716,7 +716,7 @@ function ChooseAccount(props: {
  * messages, does not perform any logic other than logging errors.
  * @returns if the error was handled or not
  */
-function handleUserFriendlyError(error: ParseError, accountId?: string) {
+export function handleUserFriendlyError(error: ParseError, accountId?: string) {
 	switch ((error as unknown as { code: number }).code) {
 		// code 10021 is a validation error
 		case 10021: {
