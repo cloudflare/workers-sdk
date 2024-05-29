@@ -220,23 +220,6 @@ afterEach(() => {
 	vi.clearAllMocks();
 });
 
-// make vitest understand virtual `worker:` imports
-// TODO: Actual build these with Vite
-vi.mock("worker:startDevWorker/ProxyWorker", () => {
-	return {
-		__esModule: true,
-		default: path.resolve(getBasePath(), `wrangler-dist/ProxyWorker.js`),
-	};
-});
-vi.mock("worker:startDevWorker/InspectorProxyWorker", () => {
-	return {
-		__esModule: true,
-		default: path.resolve(
-			getBasePath(),
-			`wrangler-dist/InspectorProxyWorker.js`
-		),
-	};
-});
 vi.mock("@cloudflare/cli/streams", async () => {
 	const stdout = new PassThrough();
 	const stderr = new PassThrough();

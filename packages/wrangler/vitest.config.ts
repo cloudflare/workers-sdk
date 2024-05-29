@@ -1,14 +1,13 @@
+import assert from "assert";
 import path from "path";
 import * as esbuild from "esbuild";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
-import type { BuildContext } from "esbuild";
 import type { PluginOption } from "vite";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 
-const workersContexts = new Map<string, BuildContext>();
-
+const OUTDIR = path.resolve(__dirname, "./.tmp/vitest-workers");
 function embedWorkersPlugin() {
 	return {
 		name: "embed-workers",
@@ -25,33 +24,31 @@ function embedWorkersPlugin() {
 				return null;
 			}
 			id = id.substring(`\0worker:`.length);
-			const ctx =
-				workersContexts.get(id) ??
-				(await esbuild.context({
-					platform: "node", // Marks `node:*` imports as external
-					format: "esm",
-					target: "esnext",
-					bundle: true,
-					sourcemap: true,
-					sourcesContent: false,
-					metafile: true,
-					entryPoints: [id],
-				}));
-			const result = await ctx.rebuild();
-			workersContexts.set(id, ctx);
+			const result = await esbuild.build({
+				platform: "node", // Marks `node:*` imports as external
+				format: "esm",
+				target: "esnext",
+				bundle: true,
+				sourcemap: true,
+				sourcesContent: false,
+				metafile: true,
+				entryPoints: [id],
+				outdir: OUTDIR,
+			});
 			const watchFiles = Object.keys(result?.metafile?.inputs ?? {});
 			const scriptPath = Object.keys(result?.metafile?.outputs ?? {}).find(
 				(filepath) => filepath.endsWith(".js")
 			);
+			assert(scriptPath);
+			const absoluteScriptPath = path.resolve(__dirname, scriptPath);
 
 			for (const file of watchFiles) {
 				this.addWatchFile(file);
 			}
 
 			return dedent/*javascript*/ `
-			import path from "node:path";
-			const scriptPath = path.resolve(__dirname, "..", "${scriptPath}");
-			export default scriptPath;`;
+				export default "${absoluteScriptPath}";
+			`;
 		},
 	} satisfies PluginOption;
 }
