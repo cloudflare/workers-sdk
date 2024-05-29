@@ -2293,7 +2293,6 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 			});
 			writeWorkerSource();
@@ -2323,7 +2322,6 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 				site: {
 					bucket: "xyz",
@@ -2407,7 +2405,6 @@ addEventListener('fetch', event => {});`
 		it("should warn if config.assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "./assets",
 			});
 			const assets = [
