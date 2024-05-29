@@ -476,7 +476,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "Wasm Modules",
 			entries: Object.entries(wasm_modules).map(([key, value]) => ({
 				key,
-				value: truncate(value),
+				value: typeof value === "string" ? truncate(value) : "<Wasm>",
 			})),
 		});
 	}

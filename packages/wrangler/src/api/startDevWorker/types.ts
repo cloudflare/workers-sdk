@@ -140,7 +140,8 @@ export interface StartDevWorkerOptions {
 	};
 }
 
-export type Hook<T, Args extends unknown[] = unknown[]> =
+
+export type Hook<T extends string | number | object> =
 	| T
 	| Promise<T>
 	| (() => T | Promise<T>);
