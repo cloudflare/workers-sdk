@@ -174,6 +174,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				sendMetrics: config.sendMetrics,
 			});
 
+			const bindings = (
+				await convertBindingsToCfWorkerInitBindings(config.bindings)
+			).bindings;
+
 			const token = await this.#previewToken({
 				bundle,
 				modules: bundle.modules,
@@ -191,8 +195,8 @@ export class RemoteRuntimeController extends RuntimeController {
 						}
 					: undefined,
 				format: bundle.entry.format,
-				bindings: (await convertBindingsToCfWorkerInitBindings(config.bindings))
-					.bindings,
+				// TODO: Remove this passthrough
+				bindings: config._bindings ? config._bindings : bindings,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				usageModel: config.usageModel,

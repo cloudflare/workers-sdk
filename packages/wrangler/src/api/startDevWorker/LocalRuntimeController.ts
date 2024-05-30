@@ -1,13 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import getPort from "get-port";
 import { Miniflare, Mutex } from "miniflare";
-import { DEFAULT_INSPECTOR_PORT } from "../..";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import * as MF from "../../dev/miniflare";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
 	BundleCompleteEvent,
@@ -48,118 +46,21 @@ function getName(config: StartDevWorkerOptions) {
 async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
-	const bindings: CfWorkerInit["bindings"] = {
-		vars: undefined,
-		kv_namespaces: undefined,
-		send_email: undefined,
-		wasm_modules: undefined,
-		text_blobs: undefined,
-		browser: undefined,
-		ai: undefined,
-		version_metadata: undefined,
-		data_blobs: undefined,
-		durable_objects: undefined,
-		queues: undefined,
-		r2_buckets: undefined,
-		d1_databases: undefined,
-		vectorize: undefined,
-		constellation: undefined,
-		hyperdrive: undefined,
-		services: undefined,
-		analytics_engine_datasets: undefined,
-		dispatch_namespaces: undefined,
-		mtls_certificates: undefined,
-		logfwdr: undefined,
-		unsafe: undefined,
-	};
+	let { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
+		event.config.bindings
+	);
 
-	const fetchers: Record<string, ServiceFetch> = {};
-
-	for (const [name, binding] of Object.entries(event.config.bindings ?? {})) {
-		binding.type;
-		if (binding.type === "plain_text") {
-			bindings.vars ??= {};
-			bindings.vars[name] = binding.value;
-		} else if (binding.type === "json") {
-			bindings.vars ??= {};
-			bindings.vars[name] = binding.value;
-		} else if (binding.type === "kv_namespace") {
-			bindings.kv_namespaces ??= [];
-			bindings.kv_namespaces.push({ ...binding, binding: name });
-		} else if (binding.type === "send_email") {
-			bindings.send_email ??= [];
-			bindings.send_email.push({ ...binding, name: name });
-		} else if (binding.type === "wasm_module") {
-			bindings.wasm_modules ??= {};
-			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "text_blob") {
-			bindings.text_blobs ??= {};
-			bindings.text_blobs[name] = binding.source.path as string;
-		} else if (binding.type === "data_blob") {
-			bindings.data_blobs ??= {};
-			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "browser") {
-			bindings.browser = { binding: name };
-		} else if (binding.type === "ai") {
-			bindings.ai = { binding: name };
-		} else if (binding.type === "version_metadata") {
-			bindings.version_metadata = { binding: name };
-		} else if (binding.type === "durable_object_namespace") {
-			bindings.durable_objects ??= { bindings: [] };
-			bindings.durable_objects.bindings.push({ ...binding, name: name });
-		} else if (binding.type === "queue") {
-			bindings.queues ??= [];
-			bindings.queues.push({ ...binding, binding: name });
-		} else if (binding.type === "r2_bucket") {
-			bindings.r2_buckets ??= [];
-			bindings.r2_buckets.push({ ...binding, binding: name });
-		} else if (binding.type === "d1") {
-			bindings.d1_databases ??= [];
-			bindings.d1_databases.push({ ...binding, binding: name });
-		} else if (binding.type === "vectorize") {
-			bindings.vectorize ??= [];
-			bindings.vectorize.push({ ...binding, binding: name });
-		} else if (binding.type === "constellation") {
-			bindings.constellation ??= [];
-			bindings.constellation.push({ ...binding, binding: name });
-		} else if (binding.type === "hyperdrive") {
-			bindings.hyperdrive ??= [];
-			bindings.hyperdrive.push({ ...binding, binding: name });
-		} else if (binding.type === "service") {
-			bindings.services ??= [];
-			bindings.services.push({ ...binding, binding: name });
-		} else if (binding.type === "fetcher") {
-			fetchers[name] = binding.fetcher;
-		} else if (binding.type === "analytics_engine") {
-			bindings.analytics_engine_datasets ??= [];
-			bindings.analytics_engine_datasets.push({ ...binding, binding: name });
-		} else if (binding.type === "dispatch_namespace") {
-			bindings.dispatch_namespaces ??= [];
-			bindings.dispatch_namespaces.push({ ...binding, binding: name });
-		} else if (binding.type === "mtls_certificate") {
-			bindings.mtls_certificates ??= [];
-			bindings.mtls_certificates.push({ ...binding, binding: name });
-		} else if (binding.type === "logfwdr") {
-			bindings.logfwdr ??= { bindings: [] };
-			bindings.logfwdr.bindings.push({ ...binding, name: name });
-		} else if (binding.type.startsWith("unsafe-")) {
-			bindings.unsafe ??= {
-				bindings: [],
-				metadata: undefined,
-				capnp: undefined,
-			};
-			bindings.unsafe.bindings?.push({ ...binding, name: name });
-		}
+	// TODO: Remove this passthrough
+	if (event.config._bindings) {
+		bindings = event.config._bindings;
 	}
 
-	const persistence = event.config.dev?.persist
-		? getLocalPersistencePath(
-				typeof event.config.dev?.persist === "object"
-					? event.config.dev?.persist.path
-					: undefined,
-				event.config.config?.path
-			)
-		: null;
+	const persistence = getLocalPersistencePath(
+		typeof event.config.dev?.persist === "object"
+			? event.config.dev?.persist.path
+			: undefined,
+		event.config.config?.path
+	);
 
 	const crons = [];
 	const queueConsumers = [];

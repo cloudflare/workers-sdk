@@ -91,160 +91,105 @@ export async function convertBindingsToCfWorkerInitBindings(
 	fetchers: Record<string, ServiceFetch>;
 }> {
 	const bindings: CfWorkerInit["bindings"] = {
-		vars: {},
-		kv_namespaces: [],
-		send_email: [],
-		wasm_modules: {},
-		text_blobs: {},
+		vars: undefined,
+		kv_namespaces: undefined,
+		send_email: undefined,
+		wasm_modules: undefined,
+		text_blobs: undefined,
 		browser: undefined,
-		data_blobs: {},
-		durable_objects: { bindings: [] },
-		queues: [],
-		r2_buckets: [],
-		d1_databases: [],
-		constellation: [],
-		services: [],
-		analytics_engine_datasets: [],
-		dispatch_namespaces: [],
-		mtls_certificates: [],
-		logfwdr: { bindings: [] },
-		unsafe: { bindings: [], metadata: undefined, capnp: undefined },
 		ai: undefined,
 		version_metadata: undefined,
-		hyperdrive: [],
-		vectorize: [],
+		data_blobs: undefined,
+		durable_objects: undefined,
+		queues: undefined,
+		r2_buckets: undefined,
+		d1_databases: undefined,
+		vectorize: undefined,
+		constellation: undefined,
+		hyperdrive: undefined,
+		services: undefined,
+		analytics_engine_datasets: undefined,
+		dispatch_namespaces: undefined,
+		mtls_certificates: undefined,
+		logfwdr: undefined,
+		unsafe: undefined,
 	};
+
 	const fetchers: Record<string, ServiceFetch> = {};
 
-	// TODO: handle all binding types
-	for (const [binding, info] of Object.entries(inputBindings ?? {})) {
-		switch (info.type) {
-			case "plain_text": {
-				bindings.vars ??= {};
-				bindings.vars[binding] = info.value;
-				break;
-			}
-			case "json": {
-				bindings.vars ??= {};
-				bindings.vars[binding] = info.value;
-				break;
-			}
-			case "kv_namespace": {
-				bindings.kv_namespaces ??= [];
-				bindings.kv_namespaces.push({ ...info, binding });
-				break;
-			}
-			case "send_email": {
-				bindings.send_email ??= [];
-				bindings.send_email.push({ ...info, name: binding });
-				break;
-			}
-			case "wasm_module": {
-				bindings.wasm_modules ??= {};
-				bindings.wasm_modules[binding] = await getBinaryFileContents(
-					info.source
-				);
-				break;
-			}
-			case "text_blob": {
-				bindings.text_blobs ??= {};
-				bindings.text_blobs[binding] = info.source.path as string;
-				break;
-			}
-			case "data_blob": {
-				bindings.data_blobs ??= {};
-				bindings.data_blobs[binding] = await getBinaryFileContents(info.source);
-				break;
-			}
-			case "browser": {
-				bindings.browser = { binding };
-				break;
-			}
-			case "ai": {
-				bindings.ai = { binding };
-				break;
-			}
-			case "version_metadata": {
-				bindings.version_metadata = { binding };
-				break;
-			}
-			case "durable_object_namespace": {
-				bindings.durable_objects ??= { bindings: [] };
-				bindings.durable_objects.bindings.push({ ...info, name: binding });
-				break;
-			}
-			case "queue": {
-				bindings.queues ??= [];
-				bindings.queues.push({ ...info, binding });
-				break;
-			}
-			case "r2_bucket": {
-				bindings.r2_buckets ??= [];
-				bindings.r2_buckets.push({ ...info, binding });
-				break;
-			}
-			case "d1": {
-				bindings.d1_databases ??= [];
-				bindings.d1_databases.push({ ...info, binding });
-				break;
-			}
-			case "vectorize": {
-				bindings.vectorize ??= [];
-				bindings.vectorize.push({ ...info, binding });
-				break;
-			}
-			case "constellation": {
-				bindings.constellation ??= [];
-				bindings.constellation.push({ ...info, binding });
-				break;
-			}
-			case "hyperdrive": {
-				bindings.hyperdrive ??= [];
-				bindings.hyperdrive.push({ ...info, binding });
-				break;
-			}
-			case "service": {
-				bindings.services ??= [];
-				bindings.services.push({ ...info, binding });
-				break;
-			}
-			case "fetcher": {
-				fetchers[binding] = info.fetcher;
-				break;
-			}
-			case "analytics_engine": {
-				bindings.analytics_engine_datasets ??= [];
-				bindings.analytics_engine_datasets.push({ ...info, binding });
-				break;
-			}
-			case "dispatch_namespace": {
-				bindings.dispatch_namespaces ??= [];
-				bindings.dispatch_namespaces.push({ ...info, binding });
-				break;
-			}
-			case "mtls_certificate": {
-				bindings.mtls_certificates ??= [];
-				bindings.mtls_certificates.push({ ...info, binding });
-				break;
-			}
-			case "logfwdr": {
-				bindings.logfwdr ??= { bindings: [] };
-				bindings.logfwdr.bindings.push({ ...info, name: binding });
-				break;
-			}
-			default: {
-				if (isUnsafeBindingType(info.type)) {
-					bindings.unsafe ??= {
-						bindings: [],
-						metadata: undefined,
-						capnp: undefined,
-					};
-					bindings.unsafe.bindings?.push({ ...info, name: binding });
-					break;
-				}
-
-				assertNever(info.type);
-			}
+	for (const [name, binding] of Object.entries(inputBindings ?? {})) {
+		if (binding.type === "plain_text") {
+			bindings.vars ??= {};
+			bindings.vars[name] = binding.value;
+		} else if (binding.type === "json") {
+			bindings.vars ??= {};
+			bindings.vars[name] = binding.value;
+		} else if (binding.type === "kv_namespace") {
+			bindings.kv_namespaces ??= [];
+			bindings.kv_namespaces.push({ ...binding, binding: name });
+		} else if (binding.type === "send_email") {
+			bindings.send_email ??= [];
+			bindings.send_email.push({ ...binding, name: name });
+		} else if (binding.type === "wasm_module") {
+			bindings.wasm_modules ??= {};
+			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
+		} else if (binding.type === "text_blob") {
+			bindings.text_blobs ??= {};
+			bindings.text_blobs[name] = binding.source.path as string;
+		} else if (binding.type === "data_blob") {
+			bindings.data_blobs ??= {};
+			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
+		} else if (binding.type === "browser") {
+			bindings.browser = { binding: name };
+		} else if (binding.type === "ai") {
+			bindings.ai = { binding: name };
+		} else if (binding.type === "version_metadata") {
+			bindings.version_metadata = { binding: name };
+		} else if (binding.type === "durable_object_namespace") {
+			bindings.durable_objects ??= { bindings: [] };
+			bindings.durable_objects.bindings.push({ ...binding, name: name });
+		} else if (binding.type === "queue") {
+			bindings.queues ??= [];
+			bindings.queues.push({ ...binding, binding: name });
+		} else if (binding.type === "r2_bucket") {
+			bindings.r2_buckets ??= [];
+			bindings.r2_buckets.push({ ...binding, binding: name });
+		} else if (binding.type === "d1") {
+			bindings.d1_databases ??= [];
+			bindings.d1_databases.push({ ...binding, binding: name });
+		} else if (binding.type === "vectorize") {
+			bindings.vectorize ??= [];
+			bindings.vectorize.push({ ...binding, binding: name });
+		} else if (binding.type === "constellation") {
+			bindings.constellation ??= [];
+			bindings.constellation.push({ ...binding, binding: name });
+		} else if (binding.type === "hyperdrive") {
+			bindings.hyperdrive ??= [];
+			bindings.hyperdrive.push({ ...binding, binding: name });
+		} else if (binding.type === "service") {
+			bindings.services ??= [];
+			bindings.services.push({ ...binding, binding: name });
+		} else if (binding.type === "fetcher") {
+			fetchers[name] = binding.fetcher;
+		} else if (binding.type === "analytics_engine") {
+			bindings.analytics_engine_datasets ??= [];
+			bindings.analytics_engine_datasets.push({ ...binding, binding: name });
+		} else if (binding.type === "dispatch_namespace") {
+			bindings.dispatch_namespaces ??= [];
+			bindings.dispatch_namespaces.push({ ...binding, binding: name });
+		} else if (binding.type === "mtls_certificate") {
+			bindings.mtls_certificates ??= [];
+			bindings.mtls_certificates.push({ ...binding, binding: name });
+		} else if (binding.type === "logfwdr") {
+			bindings.logfwdr ??= { bindings: [] };
+			bindings.logfwdr.bindings.push({ ...binding, name: name });
+		} else if (isUnsafeBindingType(binding.type)) {
+			bindings.unsafe ??= {
+				bindings: [],
+				metadata: undefined,
+				capnp: undefined,
+			};
+			bindings.unsafe.bindings?.push({ ...binding, name: name });
 		}
 	}
 
