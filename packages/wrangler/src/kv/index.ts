@@ -83,7 +83,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 				);
 				logger.log(`[[kv_namespaces]]`);
 				logger.log(`binding = "${getValidBindingName(args.namespace, "KV")}"`);
-				logger.log(`id = "${previewString}id = "${namespaceId}"`);
+				logger.log(`${previewString}id = "${namespaceId}"`);
 
 				// TODO: automatically write this block to the wrangler.toml config file??
 			}
