@@ -89,6 +89,10 @@ const cliDefinition: ArgumentsDefinition = {
 					name: "openapi",
 					description: "A Worker implementing an OpenAPI REST endpoint.",
 				},
+				{
+					name: "pre-existing",
+					description: "Fetch a Worker initialized from the Cloudflare dashboard."
+				}
 			],
 		},
 		{
@@ -146,13 +150,12 @@ const cliDefinition: ArgumentsDefinition = {
 		},
 		{
 			name: "existing-script",
-			description: `The name of an existing Cloudflare Workers script to clone locally.
+			description: `The name of an existing Cloudflare Workers script to clone locally (when using this option "--type" is coerced to "pre-existing").
 
         When "--existing-script" is specified, "deploy" will be ignored.
         `,
 			type: "string",
 			requiresArg: true,
-			hidden: true,
 		},
 		{
 			name: "template",
