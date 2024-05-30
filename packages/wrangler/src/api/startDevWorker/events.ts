@@ -83,7 +83,6 @@ export type PreviewTokenExpiredEvent = {
 };
 export type ReadyEvent = {
 	type: "ready";
-
 	proxyWorker: Miniflare;
 };
 

@@ -59,7 +59,7 @@ export class DevEnv extends EventEmitter {
 		});
 
 		config.on("configUpdate", (event) => {
-			bundler.onConfigUpdate(event);
+			void bundler.onConfigUpdate(event);
 			proxy.onConfigUpdate(event);
 		});
 
