@@ -335,6 +335,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				"src/index.ts": dedent`
 				export default {
 					async fetch(request, env, ctx) {
+						console.log(await env.NAMESPACE.list())
 						const value = await env.NAMESPACE.get("existing-key");
 						await env.NAMESPACE.put("new-key", "new-value");
 						return new Response(value);

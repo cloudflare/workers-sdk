@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { Mutex } from "miniflare";
 import {
 	CfPreviewSession,
@@ -164,6 +165,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				throw new MissingConfigError("config.dev.auth");
 			}
 			const auth = await unwrapHook(config.dev.auth);
+
+			if (this.#session) {
+				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
+			}
 
 			this.#session ??= await this.#previewSession({
 				accountId: auth.accountId,

@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import * as MF from "../../dev/miniflare";
+import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { convertBindingsToCfWorkerInitBindings } from "./utils";
@@ -14,7 +16,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { File, ServiceFetch, StartDevWorkerOptions } from "./types";
+import type { File, StartDevWorkerOptions } from "./types";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -169,8 +171,12 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
 			if (this.#mf === undefined) {
+				logger.log(chalk.dim("⎔ Starting local server..."));
+
 				this.#mf = new Miniflare(options);
 			} else {
+				logger.log(chalk.dim("⎔ Reloading local server..."));
+
 				await this.#mf.setOptions(options);
 			}
 			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
@@ -184,6 +190,7 @@ export class LocalRuntimeController extends RuntimeController {
 			if (id !== this.#currentBundleId) {
 				return;
 			}
+
 			// Get entrypoint addresses
 			const entrypointAddresses: WorkerEntrypointsDefinition = {};
 			for (const name of entrypointNames) {
@@ -251,6 +258,8 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 
 	#teardown = async (): Promise<void> => {
+		logger.log(chalk.dim("⎔ Shutting down local server..."));
+
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 	};
