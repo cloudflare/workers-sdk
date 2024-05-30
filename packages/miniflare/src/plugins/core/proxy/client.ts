@@ -38,7 +38,7 @@ interface NativeTarget {
 	// `ProxyClientHandler`. Usually the `.constructor.name` of the object.
 	[kName]: string;
 	// Use `Symbol` for isFunction too, so we can use it as a unique property key in
-	// `ProxyClientHandler`. This is a field needed because we need to treat functions ad-hod.
+	// `ProxyClientHandler`. This is a field needed because we need to treat functions ad-hoc.
 	[kIsFunction]: boolean;
 }
 function isNativeTarget(value: unknown): value is NativeTarget {
