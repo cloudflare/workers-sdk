@@ -1,8 +1,7 @@
+import assert from "assert";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
 import {
-	CfPreviewSession,
-	CfPreviewToken,
 	createPreviewSession,
 	createWorkerPreview,
 } from "../../dev/create-worker-preview";
@@ -22,6 +21,11 @@ import {
 	MissingConfigError,
 	unwrapHook,
 } from "./utils";
+import type {
+	CfPreviewSession,
+	CfPreviewToken,
+} from "../../dev/create-worker-preview";
+import type { ParseError } from "../../parse";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -51,11 +55,12 @@ export class RemoteRuntimeController extends RuntimeController {
 				workerContext,
 				this.#abortController.signal
 			);
-		} catch (err: any) {
+		} catch (err: unknown) {
+			assert(err && typeof err === "object");
 			// instead of logging the raw API error to the user,
 			// give them friendly instructions
 			// for error 10063 (workers.dev subdomain required)
-			if (err.code === 10063) {
+			if ("code" in err && err.code === 10063) {
 				const errorMessage =
 					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
 				const solutionMessage =
@@ -63,10 +68,11 @@ export class RemoteRuntimeController extends RuntimeController {
 				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
 				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
 			} else if (
+				"cause" in err &&
 				(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
 			) {
 				logger.error(
-					`Could not access \`${err.cause.hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+					`Could not access \`${(err.cause as { code: string; hostname: string }).hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
 				);
 			} else if (err instanceof UserError) {
 				logger.error(err.message);
@@ -125,19 +131,22 @@ export class RemoteRuntimeController extends RuntimeController {
 			);
 
 			return workerPreviewToken;
-		} catch (err: any) {
+		} catch (err: unknown) {
+			assert(err && typeof err === "object");
 			// we want to log the error, but not end the process
 			// since it could recover after the developer fixes whatever's wrong
 			// instead of logging the raw API error to the user,
 			// give them friendly instructions
 			if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
 				// code 10049 happens when the preview token expires
-				if (err.code === 10049) {
+				if ("code" in err && err.code === 10049) {
 					logger.log("Preview session expired, fetching a new one");
 
 					this.#session = await this.#previewSession(props);
 					return this.#previewToken(props);
-				} else if (!handleUserFriendlyError(err, props.accountId)) {
+				} else if (
+					!handleUserFriendlyError(err as ParseError, props.accountId)
+				) {
 					logger.error("Error on remote worker:", err);
 				}
 			} else {

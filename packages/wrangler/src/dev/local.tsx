@@ -164,6 +164,7 @@ export function Local(props: LocalProps) {
 
 	if (!props.experimentalDevenvRuntime) {
 		// this condition WILL be static and therefore safe to wrap around a hook
+		// eslint-disable-next-line react-hooks/rules-of-hooks
 		useLocalWorker(props);
 	}
 
