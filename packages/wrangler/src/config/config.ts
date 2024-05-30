@@ -149,6 +149,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				browser_TTL: number | undefined;
 				serve_single_page_app: boolean;
 		  }
+		| string
 		| undefined;
 
 	/**
