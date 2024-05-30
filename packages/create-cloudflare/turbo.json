@@ -13,7 +13,7 @@
 			],
 			"outputs": ["dist/**"]
 		},
-		"test:e2e:*": {
+		"test:e2e": {
 			"env": [
 				"SAVE_DIFFS",
 				"CLOUDFLARE_ACCOUNT_ID",
