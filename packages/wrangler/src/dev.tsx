@@ -709,7 +709,7 @@ async function getHostAndRoutes(
 }
 
 export function getInferredHost(routes: Route[] | undefined) {
-	if (routes) {
+	if (routes?.length) {
 		const firstRoute = routes[0];
 		const host = getHostFromRoute(firstRoute);
 
