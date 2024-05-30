@@ -832,18 +832,6 @@ export async function buildMiniflareOptions(
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 
-	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
-	if (config.localProtocol === "https") {
-		const cert = await getHttpsOptions(
-			config.httpsKeyPath,
-			config.httpsCertPath
-		);
-		httpsOptions = {
-			httpsKey: cert.key,
-			httpsCert: cert.cert,
-		};
-	}
-
 	const options: MiniflareOptions = {
 		host: config.initialIp,
 		port: config.initialPort,
@@ -856,7 +844,6 @@ export async function buildMiniflareOptions(
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
 
-		...httpsOptions,
 		...persistOptions,
 		workers: [
 			{
