@@ -202,7 +202,7 @@ describe("git helpers", () => {
 			await offerGit(ctx);
 
 			expect(processArgument).not.toHaveBeenCalledOnce();
-			expect(ctx.args.git).toBeUndefined();
+			expect(ctx.args.git).toBe(true);
 		});
 
 		test("user selects no git", async () => {

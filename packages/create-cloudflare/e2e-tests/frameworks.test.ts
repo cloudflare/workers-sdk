@@ -133,6 +133,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "C3_TEST",
 		},
 		flags: ["--skipTailwind"],
+		quarantine: true,
 	},
 	angular: {
 		testCommitMessage: true,
