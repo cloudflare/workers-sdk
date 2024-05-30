@@ -81,18 +81,9 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 				logger.log(
 					`Add the following to your configuration file in your kv_namespaces array${envString}:`
 				);
-				logger.log(
-					`[[kv_namespaces]]`
-				);
-				logger.log(
-					`binding = "${getValidBindingName(
-						args.namespace,
-						"KV"
-					)}"`
-				);
-				logger.log(
-					`id = "${previewString}id = "${namespaceId}"`
-				);
+				logger.log(`[[kv_namespaces]]`);
+				logger.log(`binding = "${getValidBindingName(args.namespace, "KV")}"`);
+				logger.log(`id = "${previewString}id = "${namespaceId}"`);
 
 				// TODO: automatically write this block to the wrangler.toml config file??
 			}
@@ -251,7 +242,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				const value = args.path
 					? readFileSyncToBuffer(args.path)
 					: // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-						args.value!;
+					  args.value!;
 
 				const metadataLog = metadata
 					? ` with metadata "${JSON.stringify(metadata)}"`
