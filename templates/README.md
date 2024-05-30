@@ -49,5 +49,5 @@ See [CODE OF CONDUCT](../CODE_OF_CONDUCT.md) for details.
 
 ## License
 
-See [APACHE LICENSE](../LICENSE-MIT) for details.
-See [MIT LICENSE](../LICENSE-APACHE) for details.
+See [APACHE LICENSE](../LICENSE-APACHE) for details.
+See [MIT LICENSE](../LICENSE-MIT) for details.
