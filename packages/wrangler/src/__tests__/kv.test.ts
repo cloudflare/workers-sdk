@@ -133,8 +133,10 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			          "🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
 			          ✨ Success!
-			          Add the following to your configuration file in your kv_namespaces array:
-			          { binding = \\"UnitTestNamespace\\", preview_id = \\"some-namespace-id\\" }"
+					  Add the following to your configuration file in your kv_namespaces array:
+					  [[kv_namespaces]]
+			          binding = \\"UnitTestNamespace\\",
+					  id = \\"some-namespace-id\\""
 		        `);
 			});
 
@@ -145,8 +147,10 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			            "🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
 			            ✨ Success!
-			            Add the following to your configuration file in your kv_namespaces array:
-			            { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
+						Add the following to your configuration file in your kv_namespaces array:
+						[[kv_namespaces]]
+						binding = \\"UnitTestNamespace\\",
+						id = \\"some-namespace-id\\""
 		            `);
 			});
 
@@ -158,8 +162,10 @@ describe("wrangler", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			          "🌀 Creating namespace with title \\"worker-customEnv-UnitTestNamespace\\"
 			          ✨ Success!
-			          Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
-			          { binding = \\"UnitTestNamespace\\", id = \\"some-namespace-id\\" }"
+					  Add the following to your configuration file in your kv_namespaces array:
+					  [[kv_namespaces]]
+			          binding = \\"UnitTestNamespace\\",
+					  id = \\"some-namespace-id\\""
 		        `);
 			});
 		});
