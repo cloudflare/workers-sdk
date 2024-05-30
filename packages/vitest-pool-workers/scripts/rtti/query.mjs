@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { Message } from "capnp-ts";
 import { Miniflare } from "miniflare";
 import { StructureGroups } from "./rtti.capnp.js";
@@ -31,25 +30,6 @@ root.getGroups().forEach((group) => {
 		structures.set(structure.getFullyQualifiedName(), structure);
 	});
 });
-
-// Get `ExportedHandler` property names
-const exportedHandler = structures.get("workerd::api::ExportedHandler");
-assert(exportedHandler !== undefined, "Expected to find ExportedHandler types");
-const exportedHandlerNames = new Set();
-// Add names from the C++ type
-exportedHandler.getMembers().forEach((member) => {
-	if (!member.isProperty()) return;
-	const property = member.getProperty();
-	if (property.getType().isJsgImpl()) return;
-	exportedHandlerNames.add(property.getName());
-});
-// Add names from the TypeScript override. This will catch things like `email`
-// and `queue` which are "custom events" defined dynamically.
-for (const match of exportedHandler.getTsOverride().matchAll(/([a-z]+)\?:/g)) {
-	exportedHandlerNames.add(match[1]);
-}
-/** @type {string[]} */
-export const exportedHandlers = Array.from(exportedHandlerNames);
 
 // Get built-in modules list
 const builtinModuleNames = new Set();

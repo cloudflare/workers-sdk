@@ -1,5 +1,24 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.3.0
+
+### Minor Changes
+
+- [#5900](https://github.com/cloudflare/workers-sdk/pull/5900) [`5bf0a6b`](https://github.com/cloudflare/workers-sdk/commit/5bf0a6b7fa365305143f0d1ce1426bb55bc3a085) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feature: add support for testing Pages Functions
+
+### Patch Changes
+
+- [#5904](https://github.com/cloudflare/workers-sdk/pull/5904) [`c36fb59`](https://github.com/cloudflare/workers-sdk/commit/c36fb59a1bf905b8847659cc87b1b625849f0bdc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: automatically re-run `SELF` tests without `import <main>`
+
+  By injecting a side-effect only import into tests when there is a `main` field specified
+  we can get Vitest to "know" when the SELF Worker has been modified and re-run tests automatically.
+
+- [#5911](https://github.com/cloudflare/workers-sdk/pull/5911) [`8cb0ee7`](https://github.com/cloudflare/workers-sdk/commit/8cb0ee7fc7a84ab34bcb2a05b690a7bc2899005d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure `console.log()`s displayed in `SELF` integration tests
+
+- Updated dependencies [[`53f22a0`](https://github.com/cloudflare/workers-sdk/commit/53f22a086837df7130d165fe9243f2d1f1559d73), [`57daae0`](https://github.com/cloudflare/workers-sdk/commit/57daae0b2bd70c4f25b2abcabfc7fb03dba0c878), [`a905f31`](https://github.com/cloudflare/workers-sdk/commit/a905f318166a9ceac1fb70487b3a47e5f4158780), [`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d), [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b)]:
+  - wrangler@3.57.2
+  - miniflare@3.20240524.0
+
 ## 0.2.12
 
 ### Patch Changes

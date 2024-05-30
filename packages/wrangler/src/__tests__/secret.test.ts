@@ -4,6 +4,7 @@ import readline from "node:readline";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -307,6 +308,50 @@ describe("wrangler secret", () => {
 					`);
 				});
 			});
+		});
+
+		it("should error if the latest version is not deployed", async () => {
+			setIsTTY(true);
+
+			const scriptName = "test-script";
+
+			msw.use(
+				http.put(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual(scriptName);
+
+						// Return our error
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: VERSION_NOT_DEPLOYED_ERR_CODE,
+									message: "latest is not deployed",
+								},
+							],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			mockPrompt({
+				text: "Enter a secret value:",
+				options: { isSecret: true },
+				result: `hunter2
+				`,
+			});
+
+			await expect(runWrangler(`secret put secret-name --name ${scriptName}`))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. Please ensure that the latest version of your Worker is fully deployed (wrangler versions deploy --x-versions) before modifying secrets. Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.
+
+				Note: This limitation will be addressed in an upcoming release.]
+			`);
 		});
 	});
 

@@ -13,7 +13,7 @@ import {
 } from "../index";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { parseJSON, readFileSync } from "../parse";
+import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
@@ -21,6 +21,8 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 
 type SecretBindingUpload = {
 	type: "secret_text";
@@ -168,15 +170,32 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 							? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
 							: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
-					return await fetchResult(url, {
-						method: "PUT",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							name: args.key,
-							text: secretValue,
-							type: "secret_text",
-						}),
-					});
+					try {
+						return await fetchResult(url, {
+							method: "PUT",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								name: args.key,
+								text: secretValue,
+								type: "secret_text",
+							}),
+						});
+					} catch (e) {
+						if (
+							e instanceof APIError &&
+							e.code === VERSION_NOT_DEPLOYED_ERR_CODE
+						) {
+							throw new UserError(
+								"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. " +
+									"Please ensure that the latest version of your Worker is fully deployed " +
+									"(wrangler versions deploy --x-versions) before modifying secrets. " +
+									"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version." +
+									"\n\nNote: This limitation will be addressed in an upcoming release."
+							);
+						} else {
+							throw e;
+						}
+					}
 				}
 
 				try {

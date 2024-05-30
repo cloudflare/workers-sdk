@@ -1,0 +1,27 @@
+name = "rpc"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat", "rpc"]
+
+kv_namespaces = [
+	{ binding = "KV_NAMESPACE", id = "00000000000000000000000000000000" }
+]
+
+[durable_objects]
+bindings = [
+	{ name = "TEST_OBJECT", class_name = "TestObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["TestObject"]
+
+[[services]]
+binding = "TEST_NAMED_HANDLER"
+service = "rpc"
+entrypoint = "testNamedHandler"
+
+[[services]]
+binding = "TEST_NAMED_ENTRYPOINT"
+service = "rpc"
+entrypoint = "TestNamedEntrypoint"

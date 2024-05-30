@@ -181,7 +181,6 @@ function throwFetchError(
 	// so consumers can use it for specific behaviour
 	const code = response.errors[0]?.code;
 	if (code) {
-		//@ts-expect-error non-standard property on Error
 		error.code = code;
 	}
 	throw error;

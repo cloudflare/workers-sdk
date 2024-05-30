@@ -220,6 +220,7 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
+import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
@@ -306,7 +307,7 @@ interface AuthTokens {
  * The path to the config file that holds user authentication data,
  * relative to the user's home directory.
  */
-export const USER_AUTH_CONFIG_FILE = "config/default.toml";
+export const USER_AUTH_CONFIG_PATH = "config";
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -875,33 +876,32 @@ async function generatePKCECodes(): Promise<PKCECodes> {
 	return { codeChallenge, codeVerifier };
 }
 
+export function getAuthConfigFilePath() {
+	const environment = getCloudflareApiEnvironmentFromEnv();
+	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
+
+	return path.join(getGlobalWranglerConfigPath(), filePath);
+}
+
 /**
  * Writes a a wrangler config file (auth credentials) to disk,
  * and updates the user auth state with the new credentials.
  */
 export function writeAuthConfigFile(config: UserAuthConfig) {
-	const authConfigFilePath = path.join(
-		getGlobalWranglerConfigPath(),
-		USER_AUTH_CONFIG_FILE
-	);
-	mkdirSync(path.dirname(authConfigFilePath), {
+	const configPath = getAuthConfigFilePath();
+
+	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(
-		path.join(authConfigFilePath),
-		TOML.stringify(config as TOML.JsonMap),
-		{ encoding: "utf-8" }
-	);
+	writeFileSync(path.join(configPath), TOML.stringify(config as TOML.JsonMap), {
+		encoding: "utf-8",
+	});
 
 	reinitialiseAuthTokens();
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const authConfigFilePath = path.join(
-		getGlobalWranglerConfigPath(),
-		USER_AUTH_CONFIG_FILE
-	);
-	const toml = parseTOML(readFileSync(authConfigFilePath));
+	const toml = parseTOML(readFileSync(getAuthConfigFilePath()));
 	return toml;
 }
 
@@ -1106,7 +1106,7 @@ export async function logout(): Promise<void> {
 		},
 	});
 	await response.text(); // blank text? would be nice if it was something meaningful
-	rmSync(path.join(getGlobalWranglerConfigPath(), USER_AUTH_CONFIG_FILE));
+	rmSync(getAuthConfigFilePath());
 	logger.log(`Successfully logged out.`);
 }
 

@@ -1,0 +1,15 @@
+{
+	"name": "devprod-status-bot",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"check:lint": "eslint .",
+		"check:type": "tsc"
+	},
+	"devDependencies": {
+		"@octokit/types": "^13.5.0",
+		"@octokit/webhooks-types": "^7.5.1",
+		"wrangler": "workspace:*"
+	}
+}
