@@ -91,8 +91,9 @@ const cliDefinition: ArgumentsDefinition = {
 				},
 				{
 					name: "pre-existing",
-					description: "Fetch a Worker initialized from the Cloudflare dashboard."
-				}
+					description:
+						"Fetch a Worker initialized from the Cloudflare dashboard.",
+				},
 			],
 		},
 		{
