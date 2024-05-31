@@ -209,16 +209,18 @@ export const upload = async (
 
 			for (let i = 0; i < bucket.files.length; i += 1000) {
 				// only read up to 1000 files, from disk, at a time to avoid `EMFILE` error (on Windows)
-				payload.push(...(await Promise.all(
-					bucket.files.slice(i * 1000, (i + 1) * 1000).map(async (file) => ({
-						key: file.hash,
-						value: (await readFile(file.path)).toString("base64"),
-						metadata: {
-							contentType: file.contentType,
-						},
-						base64: true,
-					}))
-				)));
+				payload.push(
+					...(await Promise.all(
+						bucket.files.slice(i * 1000, (i + 1) * 1000).map(async (file) => ({
+							key: file.hash,
+							value: (await readFile(file.path)).toString("base64"),
+							metadata: {
+								contentType: file.contentType,
+							},
+							base64: true,
+						}))
+					))
+				);
 			}
 
 			try {
