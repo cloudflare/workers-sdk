@@ -9,8 +9,7 @@
 				"TEST_PM",
 				"TEST_PM_VERSION",
 				"npm_config_user_agent",
-				"CI",
-				"CI_OS"
+				"CI"
 			],
 			"outputs": ["dist/**"]
 		},
@@ -23,15 +22,8 @@
 				"E2E_QUARANTINE",
 				"E2E_PROJECT_PATH",
 				"E2E_RETRIES",
-				"E2E_NO_DEPLOY",
-				"VITEST",
-				"TEST_PM",
-				"TEST_PM_VERSION",
-				"npm_config_user_agent",
-				"CI",
-				"CI_OS"
-			],
-			"outputs": [".e2e-logs/**", ".e2e-diffs/**"]
+				"E2E_NO_DEPLOY"
+			]
 		}
 	}
 }

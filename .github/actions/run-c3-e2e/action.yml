@@ -58,7 +58,7 @@ runs:
         TEST_PM: ${{ inputs.packageManager }}
         TEST_PM_VERSION: ${{ inputs.packageManagerVersion }}
         SAVE_DIFFS: ${{ inputs.saveDiffs }}
-        CI_OS: ${{ runner.os }}
+        # CI_OS: ${{ runner.os }}
 
     - name: Upload Logs
       uses: actions/upload-artifact@v3
