@@ -106,6 +106,12 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Dinosaurs are cool",
 		},
 		flags: [`--package-manager`, pm],
+		promptHandlers: [
+			{
+				matcher: /Which language do you want to use\?/,
+				input: [keys.enter],
+			},
+		],
 	},
 	analog: {
 		testCommitMessage: true,
