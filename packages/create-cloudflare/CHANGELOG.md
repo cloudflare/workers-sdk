@@ -1,5 +1,16 @@
 # create-cloudflare
 
+## 2.21.4
+
+### Patch Changes
+
+- [#5925](https://github.com/cloudflare/workers-sdk/pull/5925) [`e51a43c`](https://github.com/cloudflare/workers-sdk/commit/e51a43c724cbb5174bde4f02fecc468a906a2c8e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: commit changes when framework cli initialized the git repository
+
+  Currently if a framework CLI initializes the git repository then
+  C3 fails to commit its changes, fix such erroneous behavior
+
+- [#5892](https://github.com/cloudflare/workers-sdk/pull/5892) [`9a804b9`](https://github.com/cloudflare/workers-sdk/commit/9a804b9061006f2c2d508151d86246400055e4fd) Thanks [@megaconfidence](https://github.com/megaconfidence)! - fix: Updates DO Template Entry point
+
 ## 2.21.3
 
 ### Patch Changes

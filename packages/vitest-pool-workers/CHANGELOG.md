@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.0
+
+### Minor Changes
+
+- [#5916](https://github.com/cloudflare/workers-sdk/pull/5916) [`e42f320`](https://github.com/cloudflare/workers-sdk/commit/e42f32071871b0208e9f00cfd7078d8a5c03fe38) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feature: add support for JSRPC
+
+### Patch Changes
+
+- Updated dependencies [[`9e4d8bc`](https://github.com/cloudflare/workers-sdk/commit/9e4d8bcb8811b9dc2570de26660baa4361a52749), [`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a), [`93b98cb`](https://github.com/cloudflare/workers-sdk/commit/93b98cb7e2ba5f73acbc20b4a3ca9a404a37a5dc), [`8e5e589`](https://github.com/cloudflare/workers-sdk/commit/8e5e5897f0de5f8a4990f88165d7a963018a06ef)]:
+  - wrangler@3.58.0
+  - miniflare@3.20240524.1
+
 ## 0.3.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20240524.1
+
+### Patch Changes
+
+- [#5921](https://github.com/cloudflare/workers-sdk/pull/5921) [`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - docs: add configuration section with local workerd linking to main readme
+
 ## 3.20240524.0
 
 ### Minor Changes
