@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.58.0
+
+### Minor Changes
+
+- [#5933](https://github.com/cloudflare/workers-sdk/pull/5933) [`93b98cb`](https://github.com/cloudflare/workers-sdk/commit/93b98cb7e2ba5f73acbc20b4a3ca9a404a37a5dc) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feature: allow for writing authentication details per API environment. This allows someone targetting staging to have their staging auth details saved separately from production, this saves them logging in and out when switching environments.
+
+### Patch Changes
+
+- [#5938](https://github.com/cloudflare/workers-sdk/pull/5938) [`9e4d8bc`](https://github.com/cloudflare/workers-sdk/commit/9e4d8bcb8811b9dc2570de26660baa4361a52749) Thanks [@threepointone](https://github.com/threepointone)! - fix: let "assets" in wrangler.toml be a string
+
+  The experimental "assets" field can be either a string or an object. However the type definition marks it only as an object. This is a problem because we use this to generate the json schema, which gets picked up by vscode's even better toml extension, and shows it to be an error when used with a string (even though it works fine). The fix is to simply change the type definition to add a string variant.
+
+- [#5758](https://github.com/cloudflare/workers-sdk/pull/5758) [`8e5e589`](https://github.com/cloudflare/workers-sdk/commit/8e5e5897f0de5f8a4990f88165d7a963018a06ef) Thanks [@Jackenmen](https://github.com/Jackenmen)! - fix: use correct type for AI binding instead of unknown
+
+- Updated dependencies [[`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a)]:
+  - miniflare@3.20240524.1
+
 ## 3.57.2
 
 ### Patch Changes
