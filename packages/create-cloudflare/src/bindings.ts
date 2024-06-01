@@ -3,8 +3,10 @@ import { inputPrompt } from "@cloudflare/cli/interactive";
 import { readWranglerConfig, writeWranglerConfig } from "./wrangler/config";
 import { createKvNamespace, fetchKvNamespaces } from "./wrangler/kvNamespaces";
 import { createQueue, fetchQueues } from "./wrangler/queues";
+import { createR2Bucket, fetchR2Buckets } from "./wrangler/r2Buckets";
 import type { KvNamespace } from "./wrangler/kvNamespaces";
 import type { Queue } from "./wrangler/queues";
+import type { R2Bucket } from "./wrangler/r2Buckets";
 import type { WranglerConfig } from "./wrangler/schema";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type { C3Context } from "types";
@@ -48,6 +50,7 @@ export const autoProvisionResources = async (ctx: C3Context) => {
 
 	await provisionQueues(ctx, wranglerConfig);
 	await provisionKvNamespaces(ctx, wranglerConfig);
+	await provisionR2Buckets(ctx, wranglerConfig);
 
 	// write the mutated config back to disk
 	writeWranglerConfig(ctx, wranglerConfig);
@@ -67,12 +70,12 @@ const provisionQueues = async (
 		const queueName = await selectOrCreateResource<Queue>({
 			ctx,
 			fetchResources: fetchQueues,
+			createResource: createQueue,
 			toOptions: (q) => ({ label: q.name, value: q.name }),
 			createLabel: "Create a new queue",
 			placeholder: queueConfig.queue,
 			selectQuestion: `Select a queue to consume messages from`,
 			createQuestion: `What would you like to name your queue?`,
-			createResource: createQueue,
 		});
 
 		queueConfig.queue = queueName;
@@ -82,12 +85,12 @@ const provisionQueues = async (
 		const queueName = await selectOrCreateResource<Queue>({
 			ctx,
 			fetchResources: fetchQueues,
+			createResource: createQueue,
 			toOptions: (q) => ({ label: q.name, value: q.name }),
 			createLabel: "Create a new queue",
 			placeholder: queueConfig.queue,
 			selectQuestion: `Select a queue to send messages to`,
 			createQuestion: `What would you like to name your queue?`,
-			createResource: createQueue,
 		});
 
 		queueConfig.queue = queueName;
@@ -106,15 +109,39 @@ const provisionKvNamespaces = async (
 		const namespaceId = await selectOrCreateResource<KvNamespace>({
 			ctx,
 			fetchResources: fetchKvNamespaces,
+			createResource: createKvNamespace,
 			toOptions: (ns) => ({ label: ns.title, value: ns.id }),
 			createLabel: "Create a new KV namespace",
 			placeholder: kvNamespace.id,
 			selectQuestion: `Which KV namespace should be bound to \`${kvNamespace.binding}\`?`,
 			createQuestion: `What would you like to name your KV namespace?`,
-			createResource: createKvNamespace,
 		});
 
 		kvNamespace.id = namespaceId;
+	}
+};
+
+const provisionR2Buckets = async (
+	ctx: C3Context,
+	wranglerConfig: WranglerConfig,
+) => {
+	if (!wranglerConfig.r2_buckets) {
+		return;
+	}
+
+	for (const bucket of wranglerConfig.r2_buckets) {
+		const bucketName = await selectOrCreateResource<R2Bucket>({
+			ctx,
+			fetchResources: fetchR2Buckets,
+			createResource: createR2Bucket,
+			toOptions: ({ name }) => ({ label: name, value: name }),
+			createLabel: "Create a new R2 bucket",
+			placeholder: bucket.bucket_name,
+			selectQuestion: `Which R2 bucket should be bound to \`${bucket.binding}\`?`,
+			createQuestion: `What would you like to name your R2 bucket?`,
+		});
+
+		bucket.bucket_name = bucketName;
 	}
 };
 

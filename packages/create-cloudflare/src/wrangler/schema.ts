@@ -27,6 +27,14 @@ export const WranglerTomlSchema = z.object({
 			}),
 		),
 	),
+	r2_buckets: z.optional(
+		z.array(
+			z.object({
+				binding: z.string(),
+				bucket_name: z.string(),
+			}),
+		),
+	),
 });
 
 export type WranglerConfig = z.infer<typeof WranglerTomlSchema>;
