@@ -2,7 +2,7 @@ import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
+import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -96,11 +96,10 @@ const updateNuxtConfig = () => {
 		visitCallExpression: function (n) {
 			const callee = n.node.callee as recast.types.namedTypes.Identifier;
 			if (callee.name === "defineNuxtConfig") {
-				const obj = n.node
-					.arguments[0] as recast.types.namedTypes.ObjectExpression;
-
-				obj.properties.push(presetDef);
-				obj.properties.push(moduleDef);
+				mergeObjectProperties(
+					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
+					[presetDef, moduleDef],
+				);
 			}
 
 			return this.traverse(n);
