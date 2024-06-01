@@ -6,9 +6,9 @@ import type { C3Context } from "types";
 
 export type Queue = {
 	name: string;
-	id: string;
-	producers: number;
-	consumers: number;
+	id?: string;
+	producers?: number;
+	consumers?: number;
 };
 
 export const fetchQueues = async (ctx: C3Context) => {
@@ -34,7 +34,7 @@ export const createQueue = async (ctx: C3Context, name: string) => {
 			`Creating queue ${blue(name)}`,
 			`${brandColor("created")} ${dim(`via wrangler`)}`,
 		);
-		return name;
+		return { name };
 	} catch (error) {
 		return crash(`Failed to create queue \`${name}.\``);
 	}

@@ -35,6 +35,15 @@ export const WranglerTomlSchema = z.object({
 			}),
 		),
 	),
+	d1_databases: z.optional(
+		z.array(
+			z.object({
+				binding: z.string(),
+				database_name: z.string(),
+				database_id: z.string(),
+			}),
+		),
+	),
 });
 
 export type WranglerConfig = z.infer<typeof WranglerTomlSchema>;

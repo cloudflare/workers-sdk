@@ -1,9 +1,11 @@
 import { warn } from "console";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { readWranglerConfig, writeWranglerConfig } from "./wrangler/config";
+import { createD1Database, fetchD1Databases } from "./wrangler/d1Databases";
 import { createKvNamespace, fetchKvNamespaces } from "./wrangler/kvNamespaces";
 import { createQueue, fetchQueues } from "./wrangler/queues";
 import { createR2Bucket, fetchR2Buckets } from "./wrangler/r2Buckets";
+import type { D1Database } from "./wrangler/d1Databases";
 import type { KvNamespace } from "./wrangler/kvNamespaces";
 import type { Queue } from "./wrangler/queues";
 import type { R2Bucket } from "./wrangler/r2Buckets";
@@ -51,6 +53,7 @@ export const autoProvisionResources = async (ctx: C3Context) => {
 	await provisionQueues(ctx, wranglerConfig);
 	await provisionKvNamespaces(ctx, wranglerConfig);
 	await provisionR2Buckets(ctx, wranglerConfig);
+	await provisionD1Databases(ctx, wranglerConfig);
 
 	// write the mutated config back to disk
 	writeWranglerConfig(ctx, wranglerConfig);
@@ -67,33 +70,35 @@ const provisionQueues = async (
 		return;
 	}
 	for (const queueConfig of wranglerConfig.queues.consumers) {
-		const queueName = await selectOrCreateResource<Queue>({
+		const queue = await selectOrCreateResource<Queue>({
 			ctx,
 			fetchResources: fetchQueues,
 			createResource: createQueue,
 			toOptions: (q) => ({ label: q.name, value: q.name }),
+			locate: (q, name) => q.name === name,
 			createLabel: "Create a new queue",
 			placeholder: queueConfig.queue,
 			selectQuestion: `Select a queue to consume messages from`,
 			createQuestion: `What would you like to name your queue?`,
 		});
 
-		queueConfig.queue = queueName;
+		queueConfig.queue = queue.name;
 	}
 
 	for (const queueConfig of wranglerConfig.queues.producers) {
-		const queueName = await selectOrCreateResource<Queue>({
+		const queue = await selectOrCreateResource<Queue>({
 			ctx,
 			fetchResources: fetchQueues,
 			createResource: createQueue,
 			toOptions: (q) => ({ label: q.name, value: q.name }),
+			locate: (q, name) => q.name === name,
 			createLabel: "Create a new queue",
 			placeholder: queueConfig.queue,
 			selectQuestion: `Select a queue to send messages to`,
 			createQuestion: `What would you like to name your queue?`,
 		});
 
-		queueConfig.queue = queueName;
+		queueConfig.queue = queue.name;
 	}
 };
 
@@ -106,18 +111,19 @@ const provisionKvNamespaces = async (
 	}
 
 	for (const kvNamespace of wranglerConfig.kv_namespaces) {
-		const namespaceId = await selectOrCreateResource<KvNamespace>({
+		const namespace = await selectOrCreateResource<KvNamespace>({
 			ctx,
 			fetchResources: fetchKvNamespaces,
 			createResource: createKvNamespace,
-			toOptions: (ns) => ({ label: ns.title, value: ns.id }),
+			locate: (ns, id) => ns.id === id,
+			toOptions: (ns) => ({ label: ns.title ?? ns.id, value: ns.id }),
 			createLabel: "Create a new KV namespace",
 			placeholder: kvNamespace.id,
 			selectQuestion: `Which KV namespace should be bound to \`${kvNamespace.binding}\`?`,
 			createQuestion: `What would you like to name your KV namespace?`,
 		});
 
-		kvNamespace.id = namespaceId;
+		kvNamespace.id = namespace.id;
 	}
 };
 
@@ -135,13 +141,40 @@ const provisionR2Buckets = async (
 			fetchResources: fetchR2Buckets,
 			createResource: createR2Bucket,
 			toOptions: ({ name }) => ({ label: name, value: name }),
+			locate: (b, name) => b.name === name,
 			createLabel: "Create a new R2 bucket",
 			placeholder: bucket.bucket_name,
 			selectQuestion: `Which R2 bucket should be bound to \`${bucket.binding}\`?`,
 			createQuestion: `What would you like to name your R2 bucket?`,
 		});
 
-		bucket.bucket_name = bucketName;
+		bucket.bucket_name = bucketName.name;
+	}
+};
+
+const provisionD1Databases = async (
+	ctx: C3Context,
+	wranglerConfig: WranglerConfig,
+) => {
+	if (!wranglerConfig.d1_databases) {
+		return;
+	}
+
+	for (const d1Database of wranglerConfig.d1_databases) {
+		const db = await selectOrCreateResource<D1Database>({
+			ctx,
+			fetchResources: fetchD1Databases,
+			createResource: createD1Database,
+			toOptions: ({ name, uuid }) => ({ label: name, value: uuid }),
+			locate: (b, id) => b.uuid === id,
+			createLabel: "Create a new D1 database",
+			placeholder: d1Database.database_name,
+			selectQuestion: `Which D1 database should be bound to \`${d1Database.binding}\`?`,
+			createQuestion: `What would you like to name your D1 database?`,
+		});
+
+		d1Database.database_id = db.uuid;
+		d1Database.database_name = db.name;
 	}
 };
 
@@ -149,23 +182,25 @@ type SelectOrCreateOptions<T> = {
 	ctx: C3Context;
 	fetchResources: (ctx: C3Context) => Promise<T[]>;
 	toOptions: (item: T) => { label: string; value: string };
+	locate: (item: T, id: string) => boolean;
 	createLabel: string;
 	placeholder: string;
 	selectQuestion: string;
 	createQuestion: string;
-	createResource: (ctx: C3Context, id: string) => Promise<string>;
+	createResource: (ctx: C3Context, id: string) => Promise<T>;
 };
 
 const selectOrCreateResource = async <T>({
 	ctx,
 	fetchResources,
 	toOptions,
+	locate,
 	createLabel,
 	placeholder,
 	selectQuestion,
 	createQuestion,
 	createResource,
-}: SelectOrCreateOptions<T>) => {
+}: SelectOrCreateOptions<T>): Promise<T> => {
 	const availableResources = await fetchResources(ctx);
 
 	if (availableResources.length > 0) {
@@ -174,15 +209,20 @@ const selectOrCreateResource = async <T>({
 			...availableResources.map(toOptions),
 		];
 
-		const selectedNs = await inputPrompt({
+		const selection = await inputPrompt({
 			type: "select",
 			question: selectQuestion,
 			options: options,
+			// TODO: fix this
 			label: "namespace",
 		});
 
-		if (selectedNs !== "--create") {
-			return selectedNs;
+		const selectedResource = availableResources.find((r) =>
+			locate(r, selection),
+		) as T;
+
+		if (selectedResource !== "--create") {
+			return selectedResource;
 		}
 	}
 
@@ -190,10 +230,10 @@ const selectOrCreateResource = async <T>({
 		type: "text",
 		question: createQuestion,
 		defaultValue: placeholder,
+		// TODO: fix these
 		validate: validateQueueName,
 		label: "name",
 	});
 
-	// return createKvNamespace(ctx, newNamespaceName);
 	return createResource(ctx, newResourceName);
 };

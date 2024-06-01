@@ -5,7 +5,7 @@ import type { C3Context } from "types";
 
 export type KvNamespace = {
 	id: string;
-	title: string;
+	title?: string;
 };
 
 export const fetchKvNamespaces = async (ctx: C3Context) => {
@@ -38,7 +38,7 @@ export const createKvNamespace = async (ctx: C3Context, name: string) => {
 			return crash("Failed to read KV namespace id");
 		}
 
-		return match[2];
+		return { id: match[2] };
 	} catch (error) {
 		return crash(`Failed to create KV namespace \`${name}.\``);
 	}

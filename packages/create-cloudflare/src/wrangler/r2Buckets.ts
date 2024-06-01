@@ -23,7 +23,10 @@ export const fetchR2Buckets = async (ctx: C3Context) => {
 	}
 };
 
-export const createR2Bucket = async (ctx: C3Context, name: string) => {
+export const createR2Bucket = async (
+	ctx: C3Context,
+	name: string,
+): Promise<R2Bucket> => {
 	try {
 		await wrangler(
 			ctx,
@@ -31,7 +34,7 @@ export const createR2Bucket = async (ctx: C3Context, name: string) => {
 			`Creating R2 bucket ${blue(name)}`,
 			`${brandColor("created")} ${dim(`via wrangler`)}`,
 		);
-		return name;
+		return { name };
 	} catch (error) {
 		return crash(`Failed to create KV namespace \`${name}.\``);
 	}
