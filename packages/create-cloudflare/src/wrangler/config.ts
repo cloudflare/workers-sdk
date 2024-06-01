@@ -1,8 +1,11 @@
 import { existsSync } from "fs";
 import { resolve } from "path";
+import { crash, warn } from "@cloudflare/cli";
+import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import MagicString from "magic-string";
+import { WranglerConfig, WranglerTomlSchema } from "./schema";
 import type { C3Context } from "types";
 
 /**
@@ -62,4 +65,21 @@ export const readWranglerToml = (ctx: C3Context) => {
 export const writeWranglerToml = (ctx: C3Context, contents: string) => {
 	const wranglerTomlPath = getWranglerTomlPath(ctx);
 	return writeFile(wranglerTomlPath, contents);
+};
+
+export const readWranglerConfig = (ctx: C3Context) => {
+	const wranglerToml = readWranglerToml(ctx);
+	try {
+		const wranglerJson = TOML.parse(wranglerToml);
+		console.log(wranglerJson);
+		return WranglerTomlSchema.parse(wranglerJson);
+	} catch (error) {
+		warn("Failed to parse config from `wrangler.toml`");
+		return null;
+	}
+};
+
+export const writeWranglerConfig = (ctx: C3Context, config: WranglerConfig) => {
+	const updatedWranglerToml = TOML.stringify(config);
+	writeWranglerToml(ctx, updatedWranglerToml);
 };

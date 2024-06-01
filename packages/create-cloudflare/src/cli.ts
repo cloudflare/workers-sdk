@@ -175,11 +175,17 @@ const configure = async (ctx: C3Context) => {
 };
 
 const deploy = async (ctx: C3Context) => {
-	if (await offerToDeploy(ctx)) {
-		await autoProvisionResources(ctx);
-		// await createProject(ctx);
-		// await runDeploy(ctx);
+	if (!(await offerToDeploy(ctx))) {
+		return;
 	}
+
+	const provisionResult = await autoProvisionResources(ctx);
+	if (!provisionResult) {
+		return;
+	}
+
+	await createProject(ctx);
+	await runDeploy(ctx);
 };
 
 const printBanner = () => {

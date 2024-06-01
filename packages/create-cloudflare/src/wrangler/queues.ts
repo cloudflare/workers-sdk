@@ -4,7 +4,7 @@ import { parseTable } from "./utils";
 import { wrangler } from ".";
 import type { C3Context } from "types";
 
-type Queue = {
+export type Queue = {
 	name: string;
 	id: string;
 	producers: number;
@@ -34,6 +34,7 @@ export const createQueue = async (ctx: C3Context, name: string) => {
 			`Creating queue ${blue(name)}`,
 			`${brandColor("created")} ${dim(`via wrangler`)}`,
 		);
+		return name;
 	} catch (error) {
 		return crash(`Failed to create queue \`${name}.\``);
 	}

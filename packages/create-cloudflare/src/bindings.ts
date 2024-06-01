@@ -1,7 +1,11 @@
+import { warn } from "console";
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import TOML from "@iarna/toml";
-import { readWranglerToml, writeWranglerToml } from "./wrangler/config";
+import { readWranglerConfig, writeWranglerConfig } from "./wrangler/config";
+import { createKvNamespace, fetchKvNamespaces } from "./wrangler/kvNamespaces";
 import { createQueue, fetchQueues } from "./wrangler/queues";
+import type { KvNamespace } from "./wrangler/kvNamespaces";
+import type { Queue } from "./wrangler/queues";
+import type { WranglerConfig } from "./wrangler/schema";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type { C3Context } from "types";
 
@@ -34,74 +38,135 @@ export const validateQueueName = (value: Arg) => {
 };
 
 export const autoProvisionResources = async (ctx: C3Context) => {
-	const wranglerToml = readWranglerToml(ctx);
-	const config = TOML.parse(wranglerToml);
-
-	const queuesConfig = config.queues as {
-		consumers: { queue: string }[];
-		producers: { queue: string; binding: string }[];
-	};
-
-	if (queuesConfig) {
-		for (const queueConfig of queuesConfig.consumers) {
-			const defaultName = queueConfig.queue;
-			const queueName = await selectQueue(ctx, defaultName);
-
-			queueConfig.queue = queueName;
-		}
-
-		for (const queueConfig of queuesConfig.producers) {
-			const defaultName = queueConfig.queue;
-			const queueName = await selectQueue(
-				ctx,
-				defaultName,
-				queueConfig.binding,
-			);
-
-			queueConfig.queue = queueName;
-		}
+	const wranglerConfig = readWranglerConfig(ctx);
+	if (!wranglerConfig) {
+		warn(
+			"Skipping resource provisioning. Please check `wrangler.toml` and create any required resource bindings before deployment.",
+		);
+		return false;
 	}
+
+	await provisionQueues(ctx, wranglerConfig);
+	await provisionKvNamespaces(ctx, wranglerConfig);
 
 	// write the mutated config back to disk
-	const updatedWranglerToml = TOML.stringify(config);
-	writeWranglerToml(ctx, updatedWranglerToml);
-
+	writeWranglerConfig(ctx, wranglerConfig);
+	console.log(ctx.project.name);
 	process.exit(1);
+	return true;
 };
 
-const selectQueue = async (
+const provisionQueues = async (
 	ctx: C3Context,
-	defaultValue: string,
-	binding?: string,
+	wranglerConfig: WranglerConfig,
 ) => {
-	const queues = await fetchQueues(ctx);
-	if (queues.length > 0) {
-		const queueOptions = [
-			{ label: "Create a new queue", value: "--create" },
-			...queues.map((q) => ({ label: q.name, value: q.name })),
-		];
-
-		const selectedQueue = await inputPrompt({
-			type: "select",
-			question: binding
-				? `Select a queue to send messages to`
-				: `Select a queue to consume messages from`,
-			options: queueOptions,
-			label: "queue",
+	if (!wranglerConfig.queues) {
+		return;
+	}
+	for (const queueConfig of wranglerConfig.queues.consumers) {
+		const queueName = await selectOrCreateResource<Queue>({
+			ctx,
+			fetchResources: fetchQueues,
+			toOptions: (q) => ({ label: q.name, value: q.name }),
+			createLabel: "Create a new queue",
+			placeholder: queueConfig.queue,
+			selectQuestion: `Select a queue to consume messages from`,
+			createQuestion: `What would you like to name your queue?`,
+			createResource: createQueue,
 		});
 
-		if (selectedQueue !== "--create") {
-			return selectedQueue;
+		queueConfig.queue = queueName;
+	}
+
+	for (const queueConfig of wranglerConfig.queues.producers) {
+		const queueName = await selectOrCreateResource<Queue>({
+			ctx,
+			fetchResources: fetchQueues,
+			toOptions: (q) => ({ label: q.name, value: q.name }),
+			createLabel: "Create a new queue",
+			placeholder: queueConfig.queue,
+			selectQuestion: `Select a queue to send messages to`,
+			createQuestion: `What would you like to name your queue?`,
+			createResource: createQueue,
+		});
+
+		queueConfig.queue = queueName;
+	}
+};
+
+const provisionKvNamespaces = async (
+	ctx: C3Context,
+	wranglerConfig: WranglerConfig,
+) => {
+	if (!wranglerConfig.kv_namespaces) {
+		return;
+	}
+
+	for (const kvNamespace of wranglerConfig.kv_namespaces) {
+		const namespaceId = await selectOrCreateResource<KvNamespace>({
+			ctx,
+			fetchResources: fetchKvNamespaces,
+			toOptions: (ns) => ({ label: ns.title, value: ns.id }),
+			createLabel: "Create a new KV namespace",
+			placeholder: kvNamespace.id,
+			selectQuestion: `Which KV namespace should be bound to \`${kvNamespace.binding}\`?`,
+			createQuestion: `What would you like to name your KV namespace?`,
+			createResource: createKvNamespace,
+		});
+
+		kvNamespace.id = namespaceId;
+	}
+};
+
+type SelectOrCreateOptions<T> = {
+	ctx: C3Context;
+	fetchResources: (ctx: C3Context) => Promise<T[]>;
+	toOptions: (item: T) => { label: string; value: string };
+	createLabel: string;
+	placeholder: string;
+	selectQuestion: string;
+	createQuestion: string;
+	createResource: (ctx: C3Context, id: string) => Promise<string>;
+};
+
+const selectOrCreateResource = async <T>({
+	ctx,
+	fetchResources,
+	toOptions,
+	createLabel,
+	placeholder,
+	selectQuestion,
+	createQuestion,
+	createResource,
+}: SelectOrCreateOptions<T>) => {
+	const availableResources = await fetchResources(ctx);
+
+	if (availableResources.length > 0) {
+		const options = [
+			{ label: createLabel, value: "--create" },
+			...availableResources.map(toOptions),
+		];
+
+		const selectedNs = await inputPrompt({
+			type: "select",
+			question: selectQuestion,
+			options: options,
+			label: "namespace",
+		});
+
+		if (selectedNs !== "--create") {
+			return selectedNs;
 		}
 	}
 
-	const newQueueName = await inputPrompt({
+	const newResourceName = await inputPrompt({
 		type: "text",
-		question: `What would you like to name your queue?`,
-		defaultValue,
+		question: createQuestion,
+		defaultValue: placeholder,
 		validate: validateQueueName,
 		label: "name",
 	});
-	await createQueue(ctx, newQueueName);
-	return newQueueName;
+
+	// return createKvNamespace(ctx, newNamespaceName);
+	return createResource(ctx, newResourceName);
 };
