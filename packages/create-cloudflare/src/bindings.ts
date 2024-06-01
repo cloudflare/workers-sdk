@@ -54,6 +54,7 @@ export const autoProvisionResources = async (ctx: C3Context) => {
 	await provisionKvNamespaces(ctx, wranglerConfig);
 	await provisionR2Buckets(ctx, wranglerConfig);
 	await provisionD1Databases(ctx, wranglerConfig);
+	await provisionVariables(ctx, wranglerConfig);
 
 	// write the mutated config back to disk
 	writeWranglerConfig(ctx, wranglerConfig);
@@ -175,6 +176,25 @@ const provisionD1Databases = async (
 
 		d1Database.database_id = db.uuid;
 		d1Database.database_name = db.name;
+	}
+};
+
+const provisionVariables = async (
+	ctx: C3Context,
+	wranglerConfig: WranglerConfig,
+) => {
+	if (!wranglerConfig.vars) {
+		return;
+	}
+
+	for (const key of Object.keys(wranglerConfig.vars)) {
+		const value = await inputPrompt({
+			type: "text",
+			question: `Specify a value for variable ${key}`,
+			defaultValue: wranglerConfig.vars[key],
+			label: "variable",
+		});
+		wranglerConfig.vars[key] = value;
 	}
 };
 

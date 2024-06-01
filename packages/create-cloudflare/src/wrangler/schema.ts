@@ -44,6 +44,8 @@ export const WranglerTomlSchema = z.object({
 			}),
 		),
 	),
+	// vars: { MY_VARIABLE: 'production_value' }
+	vars: z.optional(z.record(z.string(), z.string())),
 });
 
 export type WranglerConfig = z.infer<typeof WranglerTomlSchema>;
