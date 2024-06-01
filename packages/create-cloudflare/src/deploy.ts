@@ -15,14 +15,14 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
 	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
-	if (!(await isDeployable(ctx))) {
-		ctx.args.deploy = false;
-		updateStatus(
-			`Bindings must be configured in ${blue(
-				"`wrangler.toml`",
-			)} before your application can be deployed`,
-		);
-	}
+	// if (!(await isDeployable(ctx))) {
+	// 	ctx.args.deploy = false;
+	// 	updateStatus(
+	// 		`Bindings must be configured in ${blue(
+	// 			"`wrangler.toml`",
+	// 		)} before your application can be deployed`,
+	// 	);
+	// }
 
 	const label = `deploy via \`${quoteShellArgs([
 		npm,

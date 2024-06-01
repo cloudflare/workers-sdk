@@ -15,6 +15,7 @@ import {
 } from "helpers/packageManagers";
 import { installWrangler, npmInstall } from "helpers/packages";
 import { version } from "../package.json";
+import { autoProvisionResources } from "./bindings";
 import { offerToDeploy, runDeploy } from "./deploy";
 import { gitCommit, isInsideGitRepo, offerGit } from "./git";
 import { createProject } from "./pages";
@@ -175,8 +176,9 @@ const configure = async (ctx: C3Context) => {
 
 const deploy = async (ctx: C3Context) => {
 	if (await offerToDeploy(ctx)) {
-		await createProject(ctx);
-		await runDeploy(ctx);
+		await autoProvisionResources(ctx);
+		// await createProject(ctx);
+		// await runDeploy(ctx);
 	}
 };
 
