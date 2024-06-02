@@ -76,6 +76,14 @@ describe("constructType", () => {
 	});
 });
 
+describe("constructType with multiline strings", () => {
+	it("should correctly escape newlines in string values", () => {
+		const multilineString = "This is a\nmulti-line\nstring";
+		const expected = `valid: "This is a\\nmulti-line\\nstring";`;
+		expect(constructType("valid", multilineString, false)).toBe(expected);
+	});
+});
+
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
 	"define" | "tail_consumers" | "constellation" | "cloudchamber"
