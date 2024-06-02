@@ -144,7 +144,7 @@ export function constructType(
 		if (useRawVal) {
 			return `${typeKey}: ${value};`;
 		}
-		return `${typeKey}: "${value.replace(/"/g, '\\"')}";`;
+		return `${typeKey}: "${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";`;
 	}
 	if (typeof value === "number" || typeof value === "boolean") {
 		return `${typeKey}: ${value};`;
