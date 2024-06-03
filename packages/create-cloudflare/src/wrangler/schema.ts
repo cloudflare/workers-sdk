@@ -44,7 +44,14 @@ export const WranglerTomlSchema = z.object({
 			}),
 		),
 	),
-	// vars: { MY_VARIABLE: 'production_value' }
+	vectorize: z.optional(
+		z.array(
+			z.object({
+				binding: z.string(),
+				index_name: z.string(),
+			}),
+		),
+	),
 	vars: z.optional(z.record(z.string(), z.string())),
 });
 

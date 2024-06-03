@@ -5,6 +5,11 @@ import { createD1Database, fetchD1Databases } from "./wrangler/d1Databases";
 import { createKvNamespace, fetchKvNamespaces } from "./wrangler/kvNamespaces";
 import { createQueue, fetchQueues } from "./wrangler/queues";
 import { createR2Bucket, fetchR2Buckets } from "./wrangler/r2Buckets";
+import {
+	createVectorizeIndex,
+	fetchVectorizeIndices,
+	VectorizeIndex,
+} from "./wrangler/vectorize";
 import type { D1Database } from "./wrangler/d1Databases";
 import type { KvNamespace } from "./wrangler/kvNamespaces";
 import type { Queue } from "./wrangler/queues";
@@ -55,6 +60,7 @@ export const autoProvisionResources = async (ctx: C3Context) => {
 	await provisionR2Buckets(ctx, wranglerConfig);
 	await provisionD1Databases(ctx, wranglerConfig);
 	await provisionVariables(ctx, wranglerConfig);
+	await provisionVectorizeIndices(ctx, wranglerConfig);
 
 	// write the mutated config back to disk
 	writeWranglerConfig(ctx, wranglerConfig);
@@ -179,6 +185,31 @@ const provisionD1Databases = async (
 	}
 };
 
+const provisionVectorizeIndices = async (
+	ctx: C3Context,
+	wranglerConfig: WranglerConfig,
+) => {
+	if (!wranglerConfig.vectorize) {
+		return;
+	}
+
+	for (const indexConfig of wranglerConfig.vectorize) {
+		const index = await selectOrCreateResource<VectorizeIndex>({
+			ctx,
+			fetchResources: fetchVectorizeIndices,
+			createResource: createVectorizeIndex,
+			toOptions: ({ name }) => ({ label: name, value: name }),
+			locate: (b, name) => b.name === name,
+			createLabel: "Create a new Vectorize index",
+			placeholder: indexConfig.index_name,
+			selectQuestion: `Which Vectorize indexshould be bound to \`${indexConfig.binding}\`?`,
+			createQuestion: `What would you like to name your Vectorize index?`,
+		});
+
+		indexConfig.index_name = index.name;
+	}
+};
+
 const provisionVariables = async (
 	ctx: C3Context,
 	wranglerConfig: WranglerConfig,
@@ -255,5 +286,5 @@ const selectOrCreateResource = async <T>({
 		label: "name",
 	});
 
-	return createResource(ctx, newResourceName);
+	return await createResource(ctx, newResourceName);
 };

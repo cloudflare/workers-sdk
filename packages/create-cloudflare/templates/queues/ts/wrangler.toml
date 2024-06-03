@@ -15,9 +15,8 @@ compatibility_date = "<TBD>"
 # - https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/workers/configuration/secrets/
-[vars]
-MY_VARIABLE = "production_value"
-FOO = "xxx"
+# [vars]
+# MY_VARIABLE = "production_value"
 
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare’s global network
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
@@ -108,6 +107,6 @@ FOO = "xxx"
 
 # Bind a Vectorize index. Use to store and query vector embeddings for semantic search, classification and other vector search use-cases.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#vectorize-indexes
-# [[vectorize]]
-# binding = "MY_INDEX"
-# index_name = "my-index"
+[[vectorize]]
+binding = "MY_INDEX"
+index_name = "my-index"
