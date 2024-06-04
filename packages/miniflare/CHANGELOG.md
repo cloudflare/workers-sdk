@@ -1,5 +1,25 @@
 # miniflare
 
+## 3.20240524.2
+
+### Patch Changes
+
+- [#5922](https://github.com/cloudflare/workers-sdk/pull/5922) [`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Allow the magic proxy to handle functions returning functions
+
+  Previously functions returning functions would not be handled by the magic proxy,
+  the changes here enable the above, allowing for code such as the following:
+
+  ```js
+  	const mf = new Miniflare(/* ... */);
+
+  	const { functionsFactory } = await mf.getBindings<Env>();
+  	const fn = functionsFactory.getFunction();
+  	const functionResult = fn();
+  ```
+
+  This also works with the native workers RPC mechanism, allowing users to
+  return functions in their RPC code.
+
 ## 3.20240524.1
 
 ### Patch Changes

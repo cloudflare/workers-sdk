@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.1.0
+
+### Minor Changes
+
+- [#5958](https://github.com/cloudflare/workers-sdk/pull/5958) [`93f7255`](https://github.com/cloudflare/workers-sdk/commit/93f725588a96a8baee408b273a57eb2dba9280d9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add Andy to the list of internal contributors
+
 ## 1.0.0
 
 ### Major Changes
