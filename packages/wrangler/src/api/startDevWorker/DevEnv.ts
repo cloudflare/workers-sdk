@@ -6,7 +6,7 @@ import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { RuntimeController } from "./BaseController";
+import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { DevWorker, StartDevWorkerOptions } from "./types";
 
@@ -43,9 +43,10 @@ export class DevEnv extends EventEmitter {
 		this.runtimes = runtimes;
 		this.proxy = proxy;
 
-		[config, bundler, ...runtimes, proxy].forEach((controller) =>
-			controller.on("error", (event) => this.emitErrorEvent(event))
-		);
+		const controllers: Controller[] = [config, bundler, ...runtimes, proxy];
+		controllers.forEach((controller) => {
+			controller.on("error", (event: ErrorEvent) => this.emitErrorEvent(event));
+		});
 
 		this.on("error", (event: ErrorEvent) => {
 			// TODO: when we're are comfortable with StartDevWorker/DevEnv stability,
@@ -100,7 +101,7 @@ export class DevEnv extends EventEmitter {
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
-			this.runtimes.forEach((runtime) => runtime.teardown()),
+			...this.runtimes.map((runtime) => runtime.teardown()),
 			this.proxy.teardown(),
 		]);
 	}

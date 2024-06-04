@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
@@ -370,15 +371,17 @@ async function runEsbuild({
 				})
 			: undefined;
 
+	const entrypointPath = bundleResult?.resolvedEntryPointPath ?? entry.file;
 	return {
 		id: 0,
 		entry,
-		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+		path: entrypointPath,
 		type: bundleResult?.bundleType ?? getBundleType(entry.format),
 		modules: bundleResult ? bundleResult.modules : additionalModules,
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,
+		entrypointSource: await readFile(entrypointPath, "utf8"),
 	};
 }
 

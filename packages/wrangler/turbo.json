@@ -11,7 +11,8 @@
 				"scripts/**",
 				"templates/**",
 				"*.json",
-				"*.js"
+				"*.js",
+				"*.ts"
 			],
 			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
 			"env": [
