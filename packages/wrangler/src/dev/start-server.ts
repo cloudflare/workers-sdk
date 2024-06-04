@@ -22,6 +22,11 @@ import {
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
+import {
+	getAccountChoices,
+	requireApiToken,
+	saveAccountToCache,
+} from "../user";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
@@ -99,12 +104,31 @@ export async function startDevServer(
 			inspector: {
 				port: props.inspectorPort,
 			},
-			urlOverrides: {
+			origin: {
 				secure: props.upstreamProtocol === "https",
 				hostname: props.localUpstream,
 			},
 			liveReload: props.liveReload,
 			remote: !props.local,
+			auth: async () => {
+				let accountId = props.accountId;
+				if (accountId === undefined) {
+					const accountChoices = await getAccountChoices();
+					if (accountChoices.length === 1) {
+						saveAccountToCache({
+							id: accountChoices[0].id,
+							name: accountChoices[0].name,
+						});
+						accountId = accountChoices[0].id;
+					} else {
+						throw logger.error(
+							"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+						);
+					}
+				}
+
+				return { accountId, apiToken: requireApiToken() };
+			},
 		},
 	};
 
@@ -148,7 +172,34 @@ export async function startDevServer(
 		),
 	});
 
+	console.log({ experimentalDevenvRuntime: props.experimentalDevenvRuntime });
+
+	if (props.experimentalDevenvRuntime) {
+		console.log("UNSTABLE_DEV Experimental-DevEnv-Runtime MODE");
+
+		devEnv.runtimes.forEach((runtime) => {
+			console.log("devEnv.runtimes.onBundleComplete()");
+			runtime.onBundleComplete({
+				type: "bundleComplete",
+				config: startDevWorkerOptions,
+				bundle,
+			});
+		});
+
+		// to comply with the current contract of this function, call props.onReady on reloadComplete
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (ev) => {
+				console.log("devEnv.runtimes.onReloadComplete");
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+
+				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+			});
+		});
+	}
+
 	if (props.local) {
+		console.log("UNSTABLE_DEV LOCAL MODE");
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
@@ -209,15 +260,17 @@ export async function startDevServer(
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
+			experimentalDevenvRuntime: props.experimentalDevenvRuntime,
 		});
 
 		return {
 			stop: async () => {
 				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
-			// TODO: inspectorUrl,
 		};
 	} else {
+		console.log("UNSTABLE_DEV REMOTE MODE");
+
 		const { stop } = await startRemoteServer({
 			name: props.name,
 			bundle: bundle,
@@ -260,12 +313,14 @@ export async function startDevServer(
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
+			experimentalDevenvRuntime: props.experimentalDevenvRuntime,
+			setAccountId: /* noop */ () => {},
 		});
+
 		return {
 			stop: async () => {
 				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
-			// TODO: inspectorUrl,
 		};
 	}
 }

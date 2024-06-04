@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import getPort from "get-port";
+import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
-import { DEFAULT_INSPECTOR_PORT } from "../..";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import * as MF from "../../dev/miniflare";
+import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import type { CfWorkerInit } from "../../deployment-bundle/worker";
+import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
 	BundleCompleteEvent,
@@ -16,7 +16,7 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
-import type { File, ServiceFetch, StartDevWorkerOptions } from "./types";
+import type { File, StartDevWorkerOptions } from "./types";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
@@ -48,120 +48,20 @@ function getName(config: StartDevWorkerOptions) {
 async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
-	const bindings: CfWorkerInit["bindings"] = {
-		vars: undefined,
-		kv_namespaces: undefined,
-		send_email: undefined,
-		wasm_modules: undefined,
-		text_blobs: undefined,
-		browser: undefined,
-		ai: undefined,
-		version_metadata: undefined,
-		data_blobs: undefined,
-		durable_objects: undefined,
-		queues: undefined,
-		r2_buckets: undefined,
-		d1_databases: undefined,
-		vectorize: undefined,
-		constellation: undefined,
-		hyperdrive: undefined,
-		services: undefined,
-		analytics_engine_datasets: undefined,
-		dispatch_namespaces: undefined,
-		mtls_certificates: undefined,
-		logfwdr: undefined,
-		unsafe: undefined,
-	};
+	const { bindings: convertedBindings, fetchers } =
+		await convertBindingsToCfWorkerInitBindings(event.config.bindings);
 
-	const fetchers: Record<string, ServiceFetch> = {};
+	// TODO: Remove this passthrough
+	const bindings = event.config._bindings
+		? event.config._bindings
+		: convertedBindings;
 
-	for (const [name, binding] of Object.entries(event.config.bindings ?? {})) {
-		if (binding.type === "plain_text") {
-			bindings.vars ??= {};
-			bindings.vars[name] = binding.value;
-		} else if (binding.type === "json") {
-			bindings.vars ??= {};
-			bindings.vars[name] = binding.value;
-		} else if (binding.type === "kv_namespace") {
-			bindings.kv_namespaces ??= [];
-			bindings.kv_namespaces.push({ ...binding, binding: name });
-		} else if (binding.type === "send_email") {
-			bindings.send_email ??= [];
-			bindings.send_email.push({ ...binding, name: name });
-		} else if (binding.type === "wasm_module") {
-			bindings.wasm_modules ??= {};
-			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "text_blob") {
-			bindings.text_blobs ??= {};
-			bindings.text_blobs[name] = binding.source.path as string;
-		} else if (binding.type === "data_blob") {
-			bindings.data_blobs ??= {};
-			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "browser") {
-			bindings.browser = { binding: name };
-		} else if (binding.type === "ai") {
-			bindings.ai = { binding: name };
-		} else if (binding.type === "version_metadata") {
-			bindings.version_metadata = { binding: name };
-		} else if (binding.type === "durable_object_namespace") {
-			bindings.durable_objects ??= { bindings: [] };
-			bindings.durable_objects.bindings.push({ ...binding, name: name });
-		} else if (binding.type === "queue") {
-			bindings.queues ??= [];
-			bindings.queues.push({ ...binding, binding: name });
-		} else if (binding.type === "r2_bucket") {
-			bindings.r2_buckets ??= [];
-			bindings.r2_buckets.push({ ...binding, binding: name });
-		} else if (binding.type === "d1") {
-			bindings.d1_databases ??= [];
-			bindings.d1_databases.push({ ...binding, binding: name });
-		} else if (binding.type === "vectorize") {
-			bindings.vectorize ??= [];
-			bindings.vectorize.push({ ...binding, binding: name });
-		} else if (binding.type === "constellation") {
-			bindings.constellation ??= [];
-			bindings.constellation.push({ ...binding, binding: name });
-		} else if (binding.type === "hyperdrive") {
-			bindings.hyperdrive ??= [];
-			bindings.hyperdrive.push({ ...binding, binding: name });
-		} else if (binding.type === "service") {
-			bindings.services ??= [];
-			bindings.services.push({ ...binding, binding: name });
-		} else if (binding.type === "fetcher") {
-			fetchers[name] = binding.fetcher;
-		} else if (binding.type === "analytics_engine") {
-			bindings.analytics_engine_datasets ??= [];
-			bindings.analytics_engine_datasets.push({ ...binding, binding: name });
-		} else if (binding.type === "dispatch_namespace") {
-			bindings.dispatch_namespaces ??= [];
-			bindings.dispatch_namespaces.push({ ...binding, binding: name });
-		} else if (binding.type === "mtls_certificate") {
-			bindings.mtls_certificates ??= [];
-			bindings.mtls_certificates.push({ ...binding, binding: name });
-		} else if (binding.type === "logfwdr") {
-			bindings.logfwdr ??= { bindings: [] };
-			bindings.logfwdr.bindings.push({ ...binding, name: name });
-		} else if (binding.type.startsWith("unsafe_")) {
-			bindings.unsafe ??= {
-				bindings: [],
-				metadata: undefined,
-				capnp: undefined,
-			};
-			bindings.unsafe.bindings?.push({
-				type: binding.type.slice("unsafe_".length),
-				name: name,
-			});
-		}
-	}
-
-	const persistence = event.config.dev?.persist
-		? getLocalPersistencePath(
-				typeof event.config.dev?.persist === "object"
-					? event.config.dev?.persist.path
-					: undefined,
-				event.config.config?.path
-			)
-		: null;
+	const persistence = getLocalPersistencePath(
+		typeof event.config.dev?.persist === "object"
+			? event.config.dev?.persist.path
+			: undefined,
+		event.config.config?.path
+	);
 
 	const crons = [];
 	const queueConsumers = [];
@@ -222,9 +122,7 @@ async function convertToConfigBundle(
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
-		inspectorPort:
-			event.config.dev?.inspector?.port ??
-			(await getPort({ port: DEFAULT_INSPECTOR_PORT })),
+		inspectorPort: 0,
 		localPersistencePath: persistence,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
@@ -232,8 +130,8 @@ async function convertToConfigBundle(
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		httpsCertPath: event.config.dev?.server?.httpsCertPath,
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
-		localUpstream: event.config.dev?.urlOverrides?.hostname,
-		upstreamProtocol: event.config.dev?.urlOverrides?.secure ? "https" : "http",
+		localUpstream: event.config.dev?.origin?.hostname,
+		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
 		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,
@@ -272,8 +170,12 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
 			if (this.#mf === undefined) {
+				logger.log(chalk.dim("⎔ Starting local server..."));
+
 				this.#mf = new Miniflare(options);
 			} else {
+				logger.log(chalk.dim("⎔ Reloading local server..."));
+
 				await this.#mf.setOptions(options);
 			}
 			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
@@ -287,6 +189,7 @@ export class LocalRuntimeController extends RuntimeController {
 			if (id !== this.#currentBundleId) {
 				return;
 			}
+
 			// Get entrypoint addresses
 			const entrypointAddresses: WorkerEntrypointsDefinition = {};
 			for (const name of entrypointNames) {
@@ -311,10 +214,8 @@ export class LocalRuntimeController extends RuntimeController {
 						pathname: `/core:user:${getName(data.config)}`,
 					},
 					userWorkerInnerUrlOverrides: {
-						protocol: data.config?.dev?.urlOverrides?.secure
-							? "https:"
-							: "http:",
-						hostname: data.config?.dev?.urlOverrides?.hostname,
+						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
+						hostname: data.config?.dev?.origin?.hostname,
 					},
 					headers: {
 						// Passing this signature from Proxy Worker allows the User Worker to trust the request.
@@ -339,6 +240,11 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 	onBundleComplete(data: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
+
+		if (data.config.dev?.remote) {
+			return;
+		}
+
 		this.emitReloadStartEvent({
 			type: "reloadStart",
 			config: data.config,
@@ -351,6 +257,8 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 
 	#teardown = async (): Promise<void> => {
+		logger.log(chalk.dim("⎔ Shutting down local server..."));
+
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 	};

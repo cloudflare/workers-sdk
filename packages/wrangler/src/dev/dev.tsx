@@ -16,6 +16,7 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
+import { createDeferred } from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -27,6 +28,7 @@ import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
+import { requireApiToken } from "../user";
 import { openInspector } from "./inspect";
 import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
@@ -183,6 +185,8 @@ export type DevProps = {
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
+
+	experimentalDevenvRuntime: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -274,17 +278,88 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
+	const [accountId, setAccountIdStateOnly] = useState(props.accountId);
+	const accountIdDeferred = useMemo(() => createDeferred<string>(), []);
+	const setAccountIdAndResolveDeferred = useCallback(
+		(newAccountId: string) => {
+			setAccountIdStateOnly(newAccountId);
+			accountIdDeferred.resolve(newAccountId);
+		},
+		[setAccountIdStateOnly, accountIdDeferred]
+	);
+
+	useEffect(() => {
+		if (props.accountId) {
+			setAccountIdAndResolveDeferred(props.accountId);
+		}
+
+		// run once on mount only (to synchronize the deferred value with the pre-selected props.accountId)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
 	const [devEnv] = useState(() => new DevEnv());
 	useEffect(() => {
 		return () => {
 			void devEnv.teardown();
 		};
 	}, [devEnv]);
-	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
-		() => ({
+	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(() => {
+		const routes =
+			props.routes?.map((r) =>
+				typeof r === "string"
+					? ({
+							type: "route",
+							pattern: r,
+						} as const)
+					: ({ type: "route", ...r } as const)
+			) ?? [];
+		const queueConsumers =
+			props.queueConsumers?.map(
+				(c) =>
+					({
+						...c,
+						type: "queue-consumer",
+					}) as const
+			) ?? [];
+
+		const crons =
+			props.crons?.map(
+				(c) =>
+					({
+						cron: c,
+						type: "cron",
+					}) as const
+			) ?? [];
+		return {
 			name: props.name ?? "worker",
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
+			_bindings: props.bindings,
+			triggers: [...routes, ...queueConsumers, ...crons],
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			sendMetrics: props.sendMetrics,
+			usageModel: props.usageModel,
+			site:
+				props.isWorkersSite && props.assetPaths
+					? {
+							path: path.join(
+								props.assetPaths.baseDirectory,
+								props.assetPaths?.assetDirectory
+							),
+							include: props.assetPaths.includePatterns,
+							exclude: props.assetPaths.excludePatterns,
+						}
+					: undefined,
 			dev: {
+				auth: async () => {
+					return {
+						accountId: await accountIdDeferred.promise,
+						apiToken: requireApiToken(),
+					};
+				},
+				remote: !props.local,
 				server: {
 					hostname: props.initialIp,
 					port: props.initialPort,
@@ -295,25 +370,38 @@ function DevSession(props: DevSessionProps) {
 				inspector: {
 					port: props.inspectorPort,
 				},
-				urlOverrides: {
+				origin: {
 					secure: props.localProtocol === "https",
 					hostname: props.localUpstream,
 				},
 				liveReload: props.liveReload,
 			},
-		}),
-		[
-			props.name,
-			props.initialIp,
-			props.initialPort,
-			props.localProtocol,
-			props.httpsKeyPath,
-			props.httpsCertPath,
-			props.localUpstream,
-			props.inspectorPort,
-			props.liveReload,
-		]
-	);
+		} satisfies StartDevWorkerOptions;
+	}, [
+		props.name,
+		props.compatibilityDate,
+		props.compatibilityFlags,
+		props.bindings,
+		props.routes,
+		props.env,
+		props.legacyEnv,
+		props.sendMetrics,
+		props.usageModel,
+		props.isWorkersSite,
+		props.assetPaths,
+		accountIdDeferred,
+		props.local,
+		props.initialIp,
+		props.initialPort,
+		props.localProtocol,
+		props.httpsKeyPath,
+		props.httpsCertPath,
+		props.localUpstream,
+		props.inspectorPort,
+		props.liveReload,
+		props.queueConsumers,
+		props.crons,
+	]);
 
 	const onBundleStart = useCallback(() => {
 		devEnv.proxy.onBundleStart({
@@ -321,9 +409,28 @@ function DevSession(props: DevSessionProps) {
 			config: startDevWorkerOptions,
 		});
 	}, [devEnv, startDevWorkerOptions]);
+	const onBundleComplete = useCallback(
+		(bundle: EsbuildBundle) => {
+			if (props.experimentalDevenvRuntime) {
+				devEnv.runtimes.forEach((runtime) =>
+					runtime.onBundleComplete({
+						type: "bundleComplete",
+						config: startDevWorkerOptions,
+						bundle,
+					})
+				);
+			} else {
+				devEnv.proxy.onReloadStart({
+					type: "reloadStart",
+					config: startDevWorkerOptions,
+					bundle,
+				});
+			}
+		},
+		[devEnv, startDevWorkerOptions, props.experimentalDevenvRuntime]
+	);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
-	const bundle = useRef<ReturnType<typeof useEsbuild>>();
 	const onCustomBuildEnd = useCallback(() => {
 		const TIMEOUT = 300; // TODO: find a lower bound for this value
 
@@ -354,16 +461,6 @@ function DevSession(props: DevSessionProps) {
 		// also, if the timeout fired before esbuild started, for some reason, firing this event again is needed
 		onBundleStart();
 	}, [esbuildStartTimeoutRef, onBundleStart]);
-	const onReloadStart = useCallback(
-		(esbuildBundle: EsbuildBundle) => {
-			devEnv.proxy.onReloadStart({
-				type: "reloadStart",
-				config: startDevWorkerOptions,
-				bundle: esbuildBundle,
-			});
-		},
-		[devEnv, startDevWorkerOptions]
-	);
 
 	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
@@ -383,7 +480,7 @@ function DevSession(props: DevSessionProps) {
 		});
 	}, [devEnv, startDevWorkerOptions]);
 
-	bundle.current = useEsbuild({
+	const bundle = useEsbuild({
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
@@ -412,18 +509,12 @@ function DevSession(props: DevSessionProps) {
 		experimentalLocal: props.experimentalLocal,
 		projectRoot: props.projectRoot,
 		onStart: onEsbuildStart,
+		onComplete: onBundleComplete,
 		defineNavigatorUserAgent: isNavigatorDefined(
 			props.compatibilityDate,
 			props.compatibilityFlags
 		),
 	});
-
-	// this suffices as an onEsbuildEnd callback
-	useEffect(() => {
-		if (bundle.current) {
-			onReloadStart(bundle.current);
-		}
-	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -466,11 +557,11 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
-		if (bundle.current) {
+		if (bundle) {
 			latestReloadCompleteEvent.current = {
 				type: "reloadComplete",
 				config: startDevWorkerOptions,
-				bundle: bundle.current,
+				bundle: bundle,
 				proxyData,
 			};
 
@@ -485,7 +576,7 @@ function DevSession(props: DevSessionProps) {
 	return props.local ? (
 		<Local
 			name={props.name}
-			bundle={bundle.current}
+			bundle={bundle}
 			format={props.entry.format}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
@@ -510,15 +601,15 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-			sourceMapPath={bundle.current?.sourceMapPath}
+			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
+			experimentalDevenvRuntime={props.experimentalDevenvRuntime}
 		/>
 	) : (
 		<Remote
 			name={props.name}
-			bundle={bundle.current}
+			bundle={bundle}
 			format={props.entry.format}
-			accountId={props.accountId}
 			bindings={props.bindings}
 			assetPaths={props.assetPaths}
 			isWorkersSite={props.isWorkersSite}
@@ -539,8 +630,12 @@ function DevSession(props: DevSessionProps) {
 			host={props.host}
 			routes={props.routes}
 			onReady={announceAndOnReady}
-			sourceMapPath={bundle.current?.sourceMapPath}
+			sourceMapPath={bundle?.sourceMapPath}
 			sendMetrics={props.sendMetrics}
+			// startDevWorker
+			accountId={accountId}
+			setAccountId={setAccountIdAndResolveDeferred}
+			experimentalDevenvRuntime={props.experimentalDevenvRuntime}
 		/>
 	);
 }

@@ -12,7 +12,12 @@ import { killAllWranglerDev } from "./helpers/wrangler";
 beforeEach(killAllWranglerDev);
 afterEach(killAllWranglerDev);
 
-const RUNTIMES = [{ runtime: "local" }, { runtime: "remote" }] as const;
+const RUNTIMES = [
+	{ flags: "", runtime: "local" },
+	{ flags: "--remote", runtime: "remote" },
+	{ flags: "--x-devenv-runtime", runtime: "local" },
+	{ flags: "--remote --x-devenv-runtime", runtime: "remote" },
+] as const;
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
 // Generated using https://webassembly.github.io/wabt/demo/wat2wasm/.
@@ -21,9 +26,8 @@ const WASM_ADD_MODULE = Buffer.from(
 	"base64"
 );
 
-describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
+describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
-	const runtimeFlags = isLocal ? [] : ["--remote"];
 
 	e2eTest(
 		"works with basic modules format worker",
@@ -50,7 +54,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			let res = await fetch(url);
 
@@ -92,7 +96,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				});
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			let res = await fetch(url);
 			expect(await res.text()).toBe("service worker");
@@ -145,7 +149,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.json()).toEqual({
@@ -174,7 +178,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 			`,
 			});
 			const worker = run(
-				`wrangler dev ${runtimeFlags} --inspector-port=${inspectorPort}`
+				`wrangler dev ${flags} --inspector-port=${inspectorPort}`
 			);
 			await waitForReady(worker);
 			const inspectorUrl = new URL(`ws://127.0.0.1:${inspectorPort}`);
@@ -200,7 +204,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 				}
 			`,
 		});
-		const worker = run(`wrangler dev ${runtimeFlags} --local-protocol=https`);
+		const worker = run(`wrangler dev ${flags} --local-protocol=https`);
 		const { url } = await waitForReady(worker);
 		const parsedURL = new URL(url);
 		expect(parsedURL.protocol).toBe("https:");
@@ -227,9 +231,7 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 			`,
 			});
 			// TODO(soon): explore using `--host` for remote mode in this test
-			const worker = run(
-				`wrangler dev ${runtimeFlags} --local-upstream=example.com`
-			);
+			const worker = run(`wrangler dev ${flags} --local-upstream=example.com`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.text()).toBe("http://example.com/");
@@ -237,10 +239,10 @@ describe.each(RUNTIMES)("Core: $runtime", ({ runtime }) => {
 	);
 });
 
-describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
+describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
-	const runtimeFlags = isLocal ? "" : "--remote";
 	const resourceFlags = isLocal ? "--local" : "";
+	const d1ResourceFlags = isLocal ? "" : "--remote";
 
 	e2eTest(
 		"exposes basic bindings in service workers",
@@ -273,7 +275,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				});
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.json()).toEqual({
@@ -305,7 +307,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				});
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.text()).toBe("3");
@@ -333,6 +335,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				"src/index.ts": dedent`
 				export default {
 					async fetch(request, env, ctx) {
+						console.log(await env.NAMESPACE.list())
 						const value = await env.NAMESPACE.get("existing-key");
 						await env.NAMESPACE.put("new-key", "new-value");
 						return new Response(value);
@@ -340,7 +343,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				}
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.text()).toBe("existing-value");
@@ -390,7 +393,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 			`,
 			});
 
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.text()).toBe("<h1>👋</h1>");
@@ -446,7 +449,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				}
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.text()).toBe("existing-value");
@@ -494,16 +497,16 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 			`,
 			});
 
-			// D1 defaults to `--local`, so we deliberately use `runtimeFlags`, not `resourceFlags`
-			await run(`wrangler d1 execute ${runtimeFlags} DB --file schema.sql`);
+			// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
+			await run(`wrangler d1 execute ${d1ResourceFlags} DB --file schema.sql`);
 
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			const res = await fetch(url);
 			expect(await res.json()).toEqual([{ key: "key1", value: "value1" }]);
 
 			const result = await run(
-				`wrangler d1 execute ${runtimeFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
+				`wrangler d1 execute ${d1ResourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
 			);
 			expect(result).toContain("value2");
 		}
@@ -538,7 +541,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 				}
 			`,
 			});
-			const worker = run(`wrangler dev ${runtimeFlags}`);
+			const worker = run(`wrangler dev ${flags}`);
 			const { url } = await waitForReady(worker);
 			await fetch(url);
 			await worker.readUntil(/✉️/);
@@ -558,7 +561,7 @@ describe.each(RUNTIMES)("Bindings: $runtime", ({ runtime }) => {
 
 describe.each(RUNTIMES)("Multi-Worker Bindings: $runtime", ({ runtime }) => {
 	const isLocal = runtime === "local";
-	const _runtimeFlags = isLocal ? [] : ["--remote"];
+	const _flags = isLocal ? [] : ["--remote"];
 
 	// TODO(soon): we already have tests for service bindings in `dev.test.ts`,
 	//  but would be good to get some more for Durable Objects
