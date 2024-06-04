@@ -60,6 +60,7 @@ export function useEsbuild({
 	experimentalLocal,
 	projectRoot,
 	onStart,
+	onComplete,
 	defineNavigatorUserAgent,
 }: {
 	entry: Entry;
@@ -87,6 +88,7 @@ export function useEsbuild({
 	experimentalLocal: boolean | undefined;
 	projectRoot: string | undefined;
 	onStart: () => void;
+	onComplete: (bundle: EsbuildBundle) => void;
 	defineNavigatorUserAgent: boolean;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
@@ -288,5 +290,12 @@ export function useEsbuild({
 		onStart,
 		defineNavigatorUserAgent,
 	]);
+
+	useEffect(() => {
+		if (bundle) {
+			onComplete(bundle);
+		}
+	}, [onComplete, bundle]);
+
 	return bundle;
 }
