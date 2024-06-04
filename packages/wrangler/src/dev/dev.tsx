@@ -185,7 +185,6 @@ export type DevProps = {
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
-
 	experimentalDevEnv: boolean;
 };
 
