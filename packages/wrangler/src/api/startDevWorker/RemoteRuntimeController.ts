@@ -13,10 +13,11 @@ import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { notImplemented } from "./NotImplementedError";
 import {
-	coerceBindingsToApiBindings,
+	convertBindingsToCfWorkerInitBindings,
 	MissingConfigError,
 	unwrapHook,
 } from "./utils";
+import type { Route } from "../../config/environment";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -44,9 +45,18 @@ export class RemoteRuntimeController extends RuntimeController {
 					(trigger): trigger is Extract<Trigger, { type: "route" }> =>
 						trigger.type === "route"
 				)
-				.map((trigger) => {
+				.map((trigger): Route => {
 					const { type: _, ...route } = trigger;
-					return route;
+
+					if (
+						"custom_domain" in route ||
+						"zone_id" in route ||
+						"zone_name" in route
+					) {
+						return route;
+					} else {
+						return route.pattern; // SimpleRoute
+					}
 				});
 			const workersDev = config.triggers?.some(
 				(trigger) => trigger.type === "workers.dev"
@@ -74,6 +84,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.abortController.signal
 			);
 
+			const { bindings } = await convertBindingsToCfWorkerInitBindings(
+				config.bindings
+			);
+			console.log({ bindings });
 			const init = await createRemoteWorkerInit({
 				bundle,
 				modules: bundle.modules,
@@ -84,7 +98,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				isWorkersSite: config.site !== undefined,
 				assetPaths: undefined, // TODO: config.site.assetPaths ?
 				format: "modules", // TODO: do we need to support format: service-worker?
-				bindings: coerceBindingsToApiBindings(config.bindings),
+				bindings,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				usageModel: config.usageModel,
@@ -160,7 +174,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	onBundleStart(_: BundleStartEvent) {}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const { remote = false } = ev.config.dev ?? {};
-		if (!remote) return;
+		if (!remote) {
+			return;
+		}
 
 		return this.mutex.runWith(() => this.#onBundleComplete(ev));
 	}

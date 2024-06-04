@@ -18,8 +18,8 @@ import type {
 	CfR2Bucket,
 	CfSendEmailBindings,
 	CfService,
+	CfUnsafe,
 	CfVectorize,
-	CfWorkerInit,
 } from "../../deployment-bundle/worker";
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -66,10 +66,9 @@ export interface StartDevWorkerOptions {
 		exclude?: string[];
 	};
 
-	// -- PASSTHROUGH -- FROM OLD CONFIG TO NEW CONFIG (TEMP)
-	/** Service environments. Providing support for existing workers with this property. Don't use this for new workers. */
+	/** TODO */
 	env?: string;
-	/** Wrangler environments, defaults to true. */
+	/** TODO */
 	legacyEnv?: boolean;
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
@@ -78,9 +77,8 @@ export interface StartDevWorkerOptions {
 	 * Otherwise, Wrangler will use the user's preference.
 	 */
 	sendMetrics?: boolean;
-	usageModel?: "bundled" | "unbound";
-	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
-	// --/ PASSTHROUGH --
+	/** TODO */
+	usageModel?: "bundled" | "unbound" | undefined;
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
@@ -138,6 +136,11 @@ export interface StartDevWorkerOptions {
 		/** Gets a fetcher to a specific worker, used for multi-worker development */
 		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
 	};
+
+	unsafe?: {
+		metadata?: CfUnsafe["metadata"];
+		capnp?: CfUnsafe["capnp"];
+	};
 }
 
 export type Hook<T extends string | number | object> =
@@ -169,16 +172,6 @@ export interface Location {
 	secure?: boolean; // Usually `https`, but could be `wss` for inspector
 }
 
-export type PatternRoute = {
-	pattern: string;
-} & (
-	| { pattern: string; customDomain: true }
-	| { pattern: string; zoneId: string; customDomain?: true; zoneName?: never }
-	| { pattern: string; zoneName: string; customDomain?: true; zoneId?: never }
-);
-export type WorkersDevRoute = { workersDev: true };
-export type Route = PatternRoute | WorkersDevRoute;
-
 export interface ModuleRule {
 	type:
 		| "ESModule"
@@ -195,7 +188,7 @@ type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
 export type Trigger =
 	| { type: "workers.dev" }
-	| { type: "route"; pattern: "string" } // SimpleRoute
+	| { type: "route"; pattern: string } // SimpleRoute
 	| ({ type: "route" } & ZoneIdRoute)
 	| ({ type: "route" } & ZoneNameRoute)
 	| ({ type: "route" } & CustomDomainRoute)

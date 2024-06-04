@@ -17,7 +17,10 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
-import { createDeferred } from "../api/startDevWorker/utils";
+import {
+	convertCfWorkerInitBindingsToBindings,
+	createDeferred,
+} from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -310,8 +313,8 @@ function DevSession(props: DevSessionProps) {
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
-			_bindings: props.bindings,
-			routes: props.routes,
+			bindings: convertCfWorkerInitBindingsToBindings(props.bindings),
+			format: bundle?.entry.format,
 			env: props.env,
 			legacyEnv: props.legacyEnv,
 			sendMetrics: props.sendMetrics,
