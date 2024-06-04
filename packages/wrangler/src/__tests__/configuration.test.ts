@@ -3266,17 +3266,20 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should not provide an unsafe warning when the environment variable is specified", () => {
-				process.env.WRANGLER_DISABLE_EXPERIMENTAL_WARNING = "1";
+				try {
+					process.env.WRANGLER_DISABLE_EXPERIMENTAL_WARNING = "1";
 
-				const { diagnostics } = normalizeAndValidateConfig(
-					{ unsafe: { bindings: [] } } as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-				delete process.env.WRANGLER_DISABLE_EXPERIMENTAL_WARNING;
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ unsafe: { bindings: [] } } as unknown as RawConfig,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				} finally {
+					delete process.env.WRANGLER_DISABLE_EXPERIMENTAL_WARNING;
+				}
 			});
 		});
 
