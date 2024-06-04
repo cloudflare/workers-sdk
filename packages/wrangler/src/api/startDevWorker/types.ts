@@ -136,7 +136,6 @@ export type Module<ModuleType extends ModuleRule["type"] = ModuleRule["type"]> =
 		type: ModuleType;
 	};
 
-// TODO: revisit this type
 export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";

@@ -367,7 +367,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
 		this.latestConfig = data.config;
-		this.latestBundle = data.bundle; // TODO(now): update `latestBundle` type
+		this.latestBundle = data.bundle;
 
 		void this.sendMessageToProxyWorker({
 			type: "play",

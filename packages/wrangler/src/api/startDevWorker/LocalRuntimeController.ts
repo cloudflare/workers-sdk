@@ -76,7 +76,6 @@ async function convertToConfigBundle(
 	const fetchers: Record<string, ServiceFetch> = {};
 
 	for (const [name, binding] of Object.entries(event.config.bindings ?? {})) {
-		binding.type;
 		if (binding.type === "plain_text") {
 			bindings.vars ??= {};
 			bindings.vars[name] = binding.value;
@@ -277,7 +276,7 @@ export class LocalRuntimeController extends RuntimeController {
 			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
 			// calls to complete before resolving. To ensure we get the `url` and
 			// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
-			// so only update can happen at a time.
+			// so only one update can happen at a time.
 			const userWorkerUrl = await this.#mf.ready;
 			const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
 			// If we received a new `bundleComplete` event before we were able to
