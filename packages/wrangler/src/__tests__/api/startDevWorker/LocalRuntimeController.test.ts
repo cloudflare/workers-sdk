@@ -19,8 +19,6 @@ import type {
 	Module,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
-	UrlOriginAndPathnameParts,
-	UrlOriginParts,
 } from "../../../api";
 
 const isWindows = process.platform === "win32";
