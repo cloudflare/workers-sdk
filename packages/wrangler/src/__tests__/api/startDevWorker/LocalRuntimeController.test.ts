@@ -9,6 +9,7 @@ import { fetch } from "undici";
 import { assert, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
+import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
 import { teardown, useTmp } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
@@ -49,11 +50,6 @@ async function waitForReloadComplete(
 	return event;
 }
 
-function joinUrlParts(parts: UrlOriginParts | UrlOriginAndPathnameParts): URL {
-	const pathname = "pathname" in parts ? parts.pathname : "";
-	const spec = `${parts.protocol}//${parts.hostname}:${parts.port}${pathname}`;
-	return new URL(spec);
-}
 type TestBundle =
 	| string
 	| ({
@@ -219,7 +215,7 @@ describe("Core", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		const event = await waitForReloadComplete(controller);
-		const url = joinUrlParts(event.proxyData.userWorkerUrl);
+		const url = urlFromParts(event.proxyData.userWorkerUrl);
 
 		// Check all module types
 		let res = await fetch(url);
@@ -325,7 +321,7 @@ describe("Core", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		const event = await waitForReloadComplete(controller);
-		const url = joinUrlParts(event.proxyData.userWorkerUrl);
+		const url = urlFromParts(event.proxyData.userWorkerUrl);
 
 		// Check additional modules added to global scope
 		let res = await fetch(url);
@@ -373,13 +369,13 @@ describe("Core", () => {
 		// Start worker
 		update(1);
 		let event = await waitForReloadComplete(controller);
-		let res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.json()).toEqual({ binding: 1, bundle: 1 });
 
 		// Update worker and check config/bundle updated
 		update(2);
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.json()).toEqual({ binding: 2, bundle: 2 });
 
 		// Update worker multiple times and check only latest config/bundle used
@@ -388,7 +384,7 @@ describe("Core", () => {
 		update(4);
 		update(5);
 		event = await eventPromise;
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.json()).toEqual({ binding: 5, bundle: 5 });
 	});
 	it("should start Miniflare with configured compatibility settings", async () => {
@@ -414,7 +410,7 @@ describe("Core", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		let event = await waitForReloadComplete(controller);
-		let res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("undefined");
 
 		// Check respects compatibility date
@@ -422,7 +418,7 @@ describe("Core", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("object");
 
 		// Check respects compatibility flags
@@ -431,7 +427,7 @@ describe("Core", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("object");
 	});
 	it("should start inspector on random port and allow debugging", async () => {
@@ -453,8 +449,8 @@ describe("Core", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		const event = await waitForReloadComplete(controller);
-		const url = joinUrlParts(event.proxyData.userWorkerUrl);
-		const inspectorUrl = joinUrlParts(event.proxyData.userWorkerInspectorUrl);
+		const url = urlFromParts(event.proxyData.userWorkerUrl);
+		const inspectorUrl = urlFromParts(event.proxyData.userWorkerInspectorUrl);
 
 		// Connect inspector WebSocket
 		const ws = new WebSocket(inspectorUrl);
@@ -526,7 +522,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		const event = await waitForReloadComplete(controller);
-		const res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.json()).toEqual({
 			TEXT: "text",
 			OBJECT: { a: { b: 1 } },
@@ -558,7 +554,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		const event = await waitForReloadComplete(controller);
-		const res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("3");
 	});
 	it("should persist cached data", async () => {
@@ -588,7 +584,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		let event = await waitForReloadComplete(controller);
-		let res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl), {
+		let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 			method: "POST",
 		});
 		expect(await res.text()).toBe("cached");
@@ -597,7 +593,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("cached");
 
 		// Check deleting persistence directory removes data
@@ -606,7 +602,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("miss");
 	});
 	it("should expose KV namespace bindings", async () => {
@@ -631,7 +627,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		let event = await waitForReloadComplete(controller);
-		let res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl), {
+		let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 			method: "POST",
 		});
 		expect(await res.text()).toBe("value");
@@ -640,7 +636,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("value");
 
 		// Check deleting persistence directory removes data
@@ -649,7 +645,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("");
 	});
 	it("should support Workers Sites bindings", async () => {
@@ -684,7 +680,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		let event = await waitForReloadComplete(controller);
-		let url = joinUrlParts(event.proxyData.userWorkerUrl);
+		let url = urlFromParts(event.proxyData.userWorkerUrl);
 		let res = await fetch(new URL("/company.txt", url));
 		expect(res.status).toBe(200);
 		expect(await res.text()).toBe("👨‍👩‍👧‍👦");
@@ -697,7 +693,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		url = joinUrlParts(event.proxyData.userWorkerUrl);
+		url = urlFromParts(event.proxyData.userWorkerUrl);
 		res = await fetch(new URL("/company.txt", url));
 		expect(res.status).toBe(200);
 		res = await fetch(new URL("/charts.xlsx", url));
@@ -728,7 +724,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		let event = await waitForReloadComplete(controller);
-		let res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl), {
+		let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 			method: "POST",
 		});
 		expect(await res.text()).toBe("value");
@@ -737,7 +733,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("value");
 
 		// Check deleting persistence directory removes data
@@ -746,7 +742,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.text()).toBe("");
 	});
 	it("should expose D1 database bindings", async () => {
@@ -777,7 +773,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		let event = await waitForReloadComplete(controller);
-		let res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl), {
+		let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 			method: "POST",
 		});
 		expect(await res.json()).toEqual([{ key: "key", value: "value" }]);
@@ -786,7 +782,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.json()).toEqual([{ key: "key", value: "value" }]);
 
 		// Check deleting persistence directory removes data
@@ -795,7 +791,7 @@ describe("Bindings", () => {
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
-		res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(await res.json()).toEqual([]);
 	});
 	it("should expose queue producer bindings and consume queue messages", async () => {
@@ -839,7 +835,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		const event = await waitForReloadComplete(controller);
-		const res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl), {
+		const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 			method: "POST",
 		});
 		expect(res.status).toBe(204);
@@ -879,7 +875,7 @@ describe("Bindings", () => {
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 		const event = await waitForReloadComplete(controller);
-		const res = await fetch(joinUrlParts(event.proxyData.userWorkerUrl));
+		const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 		expect(res.status).toBe(200);
 		expect(await res.text()).toBe("👋");
 	});
