@@ -256,7 +256,8 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async teardown() {
-		// There's no way to teardown remote preview sessions, and so this is ignored in remote mode
+		this.#session = undefined;
+		this.#abortController.abort();
 	}
 
 	// *********************
