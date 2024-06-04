@@ -62,8 +62,6 @@ export function handlePreviewSessionUploadError(
 			return true;
 		} else if (!handleUserFriendlyError(err as ParseError, accountId)) {
 			logger.error("Error on remote worker:", err);
-		} else {
-			throw err;
 		}
 	}
 	return false;
@@ -98,8 +96,6 @@ export function handlePreviewSessionCreationError(
 	// since it could recover after the developer fixes whatever's wrong
 	else if ((err as { code: string }).code !== "ABORT_ERR") {
 		logger.error("Error while creating remote dev session:", err);
-	} else {
-		throw err;
 	}
 }
 

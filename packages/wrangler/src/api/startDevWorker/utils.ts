@@ -55,12 +55,6 @@ export function unwrapHook<T extends string | number | object>(hook: Hook<T>) {
 	return typeof hook === "function" ? hook() : hook;
 }
 
-export class MissingConfigError extends Error {
-	constructor(key: string) {
-		super(`Missing config value for ${key}`);
-	}
-}
-
 export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {

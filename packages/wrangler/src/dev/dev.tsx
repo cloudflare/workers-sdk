@@ -38,6 +38,7 @@ import type {
 	ProxyData,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
+	Trigger,
 } from "../api";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
@@ -304,31 +305,27 @@ function DevSession(props: DevSessionProps) {
 	}, [devEnv]);
 	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(() => {
 		const routes =
-			props.routes?.map((r) =>
+			props.routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
 				typeof r === "string"
-					? ({
+					? {
 							type: "route",
 							pattern: r,
-						} as const)
-					: ({ type: "route", ...r } as const)
+						}
+					: { type: "route", ...r }
 			) ?? [];
 		const queueConsumers =
-			props.queueConsumers?.map(
-				(c) =>
-					({
-						...c,
-						type: "queue-consumer",
-					}) as const
+			props.queueConsumers?.map<Extract<Trigger, { type: "queue-consumer" }>>(
+				(c) => ({
+					...c,
+					type: "queue-consumer",
+				})
 			) ?? [];
 
 		const crons =
-			props.crons?.map(
-				(c) =>
-					({
-						cron: c,
-						type: "cron",
-					}) as const
-			) ?? [];
+			props.crons?.map<Extract<Trigger, { type: "cron" }>>((c) => ({
+				cron: c,
+				type: "cron",
+			})) ?? [];
 		return {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
@@ -560,7 +557,7 @@ function DevSession(props: DevSessionProps) {
 			latestReloadCompleteEvent.current = {
 				type: "reloadComplete",
 				config: startDevWorkerOptions,
-				bundle: bundle,
+				bundle,
 				proxyData,
 			};
 

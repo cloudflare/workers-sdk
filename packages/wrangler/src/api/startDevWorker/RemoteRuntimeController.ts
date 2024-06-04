@@ -10,16 +10,13 @@ import {
 	handlePreviewSessionCreationError,
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
+import { MissingConfigError } from "../../errors";
 import { logger } from "../../logger";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { notImplemented } from "./NotImplementedError";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	MissingConfigError,
-	unwrapHook,
-} from "./utils";
+import { convertBindingsToCfWorkerInitBindings, unwrapHook } from "./utils";
 import type {
 	CfPreviewSession,
 	CfPreviewToken,
@@ -123,10 +120,15 @@ export class RemoteRuntimeController extends RuntimeController {
 				)
 				.map((trigger) => {
 					const { type: _, ...route } = trigger;
-					if (!("custom_domain" in route)) {
+					if (
+						"custom_domain" in route ||
+						"zone_id" in route ||
+						"zone_name" in route
+					) {
+						return route;
+					} else {
 						return route.pattern;
 					}
-					return route;
 				});
 
 			if (!config.dev?.auth) {

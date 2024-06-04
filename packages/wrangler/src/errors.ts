@@ -45,6 +45,12 @@ export class JsonFriendlyFatalError extends FatalError {
 	}
 }
 
+export class MissingConfigError extends Error {
+	constructor(key: string) {
+		super(`Missing config value for ${key}`);
+	}
+}
+
 /**
  * Create either a FatalError or JsonFriendlyFatalError depending upon `isJson` parameter.
  *
