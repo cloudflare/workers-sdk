@@ -16,7 +16,8 @@ export type CfModuleType =
 	| "text"
 	| "buffer"
 	| "python"
-	| "python-requirement";
+	| "python-requirement"
+	| "nodejs-compat-module";
 
 /**
  * An imported module.
@@ -86,7 +87,7 @@ export interface CfSendEmailBindings {
  */
 
 export interface CfWasmModuleBindings {
-	[key: string]: string;
+	[key: string]: string | Uint8Array;
 }
 
 /**
@@ -127,7 +128,7 @@ export interface CfVersionMetadataBinding {
  */
 
 export interface CfDataBlobBindings {
-	[key: string]: string;
+	[key: string]: string | Uint8Array;
 }
 
 /**
@@ -179,19 +180,19 @@ export interface CfHyperdrive {
 	localConnectionString?: string;
 }
 
-interface CfService {
+export interface CfService {
 	binding: string;
 	service: string;
 	environment?: string;
 	entrypoint?: string;
 }
 
-interface CfAnalyticsEngineDataset {
+export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;
 }
 
-interface CfDispatchNamespace {
+export interface CfDispatchNamespace {
 	binding: string;
 	namespace: string;
 	outbound?: {
@@ -201,7 +202,7 @@ interface CfDispatchNamespace {
 	};
 }
 
-interface CfMTlsCertificate {
+export interface CfMTlsCertificate {
 	binding: string;
 	certificate_id: string;
 }
@@ -210,7 +211,7 @@ interface CfLogfwdr {
 	bindings: CfLogfwdrBinding[];
 }
 
-interface CfLogfwdrBinding {
+export interface CfLogfwdrBinding {
 	name: string;
 	destination: string;
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { watch } from "chokidar";
 import { useApp } from "ink";
@@ -24,6 +25,7 @@ import type { BuildResult, Metafile, PluginBuild } from "esbuild";
 export type EsbuildBundle = {
 	id: number;
 	path: string;
+	entrypointSource: string;
 	entry: Entry;
 	type: CfModuleType;
 	modules: CfModule[];
@@ -127,7 +129,11 @@ export function useEsbuild({
 					...(moduleCollector?.modules ?? []),
 					...newAdditionalModules,
 				]);
-				return { ...previousBundle, id: previousBundle.id + 1 };
+				return {
+					...previousBundle,
+					entrypointSource: readFileSync(previousBundle.path, "utf8"),
+					id: previousBundle.id + 1,
+				};
 			});
 		}
 
@@ -226,16 +232,20 @@ export function useEsbuild({
 					void watcher.close();
 				};
 			}
+			const entrypointPath = realpathSync(
+				bundleResult?.resolvedEntryPointPath ?? entry.file
+			);
 			setBundle({
 				id: 0,
 				entry,
-				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+				path: entrypointPath,
 				type:
 					bundleResult?.bundleType ?? getBundleType(entry.format, entry.file),
 				modules: bundleResult ? bundleResult.modules : newAdditionalModules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
 				sourceMapMetadata: bundleResult?.sourceMapMetadata,
+				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		}
 

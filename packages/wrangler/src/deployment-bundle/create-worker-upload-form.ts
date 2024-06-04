@@ -305,7 +305,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	for (const [name, filePath] of Object.entries(bindings.wasm_modules || {})) {
+	for (const [name, source] of Object.entries(bindings.wasm_modules || {})) {
 		metadataBindings.push({
 			name,
 			type: "wasm_module",
@@ -314,9 +314,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 		formData.set(
 			name,
-			new File([readFileSync(filePath)], filePath, {
-				type: "application/wasm",
-			})
+			new File(
+				[typeof source === "string" ? readFileSync(source) : source],
+				typeof source === "string" ? source : name,
+				{
+					type: "application/wasm",
+				}
+			)
 		);
 	}
 
@@ -359,7 +363,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	for (const [name, filePath] of Object.entries(bindings.data_blobs || {})) {
+	for (const [name, source] of Object.entries(bindings.data_blobs || {})) {
 		metadataBindings.push({
 			name,
 			type: "data_blob",
@@ -368,9 +372,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 		formData.set(
 			name,
-			new File([readFileSync(filePath)], filePath, {
-				type: "application/octet-stream",
-			})
+			new File(
+				[typeof source === "string" ? readFileSync(source) : source],
+				typeof source === "string" ? source : name,
+				{
+					type: "application/octet-stream",
+				}
+			)
 		);
 	}
 

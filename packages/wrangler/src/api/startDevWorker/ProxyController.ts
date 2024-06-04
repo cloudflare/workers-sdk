@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { EventEmitter } from "node:events";
 import path from "node:path";
 import { LogLevel, Miniflare, Mutex, Response, WebSocket } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
@@ -17,9 +16,11 @@ import {
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
+import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { assertNever, createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ControllerEventMap } from "./BaseController";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -40,7 +41,11 @@ import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
 import type { MiniflareOptions } from "miniflare";
 
-export class ProxyController extends EventEmitter {
+export type ProxyControllerEventMap = ControllerEventMap & {
+	ready: [ReadyEvent];
+	previewTokenExpired: [PreviewTokenExpiredEvent];
+};
+export class ProxyController extends Controller<ProxyControllerEventMap> {
 	public ready = createDeferred<ReadyEvent>();
 
 	public proxyWorker?: Miniflare;
@@ -507,34 +512,24 @@ export class ProxyController extends EventEmitter {
 			proxyData,
 		});
 	}
-	emitErrorEvent(reason: string, cause: Error | SerializedError) {
-		const event: ErrorEvent = {
-			type: "error",
-			source: "ProxyController",
-			cause,
-			reason,
-			data: {
-				config: this.latestConfig,
-				bundle: this.latestBundle,
-			},
-		};
 
-		this.emit("error", event);
+	emitErrorEvent(data: ErrorEvent): void;
+	emitErrorEvent(reason: string, cause?: Error | SerializedError): void;
+	emitErrorEvent(data: string | ErrorEvent, cause?: Error | SerializedError) {
+		if (typeof data === "string") {
+			data = {
+				type: "error",
+				source: "ProxyController",
+				cause: castErrorCause(cause),
+				reason: data,
+				data: {
+					config: this.latestConfig,
+					bundle: this.latestBundle,
+				},
+			};
+		}
+		super.emitErrorEvent(data);
 	}
-
-	// *********************
-	//   Event Subscribers
-	// *********************
-
-	on(event: "ready", listener: (_: ReadyEvent) => void): this;
-	on(
-		event: "previewTokenExpired",
-		listener: (_: PreviewTokenExpiredEvent) => void
-	): this;
-	// @ts-expect-error Missing overload implementation (only need the signature types, base implementation is fine)
-	on(event: "error", listener: (_: ErrorEvent) => void): this;
-	// @ts-expect-error Missing initialisation (only need the signature types, base implementation is fine)
-	once: typeof this.on;
 }
 
 export class ProxyControllerLogger extends WranglerLog {
