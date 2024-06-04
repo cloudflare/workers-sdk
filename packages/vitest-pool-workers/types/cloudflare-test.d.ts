@@ -45,7 +45,7 @@ declare module "cloudflare:test" {
 	 * Objects defined in the `main` worker.
 	 */
 	export function runInDurableObject<O extends DurableObject, R>(
-		stub: DurableObjectStub,
+		stub: O,
 		callback: (instance: O, state: DurableObjectState) => R | Promise<R>
 	): Promise<R>;
 	/**
