@@ -82,7 +82,7 @@
 		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "0.6.1",
-		"unenv": "npm:unenv-nightly@1.10.0-1717196929.1cf935a",
+		"unenv": "npm:unenv-nightly@1.10.0-1717495514.cea841e",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
