@@ -826,26 +826,30 @@ async function validateDevServerSettings(
 
 	const compatibilityFlags =
 		args.compatibilityFlags ?? config.compatibility_flags;
-	const experimental = compatibilityFlags.includes("experimental");
-	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
-	// nodejsCompatV2 supersedes nodejsCompat
-	// disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
 
+	const nodejsCompatV2 = compatibilityFlags.includes("experimental:nodejs_compat_v2");
+	const nodejsCompatV2NotExperimental = compatibilityFlags.includes("nodejs_compat_v2");
 	if (nodejsCompatV2) {
-		logger.warn(
-			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
-		);
+		// strip the "experimental:" prefix because workerd doesn't understand it yet.
+		compatibilityFlags[compatibilityFlags.indexOf("experimental:nodejs_compat_v2")] = "nodejs_compat_v2";
 	}
+	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
+	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
 
 	assert(
 		!(legacyNodeCompat && (nodejsCompat || nodejsCompatV2)),
 		`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
 	);
 
-	assert(!(nodejsCompatV2 && !experimental),
-		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be accompanied by \`experimental\` compatibility flag. Add \`experimental\` flag to your compatibility flags.`
+	assert(!nodejsCompatV2NotExperimental,
+		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
 	);
+
+	if (nodejsCompatV2) {
+		logger.warn(
+			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
+		);
+	}
 
 	if (args.experimentalEnableLocalPersistence) {
 		logger.warn(

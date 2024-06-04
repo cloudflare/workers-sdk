@@ -11,8 +11,6 @@ overrides:
   '@cloudflare/elements>@types/react': ^18
   capnpc-ts>typescript: 4.2.4
 
-packageExtensionsChecksum: e9aba68adadc55d14e2e76f543f29319
-
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: r2d7tqjujhdts7e7zxsa3stjki
@@ -1594,8 +1592,8 @@ importers:
         specifier: 0.6.1
         version: 0.6.1
       unenv:
-        specifier: npm:unenv-nightly@1.10.0-1717495514.cea841e
-        version: unenv-nightly@1.10.0-1717495514.cea841e
+        specifier: npm:unenv-nightly@1.10.0-1717522572.87b9352
+        version: unenv-nightly@1.10.0-1717522572.87b9352
       xxhash-wasm:
         specifier: ^1.0.1
         version: 1.0.1
@@ -10512,8 +10510,8 @@ packages:
     resolution: {integrity: sha512-72RFADWFqKmUb2hmmvNODKL3p9hcB6Gt2DOQMis1SEBaV6a4MH8soBvzg+95CYhCKPFedut2JY9bMfrDl9D23g==}
     engines: {node: '>=14.0'}
 
-  unenv-nightly@1.10.0-1717495514.cea841e:
-    resolution: {integrity: sha512-rulAER6KVltA7Q3oenfnP8BjdlZQDDosCqO5P3paqIqZDj2Rz/5R4nVCV6954GMYb2p8DG5UmrGWE2JFwnUzCQ==}
+  unenv-nightly@1.10.0-1717522572.87b9352:
+    resolution: {integrity: sha512-4DFC3gIw13PdlDN6cqNRlatM6dn/yerNH/1B0Ap9rO41fv4JgbtSm6+tUK12FRMjiZIg7y2NK95BEMc2J9T02g==}
 
   unicode-canonical-property-names-ecmascript@2.0.0:
     resolution: {integrity: sha512-yY5PpDlfVIU5+y/BSCxAJRBIS1Zc2dDG3Ujq+sR0U+JjUevW2JhocOF+soROYDSaAezOzOKuyyixhD6mBknSmQ==}
@@ -15038,7 +15036,7 @@ snapshots:
     dependencies:
       '@vitest/utils': 1.2.2
       p-limit: 5.0.0
-      pathe: 1.1.1
+      pathe: 1.1.2
 
   '@vitest/runner@1.5.0':
     dependencies:
@@ -15050,12 +15048,12 @@ snapshots:
     dependencies:
       '@vitest/utils': 1.6.0
       p-limit: 5.0.0
-      pathe: 1.1.1
+      pathe: 1.1.2
 
   '@vitest/snapshot@1.2.2':
     dependencies:
       magic-string: 0.30.5
-      pathe: 1.1.1
+      pathe: 1.1.2
       pretty-format: 29.7.0
 
   '@vitest/snapshot@1.5.0':
@@ -15067,7 +15065,7 @@ snapshots:
   '@vitest/snapshot@1.6.0':
     dependencies:
       magic-string: 0.30.5
-      pathe: 1.1.1
+      pathe: 1.1.2
       pretty-format: 29.7.0
 
   '@vitest/spy@1.2.2':
@@ -19241,7 +19239,7 @@ snapshots:
   mlly@1.4.2:
     dependencies:
       acorn: 8.11.3
-      pathe: 1.1.1
+      pathe: 1.1.2
       pkg-types: 1.0.3
       ufo: 1.5.3
 
@@ -19891,7 +19889,7 @@ snapshots:
     dependencies:
       jsonc-parser: 3.2.0
       mlly: 1.4.2
-      pathe: 1.1.1
+      pathe: 1.1.2
 
   plur@5.1.0:
     dependencies:
@@ -21490,7 +21488,7 @@ snapshots:
     dependencies:
       '@fastify/busboy': 2.1.1
 
-  unenv-nightly@1.10.0-1717495514.cea841e:
+  unenv-nightly@1.10.0-1717522572.87b9352:
     dependencies:
       consola: 3.2.3
       defu: 6.1.4
@@ -21704,7 +21702,7 @@ snapshots:
     dependencies:
       cac: 6.7.14
       debug: 4.3.4(supports-color@9.2.2)
-      pathe: 1.1.1
+      pathe: 1.1.2
       picocolors: 1.0.0
       vite: 5.0.12(@types/node@20.1.7)
     transitivePeerDependencies:
@@ -21738,7 +21736,7 @@ snapshots:
     dependencies:
       cac: 6.7.14
       debug: 4.3.4(supports-color@9.2.2)
-      pathe: 1.1.1
+      pathe: 1.1.2
       picocolors: 1.0.1
       vite: 5.0.12(@types/node@20.12.12)
     transitivePeerDependencies:

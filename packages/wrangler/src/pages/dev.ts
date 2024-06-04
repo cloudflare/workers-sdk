@@ -348,10 +348,14 @@ export const Handler = async (args: PagesDevArguments) => {
 	let scriptPath = "";
 
 	const legacyNodeCompat = args.nodeCompat;
-	const experimental = compatibilityFlags.includes("experimental");
-	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
-	// nodejsCompatV2 supersedes nodejsCompat
-	// disable nodejsCompat if nodejsCompatV2 is enabled
+
+	const nodejsCompatV2 = compatibilityFlags.includes("experimental:nodejs_compat_v2");
+	const nodejsCompatV2NotExperimental = compatibilityFlags.includes("nodejs_compat_v2");
+	if (nodejsCompatV2) {
+		// strip the "experimental:" prefix because workerd doesn't understand it yet.
+		compatibilityFlags[compatibilityFlags.indexOf("experimental:nodejs_compat_v2")] = "nodejs_compat_v2";
+	}
+	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
 	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
@@ -467,9 +471,9 @@ export const Handler = async (args: PagesDevArguments) => {
 			);
 		}
 
-		if (nodejsCompatV2 && !experimental) {
+		if (nodejsCompatV2NotExperimental) {
 			throw new FatalError(
-				`The \`nodejs_compat_v2\` compatibility flag is experimental and must be accompanied by \`experimental\` compatibility flag. Add \`experimental\` flag to your compatibility flags.`
+				`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
 			);
 		}
 
