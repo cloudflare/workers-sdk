@@ -8,13 +8,13 @@ import { createR2Bucket, fetchR2Buckets } from "./wrangler/r2Buckets";
 import {
 	createVectorizeIndex,
 	fetchVectorizeIndices,
-	VectorizeIndex,
 } from "./wrangler/vectorize";
 import type { D1Database } from "./wrangler/d1Databases";
 import type { KvNamespace } from "./wrangler/kvNamespaces";
 import type { Queue } from "./wrangler/queues";
 import type { R2Bucket } from "./wrangler/r2Buckets";
 import type { WranglerConfig } from "./wrangler/schema";
+import type { VectorizeIndex } from "./wrangler/vectorize";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type { C3Context } from "types";
 
@@ -64,8 +64,6 @@ export const autoProvisionResources = async (ctx: C3Context) => {
 
 	// write the mutated config back to disk
 	writeWranglerConfig(ctx, wranglerConfig);
-	console.log(ctx.project.name);
-	process.exit(1);
 	return true;
 };
 

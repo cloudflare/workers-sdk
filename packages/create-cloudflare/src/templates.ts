@@ -152,6 +152,13 @@ export const getTemplateMap = async () => {
 		scheduled: (await import("../templates/scheduled/c3")).default,
 		queues: (await import("../templates/queues/c3")).default,
 		openapi: (await import("../templates/openapi/c3")).default,
+
+		// FOR AUTO-PROVISIONING DEMO
+		d1: (await import("../templates/d1/c3")).default,
+		kv: (await import("../templates/kv/c3")).default,
+		r2: (await import("../templates/r2/c3")).default,
+		// END FOR AUTO-PROVISIONING DEMO
+
 		// Dummy record -- actual template config resolved in `processRemoteTemplate`
 		"remote-template": {
 			displayName: "Worker built from a template hosted in a git repository",

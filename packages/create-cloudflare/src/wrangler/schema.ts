@@ -52,7 +52,7 @@ export const WranglerTomlSchema = z.object({
 			}),
 		),
 	),
-	vars: z.optional(z.record(z.string(), z.string())),
+	vars: z.optional(z.record(z.string(), z.string().or(z.boolean()))),
 });
 
 export type WranglerConfig = z.infer<typeof WranglerTomlSchema>;
