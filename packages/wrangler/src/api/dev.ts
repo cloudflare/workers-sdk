@@ -177,7 +177,7 @@ export async function unstable_dev(
 		bundle: options?.bundle,
 		compatibilityDate: options?.compatibilityDate,
 		compatibilityFlags: options?.compatibilityFlags,
-		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
+		ip: options?.ip,
 		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,
 		localProtocol: options?.localProtocol,
