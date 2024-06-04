@@ -141,13 +141,16 @@ async function convertToConfigBundle(
 		} else if (binding.type === "logfwdr") {
 			bindings.logfwdr ??= { bindings: [] };
 			bindings.logfwdr.bindings.push({ ...binding, name: name });
-		} else if (binding.type.startsWith("unsafe-")) {
+		} else if (binding.type.startsWith("unsafe_")) {
 			bindings.unsafe ??= {
 				bindings: [],
 				metadata: undefined,
 				capnp: undefined,
 			};
-			bindings.unsafe.bindings?.push({ ...binding, name: name });
+			bindings.unsafe.bindings?.push({
+				type: binding.type.slice("unsafe_".length),
+				name: name,
+			});
 		}
 	}
 
