@@ -287,11 +287,11 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			})
-			.option("experimental-devenv-runtime", {
-				alias: ["x-devenv-runtime"],
+			.option("experimental-dev-env", {
+				alias: ["x-dev-env"],
 				type: "boolean",
 				describe:
-					"Use the experimental DevEnv runtime instantiation (unified across wrangler dev and unstable_dev)",
+					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
 				default: false,
 			})
 	);
@@ -519,7 +519,7 @@ export async function startDev(args: StartDevOptions) {
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args.testScheduled}
 					projectRoot={projectRoot}
-					experimentalDevenvRuntime={args.experimentalDevenvRuntime}
+					experimentalDevEnv={args.experimentalDevEnv}
 				/>
 			);
 		}
@@ -647,7 +647,7 @@ export async function startApiDev(args: StartDevOptions) {
 			testScheduled: args.testScheduled,
 			disableDevRegistry: args.disableDevRegistry ?? false,
 			projectRoot,
-			experimentalDevenvRuntime: args.experimentalDevenvRuntime,
+			experimentalDevEnv: args.experimentalDevEnv,
 		});
 	}
 

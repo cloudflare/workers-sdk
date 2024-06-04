@@ -186,7 +186,7 @@ export type DevProps = {
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
 
-	experimentalDevenvRuntime: boolean;
+	experimentalDevEnv: boolean;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -411,7 +411,7 @@ function DevSession(props: DevSessionProps) {
 	}, [devEnv, startDevWorkerOptions]);
 	const onBundleComplete = useCallback(
 		(bundle: EsbuildBundle) => {
-			if (props.experimentalDevenvRuntime) {
+			if (props.experimentalDevEnv) {
 				devEnv.runtimes.forEach((runtime) =>
 					runtime.onBundleComplete({
 						type: "bundleComplete",
@@ -427,7 +427,7 @@ function DevSession(props: DevSessionProps) {
 				});
 			}
 		},
-		[devEnv, startDevWorkerOptions, props.experimentalDevenvRuntime]
+		[devEnv, startDevWorkerOptions, props.experimentalDevEnv]
 	);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
@@ -603,7 +603,7 @@ function DevSession(props: DevSessionProps) {
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
-			experimentalDevenvRuntime={props.experimentalDevenvRuntime}
+			experimentalDevEnv={props.experimentalDevEnv}
 		/>
 	) : (
 		<Remote
@@ -635,7 +635,7 @@ function DevSession(props: DevSessionProps) {
 			// startDevWorker
 			accountId={accountId}
 			setAccountId={setAccountIdAndResolveDeferred}
-			experimentalDevenvRuntime={props.experimentalDevenvRuntime}
+			experimentalDevEnv={props.experimentalDevEnv}
 		/>
 	);
 }

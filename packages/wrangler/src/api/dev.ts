@@ -79,7 +79,7 @@ export interface UnstableDevOptions {
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 	};
-	experimentalDevenvRuntime?: boolean;
+	experimentalDevEnv?: boolean;
 }
 
 export interface UnstableDevWorker {
@@ -214,7 +214,7 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		updateCheck: options?.updateCheck ?? false,
 		experimentalVersions: undefined,
-		experimentalDevenvRuntime: options?.experimentalDevenvRuntime ?? false,
+		experimentalDevEnv: options?.experimentalDevEnv ?? false,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.

@@ -172,9 +172,9 @@ export async function startDevServer(
 		),
 	});
 
-	console.log({ experimentalDevenvRuntime: props.experimentalDevenvRuntime });
+	console.log({ experimentalDevEnv: props.experimentalDevEnv });
 
-	if (props.experimentalDevenvRuntime) {
+	if (props.experimentalDevEnv) {
 		console.log("UNSTABLE_DEV Experimental-DevEnv-Runtime MODE");
 
 		devEnv.runtimes.forEach((runtime) => {
@@ -260,7 +260,7 @@ export async function startDevServer(
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
-			experimentalDevenvRuntime: props.experimentalDevenvRuntime,
+			experimentalDevEnv: props.experimentalDevEnv,
 		});
 
 		return {
@@ -313,7 +313,7 @@ export async function startDevServer(
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
-			experimentalDevenvRuntime: props.experimentalDevenvRuntime,
+			experimentalDevEnv: props.experimentalDevEnv,
 			setAccountId: /* noop */ () => {},
 		});
 
