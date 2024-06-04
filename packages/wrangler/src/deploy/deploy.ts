@@ -386,7 +386,30 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
+	const experimental = compatibilityFlags.includes("experimental");
+	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
+	// nodejsCompatV2 supersedes nodejsCompat
+	// disable nodejsCompat if nodejsCompatV2 is enabled
+	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
+
+	if (nodejsCompatV2) {
+		logger.warn(
+			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
+		);
+	}
+
+	assert(
+		!(legacyNodeCompat && (nodejsCompat || nodejsCompatV2)),
+		`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
+	);
+
+	assert(!(nodejsCompatV2 && !experimental),
+		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be accompanied by \`experimental\` compatibility flag. Add \`experimental\` flag to your compatibility flags.`
+	);
+
+	assert(!(experimental && !props.dryRun),
+		`Detected the \`experimental\` flag in compatibility flags. This flag enables features which work only in local development mode and are not (yet) supported in production environments.`
+	);
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -398,6 +421,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	if (props.noBundle && legacyNodeCompat) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+		);
+	}
+
+	if (props.noBundle && nodejsCompatV2) {
+		logger.warn(
+			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
@@ -521,6 +550,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						sourcemap: uploadSourceMaps,
 						legacyNodeCompat,
 						nodejsCompat,
+						nodejsCompatV2,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets,

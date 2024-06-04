@@ -73,6 +73,7 @@ export type BundleOptions = {
 	minify?: boolean;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
+	nodejsCompatV2?: boolean;
 	define: Config["define"];
 	checkFetch: boolean;
 	targetConsumer: "dev" | "deploy";
@@ -109,6 +110,7 @@ export async function bundleWorker(
 		minify,
 		legacyNodeCompat,
 		nodejsCompat,
+		nodejsCompatV2,
 		define,
 		checkFetch,
 		assets,
@@ -309,7 +311,7 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(legacyNodeCompat && !nodejsCompat ? { global: "globalThis" } : {}),
+				...(legacyNodeCompat ? { global: "globalThis" } : {}),
 				...define,
 			},
 		}),
@@ -319,7 +321,7 @@ export async function bundleWorker(
 		},
 		plugins: [
 			moduleCollector.plugin,
-			...(legacyNodeCompat && !nodejsCompat
+			...(legacyNodeCompat
 				? [
 						NodeGlobalsPolyfills({ buffer: true }),
 						standardURLPlugin(),
@@ -327,11 +329,11 @@ export async function bundleWorker(
 					]
 				: []),
 			// Runtime Node.js compatibility
-			...(!!nodejsCompat && !legacyNodeCompat
-				? [nodejsCompatPlugin(!!nodejsCompat && !legacyNodeCompat)]
+			...(nodejsCompat
+				? [nodejsCompatPlugin(!!nodejsCompat)]
 				: []),
 			// Hybrid Node.js compatibility
-			...(!!nodejsCompat && legacyNodeCompat ? [nodejsHybridPlugin()] : []),
+			...(nodejsCompatV2 ? [nodejsHybridPlugin()] : []),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),

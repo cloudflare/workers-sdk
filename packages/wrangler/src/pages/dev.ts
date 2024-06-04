@@ -348,7 +348,12 @@ export const Handler = async (args: PagesDevArguments) => {
 	let scriptPath = "";
 
 	const legacyNodeCompat = args.nodeCompat;
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
+	const experimental = compatibilityFlags.includes("experimental");
+	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
+	// nodejsCompatV2 supersedes nodejsCompat
+	// disable nodejsCompat if nodejsCompatV2 is enabled
+	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
+
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		compatibilityDate,
 		compatibilityFlags
@@ -449,10 +454,22 @@ export const Handler = async (args: PagesDevArguments) => {
 			);
 		}
 
-		if (legacyNodeCompat && nodejsCompat) {
+		if (nodejsCompatV2) {
+			console.warn(
+				"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
+			);
+		}
+
+		if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
 			throw new FatalError(
-				"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file.",
+				`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`,
 				1
+			);
+		}
+
+		if (nodejsCompatV2 && !experimental) {
+			throw new FatalError(
+				`The \`nodejs_compat_v2\` compatibility flag is experimental and must be accompanied by \`experimental\` compatibility flag. Add \`experimental\` flag to your compatibility flags.`
 			);
 		}
 
@@ -469,6 +486,7 @@ export const Handler = async (args: PagesDevArguments) => {
 					buildOutputDirectory: directory,
 					legacyNodeCompat,
 					nodejsCompat,
+					nodejsCompatV2,
 					local: true,
 					routesModule,
 					defineNavigatorUserAgent,

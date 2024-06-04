@@ -29,6 +29,7 @@ export type Options = {
 	buildOutputDirectory?: string;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
+	nodejsCompatV2?: boolean;
 	functionsDirectory: string;
 	local: boolean;
 	defineNavigatorUserAgent: boolean;
@@ -47,6 +48,7 @@ export function buildWorkerFromFunctions({
 	buildOutputDirectory,
 	legacyNodeCompat,
 	nodejsCompat,
+	nodejsCompatV2,
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
@@ -74,6 +76,7 @@ export function buildWorkerFromFunctions({
 		watch,
 		legacyNodeCompat,
 		nodejsCompat,
+		nodejsCompatV2,
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},

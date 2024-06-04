@@ -33,6 +33,7 @@ export async function buildFunctions({
 	routesOutputPath,
 	legacyNodeCompat,
 	nodejsCompat,
+	nodejsCompatV2,
 	local,
 	routesModule = join(
 		getPagesTmpDir(),
@@ -61,6 +62,7 @@ export async function buildFunctions({
 	local: boolean;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
+	nodejsCompatV2?: boolean;
 	// Allow `routesModule` to be fixed, so we don't create a new file in the
 	// temporary directory each time
 	routesModule?: string;
@@ -139,6 +141,7 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			legacyNodeCompat,
 			nodejsCompat,
+			nodejsCompatV2,
 			defineNavigatorUserAgent,
 			external,
 		});

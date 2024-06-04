@@ -172,10 +172,33 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
+	const experimental = compatibilityFlags.includes("experimental");
+	const nodejsCompatV2 = compatibilityFlags.includes("nodejs_compat_v2");
+	// nodejsCompatV2 supersedes nodejsCompat
+	// disable nodejsCompat if nodejsCompatV2 is enabled
+	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
+
+	if (nodejsCompatV2) {
+		console.warn(
+			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
+		);
+	}
+
+	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
 		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
+			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
+		);
+	}
+
+	if (nodejsCompatV2 && !experimental) {
+		throw new UserError(
+			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be accompanied by \`experimental\` compatibility flag. Add \`experimental\` flag to your compatibility flags.`
+		);
+	}
+
+	if (experimental && !props.dryRun) {
+		throw new UserError(
+			`Detected the \`experimental\` flag in compatibility flags. This flag enables features which work only in local development mode and are not (yet) supported in production environments.`
 		);
 	}
 
@@ -189,6 +212,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	if (props.noBundle && legacyNodeCompat) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+		);
+	}
+
+	if (props.noBundle && nodejsCompatV2) {
+		logger.warn(
+			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
@@ -294,6 +323,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						sourcemap: uploadSourceMaps,
 						legacyNodeCompat,
 						nodejsCompat,
+						nodejsCompatV2,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets,

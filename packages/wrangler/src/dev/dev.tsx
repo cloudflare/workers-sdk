@@ -170,6 +170,7 @@ export type DevProps = {
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
+	nodejsCompatV2: boolean | undefined;
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
@@ -491,6 +492,7 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		legacyNodeCompat: props.legacyNodeCompat,
 		nodejsCompat: props.nodejsCompat,
+		nodejsCompatV2: props.nodejsCompatV2,
 		define: props.define,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
