@@ -172,13 +172,8 @@ export async function startDevServer(
 		),
 	});
 
-	console.log({ experimentalDevEnv: props.experimentalDevEnv });
-
 	if (props.experimentalDevEnv) {
-		console.log("UNSTABLE_DEV Experimental-DevEnv-Runtime MODE");
-
 		devEnv.runtimes.forEach((runtime) => {
-			console.log("devEnv.runtimes.onBundleComplete()");
 			runtime.onBundleComplete({
 				type: "bundleComplete",
 				config: startDevWorkerOptions,
@@ -189,7 +184,6 @@ export async function startDevServer(
 		// to comply with the current contract of this function, call props.onReady on reloadComplete
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (ev) => {
-				console.log("devEnv.runtimes.onReloadComplete");
 				const { proxyWorker } = await devEnv.proxy.ready.promise;
 				const url = await proxyWorker.ready;
 
@@ -199,7 +193,6 @@ export async function startDevServer(
 	}
 
 	if (props.local) {
-		console.log("UNSTABLE_DEV LOCAL MODE");
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
@@ -269,8 +262,6 @@ export async function startDevServer(
 			},
 		};
 	} else {
-		console.log("UNSTABLE_DEV REMOTE MODE");
-
 		const { stop } = await startRemoteServer({
 			name: props.name,
 			bundle: bundle,

@@ -118,7 +118,6 @@ export class DevEnv extends EventEmitter {
 			const inspectorPort = config.dev?.inspector?.port;
 			const randomPorts = [0, undefined];
 
-			// console.log({ port, inspectorPort, ev });
 			if (!randomPorts.includes(port) || !randomPorts.includes(inspectorPort)) {
 				// emit the event here while the ConfigController is unimplemented
 				// this will cause the ProxyController to try reinstantiating the ProxyWorker(s)
