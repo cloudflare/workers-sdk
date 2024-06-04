@@ -41,7 +41,11 @@ export function experimental<T extends object>(
 	fieldPath: DeepKeyOf<T>
 ): void {
 	const result = unwindPropertyPath(config, fieldPath);
-	if (result !== undefined && result.field in result.container) {
+	if (
+		result !== undefined &&
+		result.field in result.container &&
+		!("WRANGLER_DISABLE_EXPERIMENTAL_WARNING" in process.env)
+	) {
 		diagnostics.warnings.push(
 			`"${fieldPath}" fields are experimental and may change or break at any time.`
 		);
