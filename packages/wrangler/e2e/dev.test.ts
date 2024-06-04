@@ -49,8 +49,8 @@ e2eTest(
 describe.each([
 	{ cmd: "wrangler dev" },
 	{ cmd: "wrangler dev --remote" },
-	{ cmd: "wrangler dev --x-devenv-runtime" },
-	{ cmd: "wrangler dev --remote --x-devenv-runtime" },
+	{ cmd: "wrangler dev --x-dev-env" },
+	{ cmd: "wrangler dev --remote --x-dev-env" },
 ])("basic js dev: $cmd", ({ cmd }) => {
 	e2eTest(
 		`can modify worker during ${cmd}`,
@@ -104,8 +104,8 @@ describe.each([
 describe.each([
 	{ cmd: "wrangler dev" },
 	{ cmd: "wrangler dev --remote" },
-	{ cmd: "wrangler dev --x-devenv-runtime" },
-	{ cmd: "wrangler dev --remote --x-devenv-runtime" },
+	{ cmd: "wrangler dev --x-dev-env" },
+	{ cmd: "wrangler dev --remote --x-dev-env" },
 ])("basic python dev: $cmd", ({ cmd }) => {
 	e2eTest(
 		`can modify entrypoint during ${cmd}`,

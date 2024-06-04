@@ -203,9 +203,6 @@ export class RemoteRuntimeController extends RuntimeController {
 						port: token.inspectorUrl.port.toString(),
 						pathname: token.inspectorUrl.pathname,
 					},
-					userWorkerInnerUrlOverrides: {
-						hostname: token.host,
-					},
 					headers: {
 						"cf-workers-preview-token": token.value,
 						...(accessToken

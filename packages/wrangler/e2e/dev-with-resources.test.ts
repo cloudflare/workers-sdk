@@ -15,8 +15,8 @@ afterEach(killAllWranglerDev);
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
 	{ flags: "--remote", runtime: "remote" },
-	{ flags: "--x-devenv-runtime", runtime: "local" },
-	{ flags: "--remote --x-devenv-runtime", runtime: "remote" },
+	{ flags: "--x-dev-env", runtime: "local" },
+	{ flags: "--remote --x-dev-env", runtime: "remote" },
 ] as const;
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
