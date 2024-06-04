@@ -266,10 +266,12 @@ export async function bundleWorker(
 		inject.push(...(result.inject ?? []));
 	}
 
-	// `esbuild` doesn't support returning `watch*` options from `onStart()`
-	// plugin callbacks. Instead, we define an empty virtual module that is
-	// imported in this injected module. Importing that module registers watchers.
-	inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
+	if (watch) {
+		// `esbuild` doesn't support returning `watch*` options from `onStart()`
+		// plugin callbacks. Instead, we define an empty virtual module that is
+		// imported in this injected module. Importing that module registers watchers.
+		inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
+	}
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware

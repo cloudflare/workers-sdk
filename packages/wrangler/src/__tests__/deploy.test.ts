@@ -2601,7 +2601,18 @@ addEventListener('fetch', event => {});`
 				find_additional_modules: true,
 				rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],
 			});
-			writeWorkerSource({ type: "esm" });
+			// Create a Worker that imports a CommonJS module to trigger esbuild to add
+			// extra boilerplate to convert to ESM imports.
+			fs.writeFileSync(`another.cjs`, `module.exports.foo = 100;`);
+			fs.writeFileSync(
+				`index.js`,
+				`import { foo } from "./another.cjs";
+					export default {
+						async fetch(request) {
+							return new Response('Hello' + foo);
+						},
+					};`
+			);
 			fs.mkdirSync("a/b/c", { recursive: true });
 			fs.writeFileSync(
 				"a/1.mjs",
@@ -2621,6 +2632,11 @@ addEventListener('fetch', event => {});`
 			);
 			writeAssets(assets);
 			mockUploadWorkerRequest({
+				expectedEntry(entry) {
+					// Ensure that we have not included the watch stub in production code.
+					// This is only needed in `wrangler dev`.
+					expect(entry).not.toMatch(/modules-watch-stub\.js/);
+				},
 				expectedBindings: [
 					{
 						name: "__STATIC_CONTENT",
