@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.59.0
+
+### Minor Changes
+
+- [#5963](https://github.com/cloudflare/workers-sdk/pull/5963) [`bf803d7`](https://github.com/cloudflare/workers-sdk/commit/bf803d74c2bd1fc9f6e090bad08db09c6ff88246) Thanks [@Skye-31](https://github.com/Skye-31)! - Feature: Add support for hiding the `"unsafe" fields are experimental` warning using an environment variable
+
+  By setting `WRANGLER_DISABLE_EXPERIMENTAL_WARNING` to any truthy value, these warnings will be hidden.
+
+### Patch Changes
+
+- Updated dependencies [[`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2)]:
+  - miniflare@3.20240524.2
+
 ## 3.58.0
 
 ### Minor Changes
