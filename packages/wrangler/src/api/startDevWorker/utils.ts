@@ -129,7 +129,15 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "text_blob") {
 			bindings.text_blobs ??= {};
-			bindings.text_blobs[name] = binding.source.path as string;
+
+			if (typeof binding.source.path === "string") {
+				bindings.text_blobs[name] = binding.source.path;
+			} else if ("contents" in binding.source) {
+				// TODO(maybe): write file contents to disk and set path
+				throw new Error(
+					"Cannot provide text_blob contents directly in CfWorkerInitBindings"
+				);
+			}
 		} else if (binding.type === "data_blob") {
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
