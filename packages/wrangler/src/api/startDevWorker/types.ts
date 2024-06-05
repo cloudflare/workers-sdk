@@ -162,15 +162,6 @@ export type Hook<T extends string | number | object> =
 	| Promise<T>
 	| (() => T | Promise<T>);
 
-export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
-	string | Uint8Array
-> & {
-	/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
-	name: string;
-	/** How this module should be interpreted */
-	type: ModuleType;
-};
-
 export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";

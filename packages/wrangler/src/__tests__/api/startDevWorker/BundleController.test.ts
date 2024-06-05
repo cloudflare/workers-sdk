@@ -1,5 +1,5 @@
 import { once } from "events";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
@@ -11,7 +11,6 @@ import type {
 	BundleStartEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
-import type { ExpectStatic } from "vitest";
 
 type _BundleConfig = Pick<
 	StartDevWorkerOptions,
@@ -63,7 +62,7 @@ async function waitForBundleComplete(
 	return event;
 }
 
-async function waitForBundleStart(
+async function _waitForBundleStart(
 	controller: BundlerController
 ): Promise<BundleStartEvent> {
 	const [event] = await once(controller, "bundleStart");
@@ -285,7 +284,7 @@ describe("happy path bundle + watch", () => {
 
 describe("switching", () => {
 	runInTempDir();
-	test.only("esbuild -> custom builds", async ({ controller }) => {
+	test("esbuild -> custom builds", async ({ controller }) => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 		        export default {
@@ -296,7 +295,7 @@ describe("switching", () => {
 		        } satisfies ExportedHandler
 		    `,
 		});
-		let config: StartDevWorkerOptions = {
+		const config: StartDevWorkerOptions = {
 			name: "worker",
 			script: unusable(),
 			_entry: {
@@ -320,7 +319,7 @@ describe("switching", () => {
 			config,
 		});
 
-		let ev = await waitForBundleComplete(controller);
+		const ev = await waitForBundleComplete(controller);
 		expect(stripMiddleware(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
 				"// index.ts
@@ -362,7 +361,7 @@ describe("switching", () => {
 				},
 				define: {},
 			},
-		};
+		} satisfies StartDevWorkerOptions;
 
 		await controller.onConfigUpdate({
 			type: "configUpdate",
