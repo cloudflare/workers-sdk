@@ -51,8 +51,6 @@ function handleAliasedNodeJSPackages(
 	alias: Record<string, string>,
 	external: string[]
 ) {
-	const UNENV_ALIAS_RE = new RegExp(`^(${Object.keys(alias).join("|")})$`);
-
 	// esbuild expects alias paths to be absolute
 	const aliasAbsolute = Object.fromEntries(
 		Object.entries(alias)
@@ -68,6 +66,9 @@ function handleAliasedNodeJSPackages(
 				return [key, resolvedAliasPath.replace(/\.cjs$/, ".mjs")];
 			})
 			.filter((entry) => entry[1] !== "")
+	);
+	const UNENV_ALIAS_RE = new RegExp(
+		`^(${Object.keys(aliasAbsolute).join("|")})$`
 	);
 
 	build.onResolve({ filter: UNENV_ALIAS_RE }, (args) => {
