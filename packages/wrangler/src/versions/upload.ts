@@ -173,14 +173,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
 
-	const nodejsCompatV2 = compatibilityFlags.includes("experimental:nodejs_compat_v2");
-	const nodejsCompatV2NotExperimental = compatibilityFlags.includes("nodejs_compat_v2");
+	const nodejsCompatV2 = compatibilityFlags.includes(
+		"experimental:nodejs_compat_v2"
+	);
+	const nodejsCompatV2NotExperimental =
+		compatibilityFlags.includes("nodejs_compat_v2");
 	if (nodejsCompatV2) {
 		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[compatibilityFlags.indexOf("experimental:nodejs_compat_v2")] = "nodejs_compat_v2";
+		compatibilityFlags[
+			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
+		] = "nodejs_compat_v2";
 	}
 	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
+	const nodejsCompat =
+		!nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
 
 	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
 		throw new UserError(

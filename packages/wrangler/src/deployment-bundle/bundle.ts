@@ -329,9 +329,7 @@ export async function bundleWorker(
 					]
 				: []),
 			// Runtime Node.js compatibility
-			...(nodejsCompat
-				? [nodejsCompatPlugin(!!nodejsCompat)]
-				: []),
+			...(nodejsCompat ? [nodejsCompatPlugin(!!nodejsCompat)] : []),
 			// Hybrid Node.js compatibility
 			...(nodejsCompatV2 ? [nodejsHybridPlugin()] : []),
 			cloudflareInternalPlugin,

@@ -448,14 +448,20 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 		);
 	}
 	const compatibilityFlags = args.compatibilityFlags ?? [];
-	const nodejsCompatV2 = compatibilityFlags.includes("experimental:nodejs_compat_v2");
-	const nodejsCompatV2NotExperimental = compatibilityFlags.includes("nodejs_compat_v2");
+	const nodejsCompatV2 = compatibilityFlags.includes(
+		"experimental:nodejs_compat_v2"
+	);
+	const nodejsCompatV2NotExperimental =
+		compatibilityFlags.includes("nodejs_compat_v2");
 	if (nodejsCompatV2) {
 		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[compatibilityFlags.indexOf("experimental:nodejs_compat_v2")] = "nodejs_compat_v2";
+		compatibilityFlags[
+			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
+		] = "nodejs_compat_v2";
 	}
 	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat = !nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
+	const nodejsCompat =
+		!nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,
@@ -474,7 +480,7 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	if (nodejsCompatV2NotExperimental) {
-		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
+		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`;
 	}
 
 	if (nodejsCompatV2) {

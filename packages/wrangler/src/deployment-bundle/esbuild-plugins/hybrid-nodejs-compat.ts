@@ -15,19 +15,19 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 
 			// esbuild expects alias paths to be absolute
 			const aliasAbsolute = Object.fromEntries(
-				Object.entries(alias).map(([key, value]) => {
-					let resolvedAliasPath;
-					try {
-						resolvedAliasPath = require.resolve(value)
-					} catch (e) {
-						// this is an alias for package that is not installed in the current app => ignore
-						resolvedAliasPath = '';
-					}
+				Object.entries(alias)
+					.map(([key, value]) => {
+						let resolvedAliasPath;
+						try {
+							resolvedAliasPath = require.resolve(value);
+						} catch (e) {
+							// this is an alias for package that is not installed in the current app => ignore
+							resolvedAliasPath = "";
+						}
 
-					return [
-						key,
-						resolvedAliasPath.replace(/\.cjs$/, ".mjs"),
-					]}).filter((entry) => entry[1] !== '')
+						return [key, resolvedAliasPath.replace(/\.cjs$/, ".mjs")];
+					})
+					.filter((entry) => entry[1] !== "")
 			);
 
 			build.onResolve(
@@ -71,10 +71,10 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 				...(build.initialOptions.inject ?? []),
 				//convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
 				...Object.keys(inject).map((globalName) =>
-				nodePath.resolve(
-				getBasePath(),
-				`_virtual_unenv_global_polyfill-${globalName}.js`
-				)
+					nodePath.resolve(
+						getBasePath(),
+						`_virtual_unenv_global_polyfill-${globalName}.js`
+					)
 				),
 			];
 
@@ -96,23 +96,29 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 						contents: `
 							import globalVar from "${globalPolyfillSpecifier}";
 
-							${/*
+							${
+								/*
 							// ESBuild's inject doesn't actually touch globalThis, so let's do it ourselves
 							// by creating an exportable so that we can preserve the globalThis assignment if
 							// the ${globalName} was found in the app, or tree-shake it, if it wasn't
 							// see https://esbuild.github.io/api/#inject
-							*/''}
+							*/ ""
+							}
 							const exportable =
-								${/*
+								${
+									/*
 								// mark this as a PURE call so it can be ignored and tree-shaken by ESBuild,
 								// when we don't detect 'process', 'global.process', or 'globalThis.process'
 								// in the app code
 								// see https://esbuild.github.io/api/#tree-shaking-and-side-effects
-								*/''}
+								*/ ""
+								}
 								/* @__PURE__ */ (() => {
-									${/*
+									${
+										/*
 									// TODO: should we try to preserve globalThis.${globalName} if it exists?
-									*/''}
+									*/ ""
+									}
 									return globalThis.${globalName} = globalVar;
 								})();
 
@@ -130,23 +136,29 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 					contents: `
 						import { ${exportName} } from "${moduleName}";
 
-						${/*
+						${
+							/*
 						// ESBuild's inject doesn't actually touch globalThis, so let's do it ourselves
 						// by creating an exportable so that we can preserve the globalThis assignment if
 						// the ${globalName} was found in the app, or tree-shake it, if it wasn't
 						// see https://esbuild.github.io/api/#inject
-						*/''}
+						*/ ""
+						}
 						const exportable =
-							${/*
+							${
+								/*
 							// mark this as a PURE call so it can be ignored and tree-shaken by ESBuild,
 							// when we don't detect 'process', 'global.process', or 'globalThis.process'
 							// in the app code
 							// see https://esbuild.github.io/api/#tree-shaking-and-side-effects
-							*/''}
+							*/ ""
+							}
 							/* @__PURE__ */ (() => {
-								${/*
+								${
+									/*
 								// TODO: should we try to preserve globalThis.${globalName} if it exists?
-								*/''}
+								*/ ""
+								}
 								return globalThis.${globalName} = ${exportName};
 						})();
 
