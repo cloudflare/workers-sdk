@@ -36,7 +36,12 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 			process.chdir(originalCwd);
 			process.env.PWD = originalCwd;
 			try {
-				fs.rmSync(tmpDir, { recursive: true, force: true });
+				fs.rmSync(tmpDir, {
+					recursive: true,
+					force: true,
+					retryDelay: 200,
+					maxRetries: 5,
+				});
 			} catch (e) {
 				// It seems that Windows doesn't let us delete this, with errors like:
 				//
