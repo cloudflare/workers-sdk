@@ -78,8 +78,8 @@ export interface UnstableDevOptions {
 		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
+		devEnv?: boolean;
 	};
-	experimentalDevEnv?: boolean;
 }
 
 export interface UnstableDevWorker {
@@ -122,6 +122,7 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
+		devEnv = false,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -214,7 +215,7 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		updateCheck: options?.updateCheck ?? false,
 		experimentalVersions: undefined,
-		experimentalDevEnv: options?.experimentalDevEnv ?? false,
+		experimentalDevEnv: devEnv,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
