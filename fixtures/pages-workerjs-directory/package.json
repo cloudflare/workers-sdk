@@ -17,6 +17,6 @@
 		"node": ">=16.13"
 	},
 	"volta": {
-		"node": "16.13.0"
+		"extends": "../../package.json"
 	}
 }

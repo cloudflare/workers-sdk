@@ -4,5 +4,8 @@
 	"description": "routing-app for testing",
 	"scripts": {
 		"check:type": "tsc"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }
