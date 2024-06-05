@@ -16,8 +16,8 @@ import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	createDeployment,
+	fetchDeployableVersions,
 	fetchLatestDeploymentVersions,
-	fetchLatestUploadedVersions,
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
@@ -269,7 +269,7 @@ async function promptVersionsToDeploy(
 	await spinnerWhile({
 		startMessage: "Fetching deployable versions",
 		async promise() {
-			await fetchLatestUploadedVersions(accountId, workerName, versionCache);
+			await fetchDeployableVersions(accountId, workerName, versionCache);
 			await fetchVersions(
 				accountId,
 				workerName,

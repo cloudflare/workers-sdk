@@ -87,13 +87,13 @@ export async function fetchLatestDeploymentVersions(
 	return [versions, versionTraffic];
 }
 
-export async function fetchLatestUploadedVersions(
+export async function fetchDeployableVersions(
 	accountId: string,
 	workerName: string,
 	versionCache: VersionCache
 ): Promise<ApiVersion[]> {
 	const { items: versions } = await fetchResult<{ items: ApiVersion[] }>(
-		`/accounts/${accountId}/workers/scripts/${workerName}/versions`
+		`/accounts/${accountId}/workers/scripts/${workerName}/versions?deployable=true`
 	);
 
 	for (const version of versions) {
