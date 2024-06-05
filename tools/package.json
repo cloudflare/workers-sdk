@@ -5,7 +5,8 @@
 	"scripts": {
 		"check:type": "tsc",
 		"test:ci": "vitest run",
-		"check:lint": "eslint ."
+		"check:lint": "eslint .",
+		"test:file": "node -r esbuild-register test/run-test-file.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
