@@ -28,7 +28,7 @@ describe("switching runtimes", () => {
 
 					const devEnv = new DevEnv()
 
-					const config = {
+					let config = {
 						name: "worker",
 						script: "",
 						compatibilityFlags: ["nodejs_compat"],
@@ -41,7 +41,7 @@ describe("switching runtimes", () => {
 							}
 						}
 					};
-					const bundle = {
+					let bundle = {
 						type: "esm",
 						modules: [],
 						id: 0,
@@ -80,8 +80,8 @@ describe("switching runtimes", () => {
 					);
 
 					// Immediately switch runtime
-					config.dev.remote = !firstRemote
-					bundle.entrypointSource = "export default { fetch() { return new Response('Hello World " + (firstRemote ? 'local' : 'remote') + " runtime') } }"
+					config = { ...config, dev: { ...config.dev, remote: !firstRemote } };
+					bundle = {...bundle, entrypointSource: "export default { fetch() { return new Response('Hello World " + (firstRemote ? 'local' : 'remote') + " runtime') } }"}
 
 					devEnv.proxy.onConfigUpdate({
 						type: "configUpdate",
