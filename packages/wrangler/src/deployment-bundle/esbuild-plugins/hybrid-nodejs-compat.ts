@@ -6,7 +6,7 @@ import type { Plugin } from "esbuild";
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
 
 export const nodejsHybridPlugin: () => Plugin = () => {
-	const { alias, inject, /* polyfill, */ external } = env(nodeless, cloudflare);
+	const { alias, inject, external } = env(nodeless, cloudflare);
 
 	return {
 		name: "unenv-cloudflare",
@@ -78,11 +78,7 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 				),
 			];
 
-			build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
-				return {
-					path: path,
-				};
-			});
+			build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => ({ path }));
 
 			build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
 				// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion

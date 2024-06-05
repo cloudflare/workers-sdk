@@ -398,9 +398,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
 		] = "nodejs_compat_v2";
 	}
-	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat =
-		!nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
+	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
+	assert(
+		!(nodejsCompat && nodejsCompatV2),
+		"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
+	);
 
 	assert(
 		!(legacyNodeCompat && (nodejsCompat || nodejsCompatV2)),
@@ -433,7 +435,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.noBundle && nodejsCompatV2) {
 		logger.warn(
-			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+			"`nodejs_compat_v2` compatibility flag with `--no-bundle` will not polyfill any Node.js built-ins that are not already provided by the runtime. If you want to polyfill the additional Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 

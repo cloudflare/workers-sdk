@@ -328,8 +328,10 @@ export async function bundleWorker(
 						NodeModulesPolyfills(),
 					]
 				: []),
-			// Runtime Node.js compatibility
-			...(nodejsCompat ? [nodejsCompatPlugin(!!nodejsCompat)] : []),
+			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
+			...(nodejsCompat || !nodejsCompatV2
+				? [nodejsCompatPlugin(!!nodejsCompat)]
+				: []),
 			// Hybrid Node.js compatibility
 			...(nodejsCompatV2 ? [nodejsHybridPlugin()] : []),
 			cloudflareInternalPlugin,
