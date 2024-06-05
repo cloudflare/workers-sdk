@@ -15,3 +15,11 @@ exports[`basic js dev: 'wrangler dev --x-dev-env' > can modify worker during wra
 exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 1`] = `"Hello World!"`;
 
 exports[`basic js dev: 'wrangler dev' > can modify worker during wrangler dev 2`] = `"Updated Worker! value"`;
+
+exports[`switching runtimes > can move from local to remote 1`] = `"Hello World local!"`;
+
+exports[`switching runtimes > can move from local to remote 2`] = `"Updated local Worker!"`;
+
+exports[`switching runtimes > can move from local to remote 3`] = `"Hello World local!"`;
+
+exports[`switching runtimes > can move from local to remote 4`] = `"Updated local Worker!"`;
