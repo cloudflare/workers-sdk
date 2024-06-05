@@ -452,7 +452,8 @@ export const Handler = async (args: PagesDevArguments) => {
 			`./functionsRoutes-${Math.random()}.mjs`
 		);
 
-		logger.log(`Compiling worker to "${scriptPath}"...`);
+		logger.debug(`Compiling worker to "${scriptPath}"...`);
+
 		const onEnd = () => scriptReadyResolve();
 		try {
 			const buildFn = async () => {
