@@ -14,13 +14,9 @@ describe("switching runtimes", () => {
 		run = shellac.in(root).env(process.env);
 		await seed(root, {
 			"wrangler.toml": dedent`
-					name = "ai-app"
+					name = "dev-env-app"
 					account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 					compatibility_date = "2023-01-01"
-					compatibility_flags = ["nodejs_compat"]
-
-					[ai]
-					binding = "AI"
 			`,
 			"index.mjs": dedent/*javascript*/ `
 					const firstRemote = process.argv[2] === "remote"
