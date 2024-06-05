@@ -181,8 +181,8 @@ function fakeReloadComplete(
 			pathname: `/core:user:${config.name}`,
 		},
 		userWorkerInnerUrlOverrides: {
-			protocol: config?.dev?.urlOverrides?.secure ? "https:" : "http:",
-			hostname: config?.dev?.urlOverrides?.hostname,
+			protocol: config?.dev?.origin?.secure ? "https:" : "http:",
+			hostname: config?.dev?.origin?.hostname,
 		},
 		headers: {},
 		liveReload: config.dev?.liveReload,
@@ -569,7 +569,7 @@ describe("startDevWorker: ProxyController", () => {
 			`,
 			config: {
 				dev: {
-					urlOverrides: {
+					origin: {
 						hostname: "www.google.com",
 					},
 				},
@@ -585,7 +585,7 @@ describe("startDevWorker: ProxyController", () => {
 			...run.config,
 			dev: {
 				...run.config.dev,
-				urlOverrides: {
+				origin: {
 					secure: true,
 					hostname: "mybank.co.uk",
 				},

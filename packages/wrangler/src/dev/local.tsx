@@ -53,6 +53,7 @@ export interface LocalProps {
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
 	services: Config["services"] | undefined;
+	experimentalDevEnv: boolean;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -141,15 +142,6 @@ export function maybeRegisterLocalWorker(
 }
 
 export function Local(props: LocalProps) {
-	useLocalWorker(props);
-
-	return null;
-}
-
-function useLocalWorker(props: LocalProps) {
-	const miniflareServerRef = useRef<MiniflareServer>();
-	const removeMiniflareServerExitListenerRef = useRef<() => void>();
-
 	useEffect(() => {
 		if (props.bindings.services && props.bindings.services.length > 0) {
 			logger.warn(
@@ -169,6 +161,19 @@ function useLocalWorker(props: LocalProps) {
 			);
 		}
 	}, [props.bindings.durable_objects?.bindings]);
+
+	if (!props.experimentalDevEnv) {
+		// this condition WILL be static and therefore safe to wrap around a hook
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		useLocalWorker(props);
+	}
+
+	return null;
+}
+
+function useLocalWorker(props: LocalProps) {
+	const miniflareServerRef = useRef<MiniflareServer>();
+	const removeMiniflareServerExitListenerRef = useRef<() => void>();
 
 	useEffect(() => {
 		const abortController = new AbortController();

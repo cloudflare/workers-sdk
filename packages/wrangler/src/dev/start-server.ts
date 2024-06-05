@@ -22,6 +22,11 @@ import {
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
+import {
+	getAccountChoices,
+	requireApiToken,
+	saveAccountToCache,
+} from "../user";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
@@ -99,12 +104,31 @@ export async function startDevServer(
 			inspector: {
 				port: props.inspectorPort,
 			},
-			urlOverrides: {
+			origin: {
 				secure: props.upstreamProtocol === "https",
 				hostname: props.localUpstream,
 			},
 			liveReload: props.liveReload,
 			remote: !props.local,
+			auth: async () => {
+				let accountId = props.accountId;
+				if (accountId === undefined) {
+					const accountChoices = await getAccountChoices();
+					if (accountChoices.length === 1) {
+						saveAccountToCache({
+							id: accountChoices[0].id,
+							name: accountChoices[0].name,
+						});
+						accountId = accountChoices[0].id;
+					} else {
+						throw logger.error(
+							"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+						);
+					}
+				}
+
+				return { accountId, apiToken: requireApiToken() };
+			},
 		},
 	};
 
@@ -147,6 +171,26 @@ export async function startDevServer(
 			props.compatibilityFlags
 		),
 	});
+
+	if (props.experimentalDevEnv) {
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.onBundleComplete({
+				type: "bundleComplete",
+				config: startDevWorkerOptions,
+				bundle,
+			});
+		});
+
+		// to comply with the current contract of this function, call props.onReady on reloadComplete
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (ev) => {
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+
+				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+			});
+		});
+	}
 
 	if (props.local) {
 		// temp: fake these events by calling the handler directly
@@ -209,13 +253,13 @@ export async function startDevServer(
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
+			experimentalDevEnv: props.experimentalDevEnv,
 		});
 
 		return {
 			stop: async () => {
 				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
-			// TODO: inspectorUrl,
 		};
 	} else {
 		const { stop } = await startRemoteServer({
@@ -260,12 +304,14 @@ export async function startDevServer(
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
+			experimentalDevEnv: props.experimentalDevEnv,
+			setAccountId: /* noop */ () => {},
 		});
+
 		return {
 			stop: async () => {
 				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
-			// TODO: inspectorUrl,
 		};
 	}
 }

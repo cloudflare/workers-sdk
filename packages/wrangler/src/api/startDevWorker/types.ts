@@ -1,4 +1,4 @@
-import type { Config, RawConfig } from "../../config";
+import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
 	ZoneIdRoute,
@@ -19,6 +19,7 @@ import type {
 	CfSendEmailBindings,
 	CfService,
 	CfVectorize,
+	CfWorkerInit,
 } from "../../deployment-bundle/worker";
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -47,7 +48,7 @@ export interface StartDevWorkerOptions {
 	 */
 	script: File<string>;
 	/** The configuration of the worker. */
-	config?: File<string | RawConfig> & { env?: string };
+	config?: File<Config>;
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
@@ -64,6 +65,22 @@ export interface StartDevWorkerOptions {
 		include?: string[];
 		exclude?: string[];
 	};
+
+	// -- PASSTHROUGH -- FROM OLD CONFIG TO NEW CONFIG (TEMP)
+	/** Service environments. Providing support for existing workers with this property. Don't use this for new workers. */
+	env?: string;
+	/** Wrangler environments, defaults to true. */
+	legacyEnv?: boolean;
+	/**
+	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
+	 *
+	 * When defined this will override any user settings.
+	 * Otherwise, Wrangler will use the user's preference.
+	 */
+	sendMetrics?: boolean;
+	usageModel?: "bundled" | "unbound";
+	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
+	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
@@ -112,7 +129,7 @@ export interface StartDevWorkerOptions {
 			httpsCertPath?: string;
 		};
 		/** Controls what request.url looks like inside the worker. */
-		urlOverrides?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
+		origin?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
 		/** A hook for outbound fetch calls from within the worker. */
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
