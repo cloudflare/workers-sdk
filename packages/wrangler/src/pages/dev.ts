@@ -625,11 +625,8 @@ export const Handler = async (args: PagesDevArguments) => {
 
 					logger.error(error);
 					logger.warn(
-						`Falling back to the following _routes.json default: ${JSON.stringify(
-							defaultRoutesJSONSpec,
-							null,
-							2
-						)}`
+						`Ignoring provided _routes.json file, and falling back to the following default routes configuration:\n` +
+							`${JSON.stringify(defaultRoutesJSONSpec, null, 2)}`
 					);
 
 					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
