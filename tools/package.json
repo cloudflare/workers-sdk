@@ -5,7 +5,8 @@
 	"scripts": {
 		"check:type": "tsc",
 		"test:ci": "vitest run",
-		"check:lint": "eslint ."
+		"check:lint": "eslint .",
+		"test:file": "node -r esbuild-register test/run-test-file.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
@@ -13,6 +14,7 @@
 		"@typescript-eslint/eslint-plugin": "^5.55.0",
 		"@typescript-eslint/parser": "^5.55.0",
 		"ts-dedent": "^2.2.0",
-		"undici": "5.28.4"
+		"undici": "5.28.4",
+		"find-up": "^6.3.0"
 	}
 }
