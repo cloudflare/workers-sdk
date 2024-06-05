@@ -242,6 +242,7 @@ export class LocalRuntimeController extends RuntimeController {
 		const id = ++this.#currentBundleId;
 
 		if (data.config.dev?.remote) {
+			void this.teardown();
 			return;
 		}
 

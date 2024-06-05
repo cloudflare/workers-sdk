@@ -239,6 +239,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		const id = ++this.#currentBundleId;
 
 		if (!ev.config.dev?.remote) {
+			void this.teardown();
 			return;
 		}
 
