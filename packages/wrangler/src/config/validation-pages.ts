@@ -38,6 +38,7 @@ const supportedPagesConfigFields = [
 	"browser",
 	// normalizeAndValidateConfig() sets this value
 	"configPath",
+	"upload_source_maps",
 ] as const;
 
 export function validatePagesConfig(

@@ -69,46 +69,93 @@ function loadSourceMap(
 function scanSourceMaps(modules: CfModule[]): CfWorkerSourceMap[] {
 	const maps: CfWorkerSourceMap[] = [];
 	for (const module of modules) {
-		const commentPrefix = "//# sourceMappingURL=";
-		const lastLine = module.content.toString().split("\n").pop();
-		if (
-			lastLine === undefined ||
-			!lastLine.startsWith(commentPrefix) ||
-			module.filePath === undefined
-		) {
-			continue;
+		const maybeSourcemap = sourceMapForModule(module);
+		if (maybeSourcemap) {
+			maps.push(maybeSourcemap);
 		}
-		// Assume the source map path in the comment is relative to the
-		// generated file it appears in.
-		const commentPath = stripPrefix(commentPrefix, lastLine).trim();
-		if (commentPath.startsWith("data:")) {
-			throw new Error(
-				`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
-			);
-		}
-		// Convert source map path to an absolute path that we can read.
-		const wranglerPath = path.join(path.dirname(module.filePath), commentPath);
-		if (!fs.existsSync(wranglerPath)) {
-			throw new Error(
-				`Invalid source map path in ${module.filePath}: ${wranglerPath} does not exist.`
-			);
-		}
-		const map = JSON.parse(
-			fs.readFileSync(wranglerPath, "utf8")
-		) as RawSourceMap;
-		// Overwrite the file property of the sourcemap to match the name of the
-		// corresponding module in the multipart upload.
-		map.file = module.name;
-		if (map.sourceRoot) {
-			map.sourceRoot = cleanPathPrefix(map.sourceRoot);
-		}
-		map.sources = map.sources.map(cleanPathPrefix);
-		maps.push({
-			name: module.name + ".map",
-			content: JSON.stringify(map),
-		});
 	}
 	return maps;
+}
+
+/**
+ * Attaches a sourcemap, if found, to a JavaScript module.
+ */
+export function tryAttachSourcemapToModule(module: CfModule) {
+	if (module.type !== "esm" && module.type !== "commonjs") {
+		return;
+	}
+
+	const sourceMap = sourceMapForModule(module);
+	if (sourceMap) {
+		module.sourceMap = sourceMap;
+	}
+}
+
+function getSourceMappingUrl(module: CfModule): string | undefined {
+	const content =
+		typeof module.content === "string"
+			? module.content
+			: new TextDecoder().decode(module.content);
+
+	const trimmed = content.trimEnd();
+	const lines = trimmed.split("\n");
+
+	// Some build steps generate empty last lines after the sourceMappingURL, so we'll need to
+	// trim so we can check for the sourcemap url.
+	while (lines.at(-1)?.trim().length === 0) {
+		lines.pop();
+	}
+
+	const commentPrefix = "//# sourceMappingURL=";
+	const lastLine = lines.pop();
+	if (lastLine === undefined || !lastLine.startsWith(commentPrefix)) {
+		return undefined;
+	}
+
+	// Assume the source map path in the comment is relative to the
+	// generated file it appears in.
+	const commentPath = stripPrefix(commentPrefix, lastLine).trim();
+	if (commentPath.startsWith("data:")) {
+		throw new Error(
+			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
+		);
+	}
+
+	return commentPath;
+}
+
+function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
+	if (module.filePath === undefined) {
+		// virtual modules don't have sourcemaps so we can exit early here
+		return undefined;
+	}
+
+	const sourceMapUrl = getSourceMappingUrl(module);
+	if (sourceMapUrl === undefined) {
+		return;
+	}
+
+	// Convert source map path to an absolute path that we can read.
+	const sourcemapPath = path.join(path.dirname(module.filePath), sourceMapUrl);
+	if (!fs.existsSync(sourcemapPath)) {
+		throw new Error(
+			`Invalid source map path in ${module.filePath}: ${sourcemapPath} does not exist.`
+		);
+	}
+	const map = JSON.parse(
+		fs.readFileSync(sourcemapPath, "utf8")
+	) as RawSourceMap;
+	// Overwrite the file property of the sourcemap to match the name of the
+	// corresponding module in the multipart upload.
+	map.file = module.name;
+	if (map.sourceRoot) {
+		map.sourceRoot = cleanPathPrefix(map.sourceRoot);
+	}
+	map.sources = map.sources.map(cleanPathPrefix);
+	return {
+		name: module.name + ".map",
+		content: JSON.stringify(map),
+	};
 }
 
 /**

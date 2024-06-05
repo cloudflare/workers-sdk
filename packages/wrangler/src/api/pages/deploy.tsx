@@ -78,6 +78,10 @@ interface PagesDeployOptions {
 	 */
 	bundle?: boolean;
 	/**
+	 * Whether to upload any server-side sourcemaps with this deployment
+	 */
+	sourceMaps: boolean;
+	/**
 	 * Command line args passed to the `pages deploy` cmd
 	 */
 	args?: Record<string, unknown>;
@@ -103,6 +107,7 @@ export async function deploy({
 	commitDirty,
 	functionsDirectory: customFunctionsDirectory,
 	bundle,
+	sourceMaps,
 	args,
 }: PagesDeployOptions) {
 	let _headers: string | undefined,
@@ -205,6 +210,7 @@ export async function deploy({
 			workerBundle = await buildFunctions({
 				outputConfigPath,
 				functionsDirectory,
+				sourcemap: sourceMaps,
 				onEnd: () => {},
 				buildOutputDirectory: directory,
 				routesOutputPath,
@@ -309,6 +315,7 @@ export async function deploy({
 			buildOutputDirectory: directory,
 			nodejsCompat,
 			defineNavigatorUserAgent,
+			sourceMaps: sourceMaps,
 		});
 	} else if (_workerJS) {
 		if (bundle) {

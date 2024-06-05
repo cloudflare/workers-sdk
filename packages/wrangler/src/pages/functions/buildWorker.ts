@@ -277,12 +277,14 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 	buildOutputDirectory,
 	nodejsCompat,
 	defineNavigatorUserAgent,
+	sourceMaps,
 }: {
 	workerJSDirectory: string;
 	bundle: boolean;
 	buildOutputDirectory: string;
 	nodejsCompat?: boolean;
 	defineNavigatorUserAgent: boolean;
+	sourceMaps: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
@@ -298,7 +300,8 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 				type: "ESModule",
 				globs: ["**/*.js", "**/*.mjs"],
 			},
-		]
+		],
+		sourceMaps
 	);
 
 	if (!bundle) {
