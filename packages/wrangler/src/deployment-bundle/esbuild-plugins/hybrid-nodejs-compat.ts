@@ -15,10 +15,19 @@ export const nodejsHybridPlugin: () => Plugin = () => {
 
 			// esbuild expects alias paths to be absolute
 			const aliasAbsolute = Object.fromEntries(
-				Object.entries(alias).map(([key, value]) => [
-					key,
-					require.resolve(value).replace(/\.cjs$/, ".mjs"),
-				])
+				Object.entries(alias).map(([key, value]) => {
+					let resolvedAliasPath;
+					try {
+						resolvedAliasPath = require.resolve(value)
+					} catch (e) {
+						// this is an alias for package that is not installed in the current app => ignore
+						resolvedAliasPath = '';
+					}
+
+					return [
+						key,
+						resolvedAliasPath.replace(/\.cjs$/, ".mjs"),
+					]}).filter((entry) => entry[1] !== '')
 			);
 
 			build.onResolve(
