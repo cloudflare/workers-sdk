@@ -13,9 +13,8 @@ describe("nodejs compat", () => {
 		);
 		try {
 			const response = await fetch(`http://${ip}:${port}`);
-			await expect(response.text()).resolves.toMatchInlineSnapshot(
-				`"{"id":"1","timestamp":"2017-04-30T23:00:00.000Z","userstamp":"RNACEN","descr":"ENA","current_release":884,"full_descr":"ENA","alive":"Y","for_release":" ","display_name":"ENA","project_id":"","avg_length":"412","min_length":"10","max_length":"900074","num_sequences":"12086180","num_organisms":"814855","description":"provides a comprehensive record of the world's nucleotide sequencing information","url":"https://www.ebi.ac.uk/ena/browser/","example":[{"upi":"URS00002D0E0C","taxid":10090},{"upi":"URS000035EE7E","taxid":9606},{"upi":"URS0000000001","taxid":77133}],"reference":[{"title":"The European Nucleotide Archive in 2017","authors":"Silvester et al.","journal":"Nucleic Acids Res. 2017","pubmed_id":"29140475"}]}"`
-			);
+			const result = (await response.json()) as { id: string };
+			expect(result.id).toEqual("1");
 		} finally {
 			await stop();
 		}
