@@ -3,6 +3,7 @@ import events from "node:events";
 import rl from "node:readline";
 import { PassThrough } from "node:stream";
 import { ReadableStream } from "node:stream/web";
+import { pathToFileURL } from "node:url";
 import psList from "ps-list";
 import { readUntil } from "./read-until";
 import type { ChildProcess } from "node:child_process";
@@ -10,8 +11,9 @@ import type { ChildProcess } from "node:child_process";
 // Replace all backslashes with forward slashes to ensure that their use
 // in shellac scripts doesn't break.
 export const WRANGLER = process.env.WRANGLER?.replaceAll("\\", "/") ?? "";
-export const WRANGLER_IMPORT =
-	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ?? "";
+export const WRANGLER_IMPORT = pathToFileURL(
+	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ?? ""
+);
 
 export function runWrangler(
 	wranglerCommand: string,
