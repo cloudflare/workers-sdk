@@ -1,9 +1,12 @@
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
+import { findUpSync } from "find-up";
 
 const currentFile = process.argv[2];
-const packageJsonPath = findNearestPackageJson(currentFile);
+const currentDirectory = path.dirname(currentFile);
+
+const packageJsonPath = findUpSync("package.json", { cwd: currentDirectory });
 
 if (!packageJsonPath) {
 	console.error("No package.json found.");
@@ -22,19 +25,3 @@ const testProcess = spawn(command, args, { stdio: "inherit" });
 testProcess.on("close", (code) => {
 	process.exit(code ?? 1);
 });
-
-/**
- * Finds the nearest parent package.json to the provided file.
- */
-function findNearestPackageJson(file: string) {
-	let dir = path.dirname(file);
-
-	while (dir !== path.resolve(dir, "..")) {
-		const jsonPath = path.join(dir, "package.json");
-		if (fs.existsSync(jsonPath)) {
-			return jsonPath;
-		}
-		dir = path.resolve(dir, "..");
-	}
-	return null;
-}

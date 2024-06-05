@@ -14,6 +14,7 @@
 		"@typescript-eslint/eslint-plugin": "^5.55.0",
 		"@typescript-eslint/parser": "^5.55.0",
 		"ts-dedent": "^2.2.0",
-		"undici": "5.28.4"
+		"undici": "5.28.4",
+		"find-up": "^6.3.0"
 	}
 }
