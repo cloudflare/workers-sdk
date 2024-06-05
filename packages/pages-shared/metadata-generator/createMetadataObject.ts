@@ -1,3 +1,4 @@
+import { relative } from "node:path";
 import {
 	ANALYTICS_VERSION,
 	HEADERS_VERSION,
@@ -26,6 +27,8 @@ const noopLogger = {
 export function createMetadataObject({
 	redirects,
 	headers,
+	redirectsFile,
+	headersFile,
 	webAnalyticsToken,
 	deploymentId,
 	failOpen,
@@ -33,14 +36,16 @@ export function createMetadataObject({
 }: {
 	redirects?: ParsedRedirects;
 	headers?: ParsedHeaders;
+	redirectsFile?: string;
+	headersFile?: string;
 	webAnalyticsToken?: string;
 	deploymentId?: string;
 	failOpen?: boolean;
 	logger?: Logger;
 }): Metadata {
 	return {
-		...constructRedirects({ redirects, logger }),
-		...constructHeaders({ headers, logger }),
+		...constructRedirects({ redirects, redirectsFile, logger }),
+		...constructHeaders({ headers, headersFile, logger }),
 		...constructWebAnalytics({ webAnalyticsToken, logger }),
 		deploymentId,
 		failOpen,
@@ -49,9 +54,11 @@ export function createMetadataObject({
 
 function constructRedirects({
 	redirects,
+	redirectsFile,
 	logger,
 }: {
 	redirects?: ParsedRedirects;
+	redirectsFile?: string;
 	logger: Logger;
 }): Metadata {
 	if (!redirects) {
@@ -61,18 +68,31 @@ function constructRedirects({
 	const num_valid = redirects.rules.length;
 	const num_invalid = redirects.invalid.length;
 
+	// exhaustive check, since we could not have parsed `redirects` out of
+	// a non-existing redirects file
+	const redirectsRelativePath = redirectsFile
+		? relative(process.cwd(), redirectsFile)
+		: "";
+
 	logger.log(
-		`Parsed ${num_valid} valid redirect rule${num_valid === 1 ? "" : "s"}.`
+		`✨ Parsed ${num_valid} valid redirect rule${num_valid === 1 ? "" : "s"}.`
 	);
 
 	if (num_invalid > 0) {
-		logger.warn(`Found invalid redirect lines:`);
+		let invalidRedirectRulesList = ``;
+
 		for (const { line, lineNumber, message } of redirects.invalid) {
+			invalidRedirectRulesList += `▶︎ ${message}\n`;
+
 			if (line) {
-				logger.warn(`  - ${lineNumber ? `#${lineNumber}: ` : ""}${line}`);
+				invalidRedirectRulesList += `    at ${redirectsRelativePath}${lineNumber ? `:${lineNumber}` : ""} | ${line}\n\n`;
 			}
-			logger.warn(`    ${message}`);
 		}
+
+		logger.warn(
+			`Found ${num_invalid} invalid redirect rule${num_invalid === 1 ? "" : "s"}:\n` +
+				`${invalidRedirectRulesList}`
+		);
 	}
 
 	/* Better to return no Redirects object at all than one with empty rules */
@@ -114,9 +134,11 @@ function constructRedirects({
 
 function constructHeaders({
 	headers,
+	headersFile,
 	logger,
 }: {
 	headers?: ParsedHeaders;
+	headersFile?: string;
 	logger: Logger;
 }): Metadata {
 	if (!headers) {
@@ -126,18 +148,31 @@ function constructHeaders({
 	const num_valid = headers.rules.length;
 	const num_invalid = headers.invalid.length;
 
+	// exhaustive check, since we could not have parsed `headers` out of
+	// a non-existing headers file
+	const headersRelativePath = headersFile
+		? relative(process.cwd(), headersFile)
+		: "";
+
 	logger.log(
-		`Parsed ${num_valid} valid header rule${num_valid === 1 ? "" : "s"}.`
+		`✨ Parsed ${num_valid} valid header rule${num_valid === 1 ? "" : "s"}.`
 	);
 
 	if (num_invalid > 0) {
-		logger.warn(`Found invalid header lines:`);
+		let invalidHeaderRulesList = ``;
+
 		for (const { line, lineNumber, message } of headers.invalid) {
+			invalidHeaderRulesList += `▶︎ ${message}\n`;
+
 			if (line) {
-				logger.warn(`  - ${lineNumber ? `#${lineNumber}: ` : ""} ${line}`);
+				invalidHeaderRulesList += `    at ${headersRelativePath}${lineNumber ? `:${lineNumber}` : ""} | ${line}\n\n`;
 			}
-			logger.warn(`    ${message}`);
 		}
+
+		logger.warn(
+			`Found ${num_invalid} invalid header rule${num_invalid === 1 ? "" : "s"}:\n` +
+				`${invalidHeaderRulesList}`
+		);
 	}
 
 	/* Better to return no Headers object at all than one with empty rules */
