@@ -23,7 +23,9 @@ testProcess.on("close", (code) => {
 	process.exit(code ?? 1);
 });
 
-// Function to find the nearest package.json
+/**
+ * Finds the nearest parent package.json to the provided file.
+ */
 function findNearestPackageJson(file: string) {
 	let dir = path.dirname(file);
 
