@@ -8663,7 +8663,7 @@ export default{
 					"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[AssertionError: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
+				`[AssertionError: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
 	});
