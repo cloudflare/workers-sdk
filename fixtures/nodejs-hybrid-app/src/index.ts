@@ -26,8 +26,8 @@ export default {
 		await client.connect();
 		const result = await client.query(`SELECT * FROM rnc_database`);
 
-		// Return the result as JSON
-		const resp = new Response(JSON.stringify(result.rows), {
+		// Return the first row as JSON
+		const resp = new Response(JSON.stringify(result.rows[0]), {
 			headers: { "Content-Type": "application/json" },
 		});
 
