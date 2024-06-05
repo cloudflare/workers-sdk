@@ -143,14 +143,14 @@ export const getTemplateMap = async () => {
 		"hello-world": (await import("../templates/hello-world/c3")).default,
 		"hello-world-python": (await import("../templates/hello-world-python/c3"))
 			.default,
-		"hello-world-durable-object": (
-			await import("../templates/hello-world-durable-object/c3")
-		).default,
 		// Dummy record -- actual template config resolved in `selectFramework`
 		"web-framework": { displayName: "Website or web app" } as TemplateConfig,
 		common: (await import("../templates/common/c3")).default,
 		scheduled: (await import("../templates/scheduled/c3")).default,
 		queues: (await import("../templates/queues/c3")).default,
+		"hello-world-durable-object": (
+			await import("../templates/hello-world-durable-object/c3")
+		).default,
 		openapi: (await import("../templates/openapi/c3")).default,
 		// Dummy record -- actual template config resolved in `processRemoteTemplate`
 		"remote-template": {
