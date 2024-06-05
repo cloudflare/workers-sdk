@@ -17,5 +17,8 @@
 		"typescript": "^5.4.3",
 		"vitest": "1.5.0",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

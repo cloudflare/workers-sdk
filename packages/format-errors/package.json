@@ -17,5 +17,8 @@
 		"tsconfig": "*",
 		"wrangler": "workspace:*",
 		"zod": "^3.22.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

@@ -3264,6 +3264,23 @@ describe("normalizeAndValidateConfig()", () => {
 			                    - The field \\"unsafe.metadata\\" should be an object but got null."
 		              `);
 			});
+
+			it("should not provide an unsafe warning when the environment variable is specified", () => {
+				try {
+					process.env.WRANGLER_DISABLE_EXPERIMENTAL_WARNING = "1";
+
+					const { diagnostics } = normalizeAndValidateConfig(
+						{ unsafe: { bindings: [] } } as unknown as RawConfig,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				} finally {
+					delete process.env.WRANGLER_DISABLE_EXPERIMENTAL_WARNING;
+				}
+			});
 		});
 
 		describe("(deprecated)", () => {

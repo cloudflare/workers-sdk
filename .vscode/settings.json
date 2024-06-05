@@ -73,5 +73,10 @@
 	},
 	"[ignore]": {
 		"editor.defaultFormatter": "foxundermoon.shell-format"
-	}
+	},
+	"eslint.workingDirectories": [
+		{
+			"mode": "auto"
+		}
+	]
 }

@@ -32,5 +32,8 @@
 		"esbuild": "^0.17.12",
 		"log-update": "^5.0.1",
 		"undici": "5.28.4"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

@@ -10,5 +10,8 @@
 		"wrangler": "workspace:*",
 		"ts-dedent": "^2.2.0",
 		"undici": "^5.28.3"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

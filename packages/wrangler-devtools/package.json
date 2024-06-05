@@ -15,5 +15,8 @@
 	"devDependencies": {
 		"patch-package": "^6.5.1",
 		"wrangler": "^3.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

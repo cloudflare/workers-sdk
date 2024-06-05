@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.11.40",
+	"version": "0.11.41",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -33,5 +33,8 @@
 	},
 	"workers-sdk": {
 		"prerelease": true
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

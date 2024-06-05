@@ -9,7 +9,7 @@ import type { HttpResponseResolver } from "msw";
 export function mockUploadWorkerRequest(
 	options: {
 		available_on_subdomain?: boolean;
-		expectedEntry?: string | RegExp;
+		expectedEntry?: string | RegExp | ((entry: string | null) => void);
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw";
 		expectedBindings?: unknown;
@@ -47,8 +47,10 @@ export function mockUploadWorkerRequest(
 		}
 
 		const formBody = await request.formData();
-		if (expectedEntry !== undefined) {
+		if (typeof expectedEntry === "string" || expectedEntry instanceof RegExp) {
 			expect(await serialize(formBody.get("index.js"))).toMatch(expectedEntry);
+		} else if (typeof expectedEntry === "function") {
+			expectedEntry(await serialize(formBody.get("index.js")));
 		}
 		const metadata = JSON.parse(
 			await toString(formBody.get("metadata"))

@@ -15,5 +15,8 @@
 		"undici": "^5.28.3",
 		"wrangler": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }
