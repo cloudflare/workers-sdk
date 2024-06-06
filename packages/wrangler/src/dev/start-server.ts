@@ -112,7 +112,6 @@ export async function startDevServer(
 			liveReload: props.liveReload,
 			remote: !props.local,
 			auth: async () => {
-				console.log("in auth hook");
 				let accountId = props.accountId;
 				if (accountId === undefined) {
 					const accountChoices = await getAccountChoices();

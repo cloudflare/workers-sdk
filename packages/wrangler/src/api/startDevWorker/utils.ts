@@ -52,7 +52,6 @@ export function unwrapHook<T extends string | number | object>(
 	hook: Hook<T> | undefined
 ): T | Promise<T> | undefined;
 export function unwrapHook<T extends string | number | object>(hook: Hook<T>) {
-	console.log("unwrapping hook", hook.toString());
 	return typeof hook === "function" ? hook() : hook;
 }
 

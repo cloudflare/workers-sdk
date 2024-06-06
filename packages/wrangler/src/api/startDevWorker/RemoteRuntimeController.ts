@@ -112,7 +112,6 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
-		logger.log("onBundleComplete");
 		try {
 			const routes = config.triggers
 				?.filter(
@@ -135,15 +134,12 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (!config.dev?.auth) {
 				throw new MissingConfigError("config.dev.auth");
 			}
-			logger.log("pre-auth");
 
 			const auth = await unwrapHook(config.dev.auth);
-			logger.log("post-auth");
 
 			if (this.#session) {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
 			}
-			logger.log(auth);
 
 			this.#session ??= await this.#previewSession({
 				accountId: auth.accountId,
@@ -153,8 +149,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				routes,
 				sendMetrics: config.sendMetrics,
 			});
-
-			logger.log(this.#session);
 
 			const bindings = (
 				await convertBindingsToCfWorkerInitBindings(config.bindings)
@@ -184,7 +178,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				usageModel: config.usageModel,
 				routes,
 			});
-			logger.log(token);
 
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
@@ -194,7 +187,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 
 			const accessToken = await getAccessToken(token.host);
-			logger.log(accessToken);
 
 			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
@@ -225,8 +217,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				},
 			});
 		} catch (error) {
-			logger.error(error);
-
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error reloading remote server",
@@ -276,12 +266,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		logger.log("reloadStart");
 		this.emit("reloadStart", data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		logger.log("reloadComplete");
-
 		this.emit("reloadComplete", data);
 	}
 }

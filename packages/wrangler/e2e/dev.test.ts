@@ -52,7 +52,7 @@ describe.each([
 	{ cmd: "wrangler dev --x-dev-env" },
 	{ cmd: "wrangler dev --remote --x-dev-env" },
 ])("basic js dev: $cmd", ({ cmd }) => {
-	e2eTest.only(
+	e2eTest(
 		`can modify worker during ${cmd}`,
 		async ({ run, seed, waitForReady, waitForReload }) => {
 			await seed({
