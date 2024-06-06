@@ -696,7 +696,7 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/unstable_dev:
-    dependencies:
+    devDependencies:
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler

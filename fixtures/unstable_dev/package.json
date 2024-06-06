@@ -1,5 +1,5 @@
 {
-	"name": "wrangler-dev-api-app",
+	"name": "unstable_dev",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -8,7 +8,7 @@
 		"dev": "node --no-warnings ./src/wrangler-dev.mjs",
 		"test:ci": "npm run dev"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"wrangler": "workspace:*"
 	},
 	"volta": {
