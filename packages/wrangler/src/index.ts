@@ -1,6 +1,5 @@
 import module from "node:module";
 import os from "node:os";
-import { brandColor } from "@cloudflare/cli/colors";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
