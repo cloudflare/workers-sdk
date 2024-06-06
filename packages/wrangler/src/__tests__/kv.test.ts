@@ -115,7 +115,7 @@ describe("wrangler", () => {
 			});
 
 			it("should create a namespace", async () => {
-				mockCreateRequest("UnitTestNamespace");
+				mockCreateRequest("worker-UnitTestNamespace");
 				await runWrangler("kv namespace create UnitTestNamespace");
 				expect(std.out).toMatchInlineSnapshot(`
 					"🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
@@ -128,7 +128,7 @@ describe("wrangler", () => {
 			});
 
 			it("should create a preview namespace if configured to do so", async () => {
-				mockCreateRequest("UnitTestNamespace_preview");
+				mockCreateRequest("worker-UnitTestNamespace_preview");
 				await runWrangler("kv namespace create UnitTestNamespace --preview");
 				expect(std.out).toMatchInlineSnapshot(`
 					"🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
@@ -141,8 +141,8 @@ describe("wrangler", () => {
 			});
 
 			it("should create a namespace using configured worker name", async () => {
-				writeFileSync("./wrangler.toml", 'name = "other"', "utf-8");
-				mockCreateRequest("other-UnitTestNamespace");
+				writeFileSync("./wrangler.toml", 'name = "other-worker"', "utf-8");
+				mockCreateRequest("other-worker-UnitTestNamespace");
 				await runWrangler("kv namespace create UnitTestNamespace");
 				expect(std.out).toMatchInlineSnapshot(`
 					"🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
@@ -1699,66 +1699,60 @@ describe("wrangler", () => {
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler kv:namespace
+				"wrangler kv:namespace
 
-			🗂️  Interact with your Workers KV Namespaces (deprecated)
+				Commands:
+				  wrangler kv:namespace create <namespace>  Create a new namespace
+				  wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
+				  wrangler kv:namespace delete              Deletes a given namespace.
 
-			Commands:
-			  wrangler kv:namespace create <namespace>  Create a new namespace
-			  wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
-			  wrangler kv:namespace delete              Deletes a given namespace.
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 		test("kv:key", async () => {
 			const result = runWrangler("kv:key --help");
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler kv:key
+				"wrangler kv:key
 
-			🔑 Individually manage Workers KV key-value pairs (deprecated)
+				Commands:
+				  wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
+				  wrangler kv:key list               Outputs a list of all keys in a given namespace.
+				  wrangler kv:key get <key>          Reads a single value by key from the given namespace.
+				  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
 
-			Commands:
-			  wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
-			  wrangler kv:key list               Outputs a list of all keys in a given namespace.
-			  wrangler kv:key get <key>          Reads a single value by key from the given namespace.
-			  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 		test("kv:bulk", async () => {
 			const result = runWrangler("kv:bulk --help");
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler kv:bulk
+				"wrangler kv:bulk
 
-			💪 Interact with multiple Workers KV key-value pairs at once (deprecated)
+				Commands:
+				  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
+				  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
-			Commands:
-			  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
-			  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
-
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 	});
 });
