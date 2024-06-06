@@ -75,7 +75,7 @@ function handleAliasedNodeJSPackages(
 		// Resolve the alias to its absolute path and potentially mark it as external
 		return {
 			path: aliasAbsolute[args.path],
-			external: external.includes(args.path),
+			external: external.includes(alias[args.path]),
 		};
 	});
 }

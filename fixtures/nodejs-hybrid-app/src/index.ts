@@ -1,8 +1,9 @@
-import { Client } from "pg";
-
 // node:assert/strict is currently an unenv alias to node:assert
 // this is not very common, but happens and we need to support it
 import assert from "node:assert/strict";
+import { Client } from "pg";
+
+assert(true, "the world is broken");
 
 /**
  * Welcome to Cloudflare Workers! This is your first worker.
