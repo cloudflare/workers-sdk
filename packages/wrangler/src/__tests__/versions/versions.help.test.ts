@@ -22,9 +22,7 @@ describe("versions --help", () => {
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
-			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
-			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
-			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler kv                          🗂️  Interact with your Workers KV Namespaces
 			  wrangler pages                       ⚡️ Configure Cloudflare Pages
 			  wrangler queues                      🇶 Configure Workers Queues
 			  wrangler r2                          📦 Interact with an R2 store
