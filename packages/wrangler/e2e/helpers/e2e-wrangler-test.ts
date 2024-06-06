@@ -59,7 +59,7 @@ export const e2eTest = test.extend<TestContext>({
 				return name;
 			}
 
-			const result = await run(`wrangler kv:namespace create ${name}`);
+			const result = await run(`wrangler kv namespace create ${name}`);
 			const match = /id = "([0-9a-f]{32})"/.exec(result);
 			assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 			const id = match[1];
@@ -67,7 +67,7 @@ export const e2eTest = test.extend<TestContext>({
 			return id;
 		});
 		for (const resource of created) {
-			await run(`wrangler kv:namespace delete --namespace-id ${resource}`);
+			await run(`wrangler kv namespace delete --namespace-id ${resource}`);
 		}
 		created.clear();
 	},

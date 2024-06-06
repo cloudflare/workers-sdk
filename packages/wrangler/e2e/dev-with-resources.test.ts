@@ -319,7 +319,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		async ({ kv, run, seed, waitForReady }) => {
 			const ns = await kv(isLocal);
 			await run(
-				`wrangler kv:key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
+				`wrangler kv key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
 			);
 
 			const workerName = generateResourceName();
@@ -349,7 +349,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			expect(await res.text()).toBe("existing-value");
 
 			const result = await run(
-				`wrangler kv:key get ${resourceFlags} --namespace-id=${ns} new-key`
+				`wrangler kv key get ${resourceFlags} --namespace-id=${ns} new-key`
 			);
 			expect(result).toBe("new-value");
 		}
@@ -400,7 +400,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 			// Try to clean up created remote Workers Sites namespace
 			if (!isLocal) {
-				const listResult = await run(`wrangler kv:namespace list`);
+				const listResult = await run(`wrangler kv namespace list`);
 				const list = JSON.parse(
 					// Ignore extra debug output
 					listResult.substring(
@@ -413,7 +413,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				if (ns === undefined) {
 					console.warn("Couldn't find Workers Sites namespace to delete");
 				} else {
-					await run(`wrangler kv:namespace delete --namespace-id ${ns.id}`);
+					await run(`wrangler kv namespace delete --namespace-id ${ns.id}`);
 				}
 			}
 		}
