@@ -1,5 +1,102 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
+import type { ApiDeployment, ApiVersion } from "../../../../versions/types";
+
+export const mswListNewDeploymentsLatestFull = [
+	http.get(
+		"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+		({ params }) => {
+			return HttpResponse.json(
+				createFetchResult({
+					deployments: [
+						{
+							id: `deployment:${params["scriptName"]}`,
+							source: "api",
+							strategy: "percentage",
+							author_email: "author@example.com",
+							created_on: "2021-01-01T00:00:00.000000Z",
+							versions: [
+								{
+									version_id: `${params["scriptName"]}:version:0`,
+									percentage: 100.0,
+								},
+							],
+						},
+					] as Array<ApiDeployment>,
+				})
+			);
+		},
+		{ once: true }
+	),
+	http.get(
+		"*/accounts/:accountId/workers/scripts/:scriptName/versions/:version",
+		({ params }) => {
+			return HttpResponse.json(
+				createFetchResult({
+					id: params["version"],
+					number: 1,
+					metadata: {
+						created_on: "2021-01-01T00:00:00.000000Z",
+						modified_on: "2021-01-01T00:00:00.000000Z",
+						source: "api",
+						author_email: "author@example.com",
+					},
+				} as ApiVersion)
+			);
+		},
+		{ once: false }
+	),
+];
+
+export const mswListNewDeploymentsLatestFiftyFifty = [
+	http.get(
+		"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+		({ params }) => {
+			return HttpResponse.json(
+				createFetchResult({
+					deployments: [
+						{
+							id: `deployment:${params["scriptName"]}`,
+							source: "api",
+							strategy: "percentage",
+							author_email: "author@example.com",
+							created_on: "2021-01-01T00:00:00.000000Z",
+							versions: [
+								{
+									version_id: `${params["scriptName"]}:version:0`,
+									percentage: 50.0,
+								},
+								{
+									version_id: `${params["scriptName"]}:version:1`,
+									percentage: 50.0,
+								},
+							],
+						},
+					] as Array<ApiDeployment>,
+				})
+			);
+		},
+		{ once: true }
+	),
+	http.get(
+		"*/accounts/:accountId/workers/scripts/:scriptName/versions/:version",
+		({ params }) => {
+			return HttpResponse.json(
+				createFetchResult({
+					id: params["version"],
+					number: 1,
+					metadata: {
+						created_on: "2021-01-01T00:00:00.000000Z",
+						modified_on: "2021-01-01T00:00:00.000000Z",
+						source: "api",
+						author_email: "author@example.com",
+					},
+				} as ApiVersion)
+			);
+		},
+		{ once: false }
+	),
+];
 
 export const mswListNewDeployments = http.get(
 	"*/accounts/:accountId/workers/scripts/:workerName/deployments",

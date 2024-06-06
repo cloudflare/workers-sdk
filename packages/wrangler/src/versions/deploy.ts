@@ -9,14 +9,18 @@ import {
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { findWranglerToml, readConfig } from "../config";
+import { confirm } from "../dialogs";
 import { UserError } from "../errors";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { APIError } from "../parse";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	createDeployment,
 	fetchDeployableVersions,
+	fetchLatestDeployment,
 	fetchLatestDeploymentVersions,
 	fetchVersions,
 	patchNonVersionedScriptSettings,
@@ -203,6 +207,68 @@ function getConfig(
 	const config = readConfig(configPath, args);
 
 	return config;
+}
+
+/**
+ * Prompts the user for confirmation when overwriting the latest deployment, given that it's split.
+ */
+export async function confirmLatestDeploymentOverwrite(
+	accountId: string,
+	scriptName: string
+) {
+	try {
+		const latest = await fetchLatestDeployment(accountId, scriptName);
+		if (latest && latest.versions.length >= 2) {
+			// Fetch the version details.
+
+			const versionCache: VersionCache = new Map();
+			const versionIds = latest.versions.map((v) => v.version_id);
+			await fetchVersions(accountId, scriptName, versionCache, ...versionIds);
+
+			// Format each version.
+
+			const formattedVersions = latest.versions.map((traffic) => {
+				const version = versionCache.get(traffic.version_id);
+				assert(version);
+				const percentage = brandColor(`(${traffic.percentage}%)`);
+				const details = formatLabelledValues(
+					{ Created: new Date(version.metadata["created_on"]).toISOString() },
+					{
+						indentationCount: 4,
+						labelJustification: "right",
+						formatLabel: (label) => gray(label + ":"),
+						formatValue: (value) => gray(value),
+					}
+				);
+				return `${percentage} ${version.id}\n${details}`;
+			});
+
+			// Format deployment.
+
+			const formattedDeployment = formatLabelledValues({
+				"Version(s)": formattedVersions.join("\n\n"),
+			});
+
+			// Print message and confirmation.
+
+			logger.warn(
+				`Your last deployment has multiple versions. To progress this deployment use "wrangler versions deploy" instead.
+Currently deployed versions:
+
+${formattedDeployment}`
+			);
+
+			return await confirm(
+				`"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`
+			);
+		}
+	} catch (e) {
+		const isNotFound = e instanceof APIError && e.code == 10007;
+		if (!isNotFound) {
+			throw e;
+		}
+	}
+	return true;
 }
 
 export async function printLatestDeployment(

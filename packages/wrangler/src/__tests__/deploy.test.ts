@@ -43,6 +43,10 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
+import {
+	mswListNewDeploymentsLatestFiftyFifty,
+	mswListNewDeploymentsLatestFull,
+} from "./helpers/msw/handlers/versions";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
@@ -78,6 +82,7 @@ describe("deploy", () => {
 		setIsTTY(true);
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
+		msw.use(...mswListNewDeploymentsLatestFull);
 		logger.loggerLevel = "log";
 	});
 
@@ -421,6 +426,34 @@ describe("deploy", () => {
 
 			"
 		`);
+		});
+
+		it("should warn user when worker has deployment with multiple versions", async () => {
+			msw.use(...mswListNewDeploymentsLatestFiftyFifty);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockConfirm({
+				text: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				result: false,
+			});
+
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour last deployment has multiple versions. To progress this deployment use \\"wrangler versions deploy\\" instead.[0m
+
+				  Currently deployed versions:
+
+				  Version(s):  (50%) test-name:version:0
+				                   Created:  2021-01-01T00:00:00.000Z
+
+				               (50%) test-name:version:1
+				                   Created:  2021-01-01T00:00:00.000Z
+
+				"
+			`);
 		});
 
 		it("should warn user when additional properties are passed to a services config", async () => {
