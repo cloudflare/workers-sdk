@@ -32,61 +32,12 @@ export type BundlerControllerEventMap = ControllerEventMap & {
 	bundleComplete: [BundleCompleteEvent];
 };
 export class BundlerController extends Controller<BundlerControllerEventMap> {
-	#runEsbuild(
-		config: StartDevWorkerOptions,
-		onStart: () => void,
-		setBundle: (
-			cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
-		) => void
-	) {
-		assert(this.#tmpDir);
-		assert(config._entry, "config._entry");
-		assert(config._additionalModules, "config._additionalModules");
-		assert(config.build?.moduleRules, "config.build?.moduleRules");
-		assert(config.build?.define, "config.build?.define");
-		return runBuild(
-			{
-				entry: config._entry,
-				destination: this.#tmpDir.path,
-				jsxFactory: config.build?.jsxFactory,
-				jsxFragment: config.build?.jsxFragment,
-				processEntrypoint: Boolean(config._processEntrypoint),
-				additionalModules: config._additionalModules,
-				rules: config.build.moduleRules,
-				assets: config._assets,
-				serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
-				tsconfig: config.build?.tsconfig,
-				minify: config.build?.minify,
-				legacyNodeCompat: config._legacyNodeCompat,
-				nodejsCompat: config.compatibilityFlags?.includes("nodejs_compat"),
-				define: config.build.define,
-				noBundle: !config.build?.bundle,
-				findAdditionalModules: config.build?.findAdditionalModules,
-				durableObjects: config._bindings?.durable_objects ?? { bindings: [] },
-				local: !config.dev?.remote,
-				// startDevWorker only applies to "dev"
-				targetConsumer: "dev",
-				testScheduled: Boolean(config.dev?.testScheduled),
-				projectRoot: config._projectRoot,
-				onStart,
-				defineNavigatorUserAgent: isNavigatorDefined(
-					config.compatibilityDate,
-					config.compatibilityFlags
-				),
-			},
-			setBundle,
-			(err) =>
-				this.emitErrorEvent({
-					type: "error",
-					reason: "Failed to construct initial bundle",
-					cause: castErrorCause(err),
-					source: "BundlerController",
-					data: undefined,
-				})
-		);
-	}
+	#currentBundle?: EsbuildBundle;
 
 	#customBuildWatcher?: ReturnType<typeof watch>;
+
+	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
+	// Note: we don't need this for non-custom builds since esbuild handles this internally with it's watch mode
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
@@ -94,7 +45,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		this.#customBuildAborter.abort();
 		this.#customBuildAborter = new AbortController();
 
-		// Since `this.#customBuildAborter` will change as builds are scheduled, store the specific AbortController that will be used for this build
+		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#customBuildAborter;
 		assert(config._entry);
 		const relativeFile =
@@ -139,9 +90,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				rules: config.build.moduleRules,
 			});
 
-			const bundleResult: Omit<BundleResult, "stop"> & {
-				stop?: BundleResult["stop"];
-			} = !config.build?.bundle
+			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
 						config._entry,
 						config.build.moduleRules,
@@ -181,7 +130,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			const entrypointPath = realpathSync(
 				bundleResult?.resolvedEntryPointPath ?? config._entry.file
 			);
-			this.emitBundleCompletetEvent({
+			this.emitBundleCompletedEvent({
 				type: "bundleComplete",
 				config,
 				bundle: {
@@ -193,10 +142,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						getBundleType(config._entry.format, config._entry.file),
 					modules: bundleResult.modules,
 					dependencies: bundleResult?.dependencies ?? {},
-					sourceMapPath:
-						"sourceMapPath" in bundleResult
-							? bundleResult?.sourceMapPath
-							: undefined,
+					sourceMapPath: bundleResult?.sourceMapPath,
 					sourceMapMetadata: bundleResult?.sourceMapMetadata,
 					entrypointSource: readFileSync(entrypointPath, "utf8"),
 				},
@@ -234,26 +180,64 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 	#bundlerCleanup?: ReturnType<typeof runBuild>;
 
-	#currentBundle?: EsbuildBundle;
-
 	#startBundle(config: StartDevWorkerOptions) {
-		this.#bundlerCleanup = this.#runEsbuild(
-			config,
-			() => {
-				this.emitBundleStartEvent({
-					type: "bundleStart",
-					config,
-				});
+		assert(this.#tmpDir);
+		assert(config._entry, "config._entry");
+		assert(config._additionalModules, "config._additionalModules");
+		assert(config.build?.moduleRules, "config.build?.moduleRules");
+		assert(config.build?.define, "config.build?.define");
+		this.#bundlerCleanup = runBuild(
+			{
+				entry: config._entry,
+				destination: this.#tmpDir.path,
+				jsxFactory: config.build?.jsxFactory,
+				jsxFragment: config.build?.jsxFragment,
+				processEntrypoint: Boolean(config._processEntrypoint),
+				additionalModules: config._additionalModules,
+				rules: config.build.moduleRules,
+				assets: config._assets,
+				serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
+				tsconfig: config.build?.tsconfig,
+				minify: config.build?.minify,
+				legacyNodeCompat: config._legacyNodeCompat,
+				nodejsCompat: config.compatibilityFlags?.includes("nodejs_compat"),
+				define: config.build.define,
+				noBundle: !config.build?.bundle,
+				findAdditionalModules: config.build?.findAdditionalModules,
+				durableObjects: config._bindings?.durable_objects ?? { bindings: [] },
+				local: !config.dev?.remote,
+				// startDevWorker only applies to "dev"
+				targetConsumer: "dev",
+				testScheduled: Boolean(config.dev?.testScheduled),
+				projectRoot: config._projectRoot,
+				onStart: () => {
+					this.emitBundleStartEvent({
+						type: "bundleStart",
+						config,
+					});
+				},
+				defineNavigatorUserAgent: isNavigatorDefined(
+					config.compatibilityDate,
+					config.compatibilityFlags
+				),
 			},
 			(cb) => {
 				const newBundle = cb(this.#currentBundle);
-				this.emitBundleCompletetEvent({
+				this.emitBundleCompletedEvent({
 					type: "bundleComplete",
 					config,
 					bundle: newBundle,
 				});
 				this.#currentBundle = newBundle;
-			}
+			},
+			(err) =>
+				this.emitErrorEvent({
+					type: "error",
+					reason: "Failed to construct initial bundle",
+					cause: castErrorCause(err),
+					source: "BundlerController",
+					data: undefined,
+				})
 		);
 	}
 
@@ -290,14 +274,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		this.#tmpDir?.remove();
 	}
 
-	// *********************
-	//   Event Dispatchers
-	// *********************
-
 	emitBundleStartEvent(data: BundleStartEvent) {
 		this.emit("bundleStart", data);
 	}
-	emitBundleCompletetEvent(data: BundleCompleteEvent) {
+	emitBundleCompletedEvent(data: BundleCompleteEvent) {
 		this.emit("bundleComplete", data);
 	}
 }

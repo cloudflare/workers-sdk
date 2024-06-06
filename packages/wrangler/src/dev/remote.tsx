@@ -132,6 +132,7 @@ interface RemoteProps {
 }
 
 export function Remote(props: RemoteProps) {
+	logger.log("in Remote");
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
@@ -165,6 +166,7 @@ export function Remote(props: RemoteProps) {
 	// This effect handles the async step of fetching the available accounts for the current user.
 	// If only one account is available then it is just used by calling `setAccountId()`.
 	useEffect(() => {
+		console.log("in random useEffect");
 		if (
 			accountChoicesRef.current !== undefined ||
 			props.accountId !== undefined

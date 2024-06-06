@@ -31,7 +31,7 @@ import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
-import { requireApiToken } from "../user";
+import { getAccountId, requireApiToken } from "../user";
 import { openInspector } from "./inspect";
 import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
@@ -282,6 +282,7 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
+	console.log("props.accountId", props.accountId);
 	const [accountId, setAccountIdStateOnly] = useState(props.accountId);
 	const accountIdDeferred = useMemo(() => createDeferred<string>(), []);
 	const setAccountIdAndResolveDeferred = useCallback(
@@ -412,8 +413,9 @@ function DevSession(props: DevSessionProps) {
 					: undefined,
 			dev: {
 				auth: async () => {
+					const selectedAccountId = await getAccountId();
 					return {
-						accountId: await accountIdDeferred.promise,
+						accountId: selectedAccountId,
 						apiToken: requireApiToken(),
 					};
 				},
@@ -448,7 +450,6 @@ function DevSession(props: DevSessionProps) {
 		props.usageModel,
 		props.isWorkersSite,
 		props.assetPaths,
-		accountIdDeferred,
 		props.local,
 		props.initialIp,
 		props.initialPort,
