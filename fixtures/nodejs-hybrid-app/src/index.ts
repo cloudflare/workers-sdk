@@ -1,5 +1,9 @@
 import { Client } from "pg";
 
+// node:assert/strict is currently an unenv alias to node:assert
+// this is not very common, but happens and we need to support it
+import assert from "node:assert/strict";
+
 /**
  * Welcome to Cloudflare Workers! This is your first worker.
  *
@@ -25,6 +29,7 @@ export default {
 		});
 		await client.connect();
 		const result = await client.query(`SELECT * FROM rnc_database`);
+		assert(true);
 
 		// Return the first row as JSON
 		const resp = new Response(JSON.stringify(result.rows[0]), {
