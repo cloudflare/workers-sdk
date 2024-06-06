@@ -438,11 +438,11 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	const { nodeCompat: legacyNodeCompat, ...argsExceptNodeCompat } = args;
-	const nodejsCompatMode = validateNodeCompat(
-		legacyNodeCompat,
-		args.compatibilityFlags ?? [],
-		config?.no_bundle ?? false
-	);
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: legacyNodeCompat,
+		compatibilityFlags: args.compatibilityFlags ?? [],
+		noBundle: config?.no_bundle ?? false,
+	});
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,

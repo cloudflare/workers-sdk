@@ -348,11 +348,12 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	let scriptPath = "";
 
-	const nodejsCompatMode = validateNodeCompat(
-		args.nodeCompat,
-		args.compatibilityFlags ?? config.compatibility_flags ?? [],
-		args.noBundle ?? config.no_bundle ?? false
-	);
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat,
+		compatibilityFlags:
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		compatibilityDate,

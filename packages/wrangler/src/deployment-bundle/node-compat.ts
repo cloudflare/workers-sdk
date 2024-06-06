@@ -20,11 +20,15 @@ export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
  * We assert that you must prefix v2 mode with `experimental`.
  * We warn if using legacy or v2 mode.
  */
-export function validateNodeCompat(
-	legacyNodeCompat: boolean,
-	/* mutate */ compatibilityFlags: string[],
-	noBundle: boolean
-): NodeJSCompatMode {
+export function validateNodeCompat({
+	legacyNodeCompat,
+	compatibilityFlags,
+	noBundle,
+}: {
+	legacyNodeCompat: boolean;
+	/* mutate */ compatibilityFlags: string[];
+	noBundle: boolean;
+}): NodeJSCompatMode {
 	if (legacyNodeCompat) {
 		logger.warn(
 			"Enabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs."

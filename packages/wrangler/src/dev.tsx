@@ -435,11 +435,12 @@ export async function startDev(args: StartDevOptions) {
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
 
-		const nodejsCompatMode = validateNodeCompat(
-			args.nodeCompat ?? config.node_compat ?? false,
-			args.compatibilityFlags ?? config.compatibility_flags ?? [],
-			args.noBundle ?? config.no_bundle ?? false
-		);
+		const nodejsCompatMode = validateNodeCompat({
+			legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+			compatibilityFlags:
+				args.compatibilityFlags ?? config.compatibility_flags ?? [],
+			noBundle: args.noBundle ?? config.no_bundle ?? false,
+		});
 
 		await metrics.sendMetricsEvent(
 			"run dev",
@@ -569,11 +570,11 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
-	const nodejsCompatMode = validateNodeCompat(
-		args.nodeCompat ?? config.node_compat ?? false,
-		args.compatibilityFlags ?? config.compatibility_flags,
-		args.noBundle ?? config.no_bundle ?? false
-	);
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
