@@ -19,6 +19,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -163,65 +164,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
+	const nodejsCompatMode = validateNodeCompat(
+		props.nodeCompat ?? config.node_compat ?? false,
+		props.compatibilityFlags ?? config.compatibility_flags,
+		props.noBundle ?? config.no_bundle ?? false
+	);
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-
-	const nodejsCompatV2 = compatibilityFlags.includes(
-		"experimental:nodejs_compat_v2"
-	);
-	const nodejsCompatV2NotExperimental =
-		compatibilityFlags.includes("nodejs_compat_v2");
-	if (nodejsCompatV2) {
-		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[
-			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
-		] = "nodejs_compat_v2";
-	}
-	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat =
-		!nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
-
-	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
-		throw new UserError(
-			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
-		);
-	}
-
-	if (nodejsCompatV2NotExperimental) {
-		throw new UserError(
-			`The \`nodejs_compat_v2\` compatibility flag is experimental and must be accompanied by \`experimental\` compatibility flag. Add \`experimental\` flag to your compatibility flags.`
-		);
-	}
-
-	if (nodejsCompatV2) {
-		console.warn(
-			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
-		);
-	}
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
-	}
-
-	if (props.noBundle && legacyNodeCompat) {
-		logger.warn(
-			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
-		);
-	}
-
-	if (props.noBundle && nodejsCompatV2) {
-		logger.warn(
-			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
@@ -325,9 +280,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
 						sourcemap: uploadSourceMaps,
-						legacyNodeCompat,
-						nodejsCompat,
-						nodejsCompatV2,
+						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets,

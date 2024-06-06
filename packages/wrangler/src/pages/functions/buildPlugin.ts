@@ -20,7 +20,7 @@ export function buildPluginFromFunctions({
 	sourcemap = false,
 	watch = false,
 	onEnd = () => {},
-	legacyNodeCompat,
+	nodejsCompatMode,
 	functionsDirectory,
 	local,
 	defineNavigatorUserAgent,
@@ -45,11 +45,10 @@ export function buildPluginFromFunctions({
 		minify,
 		sourcemap,
 		watch,
-		legacyNodeCompat,
 		// We don't currently have a mechanism for Plugins 'requiring' a specific compat date/flag,
 		// but if someone wants to publish a Plugin which does require this new `nodejs_compat` flag
 		// and they document that on their README.md, we should let them.
-		nodejsCompat: true,
+		nodejsCompatMode: nodejsCompatMode ?? "v1",
 		define: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
 		external,

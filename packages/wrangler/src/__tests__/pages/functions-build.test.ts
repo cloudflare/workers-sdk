@@ -431,7 +431,16 @@ export default {
 		await expect(
 			await runWrangler(`pages functions build --outfile=public/_worker.bundle`)
 		);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe package \\"node:async_hooks\\" wasn't found on the file system but is built into node.[0m
+
+			  Your Worker may throw errors at runtime unless you enable the \\"nodejs_compat\\" compatibility flag.
+			  Refer to [4mhttps://developers.cloudflare.com/workers/runtime-apis/nodejs/[0m for more details. Imported
+			  from:
+			   - hello.js
+
+			"
+		`);
 	});
 
 	it("should compile a _worker.js/ directory", async () => {

@@ -10,6 +10,7 @@ import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { BundleResult } from "../deployment-bundle/bundle";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
 
@@ -31,9 +32,7 @@ export async function buildFunctions({
 	plugin = false,
 	buildOutputDirectory,
 	routesOutputPath,
-	legacyNodeCompat,
-	nodejsCompat,
-	nodejsCompatV2,
+	nodejsCompatMode,
 	local,
 	routesModule = join(
 		getPagesTmpDir(),
@@ -60,9 +59,7 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
-	legacyNodeCompat?: boolean;
-	nodejsCompat?: boolean;
-	nodejsCompatV2?: boolean;
+	nodejsCompatMode?: NodeJSCompatMode;
 	// Allow `routesModule` to be fixed, so we don't create a new file in the
 	// temporary directory each time
 	routesModule?: string;
@@ -120,7 +117,7 @@ export async function buildFunctions({
 			minify,
 			sourcemap,
 			watch,
-			legacyNodeCompat,
+			nodejsCompatMode,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
 			defineNavigatorUserAgent,
@@ -139,9 +136,7 @@ export async function buildFunctions({
 			local,
 			onEnd,
 			buildOutputDirectory,
-			legacyNodeCompat,
-			nodejsCompat,
-			nodejsCompatV2,
+			nodejsCompatMode,
 			defineNavigatorUserAgent,
 			external,
 		});

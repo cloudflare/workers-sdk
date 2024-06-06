@@ -18,6 +18,7 @@ import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { BuildResult, Metafile, PluginBuild } from "esbuild";
@@ -46,9 +47,7 @@ export function useEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	legacyNodeCompat,
-	nodejsCompat,
-	nodejsCompatV2,
+	nodejsCompatMode,
 	define,
 	noBundle,
 	findAdditionalModules,
@@ -77,9 +76,7 @@ export function useEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	legacyNodeCompat: boolean | undefined;
-	nodejsCompat: boolean | undefined;
-	nodejsCompatV2: boolean | undefined;
+	nodejsCompatMode: NodeJSCompatMode | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
@@ -152,7 +149,7 @@ export function useEsbuild({
 					const errors = result.errors;
 					const warnings = result.warnings;
 					if (errors.length > 0) {
-						if (!legacyNodeCompat) {
+						if (nodejsCompatMode !== "legacy") {
 							rewriteNodeCompatBuildFailure(result.errors);
 						}
 						logBuildFailure(errors, warnings);
@@ -191,9 +188,7 @@ export function useEsbuild({
 							watch: true,
 							tsconfig,
 							minify,
-							legacyNodeCompat,
-							nodejsCompat,
-							nodejsCompatV2,
+							nodejsCompatMode,
 							doBindings: durableObjects.bindings,
 							define,
 							checkFetch: true,
@@ -278,9 +273,7 @@ export function useEsbuild({
 		noBundle,
 		findAdditionalModules,
 		minify,
-		legacyNodeCompat,
-		nodejsCompat,
-		nodejsCompatV2,
+		nodejsCompatMode,
 		define,
 		assets,
 		services,

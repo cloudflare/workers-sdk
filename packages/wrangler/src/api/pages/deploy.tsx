@@ -6,6 +6,7 @@ import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readConfig } from "../../config";
+import { validateNodeCompat } from "../../deployment-bundle/node-compat";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -173,11 +174,11 @@ export async function deploy({
 		}
 	}
 
-	const nodejsCompat =
-		config !== undefined
-			? config.compatibility_flags?.includes("nodejs_compat") ?? false
-			: deploymentConfig.compatibility_flags?.includes("nodejs_compat") ??
-				false;
+	const nodejsCompatMode = validateNodeCompat(
+		false,
+		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
+		config?.no_bundle ?? false
+	);
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
@@ -215,7 +216,7 @@ export async function deploy({
 				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
-				nodejsCompat,
+				nodejsCompatMode,
 				defineNavigatorUserAgent,
 			});
 
@@ -313,7 +314,7 @@ export async function deploy({
 			workerJSDirectory: _workerPath,
 			bundle,
 			buildOutputDirectory: directory,
-			nodejsCompat,
+			nodejsCompatMode,
 			defineNavigatorUserAgent,
 			sourceMaps: sourceMaps,
 		});
@@ -331,11 +332,11 @@ export async function deploy({
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
-				nodejsCompat,
+				nodejsCompatMode,
 				defineNavigatorUserAgent,
 			});
 		} else {
-			await checkRawWorker(_workerPath, nodejsCompat, () => {});
+			await checkRawWorker(_workerPath, nodejsCompatMode, () => {});
 			// TODO: Let users configure this in the future.
 			workerBundle = {
 				modules: [],

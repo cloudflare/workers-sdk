@@ -43,6 +43,7 @@ import type {
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
@@ -168,9 +169,7 @@ export type DevProps = {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	minify: boolean | undefined;
-	legacyNodeCompat: boolean | undefined;
-	nodejsCompat: boolean | undefined;
-	nodejsCompatV2: boolean | undefined;
+	nodejsCompatMode: NodeJSCompatMode | undefined;
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
@@ -490,9 +489,7 @@ function DevSession(props: DevSessionProps) {
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
-		legacyNodeCompat: props.legacyNodeCompat,
-		nodejsCompat: props.nodejsCompat,
-		nodejsCompatV2: props.nodejsCompatV2,
+		nodejsCompatMode: props.nodejsCompatMode,
 		define: props.define,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,

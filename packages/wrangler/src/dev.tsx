@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
@@ -7,6 +6,7 @@ import { render } from "ink";
 import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
+import { validateNodeCompat } from "./deployment-bundle/node-compat";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
@@ -423,9 +423,6 @@ export async function startDev(args: StartDevOptions) {
 
 		const {
 			entry,
-			legacyNodeCompat,
-			nodejsCompat,
-			nodejsCompatV2,
 			upstreamProtocol,
 			host,
 			routes,
@@ -437,6 +434,12 @@ export async function startDev(args: StartDevOptions) {
 			processEntrypoint,
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
+
+		const nodejsCompatMode = validateNodeCompat(
+			args.nodeCompat ?? config.node_compat ?? false,
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+			args.noBundle ?? config.no_bundle ?? false
+		);
 
 		await metrics.sendMetricsEvent(
 			"run dev",
@@ -468,9 +471,7 @@ export async function startDev(args: StartDevOptions) {
 					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
-					legacyNodeCompat={legacyNodeCompat}
-					nodejsCompat={nodejsCompat}
-					nodejsCompatV2={nodejsCompatV2}
+					nodejsCompatMode={nodejsCompatMode}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
 					initialMode={args.remote ? "remote" : "local"}
@@ -556,9 +557,6 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const {
 		entry,
-		legacyNodeCompat,
-		nodejsCompat,
-		nodejsCompatV2,
 		upstreamProtocol,
 		host,
 		routes,
@@ -570,6 +568,12 @@ export async function startApiDev(args: StartDevOptions) {
 		processEntrypoint,
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
+
+	const nodejsCompatMode = validateNodeCompat(
+		args.nodeCompat ?? config.node_compat ?? false,
+		args.compatibilityFlags ?? config.compatibility_flags,
+		args.noBundle ?? config.no_bundle ?? false
+	);
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
@@ -601,9 +605,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
-			legacyNodeCompat,
-			nodejsCompat,
-			nodejsCompatV2,
+			nodejsCompatMode: nodejsCompatMode,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.remote ? "remote" : "local",
@@ -817,46 +819,11 @@ async function validateDevServerSettings(
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const legacyNodeCompat = args.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-
-	const compatibilityFlags =
-		args.compatibilityFlags ?? config.compatibility_flags;
-
-	const nodejsCompatV2 = compatibilityFlags.includes(
-		"experimental:nodejs_compat_v2"
+	const nodejsCompatMode = validateNodeCompat(
+		args.nodeCompat ?? config.node_compat ?? false,
+		args.compatibilityFlags ?? config.compatibility_flags,
+		args.noBundle ?? config.no_bundle ?? false
 	);
-	const nodejsCompatV2NotExperimental =
-		compatibilityFlags.includes("nodejs_compat_v2");
-	if (nodejsCompatV2) {
-		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[
-			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
-		] = "nodejs_compat_v2";
-	}
-	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat =
-		!nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
-
-	assert(
-		!(legacyNodeCompat && (nodejsCompat || nodejsCompatV2)),
-		`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
-	);
-
-	assert(
-		!nodejsCompatV2NotExperimental,
-		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`
-	);
-
-	if (nodejsCompatV2) {
-		logger.warn(
-			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
-		);
-	}
 
 	if (args.experimentalEnableLocalPersistence) {
 		logger.warn(
@@ -876,9 +843,7 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		legacyNodeCompat,
-		nodejsCompat,
-		nodejsCompatV2,
+		nodejsCompatMode,
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,

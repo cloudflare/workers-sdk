@@ -10,7 +10,8 @@ import path, {
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readConfig } from "../config";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { FatalError, UserError } from "../errors";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
+import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -28,6 +29,7 @@ import {
 } from "./functions/buildWorker";
 import type { Config } from "../config";
 import type { BundleResult } from "../deployment-bundle/bundle";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -148,8 +150,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			fallbackService,
 			watch,
 			plugin,
-			nodejsCompat,
-			legacyNodeCompat,
+			nodejsCompatMode,
 			defineNavigatorUserAgent,
 			external,
 		} = validatedArgs;
@@ -173,8 +174,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 				// it will not watch new files that are added to the functions directory!
 				watch,
 				plugin,
-				legacyNodeCompat,
-				nodejsCompat,
+				nodejsCompatMode,
 				routesOutputPath,
 				local: false,
 				defineNavigatorUserAgent,
@@ -216,8 +216,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			watch,
 			plugin,
 			buildOutputDirectory,
-			nodejsCompat,
-			legacyNodeCompat,
+			nodejsCompatMode,
 			workerScriptPath,
 			defineNavigatorUserAgent,
 			external,
@@ -233,7 +232,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					workerJSDirectory: workerScriptPath,
 					bundle: true,
 					buildOutputDirectory,
-					nodejsCompat,
+					nodejsCompatMode,
 					defineNavigatorUserAgent,
 					sourceMaps: config?.upload_source_maps ?? sourcemap,
 				});
@@ -251,7 +250,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					local: false,
 					sourcemap: config?.upload_source_maps ?? sourcemap,
 					watch,
-					nodejsCompat,
+					nodejsCompatMode,
 					defineNavigatorUserAgent,
 					externalModules: external,
 				});
@@ -274,8 +273,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					watch,
 					plugin,
 					buildOutputDirectory,
-					legacyNodeCompat,
-					nodejsCompat,
+					nodejsCompatMode,
 					routesOutputPath,
 					local: false,
 					defineNavigatorUserAgent,
@@ -320,8 +318,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
 	plugin: false;
 	buildOutputDirectory: string;
-	legacyNodeCompat: boolean;
-	nodejsCompat: boolean;
+	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
 	workerScriptPath: string;
 	config: Config | undefined;
@@ -338,8 +335,7 @@ type PluginArgs = Omit<
 > & {
 	plugin: true;
 	outdir: string;
-	legacyNodeCompat: boolean;
-	nodejsCompat: boolean;
+	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
 };
 async function maybeReadPagesConfig(
@@ -442,52 +438,16 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	}
 
 	const { nodeCompat: legacyNodeCompat, ...argsExceptNodeCompat } = args;
-	if (legacyNodeCompat) {
-		console.warn(
-			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-	const compatibilityFlags = args.compatibilityFlags ?? [];
-	const nodejsCompatV2 = compatibilityFlags.includes(
-		"experimental:nodejs_compat_v2"
+	const nodejsCompatMode = validateNodeCompat(
+		legacyNodeCompat,
+		args.compatibilityFlags ?? [],
+		config?.no_bundle ?? false
 	);
-	const nodejsCompatV2NotExperimental =
-		compatibilityFlags.includes("nodejs_compat_v2");
-	if (nodejsCompatV2) {
-		// strip the "experimental:" prefix because workerd doesn't understand it yet.
-		compatibilityFlags[
-			compatibilityFlags.indexOf("experimental:nodejs_compat_v2")
-		] = "nodejs_compat_v2";
-	}
-	// nodejsCompatV2 supersedes nodejsCompat, so disable nodejsCompat if nodejsCompatV2 is enabled
-	const nodejsCompat =
-		!nodejsCompatV2 ?? compatibilityFlags.includes("nodejs_compat");
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		args.compatibilityDate,
 		args.compatibilityFlags
 	);
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
-		);
-	}
-
-	if (legacyNodeCompat && (nodejsCompat || nodejsCompatV2)) {
-		throw new UserError(
-			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
-		);
-	}
-
-	if (nodejsCompatV2NotExperimental) {
-		`The \`nodejs_compat_v2\` compatibility flag is experimental and must be prefixed with \`experimental:\`. Use \`experimental:nodejs_compat_v2\` flag instead.`;
-	}
-
-	if (nodejsCompatV2) {
-		logger.warn(
-			"Enabling experimental Node.js compatibility mode v2. This feature is still in development and not ready for production use."
-		);
-	}
 
 	let workerScriptPath: string | undefined;
 
@@ -528,8 +488,7 @@ We looked for the Functions directory (${basename(
 	return {
 		...argsExceptNodeCompat,
 		workerScriptPath,
-		nodejsCompat,
-		legacyNodeCompat,
+		nodejsCompatMode,
 		defineNavigatorUserAgent,
 		config,
 		buildMetadata:
