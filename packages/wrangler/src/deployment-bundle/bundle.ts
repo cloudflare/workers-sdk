@@ -14,6 +14,7 @@ import { dedupeModulesByName } from "./dedupe-modules";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
+import { nodejsHybridPlugin } from "./esbuild-plugins/hybrid-nodejs-compat";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
 import { standardURLPlugin } from "./esbuild-plugins/standard-url";
 import { writeAdditionalModules } from "./find-additional-modules";
@@ -23,6 +24,7 @@ import type { DurableObjectBindings } from "../config/environment";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
+import type { NodeJSCompatMode } from "./node-compat";
 import type { CfModule } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {
@@ -70,8 +72,7 @@ export type BundleOptions = {
 	watch?: boolean;
 	tsconfig?: string;
 	minify?: boolean;
-	legacyNodeCompat?: boolean;
-	nodejsCompat?: boolean;
+	nodejsCompatMode?: NodeJSCompatMode;
 	define: Config["define"];
 	checkFetch: boolean;
 	targetConsumer: "dev" | "deploy";
@@ -106,8 +107,7 @@ export async function bundleWorker(
 		watch,
 		tsconfig,
 		minify,
-		legacyNodeCompat,
-		nodejsCompat,
+		nodejsCompatMode,
 		define,
 		checkFetch,
 		assets,
@@ -308,7 +308,7 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(legacyNodeCompat ? { global: "globalThis" } : {}),
+				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
 				...define,
 			},
 		}),
@@ -318,14 +318,19 @@ export async function bundleWorker(
 		},
 		plugins: [
 			moduleCollector.plugin,
-			...(legacyNodeCompat
+			...(nodejsCompatMode === "legacy"
 				? [
 						NodeGlobalsPolyfills({ buffer: true }),
 						standardURLPlugin(),
 						NodeModulesPolyfills(),
 					]
 				: []),
-			nodejsCompatPlugin(!!nodejsCompat),
+			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
+			...(nodejsCompatMode === "v1" || nodejsCompatMode !== "v2"
+				? [nodejsCompatPlugin(nodejsCompatMode === "v1")]
+				: []),
+			// Hybrid Node.js compatibility
+			...(nodejsCompatMode === "v2" ? [nodejsHybridPlugin()] : []),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
@@ -370,7 +375,7 @@ export async function bundleWorker(
 			};
 		}
 	} catch (e) {
-		if (!legacyNodeCompat && isBuildFailure(e)) {
+		if (nodejsCompatMode !== "legacy" && isBuildFailure(e)) {
 			rewriteNodeCompatBuildFailure(e.errors, forPages);
 		}
 		throw e;

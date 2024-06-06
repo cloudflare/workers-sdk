@@ -6,6 +6,7 @@ import { render } from "ink";
 import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
+import { validateNodeCompat } from "./deployment-bundle/node-compat";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
@@ -422,8 +423,6 @@ export async function startDev(args: StartDevOptions) {
 
 		const {
 			entry,
-			legacyNodeCompat,
-			nodejsCompat,
 			upstreamProtocol,
 			host,
 			routes,
@@ -435,6 +434,13 @@ export async function startDev(args: StartDevOptions) {
 			processEntrypoint,
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
+
+		const nodejsCompatMode = validateNodeCompat({
+			legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+			compatibilityFlags:
+				args.compatibilityFlags ?? config.compatibility_flags ?? [],
+			noBundle: args.noBundle ?? config.no_bundle ?? false,
+		});
 
 		await metrics.sendMetricsEvent(
 			"run dev",
@@ -466,8 +472,7 @@ export async function startDev(args: StartDevOptions) {
 					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
-					legacyNodeCompat={legacyNodeCompat}
-					nodejsCompat={nodejsCompat}
+					nodejsCompatMode={nodejsCompatMode}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
 					initialMode={args.remote ? "remote" : "local"}
@@ -553,8 +558,6 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const {
 		entry,
-		legacyNodeCompat,
-		nodejsCompat,
 		upstreamProtocol,
 		host,
 		routes,
@@ -566,6 +569,12 @@ export async function startApiDev(args: StartDevOptions) {
 		processEntrypoint,
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
+
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
@@ -597,8 +606,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
-			legacyNodeCompat,
-			nodejsCompat,
+			nodejsCompatMode: nodejsCompatMode,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.remote ? "remote" : "local",
@@ -812,21 +820,6 @@ async function validateDevServerSettings(
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const legacyNodeCompat = args.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-
-	const compatibilityFlags =
-		args.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-		);
-	}
 
 	if (args.experimentalEnableLocalPersistence) {
 		logger.warn(
@@ -846,8 +839,6 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		legacyNodeCompat,
-		nodejsCompat,
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,

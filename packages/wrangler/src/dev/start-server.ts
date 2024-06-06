@@ -35,6 +35,7 @@ import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
@@ -156,8 +157,7 @@ export async function startDevServer(
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
-		legacyNodeCompat: props.legacyNodeCompat,
-		nodejsCompat: props.nodejsCompat,
+		nodejsCompatMode: props.nodejsCompatMode,
 		define: props.define,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
@@ -337,8 +337,7 @@ async function runEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	legacyNodeCompat,
-	nodejsCompat,
+	nodejsCompatMode,
 	define,
 	noBundle,
 	findAdditionalModules,
@@ -360,8 +359,7 @@ async function runEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	legacyNodeCompat: boolean | undefined;
-	nodejsCompat: boolean | undefined;
+	nodejsCompatMode: NodeJSCompatMode | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
 	testScheduled?: boolean;
@@ -401,8 +399,7 @@ async function runEsbuild({
 					jsxFragment,
 					tsconfig,
 					minify,
-					legacyNodeCompat,
-					nodejsCompat,
+					nodejsCompatMode,
 					define,
 					checkFetch: true,
 					assets,
