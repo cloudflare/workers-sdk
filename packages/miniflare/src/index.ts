@@ -1281,13 +1281,7 @@ export class Miniflare {
 			);
 		}
 
-		const autogates = [
-			// Enables Python support in workerd.
-			// TODO(later): remove this once this gate is removed from workerd.
-			"workerd-autogate-builtin-wasm-modules",
-		];
-
-		return { services: servicesArray, sockets, extensions, autogates };
+		return { services: servicesArray, sockets, extensions };
 	}
 
 	async #assembleAndUpdateConfig() {
