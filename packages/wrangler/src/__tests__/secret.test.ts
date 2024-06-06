@@ -564,12 +564,12 @@ describe("wrangler secret", () => {
 		});
 	});
 
-	describe("secret:bulk", () => {
-		it("should fail secret:bulk w/ no pipe or JSON input", async () => {
+	describe("bulk", () => {
+		it("should fail secret bulk w/ no pipe or JSON input", async () => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() => null as unknown as Interface
 			);
-			await runWrangler(`secret:bulk --name script-name`);
+			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(
 				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
 			);
@@ -578,9 +578,10 @@ describe("wrangler secret", () => {
 
 			"
 		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should use secret:bulk w/ pipe input", async () => {
+		it("should use secret bulk w/ pipe input", async () => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
@@ -611,7 +612,7 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler(`secret:bulk --name script-name`);
+			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
 			✨ Successfully created secret for key: secret1
@@ -621,6 +622,7 @@ describe("wrangler secret", () => {
 			✨ 2 secrets successfully uploaded"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should create secrets from JSON file", async () => {
@@ -653,7 +655,7 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler("secret:bulk ./secret.json --name script-name");
+			await runWrangler("secret bulk ./secret.json --name script-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
 					"🌀 Creating the secrets for the Worker \\"script-name\\"
@@ -664,13 +666,14 @@ describe("wrangler secret", () => {
 					✨ 2 secrets successfully uploaded"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should fail if file is not valid JSON", async () => {
 			writeFileSync("secret.json", "bad file content");
 
 			await expect(
-				runWrangler("secret:bulk ./secret.json --name script-name")
+				runWrangler("secret bulk ./secret.json --name script-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The contents of "./secret.json" is not valid JSON: "ParseError: Unexpected token b"]`
 			);
@@ -685,13 +688,13 @@ describe("wrangler secret", () => {
 			);
 
 			await expect(
-				runWrangler("secret:bulk ./secret.json --name script-name")
+				runWrangler("secret bulk ./secret.json --name script-name")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: The value for "invalid-secret" in "./secret.json" is not a "string" instead it is of type "number"]`
 			);
 		});
 
-		it("should count success and network failure on secret:bulk", async () => {
+		it("should count success and network failure on secret bulk", async () => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -727,7 +730,7 @@ describe("wrangler secret", () => {
 			);
 
 			await expect(async () => {
-				await runWrangler("secret:bulk ./secret.json --name script-name");
+				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: 🚨 7 secrets failed to upload]`
 			);
@@ -745,9 +748,10 @@ describe("wrangler secret", () => {
 
 			"
 		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should handle network failure on secret:bulk", async () => {
+		it("should handle network failure on secret bulk", async () => {
 			writeFileSync(
 				"secret.json",
 				JSON.stringify({
@@ -778,7 +782,7 @@ describe("wrangler secret", () => {
 			);
 
 			await expect(async () => {
-				await runWrangler("secret:bulk ./secret.json --name script-name");
+				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: 🚨 2 secrets failed to upload]`
 			);
@@ -796,6 +800,7 @@ describe("wrangler secret", () => {
 
 			"
 		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should merge existing bindings and secrets when patching", async () => {
@@ -872,7 +877,7 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler("secret:bulk ./secret.json --name script-name");
+			await runWrangler("secret bulk ./secret.json --name script-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
 					"🌀 Creating the secrets for the Worker \\"script-name\\"
@@ -884,6 +889,31 @@ describe("wrangler secret", () => {
 					✨ 3 secrets successfully uploaded"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("secret:bulk [DEPRECATED]", () => {
+		test("is still registered and usable", async () => {
+			const result = runWrangler("secret:bulk --help");
+
+			await expect(result).resolves.toBeUndefined();
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler secret:bulk [json]
+
+				Positionals:
+				  json  The JSON file of key-value pairs to upload, in form {\\"key\\": value, ...}  [string]
+
+				Flags:
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
+
+				Options:
+				      --name  Name of the Worker  [string]"
+			`);
 		});
 	});
 });
