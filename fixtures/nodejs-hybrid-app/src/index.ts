@@ -5,6 +5,15 @@ import { Client } from "pg";
 
 assert(true, "the world is broken");
 
+const buffer1 = Buffer.of(1);
+assert(buffer1.toJSON().data[0] === 1, "Buffer is broken");
+
+const buffer2 = global.Buffer.of(1);
+assert(buffer2.toJSON().data[0] === 1, "global.Buffer is broken");
+
+const buffer3 = globalThis.Buffer.of(1);
+assert(buffer3.toJSON().data[0] === 1, "globalThis.Buffer is broken");
+
 /**
  * Welcome to Cloudflare Workers! This is your first worker.
  *
