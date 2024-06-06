@@ -29,6 +29,30 @@ describe("wrangler", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
+
+	test("kv --help", async () => {
+		const result = runWrangler("kv --help");
+
+		await expect(result).resolves.toBeUndefined();
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler kv
+
+			🗂️  Interact with your Workers KV Namespaces
+
+			Commands:
+			  wrangler kv namespace  🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv key        🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv bulk       💪 Interact with multiple Workers KV key-value pairs at once
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
+	});
+
 	describe("kv namespace", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedTitle: string) {
@@ -533,7 +557,7 @@ describe("wrangler", () => {
 					},
 				});
 				await runWrangler(
-					`kv:key put another-my-key --namespace-id some-namespace-id --path test.png --metadata '{"mKey":"mValue"}'`
+					`kv key put another-my-key --namespace-id some-namespace-id --path test.png --metadata '{"mKey":"mValue"}'`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
