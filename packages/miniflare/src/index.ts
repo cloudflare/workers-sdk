@@ -1273,8 +1273,7 @@ export class Miniflare {
 			);
 		}
 
-		const autogates = [];
-		return { services: servicesArray, sockets, extensions, autogates };
+		return { services: servicesArray, sockets, extensions };
 	}
 
 	async #assembleAndUpdateConfig() {
