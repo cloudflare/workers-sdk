@@ -819,11 +819,6 @@ async function validateDevServerSettings(
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const nodejsCompatMode = validateNodeCompat(
-		args.nodeCompat ?? config.node_compat ?? false,
-		args.compatibilityFlags ?? config.compatibility_flags,
-		args.noBundle ?? config.no_bundle ?? false
-	);
 
 	if (args.experimentalEnableLocalPersistence) {
 		logger.warn(
@@ -843,7 +838,6 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		nodejsCompatMode,
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,
