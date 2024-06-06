@@ -1,6 +1,13 @@
 import { UserError } from "../errors";
 import { logger } from "../logger";
 
+/**
+ * Wrangler can provide Node.js compatibility in a number of different modes:
+ * - "legacy" - this mode adds compile-time polyfills that are not well maintained and cannot work with workerd runtime builtins.
+ * - "v1" - this mode tells the workerd runtime to enable some Node.js builtin libraries (accessible only via `node:...` imports) but no globals.
+ * - "v2" - this mode tells the workerd runtime to enable more Node.js builtin libraries (accessible both with and without the `node:` prefix)
+ *   and also some Node.js globals such as `Buffer`; it also turns on additional compile-time polyfills for those that are not provided by the runtime.
+ */
 export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
 
 /**
@@ -52,11 +59,6 @@ export function validateNodeCompat({
 	if (nodejsCompat && nodejsCompatV2) {
 		throw new UserError(
 			"The `nodejs_compat` and `nodejs_compat_v2` compatibility flags cannot be used in together. Please select just one."
-		);
-	}
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			`The ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsCompat ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
 		);
 	}
 
