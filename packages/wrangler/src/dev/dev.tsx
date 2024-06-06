@@ -282,7 +282,6 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
-	console.log("props.accountId", props.accountId);
 	const [accountId, setAccountIdStateOnly] = useState(props.accountId);
 	const accountIdDeferred = useMemo(() => createDeferred<string>(), []);
 	const setAccountIdAndResolveDeferred = useCallback(
