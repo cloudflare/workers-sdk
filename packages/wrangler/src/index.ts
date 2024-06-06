@@ -417,9 +417,7 @@ export function createCLIParser(argv: string[]) {
 	// [DEPRECATED] kv namespace
 	wrangler.command(
 		"kv:namespace",
-		`🗂️  Interact with your Workers KV Namespaces ${brandColor(
-			"(deprecated)"
-		)}`,
+		false, // deprecated, don't show
 		(namespaceYargs) => {
 			logger.warn(
 				"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same."
@@ -432,9 +430,7 @@ export function createCLIParser(argv: string[]) {
 	// [DEPRECATED] kv key
 	wrangler.command(
 		"kv:key",
-		`🔑 Individually manage Workers KV key-value pairs ${brandColor(
-			"(deprecated)"
-		)}`,
+		false, // deprecated, don't show
 		(keyYargs) => {
 			logger.warn(
 				"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same."
@@ -447,9 +443,7 @@ export function createCLIParser(argv: string[]) {
 	// [DEPRECATED] kv bulk
 	wrangler.command(
 		"kv:bulk",
-		`💪 Interact with multiple Workers KV key-value pairs at once ${brandColor(
-			"(deprecated)"
-		)}`,
+		false, // deprecated, don't show
 		(bulkYargs) => {
 			logger.warn(
 				"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same."
