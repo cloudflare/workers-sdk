@@ -28,8 +28,8 @@ type _BundleConfig = Pick<
 	| "_projectRoot"
 >;
 
-// Make entrypoint snapshots slightly more readable and relevant
-function stripMiddleware(source: string, name: string): string {
+// Find the bundled result of a particular source file
+function findSourceFile(source: string, name: string): string {
 	const startIndex = source.indexOf(`// ${name}`);
 	const endIndex = source.indexOf("\n//", startIndex);
 	return source.slice(startIndex, endIndex);
@@ -107,7 +107,7 @@ describe("happy path bundle + watch", () => {
 		});
 
 		let ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "index.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
 				"// index.ts
 				var src_default = {
@@ -128,7 +128,7 @@ describe("happy path bundle + watch", () => {
                 `,
 		});
 		ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "index.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
                     "// index.ts
                     var src_default = {
@@ -179,13 +179,13 @@ describe("happy path bundle + watch", () => {
 		});
 
 		let ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "other.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
 			.toMatchInlineSnapshot(`
 				"// other.ts
 				var other_default = \\"someone\\";
 				"
 			`);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "index.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
 				"// index.ts
 				var src_default = {
@@ -201,7 +201,7 @@ describe("happy path bundle + watch", () => {
                 `,
 		});
 		ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "other.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
 			.toMatchInlineSnapshot(`
 				"// other.ts
 				var other_default = \\"someone else\\";
@@ -248,7 +248,7 @@ describe("happy path bundle + watch", () => {
 		});
 
 		let ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "out.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
 				"// out.ts
 				var out_default = {
@@ -269,7 +269,7 @@ describe("happy path bundle + watch", () => {
                 `,
 		});
 		ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "out.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
 				"// out.ts
 				var out_default = {
@@ -320,7 +320,7 @@ describe("switching", () => {
 		});
 
 		const ev = await waitForBundleComplete(controller);
-		expect(stripMiddleware(ev.bundle.entrypointSource, "index.ts"))
+		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
 				"// index.ts
 				var src_default = {
@@ -369,7 +369,7 @@ describe("switching", () => {
 		});
 
 		let evCustom = await waitForBundleComplete(controller);
-		expect(stripMiddleware(evCustom.bundle.entrypointSource, "out.ts"))
+		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
 		            "// out.ts
 		            var out_default = {
@@ -379,6 +379,7 @@ describe("switching", () => {
 		            };
 		            "
 		        `);
+		// Make sure custom builds can reload after switching to them
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
 		                export default {
@@ -389,9 +390,8 @@ describe("switching", () => {
 		                }
 		            `,
 		});
-		console.log(process.cwd());
 		evCustom = await waitForBundleComplete(controller);
-		expect(stripMiddleware(evCustom.bundle.entrypointSource, "out.ts"))
+		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
 		            "// out.ts
 		            var out_default = {
@@ -401,5 +401,122 @@ describe("switching", () => {
 		            };
 		            "
 		        `);
+	});
+
+	test("custom builds -> esbuild", async ({ controller }) => {
+		await seed({
+			"random_dir/index.ts": dedent/* javascript */ `
+		            export default {
+		                fetch(request, env, ctx) {
+		                    //comment
+		                    return new Response("hello custom build")
+		                }
+		            } satisfies ExportedHandler
+		        `,
+		});
+		const configCustom = {
+			name: "worker",
+			script: unusable(),
+			_entry: {
+				file: path.resolve("out.ts"),
+				directory: process.cwd(),
+				format: "modules",
+				moduleRoot: process.cwd(),
+				name: "worker-name",
+			},
+			_additionalModules: [],
+			build: {
+				bundle: true,
+				moduleRules: [],
+				custom: {
+					command: "cp random_dir/index.ts out.ts",
+					watch: "random_dir",
+				},
+				define: {},
+			},
+		} satisfies StartDevWorkerOptions;
+
+		await controller.onConfigUpdate({
+			type: "configUpdate",
+			config: configCustom,
+		});
+
+		const evCustom = await waitForBundleComplete(controller);
+		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
+			.toMatchInlineSnapshot(`
+		            "// out.ts
+		            var out_default = {
+		              fetch(request, env, ctx) {
+		                return new Response(\\"hello custom build\\");
+		              }
+		            };
+		            "
+		        `);
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+						export default {
+							fetch(request, env, ctx) {
+								//comment
+								return new Response("hello world")
+							}
+						} satisfies ExportedHandler
+					`,
+		});
+		const config: StartDevWorkerOptions = {
+			name: "worker",
+			script: unusable(),
+			_entry: {
+				file: path.resolve("src/index.ts"),
+				directory: path.resolve("src"),
+				format: "modules",
+				moduleRoot: path.resolve("src"),
+				name: "worker-name",
+			},
+			_additionalModules: [],
+			build: {
+				bundle: true,
+				moduleRules: [],
+				custom: {},
+				define: {},
+			},
+		};
+
+		await controller.onConfigUpdate({
+			type: "configUpdate",
+			config,
+		});
+
+		let ev = await waitForBundleComplete(controller);
+		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+			.toMatchInlineSnapshot(`
+				"// index.ts
+				var src_default = {
+				  fetch(request, env, ctx) {
+				    return new Response(\\"hello world\\");
+				  }
+				};
+				"
+			`);
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+						export default {
+							fetch(request, env, ctx) {
+								//comment
+								return new Response("hello world 2")
+							}
+						} satisfies ExportedHandler
+					`,
+		});
+		ev = await waitForBundleComplete(controller);
+		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+			.toMatchInlineSnapshot(`
+				"// index.ts
+				var src_default = {
+				  fetch(request, env, ctx) {
+				    return new Response(\\"hello world 2\\");
+				  }
+				};
+				"
+			`);
 	});
 });

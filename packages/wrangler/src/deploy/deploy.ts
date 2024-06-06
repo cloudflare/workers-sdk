@@ -1112,7 +1112,7 @@ export async function updateQueueConsumers(
 	return updateConsumers;
 }
 
-async function noBundleWorker(
+export async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
 	outDir: string | undefined

@@ -84,7 +84,6 @@ export function runBuild(
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
-		enableWatchMode = true,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -108,7 +107,6 @@ export function runBuild(
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
-		enableWatchMode?: boolean;
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -207,7 +205,7 @@ export function runBuild(
 						serveAssetsFromWorker,
 						jsxFactory,
 						jsxFragment,
-						watch: enableWatchMode,
+						watch: true,
 						tsconfig,
 						minify,
 						nodejsCompatMode,
@@ -231,7 +229,7 @@ export function runBuild(
 
 		// if "noBundle" is true, then we need to manually watch all modules and
 		// trigger "builds" when any change
-		if (noBundle && enableWatchMode) {
+		if (noBundle) {
 			const watching = [path.resolve(entry.moduleRoot)];
 			// Check whether we need to watch a Python requirements.txt file.
 			const watchPythonRequirements =
