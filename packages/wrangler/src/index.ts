@@ -396,9 +396,10 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+	// [DEPRECATED] secret:bulk
 	wrangler.command(
 		"secret:bulk [json]",
-		"🗄️  Bulk upload secrets for a Worker",
+		false,
 		secretBulkOptions,
 		secretBulkHandler
 	);
