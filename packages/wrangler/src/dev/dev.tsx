@@ -302,37 +302,39 @@ function DevSession(props: DevSessionProps) {
 	}, []);
 
 	const [devEnv] = useState(() => {
+		if (!props.experimentalDevEnv) {
+			return new DevEnv();
+		}
 		const proxy = new ProxyController();
 		const local = new LocalRuntimeController();
 		const remote = new RemoteRuntimeController();
-		if (props.experimentalDevEnv) {
-			// The ProxyWorker will have a stable host and port, so only listen for the first update
-			proxy.once("ready", async (event: ReadyEvent) => {
-				const url = await event.proxyWorker.ready;
-				const finalIp = url.hostname;
-				const finalPort = parseInt(url.port);
+		// The ProxyWorker will have a stable host and port, so only listen for the first update
+		proxy.once("ready", async (event: ReadyEvent) => {
+			const url = await event.proxyWorker.ready;
+			const finalIp = url.hostname;
+			const finalPort = parseInt(url.port);
 
-				if (process.send) {
-					process.send(
-						JSON.stringify({
-							event: "DEV_SERVER_READY",
-							ip: finalIp,
-							port: finalPort,
-						})
+			if (process.send) {
+				process.send(
+					JSON.stringify({
+						event: "DEV_SERVER_READY",
+						ip: finalIp,
+						port: finalPort,
+					})
+				);
+			}
+			local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
+				if (!reloadEvent.config.dev?.remote) {
+					await maybeRegisterLocalWorker(
+						url,
+						reloadEvent.config.name,
+						reloadEvent.proxyData.internalDurableObjects,
+						reloadEvent.proxyData.entrypointAddresses
 					);
 				}
-				local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
-					if (!reloadEvent.config.dev?.remote) {
-						await maybeRegisterLocalWorker(
-							url,
-							reloadEvent.config.name,
-							reloadEvent.proxyData.internalDurableObjects,
-							reloadEvent.proxyData.entrypointAddresses
-						);
-					}
-				});
 			});
-		}
+		});
+
 		return new DevEnv({ proxy, runtimes: [local, remote] });
 	});
 	useEffect(() => {

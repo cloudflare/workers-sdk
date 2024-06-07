@@ -282,7 +282,7 @@ describe("dev registry", () => {
 		).resolves.toMatchInlineSnapshot('"hello world"');
 	});
 
-	e2eTest.only(
+	e2eTest(
 		"can fetch b through a (start b, start a)",
 		async ({ run, waitForReady, waitForReload }) => {
 			const workerB = run("wrangler dev", { cwd: b });
@@ -292,9 +292,9 @@ describe("dev registry", () => {
 			const workerA = run("wrangler dev", { cwd: a });
 			const { url } = await waitForReady(workerA);
 
-			// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
 			await waitForReload(workerA);
-			await waitForReload(workerA);
+			// Give the dev registry some time to settle
+			await setTimeout(500);
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
 				'"hello world"'
@@ -311,9 +311,9 @@ describe("dev registry", () => {
 			const workerB = run("wrangler dev", { cwd: b });
 			await waitForReady(workerB);
 
-			// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
 			await waitForReload(workerA);
-			await waitForReload(workerA);
+			// Give the dev registry some time to settle
+			await setTimeout(500);
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
 				'"hello world"'
