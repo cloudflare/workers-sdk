@@ -311,8 +311,6 @@ function DevSession(props: DevSessionProps) {
 		const proxyUrl = createDeferred<URL>();
 		// The ProxyWorker will have a stable host and port, so only listen for the first update
 		proxy.once("ready", async (event: ReadyEvent) => {
-			console.log("proxy reload");
-
 			const url = await event.proxyWorker.ready;
 			proxyUrl.resolve(url);
 			const finalIp = url.hostname;
@@ -329,7 +327,6 @@ function DevSession(props: DevSessionProps) {
 			}
 		});
 		local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
-			console.log("local reload");
 			if (!reloadEvent.config.dev?.remote) {
 				await maybeRegisterLocalWorker(
 					await proxyUrl.promise,

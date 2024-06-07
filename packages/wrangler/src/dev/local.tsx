@@ -115,7 +115,6 @@ export function maybeRegisterLocalWorker(
 	internalDurableObjects: CfDurableObject[] | undefined,
 	entrypointAddresses: WorkerEntrypointsDefinition | undefined
 ) {
-	console.log("registering", name, "with", url.href);
 	if (name === undefined) {
 		return;
 	}
