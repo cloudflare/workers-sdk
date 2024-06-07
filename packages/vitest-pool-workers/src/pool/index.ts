@@ -25,9 +25,11 @@ import { createMethodsRPC } from "vitest/node";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
+	calculateAvailableThreads,
 	getProjectPath,
 	getRelativeProjectPath,
 	isFileNotFoundError,
+	ResourcePool,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import {
@@ -649,15 +651,37 @@ function maybeGetResolvedMainPath(project: Project): string | undefined {
 	}
 }
 
-async function runTests(
+type RunTestsArgs = [
 	ctx: Vitest,
 	mf: Miniflare,
 	workerName: string,
 	project: Project,
 	config: ResolvedConfig,
 	files: string[],
-	invalidates: string[] = []
-) {
+	invalidates?: string[],
+];
+
+/**
+ * Ensures that test runs are queued if all available threads are in use.
+ */
+function queuedTestRun() {
+	const threadPool = new ResourcePool(calculateAvailableThreads());
+
+	return async function run(...args: RunTestsArgs): Promise<void> {
+		await threadPool.nextAvailableResource();
+
+		// Promise.finally will be called in the event of either resolving or rejecting,
+		// so the thread will always be released unless the test run hangs.
+		return runTests(...args).finally(() => {
+			threadPool.releaseResource();
+		});
+	};
+}
+
+async function runTests(...runTestsArgs: RunTestsArgs) {
+	const [ctx, mf, workerName, project, config, files, invalidates = []] =
+		runTestsArgs;
+
 	let workerPath = path.join(ctx.distPath, "worker.js");
 	let threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
 	if (process.platform === "win32") {
@@ -875,6 +899,8 @@ export default function (ctx: Vitest): ProcessPool {
 	// This function is called when config changes and may be called on re-runs
 	assertCompatibleVitestVersion(ctx);
 
+	const run = queuedTestRun();
+
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
@@ -975,7 +1001,7 @@ export default function (ctx: Vitest): ProcessPool {
 					assert(mf instanceof Miniflare, "Expected single instance");
 					const name = getRunnerName(workspaceProject);
 					resultPromises.push(
-						runTests(ctx, mf, name, project, config, files, invalidates)
+						run(ctx, mf, name, project, config, files, invalidates)
 					);
 				} else if (options.isolatedStorage) {
 					// Multiple Workers, Isolated Storage:
@@ -986,7 +1012,7 @@ export default function (ctx: Vitest): ProcessPool {
 						const fileMf = mf.get(file);
 						assert(fileMf !== undefined);
 						resultPromises.push(
-							runTests(ctx, fileMf, name, project, config, [file], invalidates)
+							run(ctx, fileMf, name, project, config, [file], invalidates)
 						);
 					}
 				} else {
@@ -996,7 +1022,7 @@ export default function (ctx: Vitest): ProcessPool {
 					for (const file of files) {
 						const name = getRunnerName(workspaceProject, file);
 						resultPromises.push(
-							runTests(ctx, mf, name, project, config, [file], invalidates)
+							run(ctx, mf, name, project, config, [file], invalidates)
 						);
 					}
 				}
