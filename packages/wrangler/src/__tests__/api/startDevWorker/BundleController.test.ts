@@ -12,22 +12,6 @@ import type {
 	StartDevWorkerOptions,
 } from "../../../api";
 
-type _BundleConfig = Pick<
-	StartDevWorkerOptions,
-	| "_entry"
-	| "_additionalModules"
-	| "build"
-	| "_processEntrypoint"
-	| "_assets"
-	| "_serveAssetsFromWorker"
-	| "_legacyNodeCompat"
-	| "compatibilityFlags"
-	| "compatibilityDate"
-	| "_bindings"
-	| "dev"
-	| "_projectRoot"
->;
-
 // Find the bundled result of a particular source file
 function findSourceFile(source: string, name: string): string {
 	const startIndex = source.indexOf(`// ${name}`);

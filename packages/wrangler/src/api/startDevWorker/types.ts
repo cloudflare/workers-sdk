@@ -6,6 +6,7 @@ import type {
 	ZoneNameRoute,
 } from "../../config/environment";
 import type { Entry } from "../../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type {
 	CfAnalyticsEngineDataset,
 	CfConstellation,
@@ -89,7 +90,6 @@ export interface StartDevWorkerOptions {
 	_assets?: Config["assets"];
 	_processEntrypoint?: boolean;
 	_additionalModules?: CfModule[];
-	_legacyNodeCompat?: boolean;
 	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
@@ -116,6 +116,7 @@ export interface StartDevWorkerOptions {
 		jsxFactory?: string;
 		jsxFragment?: string;
 		tsconfig?: string;
+		nodejsCompatMode?: NodeJSCompatMode;
 	};
 
 	/** Options applying to the worker's development preview environment. */

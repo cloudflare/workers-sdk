@@ -377,7 +377,6 @@ function DevSession(props: DevSessionProps) {
 			_assets: props.assetsConfig,
 			_processEntrypoint: props.processEntrypoint,
 			_additionalModules: props.additionalModules,
-			_legacyNodeCompat: props.legacyNodeCompat,
 
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
@@ -398,6 +397,7 @@ function DevSession(props: DevSessionProps) {
 				jsxFactory: props.jsxFactory,
 				jsxFragment: props.jsxFragment,
 				tsconfig: props.tsconfig,
+				nodejsCompatMode: props.nodejsCompatMode,
 			},
 			site:
 				props.isWorkersSite && props.assetPaths
@@ -471,7 +471,7 @@ function DevSession(props: DevSessionProps) {
 		props.define,
 		props.entry,
 		props.findAdditionalModules,
-		props.legacyNodeCompat,
+		props.nodejsCompatMode,
 		props.minify,
 		props.noBundle,
 		props.processEntrypoint,
