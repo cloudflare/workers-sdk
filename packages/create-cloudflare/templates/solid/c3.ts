@@ -1,7 +1,7 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
-import { transformFile } from "helpers/codemod";
+import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -32,8 +32,10 @@ const configure = async (ctx: C3Context) => {
 			}
 
 			const b = recast.types.builders;
-			n.node.arguments = [
-				b.objectExpression([
+
+			mergeObjectProperties(
+				n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
+				[
 					b.objectProperty(
 						b.identifier("server"),
 						b.objectExpression([
@@ -52,8 +54,8 @@ const configure = async (ctx: C3Context) => {
 							),
 						]),
 					),
-				]),
-			];
+				],
+			);
 
 			return false;
 		},
