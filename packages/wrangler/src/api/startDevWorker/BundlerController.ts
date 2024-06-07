@@ -157,11 +157,20 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		}
 	}
 
-	#startCustomBuild(config: StartDevWorkerOptions) {
+	async #startCustomBuild(config: StartDevWorkerOptions) {
+		await this.#customBuildWatcher?.close();
+		this.#customBuildAborter?.abort();
+
+		if (!config.build?.custom.command) {
+			return;
+		}
+
 		assert(config._entry);
 		assert(config.build?.custom.watch);
+
 		this.#customBuildWatcher = watch(config.build?.custom.watch, {
 			persistent: true,
+			// TODO: add comments re this ans ready
 			ignoreInitial: true,
 		});
 		this.#customBuildWatcher.on(
@@ -178,7 +187,11 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 	#bundlerCleanup?: ReturnType<typeof runBuild>;
 
-	#startBundle(config: StartDevWorkerOptions) {
+	async #startBundle(config: StartDevWorkerOptions) {
+		await this.#bundlerCleanup?.();
+		if (config.build?.custom.command) {
+			return;
+		}
 		assert(this.#tmpDir);
 		assert(config._entry, "config._entry");
 		assert(config._additionalModules, "config._additionalModules");
@@ -240,8 +253,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 	#tmpDir?: EphemeralDirectory;
 
-	async onConfigUpdate(event: ConfigUpdateEvent) {
-		await this.teardown();
+	onConfigUpdate(event: ConfigUpdateEvent) {
+		this.#tmpDir?.remove();
 		try {
 			this.#tmpDir = getWranglerTmpDir(event.config._projectRoot, "dev");
 		} catch (e) {
@@ -257,11 +270,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			});
 		}
 
-		if (event.config.build?.custom.command) {
-			this.#startCustomBuild(event.config);
-		} else {
-			this.#startBundle(event.config);
-		}
+		void this.#startCustomBuild(event.config);
+		void this.#startBundle(event.config);
 	}
 
 	async teardown() {

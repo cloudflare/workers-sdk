@@ -562,7 +562,7 @@ function DevSession(props: DevSessionProps) {
 			config: startDevWorkerOptions,
 		});
 		if (props.experimentalDevEnv) {
-			void devEnv.bundler.onConfigUpdate({
+			devEnv.bundler.onConfigUpdate({
 				type: "configUpdate",
 				config: startDevWorkerOptions,
 			});
