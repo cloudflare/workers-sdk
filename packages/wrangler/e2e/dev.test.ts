@@ -217,7 +217,10 @@ describe.each([
 	);
 });
 
-describe("dev registry", () => {
+describe.only.each([
+	{ cmd: "wrangler dev" },
+	{ cmd: "wrangler dev --x-dev-env" },
+])("dev registry $cmd", ({ cmd }) => {
 	let a: string;
 	let b: string;
 
@@ -273,51 +276,45 @@ describe("dev registry", () => {
 	});
 
 	e2eTest("can fetch b", async ({ run, waitForReady }) => {
-		const worker = run("wrangler dev", { cwd: b });
+		const worker = run(cmd, { cwd: b });
 
 		const { url } = await waitForReady(worker);
 
-		await expect(
-			fetch(url).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"hello world"');
+		await expect(fetch(url).then((r) => r.text())).resolves.toBe("hello world");
 	});
 
 	e2eTest(
 		"can fetch b through a (start b, start a)",
 		async ({ run, waitForReady, waitForReload }) => {
-			const workerB = run("wrangler dev", { cwd: b });
+			const workerB = run(cmd, { cwd: b });
 			// We don't need b's URL, but ensure that b starts up before a
 			await waitForReady(workerB);
 
-			const workerA = run("wrangler dev", { cwd: a });
+			const workerA = run(cmd, { cwd: a });
 			const { url } = await waitForReady(workerA);
 
 			await waitForReload(workerA);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				'"hello world"'
-			);
+			await expect(fetchText(url)).resolves.toBe("hello world");
 		}
 	);
 
 	e2eTest(
 		"can fetch b through a (start a, start b)",
 		async ({ run, waitForReady, waitForReload }) => {
-			const workerA = run("wrangler dev", { cwd: a });
+			const workerA = run(cmd, { cwd: a });
 			const { url } = await waitForReady(workerA);
 
-			const workerB = run("wrangler dev", { cwd: b });
+			const workerB = run(cmd, { cwd: b });
 			await waitForReady(workerB);
 
 			await waitForReload(workerA);
 			// Give the dev registry some time to settle
 			await setTimeout(500);
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				'"hello world"'
-			);
+			await expect(fetchText(url)).resolves.toBe("hello world");
 		}
 	);
 });

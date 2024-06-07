@@ -308,9 +308,13 @@ function DevSession(props: DevSessionProps) {
 		const proxy = new ProxyController();
 		const local = new LocalRuntimeController();
 		const remote = new RemoteRuntimeController();
+		const proxyUrl = createDeferred<URL>();
 		// The ProxyWorker will have a stable host and port, so only listen for the first update
 		proxy.once("ready", async (event: ReadyEvent) => {
+			console.log("proxy reload");
+
 			const url = await event.proxyWorker.ready;
+			proxyUrl.resolve(url);
 			const finalIp = url.hostname;
 			const finalPort = parseInt(url.port);
 
@@ -323,16 +327,17 @@ function DevSession(props: DevSessionProps) {
 					})
 				);
 			}
-			local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
-				if (!reloadEvent.config.dev?.remote) {
-					await maybeRegisterLocalWorker(
-						url,
-						reloadEvent.config.name,
-						reloadEvent.proxyData.internalDurableObjects,
-						reloadEvent.proxyData.entrypointAddresses
-					);
-				}
-			});
+		});
+		local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
+			console.log("local reload");
+			if (!reloadEvent.config.dev?.remote) {
+				await maybeRegisterLocalWorker(
+					await proxyUrl.promise,
+					reloadEvent.config.name,
+					reloadEvent.proxyData.internalDurableObjects,
+					reloadEvent.proxyData.entrypointAddresses
+				);
+			}
 		});
 
 		return new DevEnv({ proxy, runtimes: [local, remote] });
@@ -342,6 +347,14 @@ function DevSession(props: DevSessionProps) {
 			void devEnv.teardown();
 		};
 	}, [devEnv]);
+
+	const workerDefinitions = useDevRegistry(
+		props.name,
+		props.bindings.services,
+		props.bindings.durable_objects,
+		props.local ? "local" : "remote"
+	);
+
 	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(() => {
 		const routes =
 			props.routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
@@ -437,6 +450,7 @@ function DevSession(props: DevSessionProps) {
 				},
 				liveReload: props.liveReload,
 				testScheduled: props.testScheduled,
+				getRegisteredWorker: (name) => workerDefinitions[name],
 			},
 		} satisfies StartDevWorkerOptions;
 	}, [
@@ -480,6 +494,7 @@ function DevSession(props: DevSessionProps) {
 		props.projectRoot,
 		props.rules,
 		props.testScheduled,
+		workerDefinitions,
 	]);
 
 	const onBundleStart = useCallback(() => {
@@ -543,12 +558,6 @@ function DevSession(props: DevSessionProps) {
 
 	const directory = useTmpDir(props.projectRoot);
 
-	const workerDefinitions = useDevRegistry(
-		props.name,
-		props.bindings.services,
-		props.bindings.durable_objects,
-		props.local ? "local" : "remote"
-	);
 	useEffect(() => {
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onConfigUpdate({
