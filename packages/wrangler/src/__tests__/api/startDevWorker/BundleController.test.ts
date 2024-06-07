@@ -58,13 +58,13 @@ describe("happy path bundle + watch", () => {
 	test("single ts source file", async ({ controller }) => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
-                export default {
-                    fetch(request, env, ctx) {
-                        //comment
-                        return new Response("hello world")
-                    }
-                } satisfies ExportedHandler
-            `,
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
@@ -96,47 +96,47 @@ describe("happy path bundle + watch", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
+					return new Response(\\"hello world\\");
 				  }
 				};
 				"
 			`);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
-                    export default {
-                        fetch(request, env, ctx) {
-                            //comment
-                            return new Response("hello world 2")
-                        }
-                    } satisfies ExportedHandler
-                `,
+					export default {
+						fetch(request, env, ctx) {
+							//comment
+							return new Response("hello world 2")
+						}
+					} satisfies ExportedHandler
+				`,
 		});
 		ev = await waitForBundleComplete(controller);
 		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
-                    "// index.ts
-                    var src_default = {
-                      fetch(request, env, ctx) {
-                        return new Response(\\"hello world 2\\");
-                      }
-                    };
-                    "
-                `);
+					"// index.ts
+					var src_default = {
+					  fetch(request, env, ctx) {
+						return new Response(\\"hello world 2\\");
+					  }
+					};
+					"
+				`);
 	});
 	test("multiple ts source files", async ({ controller }) => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
-                import name from "./other"
-                export default {
-                    fetch(request, env, ctx) {
-                        //comment
-                        return new Response("hello world" + name)
-                    }
-                } satisfies ExportedHandler
-            `,
+				import name from "./other"
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello world" + name)
+					}
+				} satisfies ExportedHandler
+			`,
 			"src/other.ts": dedent/* javascript */ `
-                export default "someone"
-            `,
+				export default "someone"
+			`,
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
@@ -174,15 +174,15 @@ describe("happy path bundle + watch", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\" + other_default);
+					return new Response(\\"hello world\\" + other_default);
 				  }
 				};
 				"
 			`);
 		await seed({
 			"src/other.ts": dedent/* javascript */ `
-                    export default "someone else"
-                `,
+					export default "someone else"
+				`,
 		});
 		ev = await waitForBundleComplete(controller);
 		expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
@@ -196,13 +196,13 @@ describe("happy path bundle + watch", () => {
 	test("custom build", async ({ controller }) => {
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
-                export default {
-                    fetch(request, env, ctx) {
-                        //comment
-                        return new Response("hello custom build")
-                    }
-                } satisfies ExportedHandler
-            `,
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello custom build")
+					}
+				} satisfies ExportedHandler
+			`,
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
@@ -237,20 +237,20 @@ describe("happy path bundle + watch", () => {
 				"// out.ts
 				var out_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
+					return new Response(\\"hello custom build\\");
 				  }
 				};
 				"
 			`);
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
-                    export default {
-                        fetch(request, env, ctx) {
-                            //comment
-                            return new Response("hello custom build 2")
-                        }
-                    }
-                `,
+					export default {
+						fetch(request, env, ctx) {
+							//comment
+							return new Response("hello custom build 2")
+						}
+					}
+				`,
 		});
 		ev = await waitForBundleComplete(controller);
 		expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
@@ -258,7 +258,7 @@ describe("happy path bundle + watch", () => {
 				"// out.ts
 				var out_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build 2\\");
+					return new Response(\\"hello custom build 2\\");
 				  }
 				};
 				"
@@ -271,13 +271,13 @@ describe("switching", () => {
 	test("esbuild -> custom builds", async ({ controller }) => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
-		        export default {
-		            fetch(request, env, ctx) {
-		                //comment
-		                return new Response("hello world")
-		            }
-		        } satisfies ExportedHandler
-		    `,
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
@@ -309,7 +309,7 @@ describe("switching", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
+					return new Response(\\"hello world\\");
 				  }
 				};
 				"
@@ -317,13 +317,13 @@ describe("switching", () => {
 
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
-		            export default {
-		                fetch(request, env, ctx) {
-		                    //comment
-		                    return new Response("hello custom build")
-		                }
-		            } satisfies ExportedHandler
-		        `,
+					export default {
+						fetch(request, env, ctx) {
+							//comment
+							return new Response("hello custom build")
+						}
+					} satisfies ExportedHandler
+				`,
 		});
 		const configCustom = {
 			name: "worker",
@@ -355,48 +355,48 @@ describe("switching", () => {
 		let evCustom = await waitForBundleComplete(controller);
 		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
-		            "// out.ts
-		            var out_default = {
-		              fetch(request, env, ctx) {
-		                return new Response(\\"hello custom build\\");
-		              }
-		            };
-		            "
-		        `);
+					"// out.ts
+					var out_default = {
+					  fetch(request, env, ctx) {
+						return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
 		// Make sure custom builds can reload after switching to them
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
-		                export default {
-		                    fetch(request, env, ctx) {
-		                        //comment
-		                        return new Response("hello custom build 2")
-		                    }
-		                }
-		            `,
+						export default {
+							fetch(request, env, ctx) {
+								//comment
+								return new Response("hello custom build 2")
+							}
+						}
+					`,
 		});
 		evCustom = await waitForBundleComplete(controller);
 		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
-		            "// out.ts
-		            var out_default = {
-		              fetch(request, env, ctx) {
-		                return new Response(\\"hello custom build 2\\");
-		              }
-		            };
-		            "
-		        `);
+					"// out.ts
+					var out_default = {
+					  fetch(request, env, ctx) {
+						return new Response(\\"hello custom build 2\\");
+					  }
+					};
+					"
+				`);
 	});
 
 	test("custom builds -> esbuild", async ({ controller }) => {
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
-		            export default {
-		                fetch(request, env, ctx) {
-		                    //comment
-		                    return new Response("hello custom build")
-		                }
-		            } satisfies ExportedHandler
-		        `,
+					export default {
+						fetch(request, env, ctx) {
+							//comment
+							return new Response("hello custom build")
+						}
+					} satisfies ExportedHandler
+				`,
 		});
 		const configCustom = {
 			name: "worker",
@@ -428,14 +428,14 @@ describe("switching", () => {
 		const evCustom = await waitForBundleComplete(controller);
 		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
-		            "// out.ts
-		            var out_default = {
-		              fetch(request, env, ctx) {
-		                return new Response(\\"hello custom build\\");
-		              }
-		            };
-		            "
-		        `);
+					"// out.ts
+					var out_default = {
+					  fetch(request, env, ctx) {
+						return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 						export default {
@@ -476,7 +476,7 @@ describe("switching", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
+					return new Response(\\"hello world\\");
 				  }
 				};
 				"
@@ -497,7 +497,7 @@ describe("switching", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world 2\\");
+					return new Response(\\"hello world 2\\");
 				  }
 				};
 				"
