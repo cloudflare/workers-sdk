@@ -1,5 +1,56 @@
 # wrangler
 
+## 3.60.0
+
+### Minor Changes
+
+- [#5878](https://github.com/cloudflare/workers-sdk/pull/5878) [`1e68fe5`](https://github.com/cloudflare/workers-sdk/commit/1e68fe5448ffa4d0551dc7255405983c329235c8) Thanks [@IgorMinar](https://github.com/IgorMinar)! - feat: add experimental support for hybrid Node.js compatibility
+
+  _This feature is experimental and not yet available for general consumption._
+
+  Use a combination of workerd Node.js builtins (behind the `experimental:nodejs_compat_v2` flag) and
+  Unenv polyfills (configured to only add those missing from the runtime) to provide a new more effective
+  Node.js compatibility approach.
+
+- [#5988](https://github.com/cloudflare/workers-sdk/pull/5988) [`e144f63`](https://github.com/cloudflare/workers-sdk/commit/e144f63f8c418c77a3b73d387f7e7d22e8f1f730) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: rename the `wrangler secret:bulk` command to `wrangler secret bulk`
+
+  The old command is now deprecated (but still functional) and will be removed in a future release. The new command is now more consistent with the rest of the wrangler CLI commands.
+
+- [#5989](https://github.com/cloudflare/workers-sdk/pull/5989) [`35b1a2f`](https://github.com/cloudflare/workers-sdk/commit/35b1a2f59bf0849e65782a278463cd0c3d294817) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: rename `wrangler kv:...` commands to `wrangler kv ...`
+
+  The old commands are now deprecated (but still functional) and will be removed in a future release. The new commands are now more consistent with the rest of the wrangler CLI commands.
+
+- [#5861](https://github.com/cloudflare/workers-sdk/pull/5861) [`1cc52f1`](https://github.com/cloudflare/workers-sdk/commit/1cc52f14c70112f5257263a4adee0c54add3a00d) Thanks [@zebp](https://github.com/zebp)! - feat: allow for Pages projects to upload sourcemaps
+
+  Pages projects can now upload sourcemaps for server bundles to enable remapped stacktraces in realtime logs when deployed with `upload_source_map` set to `true` in `wrangler.toml`.
+
+### Patch Changes
+
+- [#5939](https://github.com/cloudflare/workers-sdk/pull/5939) [`21573f4`](https://github.com/cloudflare/workers-sdk/commit/21573f4fd3484145405c5666b4dc9f7338f56887) Thanks [@penalosa](https://github.com/penalosa)! - refactor: Adds the experimental flag `--x-dev-env` which opts in to using an experimental code path for `wrangler dev` and `wrangler dev --remote`. There should be no observable behaviour changes when this flag is enabled.
+
+- [#5934](https://github.com/cloudflare/workers-sdk/pull/5934) [`bac79fb`](https://github.com/cloudflare/workers-sdk/commit/bac79fb7379941cd70d3a99d0d2cdb23e2409e50) Thanks [@dbenCF](https://github.com/dbenCF)! - fix: Update create KV namespace binding details message for easier implementation
+
+- [#5927](https://github.com/cloudflare/workers-sdk/pull/5927) [`6f83641`](https://github.com/cloudflare/workers-sdk/commit/6f836416446e3c04656d17477bcbbd39386622b5) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Clean `pages dev` terminal ouput
+
+  This work includes a series of improvements to the `pages dev` terminal output, in an attempt to make this output more structured, organised, cleaner, easier to follow, and therefore more helpful for our users <3
+
+- [#5960](https://github.com/cloudflare/workers-sdk/pull/5960) [`e648825`](https://github.com/cloudflare/workers-sdk/commit/e6488257f9376d415d970b045d77f0223d2f7884) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: avoid injecting esbuild watch stubs into production Worker code
+
+  When we added the ability to include additional modules in the deployed bundle of a Worker,
+  we inadvertently also included some boiler plate code that is only needed at development time.
+
+  This fix ensures that this code is only injected if we are running esbuild in watch mode
+  (e.g. `wrangler dev`) and not when building for deployment.
+
+  It is interesting to note that this boilerplate only gets included in the production code
+  if there is an import of CommonJS code in the Worker, which esbuild needs to convert to an
+  ESM import.
+
+  Fixes [#4269](https://github.com/cloudflare/workers-sdk/issues/4269)
+
+- Updated dependencies [[`ab95473`](https://github.com/cloudflare/workers-sdk/commit/ab9547380fd6fbc1d20c8dd4211faedbe94e5b33)]:
+  - miniflare@3.20240605.0
+
 ## 3.59.0
 
 ### Minor Changes

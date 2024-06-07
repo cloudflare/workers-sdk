@@ -1,5 +1,38 @@
 # create-cloudflare
 
+## 2.21.5
+
+### Patch Changes
+
+- [#5894](https://github.com/cloudflare/workers-sdk/pull/5894) [`314f7c4`](https://github.com/cloudflare/workers-sdk/commit/314f7c45f70e8def8302daa8f6dfcce38baa7395) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.5.4 | 1.5.5 |
+
+- [#5981](https://github.com/cloudflare/workers-sdk/pull/5981) [`2a05ede`](https://github.com/cloudflare/workers-sdk/commit/2a05edeff6c63462273a17c9e42c5d4409f78588) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-solid | 0.5.5 | 0.5.11 |
+
+- [#5982](https://github.com/cloudflare/workers-sdk/pull/5982) [`0c03316`](https://github.com/cloudflare/workers-sdk/commit/0c03316e5d5283f2ddc010b0c3af0031d5f42599) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.1.2 | 6.3.0 |
+
+- [#5250](https://github.com/cloudflare/workers-sdk/pull/5250) [`cfde058`](https://github.com/cloudflare/workers-sdk/commit/cfde0587c40cbcdfcb5e7981e8105e1b99f031fa) Thanks [@elithrar](https://github.com/elithrar)! - fix: updated the name of the Durable Object template in C3.
+
+  Makes it clearer what a "Durable Object" is. A user using c3 or Cloudflare for the first time will have no idea.
+  Also moved it down the list so that "web application" (a far more common use-case) is higher.
+
 ## 2.21.4
 
 ### Patch Changes
