@@ -96,7 +96,7 @@ describe("happy path bundle + watch", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello world\\");
+				    return new Response(\\"hello world\\");
 				  }
 				};
 				"
@@ -114,14 +114,14 @@ describe("happy path bundle + watch", () => {
 		ev = await waitForBundleComplete(controller);
 		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 			.toMatchInlineSnapshot(`
-					"// index.ts
-					var src_default = {
-					  fetch(request, env, ctx) {
-						return new Response(\\"hello world 2\\");
-					  }
-					};
-					"
-				`);
+				"// index.ts
+				var src_default = {
+				  fetch(request, env, ctx) {
+				    return new Response(\\"hello world 2\\");
+				  }
+				};
+				"
+			`);
 	});
 	test("multiple ts source files", async ({ controller }) => {
 		await seed({
@@ -174,7 +174,7 @@ describe("happy path bundle + watch", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello world\\" + other_default);
+				    return new Response(\\"hello world\\" + other_default);
 				  }
 				};
 				"
@@ -237,7 +237,7 @@ describe("happy path bundle + watch", () => {
 				"// out.ts
 				var out_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello custom build\\");
+				    return new Response(\\"hello custom build\\");
 				  }
 				};
 				"
@@ -258,7 +258,7 @@ describe("happy path bundle + watch", () => {
 				"// out.ts
 				var out_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello custom build 2\\");
+				    return new Response(\\"hello custom build 2\\");
 				  }
 				};
 				"
@@ -309,7 +309,7 @@ describe("switching", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello world\\");
+				    return new Response(\\"hello world\\");
 				  }
 				};
 				"
@@ -355,14 +355,14 @@ describe("switching", () => {
 		let evCustom = await waitForBundleComplete(controller);
 		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
-					"// out.ts
-					var out_default = {
-					  fetch(request, env, ctx) {
-						return new Response(\\"hello custom build\\");
-					  }
-					};
-					"
-				`);
+				"// out.ts
+				var out_default = {
+				  fetch(request, env, ctx) {
+				    return new Response(\\"hello custom build\\");
+				  }
+				};
+				"
+			`);
 		// Make sure custom builds can reload after switching to them
 		await seed({
 			"random_dir/index.ts": dedent/* javascript */ `
@@ -377,14 +377,14 @@ describe("switching", () => {
 		evCustom = await waitForBundleComplete(controller);
 		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
-					"// out.ts
-					var out_default = {
-					  fetch(request, env, ctx) {
-						return new Response(\\"hello custom build 2\\");
-					  }
-					};
-					"
-				`);
+				"// out.ts
+				var out_default = {
+				  fetch(request, env, ctx) {
+				    return new Response(\\"hello custom build 2\\");
+				  }
+				};
+				"
+			`);
 	});
 
 	test("custom builds -> esbuild", async ({ controller }) => {
@@ -428,14 +428,14 @@ describe("switching", () => {
 		const evCustom = await waitForBundleComplete(controller);
 		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 			.toMatchInlineSnapshot(`
-					"// out.ts
-					var out_default = {
-					  fetch(request, env, ctx) {
-						return new Response(\\"hello custom build\\");
-					  }
-					};
-					"
-				`);
+				"// out.ts
+				var out_default = {
+				  fetch(request, env, ctx) {
+				    return new Response(\\"hello custom build\\");
+				  }
+				};
+				"
+			`);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 						export default {
@@ -476,7 +476,7 @@ describe("switching", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello world\\");
+				    return new Response(\\"hello world\\");
 				  }
 				};
 				"
@@ -497,7 +497,7 @@ describe("switching", () => {
 				"// index.ts
 				var src_default = {
 				  fetch(request, env, ctx) {
-					return new Response(\\"hello world 2\\");
+				    return new Response(\\"hello world 2\\");
 				  }
 				};
 				"
