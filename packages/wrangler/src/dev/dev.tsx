@@ -560,6 +560,8 @@ function DevSession(props: DevSessionProps) {
 			});
 		}
 	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
+
+	// This value is static, so doesn't cause the below hooks to be called conditionally
 	if (props.experimentalDevEnv) {
 		return null;
 	}
