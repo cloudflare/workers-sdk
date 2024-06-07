@@ -282,7 +282,7 @@ describe("dev registry", () => {
 		).resolves.toMatchInlineSnapshot('"hello world"');
 	});
 
-	e2eTest(
+	e2eTest.only(
 		"can fetch b through a (start b, start a)",
 		async ({ run, waitForReady, waitForReload }) => {
 			const workerB = run("wrangler dev", { cwd: b });

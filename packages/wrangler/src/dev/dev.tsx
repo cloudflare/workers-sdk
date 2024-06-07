@@ -560,168 +560,167 @@ function DevSession(props: DevSessionProps) {
 			});
 		}
 	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
-	if (!props.experimentalDevEnv) {
-		// eslint-disable-next-line react-hooks/rules-of-hooks
-		useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
+	if (props.experimentalDevEnv) {
+		return null;
+	}
+	// eslint-disable-next-line react-hooks/rules-of-hooks
+	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
-		// eslint-disable-next-line react-hooks/rules-of-hooks
-		const bundle = useEsbuild({
-			entry: props.entry,
-			destination: directory,
-			jsxFactory: props.jsxFactory,
-			processEntrypoint: props.processEntrypoint,
-			additionalModules: props.additionalModules,
-			rules: props.rules,
-			jsxFragment: props.jsxFragment,
-			serveAssetsFromWorker: Boolean(
-				props.assetPaths && !props.isWorkersSite && props.local
-			),
-			tsconfig: props.tsconfig,
-			minify: props.minify,
-			nodejsCompatMode: props.nodejsCompatMode,
-			define: props.define,
-			noBundle: props.noBundle,
-			findAdditionalModules: props.findAdditionalModules,
-			assets: props.assetsConfig,
-			durableObjects: props.bindings.durable_objects || { bindings: [] },
-			local: props.local,
-			// Enable the bundling to know whether we are using dev or deploy
-			targetConsumer: "dev",
-			testScheduled: props.testScheduled ?? false,
-			projectRoot: props.projectRoot,
-			onStart: onEsbuildStart,
-			onComplete: onBundleComplete,
-			defineNavigatorUserAgent: isNavigatorDefined(
-				props.compatibilityDate,
-				props.compatibilityFlags
-			),
-		});
+	// eslint-disable-next-line react-hooks/rules-of-hooks
+	const bundle = useEsbuild({
+		entry: props.entry,
+		destination: directory,
+		jsxFactory: props.jsxFactory,
+		processEntrypoint: props.processEntrypoint,
+		additionalModules: props.additionalModules,
+		rules: props.rules,
+		jsxFragment: props.jsxFragment,
+		serveAssetsFromWorker: Boolean(
+			props.assetPaths && !props.isWorkersSite && props.local
+		),
+		tsconfig: props.tsconfig,
+		minify: props.minify,
+		nodejsCompatMode: props.nodejsCompatMode,
+		define: props.define,
+		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
+		assets: props.assetsConfig,
+		durableObjects: props.bindings.durable_objects || { bindings: [] },
+		local: props.local,
+		// Enable the bundling to know whether we are using dev or deploy
+		targetConsumer: "dev",
+		testScheduled: props.testScheduled ?? false,
+		projectRoot: props.projectRoot,
+		onStart: onEsbuildStart,
+		onComplete: onBundleComplete,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
+	});
 
-		// TODO(queues) support remote wrangler dev
-		if (
-			!props.local &&
-			(props.bindings.queues?.length || props.queueConsumers?.length)
-		) {
-			logger.warn(
-				"Queues are currently in Beta and are not supported in wrangler dev remote mode."
+	// TODO(queues) support remote wrangler dev
+	if (
+		!props.local &&
+		(props.bindings.queues?.length || props.queueConsumers?.length)
+	) {
+		logger.warn(
+			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
+		);
+	}
+
+	const announceAndOnReady: typeof props.onReady = async (
+		finalIp,
+		finalPort,
+		proxyData
+	) => {
+		// at this point (in the layers of onReady callbacks), we have devEnv in scope
+		// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+		const { proxyWorker } = await devEnv.proxy.ready.promise;
+		const url = await proxyWorker.ready;
+		finalIp = url.hostname;
+		finalPort = parseInt(url.port);
+
+		if (props.local) {
+			await maybeRegisterLocalWorker(
+				url,
+				props.name,
+				proxyData.internalDurableObjects,
+				proxyData.entrypointAddresses
 			);
 		}
 
-		const announceAndOnReady: typeof props.onReady = async (
-			finalIp,
-			finalPort,
-			proxyData
-		) => {
-			// at this point (in the layers of onReady callbacks), we have devEnv in scope
-			// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
-			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			const url = await proxyWorker.ready;
-			finalIp = url.hostname;
-			finalPort = parseInt(url.port);
+		if (process.send) {
+			process.send(
+				JSON.stringify({
+					event: "DEV_SERVER_READY",
+					ip: finalIp,
+					port: finalPort,
+				})
+			);
+		}
 
-			if (props.local) {
-				await maybeRegisterLocalWorker(
-					url,
-					props.name,
-					proxyData.internalDurableObjects,
-					proxyData.entrypointAddresses
-				);
-			}
+		if (bundle) {
+			latestReloadCompleteEvent.current = {
+				type: "reloadComplete",
+				config: startDevWorkerOptions,
+				bundle,
+				proxyData,
+			};
 
-			if (process.send) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: finalIp,
-						port: finalPort,
-					})
-				);
-			}
+			devEnv.proxy.onReloadComplete(latestReloadCompleteEvent.current);
+		}
 
-			if (bundle) {
-				latestReloadCompleteEvent.current = {
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				};
+		if (props.onReady) {
+			props.onReady(finalIp, finalPort, proxyData);
+		}
+	};
 
-				devEnv.proxy.onReloadComplete(latestReloadCompleteEvent.current);
-			}
-
-			if (props.onReady) {
-				props.onReady(finalIp, finalPort, proxyData);
-			}
-		};
-
-		return props.local ? (
-			<Local
-				name={props.name}
-				bundle={bundle}
-				format={props.entry.format}
-				compatibilityDate={props.compatibilityDate}
-				compatibilityFlags={props.compatibilityFlags}
-				usageModel={props.usageModel}
-				bindings={props.bindings}
-				workerDefinitions={workerDefinitions}
-				assetPaths={props.assetPaths}
-				initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
-				initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
-				rules={props.rules}
-				inspectorPort={props.inspectorPort}
-				runtimeInspectorPort={props.runtimeInspectorPort}
-				localPersistencePath={props.localPersistencePath}
-				liveReload={props.liveReload}
-				crons={props.crons}
-				queueConsumers={props.queueConsumers}
-				localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
-				httpsKeyPath={props.httpsKeyPath}
-				httpsCertPath={props.httpsCertPath}
-				localUpstream={props.localUpstream}
-				upstreamProtocol={props.upstreamProtocol}
-				inspect={props.inspect}
-				onReady={announceAndOnReady}
-				enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-				sourceMapPath={bundle?.sourceMapPath}
-				services={props.bindings.services}
-				experimentalDevEnv={props.experimentalDevEnv}
-			/>
-		) : (
-			<Remote
-				name={props.name}
-				bundle={bundle}
-				format={props.entry.format}
-				bindings={props.bindings}
-				assetPaths={props.assetPaths}
-				isWorkersSite={props.isWorkersSite}
-				port={props.initialPort}
-				ip={props.initialIp}
-				localProtocol={props.localProtocol}
-				httpsKeyPath={props.httpsKeyPath}
-				httpsCertPath={props.httpsCertPath}
-				inspectorPort={props.inspectorPort}
-				// TODO: @threepointone #1167
-				// liveReload={props.liveReload}
-				inspect={props.inspect}
-				compatibilityDate={props.compatibilityDate}
-				compatibilityFlags={props.compatibilityFlags}
-				usageModel={props.usageModel}
-				env={props.env}
-				legacyEnv={props.legacyEnv}
-				host={props.host}
-				routes={props.routes}
-				onReady={announceAndOnReady}
-				sourceMapPath={bundle?.sourceMapPath}
-				sendMetrics={props.sendMetrics}
-				// startDevWorker
-				accountId={accountId}
-				setAccountId={setAccountIdAndResolveDeferred}
-				experimentalDevEnv={props.experimentalDevEnv}
-			/>
-		);
-	} else {
-		return null;
-	}
+	return props.local ? (
+		<Local
+			name={props.name}
+			bundle={bundle}
+			format={props.entry.format}
+			compatibilityDate={props.compatibilityDate}
+			compatibilityFlags={props.compatibilityFlags}
+			usageModel={props.usageModel}
+			bindings={props.bindings}
+			workerDefinitions={workerDefinitions}
+			assetPaths={props.assetPaths}
+			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			rules={props.rules}
+			inspectorPort={props.inspectorPort}
+			runtimeInspectorPort={props.runtimeInspectorPort}
+			localPersistencePath={props.localPersistencePath}
+			liveReload={props.liveReload}
+			crons={props.crons}
+			queueConsumers={props.queueConsumers}
+			localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
+			localUpstream={props.localUpstream}
+			upstreamProtocol={props.upstreamProtocol}
+			inspect={props.inspect}
+			onReady={announceAndOnReady}
+			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
+			sourceMapPath={bundle?.sourceMapPath}
+			services={props.bindings.services}
+			experimentalDevEnv={props.experimentalDevEnv}
+		/>
+	) : (
+		<Remote
+			name={props.name}
+			bundle={bundle}
+			format={props.entry.format}
+			bindings={props.bindings}
+			assetPaths={props.assetPaths}
+			isWorkersSite={props.isWorkersSite}
+			port={props.initialPort}
+			ip={props.initialIp}
+			localProtocol={props.localProtocol}
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
+			inspectorPort={props.inspectorPort}
+			// TODO: @threepointone #1167
+			// liveReload={props.liveReload}
+			inspect={props.inspect}
+			compatibilityDate={props.compatibilityDate}
+			compatibilityFlags={props.compatibilityFlags}
+			usageModel={props.usageModel}
+			env={props.env}
+			legacyEnv={props.legacyEnv}
+			host={props.host}
+			routes={props.routes}
+			onReady={announceAndOnReady}
+			sourceMapPath={bundle?.sourceMapPath}
+			sendMetrics={props.sendMetrics}
+			// startDevWorker
+			accountId={accountId}
+			setAccountId={setAccountIdAndResolveDeferred}
+			experimentalDevEnv={props.experimentalDevEnv}
+		/>
+	);
 }
 
 function useTmpDir(projectRoot: string | undefined): string | undefined {
