@@ -861,7 +861,19 @@ describe("middleware", () => {
 					.replace(/\/\/ .*/g, "")
 					.trim()
 			).toMatchInlineSnapshot(`
-				"var src_default = {
+				"var __defProp = Object.defineProperty;
+				var __export = (target, all) => {
+				  for (var name in all)
+				    __defProp(target, name, { get: all[name], enumerable: true });
+				};
+
+
+				var src_exports = {};
+				__export(src_exports, {
+				  DurableObjectExample: () => DurableObjectExample,
+				  default: () => src_default
+				});
+				var src_default = {
 				  async fetch(request, env) {
 				    return Response.json(env);
 				  }
@@ -875,8 +887,9 @@ describe("middleware", () => {
 				};
 
 
+				var testingMiddlewareExportName = \\"__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__\\";
 				var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
-				  ...void 0 ?? []
+				  ...src_exports[testingMiddlewareExportName] ?? []
 				];
 				var middleware_insertion_facade_default = src_default;
 

@@ -67,8 +67,10 @@ export async function applyMiddlewareLoaderFacade(
 
 				export * from "${prepareFilePath(entry.file)}";
 
+				const testingMiddlewareExportName = "__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__";
+
 				export const __INTERNAL_WRANGLER_MIDDLEWARE__ = [
-					...(OTHER_EXPORTS.__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ ?? []),
+					...(OTHER_EXPORTS[testingMiddlewareExportName] ?? []),
 					${middlewareFns}
 				]
 				export default worker;
