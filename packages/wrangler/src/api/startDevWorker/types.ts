@@ -5,7 +5,6 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../../config/environment";
-import type { Entry } from "../../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type {
 	CfAnalyticsEngineDataset,
@@ -20,6 +19,7 @@ import type {
 	CfMTlsCertificate,
 	CfQueue,
 	CfR2Bucket,
+	CfScriptFormat,
 	CfSendEmailBindings,
 	CfService,
 	CfVectorize,
@@ -42,7 +42,7 @@ export interface DevWorker {
 	dispose(): Promise<void>;
 }
 
-export interface StartDevWorkerOptions {
+export interface InputStartDevWorkerOptions {
 	/** The name of the worker. */
 	name?: string;
 	/**
@@ -53,6 +53,8 @@ export interface StartDevWorkerOptions {
 	script: File<string>;
 	/** The configuration of the worker. */
 	config?: File<Config>;
+	/** A worker's directory. Usually where the wrangler.toml file is located */
+	directory?: string;
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
@@ -84,7 +86,6 @@ export interface StartDevWorkerOptions {
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
 	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
-	_entry?: Entry;
 	_projectRoot?: string;
 	_serveAssetsFromWorker?: boolean;
 	_assets?: Config["assets"];
@@ -117,6 +118,9 @@ export interface StartDevWorkerOptions {
 		jsxFragment?: string;
 		tsconfig?: string;
 		nodejsCompatMode?: NodeJSCompatMode;
+		moduleRoot?: string;
+
+		format?: CfScriptFormat;
 	};
 
 	/** Options applying to the worker's development preview environment. */
@@ -155,6 +159,15 @@ export interface StartDevWorkerOptions {
 		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
 
 		testScheduled?: boolean;
+	};
+}
+
+export interface StartDevWorkerOptions extends InputStartDevWorkerOptions {
+	script: { path: string };
+	directory: string;
+	build: InputStartDevWorkerOptions["build"] & {
+		format: CfScriptFormat;
+		moduleRoot: string;
 	};
 }
 

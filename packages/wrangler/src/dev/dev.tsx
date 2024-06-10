@@ -379,9 +379,9 @@ function DevSession(props: DevSessionProps) {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
-			script: { contents: "" },
+			script: { path: props.entry.file },
+			directory: props.entry.directory,
 			_bindings: props.bindings,
-			_entry: props.entry,
 			_projectRoot: props.projectRoot,
 			_serveAssetsFromWorker: Boolean(
 				props.assetPaths && !props.isWorkersSite && props.local
@@ -410,6 +410,8 @@ function DevSession(props: DevSessionProps) {
 				jsxFragment: props.jsxFragment,
 				tsconfig: props.tsconfig,
 				nodejsCompatMode: props.nodejsCompatMode,
+				format: props.entry.format,
+				moduleRoot: props.entry.moduleRoot,
 			},
 			site:
 				props.isWorkersSite && props.assetPaths
