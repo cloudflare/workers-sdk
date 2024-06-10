@@ -5,7 +5,6 @@ import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { runInTempDir } from "../../helpers/run-in-tmp";
-import { unusable } from "../../helpers/unusable";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
