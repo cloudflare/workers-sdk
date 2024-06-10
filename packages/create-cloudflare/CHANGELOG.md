@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.21.6
+
+### Patch Changes
+
+- [#5954](https://github.com/cloudflare/workers-sdk/pull/5954) [`3b99e63`](https://github.com/cloudflare/workers-sdk/commit/3b99e6349a75f64bcdbc9b2968866b3d059dd9cf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that C3 doesn't delete pre-existing options in the `defineConfig` call
+
 ## 2.21.5
 
 ### Patch Changes
