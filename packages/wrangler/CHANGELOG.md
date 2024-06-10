@@ -6,7 +6,7 @@
 
 - [#6002](https://github.com/cloudflare/workers-sdk/pull/6002) [`f1f1834`](https://github.com/cloudflare/workers-sdk/commit/f1f18347ddfff509a58acea2a815c40fe86fd56c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Revert a change in 3.60.0 which incorrectly batched assets for Pages uploads (https://github.com/cloudflare/workers-sdk/pull/5632).
 
-## 3.60.0
+## 3.60.0 [DEPRECATED]
 
 ### Minor Changes
 
