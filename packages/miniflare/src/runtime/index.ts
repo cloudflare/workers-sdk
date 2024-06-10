@@ -10,6 +10,9 @@ import workerdPath, {
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { Awaitable } from "../workers";
+import * as path from "path";
+import { findUpSync } from "find-up";
+import { mkdirSync } from "fs";
 
 const ControlMessageSchema = z.discriminatedUnion("event", [
 	z.object({
@@ -93,7 +96,25 @@ function getRuntimeCommand() {
 	return process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
 }
 
+function getCacheDir() {
+	const closestNodeModulesDirectory = findUpSync("node_modules", {
+		type: "directory",
+	});
+
+	const res = closestNodeModulesDirectory
+		? path.join(closestNodeModulesDirectory, ".cache/workerd")
+		: null;
+
+	if (res) {
+		mkdirSync(path.dirname(res), { recursive: true });
+	}
+
+	return res;
+}
+
 function getRuntimeArgs(options: RuntimeOptions) {
+	const cacheDir = getCacheDir();
+
 	const args: string[] = [
 		"serve",
 		// Required to use binary capnp config
@@ -114,6 +135,10 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	}
 	if (options.verbose) {
 		args.push("--verbose");
+	}
+	if (cacheDir) {
+		// Configure disk cache directory (used for e.g. Python wheels and snapshots)
+		args.push(`--disk-cache-dir=${cacheDir}`);
 	}
 
 	return args;
