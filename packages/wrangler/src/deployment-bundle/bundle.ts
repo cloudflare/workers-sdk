@@ -25,7 +25,7 @@ import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
 import type { ModuleCollector } from "./module-collection";
 import type { NodeJSCompatMode } from "./node-compat";
-import type { CfModule } from "./worker";
+import type { CfModule, CfModuleType } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
@@ -49,7 +49,7 @@ export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
-	bundleType: "esm" | "commonjs";
+	bundleType: CfModuleType;
 	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;

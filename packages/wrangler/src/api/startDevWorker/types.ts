@@ -1,9 +1,12 @@
 import type { Config } from "../../config";
 import type {
 	CustomDomainRoute,
+	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../../config/environment";
+import type { Entry } from "../../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type {
 	CfAnalyticsEngineDataset,
 	CfConstellation,
@@ -13,6 +16,7 @@ import type {
 	CfHyperdrive,
 	CfKvNamespace,
 	CfLogfwdrBinding,
+	CfModule,
 	CfMTlsCertificate,
 	CfQueue,
 	CfR2Bucket,
@@ -80,27 +84,39 @@ export interface StartDevWorkerOptions {
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
 	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
+	_entry?: Entry;
+	_projectRoot?: string;
+	_serveAssetsFromWorker?: boolean;
+	_assets?: Config["assets"];
+	_processEntrypoint?: boolean;
+	_additionalModules?: CfModule[];
 	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
 		/** Whether the worker and its dependencies are bundled. Defaults to true. */
 		bundle?: boolean;
+
+		findAdditionalModules?: boolean;
 		/** Specifies types of modules matched by globs. */
-		moduleRules?: ModuleRule[];
-		/** Replace global identifiers with constant expressions, e.g. ['debug=true','version="1.0.0"'] or { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
-		define: string[] | Record<string, string>;
+		moduleRules?: Rule[];
+		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
+		define?: Record<string, string>;
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
-		minify: boolean;
+		minify?: boolean;
 		/** Options controlling a custom build step. */
 		custom: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
-			command: string;
+			command?: string;
 			/** The cwd to run the command in. */
 			workingDirectory?: string;
 			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
 			watch?: string | string[];
 		};
+		jsxFactory?: string;
+		jsxFragment?: string;
+		tsconfig?: string;
+		nodejsCompatMode?: NodeJSCompatMode;
 	};
 
 	/** Options applying to the worker's development preview environment. */
@@ -137,6 +153,8 @@ export interface StartDevWorkerOptions {
 
 		/** Gets a fetcher to a specific worker, used for multi-worker development */
 		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
+
+		testScheduled?: boolean;
 	};
 }
 
@@ -144,14 +162,6 @@ export type Hook<T extends string | number | object> =
 	| T
 	| Promise<T>
 	| (() => T | Promise<T>);
-
-export type Module<ModuleType extends ModuleRule["type"] = ModuleRule["type"]> =
-	File<string | Uint8Array> & {
-		/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
-		name: string;
-		/** How this module should be interpreted */
-		type: ModuleType;
-	};
 
 export type Bundle = EsbuildBundle;
 
@@ -177,18 +187,6 @@ export type PatternRoute = {
 );
 export type WorkersDevRoute = { workersDev: true };
 export type Route = PatternRoute | WorkersDevRoute;
-
-export interface ModuleRule {
-	type:
-		| "ESModule"
-		| "CommonJS"
-		| "NodeJsCompatModule"
-		| "CompiledWasm"
-		| "Text"
-		| "Data";
-	include?: string[];
-	fallthrough?: boolean;
-}
 
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 

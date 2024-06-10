@@ -1120,12 +1120,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
 	// TODO: maybe a good idea to show usage here
 }
 
-export async function getAccountId(): Promise<string | undefined> {
-	const apiToken = getAPIToken();
-	if (!apiToken) {
-		return;
-	}
-
+export async function getAccountId(): Promise<string> {
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
 	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {

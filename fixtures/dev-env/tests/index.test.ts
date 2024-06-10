@@ -2,7 +2,7 @@ import assert from "node:assert";
 import events from "node:events";
 import timers from "node:timers/promises";
 import getPort from "get-port";
-import { Log, Miniflare } from "miniflare";
+import { Miniflare } from "miniflare";
 import * as undici from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { unstable_DevEnv as DevEnv } from "wrangler";

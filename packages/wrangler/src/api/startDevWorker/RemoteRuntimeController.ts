@@ -134,6 +134,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (!config.dev?.auth) {
 				throw new MissingConfigError("config.dev.auth");
 			}
+
 			const auth = await unwrapHook(config.dev.auth);
 
 			if (this.#session) {

@@ -19,6 +19,10 @@ export type ErrorEvent =
 	| BaseErrorEvent<
 			"ProxyController",
 			{ config?: StartDevWorkerOptions; bundle?: Bundle }
+	  >
+	| BaseErrorEvent<
+			"BundlerController",
+			{ config?: StartDevWorkerOptions; filePath?: string }
 	  >;
 export type BaseErrorEvent<Source = string, Data = undefined> = {
 	type: "error";
@@ -83,7 +87,6 @@ export type PreviewTokenExpiredEvent = {
 };
 export type ReadyEvent = {
 	type: "ready";
-
 	proxyWorker: Miniflare;
 };
 

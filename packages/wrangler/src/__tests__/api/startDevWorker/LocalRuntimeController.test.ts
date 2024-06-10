@@ -16,10 +16,19 @@ import { unusable } from "../../helpers/unusable";
 import type {
 	Bundle,
 	File,
-	Module,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
+import type { Rule } from "../../../config/environment";
+
+export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
+	string | Uint8Array
+> & {
+	/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
+	name: string;
+	/** How this module should be interpreted */
+	type: ModuleType;
+};
 
 const isWindows = process.platform === "win32";
 function getTextFileContents(file: File<string | Uint8Array>) {

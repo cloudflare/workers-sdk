@@ -217,14 +217,16 @@ describe.each([
 	);
 });
 
-describe("dev registry", () => {
-	let a: string;
-	let b: string;
+describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --x-dev-env" }])(
+	"dev registry $cmd",
+	({ cmd }) => {
+		let a: string;
+		let b: string;
 
-	beforeEach(async () => {
-		a = await makeRoot();
-		await baseSeed(a, {
-			"wrangler.toml": dedent`
+		beforeEach(async () => {
+			a = await makeRoot();
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
 					name = "a"
 					main = "src/index.ts"
 
@@ -232,95 +234,92 @@ describe("dev registry", () => {
 					binding = "BEE"
 					service = 'b'
 			`,
-			"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent/* javascript */ `
 				export default {
 					fetch(req, env) {
 						return env.BEE.fetch(req);
 					},
 				};
 				`,
-			"package.json": dedent`
+				"package.json": dedent`
 					{
 						"name": "a",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-		});
+			});
 
-		b = await makeRoot();
-		await baseSeed(b, {
-			"wrangler.toml": dedent`
+			b = await makeRoot();
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
 					name = "b"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent/* javascript */ `
 				export default{
 					fetch() {
 						return new Response("hello world");
 					},
 				};
 			`,
-			"package.json": dedent`
+				"package.json": dedent`
 					{
 						"name": "b",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
+			});
 		});
-	});
 
-	e2eTest("can fetch b", async ({ run, waitForReady }) => {
-		const worker = run("wrangler dev", { cwd: b });
+		e2eTest("can fetch b", async ({ run, waitForReady }) => {
+			const worker = run(cmd, { cwd: b });
 
-		const { url } = await waitForReady(worker);
+			const { url } = await waitForReady(worker);
 
-		await expect(
-			fetch(url).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"hello world"');
-	});
-
-	e2eTest(
-		"can fetch b through a (start b, start a)",
-		async ({ run, waitForReady, waitForReload }) => {
-			const workerB = run("wrangler dev", { cwd: b });
-			// We don't need b's URL, but ensure that b starts up before a
-			await waitForReady(workerB);
-
-			const workerA = run("wrangler dev", { cwd: a });
-			const { url } = await waitForReady(workerA);
-
-			// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
-			await waitForReload(workerA);
-			await waitForReload(workerA);
-
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				'"hello world"'
+			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+				"hello world"
 			);
-		}
-	);
+		});
 
-	e2eTest(
-		"can fetch b through a (start a, start b)",
-		async ({ run, waitForReady, waitForReload }) => {
-			const workerA = run("wrangler dev", { cwd: a });
-			const { url } = await waitForReady(workerA);
+		e2eTest(
+			"can fetch b through a (start b, start a)",
+			async ({ run, waitForReady, waitForReload }) => {
+				const workerB = run(cmd, { cwd: b });
+				// We don't need b's URL, but ensure that b starts up before a
+				await waitForReady(workerB);
 
-			const workerB = run("wrangler dev", { cwd: b });
-			await waitForReady(workerB);
+				const workerA = run(cmd, { cwd: a });
+				const { url } = await waitForReady(workerA);
 
-			// TODO(soon): Service bindings are only accessible after several reloads. We should fix this
-			await waitForReload(workerA);
-			await waitForReload(workerA);
+				await waitForReload(workerA);
+				// Give the dev registry some time to settle
+				await setTimeout(500);
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				'"hello world"'
-			);
-		}
-	);
-});
+				await expect(fetchText(url)).resolves.toBe("hello world");
+			}
+		);
+
+		e2eTest(
+			"can fetch b through a (start a, start b)",
+			async ({ run, waitForReady, waitForReload }) => {
+				const workerA = run(cmd, { cwd: a });
+				const { url } = await waitForReady(workerA);
+
+				const workerB = run(cmd, { cwd: b });
+				await waitForReady(workerB);
+
+				await waitForReload(workerA);
+				// Give the dev registry some time to settle
+				await setTimeout(500);
+
+				await expect(fetchText(url)).resolves.toBe("hello world");
+			}
+		);
+	}
+);
 
 describe("hyperdrive dev tests", () => {
 	let server: nodeNet.Server;

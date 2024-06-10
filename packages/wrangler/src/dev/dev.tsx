@@ -36,6 +36,7 @@ import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
 import type {
 	ProxyData,
+	ReadyEvent,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 	Trigger,
@@ -297,12 +298,60 @@ function DevSession(props: DevSessionProps) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const [devEnv] = useState(() => new DevEnv());
+	const [devEnv] = useState(() => {
+		const newDevEnv = new DevEnv();
+		if (!props.experimentalDevEnv) {
+			return newDevEnv;
+		}
+		const {
+			proxy,
+			runtimes: [local, remote],
+		} = newDevEnv;
+
+		const proxyUrl = createDeferred<URL>();
+		// The ProxyWorker will have a stable host and port, so only listen for the first update
+		proxy.once("ready", async (event: ReadyEvent) => {
+			const url = await event.proxyWorker.ready;
+			proxyUrl.resolve(url);
+			const finalIp = url.hostname;
+			const finalPort = parseInt(url.port);
+
+			if (process.send) {
+				process.send(
+					JSON.stringify({
+						event: "DEV_SERVER_READY",
+						ip: finalIp,
+						port: finalPort,
+					})
+				);
+			}
+		});
+		local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
+			if (!reloadEvent.config.dev?.remote) {
+				await maybeRegisterLocalWorker(
+					await proxyUrl.promise,
+					reloadEvent.config.name,
+					reloadEvent.proxyData.internalDurableObjects,
+					reloadEvent.proxyData.entrypointAddresses
+				);
+			}
+		});
+
+		return new DevEnv({ proxy, runtimes: [local, remote] });
+	});
 	useEffect(() => {
 		return () => {
 			void devEnv.teardown();
 		};
 	}, [devEnv]);
+
+	const workerDefinitions = useDevRegistry(
+		props.name,
+		props.bindings.services,
+		props.bindings.durable_objects,
+		props.local ? "local" : "remote"
+	);
+
 	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(() => {
 		const routes =
 			props.routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
@@ -332,11 +381,36 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
 			_bindings: props.bindings,
+			_entry: props.entry,
+			_projectRoot: props.projectRoot,
+			_serveAssetsFromWorker: Boolean(
+				props.assetPaths && !props.isWorkersSite && props.local
+			),
+			_assets: props.assetsConfig,
+			_processEntrypoint: props.processEntrypoint,
+			_additionalModules: props.additionalModules,
+
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
 			legacyEnv: props.legacyEnv,
 			sendMetrics: props.sendMetrics,
 			usageModel: props.usageModel,
+			build: {
+				bundle: !props.noBundle,
+				findAdditionalModules: props.findAdditionalModules,
+				minify: props.minify,
+				moduleRules: props.rules,
+				define: props.define,
+				custom: {
+					command: props.build.command,
+					watch: props.build.watch_dir,
+					workingDirectory: props.build.cwd,
+				},
+				jsxFactory: props.jsxFactory,
+				jsxFragment: props.jsxFragment,
+				tsconfig: props.tsconfig,
+				nodejsCompatMode: props.nodejsCompatMode,
+			},
 			site:
 				props.isWorkersSite && props.assetPaths
 					? {
@@ -371,32 +445,53 @@ function DevSession(props: DevSessionProps) {
 					hostname: props.localUpstream,
 				},
 				liveReload: props.liveReload,
+				testScheduled: props.testScheduled,
+				getRegisteredWorker: (name) => workerDefinitions[name],
 			},
 		} satisfies StartDevWorkerOptions;
 	}, [
+		props.routes,
+		props.queueConsumers,
+		props.crons,
 		props.name,
 		props.compatibilityDate,
 		props.compatibilityFlags,
 		props.bindings,
-		props.routes,
+		props.entry,
+		props.projectRoot,
+		props.assetPaths,
+		props.isWorkersSite,
+		props.local,
+		props.assetsConfig,
+		props.processEntrypoint,
+		props.additionalModules,
 		props.env,
 		props.legacyEnv,
 		props.sendMetrics,
 		props.usageModel,
-		props.isWorkersSite,
-		props.assetPaths,
-		accountIdDeferred,
-		props.local,
+		props.noBundle,
+		props.findAdditionalModules,
+		props.minify,
+		props.rules,
+		props.define,
+		props.build.command,
+		props.build.watch_dir,
+		props.build.cwd,
+		props.jsxFactory,
+		props.jsxFragment,
+		props.tsconfig,
+		props.nodejsCompatMode,
 		props.initialIp,
 		props.initialPort,
 		props.localProtocol,
 		props.httpsKeyPath,
 		props.httpsCertPath,
-		props.localUpstream,
 		props.inspectorPort,
+		props.localUpstream,
 		props.liveReload,
-		props.queueConsumers,
-		props.crons,
+		props.testScheduled,
+		accountIdDeferred,
+		workerDefinitions,
 	]);
 
 	const onBundleStart = useCallback(() => {
@@ -458,58 +553,61 @@ function DevSession(props: DevSessionProps) {
 		onBundleStart();
 	}, [esbuildStartTimeoutRef, onBundleStart]);
 
-	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
-
 	const directory = useTmpDir(props.projectRoot);
 
-	const workerDefinitions = useDevRegistry(
-		props.name,
-		props.bindings.services,
-		props.bindings.durable_objects,
-		props.local ? "local" : "remote"
-	);
 	useEffect(() => {
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onConfigUpdate({
 			type: "configUpdate",
 			config: startDevWorkerOptions,
 		});
-	}, [devEnv, startDevWorkerOptions]);
+		if (props.experimentalDevEnv) {
+			devEnv.bundler.onConfigUpdate({
+				type: "configUpdate",
+				config: startDevWorkerOptions,
+			});
+		}
+	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 
-	const bundle = useEsbuild({
-		entry: props.entry,
-		destination: directory,
-		jsxFactory: props.jsxFactory,
-		processEntrypoint: props.processEntrypoint,
-		additionalModules: props.additionalModules,
-		rules: props.rules,
-		jsxFragment: props.jsxFragment,
-		serveAssetsFromWorker: Boolean(
-			props.assetPaths && !props.isWorkersSite && props.local
-		),
-		tsconfig: props.tsconfig,
-		minify: props.minify,
-		nodejsCompatMode: props.nodejsCompatMode,
-		define: props.define,
-		noBundle: props.noBundle,
-		findAdditionalModules: props.findAdditionalModules,
-		assets: props.assetsConfig,
-		workerDefinitions,
-		services: props.bindings.services,
-		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		local: props.local,
-		// Enable the bundling to know whether we are using dev or deploy
-		targetConsumer: "dev",
-		testScheduled: props.testScheduled ?? false,
-		experimentalLocal: props.experimentalLocal,
-		projectRoot: props.projectRoot,
-		onStart: onEsbuildStart,
-		onComplete: onBundleComplete,
-		defineNavigatorUserAgent: isNavigatorDefined(
-			props.compatibilityDate,
-			props.compatibilityFlags
-		),
-	});
+	if (!props.experimentalDevEnv) {
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
+	}
+
+	const bundle = props.experimentalDevEnv
+		? undefined
+		: // eslint-disable-next-line react-hooks/rules-of-hooks
+			useEsbuild({
+				entry: props.entry,
+				destination: directory,
+				jsxFactory: props.jsxFactory,
+				processEntrypoint: props.processEntrypoint,
+				additionalModules: props.additionalModules,
+				rules: props.rules,
+				jsxFragment: props.jsxFragment,
+				serveAssetsFromWorker: Boolean(
+					props.assetPaths && !props.isWorkersSite && props.local
+				),
+				tsconfig: props.tsconfig,
+				minify: props.minify,
+				nodejsCompatMode: props.nodejsCompatMode,
+				define: props.define,
+				noBundle: props.noBundle,
+				findAdditionalModules: props.findAdditionalModules,
+				assets: props.assetsConfig,
+				durableObjects: props.bindings.durable_objects || { bindings: [] },
+				local: props.local,
+				// Enable the bundling to know whether we are using dev or deploy
+				targetConsumer: "dev",
+				testScheduled: props.testScheduled ?? false,
+				projectRoot: props.projectRoot,
+				onStart: onEsbuildStart,
+				onComplete: onBundleComplete,
+				defineNavigatorUserAgent: isNavigatorDefined(
+					props.compatibilityDate,
+					props.compatibilityFlags
+				),
+			});
 
 	// TODO(queues) support remote wrangler dev
 	if (

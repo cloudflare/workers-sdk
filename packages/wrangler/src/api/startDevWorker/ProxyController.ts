@@ -54,6 +54,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 	protected latestConfig?: StartDevWorkerOptions;
 	protected latestBundle?: EsbuildBundle;
+
 	secret = randomUUID();
 
 	protected createProxyWorker() {
