@@ -382,7 +382,6 @@ function DevSession(props: DevSessionProps) {
 			script: { path: props.entry.file },
 			directory: props.entry.directory,
 			_bindings: props.bindings,
-			_projectRoot: props.projectRoot,
 			_serveAssetsFromWorker: Boolean(
 				props.assetPaths && !props.isWorkersSite && props.local
 			),
@@ -460,7 +459,6 @@ function DevSession(props: DevSessionProps) {
 		props.compatibilityFlags,
 		props.bindings,
 		props.entry,
-		props.projectRoot,
 		props.assetPaths,
 		props.isWorkersSite,
 		props.local,

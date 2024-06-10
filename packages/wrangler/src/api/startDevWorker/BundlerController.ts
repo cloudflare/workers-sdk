@@ -119,7 +119,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "dev",
 						local: !config.dev?.remote,
-						projectRoot: config._projectRoot,
+						projectRoot: config.directory,
 						defineNavigatorUserAgent: isNavigatorDefined(
 							config.compatibilityDate,
 							config.compatibilityFlags
@@ -222,7 +222,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
 				testScheduled: Boolean(config.dev?.testScheduled),
-				projectRoot: config._projectRoot,
+				projectRoot: config.directory,
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},
@@ -252,7 +252,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	onConfigUpdate(event: ConfigUpdateEvent) {
 		this.#tmpDir?.remove();
 		try {
-			this.#tmpDir = getWranglerTmpDir(event.config._projectRoot, "dev");
+			this.#tmpDir = getWranglerTmpDir(event.config.directory, "dev");
 		} catch (e) {
 			logger.error(
 				"Failed to create temporary directory to store built files."
