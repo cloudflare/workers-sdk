@@ -78,7 +78,6 @@ export interface InputStartDevWorkerOptions {
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
 	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
-	_serveAssetsFromWorker?: boolean;
 	_processEntrypoint?: boolean;
 	_additionalModules?: CfModule[];
 	// --/ PASSTHROUGH --

@@ -103,7 +103,9 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
+						serveAssetsFromWorker: Boolean(
+							config.legacy?.assets && !config.dev?.remote
+						),
 						doBindings: config._bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
@@ -210,7 +212,9 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				additionalModules: config._additionalModules,
 				rules: config.build.moduleRules,
 				assets: config.legacy?.assets,
-				serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
+				serveAssetsFromWorker: Boolean(
+					config.legacy?.assets && !config.dev?.remote
+				),
 				tsconfig: config.build?.tsconfig,
 				minify: config.build?.minify,
 				nodejsCompatMode: config.build.nodejsCompatMode,

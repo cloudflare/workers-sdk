@@ -382,9 +382,6 @@ function DevSession(props: DevSessionProps) {
 			script: { path: props.entry.file },
 			directory: props.entry.directory,
 			_bindings: props.bindings,
-			_serveAssetsFromWorker: Boolean(
-				props.assetPaths && !props.isWorkersSite && props.local
-			),
 			_processEntrypoint: props.processEntrypoint,
 			_additionalModules: props.additionalModules,
 
