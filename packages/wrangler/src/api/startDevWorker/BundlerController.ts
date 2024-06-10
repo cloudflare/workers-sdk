@@ -61,7 +61,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				return;
 			}
 			assert(this.#tmpDir);
-			assert(config._additionalModules, "config._additionalModules");
 			assert(config.build?.moduleRules, "config.build?.moduleRules");
 			assert(config.build?.define, "config.build?.define");
 			if (!config.build?.bundle) {
@@ -193,7 +192,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			return;
 		}
 		assert(this.#tmpDir);
-		assert(config._additionalModules, "config._additionalModules");
 		assert(config.build?.moduleRules, "config.build?.moduleRules");
 		assert(config.build?.define, "config.build?.define");
 		const entry: Entry = {
@@ -208,8 +206,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				destination: this.#tmpDir.path,
 				jsxFactory: config.build?.jsxFactory,
 				jsxFragment: config.build?.jsxFragment,
-				processEntrypoint: Boolean(config._processEntrypoint),
-				additionalModules: config._additionalModules,
+				processEntrypoint: Boolean(config.build?.processEntrypoint),
+				additionalModules: config.build?.additionalModules ?? [],
 				rules: config.build.moduleRules,
 				assets: config.legacy?.assets,
 				serveAssetsFromWorker: Boolean(

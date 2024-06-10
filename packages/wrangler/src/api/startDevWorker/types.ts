@@ -67,8 +67,6 @@ export interface InputStartDevWorkerOptions {
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
-	// -- PASSTHROUGH -- FROM OLD CONFIG TO NEW CONFIG (TEMP)
-
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
 	 *
@@ -78,16 +76,16 @@ export interface InputStartDevWorkerOptions {
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
 	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
-	_processEntrypoint?: boolean;
-	_additionalModules?: CfModule[];
-	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
 		/** Whether the worker and its dependencies are bundled. Defaults to true. */
 		bundle?: boolean;
 
+		additionalModules?: CfModule[];
+
 		findAdditionalModules?: boolean;
+		processEntrypoint?: boolean;
 		/** Specifies types of modules matched by globs. */
 		moduleRules?: Rule[];
 		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
