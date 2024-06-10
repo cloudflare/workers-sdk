@@ -78,6 +78,172 @@ export async function getTextFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path, "utf8");
 }
 
+export function convertCfWorkerInitBindingstoBindings(
+	inputBindings: CfWorkerInit["bindings"]
+): StartDevWorkerOptions["bindings"] {
+	const output: StartDevWorkerOptions["bindings"] = {};
+
+	// required to retain type information
+	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
+	type BindingsIterable = Entries<typeof inputBindings>;
+	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
+
+	for (const [type, info] of bindingsIterable) {
+		if (info === undefined) {
+			continue;
+		}
+
+		switch (type) {
+			case "vars": {
+				for (const [key, value] of Object.entries(info)) {
+					if (typeof value === "string") {
+						output[key] = { type: "plain_text", value };
+					} else {
+						output[key] = { type: "json", value };
+					}
+				}
+				break;
+			}
+			case "kv_namespaces": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "kv_namespace", ...x };
+				}
+				break;
+			}
+			case "send_email": {
+				for (const { name, ...x } of info) {
+					output[name] = { type: "send_email", ...x };
+				}
+				break;
+			}
+			case "wasm_modules": {
+				for (const [key, value] of Object.entries(info)) {
+					if (typeof value === "string") {
+						output[key] = { type: "wasm_module", source: { path: value } };
+					} else {
+						output[key] = { type: "wasm_module", source: { contents: value } };
+					}
+				}
+				break;
+			}
+			case "text_blobs": {
+				for (const [key, value] of Object.entries(info)) {
+					output[key] = { type: "text_blob", source: { path: value } };
+				}
+				break;
+			}
+			case "data_blobs": {
+				for (const [key, value] of Object.entries(info)) {
+					if (typeof value === "string") {
+						output[key] = { type: "data_blob", source: { path: value } };
+					} else {
+						output[key] = { type: "data_blob", source: { contents: value } };
+					}
+				}
+				break;
+			}
+			case "browser": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "browser", ...x };
+				break;
+			}
+			case "durable_objects": {
+				for (const { name, ...x } of info.bindings) {
+					output[name] = { type: "durable_object_namespace", ...x };
+				}
+				break;
+			}
+			case "queues": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "queue", ...x };
+				}
+				break;
+			}
+			case "r2_buckets": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "r2_bucket", ...x };
+				}
+				break;
+			}
+			case "d1_databases": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "d1", ...x };
+				}
+				break;
+			}
+			case "constellation": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "constellation", ...x };
+				}
+				break;
+			}
+			case "services": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "service", ...x };
+				}
+				break;
+			}
+			case "analytics_engine_datasets": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "analytics_engine", ...x };
+				}
+				break;
+			}
+			case "dispatch_namespaces": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "dispatch_namespace", ...x };
+				}
+				break;
+			}
+			case "mtls_certificates": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "mtls_certificate", ...x };
+				}
+				break;
+			}
+			case "logfwdr": {
+				for (const { name, ...x } of info.bindings) {
+					output[name] = { type: "logfwdr", ...x };
+				}
+				break;
+			}
+			case "ai": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "ai", ...x };
+				break;
+			}
+			case "version_metadata": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "version_metadata", ...x };
+				break;
+			}
+			case "hyperdrive": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "hyperdrive", ...x };
+				}
+				break;
+			}
+			case "vectorize": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "vectorize", ...x };
+				}
+				break;
+			}
+			case "unsafe": {
+				for (const { type: unsafeType, name } of info.bindings ?? []) {
+					output[name] = { type: `unsafe_${unsafeType}` };
+				}
+				break;
+			}
+			default: {
+				assertNever(type);
+			}
+		}
+
+		return output;
+	}
+}
+
 export async function convertBindingsToCfWorkerInitBindings(
 	inputBindings: StartDevWorkerOptions["bindings"]
 ): Promise<{

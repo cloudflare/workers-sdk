@@ -16,7 +16,10 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
-import { createDeferred } from "../api/startDevWorker/utils";
+import {
+	convertCfWorkerInitBindingstoBindings,
+	createDeferred,
+} from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -381,7 +384,7 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags: props.compatibilityFlags,
 			script: { path: props.entry.file },
 			directory: props.entry.directory,
-			_bindings: props.bindings,
+			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
@@ -446,6 +449,10 @@ function DevSession(props: DevSessionProps) {
 						: undefined,
 				assets: props.assetsConfig,
 				enableServiceEnvironments: !props.legacyEnv,
+			},
+			unsafe: {
+				capnp: props.bindings.unsafe?.capnp,
+				metadata: props.bindings.unsafe?.metadata,
 			},
 		} satisfies StartDevWorkerOptions;
 	}, [

@@ -22,6 +22,7 @@ import type {
 	CfScriptFormat,
 	CfSendEmailBindings,
 	CfService,
+	CfUnsafe,
 	CfVectorize,
 	CfWorkerInit,
 } from "../../deployment-bundle/worker";
@@ -152,6 +153,7 @@ export interface InputStartDevWorkerOptions {
 		assets?: Config["assets"];
 		enableServiceEnvironments?: boolean;
 	};
+	unsafe?: Omit<CfUnsafe, "bindings">;
 }
 
 export interface StartDevWorkerOptions extends InputStartDevWorkerOptions {
