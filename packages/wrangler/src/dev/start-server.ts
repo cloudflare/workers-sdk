@@ -93,7 +93,8 @@ export async function startDevServer(
 	const devEnv = new DevEnv();
 	const startDevWorkerOptions: StartDevWorkerOptions = {
 		name: props.name ?? "worker",
-		script: { contents: "" },
+		script: { path: props.entry.file },
+		directory: props.entry.directory,
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -130,6 +131,10 @@ export async function startDevServer(
 
 				return { accountId, apiToken: requireApiToken() };
 			},
+		},
+		build: {
+			format: props.entry.format,
+			moduleRoot: props.entry.moduleRoot,
 		},
 	};
 

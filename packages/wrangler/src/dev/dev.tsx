@@ -385,13 +385,11 @@ function DevSession(props: DevSessionProps) {
 			_serveAssetsFromWorker: Boolean(
 				props.assetPaths && !props.isWorkersSite && props.local
 			),
-			_assets: props.assetsConfig,
 			_processEntrypoint: props.processEntrypoint,
 			_additionalModules: props.additionalModules,
 
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
-			legacyEnv: props.legacyEnv,
 			sendMetrics: props.sendMetrics,
 			usageModel: props.usageModel,
 			build: {
@@ -412,17 +410,6 @@ function DevSession(props: DevSessionProps) {
 				format: props.entry.format,
 				moduleRoot: props.entry.moduleRoot,
 			},
-			site:
-				props.isWorkersSite && props.assetPaths
-					? {
-							path: path.join(
-								props.assetPaths.baseDirectory,
-								props.assetPaths?.assetDirectory
-							),
-							include: props.assetPaths.includePatterns,
-							exclude: props.assetPaths.excludePatterns,
-						}
-					: undefined,
 			dev: {
 				auth: async () => {
 					return {
@@ -448,6 +435,21 @@ function DevSession(props: DevSessionProps) {
 				liveReload: props.liveReload,
 				testScheduled: props.testScheduled,
 				getRegisteredWorker: (name) => workerDefinitions[name],
+			},
+			legacy: {
+				site:
+					props.isWorkersSite && props.assetPaths
+						? {
+								bucket: path.join(
+									props.assetPaths.baseDirectory,
+									props.assetPaths?.assetDirectory
+								),
+								include: props.assetPaths.includePatterns,
+								exclude: props.assetPaths.excludePatterns,
+							}
+						: undefined,
+				assets: props.assetsConfig,
+				enableServiceEnvironments: !props.legacyEnv,
 			},
 		} satisfies StartDevWorkerOptions;
 	}, [

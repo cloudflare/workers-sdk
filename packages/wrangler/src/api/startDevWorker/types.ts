@@ -60,23 +60,15 @@ export interface InputStartDevWorkerOptions {
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
 
+	env?: string;
+
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
-	/** Options applying to (legacy) Worker Sites. Please consider using Cloudflare Pages. */
-	site?: {
-		path: string;
-		include?: string[];
-		exclude?: string[];
-	};
-
 	// -- PASSTHROUGH -- FROM OLD CONFIG TO NEW CONFIG (TEMP)
-	/** Service environments. Providing support for existing workers with this property. Don't use this for new workers. */
-	env?: string;
-	/** Wrangler environments, defaults to true. */
-	legacyEnv?: boolean;
+
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
 	 *
@@ -87,7 +79,6 @@ export interface InputStartDevWorkerOptions {
 	usageModel?: "bundled" | "unbound";
 	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
 	_serveAssetsFromWorker?: boolean;
-	_assets?: Config["assets"];
 	_processEntrypoint?: boolean;
 	_additionalModules?: CfModule[];
 	// --/ PASSTHROUGH --
@@ -105,7 +96,7 @@ export interface InputStartDevWorkerOptions {
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
 		minify?: boolean;
 		/** Options controlling a custom build step. */
-		custom: {
+		custom?: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
 			command?: string;
 			/** The cwd to run the command in. */
@@ -159,10 +150,15 @@ export interface InputStartDevWorkerOptions {
 
 		testScheduled?: boolean;
 	};
+	legacy?: {
+		site?: Config["site"];
+		assets?: Config["assets"];
+		enableServiceEnvironments?: boolean;
+	};
 }
 
 export interface StartDevWorkerOptions extends InputStartDevWorkerOptions {
-	script: { path: string };
+	script: { path: string; contents?: string };
 	directory: string;
 	build: InputStartDevWorkerOptions["build"] & {
 		format: CfScriptFormat;

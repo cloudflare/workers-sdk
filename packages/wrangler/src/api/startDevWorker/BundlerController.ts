@@ -54,8 +54,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		this.emitBundleStartEvent(config);
 		try {
 			await runCustomBuild(config.script.path, relativeFile, {
-				cwd: config.build?.custom.workingDirectory,
-				command: config.build?.custom.command,
+				cwd: config.build?.custom?.workingDirectory,
+				command: config.build?.custom?.command,
 			});
 			if (buildAborter.signal.aborted) {
 				return;
@@ -112,7 +112,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
 						checkFetch: true,
-						assets: config._assets,
+						assets: config.legacy?.assets,
 						// enable the cache when publishing
 						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
@@ -160,13 +160,13 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		await this.#customBuildWatcher?.close();
 		this.#customBuildAborter?.abort();
 
-		if (!config.build?.custom.command) {
+		if (!config.build?.custom?.command) {
 			return;
 		}
 
-		assert(config.build?.custom.watch);
+		assert(config.build?.custom?.watch);
 
-		this.#customBuildWatcher = watch(config.build?.custom.watch, {
+		this.#customBuildWatcher = watch(config.build?.custom?.watch, {
 			persistent: true,
 			// TODO: add comments re this ans ready
 			ignoreInitial: true,
@@ -174,7 +174,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		this.#customBuildWatcher.on(
 			"ready",
 			() =>
-				void this.#runCustomBuild(config, String(config.build?.custom.watch))
+				void this.#runCustomBuild(config, String(config.build?.custom?.watch))
 		);
 
 		this.#customBuildWatcher.on(
@@ -187,7 +187,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 	async #startBundle(config: StartDevWorkerOptions) {
 		await this.#bundlerCleanup?.();
-		if (config.build?.custom.command) {
+		if (config.build?.custom?.command) {
 			return;
 		}
 		assert(this.#tmpDir);
@@ -209,7 +209,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				processEntrypoint: Boolean(config._processEntrypoint),
 				additionalModules: config._additionalModules,
 				rules: config.build.moduleRules,
-				assets: config._assets,
+				assets: config.legacy?.assets,
 				serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
 				tsconfig: config.build?.tsconfig,
 				minify: config.build?.minify,

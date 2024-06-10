@@ -144,7 +144,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			this.#session ??= await this.#previewSession({
 				accountId: auth.accountId,
 				env: config.env, // deprecated service environments -- just pass it through for now
-				legacyEnv: config.legacyEnv, // wrangler environment -- just pass it through for now
+				legacyEnv: !config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
 				host: config.dev.origin?.hostname,
 				routes,
 				sendMetrics: config.sendMetrics,
@@ -159,15 +159,15 @@ export class RemoteRuntimeController extends RuntimeController {
 				modules: bundle.modules,
 				accountId: auth.accountId,
 				name: config.name,
-				legacyEnv: config.legacyEnv,
+				legacyEnv: !config.legacy?.enableServiceEnvironments,
 				env: config.env,
-				isWorkersSite: config.site !== undefined,
-				assetPaths: config.site?.path
+				isWorkersSite: config.legacy?.site !== undefined,
+				assetPaths: config.legacy?.site?.bucket
 					? {
-							baseDirectory: config.site.path,
+							baseDirectory: config.legacy?.site?.bucket,
 							assetDirectory: "",
-							excludePatterns: config.site.exclude ?? [],
-							includePatterns: config.site.include ?? [],
+							excludePatterns: config.legacy?.site?.exclude ?? [],
+							includePatterns: config.legacy?.site?.include ?? [],
 						}
 					: undefined,
 				format: bundle.entry.format,

@@ -111,12 +111,12 @@ async function convertToConfigBundle(
 				},
 			}
 		),
-		assetPaths: event.config.site?.path
+		assetPaths: event.config.legacy?.site?.bucket
 			? {
-					baseDirectory: event.config.site.path,
+					baseDirectory: event.config.legacy?.site?.bucket,
 					assetDirectory: "",
-					excludePatterns: event.config.site.exclude ?? [],
-					includePatterns: event.config.site.include ?? [],
+					excludePatterns: event.config.legacy?.site?.exclude ?? [],
+					includePatterns: event.config.legacy?.site?.include ?? [],
 				}
 			: undefined,
 		initialPort: undefined,

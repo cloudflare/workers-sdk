@@ -8,7 +8,7 @@ export type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
 };
 export class ConfigController extends Controller<ConfigControllerEventMap> {
-	#config?: StartDevWorkerOptions;
+	config?: StartDevWorkerOptions;
 
 	setOptions(_: StartDevWorkerOptions) {
 		notImplemented(this.setOptions.name, this.constructor.name);
