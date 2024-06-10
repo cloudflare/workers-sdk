@@ -490,7 +490,7 @@ function DevSession(props: DevSessionProps) {
 		props.localUpstream,
 		props.liveReload,
 		props.testScheduled,
-		accountIdDeferred.promise,
+		accountIdDeferred,
 		workerDefinitions,
 	]);
 
