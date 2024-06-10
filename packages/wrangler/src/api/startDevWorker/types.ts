@@ -42,7 +42,7 @@ export interface DevWorker {
 	dispose(): Promise<void>;
 }
 
-export interface InputStartDevWorkerOptions {
+export interface StartDevWorkerOptions {
 	/** The name of the worker. */
 	name?: string;
 	/**
@@ -152,15 +152,6 @@ export interface InputStartDevWorkerOptions {
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
-}
-
-export interface StartDevWorkerOptions extends InputStartDevWorkerOptions {
-	script: { path: string; contents?: string };
-	directory: string;
-	build: InputStartDevWorkerOptions["build"] & {
-		format: CfScriptFormat;
-		moduleRoot: string;
-	};
 }
 
 export type Hook<T extends string | number | object> =

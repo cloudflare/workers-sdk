@@ -43,6 +43,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
+		assert(config.script.path);
+		assert(config.directory);
+		assert(config.build?.format);
+		assert(config.build?.moduleRoot);
 		// If a new custom build comes in, we need to cancel in-flight builds
 		this.#customBuildAborter.abort();
 		this.#customBuildAborter = new AbortController();
@@ -136,6 +140,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			const entrypointPath = realpathSync(
 				bundleResult?.resolvedEntryPointPath ?? config.script.path
 			);
+
 			this.emitBundleCompleteEvent(config, {
 				id: 0,
 				entry,
@@ -198,6 +203,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		assert(this.#tmpDir);
 		assert(config.build?.moduleRules, "config.build?.moduleRules");
 		assert(config.build?.define, "config.build?.define");
+		assert(config.script.path);
+		assert(config.directory);
+		assert(config.build.format);
+		assert(config.build.moduleRoot);
 		const entry: Entry = {
 			file: config.script.path,
 			directory: config.directory,

@@ -667,7 +667,7 @@ describe("Bindings", () => {
 		const config: StartDevWorkerOptions = {
 			name: "worker",
 			script: unusable(),
-			site: { path: tmp, include: ["*.txt"] },
+			legacy: { site: { bucket: tmp, include: ["*.txt"] } },
 		};
 		const bundle = makeEsbuildBundle(`
 		import manifestJSON from "__STATIC_CONTENT_MANIFEST";
@@ -695,8 +695,8 @@ describe("Bindings", () => {
 		expect(res.status).toBe(404);
 		res = await fetch(new URL("/secrets.txt", url));
 		expect(res.status).toBe(200);
-
-		config.site = { path: tmp, exclude: ["secrets.txt"] };
+		config.legacy = {};
+		config.legacy.site = { bucket: tmp, exclude: ["secrets.txt"] };
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
