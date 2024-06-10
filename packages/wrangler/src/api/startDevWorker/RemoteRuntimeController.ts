@@ -172,7 +172,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					: undefined,
 				format: bundle.entry.format,
 				// TODO: Remove this passthrough
-				bindings: config._bindings ? config._bindings : bindings,
+				bindings: bindings,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 				usageModel: config.usageModel,

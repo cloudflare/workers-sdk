@@ -48,13 +48,9 @@ function getName(config: StartDevWorkerOptions) {
 async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
-	const { bindings: convertedBindings, fetchers } =
-		await convertBindingsToCfWorkerInitBindings(event.config.bindings);
-
-	// TODO: Remove this passthrough
-	const bindings = event.config._bindings
-		? event.config._bindings
-		: convertedBindings;
+	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
+		event.config.bindings
+	);
 
 	const persistence = getLocalPersistencePath(
 		typeof event.config.dev?.persist === "object"

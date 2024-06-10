@@ -24,7 +24,6 @@ import type {
 	CfService,
 	CfUnsafe,
 	CfVectorize,
-	CfWorkerInit,
 } from "../../deployment-bundle/worker";
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
@@ -76,7 +75,6 @@ export interface InputStartDevWorkerOptions {
 	 */
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
-	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {

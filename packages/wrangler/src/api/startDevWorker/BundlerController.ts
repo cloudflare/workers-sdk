@@ -16,6 +16,7 @@ import { isNavigatorDefined } from "../../navigator-user-agent";
 import { getWranglerTmpDir } from "../../paths";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
+import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
@@ -92,6 +93,9 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				rules: config.build.moduleRules,
 			});
 
+			const bindings = (
+				await convertBindingsToCfWorkerInitBindings(config.bindings)
+			).bindings;
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
 						entry,
@@ -105,7 +109,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						serveAssetsFromWorker: Boolean(
 							config.legacy?.assets && !config.dev?.remote
 						),
-						doBindings: config._bindings?.durable_objects?.bindings ?? [],
+						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
 						tsconfig: config.build.tsconfig,
@@ -200,6 +204,9 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 		};
+		const bindings = (
+			await convertBindingsToCfWorkerInitBindings(config.bindings)
+		).bindings;
 		this.#bundlerCleanup = runBuild(
 			{
 				entry,
@@ -219,7 +226,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				define: config.build.define,
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
-				durableObjects: config._bindings?.durable_objects ?? { bindings: [] },
+				durableObjects: bindings?.durable_objects ?? { bindings: [] },
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
