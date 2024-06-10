@@ -31,7 +31,7 @@ import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
-import { getAccountId, requireApiToken } from "../user";
+import { requireApiToken } from "../user";
 import { openInspector } from "./inspect";
 import { Local, maybeRegisterLocalWorker } from "./local";
 import { Remote } from "./remote";
@@ -424,9 +424,8 @@ function DevSession(props: DevSessionProps) {
 					: undefined,
 			dev: {
 				auth: async () => {
-					const selectedAccountId = await getAccountId();
 					return {
-						accountId: selectedAccountId,
+						accountId: await accountIdDeferred.promise,
 						apiToken: requireApiToken(),
 					};
 				},
@@ -451,46 +450,47 @@ function DevSession(props: DevSessionProps) {
 			},
 		} satisfies StartDevWorkerOptions;
 	}, [
+		props.routes,
+		props.queueConsumers,
+		props.crons,
 		props.name,
 		props.compatibilityDate,
 		props.compatibilityFlags,
 		props.bindings,
-		props.routes,
+		props.entry,
+		props.projectRoot,
+		props.assetPaths,
+		props.isWorkersSite,
+		props.local,
+		props.assetsConfig,
+		props.processEntrypoint,
+		props.additionalModules,
 		props.env,
 		props.legacyEnv,
 		props.sendMetrics,
 		props.usageModel,
-		props.isWorkersSite,
-		props.assetPaths,
-		props.local,
+		props.noBundle,
+		props.findAdditionalModules,
+		props.minify,
+		props.rules,
+		props.define,
+		props.build.command,
+		props.build.watch_dir,
+		props.build.cwd,
+		props.jsxFactory,
+		props.jsxFragment,
+		props.tsconfig,
+		props.nodejsCompatMode,
 		props.initialIp,
 		props.initialPort,
 		props.localProtocol,
 		props.httpsKeyPath,
 		props.httpsCertPath,
-		props.localUpstream,
 		props.inspectorPort,
+		props.localUpstream,
 		props.liveReload,
-		props.queueConsumers,
-		props.crons,
-		props.tsconfig,
-		props.jsxFactory,
-		props.jsxFragment,
-		props.assetsConfig,
-		props.additionalModules,
-		props.build.command,
-		props.build.cwd,
-		props.build.watch_dir,
-		props.define,
-		props.entry,
-		props.findAdditionalModules,
-		props.nodejsCompatMode,
-		props.minify,
-		props.noBundle,
-		props.processEntrypoint,
-		props.projectRoot,
-		props.rules,
 		props.testScheduled,
+		accountIdDeferred.promise,
 		workerDefinitions,
 	]);
 
@@ -569,46 +569,46 @@ function DevSession(props: DevSessionProps) {
 		}
 	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 
-	// This value is static, so doesn't cause the below hooks to be called conditionally
-	if (props.experimentalDevEnv) {
-		return null;
+	if (!props.experimentalDevEnv) {
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 	}
-	// eslint-disable-next-line react-hooks/rules-of-hooks
-	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
-	// eslint-disable-next-line react-hooks/rules-of-hooks
-	const bundle = useEsbuild({
-		entry: props.entry,
-		destination: directory,
-		jsxFactory: props.jsxFactory,
-		processEntrypoint: props.processEntrypoint,
-		additionalModules: props.additionalModules,
-		rules: props.rules,
-		jsxFragment: props.jsxFragment,
-		serveAssetsFromWorker: Boolean(
-			props.assetPaths && !props.isWorkersSite && props.local
-		),
-		tsconfig: props.tsconfig,
-		minify: props.minify,
-		nodejsCompatMode: props.nodejsCompatMode,
-		define: props.define,
-		noBundle: props.noBundle,
-		findAdditionalModules: props.findAdditionalModules,
-		assets: props.assetsConfig,
-		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		local: props.local,
-		// Enable the bundling to know whether we are using dev or deploy
-		targetConsumer: "dev",
-		testScheduled: props.testScheduled ?? false,
-		projectRoot: props.projectRoot,
-		onStart: onEsbuildStart,
-		onComplete: onBundleComplete,
-		defineNavigatorUserAgent: isNavigatorDefined(
-			props.compatibilityDate,
-			props.compatibilityFlags
-		),
-	});
-
+	let bundle: EsbuildBundle | undefined;
+	if (!props.experimentalDevEnv) {
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		bundle = useEsbuild({
+			entry: props.entry,
+			destination: directory,
+			jsxFactory: props.jsxFactory,
+			processEntrypoint: props.processEntrypoint,
+			additionalModules: props.additionalModules,
+			rules: props.rules,
+			jsxFragment: props.jsxFragment,
+			serveAssetsFromWorker: Boolean(
+				props.assetPaths && !props.isWorkersSite && props.local
+			),
+			tsconfig: props.tsconfig,
+			minify: props.minify,
+			nodejsCompatMode: props.nodejsCompatMode,
+			define: props.define,
+			noBundle: props.noBundle,
+			findAdditionalModules: props.findAdditionalModules,
+			assets: props.assetsConfig,
+			durableObjects: props.bindings.durable_objects || { bindings: [] },
+			local: props.local,
+			// Enable the bundling to know whether we are using dev or deploy
+			targetConsumer: "dev",
+			testScheduled: props.testScheduled ?? false,
+			projectRoot: props.projectRoot,
+			onStart: onEsbuildStart,
+			onComplete: onBundleComplete,
+			defineNavigatorUserAgent: isNavigatorDefined(
+				props.compatibilityDate,
+				props.compatibilityFlags
+			),
+		});
+	}
 	// TODO(queues) support remote wrangler dev
 	if (
 		!props.local &&
