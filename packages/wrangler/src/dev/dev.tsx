@@ -16,9 +16,6 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
-import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
-import { ProxyController } from "../api/startDevWorker/ProxyController";
-import { RemoteRuntimeController } from "../api/startDevWorker/RemoteRuntimeController";
 import { createDeferred } from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
@@ -302,12 +299,15 @@ function DevSession(props: DevSessionProps) {
 	}, []);
 
 	const [devEnv] = useState(() => {
+		const newDevEnv = new DevEnv();
 		if (!props.experimentalDevEnv) {
-			return new DevEnv();
+			return newDevEnv;
 		}
-		const proxy = new ProxyController();
-		const local = new LocalRuntimeController();
-		const remote = new RemoteRuntimeController();
+		const {
+			proxy,
+			runtimes: [local, remote],
+		} = newDevEnv;
+
 		const proxyUrl = createDeferred<URL>();
 		// The ProxyWorker will have a stable host and port, so only listen for the first update
 		proxy.once("ready", async (event: ReadyEvent) => {
@@ -574,41 +574,41 @@ function DevSession(props: DevSessionProps) {
 		useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 	}
 
-	let bundle: EsbuildBundle | undefined;
-	if (!props.experimentalDevEnv) {
-		// eslint-disable-next-line react-hooks/rules-of-hooks
-		bundle = useEsbuild({
-			entry: props.entry,
-			destination: directory,
-			jsxFactory: props.jsxFactory,
-			processEntrypoint: props.processEntrypoint,
-			additionalModules: props.additionalModules,
-			rules: props.rules,
-			jsxFragment: props.jsxFragment,
-			serveAssetsFromWorker: Boolean(
-				props.assetPaths && !props.isWorkersSite && props.local
-			),
-			tsconfig: props.tsconfig,
-			minify: props.minify,
-			nodejsCompatMode: props.nodejsCompatMode,
-			define: props.define,
-			noBundle: props.noBundle,
-			findAdditionalModules: props.findAdditionalModules,
-			assets: props.assetsConfig,
-			durableObjects: props.bindings.durable_objects || { bindings: [] },
-			local: props.local,
-			// Enable the bundling to know whether we are using dev or deploy
-			targetConsumer: "dev",
-			testScheduled: props.testScheduled ?? false,
-			projectRoot: props.projectRoot,
-			onStart: onEsbuildStart,
-			onComplete: onBundleComplete,
-			defineNavigatorUserAgent: isNavigatorDefined(
-				props.compatibilityDate,
-				props.compatibilityFlags
-			),
-		});
-	}
+	const bundle = props.experimentalDevEnv
+		? undefined
+		: // eslint-disable-next-line react-hooks/rules-of-hooks
+			useEsbuild({
+				entry: props.entry,
+				destination: directory,
+				jsxFactory: props.jsxFactory,
+				processEntrypoint: props.processEntrypoint,
+				additionalModules: props.additionalModules,
+				rules: props.rules,
+				jsxFragment: props.jsxFragment,
+				serveAssetsFromWorker: Boolean(
+					props.assetPaths && !props.isWorkersSite && props.local
+				),
+				tsconfig: props.tsconfig,
+				minify: props.minify,
+				nodejsCompatMode: props.nodejsCompatMode,
+				define: props.define,
+				noBundle: props.noBundle,
+				findAdditionalModules: props.findAdditionalModules,
+				assets: props.assetsConfig,
+				durableObjects: props.bindings.durable_objects || { bindings: [] },
+				local: props.local,
+				// Enable the bundling to know whether we are using dev or deploy
+				targetConsumer: "dev",
+				testScheduled: props.testScheduled ?? false,
+				projectRoot: props.projectRoot,
+				onStart: onEsbuildStart,
+				onComplete: onBundleComplete,
+				defineNavigatorUserAgent: isNavigatorDefined(
+					props.compatibilityDate,
+					props.compatibilityFlags
+				),
+			});
+
 	// TODO(queues) support remote wrangler dev
 	if (
 		!props.local &&

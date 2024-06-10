@@ -51,10 +51,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		const relativeFile =
 			path.relative(config._entry.directory, config._entry.file) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
-		this.emitBundleStartEvent({
-			type: "bundleStart",
-			config,
-		});
+		this.emitBundleStartEvent(config);
 		try {
 			await runCustomBuild(config._entry.file, relativeFile, {
 				cwd: config.build?.custom.workingDirectory,
@@ -69,7 +66,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			assert(config.build?.moduleRules, "config.build?.moduleRules");
 			assert(config.build?.define, "config.build?.define");
 			if (!config.build?.bundle) {
-				// if we're not building, let's just copy the entry to the destination directory
+				// if we're not bundling, let's just copy the entry to the destination directory
 				const destinationDir = this.#tmpDir.path;
 				writeFileSync(
 					path.join(destinationDir, path.basename(config._entry.file)),
@@ -84,7 +81,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 					config._entry.file
 				),
 				entry: config._entry,
-				// `moduleCollector` doesn't get used when `props.noBundle` is set, so
+				// `moduleCollector` doesn't get used when `noBundle` is set, so
 				// `findAdditionalModules` always defaults to `false`
 				findAdditionalModules: config.build.findAdditionalModules ?? false,
 				rules: config.build.moduleRules,
@@ -128,22 +125,18 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			const entrypointPath = realpathSync(
 				bundleResult?.resolvedEntryPointPath ?? config._entry.file
 			);
-			this.emitBundleCompletedEvent({
-				type: "bundleComplete",
-				config,
-				bundle: {
-					id: 0,
-					entry: config._entry,
-					path: entrypointPath,
-					type:
-						bundleResult?.bundleType ??
-						getBundleType(config._entry.format, config._entry.file),
-					modules: bundleResult.modules,
-					dependencies: bundleResult?.dependencies ?? {},
-					sourceMapPath: bundleResult?.sourceMapPath,
-					sourceMapMetadata: bundleResult?.sourceMapMetadata,
-					entrypointSource: readFileSync(entrypointPath, "utf8"),
-				},
+			this.emitBundleCompleteEvent(config, {
+				id: 0,
+				entry: config._entry,
+				path: entrypointPath,
+				type:
+					bundleResult?.bundleType ??
+					getBundleType(config._entry.format, config._entry.file),
+				modules: bundleResult.modules,
+				dependencies: bundleResult?.dependencies ?? {},
+				sourceMapPath: bundleResult?.sourceMapPath,
+				sourceMapMetadata: bundleResult?.sourceMapMetadata,
+				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
 			logger.error("Custom build failed:", err);
@@ -152,7 +145,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				reason: "Custom build failed",
 				cause: castErrorCause(err),
 				source: "BundlerController",
-				data: undefined,
+				data: { config, filePath },
 			});
 		}
 	}
@@ -221,10 +214,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				testScheduled: Boolean(config.dev?.testScheduled),
 				projectRoot: config._projectRoot,
 				onStart: () => {
-					this.emitBundleStartEvent({
-						type: "bundleStart",
-						config,
-					});
+					this.emitBundleStartEvent(config);
 				},
 				defineNavigatorUserAgent: isNavigatorDefined(
 					config.compatibilityDate,
@@ -233,11 +223,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			},
 			(cb) => {
 				const newBundle = cb(this.#currentBundle);
-				this.emitBundleCompletedEvent({
-					type: "bundleComplete",
-					config,
-					bundle: newBundle,
-				});
+				this.emitBundleCompleteEvent(config, newBundle);
 				this.#currentBundle = newBundle;
 			},
 			(err) =>
@@ -281,10 +267,13 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		this.#tmpDir?.remove();
 	}
 
-	emitBundleStartEvent(data: BundleStartEvent) {
-		this.emit("bundleStart", data);
+	emitBundleStartEvent(config: StartDevWorkerOptions) {
+		this.emit("bundleStart", { type: "bundleStart", config });
 	}
-	emitBundleCompletedEvent(data: BundleCompleteEvent) {
-		this.emit("bundleComplete", data);
+	emitBundleCompleteEvent(
+		config: StartDevWorkerOptions,
+		bundle: EsbuildBundle
+	) {
+		this.emit("bundleComplete", { type: "bundleComplete", config, bundle });
 	}
 }
