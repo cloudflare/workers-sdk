@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.60.2
+
+### Patch Changes
+
+- [#5307](https://github.com/cloudflare/workers-sdk/pull/5307) [`e6a3d24`](https://github.com/cloudflare/workers-sdk/commit/e6a3d243a73f0101d57e6e35c25585884ebea674) Thanks [@achanda](https://github.com/achanda)! - fix: add more timePeriods to `wrangler d1 insights`
+
+  This PR updates `wrangler d1 insights` to accept arbitrary timePeriod values up to 31 days.
+
 ## 3.60.1
 
 ### Patch Changes
