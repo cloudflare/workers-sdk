@@ -60,6 +60,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("outfile", {
+				describe: "Output file for the bundled worker",
+				type: "string",
+				requiresArg: true,
+			})
 			.option("format", {
 				choices: ["modules", "service-worker"] as const,
 				describe: "Choose an entry type",
@@ -250,6 +255,10 @@ export async function deployHandler(
 		);
 	}
 
+	if (args.outfile && args.outdir) {
+		throw new UserError("Cannot use `--outfile` and `--outdir` together");
+	}
+
 	if (args.assets) {
 		logger.warn(
 			"The --assets argument is experimental and may change or break at any time"
@@ -304,6 +313,7 @@ export async function deployHandler(
 		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,
+		outFile: args.outfile,
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
