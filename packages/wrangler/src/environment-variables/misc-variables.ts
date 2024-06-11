@@ -65,3 +65,11 @@ export const getSanitizeLogs = getEnvironmentVariableFactory({
 		return "true";
 	},
 });
+
+// Array of injected middleware, for testing purposes
+export const getInjectedMiddleware = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_INJECT_MIDDLEWARE",
+	defaultValue() {
+		return "[]";
+	},
+});

@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getInjectedMiddleware } from "../environment-variables/misc-variables";
 import { getBasePath } from "../paths";
 import { dedent } from "../utils/dedent";
 import type { Entry } from "./entry";
@@ -36,10 +37,24 @@ export async function applyMiddlewareLoaderFacade(
 	// We need to import each of the middlewares, so we need to generate a
 	// random, unique identifier that we can use for the import.
 	// Middlewares are required to be default exports so we can import to any name.
-	const middlewareIdentifiers = middleware.map((m, index) => [
+	let middlewareIdentifiers = middleware.map((m, index) => [
 		`__MIDDLEWARE_${index}__`,
 		path.resolve(getBasePath(), m.path),
 	]);
+
+	try {
+		const additionalMiddleware: string[] = JSON.parse(getInjectedMiddleware());
+
+		middlewareIdentifiers = [
+			...middlewareIdentifiers,
+			...additionalMiddleware.map((m, index) => [
+				`__MIDDLEWARE_INJECTED_${index}__`,
+				m,
+			]),
+		];
+	} catch {
+		// Ignore errors while injecting middleware
+	}
 
 	const dynamicFacadePath = path.join(
 		tmpDirPath,
@@ -62,13 +77,12 @@ export async function applyMiddlewareLoaderFacade(
 		await fs.promises.writeFile(
 			dynamicFacadePath,
 			dedent/*javascript*/ `
-				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
+				import worker from "${prepareFilePath(entry.file)}";
 				${imports}
 
 				export * from "${prepareFilePath(entry.file)}";
 
 				export const __INTERNAL_WRANGLER_MIDDLEWARE__ = [
-					...(OTHER_EXPORTS.__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ ?? []),
 					${middlewareFns}
 				]
 				export default worker;

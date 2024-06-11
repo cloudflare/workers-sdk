@@ -26,22 +26,34 @@ async function seedFs(files: Record<string, string>): Promise<void> {
 }
 describe("middleware", () => {
 	mockConsoleMethods();
+	runInTempDir();
+
+	let originalEnv: NodeJS.ProcessEnv;
+
+	beforeEach(() => {
+		originalEnv = { ...process.env };
+	});
+	afterEach(() => {
+		process.env = originalEnv;
+	});
 
 	describe("workers change behaviour with middleware with wrangler dev", () => {
-		runInTempDir();
-
 		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
 
 		describe("module workers", () => {
 			it("should register a middleware and intercept", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+					const response = await middlewareCtx.next(request, env);
+					const text = await response.text();
+					return new Response(text + ' world');
+				}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				const response = await middlewareCtx.next(request, env);
-				const text = await response.text();
-				return new Response(text + ' world');
-			}
-
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware]
 			export default {
 				fetch(request, env, ctx) {
 					return new Response('Hello');
@@ -68,13 +80,17 @@ describe("middleware", () => {
 			});
 
 			it("should be able to access scheduled workers from middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
+						return new Response("OK");
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
-				return new Response("OK");
-			}
-
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware]
 			export default {
 				scheduled(controller, env, ctx) {
 					// Scheduled worker called
@@ -102,16 +118,20 @@ describe("middleware", () => {
 			});
 
 			it("should trigger an error in a scheduled work from middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						try {
+							await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
+						} catch (e) {
+							return new Response(e.message);
+						}
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				try {
-					await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
-				} catch (e) {
-					return new Response(e.message);
-				}
-			}
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware]
-
 			export default {
 				scheduled(controller, env, ctx) {
 					throw new Error("Error in scheduled worker");
@@ -141,13 +161,18 @@ describe("middleware", () => {
 
 		describe("service workers", () => {
 			it("should register a middleware and intercept using addMiddleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						const response = await middlewareCtx.next(request, env);
+						const text = await response.text();
+						return new Response(text + ' world');
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				const response = await middlewareCtx.next(request, env);
-				const text = await response.text();
-				return new Response(text + ' world');
-			}
-			addMiddleware(middleware);
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response('Hello'));
 			});
@@ -172,13 +197,19 @@ describe("middleware", () => {
 			});
 
 			it("should register a middleware and intercept using addMiddlewareInternal", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						const response = await middlewareCtx.next(request, env);
+						const text = await response.text();
+						return new Response(text + ' world');
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				const response = await middlewareCtx.next(request, env);
-				const text = await response.text();
-				return new Response(text + ' world');
-			}
-			addMiddlewareInternal(middleware);
+
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response('Hello'));
 			});
@@ -203,12 +234,18 @@ describe("middleware", () => {
 			});
 
 			it("should be able to access scheduled workers from middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
+						return new Response("OK");
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
-				return new Response("OK");
-			}
-			addMiddleware(middleware);
+
 			addEventListener("scheduled", (event) => {
 				// Scheduled worker called
 			});
@@ -234,15 +271,21 @@ describe("middleware", () => {
 			});
 
 			it("should trigger an error in a scheduled work from middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						try {
+							await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
+						} catch (e) {
+							return new Response(e.message);
+						}
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-				const middleware = async (request, env, _ctx, middlewareCtx) => {
-					try {
-						await middlewareCtx.dispatch("scheduled", { cron: "* * * * *" });
-					} catch (e) {
-						return new Response(e.message);
-					}
-				}
-				addMiddleware(middleware);
+
 				addEventListener("scheduled", (event) => {
 					throw new Error("Error in scheduled worker");
 				});
@@ -270,8 +313,6 @@ describe("middleware", () => {
 	});
 
 	describe("unchanged functionality when wrapping with middleware", () => {
-		runInTempDir();
-
 		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
 
 		describe("module workers", () => {
@@ -302,8 +343,8 @@ describe("middleware", () => {
 			});
 
 			it("should return hello world with empty middleware array", async () => {
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([]);
 				const scriptContent = `
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = []
 
 			export default {
 				fetch() {
@@ -331,12 +372,16 @@ describe("middleware", () => {
 			});
 
 			it("should return hello world passing through middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware]
-
 			export default {
 				fetch(request, env, ctx) {
 					return new Response("Hello world");
@@ -362,15 +407,23 @@ describe("middleware", () => {
 			});
 
 			it("should return hello world with multiple middleware in array", async () => {
+				fs.writeFileSync(
+					"middlewareA.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+				fs.writeFileSync(
+					"middlewareB.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middlewareA.js"),
+					path.resolve("middlewareB.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			const middleware2 = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware, middleware2]
-
 			export default {
 				fetch() {
 					return new Response("Hello world");
@@ -397,11 +450,17 @@ describe("middleware", () => {
 			});
 
 			it("should leave response headers unchanged with middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware]
 
 			export default {
 				fetch() {
@@ -433,13 +492,17 @@ describe("middleware", () => {
 			});
 
 			it("waitUntil should not block responses", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-
-			export const __INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ = [middleware]
-
 			export default {
 				async fetch(request, env, ctx) {
 					let count = 0;
@@ -500,8 +563,8 @@ describe("middleware", () => {
 			});
 
 			it("should return hello world with empty middleware array", async () => {
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([]);
 				const scriptContent = `
-			addMiddleware([]);
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello world"));
 			});
@@ -526,11 +589,18 @@ describe("middleware", () => {
 			});
 
 			it("should return hello world passing through middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			addMiddleware(middleware);
+
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello world"));
 			});
@@ -554,145 +624,24 @@ describe("middleware", () => {
 			});
 
 			it("should return hello world with addMiddleware function called multiple times", async () => {
+				fs.writeFileSync(
+					"middlewareA.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+				fs.writeFileSync(
+					"middlewareB.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middlewareA.js"),
+					path.resolve("middlewareB.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			const middleware2 = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			addMiddleware(middleware);
-			addMiddleware(middleware2);
-			addEventListener("fetch", (event) => {
-				event.respondWith(new Response("Hello world"));
-			});
-			`;
-				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
-					},
-				});
-
-				const resp = await worker.fetch();
-				let text;
-				if (resp) {
-					text = await resp.text();
-				}
-				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
-			});
-
-			it("should return hello world with addMiddleware function called with array of middleware", async () => {
-				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			const middleware2 = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			addMiddleware(middleware, middleware2);
-			addEventListener("fetch", (event) => {
-				event.respondWith(new Response("Hello world"));
-			});
-			`;
-				fs.writeFileSync("index.js", scriptContent);
-
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
-					},
-				});
-
-				const resp = await worker.fetch();
-				let text;
-				if (resp) {
-					text = await resp.text();
-				}
-				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
-			});
-
-			it("should return hello world with addMiddlewareInternal function called multiple times", async () => {
-				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			const middleware2 = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			addMiddlewareInternal(middleware);
-			addMiddlewareInternal(middleware2);
-			addEventListener("fetch", (event) => {
-				event.respondWith(new Response("Hello world"));
-			});
-			`;
-				fs.writeFileSync("index.js", scriptContent);
-
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
-					},
-				});
-
-				const resp = await worker.fetch();
-				let text;
-				if (resp) {
-					text = await resp.text();
-				}
-				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
-			});
-
-			it("should return hello world with addMiddlewareInternal function called with array of middleware", async () => {
-				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			const middleware2 = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			addMiddlewareInternal(middleware, middleware2);
-			addEventListener("fetch", (event) => {
-				event.respondWith(new Response("Hello world"));
-			});
-			`;
-				fs.writeFileSync("index.js", scriptContent);
-
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
-					},
-				});
-
-				const resp = await worker.fetch();
-				let text;
-				if (resp) {
-					text = await resp.text();
-				}
-				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
-			});
-
-			it("should return hello world with both addMiddleware and addMiddlewareInternal called", async () => {
-				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			const middleware2 = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
-			addMiddleware(middleware);
-			addMiddlewareInternal(middleware2);
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello world"));
 			});
@@ -717,10 +666,18 @@ describe("middleware", () => {
 			});
 
 			it("should leave response headers unchanged with middleware", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
-			const middleware = async (request, env, _ctx, middlewareCtx) => {
-				return middlewareCtx.next(request, env);
-			}
+
 			addEventListener("fetch", (event) => {
 				event.respondWith(new Response("Hello world", { status: 500, headers: { "x-test": "test" } }));
 			});
@@ -749,6 +706,16 @@ describe("middleware", () => {
 			});
 
 			it("should allow multiple addEventListeners for fetch", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
 			let count = 0;
 			addEventListener("fetch", (event) => {
@@ -778,6 +745,16 @@ describe("middleware", () => {
 			});
 
 			it("waitUntil should not block responses", async () => {
+				fs.writeFileSync(
+					"middleware.js",
+					`export default async (request, env, _ctx, middlewareCtx) => {
+						return middlewareCtx.next(request, env);
+					}`
+				);
+
+				process.env.WRANGLER_INJECT_MIDDLEWARE = JSON.stringify([
+					path.resolve("middleware.js"),
+				]);
 				const scriptContent = `
 			addEventListener("fetch", (event) => {
 				let count = 0;
@@ -813,7 +790,6 @@ describe("middleware", () => {
 	});
 
 	describe("multiple middleware", () => {
-		runInTempDir();
 		it("should build multiple middleware as expected", async () => {
 			await seedFs({
 				"src/index.js": dedent/* javascript */ `
@@ -875,9 +851,7 @@ describe("middleware", () => {
 				};
 
 
-				var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
-				  ...void 0 ?? []
-				];
+				var __INTERNAL_WRANGLER_MIDDLEWARE__ = [];
 				var middleware_insertion_facade_default = src_default;
 
 
