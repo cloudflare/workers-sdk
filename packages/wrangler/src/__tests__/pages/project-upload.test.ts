@@ -516,6 +516,67 @@ describe("pages project upload", () => {
 	`);
 	});
 
+	it("should handle a very large number of assets", async () => {
+		const assets = new Set<string>();
+		// Create a large number of asset files to upload
+		for (let i = 0; i < 10_000; i++) {
+			const path = `file-${i}.txt`;
+			const content = `contents of file-${i}.txt`;
+			assets.add(content);
+			writeFileSync(path, content);
+		}
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		// Accumulate multiple requests then assert afterwards
+		const uploadedAssets = new Set<string>();
+		msw.use(
+			http.post("*/pages/assets/check-missing", async ({ request }) => {
+				const body = (await request.json()) as { hashes: string[] };
+
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					},
+					{ status: 200 }
+				);
+			}),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					const body = await request.json();
+					// Capture the assets that are uploaded
+					for (const asset of body) {
+						uploadedAssets.add(
+							Buffer.from(asset.value, "base64").toString("utf8")
+						);
+					}
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages project upload .");
+
+		expect(uploadedAssets).toEqual(assets);
+	});
+
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
 		mkdirSync(".well-known");
 		// Note: same content as previous test, but since it's a different extension,
