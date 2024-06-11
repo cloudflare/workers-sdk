@@ -15,12 +15,24 @@ import React, {
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
+import {
+	getDevCompatibilityDate,
+	getRules,
+	getScriptName,
+	isLegacyEnv,
+} from "..";
 import { DevEnv } from "../api";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	createDeferred,
 } from "../api/startDevWorker/utils";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
+import {
+	getBindingsAndAssetPaths,
+	getInferredHost,
+	validateDevServerSettings,
+} from "../dev";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
@@ -49,6 +61,7 @@ import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
+import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
@@ -191,8 +204,143 @@ export type DevProps = {
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
 	experimentalDevEnv: boolean;
+	rawConfig: Config;
+	rawArgs: StartDevOptions;
 };
+async function toSDW(
+	args: StartDevOptions,
+	accountId: Promise<string>,
+	workerDefinitions: WorkerRegistry,
+	config: Config
+): Promise<StartDevWorkerOptions> {
+	const {
+		entry,
+		upstreamProtocol,
+		host,
+		routes,
+		getLocalPort,
+		getInspectorPort,
+		cliDefines,
+		localPersistencePath,
+		processEntrypoint,
+		additionalModules,
+	} = await validateDevServerSettings(args, config);
 
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags:
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
+
+	const { assetPaths, bindings } = getBindingsAndAssetPaths(args, config);
+
+	const devRoutes =
+		routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
+			typeof r === "string"
+				? {
+						type: "route",
+						pattern: r,
+					}
+				: { type: "route", ...r }
+		) ?? [];
+	const queueConsumers =
+		config.queues.consumers?.map<Extract<Trigger, { type: "queue-consumer" }>>(
+			(c) => ({
+				...c,
+				type: "queue-consumer",
+			})
+		) ?? [];
+
+	const crons =
+		config.triggers.crons?.map<Extract<Trigger, { type: "cron" }>>((c) => ({
+			cron: c,
+			type: "cron",
+		})) ?? [];
+
+	return {
+		name: getScriptName({ name: args.name, env: args.env }, config),
+		compatibilityDate: getDevCompatibilityDate(config, args.compatibilityDate),
+		compatibilityFlags: args.compatibilityFlags || config.compatibility_flags,
+		script: { path: entry.file },
+		directory: entry.directory,
+		bindings: convertCfWorkerInitBindingstoBindings(bindings),
+
+		triggers: [...devRoutes, ...queueConsumers, ...crons],
+		env: args.env,
+		sendMetrics: config.send_metrics,
+		build: {
+			additionalModules: additionalModules,
+			processEntrypoint: processEntrypoint,
+			bundle: !(args.bundle ?? !config.no_bundle),
+			findAdditionalModules: config.find_additional_modules,
+			moduleRoot: entry.moduleRoot,
+			moduleRules: args.rules ?? getRules(config),
+
+			minify: args.minify ?? config.minify,
+			define: { ...config.define, ...cliDefines },
+			custom: {
+				command: (config.build || {}).command,
+				watch: (config.build || {}).watch_dir,
+				workingDirectory: (config.build || {}).cwd,
+			},
+			format: entry.format,
+			nodejsCompatMode: nodejsCompatMode,
+			jsxFactory: args.jsxFactory || config.jsx_factory,
+			jsxFragment: args.jsxFragment || config.jsx_fragment,
+			tsconfig: args.tsconfig ?? config.tsconfig,
+		},
+		dev: {
+			auth: async () => {
+				return {
+					accountId: await accountId,
+					apiToken: requireApiToken(),
+				};
+			},
+			remote: !args.local,
+			server: {
+				hostname: args.ip || config.dev.ip,
+				port: args.port ?? config.dev.port ?? (await getLocalPort()),
+				secure: (args.localProtocol || config.dev.local_protocol) === "https",
+				httpsKeyPath: args.httpsKeyPath,
+				httpsCertPath: args.httpsCertPath,
+			},
+			inspector: {
+				port:
+					args.inspectorPort ??
+					config.dev.inspector_port ??
+					(await getInspectorPort()),
+			},
+			origin: {
+				secure: upstreamProtocol === "https",
+				hostname: args.localUpstream ?? host ?? getInferredHost(routes),
+			},
+			liveReload: args.liveReload || false,
+			testScheduled: args.testScheduled,
+			getRegisteredWorker: (name) => workerDefinitions[name],
+			persist: { path: localPersistencePath },
+		},
+		legacy: {
+			site:
+				Boolean(args.site || config.site) && assetPaths
+					? {
+							bucket: path.join(
+								assetPaths.baseDirectory,
+								assetPaths?.assetDirectory
+							),
+							include: assetPaths.includePatterns,
+							exclude: assetPaths.excludePatterns,
+						}
+					: undefined,
+			assets: config.assets,
+			enableServiceEnvironments: !isLegacyEnv(config),
+		},
+		unsafe: {
+			capnp: bindings.unsafe?.capnp,
+			metadata: bindings.unsafe?.metadata,
+		},
+	} satisfies StartDevWorkerOptions;
+}
 export function DevImplementation(props: DevProps): JSX.Element {
 	validateDevProps(props);
 

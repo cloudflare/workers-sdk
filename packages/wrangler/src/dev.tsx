@@ -526,6 +526,8 @@ export async function startDev(args: StartDevOptions) {
 					testScheduled={args.testScheduled}
 					projectRoot={projectRoot}
 					experimentalDevEnv={args.experimentalDevEnv}
+					rawArgs={args}
+					rawConfig={configParam}
 				/>
 			);
 		}
@@ -656,6 +658,8 @@ export async function startApiDev(args: StartDevOptions) {
 			disableDevRegistry: args.disableDevRegistry ?? false,
 			projectRoot,
 			experimentalDevEnv: args.experimentalDevEnv,
+			rawArgs: args,
+			rawConfig: configParam,
 		});
 	}
 
@@ -739,7 +743,7 @@ export function getInferredHost(routes: Route[] | undefined) {
 	}
 }
 
-async function validateDevServerSettings(
+export async function validateDevServerSettings(
 	args: StartDevOptions,
 	config: Config
 ) {
@@ -851,7 +855,10 @@ async function validateDevServerSettings(
 	};
 }
 
-function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
+export function getBindingsAndAssetPaths(
+	args: StartDevOptions,
+	configParam: Config
+) {
 	const cliVars = collectKeyValues(args.var);
 
 	// now log all available bindings into the terminal
