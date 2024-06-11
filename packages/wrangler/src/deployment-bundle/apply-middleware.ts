@@ -41,19 +41,22 @@ export async function applyMiddlewareLoaderFacade(
 		`__MIDDLEWARE_${index}__`,
 		path.resolve(getBasePath(), m.path),
 	]);
+	if (process.env.NODE_ENV === "test") {
+		try {
+			const additionalMiddleware: string[] = JSON.parse(
+				getInjectedMiddleware()
+			);
 
-	try {
-		const additionalMiddleware: string[] = JSON.parse(getInjectedMiddleware());
-
-		middlewareIdentifiers = [
-			...middlewareIdentifiers,
-			...additionalMiddleware.map((m, index) => [
-				`__MIDDLEWARE_INJECTED_${index}__`,
-				m,
-			]),
-		];
-	} catch {
-		// Ignore errors while injecting middleware
+			middlewareIdentifiers = [
+				...middlewareIdentifiers,
+				...additionalMiddleware.map((m, index) => [
+					`__MIDDLEWARE_INJECTED_${index}__`,
+					m,
+				]),
+			];
+		} catch {
+			// Ignore errors while injecting middleware
+		}
 	}
 
 	const dynamicFacadePath = path.join(
