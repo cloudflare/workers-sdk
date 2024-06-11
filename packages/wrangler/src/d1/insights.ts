@@ -55,7 +55,7 @@ const cliOptionToGraphQLOption = {
 	count: "count",
 };
 
-function getDurationDates(durationString: string) {
+export function getDurationDates(durationString: string) {
 	const endDate = new Date();
 
 	const durationValue = parseInt(durationString.slice(0, -1));
