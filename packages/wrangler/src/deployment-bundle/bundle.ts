@@ -241,10 +241,7 @@ export async function bundleWorker(
 			);
 		}
 	}
-	if (
-		middlewareToLoad.length > 0 ||
-		process.env.EXPERIMENTAL_MIDDLEWARE === "true"
-	) {
+	if (middlewareToLoad.length > 0) {
 		const result = await applyMiddlewareLoaderFacade(
 			entry,
 			tmpDir.path,

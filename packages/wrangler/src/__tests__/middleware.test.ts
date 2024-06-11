@@ -38,8 +38,6 @@ describe("middleware", () => {
 	});
 
 	describe("workers change behaviour with middleware with wrangler dev", () => {
-		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
-
 		describe("module workers", () => {
 			it("should register a middleware and intercept", async () => {
 				fs.writeFileSync(
@@ -313,8 +311,6 @@ describe("middleware", () => {
 	});
 
 	describe("unchanged functionality when wrapping with middleware", () => {
-		process.env.EXPERIMENTAL_MIDDLEWARE = "true";
-
 		describe("module workers", () => {
 			it("should return Hello World with no middleware export", async () => {
 				const scriptContent = `
