@@ -17,6 +17,7 @@ import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
+import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
@@ -1151,12 +1152,6 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
-}
-
-function* createBatches<T>(array: T[], size: number): IterableIterator<T[]> {
-	for (let i = 0; i < array.length; i += size) {
-		yield array.slice(i, i + size);
-	}
 }
 
 /** Assert that there is no type argument passed. */

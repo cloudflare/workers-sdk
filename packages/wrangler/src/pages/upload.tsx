@@ -9,6 +9,7 @@ import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { APIError } from "../parse";
+import { createBatches } from "../utils/create-batches";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
@@ -205,16 +206,23 @@ export const upload = async (
 		const doUpload = async (): Promise<void> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
-			const payload: UploadPayloadFile[] = await Promise.all(
-				bucket.files.map(async (file) => ({
-					key: file.hash,
-					value: (await readFile(file.path)).toString("base64"),
-					metadata: {
-						contentType: file.contentType,
-					},
-					base64: true,
-				}))
-			);
+			const payload: UploadPayloadFile[] = [];
+
+			// only read up to 1000 files, from disk, at a time to avoid `EMFILE` error (on Windows)
+			for (const batch of createBatches(bucket.files, 1000)) {
+				payload.push(
+					...(await Promise.all(
+						batch.map(async (file) => ({
+							key: file.hash,
+							value: (await readFile(file.path)).toString("base64"),
+							metadata: {
+								contentType: file.contentType,
+							},
+							base64: true,
+						}))
+					))
+				);
+			}
 
 			try {
 				logger.debug("POST /pages/assets/upload");
