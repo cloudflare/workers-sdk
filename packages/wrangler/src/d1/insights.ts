@@ -18,7 +18,6 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			demandOption: true,
 		})
 		.option("timePeriod", {
-			choices: ["1d", "7d", "31d"] as const,
 			describe: "Fetch data from now to the provided time period",
 			default: "1d" as const,
 		})
@@ -56,6 +55,45 @@ const cliOptionToGraphQLOption = {
 	count: "count",
 };
 
+export function getDurationDates(durationString: string) {
+	const endDate = new Date();
+
+	const durationValue = parseInt(durationString.slice(0, -1));
+	const durationUnit = durationString.slice(-1);
+
+	let startDate;
+	switch (durationUnit) {
+		case "d":
+			if (durationValue > 31) {
+				throw new Error("Duration cannot be greater than 31 days");
+			}
+			startDate = new Date(
+				endDate.getTime() - durationValue * 24 * 60 * 60 * 1000
+			);
+			break;
+		case "m":
+			if (durationValue > 31 * 24 * 60) {
+				throw new Error(
+					`Duration cannot be greater than ${31 * 24 * 60} minutes (31 days)`
+				);
+			}
+			startDate = new Date(endDate.getTime() - durationValue * 60 * 1000);
+			break;
+		case "h":
+			if (durationValue > 31 * 24) {
+				throw new Error(
+					`Duration cannot be greater than ${31 * 24} hours (31 days)`
+				);
+			}
+			startDate = new Date(endDate.getTime() - durationValue * 60 * 60 * 1000);
+			break;
+		default:
+			throw new Error("Invalid duration unit");
+	}
+
+	return [startDate.toISOString(), endDate.toISOString()];
+}
+
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
 	async ({
@@ -80,11 +118,7 @@ export const Handler = withConfig<HandlerOptions>(
 		const output: Record<string, string | number>[] = [];
 
 		if (result.version !== "alpha") {
-			const convertedTimePeriod = Number(timePeriod.replace("d", ""));
-			const endDate = new Date();
-			const startDate = new Date(
-				new Date(endDate).setDate(endDate.getDate() - convertedTimePeriod)
-			);
+			const [startDate, endDate] = getDurationDates(timePeriod);
 			const parsedSortBy = cliOptionToGraphQLOption[sortBy];
 			const orderByClause =
 				parsedSortBy === "count"
@@ -122,8 +156,8 @@ export const Handler = withConfig<HandlerOptions>(
 							filter: {
 								AND: [
 									{
-										datetimeHour_geq: startDate.toISOString(),
-										datetimeHour_leq: endDate.toISOString(),
+										datetimeHour_geq: startDate,
+										datetimeHour_leq: endDate,
 										databaseId: db.uuid,
 									},
 								],
