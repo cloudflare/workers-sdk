@@ -60,23 +60,20 @@ export async function fetchLatestDeployment(
 	return deployments.at(0);
 }
 
-export async function fetchLatestDeploymentVersions(
+export async function fetchDeploymentVersions(
 	accountId: string,
 	workerName: string,
+	deployment: ApiDeployment | undefined,
 	versionCache: VersionCache
 ): Promise<[ApiVersion[], Map<VersionId, Percentage>]> {
-	const latestDeployment = await fetchLatestDeployment(accountId, workerName);
-
-	if (!latestDeployment) {
+	if (!deployment) {
 		return [[], new Map()];
 	}
 
 	const versionTraffic = new Map(
-		latestDeployment.versions.map(({ version_id: versionId, percentage }) => [
-			versionId,
-			percentage,
-		])
+		deployment.versions.map((v) => [v.version_id, v.percentage])
 	);
+
 	const versions = await fetchVersions(
 		accountId,
 		workerName,

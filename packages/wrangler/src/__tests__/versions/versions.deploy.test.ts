@@ -11,6 +11,8 @@ import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
+import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
+import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import {
 	msw,
 	mswGetVersion,
@@ -18,9 +20,12 @@ import {
 	mswListVersions,
 	mswPatchNonVersionedScriptSettings,
 	mswPostNewDeployment,
+	mswSuccessDeploymentScriptMetadata,
 } from "../helpers/msw";
+import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/versions";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import { writeWorkerSource } from "../helpers/write-worker-source";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 import type { VersionsDeployArgs } from "../../versions/deploy";
 
@@ -41,6 +46,42 @@ describe("versions deploy", () => {
 			mswPostNewDeployment,
 			mswPatchNonVersionedScriptSettings
 		);
+	});
+
+	describe("legacy deploy", () => {
+		test("should warn user when worker has deployment with multiple versions", async () => {
+			msw.use(
+				...mswSuccessDeploymentScriptMetadata,
+				...mswListNewDeploymentsLatestFiftyFifty
+			);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy ./index");
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"╭  WARNING  Your last deployment has multiple versions. To progress that deployment use \\"wrangler versions deploy\\" instead.
+				│
+				├ Your last deployment has 2 version(s):
+				│
+				│ (50%) test-name:version:0
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (50%) test-name:version:1
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ \\"wrangler deploy\\" will upload a new version and deploy it globally immediately.
+				Are you sure you want to continue?
+				│ yes
+				│"
+			`);
+		});
 	});
 
 	describe("without wrangler.toml", () => {
