@@ -19,7 +19,7 @@
 		"create-svelte": "6.3.0",
 		"create-vue": "3.10.3",
 		"gatsby": "5.13.6",
-		"nuxi": "3.11.1"
+		"nuxi": "3.12.0"
 	},
 	"frameworkCliMap": {
 		"analog": "create-analog",
