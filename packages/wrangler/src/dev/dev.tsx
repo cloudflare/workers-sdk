@@ -266,6 +266,8 @@ function InteractiveDevSession(props: DevProps) {
 				) : null}
 				<Text bold={true}>[c]</Text>
 				<Text> clear console, </Text>
+				<Text bold={true}>[s]</Text>
+				<Text> {toggles.tunnel ? "unshare" : "share"} dev server </Text>
 				<Text bold={true}>[x]</Text>
 				<Text> to exit</Text>
 			</Box>
@@ -832,13 +834,19 @@ function useTunnel(toggle: boolean) {
 					return;
 				}
 				logger.log("⎔ Starting a tunnel...");
-				tunnel.current = spawn("cloudflared", [
-					"tunnel",
-					"--url",
-					"http://localhost:8787",
-					"--metrics",
-					"localhost:8789",
-				]);
+				tunnel.current = spawn(
+					"cloudflared",
+					[
+						"tunnel",
+						"--url",
+						"http://localhost:8787",
+						"--metrics",
+						"localhost:8789",
+					],
+					{
+						stdio: "pipe",
+					}
+				);
 
 				tunnel.current.on("close", (code) => {
 					if (code) {
@@ -942,6 +950,14 @@ function useHotkeys(props: {
 						local: !previousToggles.local,
 					}));
 					break;
+				case "s": {
+					setToggles((previousToggles) => ({
+						...previousToggles,
+						tunnel: !previousToggles.tunnel,
+					}));
+					break;
+				}
+
 				// shut down
 				case "q":
 				case "x":
