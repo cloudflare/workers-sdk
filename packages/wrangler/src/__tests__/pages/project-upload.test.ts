@@ -519,7 +519,7 @@ describe("pages project upload", () => {
 	it("should handle a very large number of assets", async () => {
 		const assets = new Set<string>();
 		// Create a large number of asset files to upload
-		for (let i = 0; i < 10_000; i++) {
+		for (let i = 0; i < 10_019; i++) {
 			const path = `file-${i}.txt`;
 			const content = `contents of file-${i}.txt`;
 			assets.add(content);
