@@ -54,10 +54,6 @@ export class Semaphore {
 		return this.#maxResources - this.#activeResources;
 	}
 
-	get queueSize(): number {
-		return this.#queue.length;
-	}
-
 	async runWith<T>(fn: () => Promise<T>): Promise<T> {
 		if (this.#activeResources < this.#maxResources) {
 			this.#activeResources++;

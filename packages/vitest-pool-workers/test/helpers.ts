@@ -131,11 +131,6 @@ export const test = baseTest.extend<{
 					maxBuffer,
 				}
 			);
-
-			proc.stdout?.on("data", (data) => {
-				console.log(data.toString());
-			});
-
 			processes.push(proc);
 			return wrap(proc);
 		});
