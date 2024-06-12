@@ -1,6 +1,6 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
@@ -29,7 +29,7 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, debounce, getPagesTmpDir } from "./utils";
 import type { Config } from "../config";
 import type {
 	DurableObjectBindings,
@@ -462,9 +462,54 @@ export const Handler = async (args: PagesDevArguments) => {
 		logger.debug(`Compiling worker to "${scriptPath}"...`);
 
 		const onEnd = () => scriptReadyResolve();
+		const watchedBundleDependencies: Set<string> = new Set();
+
+		/*
+		 * Pages Functions projects cannot rely on esbuild's watch mode alone.
+		 * That's because the watch mode that's built into esbuild is designed
+		 * specifically for only triggering a rebuild when esbuild's build inputs
+		 * are changed (see https://github.com/evanw/esbuild/issues/3705). With
+		 * Functions, we would actually want to trigger a rebuild every time a new
+		 * file is added to the "/functions" directory.
+		 *
+		 * One solution would be to use an esbuild plugin, and "teach" esbuild to
+		 * watch the "/functions" directory. But it's more complicated than that.
+		 * When we build Functions, one of the steps is to generate the routes
+		 * based on the file tree (see `generateConfigFileFromTree`). These routes
+		 * are then injected into the esbuild entrypoint (see
+		 * `templates/pages-template-worker.ts`). Delegating the "/functions" dir
+		 * watching to an esbuild plugin, would mean delegating the routes generation
+		 * to that plugin as well. This gets very hairy very quickly.
+		 *
+		 * Another solution, is to use a combination of dependencies watching, via
+		 * esbuild, and file system watching, via chokidar. The downside of this
+		 * approach is that a lot of syncing between the two watch modes must be put
+		 * in place, in order to avoid triggering building Functions multiple times
+		 * over one single change (like for example renaming file that's part of the
+		 * dependency graph)
+		 *
+		 * Another solution, which is the one we opted for here, is to delegate file
+		 * watching entirely to a file system watcher, chokidar in this case. While
+		 * not entirely downside-free
+		 *   - we still rely on esbuild to provide us with the dependency graph
+		 *   - we need some logic in place to pre-process and filter the dependencies
+		 *     we pass to chokidar
+		 *   - we need to keep track of which dependencies are being watched
+		 * this solution keeps all things watch mode in one place, makes things easier
+		 * to read, reason about and maintain, separates Pages <-> esbuild concerns
+		 * better, and gives all the flexibility we needed.
+		 */
+		// always watch the "/functions" directory
+		const watcher = watch([functionsDirectory], {
+			persistent: true,
+			ignoreInitial: true,
+		});
+
 		try {
 			const buildFn = async () => {
-				await buildFunctions({
+				const currentBundleDependencies = new Set();
+
+				const bundle = await buildFunctions({
 					outfile: scriptPath,
 					functionsDirectory,
 					sourcemap: true,
@@ -476,43 +521,134 @@ export const Handler = async (args: PagesDevArguments) => {
 					routesModule,
 					defineNavigatorUserAgent,
 				});
+
+				for (const dep in bundle.dependencies) {
+					const resolvedDep = resolve(functionsDirectory, dep);
+					/*
+					 * EXCLUDE:
+					 *   - the "/functions" directory because we're already watching it
+					 *   - everything in "./.wrangler", as it's mostly cache and
+					 *     temporary files
+					 *   - any bundle dependencies we are already watching
+					 *   - anything outside of the current working directory, since we
+					 *     are expecting `wrangler pages dev` to be run from the Pages
+					 *     project root folder
+					 */
+					if (
+						!resolvedDep.includes(normalize("/functions/")) &&
+						!resolvedDep.includes(normalize("/.wrangler/")) &&
+						resolvedDep.includes(resolve(process.cwd()))
+					) {
+						currentBundleDependencies.add(resolvedDep);
+
+						if (!watchedBundleDependencies.has(resolvedDep)) {
+							watchedBundleDependencies.add(resolvedDep);
+							watcher.add(resolvedDep);
+						}
+					}
+				}
+
+				// handle non-JS module dependencies, such as wasm/html/binary imports
+				for (const module of bundle.modules) {
+					if (module.filePath) {
+						const resolvedDep = resolve(functionsDirectory, module.filePath);
+						currentBundleDependencies.add(resolvedDep);
+
+						if (!watchedBundleDependencies.has(resolvedDep)) {
+							watchedBundleDependencies.add(resolvedDep);
+							watcher.add(resolvedDep);
+						}
+					}
+				}
+
+				/*
+				 *`bundle.dependencies` and `bundle.modules` will always contain the
+				 * latest dependency list of the current bundle. If we are currently
+				 * watching any dependency files not in that list, we should remove
+				 * them, as they are no longer relevant to the compiled Functions.
+				 */
+				watchedBundleDependencies.forEach(async (path) => {
+					if (!currentBundleDependencies.has(path)) {
+						watchedBundleDependencies.delete(path);
+						watcher.unwatch(path);
+					}
+				});
+
 				await metrics.sendMetricsEvent("build pages functions");
 			};
 
-			await buildFn();
-			// If Functions found routes, continue using Functions
-			watch([functionsDirectory], {
-				persistent: true,
-				ignoreInitial: true,
-			}).on("all", async () => {
+			/*
+			 * Improve developer experience by debouncing the re-building
+			 * of Functions.
+			 *
+			 * "Debouncing ensures that exactly one signal is sent for an
+			 * event that may be happening several times — or even several
+			 * hundreds of times over an extended period. As long as the
+			 * events are occurring fast enough to happen at least once in
+			 * every detection period, the signal will not be sent!"
+			 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
+			 *
+			 * This handles use cases such as bulk file/directory changes
+			 * (such as copy/pasting multiple files/directories), where
+			 * chokidar will trigger a change event per each changed file/
+			 * directory. In such use cases, we want to ensure that we
+			 * re-build Functions once, as opposed to once per change event.
+			 */
+			const debouncedBuildFn = debounce(async () => {
 				try {
 					await buildFn();
 				} catch (e) {
 					if (e instanceof FunctionsNoRoutesError) {
-						logger.warn(
+						logger.error(
 							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
 						);
 					} else if (e instanceof FunctionsBuildError) {
-						logger.warn(
+						logger.error(
 							getFunctionsBuildWarning(functionsDirectory, e.message)
 						);
 					} else {
-						throw e;
+						/*
+						 * don't break developer flow in watch mode by throwing an error
+						 * here. Many times errors will be just the result of unfinished
+						 * typing. Instead, log the error, point out we are still serving
+						 * the last successfully built Functions, and allow developers to
+						 * write their code to completion
+						 */
+						logger.error(
+							`Error while attempting to build the Functions directory ${functionsDirectory}. Skipping to last successfully built version of Functions.\n` +
+								`${e}`
+						);
 					}
 				}
+			}, 50);
+
+			await buildFn();
+
+			// If Functions found routes, continue using Functions
+			watcher.on("all", async (eventName, path) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+
+				debouncedBuildFn();
 			});
 		} catch (e) {
 			// If there are no Functions, then Pages will only serve assets.
 			if (e instanceof FunctionsNoRoutesError) {
-				logger.warn(
+				logger.error(
 					getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
 				);
 				// Resolve anyway and run without Functions
 				onEnd();
-				// Turn off Functions
 				usingFunctions = false;
 			} else {
-				throw e;
+				/*
+				 * do not start the `pages dev` session if we encounter errors
+				 * while attempting to build Functions. These flag underlying
+				 * issues in the Functions code, and should be addressed before
+				 */
+				throw new FatalError(
+					`Error while attempting to build the Functions directory ${functionsDirectory}\n` +
+						`${e}`
+				);
 			}
 		}
 	}
