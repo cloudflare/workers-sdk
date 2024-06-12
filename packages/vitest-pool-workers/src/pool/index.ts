@@ -29,7 +29,7 @@ import {
 	getProjectPath,
 	getRelativeProjectPath,
 	isFileNotFoundError,
-	ResourcePool,
+	Semaphore,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import {
@@ -665,16 +665,10 @@ type RunTestsArgs = [
  * Ensures that test runs are queued if all available threads are in use.
  */
 function queuedTestRun() {
-	const threadPool = new ResourcePool(calculateAvailableThreads());
+	const limiter = new Semaphore(calculateAvailableThreads());
 
 	return async function run(...args: RunTestsArgs): Promise<void> {
-		await threadPool.nextAvailableResource();
-
-		// Promise.finally will be called in the event of either resolving or rejecting,
-		// so the thread will always be released unless the test run hangs.
-		return runTests(...args).finally(() => {
-			threadPool.releaseResource();
-		});
+		return limiter.runWith(() => runTests(...args));
 	};
 }
 

@@ -30,18 +30,18 @@ export function calculateAvailableThreads() {
 	return os.availableParallelism ? os.availableParallelism() : os.cpus().length;
 }
 
-type Resolve = () => void;
-
 /**
- * A generic pool that can be used to limit the number of active resources. The resources
+ * A generic semaphore that can be used to limit the number of active resources. The resources
  * are anonymous, so we don't care about their implementation. The goal is just to count
  * the number of resources in-use.
-
  */
-export class ResourcePool {
+export class Semaphore {
 	#maxResources: number;
 	#activeResources = 0;
-	#queue = [] as Resolve[];
+	#queue = [] as Array<{
+		fn: () => Promise<unknown>;
+		resolve: (value: unknown) => void;
+	}>;
 
 	constructor(maxResources: number) {
 		if (!Number.isInteger(maxResources) || maxResources < 1) {
@@ -58,21 +58,30 @@ export class ResourcePool {
 		return this.#queue.length;
 	}
 
-	async nextAvailableResource() {
+	async runWith<T>(fn: () => Promise<T>): Promise<T> {
 		if (this.#activeResources < this.#maxResources) {
 			this.#activeResources++;
-			return;
+			return fn().finally(() => {
+				void this.#releaseResource();
+			});
 		}
 
-		return new Promise((resolve) => {
-			this.#queue.push(resolve as Resolve);
+		return new Promise<T>((resolve) => {
+			this.#queue.push({ fn, resolve: resolve as (value: unknown) => void });
 		});
 	}
 
-	releaseResource() {
+	async #releaseResource() {
 		if (this.#queue.length > 0) {
 			const next = this.#queue.shift();
-			next?.();
+
+			if (!next) {
+				return;
+			}
+
+			// Resove with the result of the callback function so that it is returned
+			// to the caller of runWith.
+			next.resolve(next.fn());
 		} else {
 			this.#activeResources--;
 		}

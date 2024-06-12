@@ -1,93 +1,82 @@
-import { describe, expect, it } from "vitest";
-import { ResourcePool } from "./helpers";
+import { describe, expect, it, vi } from "vitest";
+import { Semaphore } from "./helpers";
 
-describe("ResourcePool", () => {
-	it("should initialize with the correct maximum resources", () => {
+describe("Semaphore", () => {
+	it("should initialise with the correct maximum resources", () => {
 		const maxResources = 5;
-		const pool = new ResourcePool(maxResources);
+		const pool = new Semaphore(maxResources);
 
 		expect(pool.availableResourcesCount).toEqual(maxResources);
 	});
 
-	it("should return the correct number of available resources", async () => {
-		const maxResources = 3;
-		const pool = new ResourcePool(maxResources);
+	it("should return the result of the callback function from runWith", async () => {
+		const limiter = new Semaphore(1);
+		const fn = vi.fn(() => Promise.resolve("result"));
 
-		expect(pool.availableResourcesCount).toEqual(maxResources);
+		const result = await limiter.runWith(fn);
 
-		await pool.nextAvailableResource();
-		expect(pool.availableResourcesCount).toEqual(maxResources - 1);
-
-		await pool.nextAvailableResource();
-		expect(pool.availableResourcesCount).toEqual(maxResources - 2);
+		expect(result).toEqual("result");
 	});
 
-	it("should allocate resources when available", async () => {
-		const maxResources = 2;
-		const pool = new ResourcePool(maxResources);
+	it("should queue functions when max resources are reached", async () => {
+		const limiter = new Semaphore(2);
+		const fn1 = vi.fn(() => Promise.resolve("result1"));
+		const fn2 = vi.fn(() => Promise.resolve("result2"));
+		const fn3 = vi.fn(() => Promise.resolve("result3"));
 
-		await pool.nextAvailableResource();
-		await pool.nextAvailableResource();
-		expect(pool.queueSize).toEqual(0);
+		void limiter.runWith(fn1);
+		void limiter.runWith(fn2);
+		const result3 = limiter.runWith(fn3);
 
-		const promise = pool.nextAvailableResource();
-		expect(pool.queueSize).toEqual(1);
+		expect(fn1).toHaveBeenCalled();
+		expect(fn2).toHaveBeenCalled();
+		expect(fn3).not.toHaveBeenCalled();
 
-		pool.releaseResource();
-		await promise;
+		await result3;
 
-		expect(pool.queueSize).toEqual(0);
-		expect(pool.availableResourcesCount).toEqual(0);
+		expect(fn3).toHaveBeenCalled();
 	});
 
-	it("should release resources and allocate them to queued requests", async () => {
-		const maxResources = 2;
-		const pool = new ResourcePool(maxResources);
+	it("should execute queued functions in the correct order", async () => {
+		const limiter = new Semaphore(2);
+		const logs = [] as number[];
+		const fn1 = vi.fn(() => {
+			logs.push(1);
+			return Promise.resolve("result1");
+		});
+		const fn2 = vi.fn(() => {
+			logs.push(2);
+			return Promise.resolve("result2");
+		});
+		const fn3 = vi.fn(() => {
+			logs.push(3);
+			return Promise.resolve("result3");
+		});
 
-		await pool.nextAvailableResource();
-		await pool.nextAvailableResource();
-		const promise = pool.nextAvailableResource();
-		expect(pool.queueSize).toEqual(1);
+		void limiter.runWith(fn1);
+		void limiter.runWith(fn2);
+		const result3 = limiter.runWith(fn3);
 
-		pool.releaseResource();
-		await promise;
-		expect(pool.queueSize).toEqual(0);
+		await result3;
+
+		expect(logs).toEqual([1, 2, 3]);
 	});
 
-	it("should handle multiple queued requests", async () => {
-		const maxResources = 2;
-		const pool = new ResourcePool(maxResources);
+	it("should handle rejected promises correctly", async () => {
+		const limiter = new Semaphore(1);
+		const errorMessage = "Rejected promise";
 
-		await pool.nextAvailableResource();
-		await pool.nextAvailableResource();
-		const promise1 = pool.nextAvailableResource();
-		const promise2 = pool.nextAvailableResource();
-		const promise3 = pool.nextAvailableResource();
-		expect(pool.queueSize).toEqual(3);
+		const fn1 = vi.fn(() => Promise.reject(new Error(errorMessage)));
+		const fn2 = vi.fn(() => Promise.resolve());
 
-		pool.releaseResource();
-		await promise1;
-		expect(pool.queueSize).toEqual(2);
+		const result1 = limiter.runWith(fn1);
+		const result2 = limiter.runWith(fn2);
 
-		pool.releaseResource();
-		await promise2;
-		expect(pool.queueSize).toEqual(1);
+		await expect(result1).rejects.toThrow(errorMessage);
+		await expect(result2).resolves.toBeUndefined();
 
-		pool.releaseResource();
-		await promise3;
-		expect(pool.queueSize).toEqual(0);
-	});
-
-	it("should not release resources when no requests are queued", async () => {
-		const maxResources = 2;
-		const pool = new ResourcePool(maxResources);
-
-		await pool.nextAvailableResource();
-		await pool.nextAvailableResource();
-		expect(pool.queueSize).toEqual(0);
-
-		pool.releaseResource();
-		expect(pool.queueSize).toEqual(0);
+		expect(fn1).toHaveBeenCalled();
+		expect(fn2).toHaveBeenCalled();
 	});
 
 	describe("invalid maxResources argument", () => {
@@ -103,7 +92,7 @@ describe("ResourcePool", () => {
 			[NaN],
 		])("should throw if %s provided as argument", (value) => {
 			// @ts-expect-error testing invalid values
-			expect(() => new ResourcePool(value)).toThrowError(
+			expect(() => new Semaphore(value)).toThrowError(
 				"maxResources argument must be a positive integer"
 			);
 		});
