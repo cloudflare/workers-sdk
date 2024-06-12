@@ -1,5 +1,5 @@
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
 		const redirectUrl = url.searchParams.get('redirectUrl'); // get a query param value (?redirectUrl=...)
 
@@ -10,4 +10,4 @@ export default {
 		// The Response class has static methods to create common Response objects as a convenience
 		return Response.redirect(redirectUrl);
 	},
-};
+} satisfies ExportedHandler<Env>;
