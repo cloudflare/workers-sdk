@@ -19,7 +19,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('E2E ({0}@{1} on {2})', matrix.pm.name, matrix.pm.version, matrix.os) }}
+    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
     if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       fail-fast: false
@@ -30,7 +30,7 @@ jobs:
             { name: npm, version: "0.0.0" },
             { name: pnpm, version: "9.1.3" },
             { name: bun, version: "1.0.3" },
-            { name: yarn, verison: "1.0.0" },
+            { name: yarn, version: "1.0.0" },
           ]
         # include a single windows test with pnpm
         include:
