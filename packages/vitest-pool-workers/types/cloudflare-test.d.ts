@@ -44,7 +44,11 @@ declare module "cloudflare:test" {
 	 * persisted data. Note this can only be used with `stub`s pointing to Durable
 	 * Objects defined in the `main` worker.
 	 */
-	export function runInDurableObject<O extends DurableObject, R>(
+	import type * as Rpc from "cloudflare:workers";
+	export function runInDurableObject<
+		O extends DurableObject | Rpc.DurableObject,
+		R,
+	>(
 		stub: DurableObjectStub<O>,
 		callback: (instance: O, state: DurableObjectState) => R | Promise<R>
 	): Promise<R>;
