@@ -1,6 +1,6 @@
 # Wrangler Styleguide
 
-The aim of this giudeline <!-- INTENTIONAL TYPO FOR DEMO --> is to help Wrangler contributors maintain consistent patterns throughout Wrangler and to provide end users with content that educates users on how to successfully complete tasks.
+The aim of this guide is to help Wrangler contributors maintain consistent patterns throughout Wrangler and to provide end users with content that educates users on how to successfully complete tasks.
 
 ## Styleguide legend
 
