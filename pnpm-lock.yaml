@@ -334,7 +334,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20240222.0
+        specifier: ^4.20240605.0
         version: 4.20240605.0
       '@types/pg':
         specifier: ^8.11.2
@@ -965,7 +965,7 @@ importers:
     dependencies:
       '@typescript-eslint/eslint-plugin':
         specifier: ^6.7.2
-        version: 6.7.2(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5)
+        version: 6.10.0(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5)
       '@typescript-eslint/parser':
         specifier: ^6.7.2
         version: 6.7.2(eslint@8.49.0)(typescript@5.4.5)
@@ -989,7 +989,7 @@ importers:
         version: 4.6.0(eslint@8.49.0)
       eslint-plugin-unused-imports:
         specifier: ^3.0.0
-        version: 3.0.0(@typescript-eslint/eslint-plugin@6.7.2(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)
+        version: 3.0.0(@typescript-eslint/eslint-plugin@6.10.0(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)
 
   packages/format-errors:
     devDependencies:
@@ -1070,8 +1070,8 @@ importers:
         specifier: ^5.28.2
         version: 5.28.3
       workerd:
-        specifier: 1.20240605.0
-        version: 1.20240605.0
+        specifier: 1.20240610.1
+        version: 1.20240610.1
       ws:
         specifier: ^8.11.0
         version: 8.14.2
@@ -2967,8 +2967,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-64@1.20240605.0':
-    resolution: {integrity: sha512-6V4Uze6jEM1mPBdPO6AevPwAOG2s+auEG1vPzZilwbrpn3BbYklEpQqcAZj05uUXaM6rnffnXerW8X8Fc8l4qQ==}
+  '@cloudflare/workerd-darwin-64@1.20240610.1':
+    resolution: {integrity: sha512-YanZ1iXgMGaUWlleB5cswSE6qbzyjQ8O7ENWZcPAcZZ6BfuL7q3CWi0t9iM1cv2qx92rRztsRTyjcfq099++XQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
@@ -2979,8 +2979,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-arm64@1.20240605.0':
-    resolution: {integrity: sha512-ZNxjVSeMYUhTfVlrMsVjpN5eHA2kq3+S7ZMsGu5l44ZqFrDygsFDoc9C4anJVUEIHGFUB9LMu4ZTdS5S80hvPQ==}
+  '@cloudflare/workerd-darwin-arm64@1.20240610.1':
+    resolution: {integrity: sha512-bRe/y/LKjIgp3L2EHjc+CvoCzfHhf4aFTtOBkv2zW+VToNJ4KlXridndf7LvR9urfsFRRo9r4TXCssuKaU+ypQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -2991,8 +2991,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-64@1.20240605.0':
-    resolution: {integrity: sha512-zqOWDrYEudW5JCcU8lxCFQ96UHJJHrM+uvGaRS4u5nJaEgMr2z7u9I2286+l1R3JWvJdqj9ehGuHQvZkaTADxw==}
+  '@cloudflare/workerd-linux-64@1.20240610.1':
+    resolution: {integrity: sha512-2zDcadR7+Gs9SjcMXmwsMji2Xs+yASGNA2cEHDuFc4NMUup+eL1mkzxc/QzvFjyBck98e92rBjMZt2dVscpGKg==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
@@ -3003,8 +3003,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-arm64@1.20240605.0':
-    resolution: {integrity: sha512-qFTVNem7bMsU9P1dXUi+kb8EdU5aag1I9RQq6ZLS/zfiJ0a/UasihwQG8lrzT7k9x80VnpyCekNmd625qsVZjQ==}
+  '@cloudflare/workerd-linux-arm64@1.20240610.1':
+    resolution: {integrity: sha512-7y41rPi5xmIYJN8CY+t3RHnjLL0xx/WYmaTd/j552k1qSr02eTE2o/TGyWZmGUC+lWnwdPQJla0mXbvdqgRdQg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
@@ -3015,8 +3015,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workerd-windows-64@1.20240605.0':
-    resolution: {integrity: sha512-s0U7d52ALQtb0enbHJ/AXmy+pyBQVoTIaAdAApy/PWrMiAnb8iJhf7A35pRTYfty5SUf7EX9BAPcKmeh+t3N5g==}
+  '@cloudflare/workerd-windows-64@1.20240610.1':
+    resolution: {integrity: sha512-B0LyT3DB6rXHWNptnntYHPaoJIy0rXnGfeDBM3nEVV8JIsQrx8MEFn2F2jYioH1FkUVavsaqKO/zUosY3tZXVA==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -4910,17 +4910,6 @@ packages:
       typescript:
         optional: true
 
-  '@typescript-eslint/eslint-plugin@6.7.2':
-    resolution: {integrity: sha512-ooaHxlmSgZTM6CHYAFRlifqh1OAr3PAQEwi7lhYhaegbnXrnh7CDcHmc3+ihhbQC7H0i4JF0psI5ehzkF6Yl6Q==}
-    engines: {node: ^16.0.0 || >=18.0.0}
-    peerDependencies:
-      '@typescript-eslint/parser': ^6.0.0 || ^6.0.0-alpha
-      eslint: ^7.0.0 || ^8.0.0
-      typescript: '*'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
   '@typescript-eslint/parser@5.59.9':
     resolution: {integrity: sha512-FsPkRvBtcLQ/eVK1ivDiNYBjn3TGJdXy2fhXX+rc7czWl4ARwnpArwbihSOHI2Peg9WbtGHrbThfBUkZZGTtvQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
@@ -5007,16 +4996,6 @@ packages:
       typescript:
         optional: true
 
-  '@typescript-eslint/type-utils@6.7.2':
-    resolution: {integrity: sha512-36F4fOYIROYRl0qj95dYKx6kybddLtsbmPIYNK0OBeXv2j9L5nZ17j9jmfy+bIDHKQgn2EZX+cofsqi8NPATBQ==}
-    engines: {node: ^16.0.0 || >=18.0.0}
-    peerDependencies:
-      eslint: ^7.0.0 || ^8.0.0
-      typescript: '*'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
   '@typescript-eslint/types@5.59.9':
     resolution: {integrity: sha512-uW8H5NRgTVneSVTfiCVffBb8AbwWSKg7qcA4Ot3JI3MPCJGsB4Db4BhvAODIIYE5mNj7Q+VJkK7JxmRhk2Lyjw==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
@@ -5083,12 +5062,6 @@ packages:
 
   '@typescript-eslint/utils@6.10.0':
     resolution: {integrity: sha512-v+pJ1/RcVyRc0o4wAGux9x42RHmAjIGzPRo538Z8M1tVx6HOnoQBCX/NoadHQlZeC+QO2yr4nNSFWOoraZCAyg==}
-    engines: {node: ^16.0.0 || >=18.0.0}
-    peerDependencies:
-      eslint: ^7.0.0 || ^8.0.0
-
-  '@typescript-eslint/utils@6.7.2':
-    resolution: {integrity: sha512-ZCcBJug/TS6fXRTsoTkgnsvyWSiXwMNiPzBUani7hDidBdj1779qwM1FIAmpH4lvlOZNF3EScsxxuGifjpLSWQ==}
     engines: {node: ^16.0.0 || >=18.0.0}
     peerDependencies:
       eslint: ^7.0.0 || ^8.0.0
@@ -10954,8 +10927,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  workerd@1.20240605.0:
-    resolution: {integrity: sha512-2yhzgaprAOFm7H988xlRFmU4rOLXhSsq24wh6ayucMB3ORfe/nYJ2ysFn1mzjB+UxEJVt5PhixgHkZLv1S8UPQ==}
+  workerd@1.20240610.1:
+    resolution: {integrity: sha512-Rtut5GrsODQMh6YU43b9WZ980Wd05Ov1/ds88pT/SoetmXFBvkBzdRfiHiATv+azmGX8KveE0i/Eqzk/yI01ug==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -12688,31 +12661,31 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20240419.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-64@1.20240605.0':
+  '@cloudflare/workerd-darwin-64@1.20240610.1':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20240419.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-arm64@1.20240605.0':
+  '@cloudflare/workerd-darwin-arm64@1.20240610.1':
     optional: true
 
   '@cloudflare/workerd-linux-64@1.20240419.0':
     optional: true
 
-  '@cloudflare/workerd-linux-64@1.20240605.0':
+  '@cloudflare/workerd-linux-64@1.20240610.1':
     optional: true
 
   '@cloudflare/workerd-linux-arm64@1.20240419.0':
     optional: true
 
-  '@cloudflare/workerd-linux-arm64@1.20240605.0':
+  '@cloudflare/workerd-linux-arm64@1.20240610.1':
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20240419.0':
     optional: true
 
-  '@cloudflare/workerd-windows-64@1.20240605.0':
+  '@cloudflare/workerd-windows-64@1.20240610.1':
     optional: true
 
   '@cloudflare/workers-types@4.20240605.0': {}
@@ -14548,14 +14521,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/eslint-plugin@6.7.2(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5)':
+  '@typescript-eslint/eslint-plugin@6.10.0(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5)':
     dependencies:
-      '@eslint-community/regexpp': 4.5.1
+      '@eslint-community/regexpp': 4.8.1
       '@typescript-eslint/parser': 6.7.2(eslint@8.49.0)(typescript@5.4.5)
-      '@typescript-eslint/scope-manager': 6.7.2
-      '@typescript-eslint/type-utils': 6.7.2(eslint@8.49.0)(typescript@5.4.5)
-      '@typescript-eslint/utils': 6.7.2(eslint@8.49.0)(typescript@5.4.5)
-      '@typescript-eslint/visitor-keys': 6.7.2
+      '@typescript-eslint/scope-manager': 6.10.0
+      '@typescript-eslint/type-utils': 6.10.0(eslint@8.49.0)(typescript@5.4.5)
+      '@typescript-eslint/utils': 6.10.0(eslint@8.49.0)(typescript@5.4.5)
+      '@typescript-eslint/visitor-keys': 6.10.0
       debug: 4.3.4(supports-color@9.2.2)
       eslint: 8.49.0
       graphemer: 1.4.0
@@ -14714,18 +14687,6 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.4.5)
       '@typescript-eslint/utils': 6.10.0(eslint@8.49.0)(typescript@5.4.5)
-      debug: 4.3.4(supports-color@9.2.2)
-      eslint: 8.49.0
-      ts-api-utils: 1.0.3(typescript@5.4.5)
-    optionalDependencies:
-      typescript: 5.4.5
-    transitivePeerDependencies:
-      - supports-color
-
-  '@typescript-eslint/type-utils@6.7.2(eslint@8.49.0)(typescript@5.4.5)':
-    dependencies:
-      '@typescript-eslint/typescript-estree': 6.7.2(typescript@5.4.5)
-      '@typescript-eslint/utils': 6.7.2(eslint@8.49.0)(typescript@5.4.5)
       debug: 4.3.4(supports-color@9.2.2)
       eslint: 8.49.0
       ts-api-utils: 1.0.3(typescript@5.4.5)
@@ -14909,20 +14870,6 @@ snapshots:
       '@typescript-eslint/scope-manager': 6.10.0
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.4.5)
-      eslint: 8.49.0
-      semver: 7.5.4
-    transitivePeerDependencies:
-      - supports-color
-      - typescript
-
-  '@typescript-eslint/utils@6.7.2(eslint@8.49.0)(typescript@5.4.5)':
-    dependencies:
-      '@eslint-community/eslint-utils': 4.4.0(eslint@8.49.0)
-      '@types/json-schema': 7.0.13
-      '@types/semver': 7.5.1
-      '@typescript-eslint/scope-manager': 6.7.2
-      '@typescript-eslint/types': 6.7.2
-      '@typescript-eslint/typescript-estree': 6.7.2(typescript@5.4.5)
       eslint: 8.49.0
       semver: 7.5.4
     transitivePeerDependencies:
@@ -17082,12 +17029,12 @@ snapshots:
       dotenv: 16.0.3
       eslint: 8.49.0
 
-  eslint-plugin-unused-imports@3.0.0(@typescript-eslint/eslint-plugin@6.7.2(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0):
+  eslint-plugin-unused-imports@3.0.0(@typescript-eslint/eslint-plugin@6.10.0(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0):
     dependencies:
       eslint: 8.49.0
       eslint-rule-composer: 0.3.0
     optionalDependencies:
-      '@typescript-eslint/eslint-plugin': 6.7.2(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5)
+      '@typescript-eslint/eslint-plugin': 6.10.0(@typescript-eslint/parser@6.7.2(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)(typescript@5.4.5)
 
   eslint-rule-composer@0.3.0: {}
 
@@ -22039,13 +21986,13 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20240419.0
       '@cloudflare/workerd-windows-64': 1.20240419.0
 
-  workerd@1.20240605.0:
+  workerd@1.20240610.1:
     optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20240605.0
-      '@cloudflare/workerd-darwin-arm64': 1.20240605.0
-      '@cloudflare/workerd-linux-64': 1.20240605.0
-      '@cloudflare/workerd-linux-arm64': 1.20240605.0
-      '@cloudflare/workerd-windows-64': 1.20240605.0
+      '@cloudflare/workerd-darwin-64': 1.20240610.1
+      '@cloudflare/workerd-darwin-arm64': 1.20240610.1
+      '@cloudflare/workerd-linux-64': 1.20240610.1
+      '@cloudflare/workerd-linux-arm64': 1.20240610.1
+      '@cloudflare/workerd-windows-64': 1.20240610.1
 
   wrangler@3.55.0(@cloudflare/workers-types@4.20240605.0):
     dependencies:
