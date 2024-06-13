@@ -181,18 +181,21 @@ function handleNodeJSGlobals(
 }
 
 /**
- * Converts a case sensitive string to lowercase string by prefixing all uppercase letters
+ * Encodes a case sensitive string to lowercase string by prefixing all uppercase letters
  * with $ and turning them into lowercase letters.
  *
  * This function exists because ESBuild requires that all resolved paths are case insensitive.
  * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
+ *
+ * This is important to support `inject` config for `performance` and `Performance` introduced
+ * in https://github.com/unjs/unenv/pull/257
  */
 function encodeToLowerCase(str: string): string {
 	return str.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
 }
 
 /**
- * decodes string lowercased using `encodeToLowerCase` to the original strings
+ * Decodes a string lowercased using `encodeToLowerCase` to the original strings
  */
 function decodeFromLowerCase(str: string): string {
 	return str.replaceAll(
