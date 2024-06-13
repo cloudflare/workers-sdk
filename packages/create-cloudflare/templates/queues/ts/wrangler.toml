@@ -79,14 +79,14 @@ compatibility_date = "<TBD>"
 
 # Bind a Queue producer. Use this binding to schedule an arbitrary task that may be processed later by a Queue consumer.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#queues
-# [[queues.producers]]
-# binding = "MY_QUEUE"
-# queue = "my-queue"
+[[queues.producers]]
+binding = "MY_QUEUE"
+queue = "my-queue"
 
 # Bind a Queue consumer. Queue Consumers can retrieve tasks scheduled by Producers to act on them.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#queues
-# [[queues.consumers]]
-# queue = "my-queue"
+[[queues.consumers]]
+queue = "my-queue"
 # Optional: Configure batching and retries: https://developers.cloudflare.com/queues/learning/batching-retries/
 # max_batch_size = 10
 # max_batch_timeout = 30
@@ -107,6 +107,6 @@ compatibility_date = "<TBD>"
 
 # Bind a Vectorize index. Use to store and query vector embeddings for semantic search, classification and other vector search use-cases.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#vectorize-indexes
-[[vectorize]]
-binding = "MY_INDEX"
-index_name = "my-index"
+# [[vectorize]]
+# binding = "MY_INDEX"
+# index_name = "my-index"
