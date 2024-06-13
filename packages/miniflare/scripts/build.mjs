@@ -4,7 +4,6 @@ import esbuild from "esbuild";
 import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);
-const watch = argv[0] === "watch";
 
 /**
  * Recursively walks a directory, returning a list of all files contained within
@@ -104,7 +103,6 @@ const embedWorkersPlugin = {
 					sourcesContent: false,
 					external: ["miniflare:shared", "miniflare:zod"],
 					metafile: true,
-					incremental: watch, // Allow `rebuild()` calls if watching
 					entryPoints: [args.path],
 					minifySyntax: true,
 					outdir: build.initialOptions.outdir,
@@ -186,8 +184,7 @@ async function buildPackage() {
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
-		logLevel: watch ? "info" : "warning",
-		watch,
+		logLevel: "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
 		entryPoints: [indexPath, ...testPaths],

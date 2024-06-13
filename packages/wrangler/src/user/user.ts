@@ -942,7 +942,7 @@ export async function login(
 	logger.log("Attempting to login via OAuth...");
 	const urlToOpen = await getAuthURL(props?.scopes);
 	let server: http.Server;
-	let loginTimeoutHandle: NodeJS.Timeout;
+	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<boolean>((resolve) => {
 		loginTimeoutHandle = setTimeout(() => {
 			logger.error(

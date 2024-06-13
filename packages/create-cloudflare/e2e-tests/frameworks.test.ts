@@ -455,6 +455,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await verifyBuildScript(framework, projectPath, logStream);
 					await storeDiff(framework, projectPath);
 				} catch (e) {
+					console.error("ERROR", e);
 					expect.fail(
 						"Failed due to an exception while running C3. See logs for more details",
 					);
