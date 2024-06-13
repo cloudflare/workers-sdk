@@ -4,11 +4,12 @@ import { logger } from "../logger";
 /**
  * Wrangler can provide Node.js compatibility in a number of different modes:
  * - "legacy" - this mode adds compile-time polyfills that are not well maintained and cannot work with workerd runtime builtins.
+ * - "als": this mode tells the workerd runtime to enable only the Async Local Storage builtin library (accessible via `node:async_hooks`).
  * - "v1" - this mode tells the workerd runtime to enable some Node.js builtin libraries (accessible only via `node:...` imports) but no globals.
  * - "v2" - this mode tells the workerd runtime to enable more Node.js builtin libraries (accessible both with and without the `node:` prefix)
  *   and also some Node.js globals such as `Buffer`; it also turns on additional compile-time polyfills for those that are not provided by the runtime.
  */
-export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
+export type NodeJSCompatMode = "legacy" | "als" | "v1" | "v2" | null;
 
 /**
  * Computes the Node.js compatibility mode we are running.
@@ -25,6 +26,7 @@ export type NodeJSCompatMode = "legacy" | "v1" | "v2" | null;
  * @param noBundle Whether to skip internal build steps and directly deploy script
  * @returns one of:
  *  - "legacy": build-time polyfills, from `node_compat` flag
+ *  - "als": nodejs_als compatibility flag
  *  - "v1": nodejs_compat compatibility flag
  *  - "v2": nodejs_compat_v2 compatibility flag
  *  - null: no Node.js compatibility
@@ -42,6 +44,7 @@ export function getNodeCompatMode(
 	}
 ): NodeJSCompatMode {
 	const {
+		hasNodejsAlsFlag,
 		hasNodejsCompatFlag,
 		hasNodejsCompatV2Flag,
 		hasExperimentalNodejsCompatV2Flag,
@@ -53,6 +56,8 @@ export function getNodeCompatMode(
 		mode = "v2";
 	} else if (hasNodejsCompatFlag) {
 		mode = "v1";
+	} else if (hasNodejsAlsFlag) {
+		mode = "als";
 	} else if (legacy) {
 		mode = "legacy";
 	}
@@ -74,9 +79,17 @@ export function getNodeCompatMode(
 		);
 	}
 
-	if (legacy && (hasNodejsCompatFlag || hasNodejsCompatV2Flag)) {
+	if (
+		legacy &&
+		(hasNodejsCompatFlag || hasNodejsCompatV2Flag || hasNodejsAlsFlag)
+	) {
+		const nodejsFlag = hasNodejsCompatFlag
+			? "`nodejs_compat`"
+			: hasNodejsCompatV2Flag
+				? "`nodejs_compat_v2`"
+				: "`nodejs_als`";
 		throw new UserError(
-			`The ${hasNodejsCompatFlag ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${hasNodejsCompatFlag ? "`nodejs_compat`" : "`nodejs_compat_v2`"} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
+			`The ${nodejsFlag} compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers ${nodejsFlag} compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.`
 		);
 	}
 
@@ -103,6 +116,7 @@ export function getNodeCompatMode(
 
 function parseNodeCompatibilityFlags(compatibilityFlags: string[]) {
 	return {
+		hasNodejsAlsFlag: compatibilityFlags.includes("nodejs_als"),
 		hasNodejsCompatFlag: compatibilityFlags.includes("nodejs_compat"),
 		hasNodejsCompatV2Flag: compatibilityFlags.includes("nodejs_compat_v2"),
 		hasExperimentalNodejsCompatV2Flag: compatibilityFlags.includes(
