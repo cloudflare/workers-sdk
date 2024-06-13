@@ -293,7 +293,7 @@ export async function printDeployment(
 		versionCache
 	);
 	cli.logRaw(
-		`${leftT} Your ${adjetive} deployment has ${versions.length} version(s):`
+		`${leftT} Your ${adjective} deployment has ${versions.length} version(s):`
 	);
 	printVersions(versions, traffic);
 }
