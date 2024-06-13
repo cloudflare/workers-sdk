@@ -95,7 +95,7 @@ function handleNodeJSGlobals(
 		...Object.keys(inject).map((globalName) =>
 			nodePath.resolve(
 				getBasePath(),
-				`_virtual_unenv_global_polyfill-${globalName}.js`
+				`_virtual_unenv_global_polyfill-${encodeToLowerCase(globalName)}.js`
 			)
 		),
 	];
@@ -104,7 +104,7 @@ function handleNodeJSGlobals(
 
 	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
 		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		const globalName = path.match(UNENV_GLOBALS_RE)![1];
+		const globalName = decodeFromLowerCase(path.match(UNENV_GLOBALS_RE)![1]);
 		const globalMapping = inject[globalName];
 
 		if (typeof globalMapping === "string") {
@@ -132,11 +132,6 @@ function handleNodeJSGlobals(
 									*/ ""
 									}
 									/* @__PURE__ */ (() => {
-										${
-											/*
-										// TODO: should we try to preserve globalThis.${globalName} if it exists?
-										*/ ""
-										}
 										return globalThis.${globalName} = globalVar;
 									})();
 
@@ -172,11 +167,6 @@ function handleNodeJSGlobals(
 								*/ ""
 								}
 								/* @__PURE__ */ (() => {
-									${
-										/*
-									// TODO: should we try to preserve globalThis.${globalName} if it exists?
-									*/ ""
-									}
 									return globalThis.${globalName} = ${exportName};
 							})();
 
@@ -188,4 +178,28 @@ function handleNodeJSGlobals(
 						`,
 		};
 	});
+}
+
+/**
+ * Encodes a case sensitive string to lowercase string by prefixing all uppercase letters
+ * with $ and turning them into lowercase letters.
+ *
+ * This function exists because ESBuild requires that all resolved paths are case insensitive.
+ * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
+ *
+ * This is important to support `inject` config for `performance` and `Performance` introduced
+ * in https://github.com/unjs/unenv/pull/257
+ */
+function encodeToLowerCase(str: string): string {
+	return str.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
+}
+
+/**
+ * Decodes a string lowercased using `encodeToLowerCase` to the original strings
+ */
+function decodeFromLowerCase(str: string): string {
+	return str.replaceAll(
+		/\$([a-z])/g,
+		(match, letter) => `${letter.toUpperCase()}`
+	);
 }

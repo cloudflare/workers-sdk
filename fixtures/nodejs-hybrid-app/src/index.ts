@@ -14,6 +14,20 @@ assert(buffer2.toJSON().data[0] === 1, "global.Buffer is broken");
 const buffer3 = globalThis.Buffer.of(1);
 assert(buffer3.toJSON().data[0] === 1, "globalThis.Buffer is broken");
 
+assert(performance !== undefined, "performance is missing");
+assert(global.performance !== undefined, "global.performance is missing");
+assert(
+	globalThis.performance !== undefined,
+	"globalThis.performance is missing"
+);
+
+assert(Performance !== undefined, "Performance is missing");
+assert(global.Performance !== undefined, "global.Performance is missing");
+assert(
+	globalThis.Performance !== undefined,
+	"globalThis.Performance is missing"
+);
+
 export default {
 	async fetch(
 		request: Request,
