@@ -283,7 +283,7 @@ export async function printDeployment(
 	accountId: string,
 	workerName: string,
 	deployment: ApiDeployment | undefined,
-	adjetive: "current" | "last",
+	adjective: "current" | "last",
 	versionCache: VersionCache
 ) {
 	const [versions, traffic] = await fetchDeploymentVersions(
