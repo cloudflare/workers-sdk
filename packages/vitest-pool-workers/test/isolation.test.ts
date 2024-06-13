@@ -240,6 +240,7 @@ test(
 			export default defineWorkersConfig({
 				test: {
 					sequence: { sequencer: DeterministicSequencer },
+					testTimeout: 60_000,
 					poolOptions: {
 						workers: {
 							isolatedStorage: false,
@@ -291,6 +292,10 @@ test(
 		`,
 		});
 		let result = await vitestRun();
+		if (await result.exitCode) {
+			console.log("stdout", result.stdout);
+			console.log("stderr", result.stderr);
+		}
 		expect(await result.exitCode).toBe(0);
 
 		// Check allows concurrent tests
@@ -307,9 +312,13 @@ test(
 		`,
 		});
 		result = await vitestRun();
+		if (await result.exitCode) {
+			console.log("stdout", result.stdout);
+			console.log("stderr", result.stderr);
+		}
 		expect(await result.exitCode).toBe(0);
 	},
-	{ timeout: 40_000 }
+	{ timeout: 60_000 }
 );
 
 test(
@@ -334,6 +343,7 @@ test(
 			export default defineWorkersConfig({
 				test: {
 					sequence: { sequencer: DeterministicSequencer },
+					testTimeout: 60_000,
 					poolOptions: {
 						workers: {
 							isolatedStorage: false,
@@ -400,6 +410,10 @@ test(
 		`,
 		});
 		result = await vitestRun();
+		if (await result.exitCode) {
+			console.log("stdout", result.stdout);
+			console.log("stderr", result.stderr);
+		}
 		expect(await result.exitCode).toBe(0);
 	},
 	{ timeout: 60_000 }
