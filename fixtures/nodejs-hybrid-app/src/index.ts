@@ -1,7 +1,11 @@
 // node:assert/strict is currently an unenv alias to node:assert
 // this is not very common, but happens and we need to support it
 import assert from "node:assert/strict";
+import { Stream } from "node:stream";
 import { Client } from "pg";
+import { s } from "./dep.cjs";
+
+assert(s instanceof Stream, "expected s to be an instance of Stream");
 
 assert(true, "the world is broken");
 
