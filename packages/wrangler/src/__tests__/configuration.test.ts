@@ -243,112 +243,6 @@ describe("normalizeAndValidateConfig()", () => {
 		`);
 		});
 
-		describe("[migrations]", () => {
-			it("should override `migrations` config defaults with provided values", () => {
-				const expectedConfig: RawConfig = {
-					migrations: [
-						{
-							tag: "TAG",
-							new_classes: ["CLASS_1", "CLASS_2"],
-							renamed_classes: [
-								{
-									from: "FROM_CLASS",
-									to: "TO_CLASS",
-								},
-							],
-							deleted_classes: ["CLASS_3", "CLASS_4"],
-						},
-					],
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.hasWarnings()).toBe(false);
-			});
-
-			it("should error on invalid `migrations` values", () => {
-				const expectedConfig = {
-					migrations: [
-						{
-							tag: 111,
-							new_classes: [222, 333],
-							renamed_classes: [
-								{
-									from: 444,
-									to: 555,
-								},
-							],
-							deleted_classes: [666, 777],
-						},
-					],
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
-			            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
-			            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
-			            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
-			            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
-		        `);
-			});
-
-			it("should warn/error on unexpected fields on `migrations`", async () => {
-				const expectedConfig = {
-					migrations: [
-						{
-							tag: "TAG",
-							new_classes: ["CLASS_1", "CLASS_2"],
-							renamed_classes: [
-								{
-									from: "FROM_CLASS",
-									to: "TO_CLASS",
-								},
-								{
-									a: "something",
-									b: "someone",
-								},
-							],
-							deleted_classes: ["CLASS_3", "CLASS_4"],
-							unrecognized_field: "FOO",
-						},
-					],
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Unexpected fields found in migrations field: \\"unrecognized_field\\""
-		        `);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
-		        `);
-			});
-		});
-
 		describe("[site]", () => {
 			it("should override `site` config defaults with provided values", () => {
 				const expectedConfig: RawConfig = {
@@ -1026,18 +920,18 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"unsafe\\" fields are experimental and may change or break at any time.
-			  - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+				"Processing wrangler configuration:
+				  - \\"unsafe\\" fields are experimental and may change or break at any time.
+				  - In wrangler.toml, you have configured [durable_objects] exported by this Worker (CLASS1), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-			      \`\`\`
-			      [[migrations]]
-			      tag = \\"v1\\" # Should be unique for each entry
-			      new_classes = [\\"CLASS1\\"]
-			      \`\`\`
+				      \`\`\`
+				      [[migrations]]
+				      tag = \\"v1\\" # Should be unique for each entry
+				      new_classes = [\\"CLASS1\\"]
+				      \`\`\`
 
-			    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
-		`);
+				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
+			`);
 		});
 
 		it("should error on invalid environment values", () => {
@@ -1623,6 +1517,112 @@ describe("normalizeAndValidateConfig()", () => {
 			              - binding should have a string \\"class_name\\" field.
 			              - the field \\"environment\\", when present, should be a string.
 			              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
+		        `);
+			});
+		});
+
+		describe("[migrations]", () => {
+			it("should override `migrations` config defaults with provided values", () => {
+				const expectedConfig: RawConfig = {
+					migrations: [
+						{
+							tag: "TAG",
+							new_classes: ["CLASS_1", "CLASS_2"],
+							renamed_classes: [
+								{
+									from: "FROM_CLASS",
+									to: "TO_CLASS",
+								},
+							],
+							deleted_classes: ["CLASS_3", "CLASS_4"],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error on invalid `migrations` values", () => {
+				const expectedConfig = {
+					migrations: [
+						{
+							tag: 111,
+							new_classes: [222, 333],
+							renamed_classes: [
+								{
+									from: 444,
+									to: 555,
+								},
+							],
+							deleted_classes: [666, 777],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+			            - Expected \\"migrations[0].tag\\" to be of type string but got 111.
+			            - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
+			            - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
+			            - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
+			            - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+		        `);
+			});
+
+			it("should warn/error on unexpected fields on `migrations`", async () => {
+				const expectedConfig = {
+					migrations: [
+						{
+							tag: "TAG",
+							new_classes: ["CLASS_1", "CLASS_2"],
+							renamed_classes: [
+								{
+									from: "FROM_CLASS",
+									to: "TO_CLASS",
+								},
+								{
+									a: "something",
+									b: "someone",
+								},
+							],
+							deleted_classes: ["CLASS_3", "CLASS_4"],
+							unrecognized_field: "FOO",
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+			            - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
 		        `);
 			});
 		});
@@ -3703,31 +3703,31 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"unsafe\\" fields are experimental and may change or break at any time.
-			  - \\"env.ENV1\\" environment configuration
-			    - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"vars\\" is not inherited by environments.
-			      Please add \\"vars\\" to \\"env.ENV1\\".
-			    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"define\\" is not inherited by environments.
-			      Please add \\"define\\" to \\"env.ENV1\\".
-			    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
-			      Please add \\"durable_objects\\" to \\"env.ENV1\\".
-			    - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
-			      Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
-			    - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
-			      Please add \\"r2_buckets\\" to \\"env.ENV1\\".
-			    - \\"analytics_engine_datasets\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"analytics_engine_datasets\\" is not inherited by environments.
-			      Please add \\"analytics_engine_datasets\\" to \\"env.ENV1\\".
-			    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
-			      Please add \\"unsafe\\" to \\"env.ENV1\\"."
-		`);
+				"Processing wrangler configuration:
+				  - \\"unsafe\\" fields are experimental and may change or break at any time.
+				  - \\"env.ENV1\\" environment configuration
+				    - \\"vars\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"vars\\" is not inherited by environments.
+				      Please add \\"vars\\" to \\"env.ENV1\\".
+				    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"define\\" is not inherited by environments.
+				      Please add \\"define\\" to \\"env.ENV1\\".
+				    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
+				      Please add \\"durable_objects\\" to \\"env.ENV1\\".
+				    - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
+				      Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
+				    - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
+				      Please add \\"r2_buckets\\" to \\"env.ENV1\\".
+				    - \\"analytics_engine_datasets\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"analytics_engine_datasets\\" is not inherited by environments.
+				      Please add \\"analytics_engine_datasets\\" to \\"env.ENV1\\".
+				    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
+				      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
+				      Please add \\"unsafe\\" to \\"env.ENV1\\"."
+			`);
 		});
 
 		it("should error on invalid environment values", () => {
@@ -4220,6 +4220,118 @@ describe("normalizeAndValidateConfig()", () => {
 			                - binding should have a string \\"class_name\\" field.
 			                - the field \\"script_name\\", when present, should be a string."
 		        `);
+			});
+		});
+
+		describe("[migrations]", () => {
+			it("should override `migrations` config defaults with provided values", () => {
+				const expectedConfig: RawConfig = {
+					migrations: [
+						{
+							tag: "TAG",
+							new_classes: ["CLASS_1", "CLASS_2"],
+							renamed_classes: [
+								{
+									from: "FROM_CLASS",
+									to: "TO_CLASS",
+								},
+							],
+							deleted_classes: ["CLASS_3", "CLASS_4"],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ env: { ENV1: expectedConfig } },
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error on invalid `migrations` values", () => {
+				const expectedConfig = {
+					migrations: [
+						{
+							tag: 111,
+							new_classes: [222, 333],
+							renamed_classes: [
+								{
+									from: 444,
+									to: 555,
+								},
+							],
+							deleted_classes: [666, 777],
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ env: { ENV1: expectedConfig as unknown as RawConfig } },
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - \\"env.ENV1\\" environment configuration
+					    - Expected \\"migrations[0].tag\\" to be of type string but got 111.
+					    - Expected \\"migrations[0].new_classes.[0]\\" to be of type string but got 222.
+					    - Expected \\"migrations[0].new_classes.[1]\\" to be of type string but got 333.
+					    - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":444,\\"to\\":555}].
+					    - Expected \\"migrations[0].deleted_classes.[0]\\" to be of type string but got 666.
+					    - Expected \\"migrations[0].deleted_classes.[1]\\" to be of type string but got 777."
+				`);
+			});
+
+			it("should warn/error on unexpected fields on `migrations`", async () => {
+				const expectedConfig = {
+					migrations: [
+						{
+							tag: "TAG",
+							new_classes: ["CLASS_1", "CLASS_2"],
+							renamed_classes: [
+								{
+									from: "FROM_CLASS",
+									to: "TO_CLASS",
+								},
+								{
+									a: "something",
+									b: "someone",
+								},
+							],
+							deleted_classes: ["CLASS_3", "CLASS_4"],
+							unrecognized_field: "FOO",
+						},
+					],
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ env: { ENV1: expectedConfig as unknown as RawConfig } },
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - \\"env.ENV1\\" environment configuration
+					    - Unexpected fields found in migrations field: \\"unrecognized_field\\""
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - \\"env.ENV1\\" environment configuration
+					    - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
+				`);
 			});
 		});
 
