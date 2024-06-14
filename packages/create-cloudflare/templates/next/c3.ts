@@ -89,7 +89,7 @@ const configure = async (ctx: C3Context) => {
 	]);
 
 	if (!path) {
-		crash("Could not find the `/api` or `/app` directory");
+		crash("Could not find the `/api` or `/app` directory...");
 	}
 
 	const usesTs = usesTypescript(ctx);
