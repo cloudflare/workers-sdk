@@ -31,25 +31,25 @@ globalThis.structuredClone ??= function (value, options) {
 	return message.message;
 };
 
-type ConfigFn<T extends UserConfig> = ((env: ConfigEnv) => T | Promise<T>);
+type ConfigFn<T extends UserConfig> = (env: ConfigEnv) => T | Promise<T>;
 
 export type AnyConfigExport<T extends UserConfig> =
 	| T
 	| Promise<T>
-	| ConfigFn<T>
+	| ConfigFn<T>;
 
 function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
 	f: (t: T) => U,
 	config: T
-): U
+): U;
 function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
 	f: (t: T) => U,
 	config: Promise<T>
-): Promise<U>
+): Promise<U>;
 function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
 	f: (t: T) => U,
 	config: ConfigFn<T>
-): ConfigFn<U>
+): ConfigFn<U>;
 function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
 	f: (t: T) => U,
 	config: AnyConfigExport<T>
@@ -178,17 +178,17 @@ function ensureWorkersConfig<T extends UserConfig>(config: T): T {
 
 export function defineWorkersConfig(
 	config: WorkersUserConfigExport
-): WorkersUserConfigExport
+): WorkersUserConfigExport;
 export function defineWorkersConfig(
 	config: Promise<WorkersUserConfigExport>
-): Promise<WorkersUserConfigExport>
+): Promise<WorkersUserConfigExport>;
 export function defineWorkersConfig(
 	config: ConfigFn<WorkersUserConfigExport>
-): ConfigFn<WorkersUserConfigExport>
+): ConfigFn<WorkersUserConfigExport>;
 export function defineWorkersConfig(
 	config: AnyConfigExport<WorkersUserConfigExport>
 ): AnyConfigExport<WorkersUserConfigExport> {
-	if (typeof config === 'function') {
+	if (typeof config === "function") {
 		return mapAnyConfigExport(ensureWorkersConfig, config);
 	} else if (config instanceof Promise) {
 		return mapAnyConfigExport(ensureWorkersConfig, config);
@@ -198,17 +198,17 @@ export function defineWorkersConfig(
 
 export function defineWorkersProject(
 	config: WorkersProjectConfigExport
-): WorkersProjectConfigExport
+): WorkersProjectConfigExport;
 export function defineWorkersProject(
 	config: Promise<WorkersProjectConfigExport>
-): Promise<WorkersProjectConfigExport>
+): Promise<WorkersProjectConfigExport>;
 export function defineWorkersProject(
 	config: ConfigFn<WorkersProjectConfigExport>
-): ConfigFn<WorkersProjectConfigExport>
+): ConfigFn<WorkersProjectConfigExport>;
 export function defineWorkersProject(
 	config: AnyConfigExport<WorkersProjectConfigExport>
 ): AnyConfigExport<WorkersProjectConfigExport> {
-	if (typeof config === 'function') {
+	if (typeof config === "function") {
 		return mapAnyConfigExport(ensureWorkersConfig, config);
 	} else if (config instanceof Promise) {
 		return mapAnyConfigExport(ensureWorkersConfig, config);
