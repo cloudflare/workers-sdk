@@ -9,7 +9,8 @@ export const processArgument = async <T>(
 ) => {
 	if (process.env.VITEST && "defaultValue" in promptConfig) {
 		console.log("====> RETURNING DEFAULT VALUE");
-		return promptConfig.defaultValue;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return promptConfig.defaultValue as any;
 	}
 
 	let value = args[name];
