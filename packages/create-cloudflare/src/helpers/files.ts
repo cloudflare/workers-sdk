@@ -99,7 +99,7 @@ type EslintUsageInfo =
 export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	for (const ext of eslintRcExts) {
 		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
-		if (existsSync(`${ctx.project.path}/${eslintRcFilename}`)) {
+		if (existsSync(join(ctx.project.path, eslintRcFilename))) {
 			return {
 				used: true,
 				configType: eslintRcFilename,
@@ -107,7 +107,7 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 		}
 	}
 
-	if (existsSync(`${ctx.project.path}/eslint.config.js`)) {
+	if (existsSync(join(ctx.project.path, "eslint.config.js"))) {
 		return {
 			used: true,
 			configType: "eslint.config.js",
@@ -115,7 +115,7 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	}
 
 	try {
-		const pkgJson = readJSON(`${ctx.project.path}/package.json`);
+		const pkgJson = readJSON(join(ctx.project.path, "package.json"));
 		if (pkgJson.eslintConfig) {
 			return {
 				used: true,
