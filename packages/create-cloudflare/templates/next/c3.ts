@@ -139,12 +139,16 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 		return false;
 	}
 
+	console.log(`============> POST usesEslint 1`);
+
 	if (eslintUsage.configType !== ".eslintrc.json") {
 		warn(
 			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`,
 		);
 		return false;
 	}
+
+	console.log(`============> POST usesEslint 2 (processArgument!)`);
 
 	return await processArgument(ctx.args, "eslint-plugin" as keyof C3Args, {
 		type: "confirm",

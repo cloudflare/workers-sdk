@@ -7,6 +7,11 @@ export const processArgument = async <T>(
 	name: string,
 	promptConfig: PromptConfig
 ) => {
+	if (process.env.VITEST && "defaultValue" in promptConfig) {
+		console.log("====> RETURNING DEFAULT VALUE");
+		return promptConfig.defaultValue;
+	}
+
 	let value = args[name];
 	const renderSubmitted = getRenderers(promptConfig).submit;
 
