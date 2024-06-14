@@ -111,6 +111,9 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 					configType: eslintRcFilename,
 				};
 			}
+			console.log(
+				`============> usesEslint? tied ${join(ctx.project.path, eslintRcFilename)}`,
+			);
 		}
 
 		console.log(
@@ -133,7 +136,11 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 				configType: "package.json",
 			};
 		}
-	} catch {}
+	} catch (e) {
+		console.log(
+			`============> usesEslint? ERROR ${e instanceof Error ? JSON.stringify({ message: e.message, name: e.name }) : `${e}`}`,
+		);
+	}
 
 	return { used: false };
 };

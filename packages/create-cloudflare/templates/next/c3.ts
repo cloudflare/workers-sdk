@@ -133,6 +133,8 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 	console.log(`============> shouldInstallNextOnPagesEslintPlugin?`);
 	const eslintUsage = usesEslint(ctx);
 
+	console.log(`============> POST usesEslint`);
+
 	if (!eslintUsage.used) {
 		return false;
 	}
