@@ -1,5 +1,17 @@
 # miniflare
 
+## 3.20240610.0
+
+### Patch Changes
+
+- [#6024](https://github.com/cloudflare/workers-sdk/pull/6024) [`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20240605.0 | 1.20240610.1 |
+
 ## 3.20240605.0
 
 ### Patch Changes
