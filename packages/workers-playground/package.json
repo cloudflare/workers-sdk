@@ -56,11 +56,11 @@
 		"@typescript-eslint/eslint-plugin": "^5.61.0",
 		"@typescript-eslint/parser": "^5.61.0",
 		"@vitejs/plugin-react": "^4.0.1",
-		"eslint": "^8.44.0",
+		"eslint": "^8.49.0",
 		"eslint-plugin-react-hooks": "^4.6.0",
 		"eslint-plugin-react-refresh": "^0.4.1",
 		"tsx": "^3.12.8",
-		"undici": "5.28.4",
+		"undici": "^5.28.4",
 		"vite-plugin-rewrite-all": "^1.0.1",
 		"wrangler": "workspace:^"
 	},

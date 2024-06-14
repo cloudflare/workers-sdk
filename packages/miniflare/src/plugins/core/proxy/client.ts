@@ -151,7 +151,7 @@ class ProxyClientBridge {
 	// of TCP connections to `workerd` in `dispatchFetch()` for all the concurrent
 	// requests.
 	readonly #finalizeBatch: NativeTargetHeldValue[] = [];
-	#finalizeBatchTimeout?: NodeJS.Timeout;
+	#finalizeBatchTimeout?: ReturnType<typeof setTimeout>;
 
 	readonly sync = new SynchronousFetcher();
 
