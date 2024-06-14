@@ -1,5 +1,6 @@
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
+import dedent from "ts-dedent";
 import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
@@ -39,7 +40,9 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 		{ filter: /.*/, namespace: REQUIRED_NODE_BUILT_IN_NAMESPACE },
 		({ path }) => {
 			return {
-				contents: `export * from '${path}'`,
+				contents: dedent`
+        import libDefault from '${path}';
+        module.exports = libDefault;`,
 				loader: "js",
 			};
 		}
