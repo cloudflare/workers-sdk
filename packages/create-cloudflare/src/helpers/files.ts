@@ -97,11 +97,14 @@ type EslintUsageInfo =
 		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
 */
 export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
-	console.log(`============> usesEslint?`);
+	console.log(`============> usesEslint? (${ctx.project.path})`);
 
 	try {
 		for (const ext of eslintRcExts) {
 			const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
+			console.log(
+				`============> usesEslint? trying ${join(ctx.project.path, eslintRcFilename)}`,
+			);
 			if (existsSync(join(ctx.project.path, eslintRcFilename))) {
 				return {
 					used: true,
@@ -110,6 +113,9 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 			}
 		}
 
+		console.log(
+			`============> usesEslint? trying ${join(ctx.project.path, "eslint.config.js")}`,
+		);
 		if (existsSync(join(ctx.project.path, "eslint.config.js"))) {
 			return {
 				used: true,
@@ -117,6 +123,9 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 			};
 		}
 
+		console.log(
+			`============> usesEslint? trying ${join(ctx.project.path, "package.json")}`,
+		);
 		const pkgJson = readJSON(join(ctx.project.path, "package.json"));
 		if (pkgJson.eslintConfig) {
 			return {
