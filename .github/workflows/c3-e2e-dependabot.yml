@@ -39,7 +39,7 @@ jobs:
     # Note: please keep this job in sync with the e2e one
     #       in .github/workflows/c3-e2e.yml
     needs: [get-dependabot-bumped-framework]
-    name: ${{ format('Run tests for {0}@{1} on $2', matrix.pm.name, matrix.pm.version, matrix.os) }}
+    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
     strategy:
       fail-fast: false
       matrix:
@@ -79,15 +79,3 @@ jobs:
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           saveDiffs: false
-          quarantine: false
-
-      - name: E2E Tests (quarantined)
-        uses: ./.github/actions/run-c3-e2e
-        with:
-          packageManager: ${{ matrix.pm.name }}
-          packageManagerVersion: ${{ matrix.pm.version }}
-          framework: ${{ needs.get-dependabot-bumped-framework.outputs.bumped-framework-cli }}
-          accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
-          saveDiffs: false
-          quarantine: true
