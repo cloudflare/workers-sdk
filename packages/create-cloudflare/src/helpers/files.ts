@@ -97,24 +97,26 @@ type EslintUsageInfo =
 		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
 */
 export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
-	for (const ext of eslintRcExts) {
-		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
-		if (existsSync(join(ctx.project.path, eslintRcFilename))) {
-			return {
-				used: true,
-				configType: eslintRcFilename,
-			};
-		}
-	}
-
-	if (existsSync(join(ctx.project.path, "eslint.config.js"))) {
-		return {
-			used: true,
-			configType: "eslint.config.js",
-		};
-	}
+	console.log(`============> usesEslint?`);
 
 	try {
+		for (const ext of eslintRcExts) {
+			const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
+			if (existsSync(join(ctx.project.path, eslintRcFilename))) {
+				return {
+					used: true,
+					configType: eslintRcFilename,
+				};
+			}
+		}
+
+		if (existsSync(join(ctx.project.path, "eslint.config.js"))) {
+			return {
+				used: true,
+				configType: "eslint.config.js",
+			};
+		}
+
 		const pkgJson = readJSON(join(ctx.project.path, "package.json"));
 		if (pkgJson.eslintConfig) {
 			return {

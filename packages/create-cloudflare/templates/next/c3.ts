@@ -104,11 +104,19 @@ const configure = async (ctx: C3Context) => {
 
 	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
 
+	console.log(`============> installEslintPlugin`);
+
 	if (installEslintPlugin) {
 		await writeEslintrc(ctx);
 	}
 
+	console.log(`============> POST installEslintPlugin`);
+
+	console.log(`============> updateNextConfig`);
+
 	updateNextConfig();
+
+	console.log(`============> POST updateNextConfig`);
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
@@ -122,6 +130,7 @@ const configure = async (ctx: C3Context) => {
 export const shouldInstallNextOnPagesEslintPlugin = async (
 	ctx: C3Context,
 ): Promise<boolean> => {
+	console.log(`============> shouldInstallNextOnPagesEslintPlugin?`);
 	const eslintUsage = usesEslint(ctx);
 
 	if (!eslintUsage.used) {
