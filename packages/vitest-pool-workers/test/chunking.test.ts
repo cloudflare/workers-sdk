@@ -10,7 +10,7 @@ test("chunks large WebSocket messages bi-directionally", async ({
 	const bigText = "xyz".repeat(400_000);
 	await seed({
 		"big.txt": bigText,
-		"vitest.config.ts": dedent`
+		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 					test: {

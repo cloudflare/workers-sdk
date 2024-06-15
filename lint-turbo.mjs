@@ -31,7 +31,10 @@ for (const p of paths) {
 	}
 
 	// Ensure all packages with a vitest config file have a "test:ci" script
-	if (existsSync(path.join(p, "vitest.config.ts"))) {
+	if (
+		existsSync(path.join(p, "vitest.config.ts")) ||
+		existsSync(path.join(p, "vitest.config.mts"))
+	) {
 		assert(
 			pkg.scripts["test:ci"],
 			`Package "${p}" is missing a "test:ci" script in package.json`
