@@ -28,9 +28,13 @@ export default async function ({ provide }: GlobalSetupContext) {
 		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers"))
 	);
 
-	// Pack `miniflare`, `wrangler` and `vitest-pool-workers` into tarballs
+	// Pack `miniflare`, `wrangler`, `kv-asset-handler` and `vitest-pool-workers` into tarballs
 	const packDestinationPath = path.join(tmpPath, "packed");
 	const packagesRoot = path.resolve(__dirname, "../..");
+	const kvAssetHandlerTarballPath = packPackage(
+		packDestinationPath,
+		path.join(packagesRoot, "kv-asset-handler")
+	);
 	const miniflareTarballPath = packPackage(
 		packDestinationPath,
 		path.join(packagesRoot, "miniflare")
@@ -70,6 +74,7 @@ export default async function ({ provide }: GlobalSetupContext) {
 		},
 		pnpm: {
 			overrides: {
+				"@cloudflare/kv-asset-handler": kvAssetHandlerTarballPath,
 				miniflare: miniflareTarballPath,
 				wrangler: wranglerTarballPath,
 			},
