@@ -61,8 +61,8 @@
 		"@types/semver": "^7.5.1",
 		"@types/which-pm-runs": "^1.0.0",
 		"@types/yargs": "^17.0.22",
-		"@typescript-eslint/eslint-plugin": "^5.55.0",
-		"@typescript-eslint/parser": "^5.55.0",
+		"@typescript-eslint/eslint-plugin": "^6.9.0",
+		"@typescript-eslint/parser": "^6.9.0",
 		"chalk": "^5.2.0",
 		"command-exists": "^1.2.9",
 		"cross-spawn": "^7.0.3",
@@ -84,7 +84,7 @@
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
-		"yargs": "^17.7.1"
+		"yargs": "^17.7.2"
 	},
 	"engines": {
 		"node": ">=18.14.1"
