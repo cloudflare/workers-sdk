@@ -58,7 +58,7 @@
 		"@ava/typescript": "^4.0.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240605.0",
-		"@microsoft/api-extractor": "^7.36.3",
+		"@microsoft/api-extractor": "^7.47.0",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
