@@ -10,9 +10,6 @@ import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { DevWorker, StartDevWorkerOptions } from "./types";
 
-/**
- * @internal
- */
 export class DevEnv extends EventEmitter {
 	config: ConfigController;
 	bundler: BundlerController;
