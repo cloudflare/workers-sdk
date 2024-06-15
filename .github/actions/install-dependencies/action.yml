@@ -25,6 +25,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"
+        registry-url: "https://registry.npmjs.org"
 
     - name: "Configure turbo repo cache environment variables"
       if: inputs.turbo-api
