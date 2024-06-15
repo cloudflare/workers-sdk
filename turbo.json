@@ -4,7 +4,7 @@
 		"signature": true
 	},
 	"globalEnv": ["CI_OS", "NODE_VERSION", "VITEST"],
-	"pipeline": {
+	"tasks": {
 		"dev": {
 			"persistent": true,
 			"cache": false
