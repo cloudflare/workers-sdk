@@ -195,7 +195,7 @@ function handleNodeJSGlobals(
  */
 export function encodeToLowerCase(str: string): string {
 	return str
-		.replaceAll(/\$/g, ($) => "$$")
+		.replaceAll(/\$/g, () => "$$")
 		.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
 }
 
@@ -203,11 +203,19 @@ export function encodeToLowerCase(str: string): string {
  * Decodes a string lowercased using `encodeToLowerCase` to the original strings
  */
 export function decodeFromLowerCase(str: string): string {
-	return str
-		.replaceAll(
-			// rewrite any a-z letter following a $, but not following $$
-			/(?:(?<!\$)|(?<=\$\$))\$([a-z])/g,
-			(match, letter) => `${letter.toUpperCase()}`
-		)
-		.replaceAll(/\$\$/g, ($$) => "$");
+	let out = "";
+	let i = 0;
+	while (i < str.length - 1) {
+		if (str[i] === "$") {
+			i++;
+			out += str[i].toUpperCase();
+		} else {
+			out += str[i];
+		}
+		i++;
+	}
+	if (i < str.length) {
+		out += str[i];
+	}
+	return out;
 }
