@@ -30,6 +30,8 @@ describe("hybrid nodejs compat", () => {
 			it("should decode $ from $$", () => {
 				expect(decodeFromLowerCase("$$foo$bar")).toBe("$fooBar");
 				expect(decodeFromLowerCase("$$$query$$")).toBe("$Query$");
+				expect(decodeFromLowerCase("$$$$query")).toBe("$$query");
+				expect(decodeFromLowerCase("$$$$$query")).toBe("$$Query");
 			});
 		});
 
