@@ -4,6 +4,7 @@ import esbuild from "esbuild";
 import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);
+const watch = argv[0] === "watch";
 
 /**
  * Recursively walks a directory, returning a list of all files contained within
@@ -94,7 +95,7 @@ const embedWorkersPlugin = {
 		build.onLoad({ filter: /.*/, namespace }, async (args) => {
 			let builder = workersBuilders.get(args.path);
 			if (builder === undefined) {
-				builder = await esbuild.build({
+				builder = await esbuild.context({
 					platform: "node", // Marks `node:*` imports as external
 					format: "esm",
 					target: "esnext",
@@ -113,9 +114,8 @@ const embedWorkersPlugin = {
 							? [rewriteNodeToInternalPlugin]
 							: [],
 				});
-			} else {
-				builder = await builder.rebuild();
 			}
+			const metafile = (await builder.rebuild()).metafile;
 			workersBuilders.set(args.path, builder);
 			await fs.mkdir("worker-metafiles", { recursive: true });
 			await fs.writeFile(
@@ -123,12 +123,12 @@ const embedWorkersPlugin = {
 					"worker-metafiles",
 					path.basename(args.path) + ".metafile.json"
 				),
-				JSON.stringify(builder.metafile)
+				JSON.stringify(metafile)
 			);
 			let outPath = args.path.substring(workersRoot.length + 1);
 			outPath = outPath.substring(0, outPath.lastIndexOf(".")) + ".js";
 			outPath = JSON.stringify(outPath);
-			const watchFiles = Object.keys(builder.metafile.inputs);
+			const watchFiles = Object.keys(metafile.inputs);
 			const contents = `
       import fs from "fs";
       import path from "path";
@@ -141,6 +141,9 @@ const embedWorkersPlugin = {
          return contents;
       }
       `;
+			if (!watch) {
+				builder.dispose();
+			}
 			return { contents, loader: "js", watchFiles };
 		});
 	},
@@ -162,7 +165,7 @@ async function buildPackage() {
 	}
 	const outPath = path.join(pkgRoot, "dist");
 
-	await esbuild.build({
+	const buildOptions = {
 		platform: "node",
 		format: "cjs",
 		target: "esnext",
@@ -184,11 +187,20 @@ async function buildPackage() {
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
-		logLevel: "warning",
+		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
 		entryPoints: [indexPath, ...testPaths],
-	});
+	};
+	if (watch) {
+		const ctx = await esbuild.context(buildOptions);
+		await ctx.watch();
+	} else {
+		await esbuild.build(buildOptions);
+	}
 }
 
-await buildPackage();
+buildPackage().catch((e) => {
+	console.error("Failed to build miniflare", e);
+	process.exit(1);
+});
