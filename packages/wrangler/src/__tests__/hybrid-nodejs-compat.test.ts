@@ -5,7 +5,7 @@ import {
 
 describe("hybrid nodejs compat", () => {
 	describe("toLowerCase encoding and decoding", () => {
-		describe.only("encodeToLowerCase", () => {
+		describe("encodeToLowerCase", () => {
 			it("should encode uppercase characters to lowercase prefixed with $", () => {
 				expect(encodeToLowerCase("Performance")).toBe("$performance");
 				expect(encodeToLowerCase("PerformanceMark")).toBe("$performance$mark");
@@ -32,6 +32,7 @@ describe("hybrid nodejs compat", () => {
 				expect(decodeFromLowerCase("$$$query$$")).toBe("$Query$");
 			});
 		});
+
 		it("by symmetrical", () => {
 			expect(decodeFromLowerCase(encodeToLowerCase("Performance"))).toBe(
 				"Performance"

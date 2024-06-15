@@ -205,7 +205,8 @@ export function encodeToLowerCase(str: string): string {
 export function decodeFromLowerCase(str: string): string {
 	return str
 		.replaceAll(
-			/(?!<$)\$([a-z])/g,
+			// rewrite any a-z letter following a $, but not following $$
+			/(?:(?<!\$)|(?<=\$\$))\$([a-z])/g,
 			(match, letter) => `${letter.toUpperCase()}`
 		)
 		.replaceAll(/\$\$/g, ($$) => "$");
