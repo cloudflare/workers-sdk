@@ -37,9 +37,7 @@ export function getHttpsOptions(
 				"Missing Custom Certificate File at " + customHttpsCertPath
 			);
 		}
-		if (hasCertificateExpired(customHttpsKeyPath, customHttpsCertPath)) {
-			throw new UserError("Custom Certificate is invalid");
-		}
+
 		logger.log("Using custom certificate at ", customHttpsKeyPath);
 
 		return {
