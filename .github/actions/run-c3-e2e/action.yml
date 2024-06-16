@@ -61,7 +61,7 @@ runs:
         CI_OS: ${{ runner.os }}
 
     - name: Upload Logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: e2e-logs-${{matrix.os}}
@@ -69,7 +69,7 @@ runs:
 
     - name: Upload Framework Diffs
       if: ${{ steps.run-e2e.outcome == 'success' && inputs.saveDiffs == 'true' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: e2e-framework-diffs
         path: packages/create-cloudflare/.e2e-diffs
