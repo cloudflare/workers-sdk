@@ -279,7 +279,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							objectSize = blob.size;
 						}
 
-						if (objectSize > MAX_UPLOAD_SIZE) {
+						if (objectSize > MAX_UPLOAD_SIZE && !local) {
 							throw new FatalError(
 								`Error: Wrangler only supports uploading files up to ${prettyBytes(
 									MAX_UPLOAD_SIZE,
