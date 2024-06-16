@@ -7,9 +7,10 @@ You can also run these tests locally, but you'll need access to the `8d783f274e1
 You can then run the e2e test suite with the following commands (run them in root of the repo):
 
 ```sh
+rm -rf .tmp
 pnpm --filter wrangler deploy .tmp/wrangler
 rm .tmp/wrangler/templates/tsconfig.json
-CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN WRANGLER="node --no-warnings $PWD/.tmp/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/.tmp/wrangler/wrangler-dist/cli.js" pnpm --filter wrangler run test:e2e --retry 0
+CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN WRANGLER="node --no-warnings $PWD/.tmp/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/.tmp/wrangler/wrangler-dist/cli.js" TEST_PM=npm pnpm --filter wrangler run test:e2e --retry 0
 ```
 
 > Make sure to replace `$CLOUDFLARE_TESTING_API_TOKEN` with the actual API token you generated, and make sure you've built Wrangler (with `pnpm build`).
