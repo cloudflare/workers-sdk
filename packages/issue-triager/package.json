@@ -1,0 +1,31 @@
+{
+	"name": "issue-triager",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"cf-typegen": "wrangler types",
+		"dev": "wrangler dev",
+		"start": "wrangler dev --remote",
+		"do-test": "node -r esbuild-register src/cli/do-test.ts",
+		"triage": "node -r esbuild-register src/cli/triage.ts",
+		"update-embeddings": "node -r esbuild-register src/cli/update-embeddings.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/workers-types": "^4.20240614.0",
+		"typescript": "^5.0.4",
+		"wrangler": "^3.0.0"
+	},
+	"dependencies": {
+		"@cloudflare/cli": "workspace:*",
+		"@octokit/graphql": "^8.1.1",
+		"@octokit/types": "^13.5.0",
+		"@types/inquirer": "^9.0.7",
+		"chalk": "^5.3.0",
+		"dotenv": "^16.3.1",
+		"hono": "^3.12.11",
+		"inquirer": "^9.2.23",
+		"open": "^8.4.0",
+		"ts-dedent": "^2.2.0"
+	}
+}
