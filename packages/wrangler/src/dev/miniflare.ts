@@ -411,7 +411,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	};
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
-		console.log(service);
 		if (service.service === config.name) {
 			// If this is a service binding to the current worker, don't bother using
 			// the dev registry to look up the address, just bind to it directly.

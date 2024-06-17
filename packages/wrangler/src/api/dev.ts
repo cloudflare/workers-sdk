@@ -1,5 +1,6 @@
 import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
+import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
@@ -248,7 +249,13 @@ export async function unstable_dev(
 		};
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-		const devServer = await startDev(devOptions);
+		const devServer = await run(
+			{
+				DEV_ENV: devEnv,
+				FILE_BASED_REGISTRY: fileBasedRegistry,
+			},
+			() => startDev(devOptions)
+		);
 		const { port, address, proxyData } = await readyPromise;
 		return {
 			port,

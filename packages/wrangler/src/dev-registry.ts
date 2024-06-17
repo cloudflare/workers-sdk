@@ -287,10 +287,13 @@ export async function unregisterWorker(name: string) {
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
+	const a = FILE_BASED_REGISTRY();
+	console.log(9);
 	if (FILE_BASED_REGISTRY()) {
-		globalWorkers ??= await loadWorkerDefinitions();
+		globalWorkers = await loadWorkerDefinitions();
 		return globalWorkers;
 	}
+
 	try {
 		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
 		return (await response.json()) as WorkerRegistry;
