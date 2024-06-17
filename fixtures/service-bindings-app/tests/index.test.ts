@@ -1,10 +1,9 @@
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev, UnstableDevWorker } from "wrangler";
 
-// TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
-// and improves reliability of this test.
-describe.skip("Service Bindings", () => {
+describe("Service Bindings", () => {
 	let aWorker: UnstableDevWorker;
 
 	let bWorker: UnstableDevWorker;
@@ -12,14 +11,20 @@ describe.skip("Service Bindings", () => {
 	beforeAll(async () => {
 		bWorker = await unstable_dev(path.join(__dirname, "../b/index.ts"), {
 			config: path.join(__dirname, "../b/wrangler.toml"),
+			experimental: {
+				fileBasedRegistry: true,
+				disableExperimentalWarning: true,
+			},
 		});
+		await setTimeout(1000);
 		aWorker = await unstable_dev(path.join(__dirname, "../a/index.ts"), {
 			config: path.join(__dirname, "../a/wrangler.toml"),
+			experimental: {
+				fileBasedRegistry: true,
+				disableExperimentalWarning: true,
+			},
 		});
-		// Service registry is polled every 300ms,
-		// so let's give worker A some time to find B
-
-		await new Promise((resolve) => setTimeout(resolve, 700));
+		await setTimeout(1000);
 	});
 
 	it("connects up Durable Objects and keeps state across wrangler instances", async () => {

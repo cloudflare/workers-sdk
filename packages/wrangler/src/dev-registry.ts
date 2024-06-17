@@ -258,10 +258,14 @@ export async function registerWorker(
  */
 export async function unregisterWorker(name: string) {
 	if (FILE_BASED_REGISTRY()) {
-		await unlink(path.join(DEV_REGISTRY_PATH, name));
-		const existingHeartbeat = heartbeats.get(name);
-		if (existingHeartbeat) {
-			clearInterval(existingHeartbeat);
+		try {
+			await unlink(path.join(DEV_REGISTRY_PATH, name));
+			const existingHeartbeat = heartbeats.get(name);
+			if (existingHeartbeat) {
+				clearInterval(existingHeartbeat);
+			}
+		} catch (e) {
+			logger.debug("failed to unregister worker", e);
 		}
 		return;
 	}
@@ -337,6 +341,5 @@ export async function getBoundRegisteredWorkers({
 				(serviceNames.includes(key) || durableObjectServices.includes(key))
 		)
 	);
-	const a = FILE_BASED_REGISTRY();
 	return filteredWorkers;
 }
