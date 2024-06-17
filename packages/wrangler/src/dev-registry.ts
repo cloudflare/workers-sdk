@@ -1,10 +1,15 @@
 import events from "node:events";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import net from "node:net";
+import path from "node:path";
 import bodyParser from "body-parser";
+import { watch } from "chokidar";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
+import { FILE_BASED_REGISTRY } from "./experimental-flags";
+import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Config } from "./config";
 import type { HttpTerminator } from "http-terminator";
@@ -18,8 +23,13 @@ if (Number.isNaN(DEV_REGISTRY_PORT)) {
 }
 const DEV_REGISTRY_HOST = `http://127.0.0.1:${DEV_REGISTRY_PORT}`;
 
+const DEV_REGISTRY_PATH = path.join(getGlobalWranglerConfigPath(), "registry");
+
 let globalServer: Server | null;
 let globalTerminator: HttpTerminator;
+
+let globalWatcher: ReturnType<typeof watch> | undefined;
+let globalWorkers: WorkerRegistry | undefined;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
@@ -39,6 +49,26 @@ export type WorkerDefinition = {
 	durableObjectsHost?: string;
 	durableObjectsPort?: number;
 };
+
+async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
+	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
+	globalWorkers ??= {};
+	const newWorkers = new Set<string>();
+	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
+	for (const workerName of workerDefinitions) {
+		globalWorkers[workerName] = JSON.parse(
+			await readFile(path.join(DEV_REGISTRY_PATH, workerName), "utf8")
+		);
+		newWorkers.add(workerName);
+	}
+
+	for (const worker of Object.keys(globalWorkers)) {
+		if (!newWorkers.has(worker)) {
+			delete globalWorkers[worker];
+		}
+	}
+	return globalWorkers;
+}
 
 /**
  * A helper function to check whether our service registry is already running
@@ -102,6 +132,14 @@ export async function startWorkerRegistryServer(port: number) {
  * services, as well as getting the state of the registry.
  */
 export async function startWorkerRegistry() {
+	if (FILE_BASED_REGISTRY()) {
+		globalWatcher ??= watch(DEV_REGISTRY_PATH, {
+			persistent: true,
+		}).on("all", async () => {
+			await loadWorkerDefinitions();
+		});
+		return;
+	}
 	if ((await isPortAvailable()) && !globalServer) {
 		const result = await startWorkerRegistryServer(DEV_REGISTRY_PORT);
 		globalServer = result.server;
@@ -131,6 +169,10 @@ export async function startWorkerRegistry() {
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
+	if (FILE_BASED_REGISTRY()) {
+		await globalWatcher?.close();
+		return;
+	}
 	await globalTerminator?.terminate();
 	globalServer = null;
 }
@@ -142,6 +184,14 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
+	if (FILE_BASED_REGISTRY()) {
+		await mkdir(DEV_REGISTRY_PATH, { recursive: true });
+		await writeFile(
+			path.join(DEV_REGISTRY_PATH, name),
+			JSON.stringify(definition, null, 2)
+		);
+		return;
+	}
 	/**
 	 * Prevent the dev registry be closed.
 	 */
@@ -171,6 +221,10 @@ export async function registerWorker(
  * Unregister a worker from the registry.
  */
 export async function unregisterWorker(name: string) {
+	if (FILE_BASED_REGISTRY()) {
+		await unlink(path.join(DEV_REGISTRY_PATH, name));
+		return;
+	}
 	try {
 		await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "DELETE",
@@ -193,6 +247,10 @@ export async function unregisterWorker(name: string) {
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
+	if (FILE_BASED_REGISTRY()) {
+		globalWorkers ??= await loadWorkerDefinitions();
+		return globalWorkers;
+	}
 	try {
 		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
 		return (await response.json()) as WorkerRegistry;
