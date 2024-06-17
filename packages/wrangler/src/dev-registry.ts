@@ -1,13 +1,23 @@
 import events from "node:events";
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { utimesSync } from "node:fs";
+import {
+	mkdir,
+	readdir,
+	readFile,
+	stat,
+	unlink,
+	writeFile,
+} from "node:fs/promises";
 import { createServer } from "node:http";
 import net from "node:net";
 import path from "node:path";
 import bodyParser from "body-parser";
 import { watch } from "chokidar";
+import { subDays } from "date-fns";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
+import { version as wranglerVersion } from "../package.json";
 import { FILE_BASED_REGISTRY } from "./experimental-flags";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
@@ -30,6 +40,8 @@ let globalTerminator: HttpTerminator;
 
 let globalWatcher: ReturnType<typeof watch> | undefined;
 let globalWorkers: WorkerRegistry | undefined;
+
+const heartbeats = new Map<string, ReturnType<typeof setTimeout>>();
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
@@ -56,10 +68,18 @@ async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 	const newWorkers = new Set<string>();
 	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
 	for (const workerName of workerDefinitions) {
-		globalWorkers[workerName] = JSON.parse(
-			await readFile(path.join(DEV_REGISTRY_PATH, workerName), "utf8")
+		const file = await readFile(
+			path.join(DEV_REGISTRY_PATH, workerName),
+			"utf8"
 		);
-		newWorkers.add(workerName);
+		const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
+		// Cleanup old workers
+		if (stats.mtime < subDays(new Date(), 1)) {
+			await unregisterWorker(workerName);
+		} else {
+			globalWorkers[workerName] = JSON.parse(file);
+			newWorkers.add(workerName);
+		}
 	}
 
 	for (const worker of Object.keys(globalWorkers)) {
@@ -171,6 +191,9 @@ export async function startWorkerRegistry() {
 export async function stopWorkerRegistry() {
 	if (FILE_BASED_REGISTRY()) {
 		await globalWatcher?.close();
+		for (const heartbeat of heartbeats) {
+			clearInterval(heartbeat[1]);
+		}
 		return;
 	}
 	await globalTerminator?.terminate();
@@ -185,10 +208,23 @@ export async function registerWorker(
 	definition: WorkerDefinition
 ) {
 	if (FILE_BASED_REGISTRY()) {
+		const existingHeartbeat = heartbeats.get(name);
+		if (existingHeartbeat) {
+			clearInterval(existingHeartbeat);
+		}
 		await mkdir(DEV_REGISTRY_PATH, { recursive: true });
 		await writeFile(
 			path.join(DEV_REGISTRY_PATH, name),
-			JSON.stringify(definition, null, 2)
+			// We don't currently do anything with the stored Wrangler version,
+			// but if we need to make breaking changes to this format in the future
+			// we can use this field to present useful messaging
+			JSON.stringify({ ...definition, wranglerVersion }, null, 2)
+		);
+		heartbeats.set(
+			name,
+			setInterval(() => {
+				utimesSync(path.join(DEV_REGISTRY_PATH, name), new Date(), new Date());
+			}, 30_000)
 		);
 		return;
 	}
@@ -223,6 +259,10 @@ export async function registerWorker(
 export async function unregisterWorker(name: string) {
 	if (FILE_BASED_REGISTRY()) {
 		await unlink(path.join(DEV_REGISTRY_PATH, name));
+		const existingHeartbeat = heartbeats.get(name);
+		if (existingHeartbeat) {
+			clearInterval(existingHeartbeat);
+		}
 		return;
 	}
 	try {
