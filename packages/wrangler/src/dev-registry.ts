@@ -13,7 +13,7 @@ import net from "node:net";
 import path from "node:path";
 import bodyParser from "body-parser";
 import { watch } from "chokidar";
-import { subDays } from "date-fns";
+import { subMinutes } from "date-fns";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
@@ -74,7 +74,7 @@ async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 		);
 		const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
 		// Cleanup old workers
-		if (stats.mtime < subDays(new Date(), 1)) {
+		if (stats.mtime < subMinutes(new Date(), 10)) {
 			await unregisterWorker(workerName);
 		} else {
 			globalWorkers[workerName] = JSON.parse(file);
@@ -287,8 +287,6 @@ export async function unregisterWorker(name: string) {
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
-	const a = FILE_BASED_REGISTRY();
-	console.log(9);
 	if (FILE_BASED_REGISTRY()) {
 		globalWorkers = await loadWorkerDefinitions();
 		return globalWorkers;
@@ -339,5 +337,6 @@ export async function getBoundRegisteredWorkers({
 				(serviceNames.includes(key) || durableObjectServices.includes(key))
 		)
 	);
+	const a = FILE_BASED_REGISTRY();
 	return filteredWorkers;
 }
