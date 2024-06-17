@@ -193,16 +193,29 @@ function handleNodeJSGlobals(
  * This is important to support `inject` config for `performance` and `Performance` introduced
  * in https://github.com/unjs/unenv/pull/257
  */
-function encodeToLowerCase(str: string): string {
-	return str.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
+export function encodeToLowerCase(str: string): string {
+	return str
+		.replaceAll(/\$/g, () => "$$")
+		.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
 }
 
 /**
  * Decodes a string lowercased using `encodeToLowerCase` to the original strings
  */
-function decodeFromLowerCase(str: string): string {
-	return str.replaceAll(
-		/\$([a-z])/g,
-		(match, letter) => `${letter.toUpperCase()}`
-	);
+export function decodeFromLowerCase(str: string): string {
+	let out = "";
+	let i = 0;
+	while (i < str.length - 1) {
+		if (str[i] === "$") {
+			i++;
+			out += str[i].toUpperCase();
+		} else {
+			out += str[i];
+		}
+		i++;
+	}
+	if (i < str.length) {
+		out += str[i];
+	}
+	return out;
 }
