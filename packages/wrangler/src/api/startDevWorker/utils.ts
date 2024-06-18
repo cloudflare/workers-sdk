@@ -239,9 +239,9 @@ export function convertCfWorkerInitBindingstoBindings(
 				assertNever(type);
 			}
 		}
-
-		return output;
 	}
+
+	return output;
 }
 
 export async function convertBindingsToCfWorkerInitBindings(

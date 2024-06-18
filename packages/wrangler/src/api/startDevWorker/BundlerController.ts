@@ -213,9 +213,9 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 		};
-		const bindings = (
-			await convertBindingsToCfWorkerInitBindings(config.bindings)
-		).bindings;
+		const { bindings } = await convertBindingsToCfWorkerInitBindings(
+			config.bindings
+		);
 		this.#bundlerCleanup = runBuild(
 			{
 				entry,
