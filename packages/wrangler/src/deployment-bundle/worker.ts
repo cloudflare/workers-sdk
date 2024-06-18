@@ -213,7 +213,7 @@ export interface CfMTlsCertificate {
 	certificate_id: string;
 }
 
-interface CfLogfwdr {
+export interface CfLogfwdr {
 	bindings: CfLogfwdrBinding[];
 }
 
