@@ -21,7 +21,6 @@ import {
 	getScriptName,
 	isLegacyEnv,
 } from "..";
-import { DevEnv } from "../api";
 import {
 	convertCfWorkerInitBindingstoBindings,
 	createDeferred,
@@ -50,8 +49,8 @@ import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
 import type {
+	DevEnv,
 	ProxyData,
-	ReadyEvent,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 	Trigger,
@@ -208,7 +207,9 @@ export type DevProps = {
 	rawArgs: StartDevOptions;
 	devEnv: DevEnv;
 };
-async function toSDW(
+
+// TODO: use in finalisation or followup stage of SDW
+async function _toSDW(
 	args: StartDevOptions,
 	accountId: Promise<string>,
 	workerDefinitions: WorkerRegistry,

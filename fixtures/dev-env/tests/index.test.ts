@@ -51,6 +51,7 @@ async function fakeStartUserWorker(options: {
 	const config: StartDevWorkerOptions = {
 		...options.config,
 		name: options.name ?? "test-worker",
+		// @ts-expect-error Fix when support script.contents
 		script: { contents: options.script },
 	};
 	const mfOpts: MiniflareOptions = Object.assign(

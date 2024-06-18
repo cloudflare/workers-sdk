@@ -156,10 +156,10 @@ export interface StartDevWorkerOptions {
 }
 
 export type HookValues = string | number | boolean | object;
-export type Hook<T extends HookValues, Args extends any[] = []> =
+export type Hook<T extends HookValues, Args extends unknown[] = []> =
 	| T
 	| ((...args: Args) => T);
-export type AsyncHook<T extends HookValues, Args extends any[] = []> =
+export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
 	| Hook<T, Args>
 	| Hook<Promise<T>, Args>;
 

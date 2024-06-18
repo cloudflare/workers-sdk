@@ -1,7 +1,5 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { Config } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
 	AsyncHook,
@@ -58,7 +56,7 @@ type UnwrapHook<H> = H extends Hook<infer T> ? T : never;
 export function unwrapHook<
 	H extends AsyncHook<T, Args>,
 	T extends HookValues = UnwrapHook<H>,
-	Args extends any[] = [],
+	Args extends unknown[] = [],
 >(
 	hook: H | undefined,
 	...args: Args

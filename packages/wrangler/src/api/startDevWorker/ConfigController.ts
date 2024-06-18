@@ -1,8 +1,6 @@
 import assert from "node:assert";
 import deepmerge from "deepmerge";
-import { readConfig } from "../../config";
 import { Controller } from "./BaseController";
-import { notImplemented } from "./NotImplementedError";
 import { unwrapHook } from "./utils";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent } from "./events";
@@ -14,7 +12,7 @@ export type ConfigControllerEventMap = ControllerEventMap & {
 
 type Options = StartDevWorkerOptions;
 export class ConfigController extends Controller<ConfigControllerEventMap> {
-	config?: StartDevWorkerOptions;
+	config?: Options;
 
 	public set(input: Hook<Options, [Readonly<Options> | undefined]>) {
 		const config = unwrapHook(input, this.latest);

@@ -16,10 +16,10 @@ export class DevEnv extends EventEmitter {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	startWorker(options: StartDevWorkerOptions): DevWorker {
+	startWorker(_options: StartDevWorkerOptions): DevWorker {
 		const worker = createWorkerObject(this);
-
-		this.config.set(options);
+		// TODO: uncomment this when dev-env fixture tests are no longer faked
+		// this.config.set(options);
 
 		return worker;
 	}
