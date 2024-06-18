@@ -47,24 +47,24 @@ describe("uploading Worker versions", () => {
 	beforeAll(async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
-        name = "${workerName}"
-        main = "src/index.ts"
-        compatibility_date = "2023-01-01"
-      `,
+			name = "${workerName}"
+			main = "src/index.ts"
+			compatibility_date = "2023-01-01"
+		`,
 			"src/index.ts": dedent`
-        export default {
-          fetch(request) {
-            return new Response("Hello World!")
-          }
-        }
-      `,
+			export default {
+			fetch(request) {
+				return new Response("Hello World!")
+			}
+			}
+		`,
 			"package.json": dedent`
-        {
-          "name": "${workerName}",
-          "version": "0.0.0",
-          "private": true
-        }
-      `,
+			{
+			"name": "${workerName}",
+			"version": "0.0.0",
+			"private": true
+			}
+		`,
 		});
 	});
 	it("deploy worker", async () => {
@@ -76,13 +76,13 @@ describe("uploading Worker versions", () => {
 		);
 		// Check the output looks correct
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
-      "Total Upload: xx KiB / gzip: xx KiB
-      Worker Version ID: 00000000-0000-0000-0000-000000000000
-      Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-      To deploy this version to production traffic use the command wrangler versions deploy --experimental-versions
-      Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy --experimental-versions
-      Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
-    `);
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			To deploy this version to production traffic use the command wrangler versions deploy --experimental-versions
+			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy --experimental-versions
+			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy --experimental-versions"
+	`);
 	});
 });
 ```
@@ -100,27 +100,27 @@ it(`can modify worker during ${cmd}`, async () => {
 	const helper = new WranglerE2ETestHelper();
 	await helper.seed({
 		"wrangler.toml": dedent`
-            name = "worker"
-            main = "src/index.ts"
-            compatibility_date = "2023-01-01"
-            compatibility_flags = ["nodejs_compat"]
+			name = "worker"
+			main = "src/index.ts"
+			compatibility_date = "2023-01-01"
+			compatibility_flags = ["nodejs_compat"]
 
-            [vars]
-            KEY = "value"
-        `,
+			[vars]
+			KEY = "value"
+		`,
 		"src/index.ts": dedent`
-            export default {
-              fetch(request) {
-                return new Response("Hello World!")
-              }
-            }`,
+			export default {
+			  fetch(request) {
+				return new Response("Hello World!")
+			  }
+			}`,
 		"package.json": dedent`
-            {
-              "name": "worker",
-              "version": "0.0.0",
-              "private": true
-            }
-            `,
+			{
+			  "name": "worker",
+			  "version": "0.0.0",
+			  "private": true
+			}
+			`,
 	});
 	const worker = helper.runLongLived(cmd);
 
@@ -130,11 +130,11 @@ it(`can modify worker during ${cmd}`, async () => {
 
 	await helper.seed({
 		"src/index.ts": dedent`
-          export default {
-            fetch(request, env) {
-              return new Response("Updated Worker! " + env.KEY)
-            }
-          }`,
+		  export default {
+			fetch(request, env) {
+			  return new Response("Updated Worker! " + env.KEY)
+			}
+		  }`,
 	});
 
 	await worker.waitForReload();
