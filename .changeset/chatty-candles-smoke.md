@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-Don't check expiry dates on custom certs
+fix: Don't check expiry dates on custom certs
 
 Fixes https://github.com/cloudflare/workers-sdk/issues/5964
 
