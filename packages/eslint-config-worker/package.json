@@ -19,5 +19,8 @@
 	},
 	"volta": {
 		"extends": "../../package.json"
+	},
+	"devDependencies": {
+		"@typescript-eslint/eslint-plugin": "^6.9.0"
 	}
 }
