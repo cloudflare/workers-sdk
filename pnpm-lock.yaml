@@ -970,7 +970,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 2.0.3(eslint@8.49.0)
+        version: 2.0.4(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.10.0(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)
@@ -6114,8 +6114,8 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-config-turbo@2.0.3:
-    resolution: {integrity: sha512-D1+lNOpTFEuAgPWJfRHXHjzvAfO+0TVmORfftmYQNw+uk2UIBjhelhwERBceYFy2oFJnckHsqt69dp/zIM6/0g==}
+  eslint-config-turbo@2.0.4:
+    resolution: {integrity: sha512-zGvU+bxoNWVvSl0prGItrnH9FgeNzKEAjRmv8ruqql1psI37T8IoLF/XeOzT3CzzYzJxuI3wW1yb2agDFYQdHQ==}
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -6260,8 +6260,8 @@ packages:
     peerDependencies:
       eslint: ^7.5.0 || ^8.0.0
 
-  eslint-plugin-turbo@2.0.3:
-    resolution: {integrity: sha512-mplP4nYaRvtTNuwF5QTLYKLu0/8LTRsHPgX4ARhaof+QZI2ttglONe1/iJpKB4pg0KqFp7WHziKoJL+s0+CJ1w==}
+  eslint-plugin-turbo@2.0.4:
+    resolution: {integrity: sha512-Ozn//vTXJeqIEvEkThM2vuuldMckPqAne7vg/S3GxF+BBY516cjdp7+dYpCU5Q0083hVm638c8542ubccNE+8w==}
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -13018,7 +13018,7 @@ snapshots:
       fast-glob: 3.2.12
       is-glob: 4.0.3
       open: 9.1.0
-      picocolors: 1.0.0
+      picocolors: 1.0.1
       tslib: 2.5.3
 
   '@pnpm/config.env-replace@1.1.0': {}
@@ -13237,7 +13237,7 @@ snapshots:
       eslint: 8.57.0
       eslint-import-resolver-node: 0.3.7
       eslint-import-resolver-typescript: 3.5.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.7)(eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0))(eslint@8.57.0)
-      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-typescript@3.5.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.7)(eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0))(eslint@8.57.0))(eslint@8.57.0)
+      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-typescript@3.5.5)(eslint@8.57.0)
       eslint-plugin-jest: 26.9.0(@typescript-eslint/eslint-plugin@5.62.0(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0)(typescript@5.4.5)
       eslint-plugin-jest-dom: 4.0.3(eslint@8.57.0)
       eslint-plugin-jsx-a11y: 6.7.1(eslint@8.57.0)
@@ -15806,10 +15806,10 @@ snapshots:
     dependencies:
       eslint: 8.57.0
 
-  eslint-config-turbo@2.0.3(eslint@8.49.0):
+  eslint-config-turbo@2.0.4(eslint@8.49.0):
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 2.0.3(eslint@8.49.0)
+      eslint-plugin-turbo: 2.0.4(eslint@8.49.0)
 
   eslint-import-resolver-node@0.3.7:
     dependencies:
@@ -15825,7 +15825,7 @@ snapshots:
       enhanced-resolve: 5.14.1
       eslint: 8.57.0
       eslint-module-utils: 2.8.0(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.7)(eslint-import-resolver-typescript@3.5.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.7)(eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0))(eslint@8.57.0))(eslint@8.57.0)
-      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-typescript@3.5.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.7)(eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0))(eslint@8.57.0))(eslint@8.57.0)
+      eslint-plugin-import: 2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-typescript@3.5.5)(eslint@8.57.0)
       get-tsconfig: 4.6.0
       globby: 13.1.4
       is-core-module: 2.13.0
@@ -15926,7 +15926,7 @@ snapshots:
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-typescript@3.5.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.7)(eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint@8.57.0))(eslint@8.57.0))(eslint@8.57.0):
+  eslint-plugin-import@2.27.5(@typescript-eslint/parser@5.62.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-typescript@3.5.5)(eslint@8.57.0):
     dependencies:
       array-includes: 3.1.6
       array.prototype.flat: 1.3.1
@@ -16068,7 +16068,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-turbo@2.0.3(eslint@8.49.0):
+  eslint-plugin-turbo@2.0.4(eslint@8.49.0):
     dependencies:
       dotenv: 16.0.3
       eslint: 8.49.0
@@ -16992,13 +16992,6 @@ snapshots:
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
       agent-base: 6.0.2(supports-color@9.2.2)
-      debug: 4.3.5(supports-color@9.2.2)
-    transitivePeerDependencies:
-      - supports-color
-
-  https-proxy-agent@7.0.2:
-    dependencies:
-      agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.5(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
@@ -18602,7 +18595,7 @@ snapshots:
       debug: 4.3.5(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.0
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       pac-resolver: 7.0.0
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
@@ -18905,7 +18898,7 @@ snapshots:
   postcss@8.4.33:
     dependencies:
       nanoid: 3.3.7
-      picocolors: 1.0.0
+      picocolors: 1.0.1
       source-map-js: 1.0.2
 
   postgres-array@2.0.0: {}
@@ -19044,7 +19037,7 @@ snapshots:
       agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.5(supports-color@9.2.2)
       http-proxy-agent: 7.0.0
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       lru-cache: 7.18.3
       pac-proxy-agent: 7.0.1
       proxy-from-env: 1.1.0
@@ -20613,7 +20606,7 @@ snapshots:
       cac: 6.7.14
       debug: 4.3.5(supports-color@9.2.2)
       pathe: 1.1.2
-      picocolors: 1.0.0
+      picocolors: 1.0.1
       vite: 5.0.12(@types/node@20.8.3)
     transitivePeerDependencies:
       - '@types/node'

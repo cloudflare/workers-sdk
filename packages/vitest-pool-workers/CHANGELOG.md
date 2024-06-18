@@ -1,5 +1,28 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.6
+
+### Patch Changes
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- [#6079](https://github.com/cloudflare/workers-sdk/pull/6079) [`2e531b4`](https://github.com/cloudflare/workers-sdk/commit/2e531b4f6f791fee4afb12051ef33f37011e82a6) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: define `defineWorkersConfig` using overload signatures
+
+  The type definition of `defineWorkersConfig` doesn't work with `mergeConfig` of `vitest/config` because of type mismatch.
+  This function should be an overload function like `defineConfig`
+
+- Updated dependencies [[`dc597a3`](https://github.com/cloudflare/workers-sdk/commit/dc597a38218b428141c55c4e65633953c87ed180), [`15aff8f`](https://github.com/cloudflare/workers-sdk/commit/15aff8f6e6ce533f25495193e702a6bec76fa81c), [`b4c0233`](https://github.com/cloudflare/workers-sdk/commit/b4c02333829c2312f883e897f812f9877dba603a), [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f), [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4), [`c643a81`](https://github.com/cloudflare/workers-sdk/commit/c643a8193a3c0739b33d3c0072ae716bc8f1565b), [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99), [`db66101`](https://github.com/cloudflare/workers-sdk/commit/db661015d37ce75c021413e3ca7c4f0488790cbc), [`374bc44`](https://github.com/cloudflare/workers-sdk/commit/374bc44cce65e2f83f10452122719d3ab28827b3), [`267761b`](https://github.com/cloudflare/workers-sdk/commit/267761b3f5a60e9ea72067d42302895f9d459460), [`84e6aeb`](https://github.com/cloudflare/workers-sdk/commit/84e6aeb189a4f385c49b7c6d451d0613186b29be)]:
+  - wrangler@3.61.0
+  - miniflare@3.20240610.1
+
 ## 0.4.5
 
 ### Patch Changes
