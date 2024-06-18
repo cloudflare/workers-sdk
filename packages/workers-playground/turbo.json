@@ -3,7 +3,8 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"outputs": ["dist/**"]
+			"outputs": ["dist/**"],
+			"env": ["NODE_ENV", "VITE_PLAYGROUND_PREVIEW", "VITE_PLAYGROUND_ROOT"]
 		}
 	}
 }

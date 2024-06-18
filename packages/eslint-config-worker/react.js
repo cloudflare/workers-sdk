@@ -4,8 +4,12 @@ module.exports = {
 	plugins: ["eslint-plugin-react", "eslint-plugin-react-hooks"],
 	overrides: [
 		{
-			files: ["*.ts", "*.tsx"],
-			extends: ["plugin:react/recommended", "plugin:react-hooks/recommended"],
+			files: ["**/*.ts", "**/*.tsx"],
+			extends: [
+				"plugin:react/recommended",
+				"plugin:react/jsx-runtime",
+				"plugin:react-hooks/recommended",
+			],
 		},
 	],
 	settings: {

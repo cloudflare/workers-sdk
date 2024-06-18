@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { isDarkMode, variables as theme } from "@cloudflare/style-const";
+import { isDarkMode, variables } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import {
 	Tab as ReactTab,
 	TabList as ReactTabList,
 	TabPanel as ReactTabPanel,
-	TabProps as ReactTabProps,
 	Tabs as ReactTabs,
 } from "react-tabs";
 import { BORDER_GRAY, STYLED_TAB_HEIGHT } from "./constants";
+import type { TabProps as ReactTabProps } from "react-tabs";
 
-const HIGHLIGHT_BLUE = theme.colors.blue[4];
+const HIGHLIGHT_BLUE = variables.colors.blue[4];
 
 type StyledTabProps = {
 	showHighlightBar?: boolean;
@@ -99,7 +99,9 @@ export const TabBar = createComponent(() => ({
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "space-between",
-	backgroundColor: isDarkMode() ? theme.colors.white : theme.colors.gray[9],
+	backgroundColor: isDarkMode()
+		? variables.colors.white
+		: variables.colors.gray[9],
 	flex: "none",
 }));
 
@@ -117,7 +119,9 @@ export const TabList = createComponent(
 export const TabBarContent = createComponent(() => ({
 	flex: "1 0 auto",
 	borderBottom: "none",
-	backgroundColor: isDarkMode() ? theme.colors.white : theme.colors.gray[9],
+	backgroundColor: isDarkMode()
+		? variables.colors.white
+		: variables.colors.gray[9],
 }));
 
 export const Tabs = createComponent(

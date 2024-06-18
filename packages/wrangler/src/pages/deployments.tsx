@@ -1,5 +1,4 @@
 import Table from "ink-table";
-import React from "react";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
