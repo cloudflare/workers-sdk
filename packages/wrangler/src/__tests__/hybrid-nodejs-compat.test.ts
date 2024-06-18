@@ -35,7 +35,7 @@ describe("hybrid nodejs compat", () => {
 			});
 		});
 
-		it("by symmetrical", () => {
+		it("should be symmetrical", () => {
 			expect(decodeFromLowerCase(encodeToLowerCase("Performance"))).toBe(
 				"Performance"
 			);
