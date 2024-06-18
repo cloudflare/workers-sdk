@@ -1,4 +1,4 @@
-import shellac from "shellac";
+import { execSync } from "child_process";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -7,11 +7,10 @@ import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
 // TODO(DEVX-1262): re-enable when we have set an API token with the proper AI permissions
 describe.skip("getPlatformProxy()", () => {
-	let run: typeof shellac;
+	let root: string;
 	beforeEach(async () => {
-		const root = await makeRoot();
+		root = await makeRoot();
 
-		run = shellac.in(root).env(process.env);
 		await seed(root, {
 			"wrangler.toml": dedent`
 					name = "ai-app"
@@ -52,7 +51,7 @@ describe.skip("getPlatformProxy()", () => {
 		});
 	});
 	it("can run ai inference", async () => {
-		const { stdout } = await run`$ node index.mjs`;
+		const stdout = execSync(`node index.mjs`, { cwd: root, encoding: "utf-8" });
 		expect(stdout).toContain("Workers AI");
 	});
 });

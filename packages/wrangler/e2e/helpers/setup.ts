@@ -1,9 +1,10 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtempSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-export async function makeRoot() {
-	return await mkdtemp(path.join(os.tmpdir(), "wrangler-smoke-"));
+export function makeRoot() {
+	return mkdtempSync(path.join(os.tmpdir(), "wrangler-smoke-"));
 }
 
 // Seeds the `root` directory on the file system with some data. Use in

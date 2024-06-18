@@ -1,123 +1,83 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
-import { test } from "vitest";
+import { onTestFinished } from "vitest";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, seed } from "./setup";
-import { runWrangler, waitForReady, waitForReload } from "./wrangler";
-import type { ChildProcess } from "node:child_process";
+import { runWrangler, WranglerLongLivedCommand } from "./wrangler";
+import type { WranglerCommandOptions } from "./wrangler";
 
-interface TestContext {
-	tmpPath: string;
-	seed(files: Record<string, string | Uint8Array>): Promise<void>;
-	run(
-		cmd: string,
-		options?: Partial<Parameters<typeof runWrangler>[1]>
-	): ReturnType<typeof runWrangler>;
-	r2: (isLocal: boolean) => Promise<string>;
-	kv: (isLocal: boolean) => Promise<string>;
-	d1: (isLocal: boolean) => Promise<{ id: string; name: string }>;
-	waitForReady: typeof waitForReady;
-	waitForReload: typeof waitForReload;
-}
+/**
+ * Use this class in your e2e tests to create a temp directory, seed it with files
+ * and then run various Wrangler commands.
+ */
+export class WranglerE2ETestHelper {
+	tmpPath = makeRoot();
 
-export const e2eTest = test.extend<TestContext>({
-	// eslint-disable-next-line no-empty-pattern
-	async tmpPath({}, use) {
-		const root = await makeRoot();
-		await use(root);
-		// Note: we deliberately don't clean up this temporary directory since that can cause Windows CI runners to fail with EBUSY
-	},
-	async seed({ tmpPath }, use) {
-		await use((files) => {
-			return seed(tmpPath, files);
+	async seed(files: Record<string, string | Uint8Array>) {
+		await seed(this.tmpPath, files);
+	}
+
+	runLongLived(
+		wranglerCommand: string,
+		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
+	): WranglerLongLivedCommand {
+		const wrangler = new WranglerLongLivedCommand(wranglerCommand, {
+			cwd,
+			...options,
 		});
-	},
-	async run({ tmpPath }, use) {
-		const cleanupWrangler = new Set<ChildProcess>();
-		await use(
-			(
-				cmd: string,
-				{
-					debug = false,
-					env = process.env,
-					cwd,
-				}: Partial<Parameters<typeof runWrangler>[1]> = {}
-			) =>
-				runWrangler(cmd, { cwd: cwd ?? tmpPath, debug, env }, cleanupWrangler)
-		);
-		for (const wrangler of cleanupWrangler) {
-			wrangler.kill();
-		}
-		cleanupWrangler.clear();
-	},
-	async kv({ run }, use) {
-		const created = new Set<string>();
-
-		await use(async (isLocal) => {
-			const name = generateResourceName("kv").replaceAll("-", "_");
-			if (isLocal) {
-				return name;
-			}
-
-			const result = await run(`wrangler kv namespace create ${name}`);
-			const match = /id = "([0-9a-f]{32})"/.exec(result);
-			assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
-			const id = match[1];
-			created.add(id);
-			return id;
+		onTestFinished(async () => {
+			await wrangler.stop();
 		});
-		for (const resource of created) {
-			await run(`wrangler kv namespace delete --namespace-id ${resource}`);
-		}
-		created.clear();
-	},
-	async r2({ run }, use) {
-		const created = new Set<string>();
+		return wrangler;
+	}
 
-		await use(async (isLocal) => {
-			const name = generateResourceName("r2");
-			if (isLocal) {
-				return name;
-			}
+	async run(
+		wranglerCommand: string,
+		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
+	) {
+		return runWrangler(wranglerCommand, { cwd, ...options });
+	}
 
-			await run(`wrangler r2 bucket create ${name}`);
-			created.add(name);
-
+	async kv(isLocal: boolean) {
+		const name = generateResourceName("kv").replaceAll("-", "_");
+		if (isLocal) {
 			return name;
-		});
-		for (const resource of created) {
-			await await run(`wrangler r2 bucket delete ${resource}`);
 		}
-		created.clear();
-	},
-	async d1({ run }, use) {
-		const created = new Set<string>();
-
-		await use(async (isLocal) => {
-			const name = generateResourceName("d1");
-			if (isLocal) {
-				return { id: crypto.randomUUID(), name };
-			}
-
-			const result = await run(`wrangler d1 create ${name}`);
-			const match = /database_id = "([0-9a-f-]{36})"/.exec(result);
-			assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
-			const id = match[1];
-			created.add(name);
-
-			return { id, name };
+		const result = await this.run(`wrangler kv namespace create ${name}`);
+		const match = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
+		const id = match[1];
+		onTestFinished(async () => {
+			await this.run(`wrangler kv namespace delete --namespace-id ${id}`);
 		});
-		for (const resource of created) {
-			await await run(`wrangler d1 delete -y ${resource}`);
+		return id;
+	}
+
+	async r2(isLocal: boolean) {
+		const name = generateResourceName("r2");
+		if (isLocal) {
+			return name;
 		}
-		created.clear();
-	},
-	// eslint-disable-next-line no-empty-pattern
-	async waitForReady({}, use) {
-		await use(waitForReady);
-	},
-	// eslint-disable-next-line no-empty-pattern
-	async waitForReload({}, use) {
-		await use(waitForReload);
-	},
-});
+		await this.run(`wrangler r2 bucket create ${name}`);
+		onTestFinished(async () => {
+			await this.run(`wrangler r2 bucket delete ${name}`);
+		});
+		return name;
+	}
+
+	async d1(isLocal: boolean) {
+		const name = generateResourceName("d1");
+		if (isLocal) {
+			return { id: crypto.randomUUID(), name };
+		}
+		const result = await this.run(`wrangler d1 create ${name}`);
+		const match = /database_id = "([0-9a-f-]{36})"/.exec(result.stdout);
+		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
+		const id = match[1];
+		onTestFinished(async () => {
+			await this.run(`wrangler d1 delete -y ${id}`);
+		});
+
+		return { id, name };
+	}
+}
