@@ -7,6 +7,24 @@ export const processArgument = async <T>(
 	name: string,
 	promptConfig: PromptConfig
 ) => {
+	console.log(`
+		========================================
+		============ processArgument ===========
+		========================================
+
+		args: ${JSON.stringify(args)}
+
+		name: ${JSON.stringify(name)}
+
+		promptConfig: ${JSON.stringify(promptConfig)}
+
+		========================================
+		========================================
+		========================================
+
+
+	`);
+
 	if (process.env.VITEST && "defaultValue" in promptConfig) {
 		console.log("====> RETURNING DEFAULT VALUE");
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
