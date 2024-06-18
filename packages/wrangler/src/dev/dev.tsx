@@ -206,6 +206,7 @@ export type DevProps = {
 	experimentalDevEnv: boolean;
 	rawConfig: Config;
 	rawArgs: StartDevOptions;
+	devEnv: DevEnv;
 };
 async function toSDW(
 	args: StartDevOptions,
@@ -449,47 +450,7 @@ function DevSession(props: DevSessionProps) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const [devEnv] = useState(() => {
-		const newDevEnv = new DevEnv();
-		if (!props.experimentalDevEnv) {
-			return newDevEnv;
-		}
-		const {
-			proxy,
-			runtimes: [local, remote],
-		} = newDevEnv;
-
-		const proxyUrl = createDeferred<URL>();
-		// The ProxyWorker will have a stable host and port, so only listen for the first update
-		proxy.once("ready", async (event: ReadyEvent) => {
-			const url = await event.proxyWorker.ready;
-			proxyUrl.resolve(url);
-			const finalIp = url.hostname;
-			const finalPort = parseInt(url.port);
-
-			if (process.send) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: finalIp,
-						port: finalPort,
-					})
-				);
-			}
-		});
-		local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
-			if (!reloadEvent.config.dev?.remote) {
-				await maybeRegisterLocalWorker(
-					await proxyUrl.promise,
-					reloadEvent.config.name,
-					reloadEvent.proxyData.internalDurableObjects,
-					reloadEvent.proxyData.entrypointAddresses
-				);
-			}
-		});
-
-		return new DevEnv({ proxy, runtimes: [local, remote] });
-	});
+	const devEnv = props.devEnv;
 	useEffect(() => {
 		return () => {
 			void devEnv.teardown();
@@ -647,22 +608,16 @@ function DevSession(props: DevSessionProps) {
 	]);
 
 	const onBundleStart = useCallback(() => {
-		devEnv.proxy.onBundleStart({
-			type: "bundleStart",
-			config: startDevWorkerOptions,
-		});
-	}, [devEnv, startDevWorkerOptions]);
+		if (!props.experimentalDevEnv) {
+			devEnv.proxy.onBundleStart({
+				type: "bundleStart",
+				config: startDevWorkerOptions,
+			});
+		}
+	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 	const onBundleComplete = useCallback(
 		(bundle: EsbuildBundle) => {
-			if (props.experimentalDevEnv) {
-				devEnv.runtimes.forEach((runtime) =>
-					runtime.onBundleComplete({
-						type: "bundleComplete",
-						config: startDevWorkerOptions,
-						bundle,
-					})
-				);
-			} else {
+			if (!props.experimentalDevEnv) {
 				devEnv.proxy.onReloadStart({
 					type: "reloadStart",
 					config: startDevWorkerOptions,
@@ -675,7 +630,7 @@ function DevSession(props: DevSessionProps) {
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
 	const onCustomBuildEnd = useCallback(() => {
-		const TIMEOUT = 300; // TODO: find a lower bound for this value
+		const TIMEOUT = 300;
 
 		clearTimeout(esbuildStartTimeoutRef.current);
 		esbuildStartTimeoutRef.current = setTimeout(() => {
@@ -708,16 +663,14 @@ function DevSession(props: DevSessionProps) {
 	const directory = useTmpDir(props.projectRoot);
 
 	useEffect(() => {
-		// temp: fake these events by calling the handler directly
-		devEnv.proxy.onConfigUpdate({
-			type: "configUpdate",
-			config: startDevWorkerOptions,
-		});
-		if (props.experimentalDevEnv) {
-			devEnv.bundler.onConfigUpdate({
+		if (!props.experimentalDevEnv) {
+			// temp: fake these events by calling the handler directly
+			devEnv.proxy.onConfigUpdate({
 				type: "configUpdate",
 				config: startDevWorkerOptions,
 			});
+		} else {
+			devEnv.config.set(startDevWorkerOptions);
 		}
 	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 
@@ -771,6 +724,7 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
+	// this won't be called with props.experimentalDevEnv because useWorker is guarded with the same flag
 	const announceAndOnReady: typeof props.onReady = async (
 		finalIp,
 		finalPort,

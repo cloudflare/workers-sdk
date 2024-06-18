@@ -28,14 +28,15 @@ import type {
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
 import type { DispatchFetch, Json, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
 export interface DevWorker {
 	ready: Promise<void>;
 	config?: StartDevWorkerOptions;
-	setOptions(options: StartDevWorkerOptions): void;
-	updateOptions(options: Partial<StartDevWorkerOptions>): void;
+	setConfig: ConfigController["set"];
+	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
 	scheduled(cron?: string): Promise<void>;
 	queue(queueName: string, ...messages: unknown[]): Promise<void>;
@@ -50,9 +51,9 @@ export interface StartDevWorkerOptions {
 	 * This is the `main` property of a wrangler.toml.
 	 * You can specify a file path or provide the contents directly.
 	 */
-	script: File<string>;
+	script: FilePath;
 	/** The configuration of the worker. */
-	config?: File<Config>;
+	config?: FilePath;
 	/** A worker's directory. Usually where the wrangler.toml file is located */
 	directory?: string;
 	/** The compatibility date for the workerd runtime. */
@@ -116,7 +117,7 @@ export interface StartDevWorkerOptions {
 		/** Whether the worker runs on the edge or locally. */
 		remote?: boolean;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
-		auth?: Hook<CfAccount>;
+		auth?: AsyncHook<CfAccount>;
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: boolean | { path: string };
 		/** Controls which logs are logged 🤙. */
@@ -154,19 +155,26 @@ export interface StartDevWorkerOptions {
 	unsafe?: Omit<CfUnsafe, "bindings">;
 }
 
-export type Hook<T extends string | number | object> =
+export type HookValues = string | number | boolean | object;
+export type Hook<T extends HookValues, Args extends any[] = []> =
 	| T
-	| Promise<T>
-	| (() => T | Promise<T>);
+	| ((...args: Args) => T);
+export type AsyncHook<T extends HookValues, Args extends any[] = []> =
+	| Hook<T, Args>
+	| Hook<Promise<T>, Args>;
 
 export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-export type File<Contents = string> =
-	| { path: string } // `path` resolved relative to cwd
-	| { contents: Contents; path?: string }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
+export type File<Contents = string, Path = string> =
+	| { path: Path } // `path` resolved relative to cwd
+	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
 export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instances of `Uint8Array`
+export type FilePath<Path = string> = Extract<
+	File<undefined, Path>,
+	{ path: Path }
+>; // file that must be on disk -- reminder to allow uses of `contents` eventually
 
 export interface Location {
 	hostname?: string;

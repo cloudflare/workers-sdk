@@ -1,7 +1,16 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { Config } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
-import type { File, Hook, ServiceFetch, StartDevWorkerOptions } from "./types";
+import type {
+	AsyncHook,
+	File,
+	Hook,
+	HookValues,
+	ServiceFetch,
+	StartDevWorkerOptions,
+} from "./types";
 
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
@@ -45,14 +54,16 @@ export function urlFromParts(
 	return url;
 }
 
-export function unwrapHook<T extends string | number | object>(
-	hook: Hook<T>
-): T | Promise<T>;
-export function unwrapHook<T extends string | number | object>(
-	hook: Hook<T> | undefined
-): T | Promise<T> | undefined;
-export function unwrapHook<T extends string | number | object>(hook: Hook<T>) {
-	return typeof hook === "function" ? hook() : hook;
+type UnwrapHook<H> = H extends Hook<infer T> ? T : never;
+export function unwrapHook<
+	H extends AsyncHook<T, Args>,
+	T extends HookValues = UnwrapHook<H>,
+	Args extends any[] = [],
+>(
+	hook: H | undefined,
+	...args: Args
+): H extends undefined ? UnwrapHook<H> | undefined : UnwrapHook<H> {
+	return typeof hook === "function" ? hook(...args) : hook;
 }
 
 export async function getBinaryFileContents(file: File<string | Uint8Array>) {
