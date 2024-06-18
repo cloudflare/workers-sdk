@@ -1,6 +1,6 @@
 module.exports = {
 	root: true,
-	extends: ["@cloudflare/eslint-config-worker"],
+	extends: ["@cloudflare/eslint-config-worker/react"],
 	ignorePatterns: [
 		"vendor",
 		"*-dist",
@@ -8,6 +8,11 @@ module.exports = {
 		"templates",
 		"emitted-types",
 	],
+	settings: {
+		react: {
+			version: "detect",
+		},
+	},
 	overrides: [
 		{
 			// TODO: add linting for `startDevWorker` workers in `templates/startDevWorker`
