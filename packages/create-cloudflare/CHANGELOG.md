@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.21.8
+
+### Patch Changes
+
+- [#6034](https://github.com/cloudflare/workers-sdk/pull/6034) [`b4ea661`](https://github.com/cloudflare/workers-sdk/commit/b4ea661ed227db97422e4bae81ac1c204292f579) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.0 | 6.3.1 |
+
+- [#6035](https://github.com/cloudflare/workers-sdk/pull/6035) [`e70806f`](https://github.com/cloudflare/workers-sdk/commit/e70806f101fb38ff9455c6ad576f4514ebf7f525) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.0.3 | 18.0.4 |
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- [#6046](https://github.com/cloudflare/workers-sdk/pull/6046) [`c643a81`](https://github.com/cloudflare/workers-sdk/commit/c643a8193a3c0739b33d3c0072ae716bc8f1565b) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more dependencies.
+
+  Follow up to https://github.com/cloudflare/workers-sdk/pull/6029, this normalizes some more dependencies : `get-port`, `chalk`, `yargs`, `toucan-js`, `@typescript-eslint/parser`, `@typescript-eslint/eslint-plugin`, `esbuild-register`, `hono`, `glob-to-regexp`, `@cloudflare/workers-types`
+
+- [#5944](https://github.com/cloudflare/workers-sdk/pull/5944) [`cfa7de5`](https://github.com/cloudflare/workers-sdk/commit/cfa7de510d131a29baa11d5098ddc154988970bc) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: add missing `pre-existing` type and `--existing-script` to help message
+
+- [#6076](https://github.com/cloudflare/workers-sdk/pull/6076) [`9487179`](https://github.com/cloudflare/workers-sdk/commit/9487179c8db0cb3ba13f3b9b1495e37121a3927d) Thanks [@threepointone](https://github.com/threepointone)! - chore: use latest dependencies for hello-world templates
+
+  When generating a plain hello world worker, we're picking up older versions of vitest/pool-workers. this updates the package.jsons to pick up newer versions instead. Ideally we should automate this, but we can do that later. I also updated the wrangler deps to the current version so it's clearer for developers what they're using (still not accurate, but better than showing 3.0.0). Again, this should be automated, but we can do that later.
+
 ## 2.21.7
 
 ### Patch Changes
