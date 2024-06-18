@@ -8,11 +8,6 @@ module.exports = {
 		"templates",
 		"emitted-types",
 	],
-	settings: {
-		react: {
-			version: "detect",
-		},
-	},
 	overrides: [
 		{
 			// TODO: add linting for `startDevWorker` workers in `templates/startDevWorker`
