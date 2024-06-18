@@ -29,7 +29,7 @@ test("isolated storage with multiple workers", async ({
 				}
 			}
 		`,
-		"vitest.config.ts": dedent`
+		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 
@@ -126,7 +126,7 @@ test("isolated storage with single worker", async ({
 				}
 			}
 		`,
-		"vitest.config.ts": dedent`
+		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 
@@ -235,7 +235,7 @@ test("shared storage with multiple workers", async ({
 				}
 			}
 		`,
-		"vitest.config.ts": dedent`
+		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 
@@ -327,7 +327,7 @@ test(
 				}
 			}
 		`,
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			import { DeterministicSequencer } from "./sequencer.ts";
 

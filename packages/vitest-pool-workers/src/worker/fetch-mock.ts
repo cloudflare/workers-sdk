@@ -37,7 +37,7 @@ setDispatcher((opts, handler) => {
 // worker. We kind of have to do it this way, as `fetchMock` supports functions
 // as reply callbacks, and we can't serialise arbitrary functions across worker
 // boundaries. For mocking requests in other workers, Miniflare's `fetchMock`
-// option can be used in the `vitest.config.ts`.
+// option can be used in the `vitest.config.mts`.
 globalThis.fetch = async (input, init) => {
 	const isActive = isMockActive(fetchMock);
 	if (!isActive) {

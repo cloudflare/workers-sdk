@@ -9,7 +9,7 @@ test(
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		// Check writes new snapshots
 		await seed({
-			"vitest.config.ts": minimalVitestConfig,
+			"vitest.config.mts": minimalVitestConfig,
 			"index.test.ts": dedent`
 			import { it, expect } from "vitest";
 			it("matches snapshot", () => {
@@ -117,7 +117,7 @@ test.skipIf(process.platform === "win32")(
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		// Check writes new snapshots
 		await seed({
-			"vitest.config.ts": minimalVitestConfig,
+			"vitest.config.mts": minimalVitestConfig,
 			"index.test.ts": dedent`
 			import { it, expect } from "vitest";
 			it("matches snapshot", () => {
@@ -146,7 +146,7 @@ test.skipIf(process.platform === "win32")(
 
 		// Check fails if snapshots differ
 		await seed({
-			"vitest.config.ts": minimalVitestConfig,
+			"vitest.config.mts": minimalVitestConfig,
 			"index.test.ts": dedent`
 			import { it, expect } from "vitest";
 			it("matches snapshot", () => {
