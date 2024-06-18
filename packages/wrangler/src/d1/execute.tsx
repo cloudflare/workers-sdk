@@ -7,7 +7,6 @@ import { Static, Text } from "ink";
 import Table from "ink-table";
 import md5File from "md5-file";
 import { Miniflare } from "miniflare";
-import React from "react";
 import { fetch } from "undici";
 import { printWranglerBanner } from "../";
 import { fetchResult } from "../cfetch";

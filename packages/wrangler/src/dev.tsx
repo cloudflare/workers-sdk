@@ -3,7 +3,6 @@ import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
-import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
@@ -43,6 +42,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
 import type { Json } from "miniflare";
+import type React from "react";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (

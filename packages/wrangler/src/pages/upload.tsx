@@ -3,7 +3,6 @@ import { dirname } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import PQueue from "p-queue";
-import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";

@@ -1,4 +1,4 @@
-import { eg, TypeFromCodec } from "@cloudflare/util-en-garde";
+import { eg } from "@cloudflare/util-en-garde";
 import { useDebounce } from "@cloudflare/util-hooks";
 import lzstring from "lz-string";
 import { useEffect, useRef, useState } from "react";
@@ -6,6 +6,7 @@ import useSWR from "swr";
 import { v4 } from "uuid";
 import { getPlaygroundWorker } from "./getPlaygroundWorker";
 import { matchFiles, parseRules, toMimeType } from "./module-collection";
+import type { TypeFromCodec } from "@cloudflare/util-en-garde";
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -218,7 +219,9 @@ export function useDraftWorker(
 				setDevtoolsUrl(hash.devtoolsUrl);
 			} catch (e: unknown) {
 				console.error(e);
-				if (e instanceof Error) setPreviewError(String(e.message));
+				if (e instanceof Error) {
+					setPreviewError(String(e.message));
+				}
 			} finally {
 				setIsPreviewUpdating(false);
 			}
@@ -233,7 +236,7 @@ export function useDraftWorker(
 			setIsPreviewUpdating(true);
 			void updatePreview(worker).then(() => setIsPreviewUpdating(false));
 		}
-	}, [worker]);
+	}, [updatePreview, worker]);
 
 	return {
 		isLoading,

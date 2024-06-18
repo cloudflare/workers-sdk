@@ -14,7 +14,7 @@ export function getPreviewIframeUrl(edgePreview: string, previewUrl: string) {
 	return url.href;
 }
 
-function PreviewTab() {
+function PreviewTabImplementation() {
 	const draftWorker = useContext(ServiceContext);
 
 	const previewSrc = useMemo(() => {
@@ -89,8 +89,10 @@ function PreviewTab() {
 	);
 }
 
-export default () => (
-	<FrameErrorBoundary fallback={"Invalid URL"}>
-		<PreviewTab />
-	</FrameErrorBoundary>
-);
+export default function PreviewTab() {
+	return (
+		<FrameErrorBoundary fallback={"Invalid URL"}>
+			<PreviewTabImplementation />
+		</FrameErrorBoundary>
+	);
+}

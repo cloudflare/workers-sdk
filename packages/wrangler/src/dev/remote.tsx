@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { Text } from "ink";
 import SelectInput from "ink-select-input";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
