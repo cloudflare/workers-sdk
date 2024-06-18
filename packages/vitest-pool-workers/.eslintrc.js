@@ -19,7 +19,7 @@ module.exports = {
 			},
 		},
 		{
-			files: "test/**/vitest.config.ts",
+			files: "test/**/vitest.config.*ts",
 			parserOptions: {
 				ecmaVersion: 2022,
 				sourceType: "module",

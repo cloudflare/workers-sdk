@@ -42,7 +42,7 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/workers-types": "^4.20240605.0",
 		"@types/mime": "^3.0.4",
-		"@types/node": "^18.11.12",
+		"@types/node": "20.8.3",
 		"ava": "^6.0.1",
 		"service-worker-mock": "^2.0.5"
 	},

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 describe("functions", () => {
 	it("calls function", async () => {
 		// `SELF` here points to the worker running in the current isolate.
-		// This gets its handler from the `main` option in `vitest.config.ts`.
+		// This gets its handler from the `main` option in `vitest.config.mts`.
 		const response = await SELF.fetch("http://example.com/api/ping");
 		// All `/api/*` requests go through `functions/api/_middleware.ts`,
 		// which makes all response bodies uppercase

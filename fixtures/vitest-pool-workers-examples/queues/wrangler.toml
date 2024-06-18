@@ -13,4 +13,4 @@ queue = "queue"
 
 [[queues.consumers]]
 queue = "queue"
-max_batch_timeout = 3 # Overridden in `vitest.config.ts`
+max_batch_timeout = 3 # Overridden in `vitest.config.mts`

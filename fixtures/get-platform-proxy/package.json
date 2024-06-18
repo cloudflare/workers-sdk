@@ -10,8 +10,8 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240605.0",
-		"wrangler": "workspace:*",
-		"undici": "^5.28.3"
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
 	},
 	"volta": {
 		"extends": "../../package.json"

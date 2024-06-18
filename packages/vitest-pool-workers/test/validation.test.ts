@@ -9,7 +9,7 @@ test(
 
 		// Check top-level options validated
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {
@@ -29,7 +29,7 @@ test(
 		let result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		let expected = dedent`
-		TypeError: Unexpected pool options in project ${path.join(tmpPathName, "vitest.config.ts")}:
+		TypeError: Unexpected pool options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 		{
 			test: {
 				poolOptions: {
@@ -51,7 +51,7 @@ test(
 
 		// Check `miniflare` options validated with correct error paths
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {
@@ -70,7 +70,7 @@ test(
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		TypeError: Unexpected pool options in project ${path.join(tmpPathName, "vitest.config.ts")}:
+		TypeError: Unexpected pool options in project ${path.join(tmpPathName, "vitest.config.mts")}:
 		{
 			test: {
 				poolOptions: {
@@ -96,7 +96,7 @@ test(
 
 		// Check messages without Wrangler configuration path defined
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({});
 		`,
@@ -105,13 +105,13 @@ test(
 		let result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		let expected = dedent`
-		Error: In project ${path.join(tmpPathName, "vitest.config.ts")}, \`test.poolOptions.workers.miniflare.compatibilityFlags\` must contain "export_commonjs_default", or \`test.poolOptions.workers.miniflare.compatibilityDate\` must be >= "2022-10-31".
+		Error: In project ${path.join(tmpPathName, "vitest.config.mts")}, \`test.poolOptions.workers.miniflare.compatibilityFlags\` must contain "export_commonjs_default", or \`test.poolOptions.workers.miniflare.compatibilityDate\` must be >= "2022-10-31".
 		This flag is required to use \`@cloudflare/vitest-pool-workers\`.
 	`.replaceAll("\t", "  ");
 		expect(result.stderr).toMatch(expected);
 
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {
@@ -127,14 +127,14 @@ test(
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		Error: In project ${path.join(tmpPathName, "vitest.config.ts")}, \`test.poolOptions.workers.miniflare.compatibilityFlags\` must contain "nodejs_compat".
+		Error: In project ${path.join(tmpPathName, "vitest.config.mts")}, \`test.poolOptions.workers.miniflare.compatibilityFlags\` must contain "nodejs_compat".
 		This flag is required to use \`@cloudflare/vitest-pool-workers\`.
 	`.replaceAll("\t", "  ");
 		expect(result.stderr).toMatch(expected);
 
 		// Check messages with Wrangler configuration path defined
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {
@@ -151,7 +151,7 @@ test(
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		Error: In project ${path.join(tmpPathName, "vitest.config.ts")}'s configuration file ${path.join(tmpPathName, "wrangler.toml")}, \`compatibility_flags\` must contain "export_commonjs_default", or \`compatibility_date\` must be >= "2022-10-31".
+		Error: In project ${path.join(tmpPathName, "vitest.config.mts")}'s configuration file ${path.join(tmpPathName, "wrangler.toml")}, \`compatibility_flags\` must contain "export_commonjs_default", or \`compatibility_date\` must be >= "2022-10-31".
 		This flag is required to use \`@cloudflare/vitest-pool-workers\`.
 	`.replaceAll("\t", "  ");
 		expect(result.stderr).toMatch(expected);
@@ -164,7 +164,7 @@ test(
 		result = await vitestRun();
 		expect(await result.exitCode).toBe(1);
 		expected = dedent`
-		Error: In project ${path.join(tmpPathName, "vitest.config.ts")}'s configuration file ${path.join(tmpPathName, "wrangler.toml")}, \`compatibility_flags\` must contain "nodejs_compat".
+		Error: In project ${path.join(tmpPathName, "vitest.config.mts")}'s configuration file ${path.join(tmpPathName, "wrangler.toml")}, \`compatibility_flags\` must contain "nodejs_compat".
 		This flag is required to use \`@cloudflare/vitest-pool-workers\`.
 	`.replaceAll("\t", "  ");
 		expect(result.stderr).toMatch(expected);
@@ -179,7 +179,7 @@ test(
 
 		// Check with no entrypoint
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {
@@ -213,7 +213,7 @@ test(
 
 		// Check with service worker
 		await seed({
-			"vitest.config.ts": dedent`
+			"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {

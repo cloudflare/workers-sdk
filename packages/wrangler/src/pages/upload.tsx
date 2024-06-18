@@ -205,23 +205,16 @@ export const upload = async (
 		const doUpload = async (): Promise<void> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
-			const payload: UploadPayloadFile[] = [];
-
-			for (let i = 0; i < bucket.files.length; i += 1000) {
-				// only read up to 1000 files, from disk, at a time to avoid `EMFILE` error (on Windows)
-				payload.push(
-					...(await Promise.all(
-						bucket.files.slice(i * 1000, (i + 1) * 1000).map(async (file) => ({
-							key: file.hash,
-							value: (await readFile(file.path)).toString("base64"),
-							metadata: {
-								contentType: file.contentType,
-							},
-							base64: true,
-						}))
-					))
-				);
-			}
+			const payload: UploadPayloadFile[] = await Promise.all(
+				bucket.files.map(async (file) => ({
+					key: file.hash,
+					value: (await readFile(file.path)).toString("base64"),
+					metadata: {
+						contentType: file.contentType,
+					},
+					base64: true,
+				}))
+			);
 
 			try {
 				logger.debug("POST /pages/assets/upload");

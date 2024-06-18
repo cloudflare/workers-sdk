@@ -18,19 +18,7 @@ module.exports = {
 		sourceType: "module",
 		project: true,
 	},
-	settings: {
-		react: {
-			version: "detect",
-		},
-	},
-	plugins: [
-		"@typescript-eslint",
-		"eslint-plugin-react",
-		"eslint-plugin-react-hooks",
-		"import",
-		"unused-imports",
-		"no-only-tests",
-	],
+	plugins: ["@typescript-eslint", "import", "unused-imports", "no-only-tests"],
 	extends: ["turbo"],
 	overrides: [
 		{
@@ -38,8 +26,6 @@ module.exports = {
 			extends: [
 				"eslint:recommended",
 				"plugin:@typescript-eslint/recommended",
-				"plugin:react/recommended",
-				"plugin:react-hooks/recommended",
 				"plugin:import/typescript",
 				"turbo",
 			],

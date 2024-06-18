@@ -2,9 +2,6 @@
 
 name: C3 E2E (Quarantine)
 on:
-  pull_request:
-    paths:
-      - packages/create-cloudflare/**
   push:
     branches:
       - main
@@ -18,7 +15,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
     name: ${{ format('E2E (quarantined) ({0}@{1} on {2})', matrix.pm.name, matrix.pm.version, matrix.os) }}
-    if: ${{ github.repository_owner == 'cloudflare' }}
+    if: github.repository_owner == 'cloudflare'
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -31,7 +28,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

@@ -448,7 +448,7 @@ async function executeRemotely({
 						"Total queries executed": numQueries,
 						"Rows read": meta.rows_read,
 						"Rows written": meta.rows_written,
-						"Databas size (MB)": (meta.size_after / 1_000_000).toFixed(2),
+						"Database size (MB)": (meta.size_after / 1_000_000).toFixed(2),
 					},
 				],
 				success: true,

@@ -560,7 +560,7 @@ export const spinner = (
 	// const frames = ["㊂", "㊀", "㊁"];
 
 	const frameRate = 120;
-	let loop: NodeJS.Timer | null = null;
+	let loop: ReturnType<typeof setTimeout> | null = null;
 	let startMsg: string;
 	let currentMsg: string;
 

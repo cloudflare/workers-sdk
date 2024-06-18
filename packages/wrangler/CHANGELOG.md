@@ -1,6 +1,39 @@
 # wrangler
 
-## 3.60.0
+## 3.60.3
+
+### Patch Changes
+
+- [#6025](https://github.com/cloudflare/workers-sdk/pull/6025) [`122ef06`](https://github.com/cloudflare/workers-sdk/commit/122ef0681a8aa5338993cb21f111f84ef5c3a443) Thanks [@IgorMinar](https://github.com/IgorMinar)! - fix: avoid path collisions between performance and Performance Node.js polyfills
+
+  It turns out that ESBuild paths are case insensitive, which can result in path collisions between polyfills for `globalThis.performance` and `globalThis.Performance`, etc.
+
+  This change ensures that we encode all global names to lowercase and decode them appropriately.
+
+- [#6009](https://github.com/cloudflare/workers-sdk/pull/6009) [`169a9fa`](https://github.com/cloudflare/workers-sdk/commit/169a9fa260b7cb76cf5ef9e9e29a4fd33af8cf2f) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: reduce the number of parallel file reads on Windows to avoid EMFILE type errors
+
+  Fixes #1586
+
+- [`53acdbc`](https://github.com/cloudflare/workers-sdk/commit/53acdbc00a95e621d90d225d943c36df41768571) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: warn if user tries normal deploy when in the middle of a gradual version rollout
+
+- Updated dependencies [[`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c)]:
+  - miniflare@3.20240610.0
+
+## 3.60.2
+
+### Patch Changes
+
+- [#5307](https://github.com/cloudflare/workers-sdk/pull/5307) [`e6a3d24`](https://github.com/cloudflare/workers-sdk/commit/e6a3d243a73f0101d57e6e35c25585884ebea674) Thanks [@achanda](https://github.com/achanda)! - fix: add more timePeriods to `wrangler d1 insights`
+
+  This PR updates `wrangler d1 insights` to accept arbitrary timePeriod values up to 31 days.
+
+## 3.60.1
+
+### Patch Changes
+
+- [#6002](https://github.com/cloudflare/workers-sdk/pull/6002) [`f1f1834`](https://github.com/cloudflare/workers-sdk/commit/f1f18347ddfff509a58acea2a815c40fe86fd56c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Revert a change in 3.60.0 which incorrectly batched assets for Pages uploads (https://github.com/cloudflare/workers-sdk/pull/5632).
+
+## 3.60.0 [DEPRECATED]
 
 ### Minor Changes
 

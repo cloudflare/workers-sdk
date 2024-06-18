@@ -5,7 +5,7 @@ test.skipIf(process.platform === "win32")(
 	"console.log()s include correct source-mapped locations",
 	async ({ expect, seed, vitestDev }) => {
 		await seed({
-			"vitest.config.ts": minimalVitestConfig,
+			"vitest.config.mts": minimalVitestConfig,
 			"index.test.ts": dedent`
 			import { describe, it } from "vitest";
 			console.log("global");
@@ -59,7 +59,7 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.ts": dedent`
+		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {

@@ -10,14 +10,18 @@ import {
 } from "@cloudflare/cli/interactive";
 import { findWranglerToml, readConfig } from "../config";
 import { UserError } from "../errors";
+import { CI } from "../is-ci";
+import isInteractive from "../is-interactive";
 import * as metrics from "../metrics";
+import { APIError } from "../parse";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	createDeployment,
 	fetchDeployableVersions,
-	fetchLatestDeploymentVersions,
+	fetchDeploymentVersions,
+	fetchLatestDeployment,
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
@@ -26,7 +30,13 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { ApiVersion, Percentage, VersionCache, VersionId } from "./types";
+import type {
+	ApiDeployment,
+	ApiVersion,
+	Percentage,
+	VersionCache,
+	VersionId,
+} from "./types";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
@@ -205,22 +215,86 @@ function getConfig(
 	return config;
 }
 
+/**
+ * Prompts the user for confirmation when overwriting the latest deployment, given that it's split.
+ */
+export async function confirmLatestDeploymentOverwrite(
+	accountId: string,
+	scriptName: string
+) {
+	try {
+		const latest = await fetchLatestDeployment(accountId, scriptName);
+		if (latest && latest.versions.length >= 2) {
+			const versionCache: VersionCache = new Map();
+
+			// Print message and confirmation.
+
+			cli.warn(
+				`Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.`,
+				{ shape: cli.shapes.corners.tl, newlineBefore: false }
+			);
+			cli.newline();
+			await printDeployment(
+				accountId,
+				scriptName,
+				latest,
+				"last",
+				versionCache
+			);
+
+			return inputPrompt<boolean>({
+				type: "confirm",
+				question: `"wrangler deploy" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				label: "",
+				defaultValue: !isInteractive() || CI.isCI(), // defaults to true in CI for back-compat
+				acceptDefault: !isInteractive() || CI.isCI(),
+			});
+		}
+	} catch (e) {
+		const isNotFound = e instanceof APIError && e.code == 10007;
+		if (!isNotFound) {
+			throw e;
+		}
+	}
+	return true;
+}
+
 export async function printLatestDeployment(
 	accountId: string,
 	workerName: string,
 	versionCache: VersionCache
 ) {
-	const [versions, traffic] = await spinnerWhile({
+	const latestDeployment = await spinnerWhile({
 		startMessage: "Fetching latest deployment",
 		async promise() {
-			return fetchLatestDeploymentVersions(accountId, workerName, versionCache);
+			return fetchLatestDeployment(accountId, workerName);
 		},
 	});
-
-	cli.logRaw(
-		`${leftT} Your current deployment has ${versions.length} version(s):`
+	await printDeployment(
+		accountId,
+		workerName,
+		latestDeployment,
+		"current",
+		versionCache
 	);
+}
 
+export async function printDeployment(
+	accountId: string,
+	workerName: string,
+	deployment: ApiDeployment | undefined,
+	adjective: "current" | "last",
+	versionCache: VersionCache
+) {
+	const [versions, traffic] = await fetchDeploymentVersions(
+		accountId,
+		workerName,
+		deployment,
+		versionCache
+	);
+	cli.logRaw(
+		`${leftT} Your ${adjective} deployment has ${versions.length} version(s):`
+	);
 	printVersions(versions, traffic);
 }
 
@@ -228,20 +302,25 @@ export function printVersions(
 	versions: ApiVersion[],
 	traffic: Map<VersionId, Percentage>
 ) {
-	for (const version of versions) {
-		const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
-		const versionIdString = white(version.id);
+	cli.newline();
+	cli.log(formatVersions(versions, traffic));
+	cli.newline();
+}
 
-		cli.log(
-			gray(`
-${trafficString} ${versionIdString}
+export function formatVersions(
+	versions: ApiVersion[],
+	traffic: Map<VersionId, Percentage>
+) {
+	return versions
+		.map((version) => {
+			const trafficString = brandColor(`(${traffic.get(version.id)}%)`);
+			const versionIdString = white(version.id);
+			return gray(`${trafficString} ${versionIdString}
       Created:  ${version.metadata.created_on}
           Tag:  ${version.annotations?.["workers/tag"] ?? BLANK_INPUT}
-      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`)
-		);
-	}
-
-	cli.newline();
+      Message:  ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`);
+		})
+		.join("\n\n");
 }
 
 /**

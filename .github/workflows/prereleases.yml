@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -47,7 +47,7 @@ jobs:
       - name: Publish wrangler@beta to NPM
         run: pnpm --filter wrangler publish --tag beta
         env:
-          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           # this is the "test/staging" key for sparrow analytics
           SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
@@ -57,7 +57,7 @@ jobs:
       - name: Publish create-cloudflare@beta to NPM
         run: pnpm --filter create-cloudflare publish --tag beta
         env:
-          NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
       - name: Get Package Version
         run: echo "WRANGLER_VERSION=$(npm view wrangler@beta version)" >> $GITHUB_ENV

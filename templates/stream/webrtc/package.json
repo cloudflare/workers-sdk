@@ -8,7 +8,7 @@
 		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev --local  --port 1180 ./src"
 	},
 	"devDependencies": {
-		"typescript": "^4.5.4",
+		"typescript": "^5.4.5",
 		"wrangler": "^2.9.1"
 	}
 }

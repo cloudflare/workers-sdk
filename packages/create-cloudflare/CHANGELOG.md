@@ -1,5 +1,73 @@
 # create-cloudflare
 
+## 2.21.7
+
+### Patch Changes
+
+- [#5883](https://github.com/cloudflare/workers-sdk/pull/5883) [`c8f25f1`](https://github.com/cloudflare/workers-sdk/commit/c8f25f1535286bd9183d105bc799a517aa3c9a60) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.10.2 | 3.10.3 |
+
+- [#5993](https://github.com/cloudflare/workers-sdk/pull/5993) [`402affd`](https://github.com/cloudflare/workers-sdk/commit/402affda6ecb90cfa59b5cd60199111c1c63164b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.5 | 5.13.6 |
+
+- [#5994](https://github.com/cloudflare/workers-sdk/pull/5994) [`919c9ed`](https://github.com/cloudflare/workers-sdk/commit/919c9ed4f7183c2cb319db14fc2675685b3abbeb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.3.2 | 3.4.0 |
+
+- [#6015](https://github.com/cloudflare/workers-sdk/pull/6015) [`9111f00`](https://github.com/cloudflare/workers-sdk/commit/9111f0012b5e10393b703ae64f2349a2ffd1cd0d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-hono | 0.7.3 | 0.8.1 |
+
+- [#6016](https://github.com/cloudflare/workers-sdk/pull/6016) [`62db9b0`](https://github.com/cloudflare/workers-sdk/commit/62db9b02dc4c96e7bdfbb5090874c7b0bdc0da9d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 17.3.7 | 18.0.3 |
+
+- [#6017](https://github.com/cloudflare/workers-sdk/pull/6017) [`709ec35`](https://github.com/cloudflare/workers-sdk/commit/709ec35dbc99be849e557e0a7f18aa62ae188637) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.11.1 | 3.12.0 |
+
+- [#6027](https://github.com/cloudflare/workers-sdk/pull/6027) [`88ca59b`](https://github.com/cloudflare/workers-sdk/commit/88ca59b594b3a9eb4f8425f711bf0aac61dbd46c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.5.5 | 1.5.7 |
+
+- [#5607](https://github.com/cloudflare/workers-sdk/pull/5607) [`1e939cb`](https://github.com/cloudflare/workers-sdk/commit/1e939cbd451aad70cda4c3e5b6f38def743004c1) Thanks [@morinokami](https://github.com/morinokami)! - feature: use `satisfies ExportedHandler` for handlers in C3 templates
+
+## 2.21.6
+
+### Patch Changes
+
+- [#5954](https://github.com/cloudflare/workers-sdk/pull/5954) [`3b99e63`](https://github.com/cloudflare/workers-sdk/commit/3b99e6349a75f64bcdbc9b2968866b3d059dd9cf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that C3 doesn't delete pre-existing options in the `defineConfig` call
+
 ## 2.21.5
 
 ### Patch Changes

@@ -27,3 +27,7 @@ packages/create-cloudflare/templates/hello-world/**/worker-configuration.d.ts
 
 vscode.d.ts
 vscode.*.d.ts
+
+.e2e-logs
+templates/*/build
+templates/*/dist

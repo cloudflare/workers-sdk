@@ -16,15 +16,16 @@ runs:
   using: "composite"
   steps:
     - name: Install pnpm
-      uses: pnpm/action-setup@v2
+      uses: pnpm/action-setup@v4
       with:
         version: 9.1.3
 
     - name: Install Node.js ${{ inputs.node-version }}
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
         cache: "pnpm"
+        registry-url: "https://registry.npmjs.org"
 
     - name: "Configure turbo repo cache environment variables"
       if: inputs.turbo-api

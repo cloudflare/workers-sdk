@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -66,7 +66,6 @@ jobs:
           pnpm run deploy
         env:
           DEBIAN_FRONTEND: noninteractive
-          NPM_PUBLISH_TOKEN: NOT_USED # yarn will error if the env var from .npmrc can't be interpolated
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Deploy Workers Playground preview

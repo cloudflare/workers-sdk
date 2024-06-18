@@ -20,13 +20,13 @@ jobs:
       github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: detect-bumped-framework
         id: detect
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           result-encoding: string
           script: |
@@ -39,7 +39,7 @@ jobs:
     # Note: please keep this job in sync with the e2e one
     #       in .github/workflows/c3-e2e.yml
     needs: [get-dependabot-bumped-framework]
-    name: ${{ format('Dependabot E2E ({0}@{1})', matrix.pm.name, matrix.pm.version) }}
+    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
     strategy:
       fail-fast: false
       matrix:
@@ -49,7 +49,7 @@ jobs:
             { name: npm, version: "0.0.0" },
             { name: pnpm, version: "9.1.3" },
             { name: bun, version: "1.0.3" },
-            { name: yarn, verison: "1.0.0" },
+            { name: yarn, version: "1.0.0" },
           ]
         # include a single windows test with pnpm
         include:
@@ -58,7 +58,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

@@ -7,7 +7,7 @@ test("automatically re-runs unit tests", async ({
 	vitestDev,
 }) => {
 	await seed({
-		"vitest.config.ts": minimalVitestConfig,
+		"vitest.config.mts": minimalVitestConfig,
 		"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
@@ -54,7 +54,7 @@ test("automatically re-runs integration tests", async ({
 	vitestDev,
 }) => {
 	await seed({
-		"vitest.config.ts": dedent`
+		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {

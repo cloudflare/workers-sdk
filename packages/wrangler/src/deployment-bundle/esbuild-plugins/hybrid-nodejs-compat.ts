@@ -1,5 +1,6 @@
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
+import dedent from "ts-dedent";
 import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
@@ -39,7 +40,9 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 		{ filter: /.*/, namespace: REQUIRED_NODE_BUILT_IN_NAMESPACE },
 		({ path }) => {
 			return {
-				contents: `export * from '${path}'`,
+				contents: dedent`
+        import libDefault from '${path}';
+        module.exports = libDefault;`,
 				loader: "js",
 			};
 		}
@@ -95,7 +98,7 @@ function handleNodeJSGlobals(
 		...Object.keys(inject).map((globalName) =>
 			nodePath.resolve(
 				getBasePath(),
-				`_virtual_unenv_global_polyfill-${globalName}.js`
+				`_virtual_unenv_global_polyfill-${encodeToLowerCase(globalName)}.js`
 			)
 		),
 	];
@@ -104,7 +107,7 @@ function handleNodeJSGlobals(
 
 	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
 		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		const globalName = path.match(UNENV_GLOBALS_RE)![1];
+		const globalName = decodeFromLowerCase(path.match(UNENV_GLOBALS_RE)![1]);
 		const globalMapping = inject[globalName];
 
 		if (typeof globalMapping === "string") {
@@ -132,11 +135,6 @@ function handleNodeJSGlobals(
 									*/ ""
 									}
 									/* @__PURE__ */ (() => {
-										${
-											/*
-										// TODO: should we try to preserve globalThis.${globalName} if it exists?
-										*/ ""
-										}
 										return globalThis.${globalName} = globalVar;
 									})();
 
@@ -172,11 +170,6 @@ function handleNodeJSGlobals(
 								*/ ""
 								}
 								/* @__PURE__ */ (() => {
-									${
-										/*
-									// TODO: should we try to preserve globalThis.${globalName} if it exists?
-									*/ ""
-									}
 									return globalThis.${globalName} = ${exportName};
 							})();
 
@@ -188,4 +181,41 @@ function handleNodeJSGlobals(
 						`,
 		};
 	});
+}
+
+/**
+ * Encodes a case sensitive string to lowercase string by prefixing all uppercase letters
+ * with $ and turning them into lowercase letters.
+ *
+ * This function exists because ESBuild requires that all resolved paths are case insensitive.
+ * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
+ *
+ * This is important to support `inject` config for `performance` and `Performance` introduced
+ * in https://github.com/unjs/unenv/pull/257
+ */
+export function encodeToLowerCase(str: string): string {
+	return str
+		.replaceAll(/\$/g, () => "$$")
+		.replaceAll(/[A-Z]/g, (letter) => `$${letter.toLowerCase()}`);
+}
+
+/**
+ * Decodes a string lowercased using `encodeToLowerCase` to the original strings
+ */
+export function decodeFromLowerCase(str: string): string {
+	let out = "";
+	let i = 0;
+	while (i < str.length - 1) {
+		if (str[i] === "$") {
+			i++;
+			out += str[i].toUpperCase();
+		} else {
+			out += str[i];
+		}
+		i++;
+	}
+	if (i < str.length) {
+		out += str[i];
+	}
+	return out;
 }
