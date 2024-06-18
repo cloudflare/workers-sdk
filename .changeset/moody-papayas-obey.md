@@ -3,7 +3,7 @@
 "wrangler": patch
 ---
 
-Quieter builds
+chore: Quieter builds
 
 This patch cleans up warnings we were seeing when doing a full build. Specifically:
 
