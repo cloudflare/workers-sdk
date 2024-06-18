@@ -1,5 +1,4 @@
 import { Box, Text } from "ink";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
