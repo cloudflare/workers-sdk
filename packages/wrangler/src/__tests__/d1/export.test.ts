@@ -3,7 +3,7 @@ import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -14,19 +14,90 @@ describe("execute", () => {
 	mockApiToken();
 	mockConsoleMethods();
 	runInTempDir();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
+
 	it("should throw if output is missing", async () => {
 		await expect(runWrangler("d1 export db --local")).rejects.toThrowError(
 			`Missing required argument: output`
 		);
 	});
 
-	it("should reject --local mode (for now)", async () => {
-		await expect(
-			runWrangler("d1 export db --local --output /tmp/test.sql")
-		).rejects.toThrowError(
-			`Local imports/exports will be coming in a future version of Wrangler.`
+	it("should handle local", async () => {
+		setIsTTY(false);
+		writeWranglerToml({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		// Verify the basic command works with an empty DB
+		await runWrangler("d1 export db --local --output test-local.sql");
+		expect(fs.readFileSync("test-local.sql", "utf8")).toBe(
+			"PRAGMA defer_foreign_keys=TRUE;"
+		);
+
+		// Fill with data
+		fs.writeFileSync(
+			"data.sql",
+			`
+				CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);
+				CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);
+				INSERT INTO foo (value) VALUES ('xxx'),('yyy'),('zzz');
+				INSERT INTO bar (value) VALUES ('aaa'),('bbb'),('ccc');
+			`
+		);
+		await runWrangler("d1 execute db --local --file data.sql");
+
+		// SQL output expectations
+		const create_foo = "CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);";
+		const create_bar = "CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);";
+		const insert_foo = [
+			"INSERT INTO foo VALUES(1,'xxx');",
+			"INSERT INTO foo VALUES(2,'yyy');",
+			"INSERT INTO foo VALUES(3,'zzz');",
+		];
+		const insert_bar = [
+			"INSERT INTO bar VALUES(1,'aaa');",
+			"INSERT INTO bar VALUES(2,'bbb');",
+			"INSERT INTO bar VALUES(3,'ccc');",
+		];
+
+		// Full export
+		await runWrangler("d1 export db --local --output test-full.sql");
+		expect(fs.readFileSync("test-full.sql", "utf8")).toBe(
+			[
+				"PRAGMA defer_foreign_keys=TRUE;",
+				create_foo,
+				...insert_foo,
+				create_bar,
+				...insert_bar,
+			].join("\n")
+		);
+
+		// Schema only
+		await runWrangler(
+			"d1 export db --local --output test-schema.sql --no-data"
+		);
+		expect(fs.readFileSync("test-schema.sql", "utf8")).toBe(
+			["PRAGMA defer_foreign_keys=TRUE;", create_foo, create_bar].join("\n")
+		);
+
+		// Data only
+		await runWrangler(
+			"d1 export db --local --output test-data.sql --no-schema"
+		);
+		expect(fs.readFileSync("test-data.sql", "utf8")).toBe(
+			["PRAGMA defer_foreign_keys=TRUE;", ...insert_foo, ...insert_bar].join(
+				"\n"
+			)
+		);
+
+		// Foo only
+		await runWrangler(
+			"d1 export db --local --output test-data.sql --table foo"
+		);
+		expect(fs.readFileSync("test-data.sql", "utf8")).toBe(
+			["PRAGMA defer_foreign_keys=TRUE;", create_foo, ...insert_foo].join("\n")
 		);
 	});
 
@@ -37,7 +108,6 @@ describe("execute", () => {
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
 		});
-		mockOAuthServerCallback();
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
@@ -102,7 +172,7 @@ describe("execute", () => {
 			})
 		);
 
-		await runWrangler("d1 export db --remote --output /tmp/test.sql");
-		expect(fs.readFileSync("/tmp/test.sql", "utf8")).toBe(mockSqlContent);
+		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
 	});
 });

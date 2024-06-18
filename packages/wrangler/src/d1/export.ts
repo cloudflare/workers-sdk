@@ -1,15 +1,19 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import chalk from "chalk";
+import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
+import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { Name } from "./options";
-import { getDatabaseByNameOrBinding } from "./utils";
+import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -71,12 +75,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	await printWranglerBanner();
 	const config = readConfig(args.config, args);
 
-	if (local) {
-		throw new UserError(
-			`Local imports/exports will be coming in a future version of Wrangler.`
-		);
-	}
-	if (!remote) {
+	if (!local && !remote) {
 		throw new UserError(`You must specify either --local or --remote`);
 	}
 
@@ -91,16 +90,68 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			: [table]
 		: [];
 
-	const result = await exportRemotely(
-		config,
-		name,
-		output,
-		tables,
-		!schema,
-		!data
-	);
-	return result;
+	if (local) {
+		return await exportLocal(config, name, output, tables, !schema, !data);
+	} else {
+		return await exportRemotely(config, name, output, tables, !schema, !data);
+	}
 };
+
+async function exportLocal(
+	config: Config,
+	name: string,
+	output: string,
+	tables: string[],
+	noSchema: boolean,
+	noData: boolean
+) {
+	const localDB = getDatabaseInfoFromConfig(config, name);
+	if (!localDB) {
+		throw new UserError(
+			`Couldn't find a D1 DB with the name or binding '${name}' in wrangler.toml.`
+		);
+	}
+
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+
+	// TODO: should we allow customising persistence path?
+	// Should it be --persist-to for consistency (even though this isn't persisting anything)?
+	const persistencePath = getLocalPersistencePath(undefined, config.configPath);
+	const d1Persist = path.join(persistencePath, "v3", "d1");
+
+	logger.log(
+		`🌀 Exporting local database ${name} (${id}) from ${readableRelative(
+			d1Persist
+		)}:`
+	);
+	logger.log(
+		"🌀 To export your remote database, add a --remote flag to your wrangler command."
+	);
+
+	const mf = new Miniflare({
+		modules: true,
+		script: "export default {}",
+		d1Persist,
+		d1Databases: { DATABASE: id },
+	});
+	const db = await mf.getD1Database("DATABASE");
+	logger.log(`🌀 Exporting SQL to ${output}...`);
+
+	try {
+		// Special local-only export pragma. Query must be exactly this string to work.
+		const dump = await db
+			.prepare(`PRAGMA miniflare_d1_export(?,?,?);`)
+			.bind(noSchema, noData, ...tables)
+			.raw();
+		await fs.writeFile(output, dump[0].join("\n"));
+	} catch (e) {
+		throw new UserError((e as Error).message);
+	} finally {
+		await mf.dispose();
+	}
+
+	logger.log(`Done!`);
+}
 
 async function exportRemotely(
 	config: Config,
