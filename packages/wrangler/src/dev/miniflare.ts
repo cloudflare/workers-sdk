@@ -108,7 +108,7 @@ function createDurableObjectClass({ className, proxyUrl }) {
 	// Forward regular HTTP requests to the other "wrangler dev" session
 	klass.prototype.fetch = function(request) {
 		if (proxyUrl === undefined) {
-			return new Response(\`[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
+			return new Response(\`\${className} \${proxyUrl}[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
 		}
 		const proxyRequest = new Request(proxyUrl, request);
 		proxyRequest.headers.set(HEADER_URL, request.url);
@@ -434,6 +434,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			// services support JSRPC over HTTP CONNECT using a special hostname.
 			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
 			let address: `${string}:${number}`;
+			let style = HttpOptions_Style.PROXY;
 			if (service.entrypoint !== undefined) {
 				// If the user has requested a named entrypoint...
 				if (target.entrypointAddresses === undefined) {
@@ -459,7 +460,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					target.entrypointAddresses?.["default"];
 				if (defaultEntrypointAddress === undefined) {
 					// If the "server" `wrangler` is too old to provide direct entrypoint
-					// addresses, fallback to sending requests directly to the target...
+					// addresses (or uses service-worker syntax), fallback to sending requests directly to the target...
 					if (target.protocol === "https") {
 						// ...unless the target is listening on HTTPS, in which case throw.
 						// We can't support this as `workerd` requires us to explicitly
@@ -471,6 +472,8 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 						);
 					}
 					address = `${target.host}:${target.port}`;
+					// Removing this line causes `Internal Service Error` responses from service-worker syntax workers, since they don't seem to support the PROXY protocol
+					style = HttpOptions_Style.HOST;
 				} else {
 					address = `${defaultEntrypointAddress.host}:${defaultEntrypointAddress.port}`;
 				}
@@ -480,7 +483,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				external: {
 					address,
 					http: {
-						style: HttpOptions_Style.PROXY,
+						style,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
 					},
 				},
@@ -532,6 +535,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 					const identifier = getIdentifier(`do_${script_name}_${class_name}`);
 					const classNameJson = JSON.stringify(class_name);
+
 					if (
 						target?.host === undefined ||
 						target.port === undefined ||

@@ -1,10 +1,25 @@
 import events from "node:events";
+import { utimesSync } from "node:fs";
+import {
+	mkdir,
+	readdir,
+	readFile,
+	stat,
+	unlink,
+	writeFile,
+} from "node:fs/promises";
 import { createServer } from "node:http";
 import net from "node:net";
+import path from "node:path";
 import bodyParser from "body-parser";
+import { watch } from "chokidar";
+import { subMinutes } from "date-fns";
 import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
+import { version as wranglerVersion } from "../package.json";
+import { getFlag } from "./experimental-flags";
+import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Config } from "./config";
 import type { HttpTerminator } from "http-terminator";
@@ -18,8 +33,15 @@ if (Number.isNaN(DEV_REGISTRY_PORT)) {
 }
 const DEV_REGISTRY_HOST = `http://127.0.0.1:${DEV_REGISTRY_PORT}`;
 
+const DEV_REGISTRY_PATH = path.join(getGlobalWranglerConfigPath(), "registry");
+
 let globalServer: Server | null;
 let globalTerminator: HttpTerminator;
+
+let globalWatcher: ReturnType<typeof watch> | undefined;
+let globalWorkers: WorkerRegistry | undefined;
+
+const heartbeats = new Map<string, ReturnType<typeof setTimeout>>();
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
@@ -39,6 +61,34 @@ export type WorkerDefinition = {
 	durableObjectsHost?: string;
 	durableObjectsPort?: number;
 };
+
+async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
+	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
+	globalWorkers ??= {};
+	const newWorkers = new Set<string>();
+	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
+	for (const workerName of workerDefinitions) {
+		const file = await readFile(
+			path.join(DEV_REGISTRY_PATH, workerName),
+			"utf8"
+		);
+		const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
+		// Cleanup old workers
+		if (stats.mtime < subMinutes(new Date(), 10)) {
+			await unregisterWorker(workerName);
+		} else {
+			globalWorkers[workerName] = JSON.parse(file);
+			newWorkers.add(workerName);
+		}
+	}
+
+	for (const worker of Object.keys(globalWorkers)) {
+		if (!newWorkers.has(worker)) {
+			delete globalWorkers[worker];
+		}
+	}
+	return globalWorkers;
+}
 
 /**
  * A helper function to check whether our service registry is already running
@@ -102,6 +152,14 @@ export async function startWorkerRegistryServer(port: number) {
  * services, as well as getting the state of the registry.
  */
 export async function startWorkerRegistry() {
+	if (getFlag("FILE_BASED_REGISTRY")) {
+		globalWatcher ??= watch(DEV_REGISTRY_PATH, {
+			persistent: true,
+		}).on("all", async () => {
+			await loadWorkerDefinitions();
+		});
+		return;
+	}
 	if ((await isPortAvailable()) && !globalServer) {
 		const result = await startWorkerRegistryServer(DEV_REGISTRY_PORT);
 		globalServer = result.server;
@@ -131,6 +189,13 @@ export async function startWorkerRegistry() {
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
+	if (getFlag("FILE_BASED_REGISTRY") || globalWatcher) {
+		await globalWatcher?.close();
+		for (const heartbeat of heartbeats) {
+			clearInterval(heartbeat[1]);
+		}
+		return;
+	}
 	await globalTerminator?.terminate();
 	globalServer = null;
 }
@@ -142,6 +207,27 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
+		const existingHeartbeat = heartbeats.get(name);
+		if (existingHeartbeat) {
+			clearInterval(existingHeartbeat);
+		}
+		await mkdir(DEV_REGISTRY_PATH, { recursive: true });
+		await writeFile(
+			path.join(DEV_REGISTRY_PATH, name),
+			// We don't currently do anything with the stored Wrangler version,
+			// but if we need to make breaking changes to this format in the future
+			// we can use this field to present useful messaging
+			JSON.stringify({ ...definition, wranglerVersion }, null, 2)
+		);
+		heartbeats.set(
+			name,
+			setInterval(() => {
+				utimesSync(path.join(DEV_REGISTRY_PATH, name), new Date(), new Date());
+			}, 30_000)
+		);
+		return;
+	}
 	/**
 	 * Prevent the dev registry be closed.
 	 */
@@ -171,6 +257,18 @@ export async function registerWorker(
  * Unregister a worker from the registry.
  */
 export async function unregisterWorker(name: string) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
+		try {
+			await unlink(path.join(DEV_REGISTRY_PATH, name));
+			const existingHeartbeat = heartbeats.get(name);
+			if (existingHeartbeat) {
+				clearInterval(existingHeartbeat);
+			}
+		} catch (e) {
+			logger.debug("failed to unregister worker", e);
+		}
+		return;
+	}
 	try {
 		await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "DELETE",
@@ -193,6 +291,11 @@ export async function unregisterWorker(name: string) {
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
+	if (getFlag("FILE_BASED_REGISTRY")) {
+		globalWorkers = await loadWorkerDefinitions();
+		return globalWorkers;
+	}
+
 	try {
 		const response = await fetch(`${DEV_REGISTRY_HOST}/workers`);
 		return (await response.json()) as WorkerRegistry;

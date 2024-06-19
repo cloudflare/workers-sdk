@@ -242,6 +242,13 @@ export function Options(yargs: CommonYargsArgv) {
 					"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			},
+			"experimental-registry": {
+				alias: ["x-registry"],
+				type: "boolean",
+				describe:
+					"Use the experimental file based dev registry for multi-worker development",
+				default: false,
+			},
 		});
 }
 
@@ -680,6 +687,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			showInteractiveDevSession: args.showInteractiveDevSession,
 			testMode: false,
 			watch: true,
+			fileBasedRegistry: args.experimentalRegistry,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");

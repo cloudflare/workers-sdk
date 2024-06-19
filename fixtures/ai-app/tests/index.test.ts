@@ -27,8 +27,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect((content as Record<string, object>).run).toEqual("function");
 	});
 
-	// TODO: unskip when https://github.com/cloudflare/workerd/pull/2095 is merged and released
-	it.skip("ai binding properties", async ({ expect }) => {
+	it("ai binding properties", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const content = await response.json();
 		expect((content as Record<string, object>).binding).toEqual({

@@ -1,5 +1,6 @@
 import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
+import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
@@ -78,6 +79,7 @@ export interface UnstableDevOptions {
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 		devEnv?: boolean;
+		fileBasedRegistry?: boolean;
 	};
 }
 
@@ -122,6 +124,7 @@ export async function unstable_dev(
 		testMode,
 		testScheduled,
 		devEnv = false,
+		fileBasedRegistry = false,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -214,6 +217,7 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalVersions: undefined,
 		experimentalDevEnv: devEnv,
+		experimentalRegistry: fileBasedRegistry,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
@@ -245,7 +249,13 @@ export async function unstable_dev(
 		};
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-		const devServer = await startDev(devOptions);
+		const devServer = await run(
+			{
+				DEV_ENV: devEnv,
+				FILE_BASED_REGISTRY: fileBasedRegistry,
+			},
+			() => startDev(devOptions)
+		);
 		const { port, address, proxyData } = await readyPromise;
 		return {
 			port,

@@ -8,6 +8,7 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
+import { run } from "../../../experimental-flags";
 import { getAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
@@ -41,6 +42,12 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
+	/**
+	 * Use the experimental file-based dev registry for service discovery
+	 *
+	 * Note: this feature is experimental
+	 */
+	experimentalRegistry?: boolean;
 };
 
 /**
@@ -93,10 +100,12 @@ export async function getPlatformProxy<
 		env,
 	});
 
-	const miniflareOptions = await getMiniflareOptionsFromConfig(
-		rawConfig,
-		env,
-		options
+	const miniflareOptions = await run(
+		{
+			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry),
+			DEV_ENV: false,
+		},
+		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
 
 	const mf = new Miniflare({

@@ -11,6 +11,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
+import { run } from "./experimental-flags";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
@@ -295,6 +296,13 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
 				default: false,
 			})
+			.option("experimental-registry", {
+				alias: ["x-registry"],
+				type: "boolean",
+				describe:
+					"Use the experimental file based dev registry for multi-worker development",
+				default: false,
+			})
 	);
 }
 
@@ -323,7 +331,13 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 
 	let watcher;
 	try {
-		const devInstance = await startDev(args);
+		const devInstance = await run(
+			{
+				DEV_ENV: args.experimentalDevEnv,
+				FILE_BASED_REGISTRY: args.experimentalRegistry,
+			},
+			() => startDev(args)
+		);
 		watcher = devInstance.watcher;
 		const { waitUntilExit } = devInstance.devReactElement;
 		await waitUntilExit();
@@ -659,7 +673,13 @@ export async function startApiDev(args: StartDevOptions) {
 		});
 	}
 
-	const devServer = await getDevServer(config);
+	const devServer = await run(
+		{
+			DEV_ENV: args.experimentalDevEnv,
+			FILE_BASED_REGISTRY: args.experimentalRegistry,
+		},
+		() => getDevServer(config)
+	);
 	if (!devServer) {
 		const error = new Error("Failed to start dev server.");
 		logger.error(error.message);
