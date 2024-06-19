@@ -474,6 +474,7 @@ function DevSession(props: DevSessionProps) {
 						: undefined,
 				legacyAssets: props.legacyAssetsConfig,
 				enableServiceEnvironments: !props.legacyEnv,
+				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			},
 			unsafe: {
 				capnp: props.bindings.unsafe?.capnp,

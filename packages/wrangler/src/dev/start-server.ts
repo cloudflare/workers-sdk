@@ -160,6 +160,9 @@ export async function startDevServer(
 			moduleRules: props.rules,
 			nodejsCompatMode: props.nodejsCompatMode,
 		},
+		legacy: {
+			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
+		},
 	};
 
 	if (props.experimentalDevEnv) {
