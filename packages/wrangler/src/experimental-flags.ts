@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "async_hooks";
+import { logger } from "./logger";
 
 type ExperimentalFlags = {
 	// TODO: use this
@@ -14,11 +15,11 @@ export const run = <V>(flagValues: ExperimentalFlags, cb: () => V) =>
 export const getFlag = <F extends keyof ExperimentalFlags>(flag: F) => {
 	const store = flags.getStore();
 	if (store === undefined) {
-		throw new Error("No experimental flag store instantiated");
+		logger.debug("No experimental flag store instantiated");
 	}
 	const value = flags.getStore()?.[flag];
 	if (value === undefined) {
-		throw new Error(
+		logger.debug(
 			`Attempted to use flag "${flag}" which has not been instantiated`
 		);
 	}

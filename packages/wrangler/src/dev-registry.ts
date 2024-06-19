@@ -189,7 +189,7 @@ export async function startWorkerRegistry() {
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	if (getFlag("FILE_BASED_REGISTRY")) {
+	if (getFlag("FILE_BASED_REGISTRY") || globalWatcher) {
 		await globalWatcher?.close();
 		for (const heartbeat of heartbeats) {
 			clearInterval(heartbeat[1]);
