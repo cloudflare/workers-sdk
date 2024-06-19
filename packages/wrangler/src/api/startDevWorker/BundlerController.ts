@@ -43,7 +43,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
-		assert(config.script.path);
+		assert(config.entrypoint.path);
 		assert(config.directory);
 		assert(config.build?.format);
 		assert(config.build?.moduleRoot);
@@ -54,11 +54,11 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#customBuildAborter;
 		const relativeFile =
-			path.relative(config.directory, config.script.path) || ".";
+			path.relative(config.directory, config.entrypoint.path) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(config.script.path, relativeFile, {
+			await runCustomBuild(config.entrypoint.path, relativeFile, {
 				cwd: config.build?.custom?.workingDirectory,
 				command: config.build?.custom?.command,
 			});
@@ -72,23 +72,23 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				// if we're not bundling, let's just copy the entry to the destination directory
 				const destinationDir = this.#tmpDir.path;
 				writeFileSync(
-					path.join(destinationDir, path.basename(config.script.path)),
-					readFileSync(config.script.path, "utf-8")
+					path.join(destinationDir, path.basename(config.entrypoint.path)),
+					readFileSync(config.entrypoint.path, "utf-8")
 				);
 			}
 
 			const entry: Entry = {
-				file: config.script.path,
+				file: config.entrypoint.path,
 				directory: config.directory,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
 			};
 
-			const entryDirectory = path.dirname(config.script.path);
+			const entryDirectory = path.dirname(config.entrypoint.path);
 			const moduleCollector = createModuleCollector({
 				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 					entryDirectory,
-					config.script.path
+					config.entrypoint.path
 				),
 				entry,
 				// `moduleCollector` doesn't get used when `noBundle` is set, so
@@ -138,7 +138,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				return;
 			}
 			const entrypointPath = realpathSync(
-				bundleResult?.resolvedEntryPointPath ?? config.script.path
+				bundleResult?.resolvedEntryPointPath ?? config.entrypoint.path
 			);
 
 			this.emitBundleCompleteEvent(config, {
@@ -147,7 +147,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				path: entrypointPath,
 				type:
 					bundleResult?.bundleType ??
-					getBundleType(config.build.format, config.script.path),
+					getBundleType(config.build.format, config.entrypoint.path),
 				modules: bundleResult.modules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
@@ -203,12 +203,12 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		assert(this.#tmpDir);
 		assert(config.build?.moduleRules, "config.build?.moduleRules");
 		assert(config.build?.define, "config.build?.define");
-		assert(config.script.path);
+		assert(config.entrypoint.path);
 		assert(config.directory);
 		assert(config.build.format);
 		assert(config.build.moduleRoot);
 		const entry: Entry = {
-			file: config.script.path,
+			file: config.entrypoint.path,
 			directory: config.directory,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,

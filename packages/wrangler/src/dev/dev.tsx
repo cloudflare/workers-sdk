@@ -258,7 +258,7 @@ async function _toSDW(
 		name: getScriptName({ name: args.name, env: args.env }, config),
 		compatibilityDate: getDevCompatibilityDate(config, args.compatibilityDate),
 		compatibilityFlags: args.compatibilityFlags || config.compatibility_flags,
-		script: { path: entry.file },
+		entrypoint: { path: entry.file },
 		directory: entry.directory,
 		bindings: convertCfWorkerInitBindingstoBindings(bindings),
 
@@ -486,7 +486,7 @@ function DevSession(props: DevSessionProps) {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
-			script: { path: props.entry.file },
+			entrypoint: { path: props.entry.file },
 			directory: props.entry.directory,
 			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 

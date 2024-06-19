@@ -67,7 +67,7 @@ describe("happy path bundle + watch", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: { path: path.resolve("src/index.ts") },
+			entrypoint: { path: path.resolve("src/index.ts") },
 			directory: path.resolve("src"),
 			build: {
 				bundle: true,
@@ -134,7 +134,7 @@ describe("happy path bundle + watch", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: { path: path.resolve("src/index.ts") },
+			entrypoint: { path: path.resolve("src/index.ts") },
 			directory: path.resolve("src"),
 			build: {
 				bundle: true,
@@ -195,7 +195,7 @@ describe("happy path bundle + watch", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: { path: path.resolve("out.ts") },
+			entrypoint: { path: path.resolve("out.ts") },
 			directory: path.resolve("."),
 			build: {
 				bundle: true,
@@ -265,7 +265,7 @@ describe("switching", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: { path: path.resolve("src/index.ts") },
+			entrypoint: { path: path.resolve("src/index.ts") },
 			directory: path.resolve("src"),
 
 			build: {
@@ -307,7 +307,7 @@ describe("switching", () => {
 		});
 		const configCustom = {
 			name: "worker",
-			script: { path: path.resolve("out.ts") },
+			entrypoint: { path: path.resolve("out.ts") },
 			directory: process.cwd(),
 			build: {
 				bundle: true,
@@ -375,7 +375,7 @@ describe("switching", () => {
 		});
 		const configCustom = {
 			name: "worker",
-			script: { path: path.resolve("out.ts") },
+			entrypoint: { path: path.resolve("out.ts") },
 			directory: process.cwd(),
 
 			build: {
@@ -419,7 +419,7 @@ describe("switching", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: { path: path.resolve("src/index.ts") },
+			entrypoint: { path: path.resolve("src/index.ts") },
 			directory: path.resolve("src"),
 
 			build: {

@@ -92,7 +92,7 @@ export async function startDevServer(
 	const devEnv = props.devEnv;
 	const startDevWorkerOptions: StartDevWorkerOptions = {
 		name: props.name ?? "worker",
-		script: { path: props.entry.file },
+		entrypoint: { path: props.entry.file },
 		directory: props.entry.directory,
 		dev: {
 			server: {
