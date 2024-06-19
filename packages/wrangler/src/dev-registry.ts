@@ -18,7 +18,7 @@ import express from "express";
 import { createHttpTerminator } from "http-terminator";
 import { fetch } from "undici";
 import { version as wranglerVersion } from "../package.json";
-import { FILE_BASED_REGISTRY } from "./experimental-flags";
+import { getFlag } from "./experimental-flags";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Config } from "./config";
@@ -152,7 +152,7 @@ export async function startWorkerRegistryServer(port: number) {
  * services, as well as getting the state of the registry.
  */
 export async function startWorkerRegistry() {
-	if (FILE_BASED_REGISTRY()) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
 		globalWatcher ??= watch(DEV_REGISTRY_PATH, {
 			persistent: true,
 		}).on("all", async () => {
@@ -189,7 +189,7 @@ export async function startWorkerRegistry() {
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	if (FILE_BASED_REGISTRY()) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
 		await globalWatcher?.close();
 		for (const heartbeat of heartbeats) {
 			clearInterval(heartbeat[1]);
@@ -207,7 +207,7 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
-	if (FILE_BASED_REGISTRY()) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
 		const existingHeartbeat = heartbeats.get(name);
 		if (existingHeartbeat) {
 			clearInterval(existingHeartbeat);
@@ -257,7 +257,7 @@ export async function registerWorker(
  * Unregister a worker from the registry.
  */
 export async function unregisterWorker(name: string) {
-	if (FILE_BASED_REGISTRY()) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
 		try {
 			await unlink(path.join(DEV_REGISTRY_PATH, name));
 			const existingHeartbeat = heartbeats.get(name);
@@ -291,7 +291,7 @@ export async function unregisterWorker(name: string) {
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
-	if (FILE_BASED_REGISTRY()) {
+	if (getFlag("FILE_BASED_REGISTRY")) {
 		globalWorkers = await loadWorkerDefinitions();
 		return globalWorkers;
 	}
