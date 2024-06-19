@@ -1,13 +1,28 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-	"pipeline": {
+	"tasks": {
 		"build": {
-			"env": ["TEST_PM", "TEST_PM_VERSION", "npm_config_user_agent", "CI"],
+			"env": [
+				"TMPDIR",
+				"TMP",
+				"TEMP",
+				"TEST_PM",
+				"TEST_PM_VERSION",
+				"npm_config_user_agent",
+				"CI"
+			],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
 			"env": [
+				"TMPDIR",
+				"TMP",
+				"TEMP",
+				"TEST_PM",
+				"TEST_PM_VERSION",
+				"npm_config_user_agent",
+				"CI",
 				"SAVE_DIFFS",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",

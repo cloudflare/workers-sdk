@@ -1,6 +1,5 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-
-	"pipeline": {}
+	"tasks": {}
 }
