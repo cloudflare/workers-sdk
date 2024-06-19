@@ -664,7 +664,7 @@ describe("Bindings", () => {
 		fs.writeFileSync(path.join(tmp, "charts.xlsx"), "📊");
 		fs.writeFileSync(path.join(tmp, "secrets.txt"), "🔐");
 
-		const config: StartDevWorkerOptions = {
+		let config: StartDevWorkerOptions = {
 			name: "worker",
 			script: unusable(),
 			legacy: { site: { bucket: tmp, include: ["*.txt"] } },
@@ -695,8 +695,13 @@ describe("Bindings", () => {
 		expect(res.status).toBe(404);
 		res = await fetch(new URL("/secrets.txt", url));
 		expect(res.status).toBe(200);
-		config.legacy = {};
-		config.legacy.site = { bucket: tmp, exclude: ["secrets.txt"] };
+		config = {
+			...config,
+			legacy: {
+				...config.legacy,
+				site: { bucket: tmp, exclude: ["secrets.txt"] },
+			},
+		};
 		controller.onBundleStart({ type: "bundleStart", config });
 		controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 		event = await waitForReloadComplete(controller);
