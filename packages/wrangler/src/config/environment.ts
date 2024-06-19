@@ -862,7 +862,7 @@ export type ConfigModuleRuleType =
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
 	service: string;
-	/** (Optional) The environt of the service. */
+	/** (Optional) The environment of the service. */
 	environment?: string;
 };
 
