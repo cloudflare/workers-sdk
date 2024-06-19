@@ -174,18 +174,18 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			return;
 		}
 
-		assert(config.build?.custom?.watch);
+		const pathsToWatch = config.build?.custom?.watch;
+		assert(pathsToWatch);
 
-		this.#customBuildWatcher = watch(config.build?.custom?.watch, {
+		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
 			// TODO: add comments re this ans ready
 			ignoreInitial: true,
 		});
-		this.#customBuildWatcher.on(
-			"ready",
-			() =>
-				void this.#runCustomBuild(config, String(config.build?.custom?.watch))
-		);
+		this.#customBuildWatcher.on("ready", () => {
+			assert(config.build?.custom?.watch);
+			void this.#runCustomBuild(config, String(pathsToWatch));
+		});
 
 		this.#customBuildWatcher.on(
 			"all",
