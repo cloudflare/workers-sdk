@@ -168,7 +168,7 @@ export class UserSession {
 			throw new BadUpload(`Expected valid form data`, String(e));
 		}
 
-		const m = worker.get("metadata");
+		const m = worker.get("metadata") as unknown;
 		if (!(m instanceof File)) {
 			throw new BadUpload("Expected metadata file to be defined");
 		}
@@ -209,7 +209,9 @@ export class UserSession {
 		let entrypoint = uploadedMetadata.main_module;
 		let additionalModules = new FormData();
 
-		const entrypointModule = worker.get(uploadedMetadata.main_module);
+		const entrypointModule = worker.get(
+			uploadedMetadata.main_module
+		) as unknown;
 
 		// Only apply middleware if the entrypoint is an ES6 module
 		if (
@@ -224,7 +226,7 @@ export class UserSession {
 		metadata.main_module = entrypoint;
 
 		for (const [path, additionalModule] of additionalModules.entries()) {
-			assert(additionalModule instanceof File);
+			assert((additionalModule as unknown) instanceof File);
 			worker.set(path, additionalModule);
 		}
 

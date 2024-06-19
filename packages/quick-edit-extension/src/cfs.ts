@@ -259,7 +259,7 @@ declare module "*.bin" {
 		if (!entry) {
 			entry = new File(uri, basename);
 			parent.entries.set(basename, entry);
-			if (!options.suppressChannelUpdate)
+			if (!options.suppressChannelUpdate) {
 				this.channel.postMessage({
 					type: "CreateFile",
 					body: {
@@ -267,6 +267,7 @@ declare module "*.bin" {
 						contents: content,
 					},
 				});
+			}
 			this._fireSoon({ type: FileChangeType.Created, uri });
 		}
 		entry.mtime = Date.now();
@@ -275,7 +276,7 @@ declare module "*.bin" {
 		if (options.readOnly) {
 			entry.setReadOnly();
 		}
-		if (!options.suppressChannelUpdate)
+		if (!options.suppressChannelUpdate) {
 			this.channel.postMessage({
 				type: "UpdateFile",
 				body: {
@@ -283,6 +284,7 @@ declare module "*.bin" {
 					contents: content,
 				},
 			});
+		}
 		this._fireSoon({ type: FileChangeType.Changed, uri });
 	}
 

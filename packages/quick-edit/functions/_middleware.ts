@@ -62,7 +62,9 @@ export const onRequest = async ({
 			/\{\{([^}]+)\}\}/g,
 			(_, key) => values[key as keyof typeof values] ?? "undefined"
 		);
-		if (!isLocalDev) body = body.replace("/node_modules/", "/modules/");
+		if (!isLocalDev) {
+			body = body.replace("/node_modules/", "/modules/");
+		}
 
 		return new Response(body, {
 			headers: {
