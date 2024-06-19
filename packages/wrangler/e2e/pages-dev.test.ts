@@ -32,7 +32,7 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				const currentDate = new Date().toISOString().substring(0, 10);
 				const output = worker.output.replaceAll(currentDate, "<current-date>");
 
-				expect(text).toMatchInlineSnapshot('"Testing [--compatibility_date]"');
+				expect(text).toBe("Testing [--compatibility_date]");
 				expect(output).toContain(
 					`No compatibility_date was specified. Using today's date: <current-date>.`
 				);
@@ -62,7 +62,7 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				});
 				const { url } = await waitForReady(worker);
 				const text = await fetchText(url);
-				expect(text).toMatchInlineSnapshot(`"Testing [--experimental-local]"`);
+				expect(text).toBe("Testing [--experimental-local]");
 				expect(worker.output).toContain(
 					`--experimental-local is no longer required and will be removed in a future version`
 				);
@@ -155,9 +155,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				const worker = run(`wrangler pages dev ${flags} --port ${port} .`);
 				const { url } = await waitForReady(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Hello World!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Hello World!"
+				);
 
 				await seed({
 					"_worker.js": dedent`
@@ -170,9 +170,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				await waitForReload(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Updated Worker!"
+				);
 			}
 		);
 
@@ -191,9 +191,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				const { url } = await waitForReady(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Hello World!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Hello World!"
+				);
 
 				await seed({
 					"functions/_middleware.js": dedent`
@@ -204,9 +204,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				await waitForReload(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Updated Worker!"
+				);
 			}
 		);
 		e2eTest(
@@ -230,9 +230,7 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				const { url } = await waitForReady(worker);
 
 				const text = await fetchText(url);
-				expect(text).toMatchInlineSnapshot(
-					'"Pages supports wrangler.toml ⚡️⚡️"'
-				);
+				expect(text).toBe("Pages supports wrangler.toml ⚡️⚡️");
 			}
 		);
 
@@ -252,9 +250,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				const { url } = await waitForReady(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Hello World!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Hello World!"
+				);
 
 				await seed({
 					"_worker.js": dedent`
@@ -281,9 +279,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				});
 				await waitForReload(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Updated Worker!"
+				);
 			}
 		);
 
@@ -302,9 +300,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				const { url } = await waitForReady(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Hello World!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Hello World!"
+				);
 
 				await seed({
 					"functions/_middleware.js": dedent`
@@ -327,9 +325,9 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				});
 				await waitForReload(worker);
 
-				await expect(
-					fetch(url).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+				await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+					"Updated Worker!"
+				);
 			}
 		);
 
@@ -366,10 +364,10 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				const { url } = await waitForReady(worker);
 
 				const foo = await fetchText(`${url}/foo`);
-				expect(foo).toMatchInlineSnapshot('"foo"');
+				expect(foo).toBe("foo");
 
 				const bar = await fetchText(`${url}/bar`);
-				expect(bar).toMatchInlineSnapshot('"bar"');
+				expect(bar).toBe("bar");
 
 				await seed({
 					"_routes.json": dedent`
@@ -383,10 +381,10 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				await waitForReload(worker);
 
 				const foo2 = await fetchText(`${url}/foo`);
-				expect(foo2).toMatchInlineSnapshot('"foo"');
+				expect(foo2).toBe("foo");
 
 				const bar2 = await fetchText(`${url}/bar`);
-				expect(bar2).toMatchInlineSnapshot('"hello world"');
+				expect(bar2).toBe("hello world");
 			}
 		);
 
@@ -413,7 +411,7 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				const foo = await fetchText(`${url}/foo`);
 
-				expect(foo).toMatchInlineSnapshot('"FOO"');
+				expect(foo).toBe("FOO");
 
 				// invalid _routes.json because include rule does not start with `/`
 				await seed({
@@ -462,9 +460,7 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 
 				const text = await fetchText(url);
 
-				expect(text).toMatchInlineSnapshot(
-					'"⚡️ Pages ⚡️ supports wrangler.toml"'
-				);
+				expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
 				expect(normalizeOutput(worker.output).replace(/\s/g, "")).toContain(
 					`
 					Your worker has access to the following bindings:
@@ -577,45 +573,7 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 					"⎔ Starting local server..."
 				);
 
-				expect(prestartOutput).toMatchInlineSnapshot(`
-				"✨ Compiled Worker successfully
-				▲ [WARNING] WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
-				  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
-				  Remote Durable Objects that are affected:
-				  - {"name":"DO_BINDING_1_TOML","class_name":"DO_1_TOML","script_name":"DO_SCRIPT_1_TOML"}
-				  - {"name":"DO_BINDING_2_TOML","class_name":"DO_2_TOML","script_name":"DO_SCRIPT_2_TOML"}
-				▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (SERVICE_NAME_1_TOML), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
-				Your worker has access to the following bindings:
-				- Durable Objects:
-				  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1)
-				  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML)
-				  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS)
-				- KV Namespaces:
-				  - KV_BINDING_1_TOML: NEW_KV_ID_1
-				  - KV_BINDING_2_TOML: KV_ID_2_TOML
-				  - KV_BINDING_3_ARGS: KV_ID_3_ARGS
-				- D1 Databases:
-				  - D1_BINDING_1_TOML: local-D1_BINDING_1_TOML=NEW_D1_NAME_1 (NEW_D1_NAME_1)
-				  - D1_BINDING_2_TOML: D1_NAME_2_TOML (D1_ID_2_TOML)
-				  - D1_BINDING_3_ARGS: local-D1_BINDING_3_ARGS=D1_NAME_3_ARGS (D1_NAME_3_ARGS)
-				- R2 Buckets:
-				  - R2_BINDING_1_TOML: NEW_R2_BUCKET_1
-				  - R2_BINDING_2_TOML: R2_BUCKET_2_TOML
-				  - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS
-				- Services:
-				  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1
-				  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML
-				  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS
-				- AI:
-				  - Name: AI_BINDING_2_TOML
-				- Vars:
-				  - VAR1: "(hidden)"
-				  - VAR2: "VAR_2_TOML"
-				  - VAR3: "(hidden)"
-				▲ [WARNING] ⎔ Support for service bindings in local mode is experimental and may change.
-				▲ [WARNING] ⎔ Support for external Durable Objects in local mode is experimental and may change.
-				"
-			`);
+				expect(prestartOutput).toMatchSnapshot();
 			}
 		);
 
@@ -640,8 +598,8 @@ describe.each([{ flags: "" }, { flags: "--x-dev-env" }])(
 				const port = await getPort();
 				const worker = run(`wrangler pages dev ${flags} --port ${port} public`);
 				const { url } = await waitForReady(worker);
-				await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-					`"⚡️ Pages supports wrangler.toml ⚡️"`
+				await expect(fetchText(url)).resolves.toBe(
+					"⚡️ Pages supports wrangler.toml ⚡️"
 				);
 			}
 		);
