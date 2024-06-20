@@ -603,12 +603,11 @@ function DevSession(props: DevSessionProps) {
 	]);
 
 	const onBundleStart = useCallback(() => {
-		if (!props.experimentalDevEnv) {
-			devEnv.proxy.onBundleStart({
-				type: "bundleStart",
-				config: startDevWorkerOptions,
-			});
-		}
+		// NOTE: this callback won't be called if props.experimentalDevEnv
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: startDevWorkerOptions,
+		});
 	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 	const onBundleComplete = useCallback(
 		(bundle: EsbuildBundle) => {

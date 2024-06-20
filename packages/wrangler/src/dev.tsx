@@ -628,7 +628,7 @@ export async function startApiDev(args: StartDevOptions) {
 	);
 
 	const devEnv = new DevEnv();
-	if (!args.disableDevRegistry) {
+	if (!args.disableDevRegistry && args.experimentalDevEnv) {
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
 				if (!reloadEvent.config.dev?.remote) {

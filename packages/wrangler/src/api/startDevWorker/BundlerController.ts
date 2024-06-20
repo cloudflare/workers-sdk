@@ -183,7 +183,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			ignoreInitial: true,
 		});
 		this.#customBuildWatcher.on("ready", () => {
-			assert(config.build?.custom?.watch);
 			void this.#runCustomBuild(config, String(pathsToWatch));
 		});
 
