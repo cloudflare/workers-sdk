@@ -63,7 +63,7 @@ export class TaskFetch extends OpenAPIRoute {
 				},
 				{
 					status: 404,
-				},
+				}
 			);
 		}
 
