@@ -3,7 +3,6 @@ import path from "node:path";
 import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
 import { getConstellationWarningFromEnv } from "../constellation/utils";
-import { CommonYargsOptions } from "../yargs-types";
 import { Diagnostics } from "./diagnostics";
 import {
 	all,

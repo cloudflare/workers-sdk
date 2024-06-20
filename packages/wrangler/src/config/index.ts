@@ -5,15 +5,12 @@ import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import {
-	isPagesConfig,
-	normalizeAndValidateConfig,
-	NormalizeAndValidateConfigArgs,
-} from "./validation";
+import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
+import type { NormalizeAndValidateConfigArgs } from "./validation";
 
 export type {
 	Config,
