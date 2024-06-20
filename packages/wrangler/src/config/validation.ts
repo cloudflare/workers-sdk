@@ -2060,6 +2060,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (isRequiredProperty(value, "type", "string")) {
 		const safeBindings = [
 			"plain_text",
+			"secret_text",
 			"json",
 			"wasm_module",
 			"data_blob",

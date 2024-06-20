@@ -41,13 +41,15 @@ export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs<CommandArgs>,
-	requirePagesConfig?: boolean
+	requirePagesConfig?: boolean,
+	hideWarnings?: boolean
 ): Config;
 export function readConfig<CommandArgs>(
 	configPath: string | undefined,
 	// Include command specific args as well as the wrangler global flags
 	args: ReadConfigCommandArgs<CommandArgs>,
-	requirePagesConfig?: boolean
+	requirePagesConfig?: boolean,
+	hideWarnings: boolean = false
 ): Config {
 	let rawConfig: RawConfig = {};
 
@@ -112,7 +114,7 @@ export function readConfig<CommandArgs>(
 		args
 	);
 
-	if (diagnostics.hasWarnings()) {
+	if (diagnostics.hasWarnings() && !hideWarnings) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
