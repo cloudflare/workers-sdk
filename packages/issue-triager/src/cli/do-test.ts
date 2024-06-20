@@ -2,10 +2,7 @@ import 'dotenv/config';
 import { spinner as cliSpinner } from '@cloudflare/cli/interactive';
 import chalk from 'chalk';
 
-import { embedIssues, fetchLastUpdatedTimestamp, setLastUpdatedTimestamp } from './ai/embeddings';
-import { getIssuesWithComments } from './github/get-issues-with-comments';
-
-const BATCH_SIZE = 50;
+import { fetchLastUpdatedTimestamp, setLastUpdatedTimestamp } from './ai/embeddings';
 
 doTest();
 
@@ -21,4 +18,8 @@ async function doTest() {
 	spinner.start(chalk.gray(`Updating ${dummyTimestamp} on remote`));
 	const message = await setLastUpdatedTimestamp(dummyTimestamp);
 	spinner.stop(chalk.green(message));
+
+	spinner.start(chalk.gray('Fetching last updated timestamp'));
+	const newUpdatedTimestamp = await fetchLastUpdatedTimestamp();
+	spinner.stop(chalk.green(`Retrieved new updated timestamp ${newUpdatedTimestamp}`));
 }

@@ -34,7 +34,7 @@ app.use(async (ctx, next) => {
 });
 
 app.get('/last_updated_at', async (ctx) => {
-	const { env, json, req } = ctx;
+	const { env, json } = ctx;
 
 	const id = env.ISSUES_STORE.idFromName('issue-triager');
 	const issueStore = env.ISSUES_STORE.get(id);
@@ -47,6 +47,8 @@ app.post('/last_updated_at', async (ctx) => {
 	const { env, json, req } = ctx;
 
 	const date = await req.text();
+	console.log('Date', date);
+
 	const id = env.ISSUES_STORE.idFromName('issue-triager');
 	const issueStore = env.ISSUES_STORE.get(id);
 	await issueStore.setLastUpdatedTimestamp(date);

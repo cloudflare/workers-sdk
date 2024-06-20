@@ -4,7 +4,7 @@ export class IssuesStore extends DurableObject {
 	async getLastUpdatedTimestamp(): Promise<string> {
 		const timestamp = await this.ctx.storage.get<string>('lastUpdatedTimestamp');
 
-		console.log(timestamp);
+		console.log(`Retrieved timestamp from storage: ${timestamp}`);
 
 		if (timestamp) {
 			return timestamp;
@@ -15,6 +15,7 @@ export class IssuesStore extends DurableObject {
 
 	async setLastUpdatedTimestamp(timestamp: string): Promise<void> {
 		await this.ctx.storage.put('lastUpdatedTimestamp', timestamp);
-		console.log(await this.ctx.storage.get('lastUpdatedTimestamp'));
+
+		console.log(`Added timestamp to storage: ${await this.ctx.storage.get('lastUpdatedTimestamp')}`);
 	}
 }
