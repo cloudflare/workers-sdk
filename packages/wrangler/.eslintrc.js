@@ -7,6 +7,7 @@ module.exports = {
 		"pages/functions/template-worker.ts",
 		"templates",
 		"emitted-types",
+		"kv-asset-handler.js",
 	],
 	overrides: [
 		{
