@@ -6,7 +6,8 @@
 		"check:lint": "eslint .",
 		"deploy": "wrangler deploy",
 		"build": "wrangler build",
-		"start": "wrangler dev"
+		"start": "wrangler dev",
+		"check:type": "tsc"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",

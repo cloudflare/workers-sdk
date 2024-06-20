@@ -6,6 +6,8 @@
 	"scripts": {
 		"build": "tsc && vite build",
 		"build:testing": "tsc && vite build -m development",
+		"check:lint": "eslint src",
+		"check:type": "tsc",
 		"dev": "vite",
 		"generate:default-hashes": "pnpm exec tsx ./generate-default-hashes.ts && pnpm exec prettier --write ./src/QuickEditor/defaultHashes.ts",
 		"check": "pnpm exec tsx ./generate-default-hashes.ts check",

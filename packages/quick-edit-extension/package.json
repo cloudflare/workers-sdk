@@ -10,6 +10,8 @@
 	"publisher": "cloudflare",
 	"browser": "./dist/extension.js",
 	"scripts": {
+		"check:lint": "eslint src",
+		"check:type": "tsc",
 		"package-web": "node -r esbuild-register scripts/bundle.ts",
 		"vscode:prepublish": "pnpm run package-web",
 		"watch-web": "pnpm run package-web -- --watch"

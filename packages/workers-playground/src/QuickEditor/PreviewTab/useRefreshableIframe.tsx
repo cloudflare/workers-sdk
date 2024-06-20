@@ -42,6 +42,7 @@ export function useRefreshableIframe(
 				second.removeEventListener("load", onLoadEvent);
 			};
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [onLoad]);
 
 	function listen() {
@@ -69,6 +70,7 @@ export function useRefreshableIframe(
 		if (src) {
 			setUrl(src);
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [src]);
 	const isLoading = isLoadingContent;
 	return {

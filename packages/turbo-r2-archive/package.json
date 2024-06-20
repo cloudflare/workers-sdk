@@ -14,7 +14,8 @@
 		"build": "wrangler deploy -j --dry-run --outdir=./dist",
 		"deploy": "wrangler deploy -j",
 		"start": "wrangler dev -j",
-		"type:check": "tsc --noEmit"
+		"type:check": "tsc",
+		"check:lint": "eslint ."
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.1.8",
