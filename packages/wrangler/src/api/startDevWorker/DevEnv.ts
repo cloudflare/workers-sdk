@@ -16,10 +16,10 @@ export class DevEnv extends EventEmitter {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	startWorker(options: StartDevWorkerOptions): DevWorker {
+	startWorker(_options: StartDevWorkerOptions): DevWorker {
 		const worker = createWorkerObject(this);
-
-		this.config.setOptions(options);
+		// TODO: uncomment this when dev-env fixture tests are no longer faked
+		// this.config.set(options);
 
 		return worker;
 	}
@@ -120,14 +120,11 @@ export class DevEnv extends EventEmitter {
 				// this will cause the ProxyController to try reinstantiating the ProxyWorker(s)
 				// TODO: change this to `this.config.updateOptions({ dev: { server: { port: 0 }, inspector: { port: 0 } } });` when the ConfigController is implemented
 				this.config.emitConfigUpdateEvent({
-					type: "configUpdate",
-					config: {
-						...config,
-						dev: {
-							...config.dev,
-							server: { ...config.dev?.server, port: 0 }, // override port
-							inspector: { ...config.dev?.inspector, port: 0 }, // override port
-						},
+					...config,
+					dev: {
+						...config.dev,
+						server: { ...config.dev?.server, port: 0 }, // override port
+						inspector: { ...config.dev?.inspector, port: 0 }, // override port
 					},
 				});
 			}
@@ -155,11 +152,11 @@ export function createWorkerObject(devEnv: DevEnv): DevWorker {
 		get config() {
 			return devEnv.config.config;
 		},
-		setOptions(options) {
-			return devEnv.config.setOptions(options);
+		setConfig(config) {
+			return devEnv.config.set(config);
 		},
-		updateOptions(options) {
-			return devEnv.config.updateOptions(options);
+		patchConfig(config) {
+			return devEnv.config.patch(config);
 		},
 		async fetch(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;

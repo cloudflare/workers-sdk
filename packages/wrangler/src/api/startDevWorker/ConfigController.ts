@@ -1,20 +1,43 @@
+import assert from "node:assert";
+import deepmerge from "deepmerge";
 import { Controller } from "./BaseController";
-import { notImplemented } from "./NotImplementedError";
+import { unwrapHook } from "./utils";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent } from "./events";
-import type { StartDevWorkerOptions } from "./types";
+import type { Hook, StartDevWorkerOptions } from "./types";
 
 export type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
 };
-export class ConfigController extends Controller<ConfigControllerEventMap> {
-	config?: StartDevWorkerOptions;
 
-	setOptions(_: StartDevWorkerOptions) {
-		notImplemented(this.setOptions.name, this.constructor.name);
+type Options = StartDevWorkerOptions;
+export class ConfigController extends Controller<ConfigControllerEventMap> {
+	config?: Options;
+
+	public set(input: Hook<Options, [Readonly<Options> | undefined]>) {
+		const config = unwrapHook(input, this.latest);
+
+		this.#updateConfig(config);
 	}
-	updateOptions(_: Partial<StartDevWorkerOptions>) {
-		notImplemented(this.updateOptions.name, this.constructor.name);
+	public patch(input: Hook<Partial<Options>, [Readonly<Options>]>) {
+		assert(
+			this.latest,
+			"Cannot call updateConfig without previously calling setConfig"
+		);
+
+		const partialConfig = unwrapHook(input, this.latest);
+
+		const config = deepmerge(this.latest, partialConfig, {
+			arrayMerge: (target, _source, _options) => target, // arrays are overridden, not concatenated (deepmerge default)
+		});
+
+		this.#updateConfig(config);
+	}
+
+	latest?: Options;
+	#updateConfig(input: Options) {
+		this.latest = input;
+		this.emitConfigUpdateEvent(this.latest);
 	}
 
 	// ******************
@@ -22,14 +45,14 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// ******************
 
 	async teardown() {
-		notImplemented(this.teardown.name, this.constructor.name);
+		// do nothing
 	}
 
 	// *********************
 	//   Event Dispatchers
 	// *********************
 
-	emitConfigUpdateEvent(data: ConfigUpdateEvent) {
-		this.emit("configUpdate", data);
+	emitConfigUpdateEvent(config: Options) {
+		this.emit("configUpdate", { type: "configUpdate", config });
 	}
 }

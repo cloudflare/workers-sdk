@@ -9,9 +9,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
-import { DevEnv } from "../api";
-import { createDeferred } from "../api/startDevWorker/utils";
+import {
+	getDevCompatibilityDate,
+	getRules,
+	getScriptName,
+	isLegacyEnv,
+} from "..";
+import {
+	convertCfWorkerInitBindingstoBindings,
+	createDeferred,
+} from "../api/startDevWorker/utils";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
+import {
+	getBindingsAndAssetPaths,
+	getInferredHost,
+	validateDevServerSettings,
+} from "../dev";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
@@ -29,8 +43,8 @@ import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
 import type {
+	DevEnv,
 	ProxyData,
-	ReadyEvent,
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 	Trigger,
@@ -40,6 +54,7 @@ import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
+import type { StartDevOptions } from "../dev";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
@@ -182,8 +197,146 @@ export type DevProps = {
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
 	experimentalDevEnv: boolean;
+	rawConfig: Config;
+	rawArgs: StartDevOptions;
+	devEnv: DevEnv;
 };
 
+// TODO: use in finalisation or followup stage of SDW
+async function _toSDW(
+	args: StartDevOptions,
+	accountId: Promise<string>,
+	workerDefinitions: WorkerRegistry,
+	config: Config
+): Promise<StartDevWorkerOptions> {
+	const {
+		entry,
+		upstreamProtocol,
+		host,
+		routes,
+		getLocalPort,
+		getInspectorPort,
+		cliDefines,
+		localPersistencePath,
+		processEntrypoint,
+		additionalModules,
+	} = await validateDevServerSettings(args, config);
+
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags:
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
+
+	const { assetPaths, bindings } = getBindingsAndAssetPaths(args, config);
+
+	const devRoutes =
+		routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
+			typeof r === "string"
+				? {
+						type: "route",
+						pattern: r,
+					}
+				: { type: "route", ...r }
+		) ?? [];
+	const queueConsumers =
+		config.queues.consumers?.map<Extract<Trigger, { type: "queue-consumer" }>>(
+			(c) => ({
+				...c,
+				type: "queue-consumer",
+			})
+		) ?? [];
+
+	const crons =
+		config.triggers.crons?.map<Extract<Trigger, { type: "cron" }>>((c) => ({
+			cron: c,
+			type: "cron",
+		})) ?? [];
+
+	return {
+		name: getScriptName({ name: args.name, env: args.env }, config),
+		compatibilityDate: getDevCompatibilityDate(config, args.compatibilityDate),
+		compatibilityFlags: args.compatibilityFlags || config.compatibility_flags,
+		entrypoint: { path: entry.file },
+		directory: entry.directory,
+		bindings: convertCfWorkerInitBindingstoBindings(bindings),
+
+		triggers: [...devRoutes, ...queueConsumers, ...crons],
+		env: args.env,
+		sendMetrics: config.send_metrics,
+		build: {
+			additionalModules: additionalModules,
+			processEntrypoint: processEntrypoint,
+			bundle: !(args.bundle ?? !config.no_bundle),
+			findAdditionalModules: config.find_additional_modules,
+			moduleRoot: entry.moduleRoot,
+			moduleRules: args.rules ?? getRules(config),
+
+			minify: args.minify ?? config.minify,
+			define: { ...config.define, ...cliDefines },
+			custom: {
+				command: (config.build || {}).command,
+				watch: (config.build || {}).watch_dir,
+				workingDirectory: (config.build || {}).cwd,
+			},
+			format: entry.format,
+			nodejsCompatMode: nodejsCompatMode,
+			jsxFactory: args.jsxFactory || config.jsx_factory,
+			jsxFragment: args.jsxFragment || config.jsx_fragment,
+			tsconfig: args.tsconfig ?? config.tsconfig,
+		},
+		dev: {
+			auth: async () => {
+				return {
+					accountId: await accountId,
+					apiToken: requireApiToken(),
+				};
+			},
+			remote: !args.local,
+			server: {
+				hostname: args.ip || config.dev.ip,
+				port: args.port ?? config.dev.port ?? (await getLocalPort()),
+				secure: (args.localProtocol || config.dev.local_protocol) === "https",
+				httpsKeyPath: args.httpsKeyPath,
+				httpsCertPath: args.httpsCertPath,
+			},
+			inspector: {
+				port:
+					args.inspectorPort ??
+					config.dev.inspector_port ??
+					(await getInspectorPort()),
+			},
+			origin: {
+				secure: upstreamProtocol === "https",
+				hostname: args.localUpstream ?? host ?? getInferredHost(routes),
+			},
+			liveReload: args.liveReload || false,
+			testScheduled: args.testScheduled,
+			getRegisteredWorker: (name) => workerDefinitions[name],
+			persist: { path: localPersistencePath },
+		},
+		legacy: {
+			site:
+				Boolean(args.site || config.site) && assetPaths
+					? {
+							bucket: path.join(
+								assetPaths.baseDirectory,
+								assetPaths?.assetDirectory
+							),
+							include: assetPaths.includePatterns,
+							exclude: assetPaths.excludePatterns,
+						}
+					: undefined,
+			assets: config.assets,
+			enableServiceEnvironments: !isLegacyEnv(config),
+		},
+		unsafe: {
+			capnp: bindings.unsafe?.capnp,
+			metadata: bindings.unsafe?.metadata,
+		},
+	} satisfies StartDevWorkerOptions;
+}
 export function DevImplementation(props: DevProps): JSX.Element {
 	validateDevProps(props);
 
@@ -292,47 +445,7 @@ function DevSession(props: DevSessionProps) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const [devEnv] = useState(() => {
-		const newDevEnv = new DevEnv();
-		if (!props.experimentalDevEnv) {
-			return newDevEnv;
-		}
-		const {
-			proxy,
-			runtimes: [local, remote],
-		} = newDevEnv;
-
-		const proxyUrl = createDeferred<URL>();
-		// The ProxyWorker will have a stable host and port, so only listen for the first update
-		proxy.once("ready", async (event: ReadyEvent) => {
-			const url = await event.proxyWorker.ready;
-			proxyUrl.resolve(url);
-			const finalIp = url.hostname;
-			const finalPort = parseInt(url.port);
-
-			if (process.send) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: finalIp,
-						port: finalPort,
-					})
-				);
-			}
-		});
-		local.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
-			if (!reloadEvent.config.dev?.remote) {
-				await maybeRegisterLocalWorker(
-					await proxyUrl.promise,
-					reloadEvent.config.name,
-					reloadEvent.proxyData.internalDurableObjects,
-					reloadEvent.proxyData.entrypointAddresses
-				);
-			}
-		});
-
-		return new DevEnv({ proxy, runtimes: [local, remote] });
-	});
+	const devEnv = props.devEnv;
 	useEffect(() => {
 		return () => {
 			void devEnv.teardown();
@@ -373,23 +486,16 @@ function DevSession(props: DevSessionProps) {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
-			script: { contents: "" },
-			_bindings: props.bindings,
-			_entry: props.entry,
-			_projectRoot: props.projectRoot,
-			_serveAssetsFromWorker: Boolean(
-				props.assetPaths && !props.isWorkersSite && props.local
-			),
-			_assets: props.assetsConfig,
-			_processEntrypoint: props.processEntrypoint,
-			_additionalModules: props.additionalModules,
+			entrypoint: { path: props.entry.file },
+			directory: props.entry.directory,
+			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
-			legacyEnv: props.legacyEnv,
 			sendMetrics: props.sendMetrics,
-			usageModel: props.usageModel,
 			build: {
+				additionalModules: props.additionalModules,
+				processEntrypoint: props.processEntrypoint,
 				bundle: !props.noBundle,
 				findAdditionalModules: props.findAdditionalModules,
 				minify: props.minify,
@@ -404,18 +510,9 @@ function DevSession(props: DevSessionProps) {
 				jsxFragment: props.jsxFragment,
 				tsconfig: props.tsconfig,
 				nodejsCompatMode: props.nodejsCompatMode,
+				format: props.entry.format,
+				moduleRoot: props.entry.moduleRoot,
 			},
-			site:
-				props.isWorkersSite && props.assetPaths
-					? {
-							path: path.join(
-								props.assetPaths.baseDirectory,
-								props.assetPaths?.assetDirectory
-							),
-							include: props.assetPaths.includePatterns,
-							exclude: props.assetPaths.excludePatterns,
-						}
-					: undefined,
 			dev: {
 				auth: async () => {
 					return {
@@ -442,6 +539,25 @@ function DevSession(props: DevSessionProps) {
 				testScheduled: props.testScheduled,
 				getRegisteredWorker: (name) => workerDefinitions[name],
 			},
+			legacy: {
+				site:
+					props.isWorkersSite && props.assetPaths
+						? {
+								bucket: path.join(
+									props.assetPaths.baseDirectory,
+									props.assetPaths?.assetDirectory
+								),
+								include: props.assetPaths.includePatterns,
+								exclude: props.assetPaths.excludePatterns,
+							}
+						: undefined,
+				assets: props.assetsConfig,
+				enableServiceEnvironments: !props.legacyEnv,
+			},
+			unsafe: {
+				capnp: props.bindings.unsafe?.capnp,
+				metadata: props.bindings.unsafe?.metadata,
+			},
 		} satisfies StartDevWorkerOptions;
 	}, [
 		props.routes,
@@ -452,7 +568,6 @@ function DevSession(props: DevSessionProps) {
 		props.compatibilityFlags,
 		props.bindings,
 		props.entry,
-		props.projectRoot,
 		props.assetPaths,
 		props.isWorkersSite,
 		props.local,
@@ -462,7 +577,6 @@ function DevSession(props: DevSessionProps) {
 		props.env,
 		props.legacyEnv,
 		props.sendMetrics,
-		props.usageModel,
 		props.noBundle,
 		props.findAdditionalModules,
 		props.minify,
@@ -489,22 +603,15 @@ function DevSession(props: DevSessionProps) {
 	]);
 
 	const onBundleStart = useCallback(() => {
+		// NOTE: this callback won't be called if props.experimentalDevEnv
 		devEnv.proxy.onBundleStart({
 			type: "bundleStart",
 			config: startDevWorkerOptions,
 		});
-	}, [devEnv, startDevWorkerOptions]);
+	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 	const onBundleComplete = useCallback(
 		(bundle: EsbuildBundle) => {
-			if (props.experimentalDevEnv) {
-				devEnv.runtimes.forEach((runtime) =>
-					runtime.onBundleComplete({
-						type: "bundleComplete",
-						config: startDevWorkerOptions,
-						bundle,
-					})
-				);
-			} else {
+			if (!props.experimentalDevEnv) {
 				devEnv.proxy.onReloadStart({
 					type: "reloadStart",
 					config: startDevWorkerOptions,
@@ -517,7 +624,7 @@ function DevSession(props: DevSessionProps) {
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
 	const onCustomBuildEnd = useCallback(() => {
-		const TIMEOUT = 300; // TODO: find a lower bound for this value
+		const TIMEOUT = 300;
 
 		clearTimeout(esbuildStartTimeoutRef.current);
 		esbuildStartTimeoutRef.current = setTimeout(() => {
@@ -550,16 +657,14 @@ function DevSession(props: DevSessionProps) {
 	const directory = useTmpDir(props.projectRoot);
 
 	useEffect(() => {
-		// temp: fake these events by calling the handler directly
-		devEnv.proxy.onConfigUpdate({
-			type: "configUpdate",
-			config: startDevWorkerOptions,
-		});
-		if (props.experimentalDevEnv) {
-			devEnv.bundler.onConfigUpdate({
+		if (!props.experimentalDevEnv) {
+			// temp: fake these events by calling the handler directly
+			devEnv.proxy.onConfigUpdate({
 				type: "configUpdate",
 				config: startDevWorkerOptions,
 			});
+		} else {
+			devEnv.config.set(startDevWorkerOptions);
 		}
 	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
 
@@ -613,6 +718,7 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
+	// this won't be called with props.experimentalDevEnv because useWorker is guarded with the same flag
 	const announceAndOnReady: typeof props.onReady = async (
 		finalIp,
 		finalPort,

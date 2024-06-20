@@ -5,7 +5,6 @@ import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { runInTempDir } from "../../helpers/run-in-tmp";
-import { unusable } from "../../helpers/unusable";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -68,20 +67,15 @@ describe("happy path bundle + watch", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("src/index.ts") },
+			directory: path.resolve("src"),
 			build: {
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
@@ -140,20 +134,15 @@ describe("happy path bundle + watch", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("src/index.ts") },
+			directory: path.resolve("src"),
 			build: {
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
@@ -206,15 +195,8 @@ describe("happy path bundle + watch", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("out.ts"),
-				directory: path.resolve("."),
-				format: "modules",
-				moduleRoot: path.resolve("."),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("out.ts") },
+			directory: path.resolve("."),
 			build: {
 				bundle: true,
 				moduleRules: [],
@@ -223,6 +205,8 @@ describe("happy path bundle + watch", () => {
 					watch: "random_dir",
 				},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("."),
 			},
 		};
 
@@ -281,20 +265,16 @@ describe("switching", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("src/index.ts") },
+			directory: path.resolve("src"),
+
 			build: {
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 
@@ -327,15 +307,8 @@ describe("switching", () => {
 		});
 		const configCustom = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("out.ts"),
-				directory: process.cwd(),
-				format: "modules",
-				moduleRoot: process.cwd(),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("out.ts") },
+			directory: process.cwd(),
 			build: {
 				bundle: true,
 				moduleRules: [],
@@ -344,6 +317,8 @@ describe("switching", () => {
 					watch: "random_dir",
 				},
 				define: {},
+				format: "modules",
+				moduleRoot: process.cwd(),
 			},
 		} satisfies StartDevWorkerOptions;
 
@@ -400,15 +375,9 @@ describe("switching", () => {
 		});
 		const configCustom = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("out.ts"),
-				directory: process.cwd(),
-				format: "modules",
-				moduleRoot: process.cwd(),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("out.ts") },
+			directory: process.cwd(),
+
 			build: {
 				bundle: true,
 				moduleRules: [],
@@ -417,6 +386,8 @@ describe("switching", () => {
 					watch: "random_dir",
 				},
 				define: {},
+				format: "modules",
+				moduleRoot: process.cwd(),
 			},
 		} satisfies StartDevWorkerOptions;
 
@@ -448,20 +419,16 @@ describe("switching", () => {
 		});
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			script: unusable(),
-			_entry: {
-				file: path.resolve("src/index.ts"),
-				directory: path.resolve("src"),
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-				name: "worker-name",
-			},
-			_additionalModules: [],
+			entrypoint: { path: path.resolve("src/index.ts") },
+			directory: path.resolve("src"),
+
 			build: {
 				bundle: true,
 				moduleRules: [],
 				custom: {},
 				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
 			},
 		};
 

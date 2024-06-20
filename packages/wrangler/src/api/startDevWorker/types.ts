@@ -5,7 +5,6 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "../../config/environment";
-import type { Entry } from "../../deployment-bundle/entry";
 import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
 import type {
 	CfAnalyticsEngineDataset,
@@ -20,22 +19,24 @@ import type {
 	CfMTlsCertificate,
 	CfQueue,
 	CfR2Bucket,
+	CfScriptFormat,
 	CfSendEmailBindings,
 	CfService,
+	CfUnsafe,
 	CfVectorize,
-	CfWorkerInit,
 } from "../../deployment-bundle/worker";
 import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
 import type { DispatchFetch, Json, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
 export interface DevWorker {
 	ready: Promise<void>;
 	config?: StartDevWorkerOptions;
-	setOptions(options: StartDevWorkerOptions): void;
-	updateOptions(options: Partial<StartDevWorkerOptions>): void;
+	setConfig: ConfigController["set"];
+	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
 	scheduled(cron?: string): Promise<void>;
 	queue(queueName: string, ...messages: unknown[]): Promise<void>;
@@ -50,31 +51,23 @@ export interface StartDevWorkerOptions {
 	 * This is the `main` property of a wrangler.toml.
 	 * You can specify a file path or provide the contents directly.
 	 */
-	script: File<string>;
+	entrypoint: FilePath;
 	/** The configuration of the worker. */
-	config?: File<Config>;
+	config?: FilePath;
+	/** A worker's directory. Usually where the wrangler.toml file is located */
+	directory?: string;
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
+
+	env?: string;
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
-	/** Options applying to (legacy) Worker Sites. Please consider using Cloudflare Pages. */
-	site?: {
-		path: string;
-		include?: string[];
-		exclude?: string[];
-	};
-
-	// -- PASSTHROUGH -- FROM OLD CONFIG TO NEW CONFIG (TEMP)
-	/** Service environments. Providing support for existing workers with this property. Don't use this for new workers. */
-	env?: string;
-	/** Wrangler environments, defaults to true. */
-	legacyEnv?: boolean;
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
 	 *
@@ -83,21 +76,16 @@ export interface StartDevWorkerOptions {
 	 */
 	sendMetrics?: boolean;
 	usageModel?: "bundled" | "unbound";
-	_bindings?: CfWorkerInit["bindings"]; // Type level constraint for bindings not sharing names
-	_entry?: Entry;
-	_projectRoot?: string;
-	_serveAssetsFromWorker?: boolean;
-	_assets?: Config["assets"];
-	_processEntrypoint?: boolean;
-	_additionalModules?: CfModule[];
-	// --/ PASSTHROUGH --
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
 		/** Whether the worker and its dependencies are bundled. Defaults to true. */
 		bundle?: boolean;
 
+		additionalModules?: CfModule[];
+
 		findAdditionalModules?: boolean;
+		processEntrypoint?: boolean;
 		/** Specifies types of modules matched by globs. */
 		moduleRules?: Rule[];
 		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
@@ -105,7 +93,7 @@ export interface StartDevWorkerOptions {
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
 		minify?: boolean;
 		/** Options controlling a custom build step. */
-		custom: {
+		custom?: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
 			command?: string;
 			/** The cwd to run the command in. */
@@ -117,6 +105,9 @@ export interface StartDevWorkerOptions {
 		jsxFragment?: string;
 		tsconfig?: string;
 		nodejsCompatMode?: NodeJSCompatMode;
+		moduleRoot?: string;
+
+		format?: CfScriptFormat;
 	};
 
 	/** Options applying to the worker's development preview environment. */
@@ -126,7 +117,7 @@ export interface StartDevWorkerOptions {
 		/** Whether the worker runs on the edge or locally. */
 		remote?: boolean;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
-		auth?: Hook<CfAccount>;
+		auth?: AsyncHook<CfAccount>;
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: boolean | { path: string };
 		/** Controls which logs are logged 🤙. */
@@ -156,21 +147,34 @@ export interface StartDevWorkerOptions {
 
 		testScheduled?: boolean;
 	};
+	legacy?: {
+		site?: Config["site"];
+		assets?: Config["assets"];
+		enableServiceEnvironments?: boolean;
+	};
+	unsafe?: Omit<CfUnsafe, "bindings">;
 }
 
-export type Hook<T extends string | number | object> =
+export type HookValues = string | number | boolean | object;
+export type Hook<T extends HookValues, Args extends unknown[] = []> =
 	| T
-	| Promise<T>
-	| (() => T | Promise<T>);
+	| ((...args: Args) => T);
+export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
+	| Hook<T, Args>
+	| Hook<Promise<T>, Args>;
 
 export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-export type File<Contents = string> =
-	| { path: string } // `path` resolved relative to cwd
-	| { contents: Contents; path?: string }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
+export type File<Contents = string, Path = string> =
+	| { path: Path } // `path` resolved relative to cwd
+	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
 export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instances of `Uint8Array`
+export type FilePath<Path = string> = Extract<
+	File<undefined, Path>,
+	{ path: Path }
+>; // file that must be on disk -- reminder to allow uses of `contents` eventually
 
 export interface Location {
 	hostname?: string;

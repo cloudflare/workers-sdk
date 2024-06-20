@@ -16,7 +16,9 @@ import { isNavigatorDefined } from "../../navigator-user-agent";
 import { getWranglerTmpDir } from "../../paths";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
+import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { EphemeralDirectory } from "../../paths";
 import type { ControllerEventMap } from "./BaseController";
@@ -41,64 +43,77 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
+		assert(config.entrypoint.path);
+		assert(config.directory);
+		assert(config.build?.format);
+		assert(config.build?.moduleRoot);
 		// If a new custom build comes in, we need to cancel in-flight builds
 		this.#customBuildAborter.abort();
 		this.#customBuildAborter = new AbortController();
 
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#customBuildAborter;
-		assert(config._entry);
 		const relativeFile =
-			path.relative(config._entry.directory, config._entry.file) || ".";
+			path.relative(config.directory, config.entrypoint.path) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(config._entry.file, relativeFile, {
-				cwd: config.build?.custom.workingDirectory,
-				command: config.build?.custom.command,
+			await runCustomBuild(config.entrypoint.path, relativeFile, {
+				cwd: config.build?.custom?.workingDirectory,
+				command: config.build?.custom?.command,
 			});
 			if (buildAborter.signal.aborted) {
 				return;
 			}
 			assert(this.#tmpDir);
-			assert(config._entry, "config._entry");
-			assert(config._additionalModules, "config._additionalModules");
 			assert(config.build?.moduleRules, "config.build?.moduleRules");
 			assert(config.build?.define, "config.build?.define");
 			if (!config.build?.bundle) {
 				// if we're not bundling, let's just copy the entry to the destination directory
 				const destinationDir = this.#tmpDir.path;
 				writeFileSync(
-					path.join(destinationDir, path.basename(config._entry.file)),
-					readFileSync(config._entry.file, "utf-8")
+					path.join(destinationDir, path.basename(config.entrypoint.path)),
+					readFileSync(config.entrypoint.path, "utf-8")
 				);
 			}
 
-			const entryDirectory = path.dirname(config._entry.file);
+			const entry: Entry = {
+				file: config.entrypoint.path,
+				directory: config.directory,
+				format: config.build.format,
+				moduleRoot: config.build.moduleRoot,
+			};
+
+			const entryDirectory = path.dirname(config.entrypoint.path);
 			const moduleCollector = createModuleCollector({
 				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 					entryDirectory,
-					config._entry.file
+					config.entrypoint.path
 				),
-				entry: config._entry,
+				entry,
 				// `moduleCollector` doesn't get used when `noBundle` is set, so
 				// `findAdditionalModules` always defaults to `false`
 				findAdditionalModules: config.build.findAdditionalModules ?? false,
 				rules: config.build.moduleRules,
 			});
 
+			const bindings = (
+				await convertBindingsToCfWorkerInitBindings(config.bindings)
+			).bindings;
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
-						config._entry,
+						entry,
 						config.build.moduleRules,
 						this.#tmpDir.path
 					)
-				: await bundleWorker(config._entry, this.#tmpDir.path, {
+				: await bundleWorker(entry, this.#tmpDir.path, {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
-						doBindings: config._bindings?.durable_objects?.bindings ?? [],
+						serveAssetsFromWorker: Boolean(
+							config.legacy?.assets && !config.dev?.remote
+						),
+						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
 						tsconfig: config.build.tsconfig,
@@ -106,14 +121,14 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
 						checkFetch: true,
-						assets: config._assets,
+						assets: config.legacy?.assets,
 						// enable the cache when publishing
 						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "dev",
 						local: !config.dev?.remote,
-						projectRoot: config._projectRoot,
+						projectRoot: config.directory,
 						defineNavigatorUserAgent: isNavigatorDefined(
 							config.compatibilityDate,
 							config.compatibilityFlags
@@ -123,15 +138,16 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				return;
 			}
 			const entrypointPath = realpathSync(
-				bundleResult?.resolvedEntryPointPath ?? config._entry.file
+				bundleResult?.resolvedEntryPointPath ?? config.entrypoint.path
 			);
+
 			this.emitBundleCompleteEvent(config, {
 				id: 0,
-				entry: config._entry,
+				entry,
 				path: entrypointPath,
 				type:
 					bundleResult?.bundleType ??
-					getBundleType(config._entry.format, config._entry.file),
+					getBundleType(config.build.format, config.entrypoint.path),
 				modules: bundleResult.modules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
@@ -154,23 +170,21 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		await this.#customBuildWatcher?.close();
 		this.#customBuildAborter?.abort();
 
-		if (!config.build?.custom.command) {
+		if (!config.build?.custom?.command) {
 			return;
 		}
 
-		assert(config._entry);
-		assert(config.build?.custom.watch);
+		const pathsToWatch = config.build?.custom?.watch;
+		assert(pathsToWatch);
 
-		this.#customBuildWatcher = watch(config.build?.custom.watch, {
+		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
 			// TODO: add comments re this ans ready
 			ignoreInitial: true,
 		});
-		this.#customBuildWatcher.on(
-			"ready",
-			() =>
-				void this.#runCustomBuild(config, String(config.build?.custom.watch))
-		);
+		this.#customBuildWatcher.on("ready", () => {
+			void this.#runCustomBuild(config, String(pathsToWatch));
+		});
 
 		this.#customBuildWatcher.on(
 			"all",
@@ -182,37 +196,50 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 
 	async #startBundle(config: StartDevWorkerOptions) {
 		await this.#bundlerCleanup?.();
-		if (config.build?.custom.command) {
+		if (config.build?.custom?.command) {
 			return;
 		}
 		assert(this.#tmpDir);
-		assert(config._entry, "config._entry");
-		assert(config._additionalModules, "config._additionalModules");
 		assert(config.build?.moduleRules, "config.build?.moduleRules");
 		assert(config.build?.define, "config.build?.define");
+		assert(config.entrypoint.path);
+		assert(config.directory);
+		assert(config.build.format);
+		assert(config.build.moduleRoot);
+		const entry: Entry = {
+			file: config.entrypoint.path,
+			directory: config.directory,
+			format: config.build.format,
+			moduleRoot: config.build.moduleRoot,
+		};
+		const { bindings } = await convertBindingsToCfWorkerInitBindings(
+			config.bindings
+		);
 		this.#bundlerCleanup = runBuild(
 			{
-				entry: config._entry,
+				entry,
 				destination: this.#tmpDir.path,
 				jsxFactory: config.build?.jsxFactory,
 				jsxFragment: config.build?.jsxFragment,
-				processEntrypoint: Boolean(config._processEntrypoint),
-				additionalModules: config._additionalModules,
+				processEntrypoint: Boolean(config.build?.processEntrypoint),
+				additionalModules: config.build?.additionalModules ?? [],
 				rules: config.build.moduleRules,
-				assets: config._assets,
-				serveAssetsFromWorker: Boolean(config._serveAssetsFromWorker),
+				assets: config.legacy?.assets,
+				serveAssetsFromWorker: Boolean(
+					config.legacy?.assets && !config.dev?.remote
+				),
 				tsconfig: config.build?.tsconfig,
 				minify: config.build?.minify,
 				nodejsCompatMode: config.build.nodejsCompatMode,
 				define: config.build.define,
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
-				durableObjects: config._bindings?.durable_objects ?? { bindings: [] },
+				durableObjects: bindings?.durable_objects ?? { bindings: [] },
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",
 				testScheduled: Boolean(config.dev?.testScheduled),
-				projectRoot: config._projectRoot,
+				projectRoot: config.directory,
 				onStart: () => {
 					this.emitBundleStartEvent(config);
 				},
@@ -242,7 +269,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	onConfigUpdate(event: ConfigUpdateEvent) {
 		this.#tmpDir?.remove();
 		try {
-			this.#tmpDir = getWranglerTmpDir(event.config._projectRoot, "dev");
+			this.#tmpDir = getWranglerTmpDir(event.config.directory, "dev");
 		} catch (e) {
 			logger.error(
 				"Failed to create temporary directory to store built files."

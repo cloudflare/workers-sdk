@@ -46,12 +46,13 @@ async function fakeStartUserWorker(options: {
 	script: string;
 	name?: string;
 	mfOpts?: Partial<MiniflareOptions>;
-	config?: OptionalKeys<StartDevWorkerOptions, "name" | "script">;
+	config?: OptionalKeys<StartDevWorkerOptions, "name" | "entrypoint">;
 }) {
 	const config: StartDevWorkerOptions = {
 		...options.config,
 		name: options.name ?? "test-worker",
-		script: { contents: options.script },
+		// @ts-expect-error Fix when support script.contents
+		entrypoint: { contents: options.script },
 	};
 	const mfOpts: MiniflareOptions = Object.assign(
 		{
@@ -109,8 +110,8 @@ async function fakeUserWorkerChanges({
 
 	config = {
 		...config,
-		script: {
-			...config.script,
+		entrypoint: {
+			...config.entrypoint,
 			...(script ? { contents: script } : undefined),
 		},
 	};

@@ -1,14 +1,17 @@
+import assert from "node:assert";
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
+import { DevEnv } from "./api";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
+import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
@@ -28,7 +31,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "./index";
-import type { ProxyData } from "./api";
+import type { ProxyData, ReadyEvent, ReloadCompleteEvent } from "./api";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -466,6 +469,45 @@ export async function startDev(args: StartDevOptions) {
 			{ sendMetrics: config.send_metrics, offline: !args.remote }
 		);
 
+		const devEnv = new DevEnv();
+
+		if (args.experimentalDevEnv) {
+			// The ProxyWorker will have a stable host and port, so only listen for the first update
+			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
+				if (process.send) {
+					const url = await event.proxyWorker.ready;
+
+					process.send(
+						JSON.stringify({
+							event: "DEV_SERVER_READY",
+							ip: url.hostname,
+							port: parseInt(url.port),
+						})
+					);
+				}
+			});
+			if (!args.disableDevRegistry) {
+				devEnv.runtimes.forEach((runtime) => {
+					runtime.on(
+						"reloadComplete",
+						async (reloadEvent: ReloadCompleteEvent) => {
+							if (!reloadEvent.config.dev?.remote) {
+								assert(devEnv.proxy.proxyWorker);
+								const url = await devEnv.proxy.proxyWorker.ready;
+
+								await maybeRegisterLocalWorker(
+									url,
+									reloadEvent.config.name,
+									reloadEvent.proxyData.internalDurableObjects,
+									reloadEvent.proxyData.entrypointAddresses
+								);
+							}
+						}
+					);
+				});
+			}
+		}
+
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
 			const { assetPaths, bindings } = getBindingsAndAssetPaths(
@@ -540,6 +582,9 @@ export async function startDev(args: StartDevOptions) {
 					testScheduled={args.testScheduled}
 					projectRoot={projectRoot}
 					experimentalDevEnv={args.experimentalDevEnv}
+					rawArgs={args}
+					rawConfig={configParam}
+					devEnv={devEnv}
 				/>
 			);
 		}
@@ -595,6 +640,25 @@ export async function startApiDev(args: StartDevOptions) {
 		{ local: !args.remote },
 		{ sendMetrics: config.send_metrics, offline: !args.remote }
 	);
+
+	const devEnv = new DevEnv();
+	if (!args.disableDevRegistry && args.experimentalDevEnv) {
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
+				if (!reloadEvent.config.dev?.remote) {
+					assert(devEnv.proxy.proxyWorker);
+					const url = await devEnv.proxy.proxyWorker.ready;
+
+					await maybeRegisterLocalWorker(
+						url,
+						reloadEvent.config.name,
+						reloadEvent.proxyData.internalDurableObjects,
+						reloadEvent.proxyData.entrypointAddresses
+					);
+				}
+			});
+		});
+	}
 
 	// eslint-disable-next-line no-inner-declarations
 	async function getDevServer(configParam: Config) {
@@ -670,6 +734,9 @@ export async function startApiDev(args: StartDevOptions) {
 			disableDevRegistry: args.disableDevRegistry ?? false,
 			projectRoot,
 			experimentalDevEnv: args.experimentalDevEnv,
+			rawArgs: args,
+			rawConfig: configParam,
+			devEnv,
 		});
 	}
 
@@ -759,7 +826,7 @@ export function getInferredHost(routes: Route[] | undefined) {
 	}
 }
 
-async function validateDevServerSettings(
+export async function validateDevServerSettings(
 	args: StartDevOptions,
 	config: Config
 ) {
@@ -871,7 +938,10 @@ async function validateDevServerSettings(
 	};
 }
 
-function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
+export function getBindingsAndAssetPaths(
+	args: StartDevOptions,
+	configParam: Config
+) {
 	const cliVars = collectKeyValues(args.var);
 
 	// now log all available bindings into the terminal

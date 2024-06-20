@@ -3,7 +3,6 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import { DevEnv } from "../api";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -51,7 +50,7 @@ export async function startDevServer(
 	let workerDefinitions: WorkerRegistry = {};
 	validateDevProps(props);
 
-	if (props.build.command) {
+	if (props.build.command && !props.experimentalDevEnv) {
 		const relativeFile =
 			path.relative(props.entry.directory, props.entry.file) || ".";
 		await runCustomBuild(props.entry.file, relativeFile, props.build).catch(
@@ -90,10 +89,11 @@ export async function startDevServer(
 		}
 	}
 
-	const devEnv = new DevEnv();
+	const devEnv = props.devEnv;
 	const startDevWorkerOptions: StartDevWorkerOptions = {
 		name: props.name ?? "worker",
-		script: { contents: "" },
+		entrypoint: { path: props.entry.file },
+		directory: props.entry.directory,
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -131,17 +131,23 @@ export async function startDevServer(
 				return { accountId, apiToken: requireApiToken() };
 			},
 		},
+		build: {
+			format: props.entry.format,
+			moduleRoot: props.entry.moduleRoot,
+		},
 	};
 
 	// temp: fake these events by calling the handler directly
-	devEnv.proxy.onConfigUpdate({
-		type: "configUpdate",
-		config: startDevWorkerOptions,
-	});
-	devEnv.proxy.onBundleStart({
-		type: "bundleStart",
-		config: startDevWorkerOptions,
-	});
+	if (!props.experimentalDevEnv) {
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: startDevWorkerOptions,
+		});
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: startDevWorkerOptions,
+		});
+	}
 
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
@@ -173,14 +179,6 @@ export async function startDevServer(
 	});
 
 	if (props.experimentalDevEnv) {
-		devEnv.runtimes.forEach((runtime) => {
-			runtime.onBundleComplete({
-				type: "bundleComplete",
-				config: startDevWorkerOptions,
-				bundle,
-			});
-		});
-
 		// to comply with the current contract of this function, call props.onReady on reloadComplete
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (ev) => {
@@ -241,12 +239,14 @@ export async function startDevServer(
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
+				if (!props.experimentalDevEnv) {
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: startDevWorkerOptions,
+						bundle,
+						proxyData,
+					});
+				}
 			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
@@ -258,7 +258,11 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+				await Promise.allSettled([
+					stop(),
+					stopWorkerRegistry(),
+					devEnv.teardown(),
+				]);
 			},
 		};
 	} else {
@@ -295,12 +299,14 @@ export async function startDevServer(
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
+				if (!props.experimentalDevEnv) {
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: startDevWorkerOptions,
+						bundle,
+						proxyData,
+					});
+				}
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
@@ -310,7 +316,11 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+				await Promise.allSettled([
+					stop(),
+					stopWorkerRegistry(),
+					devEnv.teardown(),
+				]);
 			},
 		};
 	}
