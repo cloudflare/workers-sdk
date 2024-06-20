@@ -330,7 +330,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"bulk [json]",
-			"🗄️  Bulk upload secrets for a Worker",
+			"Bulk upload secrets for a Worker",
 			secretBulkOptions,
 			secretBulkHandler
 		);

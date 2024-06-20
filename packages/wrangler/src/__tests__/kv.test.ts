@@ -37,15 +37,15 @@ describe("wrangler", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler kv
 
-			🗂️  Interact with your Workers KV Namespaces
+			🗂️  Manage Workers KV Namespaces
 
-			Commands:
-			  wrangler kv namespace  🗂️  Interact with your Workers KV Namespaces
-			  wrangler kv key        🔑 Individually manage Workers KV key-value pairs
-			  wrangler kv bulk       💪 Interact with multiple Workers KV key-value pairs at once
+			COMMANDS
+			  wrangler kv namespace  Interact with your Workers KV Namespaces
+			  wrangler kv key        Individually manage Workers KV key-value pairs
+			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
@@ -81,24 +81,24 @@ describe("wrangler", () => {
 					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv namespace create <namespace>
+					"
+					wrangler kv namespace create <namespace>
 
-			Create a new namespace
+					Create a new namespace
 
-			Positionals:
-			  namespace  The name of the new namespace  [string] [required]
+					POSITIONALS
+					  namespace  The name of the new namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --preview  Interact with a preview namespace  [boolean]"
-		`);
+					OPTIONS
+					      --preview  Interact with a preview namespace  [boolean]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -113,24 +113,24 @@ describe("wrangler", () => {
 					`[Error: Unknown arguments: def, ghi]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv namespace create <namespace>
+					"
+					wrangler kv namespace create <namespace>
 
-			Create a new namespace
+					Create a new namespace
 
-			Positionals:
-			  namespace  The name of the new namespace  [string] [required]
+					POSITIONALS
+					  namespace  The name of the new namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --preview  Interact with a preview namespace  [boolean]"
-		`);
+					OPTIONS
+					      --preview  Interact with a preview namespace  [boolean]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
@@ -574,33 +574,33 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key put <key> [value]
+					"
+					wrangler kv key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+					Write a single key/value pair to the given namespace
 
-			Positionals:
-			  key    The key to write to  [string] [required]
-			  value  The value to write  [string]
+					POSITIONALS
+					  key    The key to write to  [string] [required]
+					  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The binding of the namespace to write to  [string]
-			      --namespace-id  The id of the namespace to write to  [string]
-			      --preview       Interact with a preview namespace  [boolean]
-			      --ttl           Time for which the entries should be visible  [number]
-			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The binding of the namespace to write to  [string]
+					      --namespace-id  The id of the namespace to write to  [string]
+					      --preview       Interact with a preview namespace  [boolean]
+					      --ttl           Time for which the entries should be visible  [number]
+					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
+					      --metadata      Arbitrary JSON that is associated with a key  [string]
+					      --path          Read value from the file at a given path  [string]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -616,33 +616,33 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key put <key> [value]
+					"
+					wrangler kv key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+					Write a single key/value pair to the given namespace
 
-			Positionals:
-			  key    The key to write to  [string] [required]
-			  value  The value to write  [string]
+					POSITIONALS
+					  key    The key to write to  [string] [required]
+					  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The binding of the namespace to write to  [string]
-			      --namespace-id  The id of the namespace to write to  [string]
-			      --preview       Interact with a preview namespace  [boolean]
-			      --ttl           Time for which the entries should be visible  [number]
-			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The binding of the namespace to write to  [string]
+					      --namespace-id  The id of the namespace to write to  [string]
+					      --preview       Interact with a preview namespace  [boolean]
+					      --ttl           Time for which the entries should be visible  [number]
+					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
+					      --metadata      Arbitrary JSON that is associated with a key  [string]
+					      --path          Read value from the file at a given path  [string]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
@@ -658,33 +658,33 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key put <key> [value]
+					"
+					wrangler kv key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+					Write a single key/value pair to the given namespace
 
-			Positionals:
-			  key    The key to write to  [string] [required]
-			  value  The value to write  [string]
+					POSITIONALS
+					  key    The key to write to  [string] [required]
+					  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The binding of the namespace to write to  [string]
-			      --namespace-id  The id of the namespace to write to  [string]
-			      --preview       Interact with a preview namespace  [boolean]
-			      --ttl           Time for which the entries should be visible  [number]
-			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The binding of the namespace to write to  [string]
+					      --namespace-id  The id of the namespace to write to  [string]
+					      --preview       Interact with a preview namespace  [boolean]
+					      --ttl           Time for which the entries should be visible  [number]
+					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
+					      --metadata      Arbitrary JSON that is associated with a key  [string]
+					      --path          Read value from the file at a given path  [string]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
@@ -700,33 +700,33 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key put <key> [value]
+					"
+					wrangler kv key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+					Write a single key/value pair to the given namespace
 
-			Positionals:
-			  key    The key to write to  [string] [required]
-			  value  The value to write  [string]
+					POSITIONALS
+					  key    The key to write to  [string] [required]
+					  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The binding of the namespace to write to  [string]
-			      --namespace-id  The id of the namespace to write to  [string]
-			      --preview       Interact with a preview namespace  [boolean]
-			      --ttl           Time for which the entries should be visible  [number]
-			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The binding of the namespace to write to  [string]
+					      --namespace-id  The id of the namespace to write to  [string]
+					      --preview       Interact with a preview namespace  [boolean]
+					      --ttl           Time for which the entries should be visible  [number]
+					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
+					      --metadata      Arbitrary JSON that is associated with a key  [string]
+					      --path          Read value from the file at a given path  [string]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
 
@@ -742,33 +742,33 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key put <key> [value]
+					"
+					wrangler kv key put <key> [value]
 
-			Writes a single key/value pair to the given namespace.
+					Write a single key/value pair to the given namespace
 
-			Positionals:
-			  key    The key to write to  [string] [required]
-			  value  The value to write  [string]
+					POSITIONALS
+					  key    The key to write to  [string] [required]
+					  value  The value to write  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The binding of the namespace to write to  [string]
-			      --namespace-id  The id of the namespace to write to  [string]
-			      --preview       Interact with a preview namespace  [boolean]
-			      --ttl           Time for which the entries should be visible  [number]
-			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
-			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The binding of the namespace to write to  [string]
+					      --namespace-id  The id of the namespace to write to  [string]
+					      --preview       Interact with a preview namespace  [boolean]
+					      --ttl           Time for which the entries should be visible  [number]
+					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
+					      --metadata      Arbitrary JSON that is associated with a key  [string]
+					      --path          Read value from the file at a given path  [string]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
 
@@ -1113,29 +1113,29 @@ describe("wrangler", () => {
 					`[Error: Not enough non-option arguments: got 0, need at least 1]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key get <key>
+					"
+					wrangler kv key get <key>
 
-			Reads a single value by key from the given namespace.
+					Read a single value by key from the given namespace
 
-			Positionals:
-			  key  The key value to get.  [string] [required]
+					POSITIONALS
+					  key  The key value to get.  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The name of the namespace to get from  [string]
-			      --namespace-id  The id of the namespace to get from  [string]
-			      --preview       Interact with a preview namespace  [boolean] [default: false]
-			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The name of the namespace to get from  [string]
+					      --namespace-id  The id of the namespace to get from  [string]
+					      --preview       Interact with a preview namespace  [boolean] [default: false]
+					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
@@ -1150,29 +1150,29 @@ describe("wrangler", () => {
 					`[Error: Exactly one of the arguments binding and namespace-id is required]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key get <key>
+					"
+					wrangler kv key get <key>
 
-			Reads a single value by key from the given namespace.
+					Read a single value by key from the given namespace
 
-			Positionals:
-			  key  The key value to get.  [string] [required]
+					POSITIONALS
+					  key  The key value to get.  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The name of the namespace to get from  [string]
-			      --namespace-id  The id of the namespace to get from  [string]
-			      --preview       Interact with a preview namespace  [boolean] [default: false]
-			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The name of the namespace to get from  [string]
+					      --namespace-id  The id of the namespace to get from  [string]
+					      --preview       Interact with a preview namespace  [boolean] [default: false]
+					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
 
@@ -1188,29 +1188,29 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv key get <key>
+					"
+					wrangler kv key get <key>
 
-			Reads a single value by key from the given namespace.
+					Read a single value by key from the given namespace
 
-			Positionals:
-			  key  The key value to get.  [string] [required]
+					POSITIONALS
+					  key  The key value to get.  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --binding       The name of the namespace to get from  [string]
-			      --namespace-id  The id of the namespace to get from  [string]
-			      --preview       Interact with a preview namespace  [boolean] [default: false]
-			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
-			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistence  [string]"
-		`);
+					OPTIONS
+					      --binding       The name of the namespace to get from  [string]
+					      --namespace-id  The id of the namespace to get from  [string]
+					      --preview       Interact with a preview namespace  [boolean] [default: false]
+					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
+					      --local         Interact with local storage  [boolean]
+					      --persist-to    Directory for local persistence  [string]"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
 
@@ -1725,13 +1725,13 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler kv:namespace
 
-				Commands:
+				COMMANDS
 				  wrangler kv:namespace create <namespace>  Create a new namespace
-				  wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
-				  wrangler kv:namespace delete              Deletes a given namespace.
+				  wrangler kv:namespace list                Output a list of all KV namespaces associated with your account id
+				  wrangler kv:namespace delete              Delete a given namespace.
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -1745,14 +1745,14 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler kv:key
 
-				Commands:
-				  wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
-				  wrangler kv:key list               Outputs a list of all keys in a given namespace.
-				  wrangler kv:key get <key>          Reads a single value by key from the given namespace.
-				  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
+				COMMANDS
+				  wrangler kv:key put <key> [value]  Write a single key/value pair to the given namespace
+				  wrangler kv:key list               Output a list of all keys in a given namespace
+				  wrangler kv:key get <key>          Read a single value by key from the given namespace
+				  wrangler kv:key delete <key>       Remove a single key value pair from the given namespace
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
@@ -1766,12 +1766,12 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler kv:bulk
 
-				Commands:
+				COMMANDS
 				  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
 				  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]

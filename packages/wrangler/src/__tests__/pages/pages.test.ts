@@ -18,22 +18,22 @@ describe("pages", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler pages
+			"wrangler pages
 
-		⚡️ Configure Cloudflare Pages
+			⚡️ Configure Cloudflare Pages
 
-		Commands:
-		  wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
-		  wrangler pages project                         ⚡️ Interact with your Pages projects
-		  wrangler pages deployment                      🚀 Interact with the deployments of a project
-		  wrangler pages deploy [directory]              🆙 Deploy a directory of static assets as a Pages deployment  [aliases: publish]
-		  wrangler pages secret                          🤫 Generate a secret that can be referenced in a Pages project
-		  wrangler pages download                        ⚡️ Download settings from your project
+			COMMANDS
+			  wrangler pages dev [directory] [-- command..]  Develop your full-stack Pages application locally
+			  wrangler pages project                         Interact with your Pages projects
+			  wrangler pages deployment                      Interact with the deployments of a project
+			  wrangler pages deploy [directory]              Deploy a directory of static assets as a Pages deployment  [aliases: publish]
+			  wrangler pages secret                          Generate a secret that can be referenced in a Pages project
+			  wrangler pages download                        Download settings from your project
 
-		Flags:
-		  -h, --help     Show help  [boolean]
-		  -v, --version  Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 	});
 
 	describe("deprecation message for deprecated options", () => {

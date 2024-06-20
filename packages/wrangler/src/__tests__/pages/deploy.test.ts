@@ -57,16 +57,16 @@ describe("pages deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler pages deploy [directory]
 
-			🆙 Deploy a directory of static assets as a Pages deployment
+			Deploy a directory of static assets as a Pages deployment
 
-			Positionals:
+			POSITIONALS
 			  directory  The directory of static files to upload  [string]
 
-			Flags:
+			GLOBAL FLAGS
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
 
-			Options:
+			OPTIONS
 			      --project-name        The name of the project you want to deploy to  [string]
 			      --branch              The name of the branch you want to deploy to  [string]
 			      --commit-hash         The SHA to attach to this deployment  [string]

@@ -26,30 +26,30 @@ describe("cloudchamber modify", () => {
 		await runWrangler("cloudchamber modify --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler cloudchamber modify [deploymentId]
+			"wrangler cloudchamber modify [deploymentId]
 
-		Modify an existing deployment
+			Modify an existing deployment
 
-		Positionals:
-		  deploymentId  The deployment you want to modify  [string]
+			POSITIONALS
+			  deploymentId  The deployment you want to modify  [string]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		Options:
-		      --json               Return output as clean JSON  [boolean] [default: false]
-		      --var                Container environment variables  [array]
-		      --label              Deployment labels  [array]
-		      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
-		      --image              The new image that the deployment will have from now on  [string]
-		      --location           The new location that the deployment will have from now on  [string]
-		      --vcpu               The new vcpu that the deployment will have from now on  [number]
-		      --memory             The new memory that the deployment will have from now on  [string]"
-	`);
+			OPTIONS
+			      --json               Return output as clean JSON  [boolean] [default: false]
+			      --var                Container environment variables  [array]
+			      --label              Deployment labels  [array]
+			      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
+			      --image              The new image that the deployment will have from now on  [string]
+			      --location           The new location that the deployment will have from now on  [string]
+			      --vcpu               The new vcpu that the deployment will have from now on  [number]
+			      --memory             The new memory that the deployment will have from now on  [string]"
+		`);
 	});
 
 	it("should modify deployment (detects no interactivity)", async () => {

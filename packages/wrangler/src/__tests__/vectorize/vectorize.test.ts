@@ -17,31 +17,31 @@ describe("vectorize help", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler vectorize
+			"wrangler vectorize
 
-		🧮 Interact with Vectorize indexes
+			🧮 Manage Vectorize indexes [open beta]
 
-		Commands:
-		  wrangler vectorize create <name>  Create a Vectorize index
-		  wrangler vectorize delete <name>  Delete a Vectorize index
-		  wrangler vectorize get <name>     Get a Vectorize index by name
-		  wrangler vectorize list           List your Vectorize indexes
-		  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
+			COMMANDS
+			  wrangler vectorize create <name>  Create a Vectorize index
+			  wrangler vectorize delete <name>  Delete a Vectorize index
+			  wrangler vectorize get <name>     Get a Vectorize index by name
+			  wrangler vectorize list           List your Vectorize indexes
+			  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		--------------------
-		📣 Vectorize is currently in open beta
-		📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
-		📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		📣 To give feedback, visit https://discord.cloudflare.com/
-		--------------------"
-	`);
+			--------------------
+			📣 Vectorize is currently in open beta
+			📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
@@ -55,32 +55,32 @@ describe("vectorize help", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler vectorize
+			"
+			wrangler vectorize
 
-		🧮 Interact with Vectorize indexes
+			🧮 Manage Vectorize indexes [open beta]
 
-		Commands:
-		  wrangler vectorize create <name>  Create a Vectorize index
-		  wrangler vectorize delete <name>  Delete a Vectorize index
-		  wrangler vectorize get <name>     Get a Vectorize index by name
-		  wrangler vectorize list           List your Vectorize indexes
-		  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
+			COMMANDS
+			  wrangler vectorize create <name>  Create a Vectorize index
+			  wrangler vectorize delete <name>  Delete a Vectorize index
+			  wrangler vectorize get <name>     Get a Vectorize index by name
+			  wrangler vectorize list           List your Vectorize indexes
+			  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		--------------------
-		📣 Vectorize is currently in open beta
-		📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
-		📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		📣 To give feedback, visit https://discord.cloudflare.com/
-		--------------------"
-	`);
+			--------------------
+			📣 Vectorize is currently in open beta
+			📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
 	});
 
 	it("should show help when the get command is passed without an index", async () => {
@@ -94,31 +94,31 @@ describe("vectorize help", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler vectorize get <name>
+			"
+			wrangler vectorize get <name>
 
-		Get a Vectorize index by name
+			Get a Vectorize index by name
 
-		Positionals:
-		  name  The name of the Vectorize index.  [string] [required]
+			POSITIONALS
+			  name  The name of the Vectorize index.  [string] [required]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		Options:
-		      --json  return output as clean JSON  [boolean] [default: false]
+			OPTIONS
+			      --json  return output as clean JSON  [boolean] [default: false]
 
-		--------------------
-		📣 Vectorize is currently in open beta
-		📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
-		📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		📣 To give feedback, visit https://discord.cloudflare.com/
-		--------------------"
-	`);
+			--------------------
+			📣 Vectorize is currently in open beta
+			📣 See the Vectorize docs for how to get started and known issues: https://developers.cloudflare.com/vectorize
+			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			📣 To give feedback, visit https://discord.cloudflare.com/
+			--------------------"
+		`);
 	});
 });
 

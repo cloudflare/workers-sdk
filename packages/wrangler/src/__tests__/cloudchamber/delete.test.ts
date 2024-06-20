@@ -27,23 +27,23 @@ describe("cloudchamber delete", () => {
 		await runWrangler("cloudchamber delete --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler cloudchamber delete [deploymentId]
+			"wrangler cloudchamber delete [deploymentId]
 
-		Delete an existing deployment that is running in the Cloudflare edge
+			Delete an existing deployment that is running in the Cloudflare edge
 
-		Positionals:
-		  deploymentId  deployment you want to delete  [string]
+			POSITIONALS
+			  deploymentId  deployment you want to delete  [string]
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		Options:
-		      --json  Return output as clean JSON  [boolean] [default: false]"
-	`);
+			OPTIONS
+			      --json  Return output as clean JSON  [boolean] [default: false]"
+		`);
 	});
 
 	it("should delete deployment (detects no interactivity)", async () => {

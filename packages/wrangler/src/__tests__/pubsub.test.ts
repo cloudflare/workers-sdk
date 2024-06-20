@@ -22,29 +22,29 @@ describe("wrangler", () => {
 			it("shows usage details", async () => {
 				await runWrangler("pubsub --help");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "wrangler pubsub
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "wrangler pubsub
 
-			📮 Interact and manage Pub/Sub Brokers
+					📮 Manage Pub/Sub brokers [private beta]
 
-			Commands:
-			  wrangler pubsub namespace  Manage your Pub/Sub Namespaces
-			  wrangler pubsub broker     Interact with your Pub/Sub Brokers
+					COMMANDS
+					  wrangler pubsub namespace  Manage your Pub/Sub Namespaces
+					  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
-			  "warn": "",
-			}
-		`);
+					👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
+					  "warn": "",
+					}
+				`);
 			});
 		});
 
@@ -53,31 +53,31 @@ describe("wrangler", () => {
 				it("shows usage details", async () => {
 					await runWrangler("pubsub namespace --help");
 					expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "wrangler pubsub namespace
+						Object {
+						  "debug": "",
+						  "err": "",
+						  "info": "",
+						  "out": "wrangler pubsub namespace
 
-				Manage your Pub/Sub Namespaces
+						Manage your Pub/Sub Namespaces
 
-				Commands:
-				  wrangler pubsub namespace create <name>    Create a new Pub/Sub Namespace
-				  wrangler pubsub namespace list             List your existing Pub/Sub Namespaces
-				  wrangler pubsub namespace delete <name>    Delete a Pub/Sub Namespace
-				  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
+						COMMANDS
+						  wrangler pubsub namespace create <name>    Create a new Pub/Sub Namespace
+						  wrangler pubsub namespace list             List your existing Pub/Sub Namespaces
+						  wrangler pubsub namespace delete <name>    Delete a Pub/Sub Namespace
+						  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
-				  "warn": "",
-				}
-			`);
+						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
+						  "warn": "",
+						}
+					`);
 				});
 			});
 
@@ -175,37 +175,37 @@ describe("wrangler", () => {
 				it("shows usage details", async () => {
 					await runWrangler("pubsub broker --help");
 					expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "wrangler pubsub broker
+						Object {
+						  "debug": "",
+						  "err": "",
+						  "info": "",
+						  "out": "wrangler pubsub broker
 
-				Interact with your Pub/Sub Brokers
+						Interact with your Pub/Sub Brokers
 
-				Commands:
-				  wrangler pubsub broker create <name>            Create a new Pub/Sub Broker
-				  wrangler pubsub broker update <name>            Update an existing Pub/Sub Broker's configuration.
-				  wrangler pubsub broker list                     List the Pub/Sub Brokers within a Namespace
-				  wrangler pubsub broker delete <name>            Delete an existing Pub/Sub Broker
-				  wrangler pubsub broker describe <name>          Describe an existing Pub/Sub Broker.
-				  wrangler pubsub broker issue <name>             Issue new client credentials for a specific Pub/Sub Broker.
-				  wrangler pubsub broker revoke <name>            Revoke a set of active client credentials associated with the given Broker
-				  wrangler pubsub broker unrevoke <name>          Restore access to a set of previously revoked client credentials.
-				  wrangler pubsub broker show-revocations <name>  Show all previously revoked client credentials.
-				  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
+						COMMANDS
+						  wrangler pubsub broker create <name>            Create a new Pub/Sub Broker
+						  wrangler pubsub broker update <name>            Update an existing Pub/Sub Broker's configuration.
+						  wrangler pubsub broker list                     List the Pub/Sub Brokers within a Namespace
+						  wrangler pubsub broker delete <name>            Delete an existing Pub/Sub Broker
+						  wrangler pubsub broker describe <name>          Describe an existing Pub/Sub Broker.
+						  wrangler pubsub broker issue <name>             Issue new client credentials for a specific Pub/Sub Broker.
+						  wrangler pubsub broker revoke <name>            Revoke a set of active client credentials associated with the given Broker
+						  wrangler pubsub broker unrevoke <name>          Restore access to a set of previously revoked client credentials.
+						  wrangler pubsub broker show-revocations <name>  Show all previously revoked client credentials.
+						  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
-				  "warn": "",
-				}
-			`);
+						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
+						  "warn": "",
+						}
+					`);
 				});
 			});
 

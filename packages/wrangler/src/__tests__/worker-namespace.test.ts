@@ -26,30 +26,30 @@ describe("dispatch-namespace", () => {
 		await new Promise((resolve) => setImmediate(resolve));
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "wrangler dispatch-namespace
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "wrangler dispatch-namespace
 
-		📦 Interact with a dispatch namespace
+			🏗️  Manage dispatch namespaces
 
-		Commands:
-		  wrangler dispatch-namespace list                          List all dispatch namespaces
-		  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
-		  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
-		  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
-		  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
+			COMMANDS
+			  wrangler dispatch-namespace list                          List all dispatch namespaces
+			  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
+			  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
+			  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
+			  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]",
-		  "warn": "",
-		}
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]",
+			  "warn": "",
+			}
+		`);
 	});
 
 	describe("create namespace", () => {
@@ -86,21 +86,21 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace create <name>
+				"
+				wrangler dispatch-namespace create <name>
 
-			Create a dispatch namespace
+				Create a dispatch namespace
 
-			Positionals:
-			  name  Name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  name  Name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should attempt to create the given namespace", async () => {
@@ -137,21 +137,21 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace create <name>
+				"
+				wrangler dispatch-namespace create <name>
 
-			Create a dispatch namespace
+				Create a dispatch namespace
 
-			Positionals:
-			  name  Name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  name  Name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should try to delete the given namespace", async () => {
@@ -197,21 +197,21 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace get <name>
+				"
+				wrangler dispatch-namespace get <name>
 
-			Get information about a dispatch namespace
+				Get information about a dispatch namespace
 
-			Positionals:
-			  name  Name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  name  Name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should attempt to get info for the given namespace", async () => {
@@ -307,22 +307,22 @@ describe("dispatch-namespace", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace rename <old-name> <new-name>
+				"
+				wrangler dispatch-namespace rename <old-name> <new-name>
 
-			Rename a dispatch namespace
+				Rename a dispatch namespace
 
-			Positionals:
-			  old-name  Name of the dispatch namespace  [string] [required]
-			  new-name  New name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  old-name  Name of the dispatch namespace  [string] [required]
+				  new-name  New name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should attempt to rename the given namespace", async () => {

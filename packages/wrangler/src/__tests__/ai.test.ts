@@ -17,21 +17,22 @@ describe("ai help", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler ai
+			"wrangler ai
 
-		🤖 Interact with AI models
+			🤖 Manage AI models
 
-		Commands:
-		  wrangler ai models    List catalog models
-		  wrangler ai finetune  Interact with finetune files
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			COMMANDS
+			  wrangler ai models    List catalog models
+			  wrangler ai finetune  Interact with finetune files
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
@@ -45,22 +46,23 @@ describe("ai help", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler ai
+			"
+			wrangler ai
 
-		🤖 Interact with AI models
+			🤖 Manage AI models
 
-		Commands:
-		  wrangler ai models    List catalog models
-		  wrangler ai finetune  Interact with finetune files
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			COMMANDS
+			  wrangler ai models    List catalog models
+			  wrangler ai finetune  Interact with finetune files
+
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 });
 

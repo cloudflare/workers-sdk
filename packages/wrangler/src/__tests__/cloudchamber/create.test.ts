@@ -27,29 +27,29 @@ describe("cloudchamber create", () => {
 		await runWrangler("cloudchamber create --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler cloudchamber create
+			"wrangler cloudchamber create
 
-		Create a new deployment
+			Create a new deployment
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
-		Options:
-		      --json          Return output as clean JSON  [boolean] [default: false]
-		      --image         Image to use for your deployment  [string]
-		      --location      Location on Cloudflare's network where your deployment will run  [string]
-		      --var           Container environment variables  [array]
-		      --label         Deployment labels  [array]
-		      --all-ssh-keys  To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
-		      --ssh-key-id    ID of the SSH key to add to the deployment  [array]
-		      --vcpu          Number of vCPUs to allocate to this deployment.  [number]
-		      --memory        Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.  [string]
-		      --ipv4          Include an IPv4 in the deployment  [boolean]"
-	`);
+			OPTIONS
+			      --json          Return output as clean JSON  [boolean] [default: false]
+			      --image         Image to use for your deployment  [string]
+			      --location      Location on Cloudflare's network where your deployment will run  [string]
+			      --var           Container environment variables  [array]
+			      --label         Deployment labels  [array]
+			      --all-ssh-keys  To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
+			      --ssh-key-id    ID of the SSH key to add to the deployment  [array]
+			      --vcpu          Number of vCPUs to allocate to this deployment.  [number]
+			      --memory        Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.  [string]
+			      --ipv4          Include an IPv4 in the deployment  [boolean]"
+		`);
 	});
 
 	it("should create deployment (detects no interactivity)", async () => {

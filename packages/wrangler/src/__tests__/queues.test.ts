@@ -21,23 +21,23 @@ describe("wrangler", () => {
 			await runWrangler("queues --help");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler queues
+				"wrangler queues
 
-			🇶 Configure Workers Queues
+				🇶  Manage Workers Queues
 
-			Commands:
-			  wrangler queues list           List Queues
-			  wrangler queues create <name>  Create a Queue
-			  wrangler queues delete <name>  Delete a Queue
-			  wrangler queues consumer       Configure Queue Consumers
+				COMMANDS
+				  wrangler queues list           List Queues
+				  wrangler queues create <name>  Create a Queue
+				  wrangler queues delete <name>  Delete a Queue
+				  wrangler queues consumer       Configure Queue consumers
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		function mockGetQueueByNameRequest(
@@ -101,20 +101,20 @@ describe("wrangler", () => {
 				await runWrangler("queues list --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			"wrangler queues list
+					"wrangler queues list
 
-			List Queues
+					List Queues
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --page  Page number for pagination  [number]"
-		`);
+					OPTIONS
+					      --page  Page number for pagination  [number]"
+				`);
 			});
 
 			it("should list queues on page 1 with no --page", async () => {
@@ -235,23 +235,23 @@ describe("wrangler", () => {
 				await runWrangler("queues create --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			"wrangler queues create <name>
+					"wrangler queues create <name>
 
-			Create a Queue
+					Create a Queue
 
-			Positionals:
-			  name  The name of the queue  [string] [required]
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
-		`);
+					OPTIONS
+					      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
+				`);
 			});
 
 			it("should create a queue", async () => {
@@ -356,20 +356,20 @@ describe("wrangler", () => {
 				await runWrangler("queues delete --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			"wrangler queues delete <name>
+					"wrangler queues delete <name>
 
-			Delete a Queue
+					Delete a Queue
 
-			Positionals:
-			  name  The name of the queue  [string] [required]
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
+				`);
 			});
 
 			it("should delete a queue", async () => {
@@ -422,23 +422,23 @@ describe("wrangler", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			"wrangler queues consumer
+					"wrangler queues consumer
 
-			Configure Queue Consumers
+					Configure Queue consumers
 
-			Commands:
-			  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
-			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Worker Consumer
-			  wrangler queues consumer http                               Configure Queue HTTP Pull Consumers
-			  wrangler queues consumer worker                             Configure Queue Worker Consumers
+					COMMANDS
+					  wrangler queues consumer add <queue-name> <script-name>     Add a Queue Worker Consumer
+					  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Worker Consumer
+					  wrangler queues consumer http                               Configure Queue HTTP Pull Consumers
+					  wrangler queues consumer worker                             Configure Queue Worker Consumers
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
+				`);
 			});
 
 			describe("add", () => {
@@ -472,29 +472,29 @@ describe("wrangler", () => {
 					await runWrangler("queues consumer add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues consumer add <queue-name> <script-name>
+						"wrangler queues consumer add <queue-name> <script-name>
 
-				Add a Queue Worker Consumer
+						Add a Queue Worker Consumer
 
-				Positionals:
-				  queue-name   Name of the queue to configure  [string] [required]
-				  script-name  Name of the consumer script  [string] [required]
+						POSITIONALS
+						  queue-name   Name of the queue to configure  [string] [required]
+						  script-name  Name of the consumer script  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				Options:
-				      --batch-size         Maximum number of messages per batch  [number]
-				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
-				      --message-retries    Maximum number of retries for each message  [number]
-				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
-				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
-				      --retry-delay-secs   The number of seconds to wait before retrying a message  [number]"
-			`);
+						OPTIONS
+						      --batch-size         Maximum number of messages per batch  [number]
+						      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
+						      --message-retries    Maximum number of retries for each message  [number]
+						      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
+						      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]
+						      --retry-delay-secs   The number of seconds to wait before retrying a message  [number]"
+					`);
 				});
 
 				it("should add a consumer using defaults", async () => {
@@ -794,21 +794,21 @@ describe("wrangler", () => {
 					await runWrangler("queues consumer remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues consumer remove <queue-name> <script-name>
+						"wrangler queues consumer remove <queue-name> <script-name>
 
-				Remove a Queue Worker Consumer
+						Remove a Queue Worker Consumer
 
-				Positionals:
-				  queue-name   Name of the queue to configure  [string] [required]
-				  script-name  Name of the consumer script  [string] [required]
+						POSITIONALS
+						  queue-name   Name of the queue to configure  [string] [required]
+						  script-name  Name of the consumer script  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
-			`);
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]"
+					`);
 				});
 
 				it("should show an error when queue does not exist", async () => {
@@ -1182,21 +1182,21 @@ describe("wrangler", () => {
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-			"wrangler queues consumer http
+					"wrangler queues consumer http
 
-			Configure Queue HTTP Pull Consumers
+					Configure Queue HTTP Pull Consumers
 
-			Commands:
-			  wrangler queues consumer http add <queue-name>     Add a Queue HTTP Pull Consumer
-			  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
+					COMMANDS
+					  wrangler queues consumer http add <queue-name>     Add a Queue HTTP Pull Consumer
+					  wrangler queues consumer http remove <queue-name>  Remove a Queue HTTP Pull Consumer
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
+				`);
 			});
 
 			describe("add", () => {
@@ -1230,27 +1230,27 @@ describe("wrangler", () => {
 					await runWrangler("queues consumer http add --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues consumer http add <queue-name>
+						"wrangler queues consumer http add <queue-name>
 
-				Add a Queue HTTP Pull Consumer
+						Add a Queue HTTP Pull Consumer
 
-				Positionals:
-				  queue-name  Name of the queue for the consumer  [string] [required]
+						POSITIONALS
+						  queue-name  Name of the queue for the consumer  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				Options:
-				      --batch-size               Maximum number of messages per batch  [number]
-				      --message-retries          Maximum number of retries for each message  [number]
-				      --dead-letter-queue        Queue to send messages that failed to be consumed  [string]
-				      --visibility-timeout-secs  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]
-				      --retry-delay-secs         The number of seconds to wait before retrying a message  [number]"
-			`);
+						OPTIONS
+						      --batch-size               Maximum number of messages per batch  [number]
+						      --message-retries          Maximum number of retries for each message  [number]
+						      --dead-letter-queue        Queue to send messages that failed to be consumed  [string]
+						      --visibility-timeout-secs  The number of seconds a message will wait for an acknowledgement before being returned to the queue.  [number]
+						      --retry-delay-secs         The number of seconds to wait before retrying a message  [number]"
+					`);
 				});
 
 				it("should add a consumer using defaults", async () => {
@@ -1361,20 +1361,20 @@ describe("wrangler", () => {
 					await runWrangler("queues consumer http remove --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"wrangler queues consumer http remove <queue-name>
+						"wrangler queues consumer http remove <queue-name>
 
-				Remove a Queue HTTP Pull Consumer
+						Remove a Queue HTTP Pull Consumer
 
-				Positionals:
-				  queue-name  Name of the queue for the consumer  [string] [required]
+						POSITIONALS
+						  queue-name  Name of the queue for the consumer  [string] [required]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
-			`);
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]"
+					`);
 				});
 
 				it("should delete a pull consumer", async () => {
