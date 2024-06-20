@@ -1,28 +1,23 @@
-import { OpenAPIRouter } from "@cloudflare/itty-router-openapi";
-import { TaskCreate, TaskDelete, TaskFetch, TaskList } from "./tasks";
+import { fromHono } from "chanfana";
+import { Hono } from "hono";
+import { TaskCreate } from "./endpoints/taskCreate";
+import { TaskDelete } from "./endpoints/taskDelete";
+import { TaskFetch } from "./endpoints/taskFetch";
+import { TaskList } from "./endpoints/taskList";
 
-const router = OpenAPIRouter({
-	schema: {
-		info: {
-			title: "Worker OpenAPI Example",
-			version: "1.0",
-		},
-	},
+// Start a Hono app
+const app = new Hono();
+
+// Setup OpenAPI registry
+const openapi = fromHono(app, {
+	docs_url: "/",
 });
 
-router.get("/api/tasks/", TaskList);
-router.post("/api/tasks/", TaskCreate);
-router.get("/api/tasks/:taskSlug/", TaskFetch);
-router.delete("/api/tasks/:taskSlug/", TaskDelete);
+// Register OpenAPI endpoints
+openapi.get("/api/tasks", TaskList);
+openapi.post("/api/tasks", TaskCreate);
+openapi.get("/api/tasks/:taskSlug", TaskFetch);
+openapi.delete("/api/tasks/:taskSlug", TaskDelete);
 
-// Redirect root request to the /docs page
-router.original.get("/", (request) =>
-	Response.redirect(`${request.url}docs`, 302)
-);
-
-// 404 for everything else
-router.all("*", () => new Response("Not Found.", { status: 404 }));
-
-export default {
-	fetch: router.handle,
-};
+// Export the Hono app
+export default app;
