@@ -492,8 +492,6 @@ export async function startDev(args: StartDevOptions) {
 					);
 				});
 			}
-
-			// devEnv.config.set()
 		}
 
 		// eslint-disable-next-line no-inner-declarations
