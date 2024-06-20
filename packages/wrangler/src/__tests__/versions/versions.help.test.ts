@@ -14,10 +14,10 @@ describe("versions --help", () => {
 			"wrangler
 
 			COMMANDS
-			  wrangler docs [command]            📚 Open the wrangler commands documentation in your browser
+			  wrangler docs [command]            📚 Open Wrangler's command documentation in your browser
 
-			  wrangler init [name]               📥 Initialize a basic Worker application
-			  wrangler dev [script]              👂 Start a local server for developing a Worker
+			  wrangler init [name]               📥 Initialize a basic Worker
+			  wrangler dev [script]              👂 Start a local server for developing your Worker
 			  wrangler deploy [script]           🆙 Deploy a Worker to Cloudflare  [aliases: publish]
 			  wrangler deployments               🚢 List and view the current and past deployments for your Worker [open beta]
 			  wrangler rollback [deployment-id]  🔙 Rollback a deployment for a Worker [open beta]
@@ -40,14 +40,14 @@ describe("versions --help", () => {
 
 			  wrangler login                     🔓 Login to Cloudflare
 			  wrangler logout                    🚪 Logout from Cloudflare
-			  wrangler whoami                    🕵️  Retrieve your user information and test your authentication configuration
+			  wrangler whoami                    🕵️  Retrieve your user information
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-			  -c, --config                    ⚑ Path to .toml configuration file  [string]
-			  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-			  -h, --help                      ⚑ Show help  [boolean]
-			  -v, --version                   ⚑ Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
@@ -70,8 +70,8 @@ describe("versions --help", () => {
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
@@ -109,8 +109,8 @@ describe("versions subhelp", () => {
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
@@ -136,8 +136,8 @@ describe("versions subhelp", () => {
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
@@ -163,8 +163,8 @@ describe("versions subhelp", () => {
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]

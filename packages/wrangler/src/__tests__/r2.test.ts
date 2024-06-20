@@ -51,11 +51,11 @@ describe("r2", () => {
 				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-				  -c, --config                    ⚑ Path to .toml configuration file  [string]
-				  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-				  -h, --help                      ⚑ Show help  [boolean]
-				  -v, --version                   ⚑ Show version number  [boolean]"
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
 			`);
 		});
 
@@ -115,11 +115,11 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-					  -c, --config                    ⚑ Path to .toml configuration file  [string]
-					  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-					  -h, --help                      ⚑ Show help  [boolean]
-					  -v, --version                   ⚑ Show version number  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
@@ -148,11 +148,11 @@ describe("r2", () => {
 					  name  The name of the new bucket  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-					  -c, --config                    ⚑ Path to .toml configuration file  [string]
-					  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-					  -h, --help                      ⚑ Show help  [boolean]
-					  -v, --version                   ⚑ Show version number  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction   The jurisdiction where the new bucket will be created  [string]
@@ -252,11 +252,11 @@ describe("r2", () => {
 					  wrangler r2 bucket update storage-class <name>  Update the default storage class of an existing R2 bucket
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-					  -c, --config                    ⚑ Path to .toml configuration file  [string]
-					  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-					  -h, --help                      ⚑ Show help  [boolean]
-					  -v, --version                   ⚑ Show version number  [boolean]"
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
@@ -282,11 +282,11 @@ describe("r2", () => {
 						  name  The name of the existing bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction   The jurisdiction of the bucket to be updated  [string]
@@ -348,11 +348,11 @@ describe("r2", () => {
 					  name  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-					  -c, --config                    ⚑ Path to .toml configuration file  [string]
-					  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-					  -h, --help                      ⚑ Show help  [boolean]
-					  -v, --version                   ⚑ Show version number  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -380,11 +380,11 @@ describe("r2", () => {
 					  name  The name of the bucket to delete  [string] [required]
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-					  -c, --config                    ⚑ Path to .toml configuration file  [string]
-					  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-					  -h, --help                      ⚑ Show help  [boolean]
-					  -v, --version                   ⚑ Show version number  [boolean]
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
 					OPTIONS
 					  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -448,11 +448,11 @@ describe("r2", () => {
 					  wrangler r2 bucket sippy get <name>      Check the status of Sippy on an R2 bucket
 
 					GLOBAL FLAGS
-					  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-					  -c, --config                    ⚑ Path to .toml configuration file  [string]
-					  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-					  -h, --help                      ⚑ Show help  [boolean]
-					  -v, --version                   ⚑ Show version number  [boolean]"
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]"
 				`);
 			});
 
@@ -540,11 +540,11 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction              The jurisdiction where the bucket exists  [string]
@@ -584,11 +584,11 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -636,11 +636,11 @@ describe("r2", () => {
 						  name  The name of the bucket  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
@@ -762,11 +762,11 @@ describe("r2", () => {
 						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]"
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]"
 					`);
 				});
 			});
@@ -868,11 +868,11 @@ describe("r2", () => {
 						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
 						      --event-types, --event-type  Specify the kinds of object events to emit notifications for. ex. '--event-types object-create object-delete'  [array] [required] [choices: \\"object-create\\", \\"object-delete\\"]
@@ -960,11 +960,11 @@ describe("r2", () => {
 						  bucket  The name of the bucket for which notifications will be emitted  [string] [required]
 
 						GLOBAL FLAGS
-						  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
-						  -c, --config                    ⚑ Path to .toml configuration file  [string]
-						  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
-						  -h, --help                      ⚑ Show help  [boolean]
-						  -v, --version                   ⚑ Show version number  [boolean]
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
 						OPTIONS
 						      --queue  The name of the queue that is configured to receive notifications. ex '--queue my-queue'  [string] [required]"

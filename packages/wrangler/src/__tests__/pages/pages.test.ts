@@ -31,8 +31,8 @@ describe("pages", () => {
 			  wrangler pages download                        Download settings from your project
 
 			GLOBAL FLAGS
-			  -h, --help     ⚑ Show help  [boolean]
-			  -v, --version  ⚑ Show version number  [boolean]"
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 

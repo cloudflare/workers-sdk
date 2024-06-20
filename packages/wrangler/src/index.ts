@@ -66,7 +66,6 @@ import {
 	logout,
 	validateScopeKeys,
 } from "./user";
-import { embolden, highlight } from "./utils/stdout-styling";
 import { vectorize } from "./vectorize/index";
 import registerVersionsSubcommands from "./versions";
 import registerVersionsDeploymentsSubcommands from "./versions/deployments";
@@ -215,29 +214,29 @@ export function createCLIParser(argv: string[]) {
 		// the `wrangler` variable
 		.version(false)
 		.option("v", {
-			describe: "⚑ Show version number",
+			describe: "Show version number",
 			alias: "version",
 			type: "boolean",
 		})
 		.option("config", {
 			alias: "c",
-			describe: "⚑ Path to .toml configuration file",
+			describe: "Path to .toml configuration file",
 			type: "string",
 			requiresArg: true,
 		})
 		.option("env", {
 			alias: "e",
-			describe: "⚑ Environment to use for operations and .env files",
+			describe: "Environment to use for operations and .env files",
 			type: "string",
 			requiresArg: true,
 		})
 		.option("experimental-json-config", {
 			alias: "j",
-			describe: `⚑ Experimental: support wrangler.json`,
+			describe: `Experimental: support wrangler.json`,
 			type: "boolean",
 		})
 		.option("experimental-versions", {
-			describe: `⚑ Experimental: support Worker Versions`,
+			describe: `Experimental: support Worker Versions`,
 			type: "boolean",
 			hidden: true,
 			alias: ["x-versions", "experimental-gradual-rollouts"],
@@ -258,22 +257,21 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		})
 		.epilogue(
-			`Please report any issues to ${highlight(
-				"https://github.com/cloudflare/workers-sdk/issues/new/choose",
-				"#3B818D"
+			`Please report any issues to ${chalk.hex("#3B818D")(
+				"https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			)}`
 		);
 
 	wrangler.updateStrings({
-		"Commands:": `${embolden("COMMANDS")}`,
-		"Options:": `${embolden("OPTIONS")}`,
-		"Positionals:": `${embolden("POSITIONALS")}`,
+		"Commands:": `${chalk.bold("COMMANDS")}`,
+		"Options:": `${chalk.bold("OPTIONS")}`,
+		"Positionals:": `${chalk.bold("POSITIONALS")}`,
 	});
 	wrangler.group(
 		["experimental-json-config", "config", "env", "help", "version"],
-		`${embolden("GLOBAL FLAGS")}`
+		`${chalk.bold("GLOBAL FLAGS")}`
 	);
-	wrangler.help("help", "⚑ Show help").alias("h", "help");
+	wrangler.help("help", "Show help").alias("h", "help");
 
 	// Default help command that supports the subcommands
 	const subHelp: SubHelp = {
@@ -329,7 +327,7 @@ export function createCLIParser(argv: string[]) {
 	// docs
 	wrangler.command(
 		"docs [command]",
-		"📚 Open the wrangler commands documentation in your browser\n",
+		"📚 Open Wrangler's command documentation in your browser\n",
 		docsOptions,
 		docsHandler
 	);
@@ -338,7 +336,7 @@ export function createCLIParser(argv: string[]) {
 	// init
 	wrangler.command(
 		"init [name]",
-		"📥 Initialize a basic Worker application",
+		"📥 Initialize a basic Worker",
 		initOptions,
 		initHandler
 	);
@@ -346,7 +344,7 @@ export function createCLIParser(argv: string[]) {
 	// dev
 	wrangler.command(
 		"dev [script]",
-		"👂 Start a local server for developing a Worker",
+		"👂 Start a local server for developing your Worker",
 		devOptions,
 		devHandler
 	);
@@ -362,7 +360,7 @@ export function createCLIParser(argv: string[]) {
 	// [OPEN BETA] deployments
 	const deploymentsWarning =
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	const deploymentsDescription = `🚢 List and view the current and past deployments for your Worker ${highlight("[open beta]", betaCmdColor)}`;
+	const deploymentsDescription = `🚢 List and view the current and past deployments for your Worker ${chalk.hex(betaCmdColor)("[open beta]")}`;
 
 	if (experimentalGradualRollouts) {
 		wrangler
@@ -419,7 +417,7 @@ export function createCLIParser(argv: string[]) {
 	// [OPEN BETA] rollback
 	const rollbackWarning =
 		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	const rollbackDescription = `🔙 Rollback a deployment for a Worker ${highlight("[open beta]", betaCmdColor)}`;
+	const rollbackDescription = `🔙 Rollback a deployment for a Worker ${chalk.hex(betaCmdColor)("[open beta]")}`;
 
 	if (experimentalGradualRollouts) {
 		registerVersionsRollbackCommand(
@@ -470,10 +468,7 @@ export function createCLIParser(argv: string[]) {
 	if (experimentalGradualRollouts) {
 		wrangler.command(
 			"versions",
-			`🫧  List, view, upload and deploy Versions of your Worker to Cloudflare ${highlight(
-				"[open beta]",
-				betaCmdColor
-			)}`,
+			`🫧  List, view, upload and deploy Versions of your Worker to Cloudflare ${chalk.hex(betaCmdColor)("[open beta]")}`,
 			(yargs) => {
 				return registerVersionsSubcommands(yargs.command(subHelp), subHelp);
 			}
@@ -484,10 +479,7 @@ export function createCLIParser(argv: string[]) {
 	if (experimentalGradualRollouts) {
 		wrangler.command(
 			"triggers",
-			`🎯 Updates the triggers of your current deployment ${highlight(
-				"[open beta]",
-				betaCmdColor
-			)}`,
+			`🎯 Updates the triggers of your current deployment ${chalk.hex(betaCmdColor)("[open beta]")}`,
 			(yargs) => {
 				return registerTriggersSubcommands(yargs.command(subHelp));
 			}
@@ -551,7 +543,7 @@ export function createCLIParser(argv: string[]) {
 	// [OPEN BETA] vectorize
 	wrangler.command(
 		"vectorize",
-		`🧮 Manage Vectorize indexes ${highlight("[open beta]", betaCmdColor)}`,
+		`🧮 Manage Vectorize indexes ${chalk.hex(betaCmdColor)("[open beta]")}`,
 		(vectorYargs) => {
 			return vectorize(vectorYargs.command(subHelp));
 		}
@@ -592,7 +584,7 @@ export function createCLIParser(argv: string[]) {
 	// [PRIVATE BETA] pubsub
 	wrangler.command(
 		"pubsub",
-		`📮 Manage Pub/Sub brokers ${highlight("[private beta]", betaCmdColor)}`,
+		`📮 Manage Pub/Sub brokers ${chalk.hex(betaCmdColor)("[private beta]")}`,
 		(pubsubYargs) => {
 			return pubSubCommands(pubsubYargs, subHelp);
 		}
@@ -689,7 +681,7 @@ export function createCLIParser(argv: string[]) {
 	// whoami
 	wrangler.command(
 		"whoami",
-		"🕵️  Retrieve your user information and test your authentication configuration",
+		"🕵️  Retrieve your user information",
 		() => {},
 		async (args) => {
 			await printWranglerBanner();
