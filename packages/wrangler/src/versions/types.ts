@@ -1,3 +1,6 @@
+import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
+import type { CfUserLimits } from "../deployment-bundle/worker";
+
 export type Percentage = number;
 export type UUID = string;
 export type VersionId = UUID;
@@ -29,7 +32,21 @@ export type ApiVersion = {
 		"workers/message"?: string;
 		"workers/tag"?: string;
 	};
-	// other properties not typed as not used
+	resources: {
+		bindings: WorkerMetadataBinding[];
+		script: {
+			etag: string;
+			handlers: string[];
+			placement_mode?: "smart";
+			last_deployed_from: string;
+		};
+		script_runtime: {
+			compatibility_date?: string;
+			compatibility_flags?: string[];
+			usage_model: "bundled" | "unbound" | "standard";
+			limits: CfUserLimits;
+		};
+	};
 };
 
-type VersionCache = Map<VersionId, ApiVersion>;
+export type VersionCache = Map<VersionId, ApiVersion>;

@@ -1,4 +1,6 @@
 import { fetchResult } from "../cfetch";
+import { confirm } from "../dialogs";
+import { APIError } from "../parse";
 import type { TailConsumer } from "../config/environment";
 import type {
 	ApiDeployment,
@@ -7,6 +9,8 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
+
+export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
 export async function fetchVersion(
 	accountId: string,
@@ -104,28 +108,62 @@ export async function createDeployment(
 	accountId: string,
 	workerName: string,
 	versionTraffic: Map<VersionId, Percentage>,
-	message: string | undefined
+	message: string | undefined,
+	force?: boolean
 ) {
-	const res = await fetchResult(
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`,
-		{
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				strategy: "percentage",
-				versions: Array.from(versionTraffic).map(
-					([version_id, percentage]) => ({ version_id, percentage })
-				),
-				annotations: {
-					"workers/message": message,
-				},
-			}),
+	try {
+		return await fetchResult(
+			`/accounts/${accountId}/workers/scripts/${workerName}/deployments${force ? "?force=true" : ""}`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					strategy: "percentage",
+					versions: Array.from(versionTraffic).map(
+						([version_id, percentage]) => ({ version_id, percentage })
+					),
+					annotations: {
+						"workers/message": message,
+					},
+				}),
+			}
+		);
+	} catch (e) {
+		if (
+			e instanceof APIError &&
+			e.code === CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE
+		) {
+			// This is not great but is the best way I could think to handle for now
+			const errorMsg = e.notes[0].text.replace(
+				` [code: ${CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE}]`,
+				""
+			);
+			const targetString = "The following secrets have changed:";
+			const changedSecrets = errorMsg
+				.substring(errorMsg.indexOf(targetString) + targetString.length + 1)
+				.split(", ");
+
+			const confirmed = await confirm(
+				"The following secrets have changed since the target version was deployed. " +
+					`Please confirm you wish to continue with the rollback\n` +
+					changedSecrets.map((secret) => `  * ${secret}`).join("\n")
+			);
+
+			if (confirmed) {
+				return await createDeployment(
+					accountId,
+					workerName,
+					versionTraffic,
+					message,
+					true
+				);
+			} else {
+				throw new Error("Aborting rollback...");
+			}
+		} else {
+			throw e;
 		}
-	);
-
-	// TODO: handle specific errors
-
-	return res;
+	}
 }
 
 type NonVersionedScriptSettings = {

@@ -13,12 +13,14 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
 import { versionsListHandler, versionsListOptions } from "./list";
+import { registerVersionsSecretsSubcommands } from "./secrets";
 import versionsUpload from "./upload";
 import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
+	SubHelp,
 } from "../yargs-types";
 
 async function standardPricingWarning(config: Config) {
@@ -228,7 +230,8 @@ export async function versionsUploadHandler(
 }
 
 export default function registerVersionsSubcommands(
-	versionYargs: CommonYargsArgv
+	versionYargs: CommonYargsArgv,
+	subHelp: SubHelp
 ) {
 	versionYargs
 		.command(
@@ -254,5 +257,12 @@ export default function registerVersionsSubcommands(
 			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]",
 			versionsDeployOptions,
 			versionsDeployHandler
+		)
+		.command(
+			"secret",
+			"Generate a secret that can be referenced in a Worker",
+			(yargs) => {
+				return registerVersionsSecretsSubcommands(yargs.command(subHelp));
+			}
 		);
 }
