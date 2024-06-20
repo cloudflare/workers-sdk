@@ -2,11 +2,12 @@
 	"compilerOptions": {
 		"outDir": "./dist",
 		"noImplicitAny": true,
-		"target": "ES2017",
+		"target": "ES2022",
 		"allowJs": false,
-		"lib": ["WebWorker", "ES5", "ScriptHost"],
-		"module": "commonjs",
-		"moduleResolution": "node"
+		"types": ["@cloudflare/workers-types"],
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"skipLibCheck": true
 	},
 	"include": [
 		"./src/*.ts",

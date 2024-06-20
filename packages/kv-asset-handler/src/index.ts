@@ -9,7 +9,8 @@ import {
 import type { AssetManifestType } from "./types";
 
 declare global {
-	const __STATIC_CONTENT: unknown, __STATIC_CONTENT_MANIFEST: string;
+	const __STATIC_CONTENT: KVNamespace | undefined,
+		__STATIC_CONTENT_MANIFEST: string;
 }
 
 const defaultCacheControl: CacheControl = {

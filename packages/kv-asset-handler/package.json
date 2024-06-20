@@ -9,7 +9,9 @@
 		"build": "tsc -d",
 		"pretest": "npm run build",
 		"test": "ava dist/test/*.js --verbose",
-		"test:ci": "npm run build && ava dist/test/*.js --verbose"
+		"test:ci": "npm run build && ava dist/test/*.js --verbose",
+		"check:lint": "eslint .",
+		"check:type": "tsc"
 	},
 	"repository": {
 		"type": "git",
@@ -43,6 +45,7 @@
 		"@cloudflare/workers-types": "^4.20240605.0",
 		"@types/mime": "^3.0.4",
 		"@types/node": "20.8.3",
+		"@types/service-worker-mock": "^2.0.1",
 		"ava": "^6.0.1",
 		"service-worker-mock": "^2.0.5"
 	},
