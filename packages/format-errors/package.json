@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"build": "wrangler build",
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev"

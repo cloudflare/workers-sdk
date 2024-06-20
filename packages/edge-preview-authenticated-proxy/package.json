@@ -3,7 +3,7 @@
 	"version": "0.1.4",
 	"private": true,
 	"scripts": {
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",

@@ -10,7 +10,7 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint functions",
+		"check:lint": "eslint functions --max-warnings=0",
 		"check:type": "tsc",
 		"custom:build": "./build.sh",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm exec wrangler pages deploy --project-name quick-edit ./web",

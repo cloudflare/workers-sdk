@@ -5,7 +5,7 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"predeploy": "pnpm run build",
 		"deploy": "wrangler deploy dist/index.js",

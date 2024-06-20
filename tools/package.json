@@ -3,7 +3,7 @@
 	"private": true,
 	"description": "Tooling for this monorepo CI",
 	"scripts": {
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"test:ci": "vitest run",
 		"test:file": "node -r esbuild-register test/run-test-file.ts"
