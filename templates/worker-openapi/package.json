@@ -14,7 +14,7 @@
 		"@cloudflare/itty-router-openapi": "^0.0.10"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240605.0",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"wrangler": "^3.0.0"
 	}

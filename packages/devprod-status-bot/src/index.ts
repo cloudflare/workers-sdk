@@ -17,7 +17,7 @@ async function getBotMessage(ai: Ai, prompt: string) {
 				role: "user",
 				content: prompt,
 			},
-		],
+		] as RoleScopedChatInput[],
 	};
 	const message = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
 	if (!("response" in message)) {
