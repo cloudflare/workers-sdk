@@ -48,7 +48,7 @@ describe("versions deploy", () => {
 			});
 	}, 50_000);
 
-	it("init worker", async () => {
+	it("should init Worker", async () => {
 		const init =
 			await runInRoot`$ ${WRANGLER} init ${workerName} --yes --no-delegate-c3`;
 
@@ -62,7 +62,7 @@ describe("versions deploy", () => {
 		versionId0 = matchVersionId(deploy.stdout);
 	});
 
-	it("upload 1st worker version", async () => {
+	it("should upload 1st Worker version", async () => {
 		const upload =
 			await runInWorker`$ ${WRANGLER} versions upload --message "Upload via e2e test" --tag "e2e-upload"  --x-versions`;
 
@@ -78,7 +78,7 @@ describe("versions deploy", () => {
 		`);
 	});
 
-	it("list 1 version", async () => {
+	it("should list 1 version", async () => {
 		const list = await runInWorker`$ ${WRANGLER} versions list  --x-versions`;
 
 		expect(normalize(list.stdout)).toMatchInlineSnapshot(`
@@ -100,7 +100,7 @@ describe("versions deploy", () => {
 		expect(list.stdout).toMatch(/Tag:\s+e2e-upload/);
 	});
 
-	it("deploy 1st worker version", async () => {
+	it("should deploy 1st Worker version", async () => {
 		const deploy =
 			await runInWorker`$ ${WRANGLER} versions deploy ${versionId1}@100% --message "Deploy via e2e test" --yes  --x-versions`;
 
@@ -140,7 +140,7 @@ describe("versions deploy", () => {
 		`);
 	});
 
-	it("list 1 deployment", async () => {
+	it("should list 1 deployment", async () => {
 		const list =
 			await runInWorker`$ ${WRANGLER} deployments list  --x-versions`;
 
@@ -167,7 +167,7 @@ describe("versions deploy", () => {
 		expect(list.stdout).toContain(versionId1);
 	});
 
-	it("modify & upload 2nd worker version", async () => {
+	it("should modify & upload 2nd Worker version", async () => {
 		await seed(workerPath, {
 			"src/index.ts": dedent`
 				export default {
@@ -219,7 +219,7 @@ describe("versions deploy", () => {
 		expect(versionsList.stdout).toMatch(/Tag:\s+e2e-upload-AGAIN/);
 	});
 
-	it("deploy 2nd worker version", async () => {
+	it("should deploy 2nd Worker version", async () => {
 		const deploy =
 			await runInWorker`$ ${WRANGLER} versions deploy ${versionId2}@100% --message "Deploy AGAIN via e2e test" --yes  --x-versions`;
 
@@ -295,7 +295,7 @@ describe("versions deploy", () => {
 		expect(countOccurences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 	});
 
-	it("rollback to implicit worker version (1st version)", async () => {
+	it("should rollback to implicit Worker version (1st version)", async () => {
 		const rollback =
 			await runInWorker`$ ${WRANGLER} rollback --message "Rollback via e2e test" --yes  --x-versions`;
 
@@ -318,9 +318,8 @@ describe("versions deploy", () => {
 			├ Finding latest stable Worker Version to rollback to
 			│
 			│
-			├ Please provide a message for this rollback (120 characters max, optional)?
-			│ Message Rollback via e2e test
-			│
+			? Please provide an optional message for this rollback (120 characters max)?
+			🤖 Using default value in non-interactive context: Rollback via e2e test
 			│
 			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
 			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
@@ -332,9 +331,8 @@ describe("versions deploy", () => {
 			│           Tag:  e2e-upload
 			│       Message:  Upload via e2e test
 			│
-			├ Are you sure you want to deploy this Worker Version to 100% of traffic?
-			│ yes Rollback
-			│
+			? Are you sure you want to deploy this Worker Version to 100% of traffic?
+			🤖 Using fallback value in non-interactive context: yes
 			├ Performing rollback
 			│
 			│
@@ -409,7 +407,7 @@ describe("versions deploy", () => {
 		expect(countOccurences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 	});
 
-	it("rollback to specific worker version (0th version)", async () => {
+	it("should rollback to specific Worker version (0th version)", async () => {
 		const rollback =
 			await runInWorker`$ ${WRANGLER} rollback ${versionId0} --message "Rollback to old version" --yes  --x-versions`;
 
@@ -429,9 +427,8 @@ describe("versions deploy", () => {
 			│           Tag:  e2e-upload
 			│       Message:  Upload via e2e test
 			│
-			├ Please provide a message for this rollback (120 characters max, optional)?
-			│ Message Rollback to old version
-			│
+			? Please provide an optional message for this rollback (120 characters max)?
+			🤖 Using default value in non-interactive context: Rollback to old version
 			│
 			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
 			│ This will immediately replace the current deployment and become the active deployment across all your deployed triggers.
@@ -443,9 +440,8 @@ describe("versions deploy", () => {
 			│           Tag:  -
 			│       Message:  -
 			│
-			├ Are you sure you want to deploy this Worker Version to 100% of traffic?
-			│ yes Rollback
-			│
+			? Are you sure you want to deploy this Worker Version to 100% of traffic?
+			🤖 Using fallback value in non-interactive context: yes
 			├ Performing rollback
 			│
 			│
@@ -528,7 +524,7 @@ describe("versions deploy", () => {
 		expect(countOccurences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
 	});
 
-	it("delete worker", async () => {
+	it("should delete the Worker", async () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
 
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
