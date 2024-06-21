@@ -4,11 +4,11 @@
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
+		"check:type": "tsc",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json",
-		"check:type": "tsc"
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",

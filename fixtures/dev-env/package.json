@@ -11,6 +11,7 @@
 		"test:watch": "npx vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@types/ws": "^8.5.7",
@@ -20,7 +21,6 @@
 		"wrangler": "workspace:*",
 		"ws": "^8.14.2"
 	},
-	"dependencies": {},
 	"volta": {
 		"extends": "../../package.json"
 	}

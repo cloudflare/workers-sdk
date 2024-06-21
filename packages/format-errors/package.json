@@ -3,11 +3,11 @@
 	"version": "0.0.2",
 	"private": true,
 	"scripts": {
-		"check:lint": "eslint .",
-		"deploy": "wrangler deploy",
 		"build": "wrangler build",
-		"start": "wrangler dev",
-		"check:type": "tsc"
+		"check:lint": "eslint .",
+		"check:type": "tsc",
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",

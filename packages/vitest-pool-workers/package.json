@@ -25,8 +25,6 @@
 		"directory": "packages/vitest-pool-workers"
 	},
 	"license": "MIT",
-	"main": "dist/pool/index.mjs",
-	"types": "types/cloudflare-test.d.ts",
 	"exports": {
 		".": {
 			"import": "./dist/pool/index.mjs",
@@ -38,18 +36,30 @@
 			"types": "./dist/config/index.d.ts"
 		}
 	},
+	"main": "dist/pool/index.mjs",
+	"types": "types/cloudflare-test.d.ts",
 	"files": [
 		"dist",
 		"types/cloudflare-test.d.ts"
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
-		"dev": "node scripts/bundle.mjs watch",
+		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp",
 		"check:lint": "eslint .",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
+		"dev": "node scripts/bundle.mjs watch",
 		"test": "vitest run",
-		"test:ci": "vitest run",
-		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp"
+		"test:ci": "vitest run"
+	},
+	"dependencies": {
+		"birpc": "0.2.14",
+		"cjs-module-lexer": "^1.2.3",
+		"devalue": "^4.3.0",
+		"esbuild": "0.17.19",
+		"miniflare": "workspace:*",
+		"semver": "^7.5.1",
+		"wrangler": "workspace:*",
+		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
@@ -66,25 +76,15 @@
 		"undici": "^5.28.4",
 		"vitest": "1.5.0"
 	},
-	"dependencies": {
-		"birpc": "0.2.14",
-		"cjs-module-lexer": "^1.2.3",
-		"devalue": "^4.3.0",
-		"esbuild": "0.17.19",
-		"miniflare": "workspace:*",
-		"semver": "^7.5.1",
-		"wrangler": "workspace:*",
-		"zod": "^3.22.3"
-	},
 	"peerDependencies": {
 		"@vitest/runner": "1.3.x - 1.5.x",
 		"@vitest/snapshot": "1.3.x - 1.5.x",
 		"vitest": "1.3.x - 1.5.x"
 	},
-	"workers-sdk": {
-		"prerelease": true
-	},
 	"volta": {
 		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

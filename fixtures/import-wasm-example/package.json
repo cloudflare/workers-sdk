@@ -10,13 +10,13 @@
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"import-wasm-static": "workspace:^"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"undici": "^5.28.4",
 		"wrangler": "workspace:*"
-	},
-	"dependencies": {
-		"import-wasm-static": "workspace:^"
 	},
 	"volta": {
 		"extends": "../../package.json"
