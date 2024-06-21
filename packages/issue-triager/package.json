@@ -6,7 +6,6 @@
 		"cf-typegen": "wrangler types",
 		"dev": "wrangler dev",
 		"start": "wrangler dev --remote",
-		"do-test": "node -r esbuild-register src/cli/do-test.ts",
 		"triage": "node -r esbuild-register src/cli/triage.ts",
 		"update-embeddings": "node -r esbuild-register src/cli/update-embeddings.ts"
 	},

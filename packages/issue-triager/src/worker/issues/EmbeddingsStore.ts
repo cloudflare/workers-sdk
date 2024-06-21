@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 
-export class IssuesStore extends DurableObject {
+export class EmbeddingsStore extends DurableObject {
 	async getLastUpdatedTimestamp(): Promise<string> {
 		const timestamp = await this.ctx.storage.get<string>('lastUpdatedTimestamp');
 

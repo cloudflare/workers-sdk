@@ -19,27 +19,28 @@ export async function classifyIssue(issue: Issue): Promise<string | null> {
 
 	const response = dedent`
 
-        ${similarIssues.length} similar issues detected:
-        [${similarIssues.map((issue) => `[${issue.number}]`).join(', ')}]
-
-        ${chalk.gray('====================')}
         ${chalk.gray(chalk.italic('ISSUE DETAILS'))}
         ${chalk.gray('====================')}
 
         Issue Number: ${issue.number}
-        Link: ${chalk.underline(`https://github.com/cloudflare/workers-sdk/issues/${issue.number}`)}
+        Link: https://github.com/cloudflare/workers-sdk/issues/${issue.number}
         Title: ${issue.title}
         Labels: ${JSON.stringify(issue.labels)}
         Comment Count: ${issue.comments.length}
 
-        ${chalk.gray('====================')}
         ${chalk.gray(chalk.italic('AI RESPONSE'))}
         ${chalk.gray('====================')}
 
         ${aiResponse}
 
+        ${chalk.gray(chalk.italic('RELATED ISSUES'))}
         ${chalk.gray('====================')}
 
+        ${similarIssues
+					.filter((i) => i.number !== issue.number)
+					.slice(0, 5)
+					.map((issue) => `${issue.title} (https://github.com/cloudflare/workers-sdk/issues/${issue.number})\n`)
+					.join('')}
         `;
 
 	return response;
@@ -52,8 +53,6 @@ export async function getSimilarIssues(issue: Issue): Promise<Issue[]> {
 }
 
 export async function fetchAIClassification(prompt: string) {
-	const endpoint = buildEndpoint(cloudflareAccountId as string, textGenerationModel);
-
 	const messages = [
 		{
 			role: 'user',
@@ -61,7 +60,7 @@ export async function fetchAIClassification(prompt: string) {
 		},
 	];
 
-	const res = await fetch(endpoint, {
+	const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/${textGenerationModel}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -73,10 +72,6 @@ export async function fetchAIClassification(prompt: string) {
 	const json = (await res.json()) as { result: { response: string } };
 
 	return json.result.response;
-}
-
-function buildEndpoint(accountId: string, model: string) {
-	return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`;
 }
 
 function buildPrompt(issue: Issue, similarIssues: Issue[]) {
@@ -124,5 +119,5 @@ function buildPrompt(issue: Issue, similarIssues: Issue[]) {
         ${JSON.stringify(similarIssues)}
     `;
 
-	return prompt.slice(0, 6144);
+	return prompt.slice(0, 6145);
 }

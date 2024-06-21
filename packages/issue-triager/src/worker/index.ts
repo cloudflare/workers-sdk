@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
-import { IssuesStore } from './issues/IssuesStore';
+import { EmbeddingsStore } from './issues/EmbeddingsStore';
 import { Embeddings } from './embeddings/Embeddings';
 import { Issue } from '../shared/types';
-export { IssuesStore };
+export { EmbeddingsStore };
 
 export type Env = {
 	AI: Ai;
 	GITHUB_API_TOKEN: string;
 	ISSUES_INDEX: VectorizeIndex;
-	ISSUES_STORE: DurableObjectNamespace<IssuesStore>;
+	EMBEDDINGS_STORE: DurableObjectNamespace<EmbeddingsStore>;
 	ISSUE_TRIAGER_API_KEY: string;
 };
 
@@ -19,8 +19,8 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 /**
- * This app is intended for local use only, but if it is accidentally deployed,
- * the API key will protect against unauthorized access.
+ * This app is intended for local use only, but it needs to be deployed in order
+ * to use the DO. The the API key will protect against unauthorized access.
  */
 app.use(async (ctx, next) => {
 	const apiKey = ctx.env.ISSUE_TRIAGER_API_KEY;
@@ -36,8 +36,8 @@ app.use(async (ctx, next) => {
 app.get('/last_updated_at', async (ctx) => {
 	const { env, json } = ctx;
 
-	const id = env.ISSUES_STORE.idFromName('issue-triager');
-	const issueStore = env.ISSUES_STORE.get(id);
+	const id = env.EMBEDDINGS_STORE.idFromName('issue-triager');
+	const issueStore = env.EMBEDDINGS_STORE.get(id);
 	const lastUpdatedAt = await issueStore.getLastUpdatedTimestamp();
 
 	return json({ data: lastUpdatedAt });
@@ -49,8 +49,8 @@ app.post('/last_updated_at', async (ctx) => {
 	const date = await req.text();
 	console.log('Date', date);
 
-	const id = env.ISSUES_STORE.idFromName('issue-triager');
-	const issueStore = env.ISSUES_STORE.get(id);
+	const id = env.EMBEDDINGS_STORE.idFromName('issue-triager');
+	const issueStore = env.EMBEDDINGS_STORE.get(id);
 	await issueStore.setLastUpdatedTimestamp(date);
 
 	return json({ message: `Last updated timestamp set to ${date}.` });

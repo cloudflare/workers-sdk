@@ -5,10 +5,17 @@ import inquirer from 'inquirer';
 import open from 'open';
 import { classifyIssue } from './ai/text-generation';
 import { getUntriagedIssues } from './github/get-untriaged-issues';
+import { spawn } from 'child_process';
 
 main();
 
 async function main() {
+	// Update the embeddings in parallel
+	updateEmbeddings();
+	triage();
+}
+
+async function triage() {
 	const spinner = cliSpinner();
 
 	spinner.start(chalk.gray('Fetching untriaged items'));
@@ -20,7 +27,7 @@ async function main() {
 			{
 				type: 'list',
 				name: 'selectedIssue',
-				message: 'Select an issue to classify (or "ctrl+c" to quit):',
+				message: 'Select an issue to classify:',
 				choices: [
 					{ name: 'Exit', value: null },
 					...issues.map((issue, index) => ({
@@ -40,7 +47,7 @@ async function main() {
 			continue;
 		}
 
-		spinner.stop(chalk.green('Issues classified successfully'));
+		spinner.stop(chalk.green('Issue classified successfully'));
 		console.log(classification, '\n\n');
 
 		const { nextAction } = await inquirer.prompt([
@@ -58,10 +65,14 @@ async function main() {
 
 		if (nextAction === 'open') {
 			await open(selectedIssue.url);
-			console.log(chalk.gray('Opening the issue on GitHub...'));
+			console.log(chalk.gray('Opening the issue on GitHub'));
 		} else if (nextAction === 'exit') {
-			console.log(chalk.gray('Exiting issue classification.'));
+			console.log(chalk.gray('Exiting issue classification'));
 			break;
 		}
 	}
+}
+
+async function updateEmbeddings() {
+	spawn('node', ['-r', 'esbuild-register', 'src/cli/update-embeddings.ts']);
 }

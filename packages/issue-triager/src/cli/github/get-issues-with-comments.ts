@@ -20,7 +20,12 @@ export async function getIssuesWithComments({ since }: { since?: string } = {}):
 		hasNextPage = issues.pageInfo.hasNextPage;
 	}
 
-	return allIssues;
+	// For the GitHub GraphQL API "since" is inclusive, so if provided with the timestamp of the latest issue,
+	// it will return that issue. Instead, the required behaviour is to return issues AFTER that timestamp.
+	// Therefore we can filter out the issue (or issues) that match the timestamp.
+	const filteredIssues = since ? allIssues.filter((issue) => issue.updatedAt > since) : allIssues;
+
+	return filteredIssues;
 }
 
 export async function fetchIssuesWithComments({ cursor, since }: { cursor?: string | null; since?: string } = {}): Promise<any> {

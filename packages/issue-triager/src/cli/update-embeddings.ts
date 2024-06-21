@@ -4,6 +4,7 @@ import chalk from 'chalk';
 
 import { embedIssues, fetchLastUpdatedTimestamp, setLastUpdatedTimestamp } from './ai/embeddings';
 import { getIssuesWithComments } from './github/get-issues-with-comments';
+import { Issue } from '../shared/types';
 
 const BATCH_SIZE = 50;
 
@@ -14,16 +15,17 @@ async function updateEmbeddings() {
 
 	spinner.start(chalk.gray('Fetching last updated date'));
 	const lastUpdatedTimestamp = await fetchLastUpdatedTimestamp();
-	// const lastUpdatedTimestamp = '2024-06-20T09:30:46Z';
 	spinner.stop(chalk.green(`Embeddings last updated at ${lastUpdatedTimestamp}`));
 
-	if (lastUpdatedTimestamp === '2000-01-01T00:00:00Z') {
-		process.exit(0);
-	}
-
-	spinner.start(chalk.gray(`Fetching issues that were updated since ${lastUpdatedTimestamp}`));
+	spinner.start(chalk.gray(`Fetching GitHub issues that were updated since ${lastUpdatedTimestamp}`));
 	const issues = await getIssuesWithComments({ since: lastUpdatedTimestamp });
-	spinner.stop(chalk.green(`${issues.length} issues retreived successfully`));
+
+	if (issues.length) {
+		spinner.stop(chalk.green(`${issues.length} issues retreived.`));
+	} else {
+		spinner.stop(chalk.green(`0 issues retreived. Embeddings up-to-date.`));
+		return;
+	}
 
 	const batches = [];
 	for (let i = 0; i < issues.length; i += BATCH_SIZE) {
@@ -43,8 +45,13 @@ async function updateEmbeddings() {
 		}
 	}
 
-	const lastIssue = issues[issues.length - 1];
-	spinner.start(chalk.gray(`Updating ${lastIssue.updatedAt} on remote`));
-	const message = await setLastUpdatedTimestamp(lastIssue.updatedAt);
+	const latestUpdatedIssue = findLatestUpdatedIssue(issues);
+
+	spinner.start(chalk.gray(`Updating ${latestUpdatedIssue.updatedAt} on remote`));
+	const message = await setLastUpdatedTimestamp(latestUpdatedIssue.updatedAt);
 	spinner.stop(chalk.green(message));
+}
+
+function findLatestUpdatedIssue(issues: Issue[]) {
+	return issues.reduce((latest, current) => (current.updatedAt > latest.updatedAt ? current : latest));
 }
