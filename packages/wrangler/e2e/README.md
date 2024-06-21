@@ -9,7 +9,7 @@ You can then run the e2e test suite with the following commands (run them in roo
 ```zsh
 pnpm i
 pnpm build
-CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> WRANGLER="node --no-warnings $PWD/.tmp/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/.tmp/wrangler/wrangler-dist/cli.js" pnpm --filter wrangler run test:e2e --retry 0
+CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> WRANGLER="node --no-warnings $PWD/packages/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/packages/wrangler/wrangler-dist/cli.js" pnpm --filter wrangler run test:e2e
 ```
 
 > Make sure to replace `<cloudflare-testing-api-token>` with the actual API token you generated.
