@@ -333,9 +333,7 @@ describe("versions deploy", () => {
 			│
 			? Are you sure you want to deploy this Worker Version to 100% of traffic?
 			🤖 Using fallback value in non-interactive context: yes
-			├ Performing rollback
-			│
-			│
+			Performing rollback...
 			│
 			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic."
 		`);
@@ -442,9 +440,7 @@ describe("versions deploy", () => {
 			│
 			? Are you sure you want to deploy this Worker Version to 100% of traffic?
 			🤖 Using fallback value in non-interactive context: yes
-			├ Performing rollback
-			│
-			│
+			Performing rollback...
 			│
 			╰  SUCCESS  Worker Version 00000000-0000-0000-0000-000000000000 has been deployed to 100% of traffic."
 		`);
