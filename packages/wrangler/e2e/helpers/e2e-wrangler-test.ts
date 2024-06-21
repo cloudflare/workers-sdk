@@ -3,7 +3,11 @@ import crypto from "node:crypto";
 import { onTestFinished } from "vitest";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, seed } from "./setup";
-import { runWrangler, WranglerLongLivedCommand } from "./wrangler";
+import {
+	runWrangler,
+	WRANGLER_IMPORT,
+	WranglerLongLivedCommand,
+} from "./wrangler";
 import type { WranglerCommandOptions } from "./wrangler";
 
 /**
@@ -15,6 +19,11 @@ export class WranglerE2ETestHelper {
 
 	async seed(files: Record<string, string | Uint8Array>) {
 		await seed(this.tmpPath, files);
+	}
+
+	importWrangler(): Promise<typeof import("../../src/cli")> {
+		// @ts-ignore
+		return import(WRANGLER_IMPORT);
 	}
 
 	runLongLived(

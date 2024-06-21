@@ -18,8 +18,8 @@ export class DevEnv extends EventEmitter {
 
 	startWorker(_options: StartDevWorkerOptions): Worker {
 		const worker = createWorkerObject(this);
-		// TODO: uncomment this when dev-env fixture tests are no longer faked
-		// this.config.set(options);
+
+		this.config.set(options);
 
 		return worker;
 	}
