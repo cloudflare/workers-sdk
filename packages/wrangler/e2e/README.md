@@ -118,7 +118,7 @@ it(`can modify worker during ${cmd}`, async () => {
 			{
 				"name": "worker",
 				"version": "0.0.0",
-			  	"private": true
+				"private": true
 			}
 		`,
 	});
