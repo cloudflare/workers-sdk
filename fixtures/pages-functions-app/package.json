@@ -10,6 +10,9 @@
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
+	"dependencies": {
+		"is-odd": "^3.0.1"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240605.0",
@@ -19,9 +22,6 @@
 	},
 	"engines": {
 		"node": ">=16.13"
-	},
-	"dependencies": {
-		"is-odd": "^3.0.1"
 	},
 	"volta": {
 		"extends": "../../package.json"

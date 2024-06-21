@@ -1,11 +1,11 @@
 {
 	"name": "tools",
-	"description": "Tooling for this monorepo CI",
 	"private": true,
+	"description": "Tooling for this monorepo CI",
 	"scripts": {
+		"check:lint": "eslint .",
 		"check:type": "tsc",
 		"test:ci": "vitest run",
-		"check:lint": "eslint .",
 		"test:file": "node -r esbuild-register test/run-test-file.ts"
 	},
 	"devDependencies": {

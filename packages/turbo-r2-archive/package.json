@@ -12,10 +12,10 @@
 	],
 	"scripts": {
 		"build": "wrangler deploy -j --dry-run --outdir=./dist",
+		"check:lint": "eslint .",
 		"deploy": "wrangler deploy -j",
 		"start": "wrangler dev -j",
-		"type:check": "tsc",
-		"check:lint": "eslint ."
+		"type:check": "tsc"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.1.8",

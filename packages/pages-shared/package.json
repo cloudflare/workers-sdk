@@ -13,8 +13,8 @@
 		"metadata-generator/**/*"
 	],
 	"scripts": {
-		"check:type": "tsc",
 		"check:lint": "eslint .",
+		"check:type": "tsc",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},
@@ -31,10 +31,10 @@
 		"concurrently": "^8.2.2",
 		"glob": "^10.3.3"
 	},
-	"workers-sdk": {
-		"prerelease": true
-	},
 	"volta": {
 		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

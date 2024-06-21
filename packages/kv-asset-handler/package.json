@@ -2,22 +2,6 @@
 	"name": "@cloudflare/kv-asset-handler",
 	"version": "0.3.3",
 	"description": "Routes requests to KV assets",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"scripts": {
-		"prepack": "npm run build",
-		"build": "tsc -d",
-		"pretest": "npm run build",
-		"test": "ava dist/test/*.js --verbose",
-		"test:ci": "npm run build && ava dist/test/*.js --verbose",
-		"check:lint": "eslint .",
-		"check:type": "tsc"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/cloudflare/workers-sdk.git",
-		"directory": "packages/kv-asset-handler"
-	},
 	"keywords": [
 		"kv",
 		"cloudflare",
@@ -25,18 +9,34 @@
 		"wrangler",
 		"assets"
 	],
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/kv-asset-handler"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"files": [
 		"src",
 		"dist",
 		"!src/test",
 		"!dist/test"
 	],
-	"author": "wrangler@cloudflare.com",
-	"license": "MIT OR Apache-2.0",
-	"bugs": {
-		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	"scripts": {
+		"build": "tsc -d",
+		"check:lint": "eslint .",
+		"check:type": "tsc",
+		"prepack": "npm run build",
+		"pretest": "npm run build",
+		"test": "ava dist/test/*.js --verbose",
+		"test:ci": "npm run build && ava dist/test/*.js --verbose"
 	},
-	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"dependencies": {
 		"mime": "^3.0.0"
 	},
@@ -52,13 +52,13 @@
 	"engines": {
 		"node": ">=16.13"
 	},
+	"volta": {
+		"extends": "../../package.json"
+	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"workers-sdk": {
 		"prerelease": true
-	},
-	"volta": {
-		"extends": "../../package.json"
 	}
 }

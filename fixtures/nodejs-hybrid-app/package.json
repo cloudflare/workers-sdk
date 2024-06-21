@@ -2,8 +2,8 @@
 	"name": "nodejs-hybrid-app",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler dev",
 		"build": "wrangler deploy --dry-run --outdir=./dist",
+		"dev": "wrangler dev",
 		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
