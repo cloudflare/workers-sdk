@@ -43,7 +43,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
-		assert(config.entrypoint.path);
+		assert(config.entrypoint?.path);
 		assert(config.directory);
 		assert(config.build?.format);
 		assert(config.build?.moduleRoot);
@@ -202,10 +202,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		assert(this.#tmpDir);
 		assert(config.build?.moduleRules, "config.build?.moduleRules");
 		assert(config.build?.define, "config.build?.define");
-		assert(config.entrypoint.path);
-		assert(config.directory);
-		assert(config.build.format);
-		assert(config.build.moduleRoot);
+		assert(config.entrypoint?.path, "config.entrypoint?.path");
+		assert(config.directory, "config.directory");
+		assert(config.build.format, "config.build.format");
+		assert(config.build.moduleRoot, "config.build.moduleRoot");
 		const entry: Entry = {
 			file: config.entrypoint.path,
 			directory: config.directory,

@@ -10,6 +10,11 @@ export type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
 };
 
+const deepMergeOptions = (a: Options, b: Partial<Options>) =>
+	deepmerge(a, b, {
+		arrayMerge: (target, _source, _options) => target, // arrays are overridden, not concatenated (deepmerge default)
+	});
+
 type Options = StartDevWorkerOptions;
 export class ConfigController extends Controller<ConfigControllerEventMap> {
 	config?: Options;
@@ -27,17 +32,28 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 
 		const partialConfig = unwrapHook(input, this.latest);
 
-		const config = deepmerge(this.latest, partialConfig, {
-			arrayMerge: (target, _source, _options) => target, // arrays are overridden, not concatenated (deepmerge default)
-		});
+		const config = deepMergeOptions(this.latest, partialConfig);
 
 		this.#updateConfig(config);
 	}
 
 	latest?: Options;
 	#updateConfig(input: Options) {
+		const directory = input.directory;
+		const defaults: Options = {
+			directory,
+			build: {
+				moduleRules: [],
+				additionalModules: [],
+				define: {},
+				format: "modules",
+				moduleRoot: directory,
+			},
+		};
+
+		this.config = deepMergeOptions(defaults, input);
 		this.latest = input;
-		this.emitConfigUpdateEvent(this.latest);
+		this.emitConfigUpdateEvent(this.config);
 	}
 
 	// ******************
