@@ -67,7 +67,8 @@ describe("versions secret put", () => {
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets. To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -104,7 +105,8 @@ describe("versions secret put", () => {
 			✨ Successfully created secret for key: SECRET_1
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
-			✨ Success! Created version id with 3 secrets. To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);

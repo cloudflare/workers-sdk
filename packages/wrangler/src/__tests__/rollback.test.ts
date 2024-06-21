@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
-import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/api";
+import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";

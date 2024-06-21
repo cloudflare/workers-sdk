@@ -42,7 +42,7 @@ describe("versions deploy", () => {
 		msw.use(
 			mswListNewDeployments,
 			mswListVersions,
-			mswGetVersion,
+			mswGetVersion(),
 			mswPostNewDeployment,
 			mswPatchNonVersionedScriptSettings
 		);

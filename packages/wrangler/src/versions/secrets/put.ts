@@ -87,12 +87,13 @@ export async function versionsSecretPutHandler(
 		scriptName,
 		versionId: latestVersion.id,
 		secrets: [{ name: args.key, value: secretValue }],
-		versionMessage: args.message,
+		versionMessage: args.message ?? `Updated secret "${args.key}"`,
 		versionTag: args.tag,
 		sendMetrics: config.send_metrics,
 	});
 
 	logger.log(
-		`✨ Success! Created version ${newVersion.id} with secret ${args.key}. To deploy this version with secret ${args.key} to production traffic use the command "wrangler versions deploy --x-versions".`
+		`✨ Success! Created version ${newVersion.id} with secret ${args.key}.` +
+			`\n➡️  To deploy this version with secret ${args.key} to production traffic use the command "wrangler versions deploy --x-versions".`
 	);
 }

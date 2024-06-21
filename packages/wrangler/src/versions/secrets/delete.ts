@@ -105,14 +105,15 @@ export async function versionsSecretDeleteHandler(
 			scriptName,
 			versionId: latestVersion.id,
 			secrets: newSecrets,
-			versionMessage: args.message,
+			versionMessage: args.message ?? `Deleted secret "${args.key}"`,
 			versionTag: args.tag,
 			sendMetrics: config.send_metrics,
 			overrideAllSecrets: true,
 		});
 
 		logger.log(
-			`✨ Success! Created version ${newVersion.id} with deleted secret ${args.key}. To deploy this version without the secret ${args.key} to production traffic use the command "wrangler versions deploy --x-versions".`
+			`✨ Success! Created version ${newVersion.id} with deleted secret ${args.key}.` +
+				`\n➡️  To deploy this version without the secret ${args.key} to production traffic use the command "wrangler versions deploy --x-versions".`
 		);
 	}
 }
