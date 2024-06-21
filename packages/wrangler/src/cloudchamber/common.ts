@@ -383,7 +383,7 @@ export function renderDeploymentMutationError(
 				"You have surpassed the limits of your account\n" +
 				renderAccountLimits(),
 			[DeploymentMutationError.IMAGE_REGISTRY_NOT_CONFIGURED]: () =>
-				"The image registry you are trying to use is not configured. Use the 'wrangler cloudchamber registries configure' command to configure the registry.\n"
+				"The image registry you are trying to use is not configured. Use the 'wrangler cloudchamber registries configure' command to configure the registry.\n",
 		};
 
 	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
