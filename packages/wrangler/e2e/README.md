@@ -110,17 +110,17 @@ it(`can modify worker during ${cmd}`, async () => {
 		`,
 		"src/index.ts": dedent`
 			export default {
-			  fetch(request) {
-				return new Response("Hello World!")
-			  }
+				fetch(request) {
+					return new Response("Hello World!")
+				}
 			}`,
 		"package.json": dedent`
 			{
-			  "name": "worker",
-			  "version": "0.0.0",
-			  "private": true
+				"name": "worker",
+				"version": "0.0.0",
+			  	"private": true
 			}
-			`,
+		`,
 	});
 	const worker = helper.runLongLived(cmd);
 
@@ -130,11 +130,12 @@ it(`can modify worker during ${cmd}`, async () => {
 
 	await helper.seed({
 		"src/index.ts": dedent`
-		  export default {
-			fetch(request, env) {
-			  return new Response("Updated Worker! " + env.KEY)
+			export default {
+				fetch(request, env) {
+					return new Response("Updated Worker! " + env.KEY)
+				}
 			}
-		  }`,
+		`,
 	});
 
 	await worker.waitForReload();
