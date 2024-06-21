@@ -266,33 +266,62 @@ export const mswListVersions = http.get(
 	}
 );
 
-export const mswGetVersion = http.get(
-	"*/accounts/:accountId/workers/scripts/:workerName/versions/:versionId",
-	({ params }) => {
-		const versionId = String(params["versionId"]);
+export const mswGetVersion = (version?: ApiVersion) =>
+	http.get(
+		"*/accounts/:accountId/workers/scripts/:workerName/versions/:versionId",
+		({ params }) => {
+			const versionId = String(params["versionId"]);
 
-		if (versionId === "ffffffff-ffff-ffff-ffff-ffffffffffff") {
-			return HttpResponse.json(createFetchResult({}, false));
+			if (versionId === "ffffffff-ffff-ffff-ffff-ffffffffffff") {
+				return HttpResponse.json(createFetchResult({}, false));
+			}
+
+			return HttpResponse.json(
+				createFetchResult(
+					version ??
+						({
+							id: versionId,
+							number: 1,
+							annotations: {
+								"workers/triggered_by": "upload",
+							},
+							metadata: {
+								author_id: "Picard-Gamma-6-0-7-3",
+								author_email: "Jean-Luc-Picard@federation.org",
+								source: "wrangler",
+								created_on: "2021-01-01T00:00:00.000000Z",
+								modified_on: "2021-01-01T00:00:00.000000Z",
+							},
+							resources: {
+								bindings: [
+									{
+										type: "analytics_engine",
+										name: "ANALYTICS",
+										dataset: "analytics_dataset",
+									},
+									{
+										type: "kv_namespace",
+										name: "KV",
+										namespace_id: "kv-namespace-id",
+									},
+								],
+								script: {
+									etag: "aaabbbccc",
+									handlers: ["fetch", "scheduled"],
+									last_deployed_from: "api",
+								},
+								script_runtime: {
+									compatibility_date: "2020-01-01",
+									compatibility_flags: ["test", "flag"],
+									usage_model: "standard",
+									limits: { cpu_ms: 50 },
+								},
+							},
+						} as ApiVersion)
+				)
+			);
 		}
-
-		return HttpResponse.json(
-			createFetchResult({
-				id: versionId,
-				number: "1701-E",
-				annotations: {
-					"workers/triggered_by": "upload",
-				},
-				metadata: {
-					author_id: "Picard-Gamma-6-0-7-3",
-					author_email: "Jean-Luc-Picard@federation.org",
-					source: "wrangler",
-					created_on: "2021-01-01T00:00:00.000000Z",
-					modified_on: "2021-01-01T00:00:00.000000Z",
-				},
-			})
-		);
-	}
-);
+	);
 
 export const mswPostNewDeployment = http.post(
 	"*/accounts/:accountId/workers/scripts/:workerName/deployments",

@@ -2,6 +2,8 @@ import * as cli from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import { confirm, prompt } from "../../dialogs";
 import { UserError } from "../../errors";
+import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
@@ -12,6 +14,8 @@ import type {
 	SubHelp,
 } from "../../yargs-types";
 import type { VersionId } from "../types";
+
+export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 
 export type VersionsRollbackArgs = StrictYargsOptionsToInterface<
 	typeof versionsRollbackOptions
@@ -104,13 +108,45 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 		return;
 	}
 
-	await spinnerWhile({
-		async promise() {
-			await createDeployment(accountId, workerName, rollbackTraffic, message);
-		},
-		startMessage: `Performing rollback`,
-		endMessage: "",
-	});
+	logger.log("Performing rollback...");
+	try {
+		await createDeployment(accountId, workerName, rollbackTraffic, message);
+	} catch (e) {
+		if (
+			e instanceof APIError &&
+			e.code === CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE
+		) {
+			// This is not great but is the best way I could think to handle for now
+			const errorMsg = e.notes[0].text.replace(
+				` [code: ${CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE}]`,
+				""
+			);
+			const targetString = "The following secrets have changed:";
+			const changedSecrets = errorMsg
+				.substring(errorMsg.indexOf(targetString) + targetString.length + 1)
+				.split(", ");
+
+			const secretConfirmation = await confirm(
+				"The following secrets have changed since the target version was deployed. " +
+					`Please confirm you wish to continue with the rollback\n` +
+					changedSecrets.map((secret) => `  * ${secret}`).join("\n")
+			);
+
+			if (secretConfirmation) {
+				await createDeployment(
+					accountId,
+					workerName,
+					rollbackTraffic,
+					message,
+					true
+				);
+			} else {
+				cli.cancel("Aborting rollback...");
+			}
+		} else {
+			throw e;
+		}
+	}
 
 	cli.success(
 		`Worker Version ${versionId} has been deployed to 100% of traffic.`

@@ -114,7 +114,7 @@ export async function versionsSecretPutBulkHandler(
 		scriptName,
 		versionId: latestVersion.id,
 		secrets,
-		versionMessage: args.message,
+		versionMessage: args.message ?? `Bulk updated ${secrets.length} secrets`,
 		versionTag: args.tag,
 		sendMetrics: config.send_metrics,
 	});
@@ -123,6 +123,7 @@ export async function versionsSecretPutBulkHandler(
 		logger.log(`✨ Successfully created secret for key: ${secret.name}`);
 	}
 	logger.log(
-		`✨ Success! Created version ${newVersion.id} with ${secrets.length} secrets. To deploy this version to production traffic use the command "wrangler versions deploy --x-versions".`
+		`✨ Success! Created version ${newVersion.id} with ${secrets.length} secrets.` +
+			`\n➡️  To deploy this version to production traffic use the command "wrangler versions deploy --x-versions".`
 	);
 }

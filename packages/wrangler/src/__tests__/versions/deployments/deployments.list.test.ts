@@ -15,7 +15,7 @@ describe("deployments list", () => {
 	const std = collectCLIOutput();
 
 	beforeEach(() => {
-		msw.use(mswListNewDeployments, mswGetVersion);
+		msw.use(mswListNewDeployments, mswGetVersion());
 	});
 
 	describe("without wrangler.toml", () => {
