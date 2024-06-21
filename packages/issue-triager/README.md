@@ -25,15 +25,17 @@ Create a `.env` file with the following variables:
 CLOUDFLARE_ACCOUNT_ID=[cloudflare account id]
 CLOUDFLARE_API_KEY=[cloudflare api key]
 GITHUB_API_TOKEN=[github api token]
-WORKER_BASE_URL=http://localhost:8787
+WORKER_BASE_URL=https://issue-triager.devprod-testing7928.workers.dev
 ISSUE_TRIAGER_API_KEY=[key for authenticating requests to the worker]
 ```
 
-Create a `.dev.vars` file with the following variables:
+If you want to develop the worker locally, you will need to create a `.dev.vars` file with the following variables:
 
 ```
 ISSUE_TRIAGER_API_KEY=[key for authenticating requests to the worker]
 ```
+
+The `ISSUE_TRACKER_API_KEY` here can be whatever you like, e.g. `dummy-api-key`.
 
 ## Usage
 

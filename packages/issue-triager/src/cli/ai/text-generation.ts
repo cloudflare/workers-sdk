@@ -6,7 +6,8 @@ import { fetchSimilarIssues } from './embeddings';
 
 const cloudflareAccountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const cloudflareApiKey = process.env.CLOUDFLARE_API_KEY;
-const textGenerationModel = '@cf/meta/llama-3-8b-instruct';
+const TEXT_GENERATION_MODEL = '@cf/meta/llama-3-8b-instruct';
+const WORKERS_AI_CHARACTER_LIMIT = 6144;
 
 /**
  * Classifies an issue by retrieving similar issue from the vector DB, and using those
@@ -68,7 +69,7 @@ export async function fetchAIClassification(prompt: string) {
 		},
 	];
 
-	const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/${textGenerationModel}`, {
+	const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/${TEXT_GENERATION_MODEL}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -127,5 +128,5 @@ function buildPrompt(issue: Issue, similarIssues: Issue[]) {
         ${JSON.stringify(similarIssues)}
     `;
 
-	return prompt.slice(0, 6145);
+	return prompt.slice(0, WORKERS_AI_CHARACTER_LIMIT);
 }
