@@ -318,6 +318,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		worker.patchConfig({
 			dev: {
+				...worker.config.dev,
 				remote,
 				server: { port: await getPort() },
 				inspector: { port: await getPort() },
@@ -399,7 +400,12 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
                 }
             `,
 		});
-		worker.patchConfig({ dev: { liveReload: false } });
+		worker.patchConfig({
+			dev: {
+				...worker.config.dev,
+				liveReload: false,
+			},
+		});
 
 		// test liveReload: false does nothing even when the response Content-Type is html
 		res = await worker.fetch("http://dummy");
@@ -440,6 +446,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		worker.patchConfig({
 			dev: {
+				...worker.config.dev,
 				origin: {
 					secure: true,
 					hostname: "mybank.co.uk",
