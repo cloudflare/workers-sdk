@@ -47,24 +47,24 @@ describe("uploading Worker versions", () => {
 	beforeAll(async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
-			name = "${workerName}"
-			main = "src/index.ts"
-			compatibility_date = "2023-01-01"
-		`,
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+			`,
 			"src/index.ts": dedent`
-			export default {
-			fetch(request) {
-				return new Response("Hello World!")
-			}
-			}
-		`,
+				export default {
+					fetch(request) {
+						return new Response("Hello World!")
+					}
+				}
+			`,
 			"package.json": dedent`
-			{
-			"name": "${workerName}",
-			"version": "0.0.0",
-			"private": true
-			}
-		`,
+				{
+					"name": "${workerName}",
+					"version": "0.0.0",
+					"private": true
+				}
+			`,
 		});
 	});
 	it("deploy worker", async () => {
