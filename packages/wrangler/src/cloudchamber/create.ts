@@ -239,7 +239,7 @@ export async function handleCreateCommand(
 		},
 		defaultValue: args.image ?? "",
 		initialValue: args.image ?? "",
-		helpText: ":latest tags are not allowed!",
+		helpText: 'i.e. "docker.io/org/app:1.2", :latest tags are not allowed!',
 		type: "text",
 	});
 
