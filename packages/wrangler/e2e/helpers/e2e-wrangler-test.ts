@@ -22,8 +22,7 @@ export class WranglerE2ETestHelper {
 	}
 
 	importWrangler(): Promise<typeof import("../../src/cli")> {
-		// @ts-ignore
-		return import(WRANGLER_IMPORT);
+		return import(WRANGLER_IMPORT.href);
 	}
 
 	runLongLived(

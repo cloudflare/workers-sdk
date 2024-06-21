@@ -1,7 +1,8 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"types": ["node"]
+		"types": ["node"],
+		"module": "esnext"
 	},
 	"include": ["vitest.config.mts", "**/*.ts", "../src/*.d.ts"],
 	"exclude": []
