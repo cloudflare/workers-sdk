@@ -22,7 +22,7 @@ const WASM_ADD_MODULE = Buffer.from(
 	"base64"
 );
 
-describe.skip.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
+describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
 
 	let helper: WranglerE2ETestHelper;
@@ -539,15 +539,12 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	it.skipIf(isLocal).todo("exposes mTLS bindings");
 });
 
-describe.skip.each(RUNTIMES)(
-	"Multi-Worker Bindings: $runtime",
-	({ runtime }) => {
-		const isLocal = runtime === "local";
-		const _flags = isLocal ? [] : ["--remote"];
+describe.each(RUNTIMES)("Multi-Worker Bindings: $runtime", ({ runtime }) => {
+	const isLocal = runtime === "local";
+	const _flags = isLocal ? [] : ["--remote"];
 
-		// TODO(soon): we already have tests for service bindings in `dev.test.ts`,
-		//  but would be good to get some more for Durable Objects
-		it.todo("exposes service bindings to other workers");
-		it.todo("exposes Durable Object bindings to other workers");
-	}
-);
+	// TODO(soon): we already have tests for service bindings in `dev.test.ts`,
+	//  but would be good to get some more for Durable Objects
+	it.todo("exposes service bindings to other workers");
+	it.todo("exposes Durable Object bindings to other workers");
+});
