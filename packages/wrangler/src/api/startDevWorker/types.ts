@@ -29,17 +29,26 @@ import type { WorkerDefinition } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
-import type { DispatchFetch, Json, Request, Response } from "miniflare";
+import type {
+	DispatchFetch,
+	Json,
+	Miniflare,
+	Request,
+	Response,
+} from "miniflare";
 import type * as undici from "undici";
 
-export interface DevWorker {
+type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
+export interface Worker {
 	ready: Promise<void>;
-	config?: StartDevWorkerOptions;
+	url: Promise<URL>;
+	inspectorUrl: Promise<URL>;
+	config: StartDevWorkerOptions;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
-	scheduled(cron?: string): Promise<void>;
-	queue(queueName: string, ...messages: unknown[]): Promise<void>;
+	scheduled(...args: Parameters<MiniflareWorker["scheduled"]>): Promise<void>;
+	queue(...args: Parameters<MiniflareWorker["queue"]>): Promise<void>;
 	dispose(): Promise<void>;
 }
 
