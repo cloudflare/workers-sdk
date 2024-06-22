@@ -14,7 +14,7 @@
 		"jose": "^5.2.2",
 		"miniflare": "workspace:*",
 		"toucan-js": "^3.3.1",
-		"typescript": "^5.4.5",
+		"typescript": "^5.5.2",
 		"vitest": "1.5.0",
 		"wrangler": "workspace:*"
 	},
