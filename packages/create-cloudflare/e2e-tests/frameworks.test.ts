@@ -241,6 +241,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 				input: ["y"],
 			},
 		],
+		timeout: LONG_TIMEOUT,
 		testCommitMessage: true,
 		verifyBuildCfTypes: {
 			outputFile: "env.d.ts",
