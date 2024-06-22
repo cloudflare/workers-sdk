@@ -25,6 +25,11 @@ export const processArgument = async <T>(
 
 	`);
 
+	if (name === "eslint-plugin") {
+		console.log(`=========== returning true!!! =========`);
+		return true;
+	}
+
 	if (process.env.VITEST && "defaultValue" in promptConfig) {
 		console.log("====> RETURNING DEFAULT VALUE");
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
