@@ -150,8 +150,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
       ws:
-        specifier: ^8.14.2
-        version: 8.14.2
+        specifier: ^8.17.1
+        version: 8.17.1
 
   fixtures/durable-objects-app:
     devDependencies:
@@ -584,8 +584,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
       ws:
-        specifier: ^8.14.2
-        version: 8.14.2
+        specifier: ^8.17.1
+        version: 8.17.1
 
   fixtures/ratelimit-app:
     devDependencies:
@@ -1076,8 +1076,8 @@ importers:
         specifier: 1.20240610.1
         version: 1.20240610.1
       ws:
-        specifier: ^8.14.2
-        version: 8.14.2
+        specifier: ^8.17.1
+        version: 8.17.1
       youch:
         specifier: ^3.2.2
         version: 3.2.3
@@ -1867,8 +1867,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0(vitest@1.6.0(@types/node@20.12.12)(@vitest/ui@1.6.0)(supports-color@9.2.2))
       ws:
-        specifier: ^8.14.2
-        version: 8.14.2
+        specifier: ^8.17.1
+        version: 8.17.1
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
@@ -10536,8 +10536,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.14.2:
-    resolution: {integrity: sha512-wEBG1ftX4jcglPxgFCMJmZ2PLtSbJ2Peg6TmpJFTbe9GZYOQCDPdMYu/Tm0/bGZkw8paZnJY45J4K2PZrLYq8g==}
+  ws@8.17.1:
+    resolution: {integrity: sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -18124,7 +18124,7 @@ snapshots:
       stoppable: 1.1.0
       undici: 5.28.4
       workerd: 1.20240419.0
-      ws: 8.14.2
+      ws: 8.17.1
       youch: 3.2.3
       zod: 3.22.3
     transitivePeerDependencies:
@@ -20991,7 +20991,7 @@ snapshots:
 
   ws@7.5.6: {}
 
-  ws@8.14.2: {}
+  ws@8.17.1: {}
 
   xdg-app-paths@8.3.0:
     dependencies:
