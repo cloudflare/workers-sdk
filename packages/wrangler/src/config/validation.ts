@@ -40,6 +40,12 @@ import type {
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
+export type NormalizeAndValidateConfigArgs = {
+	env?: string;
+	"legacy-env"?: boolean;
+	"dispatch-namespace"?: string;
+};
+
 const ENGLISH = new Intl.ListFormat("en-US");
 
 export function isPagesConfig(rawConfig: RawConfig): boolean {
@@ -57,7 +63,7 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: Record<string, unknown>
+	args: NormalizeAndValidateConfigArgs
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
