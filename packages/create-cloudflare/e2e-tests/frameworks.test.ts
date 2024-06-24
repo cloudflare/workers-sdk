@@ -704,19 +704,12 @@ const verifyBuildScript = async (
 		logStream,
 	);
 
-	let body;
-	const attempts = new Array(15).fill(null);
-	for (const _ of attempts) {
-		try {
-			// Wait a few seconds for dev server to spin up
-			await sleep(5000);
+	// Wait a few seconds for dev server to spin up
+	await sleep(7000);
 
-			// Make a request to the specified test route
-			const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
-			body = await res.text();
-			break;
-		} catch {}
-	}
+	// Make a request to the specified test route
+	const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
+	const body = await res.text();
 
 	// Kill the process gracefully so ports can be cleaned up
 	devProc.kill("SIGINT");
