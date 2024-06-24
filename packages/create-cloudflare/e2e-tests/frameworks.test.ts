@@ -696,7 +696,15 @@ const verifyBuildScript = async (
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
 
 	const devProc = spawnWithLogging(
-		[npx, "wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
+		[
+			npx,
+			"wrangler@3.60.3",
+			"pages",
+			"dev",
+			outputDir,
+			"--port",
+			`${TEST_PORT}`,
+		],
 		{
 			cwd: projectPath,
 		},
