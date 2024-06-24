@@ -705,7 +705,10 @@ const verifyBuildScript = async (
 	);
 
 	let body;
-	const attempts = new Array(15).fill(null);
+	// Note: the large number of attempts here is for addressing the fact that wrangler pages dev
+	//       seems to take an unusually long time to spin up brand new C3 Astro apps, we should
+	//       address that and reduce the number of attempts
+	const attempts = new Array(30).fill(null);
 	for (const _ of attempts) {
 		try {
 			// Wait a few seconds for dev server to spin up
@@ -716,6 +719,10 @@ const verifyBuildScript = async (
 			body = await res.text();
 			break;
 		} catch {}
+	}
+
+	if (!body) {
+		throw new Error("Failed to fetch from wrangler pages dev");
 	}
 
 	// Kill the process gracefully so ports can be cleaned up
