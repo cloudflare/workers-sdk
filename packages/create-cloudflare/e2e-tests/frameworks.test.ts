@@ -70,6 +70,7 @@ const { name: pm, npx } = detectPackageManager();
 // These are ordered based on speed and reliability for ease of debugging
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
+		timeout: LONG_TIMEOUT,
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
