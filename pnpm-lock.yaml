@@ -1656,9 +1656,6 @@ importers:
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
-      '@types/deepmerge':
-        specifier: ^2.2.0
-        version: 2.2.0
       '@types/express':
         specifier: ^4.17.13
         version: 4.17.13
@@ -1731,9 +1728,6 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
-      deepmerge:
-        specifier: ^4.3.1
-        version: 4.3.1
       devtools-protocol:
         specifier: ^0.0.1182435
         version: 0.0.1182435
@@ -4470,9 +4464,6 @@ packages:
 
   '@types/node@12.20.47':
     resolution: {integrity: sha512-BzcaRsnFuznzOItW1WpQrDHM7plAa7GIDMZ6b5pnMbkqEtM/6WCOhvZar39oeMQP79gwvFUWjjptE7/KGcNqFg==}
-
-  '@types/node@18.16.10':
-    resolution: {integrity: sha512-sMo3EngB6QkMBlB9rBe1lFdKSLqljyWPPWv6/FzSxh/IDlyVWSzE9RiF4eAuerQHybrWdqBgAGb03PM89qOasA==}
 
   '@types/node@20.12.12':
     resolution: {integrity: sha512-eWLDGF/FOSPtAvEqeRAQ4C8LSA7M1I7i0ky1I8U7kD1J5ITyW3AsRhQrKVoWf5pFKZ2kILsEGJhsI9r93PYnOw==}
@@ -13709,8 +13700,6 @@ snapshots:
 
   '@types/node@12.20.47': {}
 
-  '@types/node@18.16.10': {}
-
   '@types/node@20.12.12':
     dependencies:
       undici-types: 5.26.5
@@ -13812,7 +13801,7 @@ snapshots:
 
   '@types/ws@8.5.9':
     dependencies:
-      '@types/node': 18.16.10
+      '@types/node': 20.8.3
 
   '@types/yargs-parser@20.2.1': {}
 

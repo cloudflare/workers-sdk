@@ -110,6 +110,7 @@ async function fakeUserWorkerChanges({
 
 	config = {
 		...config,
+		// @ts-ignore
 		entrypoint: {
 			...config.entrypoint,
 			...(script ? { contents: script } : undefined),
