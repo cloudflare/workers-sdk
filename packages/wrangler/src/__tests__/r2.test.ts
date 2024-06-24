@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -21,9 +22,90 @@ describe("r2", () => {
 
 	runInTempDir();
 
+	it("should show help when no argument is passed", async () => {
+		await runWrangler("r2");
+		await endEventLoop();
+		expect(std.out).toMatchInlineSnapshot(`
+		"wrangler r2
+
+		📦 Manage R2 buckets & objects
+
+		COMMANDS
+		  wrangler r2 object  Manage R2 objects
+		  wrangler r2 bucket  Manage R2 buckets
+
+		GLOBAL FLAGS
+		  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]"
+	`);
+	});
+
+	it("should show help when an invalid argument is passed", async () => {
+		await expect(() => runWrangler("r2 asdf")).rejects.toThrow(
+			"Unknown argument: asdf"
+		);
+		await endEventLoop();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: asdf[0m
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+		"
+		wrangler r2
+
+		📦 Manage R2 buckets & objects
+
+		COMMANDS
+		  wrangler r2 object  Manage R2 objects
+		  wrangler r2 bucket  Manage R2 buckets
+
+		GLOBAL FLAGS
+		  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]"
+	`);
+	});
+
 	describe("bucket", () => {
 		mockAccountId();
 		mockApiToken();
+
+		it("should show help when the bucket command is passed", async () => {
+			await expect(() => runWrangler("r2 bucket")).rejects.toThrow(
+				"Not enough non-option arguments: got 0, need at least 1"
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 bucket
+
+				Manage R2 buckets
+
+				COMMANDS
+				  wrangler r2 bucket create <name>  Create a new R2 bucket
+				  wrangler r2 bucket update         Update bucket state
+				  wrangler r2 bucket list           List R2 buckets
+				  wrangler r2 bucket delete <name>  Delete an R2 bucket
+				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket notification   Manage event notifications for an R2 bucket
+
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
+		});
 
 		it("should show the correct help when an invalid command is passed", async () => {
 			await expect(() =>
@@ -975,6 +1057,33 @@ describe("r2", () => {
 	});
 
 	describe("r2 object", () => {
+		it("should show help when the object command is passed", async () => {
+			await expect(() => runWrangler("r2 object")).rejects.toThrow(
+				"Not enough non-option arguments: got 0, need at least 1"
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+"`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				wrangler r2 object
+
+				Manage R2 objects
+
+				COMMANDS
+				  wrangler r2 object get <objectPath>     Fetch an object from an R2 bucket
+				  wrangler r2 object put <objectPath>     Create an object in an R2 bucket
+				  wrangler r2 object delete <objectPath>  Delete an object in an R2 bucket
+
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
+		});
 		describe("remote", () => {
 			// Only login for remote tests, local tests shouldn't require auth
 			mockAccountId();
