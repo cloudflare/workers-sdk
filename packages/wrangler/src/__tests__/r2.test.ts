@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -14,7 +15,6 @@ import type {
 	R2EventableOperation,
 	R2EventType,
 } from "../r2/helpers";
-import { endEventLoop } from "./helpers/end-event-loop";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -77,9 +77,7 @@ describe("r2", () => {
 		mockApiToken();
 
 		it("should show help when the bucket command is passed", async () => {
-			await expect(() =>
-				runWrangler("r2 bucket")
-			).rejects.toThrow(
+			await expect(() => runWrangler("r2 bucket")).rejects.toThrow(
 				"Not enough non-option arguments: got 0, need at least 1"
 			);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1060,9 +1058,7 @@ describe("r2", () => {
 
 	describe("r2 object", () => {
 		it("should show help when the object command is passed", async () => {
-			await expect(() =>
-				runWrangler("r2 object")
-			).rejects.toThrow(
+			await expect(() => runWrangler("r2 object")).rejects.toThrow(
 				"Not enough non-option arguments: got 0, need at least 1"
 			);
 			expect(std.err).toMatchInlineSnapshot(`
