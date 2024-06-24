@@ -43,7 +43,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				additionalModules: [],
 				define: {},
 				format: "modules",
-				moduleRoot: directory,
+				moduleRoot: directory, // TODO: this default needs to come from getEntry() once readConfig has been moved into ConfigController
 				...input.build,
 			},
 			...input,
