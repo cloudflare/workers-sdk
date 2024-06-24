@@ -2,7 +2,8 @@
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"types": ["node"],
-		"module": "esnext"
+		"module": "esnext",
+		"jsx": "preserve" // not used, but required for import of types (which transitively import jsx)
 	},
 	"include": ["vitest.config.mts", "**/*.ts", "../src/*.d.ts"],
 	"exclude": []
