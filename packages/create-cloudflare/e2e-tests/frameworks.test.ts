@@ -680,33 +680,36 @@ const verifyBuildScript = async (
 
 	const { outputDir, script, route, expectedText } = verifyBuild;
 
+	// Run the build scripts
+	const buildProc = spawnWithLogging(
+		[pm, "run", script],
+		{
+			cwd: projectPath,
+			env: {
+				NODE_ENV: "production",
+			},
+		},
+		logStream,
+	);
+	await waitForExit(buildProc);
+
+	// Run wrangler dev on a random port to avoid colliding with other tests
+	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
+
+	const devProc = spawnWithLogging(
+		[npx, "wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
+		{
+			cwd: projectPath,
+		},
+		logStream,
+	);
+
 	let body;
+	// Note: the large number of attempts here is for addressing the fact that wrangler pages dev
+	//       seems to take an unusually long time to spin up brand new C3 Astro apps, we should
+	//       address that and reduce the number of attempts
 	const attempts = new Array(30).fill(null);
 	for (const _ of attempts) {
-		// Run the build scripts
-		const buildProc = spawnWithLogging(
-			[pm, "run", script],
-			{
-				cwd: projectPath,
-				env: {
-					NODE_ENV: "production",
-				},
-			},
-			logStream,
-		);
-		await waitForExit(buildProc);
-
-		// Run wrangler dev on a random port to avoid colliding with other tests
-		const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
-
-		const devProc = spawnWithLogging(
-			[npx, "wrangler", "pages", "dev", outputDir, "--port", `${TEST_PORT}`],
-			{
-				cwd: projectPath,
-			},
-			logStream,
-		);
-
 		try {
 			// Wait a few seconds for dev server to spin up
 			await sleep(5000);
@@ -716,14 +719,14 @@ const verifyBuildScript = async (
 			body = await res.text();
 			break;
 		} catch {}
-
-		// Kill the process gracefully so ports can be cleaned up
-		devProc.kill("SIGINT");
 	}
 
 	if (!body) {
 		throw new Error("Failed to fetch from wrangler pages dev");
 	}
+
+	// Kill the process gracefully so ports can be cleaned up
+	devProc.kill("SIGINT");
 
 	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 	// end up camped and cause future runs to fail
