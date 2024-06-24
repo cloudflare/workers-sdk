@@ -32,6 +32,8 @@ describe("cloudchamber image", () => {
 			COMMANDS
 			  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries
 			  wrangler cloudchamber registries credentials [domain]  get a temporary password for a specific domain
+			  wrangler cloudchamber registries remove [domain]       removes the registry at the given domain
+			  wrangler cloudchamber registries list                  list registries configured for this account
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -99,5 +101,61 @@ describe("cloudchamber image", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`"jwt"`);
+	});
+
+	it("should remove an image registry (no interactivity)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.delete(
+				"*/registries/:domain",
+				async ({ params }) => {
+					const domain = String(params["domain"]);
+					expect(domain === "docker.io");
+					return HttpResponse.json({});
+				},
+				{ once: true }
+			)
+		);
+		await runWrangler("cloudchamber registries remove docker.io");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`"{}"`);
+	});
+
+	it("should list registries (no interactivity)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/registries",
+				async () => {
+					return HttpResponse.json([
+						{
+							public_key: "",
+							domain: "docker.io",
+						},
+						{
+							public_key: "some_public_key",
+							domain: "docker.io2",
+						},
+					]);
+				},
+				{ once: true }
+			)
+		);
+		await runWrangler("cloudchamber registries list");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"[
+			    {
+			        \\"public_key\\": \\"\\",
+			        \\"domain\\": \\"docker.io\\"
+			    },
+			    {
+			        \\"public_key\\": \\"some_public_key\\",
+			        \\"domain\\": \\"docker.io2\\"
+			    }
+			]"
+		`);
 	});
 });
