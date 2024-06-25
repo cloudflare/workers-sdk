@@ -70,6 +70,7 @@ const { name: pm, npx } = detectPackageManager();
 // These are ordered based on speed and reliability for ease of debugging
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
+		timeout: LONG_TIMEOUT,
 		testCommitMessage: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
@@ -712,7 +713,7 @@ const verifyBuildScript = async (
 	);
 
 	// Wait a few seconds for dev server to spin up
-	await sleep(7000);
+	await sleep(15000);
 
 	// Make a request to the specified test route
 	const res = await fetch(`http://localhost:${TEST_PORT}${route}`);

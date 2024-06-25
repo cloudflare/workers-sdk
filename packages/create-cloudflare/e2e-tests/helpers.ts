@@ -135,11 +135,13 @@ export const spawnWithLogging = (
 			const stripped = stripAnsi(line).trim();
 			if (stripped.length > 0) {
 				logStream.write(`${stripped}\n`);
+				console.log(`(${[cmd, ...argv].join(" ")}) --- ${line}`);
 			}
 		});
 	});
 
 	proc.stderr.on("data", (data) => {
+		console.log(`(${[cmd, ...argv].join(" ")}) --- ${data}`);
 		logStream.write(data);
 	});
 
