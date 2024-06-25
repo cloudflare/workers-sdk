@@ -126,7 +126,7 @@ describe("Core", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			compatibilityFlags: ["nodejs_compat"],
 			compatibilityDate: "2023-10-01",
 		};
@@ -271,7 +271,7 @@ describe("Core", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 		};
 		const bundle: Bundle = {
 			type: "commonjs",
@@ -358,7 +358,7 @@ describe("Core", () => {
 		function update(version: number) {
 			const config: StartDevWorkerOptions = {
 				name: "worker",
-				entrypoint: unusable() as FilePath,
+				entrypoint: unusable<FilePath>(),
 				bindings: {
 					VERSION: { type: "json", value: version },
 				},
@@ -406,7 +406,7 @@ describe("Core", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			compatibilityDate: disabledDate,
 		};
 		const bundle = makeEsbuildBundle(dedent/*javascript*/ `
@@ -444,7 +444,7 @@ describe("Core", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 		};
 		const bundle = makeEsbuildBundle(dedent/*javascript*/ `
 				export default {
@@ -503,7 +503,7 @@ describe("Bindings", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: {
 				TEXT: { type: "plain_text", value: "text" },
 				OBJECT: { type: "json", value: { a: { b: 1 } } },
@@ -543,7 +543,7 @@ describe("Bindings", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: {
 				// `wasm-module` bindings aren't allowed in modules workers
 				WASM: { type: "wasm_module", source: { contents: WASM_ADD_MODULE } },
@@ -573,7 +573,7 @@ describe("Bindings", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			dev: { persist: { path: persist } },
 		};
 		const bundle = makeEsbuildBundle(`export default {
@@ -621,7 +621,7 @@ describe("Bindings", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: { NAMESPACE: { type: "kv_namespace", id: "ns" } },
 			dev: { persist: { path: persist } },
 		};
@@ -667,7 +667,7 @@ describe("Bindings", () => {
 
 		let config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			legacy: { site: { bucket: tmp, include: ["*.txt"] } },
 		};
 		const bundle = makeEsbuildBundle(`
@@ -722,7 +722,7 @@ describe("Bindings", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: { BUCKET: { type: "r2_bucket", bucket_name: "bucket" } },
 			dev: { persist: { path: persist } },
 		};
@@ -766,7 +766,7 @@ describe("Bindings", () => {
 
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: {
 				DB: { type: "d1", database_name: "db-name", database_id: "db" },
 			},
@@ -816,7 +816,7 @@ describe("Bindings", () => {
 		const reportPromise = new DeferredPromise<unknown>();
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: {
 				QUEUE: { type: "queue", queue_name: "queue" },
 				BATCH_REPORT: {
@@ -872,7 +872,7 @@ describe("Bindings", () => {
 		const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db`;
 		const config: StartDevWorkerOptions = {
 			name: "worker",
-			entrypoint: unusable() as FilePath,
+			entrypoint: unusable<FilePath>(),
 			bindings: { DB: { type: "hyperdrive", id: "db", localConnectionString } },
 		};
 		const bundle = makeEsbuildBundle(`export default {
