@@ -715,10 +715,12 @@ const verifyBuildScript = async (
 		logStream,
 	);
 
+	let i = 0;
 	let body: string = "";
 	// Retry requesting the test route from the devserver
-	await retry({ times: 10 }, async () => {
-		await sleep(2000);
+	await retry({ times: 100 }, async () => {
+		i++;
+		await sleep(i * 1000);
 		const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
 		body = await res.text();
 		if (!body) {
