@@ -79,7 +79,7 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Run tests
-        run: pnpm run test:ci --filter=${{ matrix.filter }}
+        run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
