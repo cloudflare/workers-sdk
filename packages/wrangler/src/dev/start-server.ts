@@ -68,7 +68,7 @@ export async function startDevServer(
 
 	//start the worker registry
 	logger.log("disableDevRegistry: ", props.disableDevRegistry);
-	if (!props.disableDevRegistry) {
+	if (!props.disableDevRegistry && !props.experimentalDevEnv) {
 		try {
 			await startWorkerRegistry();
 			if (props.local) {

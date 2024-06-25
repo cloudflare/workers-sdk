@@ -498,6 +498,11 @@ export async function startDev(args: StartDevOptions) {
 					await events.once(devEnv, "configUpdate");
 				}
 
+				// Ignore the dev registry in remote mode
+				if (devEnv.config.latestConfig?.dev?.remote) {
+					return;
+				}
+
 				devEnv.config.patch({
 					dev: {
 						getRegisteredWorker(name) {
@@ -702,6 +707,11 @@ export async function startApiDev(args: StartDevOptions) {
 			// Make sure we're not patching an empty config
 			if (!devEnv.config.latestConfig) {
 				await events.once(devEnv, "configUpdate");
+			}
+
+			// Ignore the dev registry in remote mode
+			if (devEnv.config.latestConfig?.dev?.remote) {
+				return;
 			}
 
 			devEnv.config.patch({
