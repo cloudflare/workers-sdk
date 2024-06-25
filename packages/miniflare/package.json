@@ -50,7 +50,7 @@
 		"glob-to-regexp": "^0.4.1",
 		"stoppable": "^1.1.0",
 		"undici": "^5.28.4",
-		"workerd": "1.20240610.1",
+		"workerd": "1.20240620.1",
 		"ws": "^8.14.2",
 		"youch": "^3.2.2",
 		"zod": "^3.22.3"
@@ -58,7 +58,7 @@
 	"devDependencies": {
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240605.0",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"@microsoft/api-extractor": "^7.47.0",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",

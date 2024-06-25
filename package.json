@@ -31,7 +31,7 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.27.1",
 		"@changesets/parse": "^0.4.0",
-		"@cloudflare/workers-types": "^4.20240605.0",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
 		"@manypkg/cli": "^0.21.4",
 		"@turbo/gen": "^1.10.13",
