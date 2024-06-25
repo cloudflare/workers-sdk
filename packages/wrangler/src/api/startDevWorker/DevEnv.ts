@@ -173,12 +173,12 @@ export function createWorkerObject(devEnv: DevEnv): Worker {
 		async queue(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
-			w.queue(...args);
+			return w.queue(...args);
 		},
 		async scheduled(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
-			w.scheduled(...args);
+			return w.scheduled(...args);
 		},
 		async dispose() {
 			await devEnv.teardown();

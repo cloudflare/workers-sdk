@@ -31,14 +31,14 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 	let helper: WranglerE2ETestHelper;
 	let wrangler: Wrangler;
 	let DevEnv: Wrangler["unstable_DevEnv"];
-	beforeEach(async (t) => {
+	beforeEach(async () => {
 		helper = new WranglerE2ETestHelper();
 		wrangler = await helper.importWrangler();
 		DevEnv = wrangler.unstable_DevEnv;
 	});
 
 	it("ProxyWorker buffers requests while runtime reloads", async (t) => {
-		let devEnv = new DevEnv();
+		const devEnv = new DevEnv();
 		t.onTestFinished(() => devEnv.teardown());
 
 		const script = dedent`
@@ -71,7 +71,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		await expect(res.text()).resolves.toBe("body:2");
 	});
 	it("InspectorProxyWorker discovery endpoints + devtools websocket connection", async (t) => {
-		let devEnv = new DevEnv();
+		const devEnv = new DevEnv();
 		t.onTestFinished(() => devEnv.teardown());
 
 		const script = dedent`
@@ -96,7 +96,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
-		let res = await undici.fetch(`http://${inspectorUrl.host}/json`);
+		const res = await undici.fetch(`http://${inspectorUrl.host}/json`);
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
@@ -145,7 +145,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		await executionContextClearedPromise;
 	});
 	it("InspectorProxyWorker rejects unauthorised requests", async (t) => {
-		let devEnv = new DevEnv();
+		const devEnv = new DevEnv();
 		t.onTestFinished(() => devEnv.teardown());
 
 		await helper.seed({

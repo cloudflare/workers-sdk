@@ -21,6 +21,7 @@ export class WranglerE2ETestHelper {
 		await seed(this.tmpPath, files);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	importWrangler(): Promise<typeof import("../../src/cli")> {
 		return import(WRANGLER_IMPORT.href);
 	}

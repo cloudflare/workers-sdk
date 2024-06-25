@@ -47,8 +47,8 @@ export interface Worker {
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
-	scheduled(...args: Parameters<MiniflareWorker["scheduled"]>): Promise<void>;
-	queue(...args: Parameters<MiniflareWorker["queue"]>): Promise<void>;
+	scheduled: MiniflareWorker["scheduled"];
+	queue: MiniflareWorker["queue"];
 	dispose(): Promise<void>;
 }
 
