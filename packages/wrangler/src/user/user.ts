@@ -246,6 +246,7 @@ import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ParsedUrlQuery } from "node:querystring";
+import type { Response } from "undici";
 
 export type ApiCredentials =
 	| {
@@ -728,7 +729,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 		}
 	} else {
 		try {
-			const json = (await response.json()) as TokenResponse;
+			const json = (await getJSONFromResponse(response)) as TokenResponse;
 			if ("error" in json) {
 				throw json.error;
 			}
@@ -793,7 +794,9 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 
 	const response = await fetchAuthToken(params);
 	if (!response.ok) {
-		const { error } = (await response.json()) as { error: string };
+		const { error } = (await getJSONFromResponse(response)) as {
+			error: string;
+		};
 		// .catch((_) => ({ error: "invalid_json" }));
 		if (error === "invalid_grant") {
 			logger.log("Expired! Auth code or refresh token needs to be renewed.");
@@ -802,7 +805,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		}
 		throw toErrorClass(error);
 	}
-	const json = (await response.json()) as TokenResponse;
+	const json = (await getJSONFromResponse(response)) as TokenResponse;
 	if ("error" in json) {
 		throw new Error(json.error);
 	}
@@ -1248,4 +1251,28 @@ async function fetchAuthToken(body: URLSearchParams) {
 		body: body.toString(),
 		headers,
 	});
+}
+
+async function getJSONFromResponse(response: Response) {
+	const text = await response.text();
+	try {
+		return JSON.parse(text);
+	} catch (e) {
+		// Sometime we get an error response where the body is HTML
+		if (text.match(/<!DOCTYPE html>/)) {
+			logger.error(
+				"The body of the response was HTML rather than JSON. Check the debug logs to see the full body of the response."
+			);
+			if (text.match(/challenge-platform/)) {
+				logger.error(
+					"It looks like you might have hit a bot challenge page. This may be transient but if not, please contact Cloudflare to find out what can be done."
+				);
+			}
+		}
+		logger.debug("Full body of response\n\n", text);
+		throw new Error(
+			`Invalid JSON in response: status: ${response.status} ${response.statusText}`,
+			{ cause: e }
+		);
+	}
 }
