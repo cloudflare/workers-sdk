@@ -24,6 +24,7 @@ describe("Preview Worker", () => {
 			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
+				disableDevRegistry: true,
 			},
 			logLevel: "none",
 		});
@@ -76,7 +77,10 @@ compatibility_date = "2023-01-01"
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			config: path.join(tmpDir, "wrangler.toml"),
 			ip: "127.0.0.1",
-			experimental: { disableExperimentalWarning: true },
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
 		});
 	});
 
@@ -312,6 +316,7 @@ describe("Raw HTTP preview", () => {
 			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
+				disableDevRegistry: true,
 			},
 		});
 
@@ -373,7 +378,10 @@ compatibility_date = "2023-01-01"
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			config: path.join(tmpDir, "wrangler.toml"),
 			ip: "127.0.0.1",
-			experimental: { disableExperimentalWarning: true },
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
 		});
 	});
 

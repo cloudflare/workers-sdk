@@ -27,6 +27,7 @@ describe("multi-worker testing", () => {
 				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
+					fileBasedRegistry: true,
 				},
 			}
 		);
@@ -38,6 +39,7 @@ describe("multi-worker testing", () => {
 				config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml",
 				ip: "127.0.0.1",
 				experimental: {
+					fileBasedRegistry: true,
 					disableExperimentalWarning: true,
 				},
 			}
@@ -110,6 +112,7 @@ describe("multi-worker testing", () => {
 					logLevel: "debug",
 					ip: "127.0.0.1",
 					experimental: {
+						fileBasedRegistry: true,
 						disableExperimentalWarning: true,
 					},
 				}
