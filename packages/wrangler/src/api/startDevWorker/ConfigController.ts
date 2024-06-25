@@ -11,32 +11,32 @@ export type ConfigControllerEventMap = ControllerEventMap & {
 
 type Options = StartDevWorkerOptions;
 export class ConfigController extends Controller<ConfigControllerEventMap> {
-	config?: Options;
+	latestInput?: Options;
+	latestConfig?: Options;
 
 	public set(input: Options) {
-		const config = unwrapHook(input, this.latest);
+		const config = unwrapHook(input, this.latestInput);
 
 		this.#updateConfig(config);
 	}
 	public patch(input: Partial<Options>) {
 		assert(
-			this.latest,
+			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
 		);
 
 		const config: Options = {
-			...this.latest,
+			...this.latestInput,
 			...input,
 		};
 
 		this.#updateConfig(config);
 	}
 
-	latest?: Options;
 	#updateConfig(input: Options) {
 		const directory = input.directory;
 
-		this.config = {
+		this.latestConfig = {
 			directory,
 			build: {
 				moduleRules: [],
@@ -48,8 +48,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			},
 			...input,
 		};
-		this.latest = input;
-		this.emitConfigUpdateEvent(this.config);
+		this.latestInput = input;
+		this.emitConfigUpdateEvent(this.latestConfig);
 	}
 
 	// ******************
