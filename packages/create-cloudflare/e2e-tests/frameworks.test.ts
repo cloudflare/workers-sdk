@@ -712,12 +712,16 @@ const verifyBuildScript = async (
 		logStream,
 	);
 
-	// Wait a few seconds for dev server to spin up
-	await sleep(15000);
-
-	// Make a request to the specified test route
-	const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
-	const body = await res.text();
+	let body: string = "";
+	// Retry requesting the test route from the devserver
+	await retry({ times: 10 }, async () => {
+		await sleep(2000);
+		const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
+		body = await res.text();
+		if (!body) {
+			throw new Error("Could not fetch from local dev server");
+		}
+	});
 
 	// Kill the process gracefully so ports can be cleaned up
 	devProc.kill("SIGINT");
