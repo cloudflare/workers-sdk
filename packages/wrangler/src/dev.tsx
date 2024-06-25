@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
+import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import getPort from "get-port";
@@ -503,11 +504,19 @@ export async function startDev(args: StartDevOptions) {
 					return;
 				}
 
+				if (
+					util.isDeepStrictEqual(
+						boundWorkers,
+						devEnv.config.latestConfig?.dev?.registry
+					)
+				) {
+					return;
+				}
+
 				devEnv.config.patch({
 					dev: {
-						getRegisteredWorker(name) {
-							return boundWorkers[name];
-						},
+						...devEnv.config.latestConfig?.dev,
+						registry: boundWorkers,
 					},
 				});
 			});
@@ -714,11 +723,19 @@ export async function startApiDev(args: StartDevOptions) {
 				return;
 			}
 
+			if (
+				util.isDeepStrictEqual(
+					boundWorkers,
+					devEnv.config.latestConfig?.dev?.registry
+				)
+			) {
+				return;
+			}
+
 			devEnv.config.patch({
 				dev: {
-					getRegisteredWorker(name) {
-						return boundWorkers[name];
-					},
+					...devEnv.config.latestConfig?.dev,
+					registry: boundWorkers,
 				},
 			});
 		});

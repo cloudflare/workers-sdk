@@ -99,14 +99,7 @@ async function convertToConfigBundle(
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
 		bindings,
-		workerDefinitions: new Proxy(
-			{},
-			{
-				get(_, name: string) {
-					return event.config.dev?.getRegisteredWorker?.(name);
-				},
-			}
-		),
+		workerDefinitions: event.config.dev?.registry,
 		assetPaths: event.config.legacy?.site?.bucket
 			? {
 					baseDirectory: event.config.legacy?.site?.bucket,

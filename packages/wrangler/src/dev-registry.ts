@@ -335,7 +335,7 @@ export async function getBoundRegisteredWorkers(
 			| undefined;
 	},
 	existingWorkerDefinitions?: WorkerRegistry | undefined
-): Promise<WorkerRegistry> {
+): Promise<WorkerRegistry | undefined> {
 	const serviceNames = (services || []).map(
 		(serviceBinding) => serviceBinding.service
 	);
@@ -344,10 +344,15 @@ export async function getBoundRegisteredWorkers(
 	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
 
 	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
-		return {};
+		return undefined;
 	}
 	const workerDefinitions =
 		existingWorkerDefinitions ?? (await getRegisteredWorkers());
+
+	if (workerDefinitions === undefined) {
+		return undefined;
+	}
+
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
 			([key, _value]) =>

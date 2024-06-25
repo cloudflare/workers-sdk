@@ -380,7 +380,7 @@ async function _toSDW(
 			},
 			liveReload: args.liveReload || false,
 			testScheduled: args.testScheduled,
-			getRegisteredWorker: (name) => workerDefinitions[name],
+			registry: workerDefinitions,
 			persist: { path: localPersistencePath },
 		},
 		legacy: {
@@ -738,8 +738,7 @@ function DevSession(props: DevSessionProps) {
 				...startDevWorkerOptions,
 				dev: {
 					...startDevWorkerOptions.dev,
-					getRegisteredWorker:
-						devEnv.config.latestConfig?.dev?.getRegisteredWorker,
+					registry: devEnv.config.latestConfig?.dev?.registry,
 				},
 			});
 		}
