@@ -696,40 +696,40 @@ const verifyBuildScript = async (
 	);
 	await waitForExit(buildProc);
 
-	// Run wrangler dev on a random port to avoid colliding with other tests
-	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
-
-	const devProc = spawnWithLogging(
-		[
-			npx,
-			"wrangler@3.60.3",
-			"pages",
-			"dev",
-			outputDir,
-			"--port",
-			`${TEST_PORT}`,
-		],
-		{
-			cwd: projectPath,
-		},
-		logStream,
-	);
-
-	let i = 0;
 	let body: string = "";
+	let i = 0;
+
 	// Retry requesting the test route from the devserver
 	await retry({ times: 100 }, async () => {
 		i++;
+		// Run wrangler dev on a random port to avoid colliding with other tests
+		const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
+
+		const devProc = spawnWithLogging(
+			[
+				npx,
+				"wrangler@3.60.3",
+				"pages",
+				"dev",
+				outputDir,
+				"--port",
+				`${TEST_PORT}`,
+			],
+			{
+				cwd: projectPath,
+			},
+			logStream,
+		);
+
 		await sleep(i * 1000);
 		const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
 		body = await res.text();
 		if (!body) {
 			throw new Error("Could not fetch from local dev server");
 		}
+		// Kill the process gracefully so ports can be cleaned up
+		devProc.kill("SIGINT");
 	});
-
-	// Kill the process gracefully so ports can be cleaned up
-	devProc.kill("SIGINT");
 
 	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 	// end up camped and cause future runs to fail
