@@ -478,15 +478,15 @@ export async function startDev(args: StartDevOptions) {
 			const teardownRegistryPromise = devRegistry(async (registry) => {
 				const boundWorkers = await getBoundRegisteredWorkers(
 					{
-						name: devEnv.config.config?.name,
+						name: devEnv.config.latestConfig?.name,
 						services: extractBindingsOfType(
 							"service",
-							devEnv.config.config?.bindings
+							devEnv.config.latestConfig?.bindings
 						),
 						durableObjects: {
 							bindings: extractBindingsOfType(
 								"durable_object_namespace",
-								devEnv.config.config?.bindings
+								devEnv.config.latestConfig?.bindings
 							),
 						},
 					},
@@ -494,7 +494,7 @@ export async function startDev(args: StartDevOptions) {
 				);
 
 				// Make sure we're not patching an empty config
-				if (!devEnv.config.config) {
+				if (!devEnv.config.latestConfig) {
 					await events.once(devEnv, "configUpdate");
 				}
 
@@ -508,7 +508,7 @@ export async function startDev(args: StartDevOptions) {
 			});
 			devEnv.once("teardown", async () => {
 				const teardownRegistry = await teardownRegistryPromise;
-				await teardownRegistry(devEnv.config.config?.name);
+				await teardownRegistry(devEnv.config.latestConfig?.name);
 			});
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
@@ -684,15 +684,15 @@ export async function startApiDev(args: StartDevOptions) {
 		const teardownRegistryPromise = devRegistry(async (registry) => {
 			const boundWorkers = await getBoundRegisteredWorkers(
 				{
-					name: devEnv.config.config?.name,
+					name: devEnv.config.latestConfig?.name,
 					services: extractBindingsOfType(
 						"service",
-						devEnv.config.config?.bindings
+						devEnv.config.latestConfig?.bindings
 					),
 					durableObjects: {
 						bindings: extractBindingsOfType(
 							"durable_object_namespace",
-							devEnv.config.config?.bindings
+							devEnv.config.latestConfig?.bindings
 						),
 					},
 				},
@@ -700,7 +700,7 @@ export async function startApiDev(args: StartDevOptions) {
 			);
 
 			// Make sure we're not patching an empty config
-			if (!devEnv.config.config) {
+			if (!devEnv.config.latestConfig) {
 				await events.once(devEnv, "configUpdate");
 			}
 
@@ -714,7 +714,7 @@ export async function startApiDev(args: StartDevOptions) {
 		});
 		devEnv.once("teardown", async () => {
 			const teardownRegistry = await teardownRegistryPromise;
-			await teardownRegistry(devEnv.config.config?.name);
+			await teardownRegistry(devEnv.config.latestConfig?.name);
 		});
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {

@@ -738,7 +738,8 @@ function DevSession(props: DevSessionProps) {
 				...startDevWorkerOptions,
 				dev: {
 					...startDevWorkerOptions.dev,
-					getRegisteredWorker: devEnv.config.config?.dev?.getRegisteredWorker,
+					getRegisteredWorker:
+						devEnv.config.latestConfig?.dev?.getRegisteredWorker,
 				},
 			});
 		}
