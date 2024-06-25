@@ -396,8 +396,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		// Skip if the OS is unsupported
 		shouldRun &&= !unsupportedOSs?.includes(process.platform);
 
-		shouldRun &&= framework === "astro"; // let's only run astro
-
 		test.runIf(shouldRun)(
 			framework,
 			async () => {
