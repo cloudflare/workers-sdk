@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/kv-asset-handler",
-	"version": "0.3.3",
+	"version": "0.3.4",
 	"description": "Routes requests to KV assets",
 	"keywords": [
 		"kv",

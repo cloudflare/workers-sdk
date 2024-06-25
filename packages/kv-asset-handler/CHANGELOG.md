@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4
+
+### Patch Changes
+
+- [#6102](https://github.com/cloudflare/workers-sdk/pull/6102) [`d4e1e9f`](https://github.com/cloudflare/workers-sdk/commit/d4e1e9fc3439c3d6bd2d1d145d3edc85b551f276) Thanks [@threepointone](https://github.com/threepointone)! - chore: pass lint/typechecks for kv-asset-handler
+
+  Followup from https://github.com/cloudflare/workers-sdk/pull/6090, this enables typechecking and linting in kv-asset-handler, and fixes any failures.
+
 ## 0.3.3
 
 ### Patch Changes

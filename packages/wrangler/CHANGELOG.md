@@ -1,5 +1,43 @@
 # wrangler
 
+## 3.62.0
+
+### Minor Changes
+
+- [#5950](https://github.com/cloudflare/workers-sdk/pull/5950) [`0075621`](https://github.com/cloudflare/workers-sdk/commit/007562109b583adb6ae15bba5f50029735af24e5) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feat: add `wrangler versions secret put`, `wrangler versions secret bulk` and `wrangler versions secret list`
+
+  `wrangler versions secret put` allows for you to add/update a secret even if the latest version is not fully deployed. A new version with this secret will be created, the existing secrets and config are copied from the latest version.
+
+  `wrangler versions secret bulk` allows you to bulk add/update multiple secrets at once, this behaves the same as `secret put` and will only make one new version.
+
+  `wrangler versions secret list` lists the secrets available to the currently deployed versions. `wrangler versions secret list --latest-version` or `wrangler secret list` will list for the latest version.
+
+  Additionally, we will now prompt for extra confirmation if attempting to rollback to a version with different secrets than the currently deployed.
+
+### Patch Changes
+
+- [#6118](https://github.com/cloudflare/workers-sdk/pull/6118) [`1621992`](https://github.com/cloudflare/workers-sdk/commit/162199289d51dbaf3f7a371d777012d0039fbdfb) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: rollback in the case of a secret change, the prompt meant to show was not showing due to the spinner in an interactive env. It will now properly show.
+
+  chore: improve the view of `wrangler versions view` and change up copy a little for `versions secret` commands.
+
+- [#6105](https://github.com/cloudflare/workers-sdk/pull/6105) [`26855f3`](https://github.com/cloudflare/workers-sdk/commit/26855f39ae635feebb9d5768b64494e73d979b47) Thanks [@helloimalastair](https://github.com/helloimalastair)! - feat: Add help messages to all invalid `r2` commands
+
+- [#3735](https://github.com/cloudflare/workers-sdk/pull/3735) [`9c7df38`](https://github.com/cloudflare/workers-sdk/commit/9c7df38871b9fcfda4890a00507e6ef149e0cbcd) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - chore: Cleanup `wrangler --help` output
+
+  This commit cleans up and standardizes the look and feel of all `wrangler` commands as displayed by `wrangler --help` and `wrangler <cmd> --help`.
+
+- [#6080](https://github.com/cloudflare/workers-sdk/pull/6080) [`e2972cf`](https://github.com/cloudflare/workers-sdk/commit/e2972cf2ce785f5d56b1476e30102e05febba320) Thanks [@threepointone](https://github.com/threepointone)! - chore: run eslint (with react config) on workers-playground/wrangler
+
+  This enables eslint (with our react config) for the workers-playground project. Additionally, this enables the react-jsx condition in relevant tsconfig/eslint config, letting us write jsx without having React in scope.
+
+- [#6001](https://github.com/cloudflare/workers-sdk/pull/6001) [`d39d595`](https://github.com/cloudflare/workers-sdk/commit/d39d59589f7fe3102276bad6b93caf10c39e5f20) Thanks [@penalosa](https://github.com/penalosa)! - chore: changes to how `wrangler dev` launches your worker, behind the experimental `--x-dev-env` flag
+
+- [#5214](https://github.com/cloudflare/workers-sdk/pull/5214) [`05c5607`](https://github.com/cloudflare/workers-sdk/commit/05c56073b4e8c71ab6e0b287adddddc00d763170) Thanks [@penalosa](https://github.com/penalosa)! - feat: Experimental file based service discovery when running multiple Wrangler instances locally. To try it out, make sure all your local Wrangler instances are running with the `--x-registry` flag.
+
+- Updated dependencies [[`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059), [`d4e1e9f`](https://github.com/cloudflare/workers-sdk/commit/d4e1e9fc3439c3d6bd2d1d145d3edc85b551f276)]:
+  - miniflare@3.20240620.0
+  - @cloudflare/kv-asset-handler@0.3.4
+
 ## 3.61.0
 
 ### Minor Changes
