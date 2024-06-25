@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=$WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler deploy",
 		"dev": "wrangler dev",
 		"test": "vitest run",

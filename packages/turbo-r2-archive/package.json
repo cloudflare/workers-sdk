@@ -12,7 +12,7 @@
 	],
 	"scripts": {
 		"build": "wrangler deploy -j --dry-run --outdir=./dist",
-		"check:lint": "eslint .",
+		"check:lint": "eslint .  --max-warnings=0",
 		"deploy": "wrangler deploy -j",
 		"start": "wrangler dev -j",
 		"type:check": "tsc"

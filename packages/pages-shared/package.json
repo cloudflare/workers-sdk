@@ -13,7 +13,7 @@
 		"metadata-generator/**/*"
 	],
 	"scripts": {
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"test": "vitest run",
 		"test:ci": "vitest run"

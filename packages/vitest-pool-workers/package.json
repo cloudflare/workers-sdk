@@ -45,7 +45,7 @@
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
 		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp",
-		"check:lint": "eslint .",
+		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "node scripts/bundle.mjs watch",
 		"test": "vitest run",

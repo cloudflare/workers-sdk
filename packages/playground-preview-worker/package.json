@@ -6,7 +6,7 @@
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
 		"build-middleware:common": "pnpm dlx esbuild ../wrangler/templates/middleware/common.ts --outfile=src/middleware/common.module.template",
 		"build-middleware:loader": "pnpm dlx esbuild ../wrangler/templates/middleware/loader-modules.ts --outfile=src/middleware/loader.module.template",
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"deploy": "wrangler -j deploy",
 		"deploy:testing": "wrangler -j deploy -e testing",

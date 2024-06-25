@@ -53,7 +53,7 @@
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "pnpm run clean && pnpm run bundle && pnpm run emit-types && pnpm run generate-json-schema",
 		"bundle": "node -r esbuild-register scripts/bundle.ts",
-		"check:lint": "eslint .",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm run bundle --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
