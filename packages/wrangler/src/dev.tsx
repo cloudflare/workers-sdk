@@ -11,7 +11,7 @@ import { extractBindingsOfType } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
-import { getBoundRegisteredWorkers } from "./dev-registry";
+import { getBoundRegisteredWorkers, WorkerRegistry } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
@@ -404,6 +404,49 @@ export type StartDevOptions = DevArguments &
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
 	};
 
+async function updateDevEnvRegistry(
+	devEnv: DevEnv,
+	registry: WorkerRegistry | undefined
+) {
+	const boundWorkers = await getBoundRegisteredWorkers(
+		{
+			name: devEnv.config.latestConfig?.name,
+			services: extractBindingsOfType(
+				"service",
+				devEnv.config.latestConfig?.bindings
+			),
+			durableObjects: {
+				bindings: extractBindingsOfType(
+					"durable_object_namespace",
+					devEnv.config.latestConfig?.bindings
+				),
+			},
+		},
+		registry
+	);
+
+	// Make sure we're not patching an empty config
+	if (!devEnv.config.latestConfig) {
+		await events.once(devEnv, "configUpdate");
+	}
+
+	if (
+		util.isDeepStrictEqual(
+			boundWorkers,
+			devEnv.config.latestConfig?.dev?.registry
+		)
+	) {
+		return;
+	}
+
+	devEnv.config.patch({
+		dev: {
+			...devEnv.config.latestConfig?.dev,
+			registry: boundWorkers,
+		},
+	});
+}
+
 export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
@@ -476,45 +519,9 @@ export async function startDev(args: StartDevOptions) {
 		const devEnv = new DevEnv();
 
 		if (args.experimentalDevEnv) {
-			const teardownRegistryPromise = devRegistry(async (registry) => {
-				const boundWorkers = await getBoundRegisteredWorkers(
-					{
-						name: devEnv.config.latestConfig?.name,
-						services: extractBindingsOfType(
-							"service",
-							devEnv.config.latestConfig?.bindings
-						),
-						durableObjects: {
-							bindings: extractBindingsOfType(
-								"durable_object_namespace",
-								devEnv.config.latestConfig?.bindings
-							),
-						},
-					},
-					registry
-				);
-
-				// Make sure we're not patching an empty config
-				if (!devEnv.config.latestConfig) {
-					await events.once(devEnv, "configUpdate");
-				}
-
-				if (
-					util.isDeepStrictEqual(
-						boundWorkers,
-						devEnv.config.latestConfig?.dev?.registry
-					)
-				) {
-					return;
-				}
-
-				devEnv.config.patch({
-					dev: {
-						...devEnv.config.latestConfig?.dev,
-						registry: boundWorkers,
-					},
-				});
-			});
+			const teardownRegistryPromise = devRegistry((registry) =>
+				updateDevEnvRegistry(devEnv, registry)
+			);
 			devEnv.once("teardown", async () => {
 				const teardownRegistry = await teardownRegistryPromise;
 				await teardownRegistry(devEnv.config.latestConfig?.name);
@@ -690,45 +697,9 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const devEnv = new DevEnv();
 	if (!args.disableDevRegistry && args.experimentalDevEnv) {
-		const teardownRegistryPromise = devRegistry(async (registry) => {
-			const boundWorkers = await getBoundRegisteredWorkers(
-				{
-					name: devEnv.config.latestConfig?.name,
-					services: extractBindingsOfType(
-						"service",
-						devEnv.config.latestConfig?.bindings
-					),
-					durableObjects: {
-						bindings: extractBindingsOfType(
-							"durable_object_namespace",
-							devEnv.config.latestConfig?.bindings
-						),
-					},
-				},
-				registry
-			);
-
-			// Make sure we're not patching an empty config
-			if (!devEnv.config.latestConfig) {
-				await events.once(devEnv, "configUpdate");
-			}
-
-			if (
-				util.isDeepStrictEqual(
-					boundWorkers,
-					devEnv.config.latestConfig?.dev?.registry
-				)
-			) {
-				return;
-			}
-
-			devEnv.config.patch({
-				dev: {
-					...devEnv.config.latestConfig?.dev,
-					registry: boundWorkers,
-				},
-			});
-		});
+		const teardownRegistryPromise = devRegistry((registry) =>
+			updateDevEnvRegistry(devEnv, registry)
+		);
 		devEnv.once("teardown", async () => {
 			const teardownRegistry = await teardownRegistryPromise;
 			await teardownRegistry(devEnv.config.latestConfig?.name);
