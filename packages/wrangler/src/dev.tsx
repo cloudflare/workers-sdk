@@ -1,14 +1,17 @@
 import assert from "node:assert";
+import events from "node:events";
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import { DevEnv } from "./api";
+import { extractBindingsOfType } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
-import Dev from "./dev/dev";
+import { getBoundRegisteredWorkers } from "./dev-registry";
+import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import { maybeRegisterLocalWorker } from "./dev/local";
@@ -472,6 +475,41 @@ export async function startDev(args: StartDevOptions) {
 		const devEnv = new DevEnv();
 
 		if (args.experimentalDevEnv) {
+			const teardownRegistryPromise = devRegistry(async (registry) => {
+				const boundWorkers = await getBoundRegisteredWorkers(
+					{
+						name: devEnv.config.config?.name,
+						services: extractBindingsOfType(
+							"service",
+							devEnv.config.config?.bindings
+						),
+						durableObjects: {
+							bindings: extractBindingsOfType(
+								"durable_object_namespace",
+								devEnv.config.config?.bindings
+							),
+						},
+					},
+					registry
+				);
+
+				// Make sure we're not patching an empty config
+				if (!devEnv.config.config) {
+					await events.once(devEnv, "configUpdate");
+				}
+
+				devEnv.config.patch({
+					dev: {
+						getRegisteredWorker(name) {
+							return boundWorkers[name];
+						},
+					},
+				});
+			});
+			devEnv.once("teardown", async () => {
+				const teardownRegistry = await teardownRegistryPromise;
+				await teardownRegistry(devEnv.config.config?.name);
+			});
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
 				if (process.send) {
@@ -643,6 +681,41 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const devEnv = new DevEnv();
 	if (!args.disableDevRegistry && args.experimentalDevEnv) {
+		const teardownRegistryPromise = devRegistry(async (registry) => {
+			const boundWorkers = await getBoundRegisteredWorkers(
+				{
+					name: devEnv.config.config?.name,
+					services: extractBindingsOfType(
+						"service",
+						devEnv.config.config?.bindings
+					),
+					durableObjects: {
+						bindings: extractBindingsOfType(
+							"durable_object_namespace",
+							devEnv.config.config?.bindings
+						),
+					},
+				},
+				registry
+			);
+
+			// Make sure we're not patching an empty config
+			if (!devEnv.config.config) {
+				await events.once(devEnv, "configUpdate");
+			}
+
+			devEnv.config.patch({
+				dev: {
+					getRegisteredWorker(name) {
+						return boundWorkers[name];
+					},
+				},
+			});
+		});
+		devEnv.once("teardown", async () => {
+			const teardownRegistry = await teardownRegistryPromise;
+			await teardownRegistry(devEnv.config.config?.name);
+		});
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
 				if (!reloadEvent.config.dev?.remote) {

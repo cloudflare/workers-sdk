@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
 	AsyncHook,
+	Binding,
 	File,
 	Hook,
 	HookValues,
@@ -378,4 +379,15 @@ export async function convertBindingsToCfWorkerInitBindings(
 
 function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
 	return type.startsWith("unsafe_");
+}
+
+export function extractBindingsOfType<
+	Type extends NonNullable<StartDevWorkerOptions["bindings"]>[string]["type"],
+>(
+	type: Type,
+	bindings: StartDevWorkerOptions["bindings"]
+): Extract<Binding, { type: Type }>[] {
+	return Object.values(bindings ?? {}).filter(
+		(b): b is Extract<Binding, { type: Type }> => b.type === type
+	);
 }
