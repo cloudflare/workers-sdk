@@ -1,25 +1,17 @@
-import readline from "readline";
 import { unwrapHook } from "./api/startDevWorker/utils";
+import { logger } from "./logger";
+import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";
-import type { Logger } from "./logger";
 
-type KeypressEvent = { name: string; ctrl: boolean };
-
-export default function ({
-	options,
-	logger,
-	stdin,
-}: {
+export default function (
 	options: Array<{
 		keys: string[];
 		label: Hook<string>;
 		handler: (helpers: {
-			printIntructions: () => void;
+			printInstructions: () => void;
 		}) => void | Promise<void>;
-	}>;
-	logger: Logger;
-	stdin?: typeof process.stdin;
-}) {
+	}>
+) {
 	/**
 	 * Prints all options, comma-separated, prefixed by the first key in square brackets.
 	 *
@@ -31,7 +23,7 @@ export default function ({
 	 * Limitations:
 	 *  - doesn't break nicely across lines
 	 */
-	function printIntructions() {
+	function printInstructions() {
 		const instructions = options
 			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`)
 			.join(", ");
@@ -43,7 +35,7 @@ export default function ({
 		);
 	}
 
-	printIntructions();
+	printInstructions();
 
 	return onKeyPress(async (key) => {
 		key = key.toLowerCase();
@@ -51,35 +43,11 @@ export default function ({
 		for (const { keys, handler } of options) {
 			if (keys.includes(key)) {
 				try {
-					await handler({ printIntructions });
+					await handler({ printInstructions });
 				} catch (error) {
 					logger.error(`Error while handling hotkey [${key}]\n`, error);
 				}
 			}
 		}
-	}, stdin);
-}
-
-export function onKeyPress(
-	callback: (key: string) => void,
-	stdin = process.stdin
-) {
-	if (stdin.isTTY) {
-		readline.emitKeypressEvents(stdin);
-		stdin.setRawMode(true);
-	}
-
-	const handler = async (char: string, key: KeypressEvent) => {
-		if (key && key.ctrl && key.name == "c") {
-			char = "CTRL+C";
-		}
-
-		if (char) {
-			callback(char);
-		}
-	};
-
-	stdin.on("keypress", handler);
-
-	return () => stdin.off("keypress", handler);
+	});
 }
