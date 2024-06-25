@@ -11,7 +11,6 @@ import { extractBindingsOfType } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
-import type { WorkerRegistry } from "./dev-registry";
 import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -44,6 +43,7 @@ import type {
 	Rule,
 } from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
+import type { WorkerRegistry } from "./dev-registry";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
