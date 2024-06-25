@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.21.9
+
+### Patch Changes
+
+- [#6069](https://github.com/cloudflare/workers-sdk/pull/6069) [`91c7ce2`](https://github.com/cloudflare/workers-sdk/commit/91c7ce262e43be075198f20b0fd5d8a7cd2494c1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-hono | 0.8.1 | 0.9.0 |
+
+- [#6070](https://github.com/cloudflare/workers-sdk/pull/6070) [`bcb7acd`](https://github.com/cloudflare/workers-sdk/commit/bcb7acda0389f0851eb052369ef70082ab09eaf8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.1 | 6.3.2 |
+
+- [#6086](https://github.com/cloudflare/workers-sdk/pull/6086) [`820d6d2`](https://github.com/cloudflare/workers-sdk/commit/820d6d2191a8bac9bee91c97b2c4fc588e643a58) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.10.3 | 3.10.4 |
+
 ## 2.21.8
 
 ### Patch Changes
