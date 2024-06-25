@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { Controller } from "./BaseController";
-import { unwrapHook } from "./utils";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
@@ -15,9 +14,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestConfig?: Options;
 
 	public set(input: Options) {
-		const config = unwrapHook(input, this.latestInput);
-
-		this.#updateConfig(config);
+		this.#updateConfig(input);
 	}
 	public patch(input: Partial<Options>) {
 		assert(
