@@ -197,6 +197,7 @@ function getStartedWorkerdProcesses(): Process[] {
 
 const devScripts = [
 	{ args: ["dev"], expectedBody: "body" },
+	{ args: ["dev", "--x-dev-env"], expectedBody: "body" },
 	{ args: ["pages", "dev", "public"], expectedBody: "<p>body</p>" },
 ];
 const exitKeys = [
