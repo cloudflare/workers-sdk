@@ -188,7 +188,7 @@ describe("pages dev", () => {
 
 		await setTimeout(5_000);
 
-		await worker.readUntil(/Failed to bundle/);
+		await worker.readUntil(/Error while attempting to build/);
 
 		// And then make sure Wrangler hasn't crashed
 		await helper.seed({
@@ -643,6 +643,78 @@ describe("pages dev", () => {
 
 			hello = await fetchText(url);
 			expect(hello).toMatchInlineSnapshot('"Updated Worker!"');
+		});
+
+		it("should support modifying dependencies during dev session (_worker)", async () => {
+			const helper = new WranglerE2ETestHelper();
+
+			await helper.seed({
+				"pets/bear.js": dedent`
+						export const bear = "BEAR!"
+						`,
+				"_worker.js": dedent`
+						import { bear } from "./pets/bear"
+						export default {
+							fetch(request, env) {
+								return new Response(bear)
+							}
+						}`,
+			});
+
+			const port = await getPort();
+			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const { url } = await worker.waitForReady();
+
+			let bear = await fetchText(url);
+			expect(bear).toMatchInlineSnapshot('"BEAR!"');
+
+			await helper.seed({
+				"pets/bear.js": dedent`
+						export const bear = "We love BEAR!"
+						`,
+			});
+
+			await worker.waitForReload();
+
+			bear = await fetchText(url);
+			expect(bear).toMatchInlineSnapshot('"We love BEAR!"');
+		});
+
+		it("should support modifying external modules during dev session (_worker)", async () => {
+			const helper = new WranglerE2ETestHelper();
+
+			await helper.seed({
+				"graham.html": dedent`
+						<h1>Graham the dog</h1>
+						`,
+				"_worker.js": dedent`
+						import html from "./graham.html"
+						export default {
+							fetch(request, env) {
+								return new Response(html)
+							}
+						}`,
+			});
+
+			const port = await getPort();
+			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const { url } = await worker.waitForReady();
+
+			let graham = await fetchText(url);
+			expect(graham).toMatchInlineSnapshot('"<h1>Graham the dog</h1>"');
+
+			await helper.seed({
+				"graham.html": dedent`
+						<h1>Graham is the bestest doggo</h1>
+						`,
+			});
+
+			await worker.waitForReload();
+
+			graham = await fetchText(url);
+			expect(graham).toMatchInlineSnapshot(
+				'"<h1>Graham is the bestest doggo</h1>"'
+			);
 		});
 
 		it("should support modifying _routes.json during dev session", async () => {
