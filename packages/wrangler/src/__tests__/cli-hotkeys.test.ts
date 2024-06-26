@@ -1,5 +1,4 @@
-// import readline from "readline";
-// vi.spyOn(readline, "emitKeypressEvents");
+import { setTimeout } from "node:timers/promises";
 import { vitest } from "vitest";
 import hotkeys from "../cli-hotkeys";
 import { logger } from "../logger";
@@ -16,6 +15,8 @@ vitest.mock("../utils/onKeyPress", async () => {
 });
 
 describe("Hotkeys", () => {
+	const std = mockConsoleMethods();
+
 	describe("callbacks", () => {
 		it("calls handlers when a key is pressed", async () => {
 			const handlerA = vi.fn();
@@ -113,11 +114,40 @@ describe("Hotkeys", () => {
 			});
 			handlerA.mockClear();
 		});
+
+		it("surfaces errors in handlers", async () => {
+			const handlerA = vi.fn().mockImplementation(() => {
+				throw new Error("sync error");
+			});
+			const handlerB = vi.fn().mockRejectedValue("async error");
+			const options = [
+				{ keys: ["a"], label: "first option", handler: handlerA },
+				{ keys: ["b"], label: "second option", handler: handlerB },
+			];
+
+			hotkeys(options);
+
+			writeToMockedStdin("a");
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError while handling hotkey [a][0m
+
+				"
+			`);
+
+			writeToMockedStdin("b");
+			await setTimeout(0); //
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError while handling hotkey [a][0m
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError while handling hotkey [b][0m
+
+				"
+			`);
+		});
 	});
 
 	describe("instructions", () => {
-		const std = mockConsoleMethods();
-
 		it("prints instructions immediately", async () => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();

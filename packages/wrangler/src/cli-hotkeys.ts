@@ -44,8 +44,8 @@ export default function (
 			if (keys.includes(key)) {
 				try {
 					await handler({ printInstructions });
-				} catch (error) {
-					logger.error(`Error while handling hotkey [${key}]\n`, error);
+				} catch {
+					logger.error(`Error while handling hotkey [${key}]`);
 				}
 			}
 		}

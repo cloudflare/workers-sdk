@@ -23,5 +23,7 @@ export function onKeyPress(
 
 	stdin.on("keypress", handler);
 
-	return () => stdin.off("keypress", handler);
+	return () => {
+		stdin.off("keypress", handler);
+	};
 }
