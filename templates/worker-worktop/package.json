@@ -10,7 +10,7 @@
 		"worktop": "0.8.0-next.14"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240605.0",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"wrangler": "^3.0.0"
 	}
 }

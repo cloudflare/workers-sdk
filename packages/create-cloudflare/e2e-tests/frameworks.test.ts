@@ -71,6 +71,7 @@ const { name: pm, npx } = detectPackageManager();
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
 		testCommitMessage: true,
+		quarantine: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",

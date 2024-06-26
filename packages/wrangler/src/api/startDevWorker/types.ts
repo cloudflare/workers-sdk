@@ -51,7 +51,7 @@ export interface StartDevWorkerOptions {
 	 * This is the `main` property of a wrangler.toml.
 	 * You can specify a file path or provide the contents directly.
 	 */
-	entrypoint: FilePath;
+	entrypoint?: FilePath;
 	/** The configuration of the worker. */
 	config?: FilePath;
 	/** A worker's directory. Usually where the wrangler.toml file is located */

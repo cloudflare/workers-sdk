@@ -44,7 +44,7 @@
 		"wrangler": "^3.0.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20240605.0",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"@tsndr/cloudflare-worker-jwt": "^2.0.1",
 		"@types/jest": "^28.1.6",
 		"@types/node": "20.8.3",

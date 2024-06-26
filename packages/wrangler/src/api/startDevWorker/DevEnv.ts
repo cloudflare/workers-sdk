@@ -150,7 +150,7 @@ export function createWorkerObject(devEnv: DevEnv): DevWorker {
 			return devEnv.proxy.ready.promise.then(() => undefined);
 		},
 		get config() {
-			return devEnv.config.config;
+			return devEnv.config.latestConfig;
 		},
 		setConfig(config) {
 			return devEnv.config.set(config);

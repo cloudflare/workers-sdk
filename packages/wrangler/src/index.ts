@@ -532,7 +532,7 @@ export function createCLIParser(argv: string[]) {
 
 	// r2
 	wrangler.command("r2", "📦 Manage R2 buckets & objects", (r2Yargs) => {
-		return r2(r2Yargs.command(subHelp));
+		return r2(r2Yargs, subHelp);
 	});
 
 	// d1
