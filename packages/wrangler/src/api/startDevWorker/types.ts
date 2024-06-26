@@ -52,7 +52,7 @@ export interface Worker {
 	dispose(): Promise<void>;
 }
 
-export interface StartDevWorkerOptions {
+export interface StartDevWorkerInput {
 	/** The name of the worker. */
 	name?: string;
 	/**
@@ -63,8 +63,7 @@ export interface StartDevWorkerOptions {
 	entrypoint?: FilePath;
 	/** The configuration of the worker. */
 	config?: FilePath;
-	/** A worker's directory. Usually where the wrangler.toml file is located */
-	directory?: string;
+
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
@@ -84,7 +83,6 @@ export interface StartDevWorkerOptions {
 	 * Otherwise, Wrangler will use the user's preference.
 	 */
 	sendMetrics?: boolean;
-	usageModel?: "bundled" | "unbound";
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
@@ -113,10 +111,10 @@ export interface StartDevWorkerOptions {
 		jsxFactory?: string;
 		jsxFragment?: string;
 		tsconfig?: string;
-		nodejsCompatMode?: NodeJSCompatMode;
-		moduleRoot?: string;
+		// HACK: Resolving the nodejs compat mode is complex and fraught with backwards-compat concerns
+		nodejsCompatMode?: Hook<NodeJSCompatMode, [Config]>;
 
-		format?: CfScriptFormat;
+		moduleRoot?: string;
 	};
 
 	/** Options applying to the worker's development preview environment. */
@@ -128,7 +126,7 @@ export interface StartDevWorkerOptions {
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount>;
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
-		persist?: boolean | { path: string };
+		persist?: string;
 		/** Controls which logs are logged 🤙. */
 		logLevel?: LogLevel;
 		/** Whether the worker server restarts upon source/config file changes. */
@@ -157,14 +155,39 @@ export interface StartDevWorkerOptions {
 		testScheduled?: boolean;
 	};
 	legacy?: {
-		site?: Config["site"];
-		assets?: Config["assets"];
+		site?: Hook<Config["site"], [Config]>;
+		assets?: Hook<Config["assets"], [Config]>;
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 }
 
-export type HookValues = string | number | boolean | object;
+export type StartDevWorkerOptions = StartDevWorkerInput & {
+	/** A worker's directory. Usually where the wrangler.toml file is located */
+	directory: string;
+	build: StartDevWorkerInput["build"] & {
+		nodejsCompatMode: NodeJSCompatMode;
+		format: CfScriptFormat;
+		moduleRoot: string;
+		moduleRules: Rule[];
+		define: Record<string, string>;
+		additionalModules: CfModule[];
+
+		processEntrypoint: boolean;
+	};
+	legacy: StartDevWorkerInput["legacy"] & {
+		assets?: Config["assets"];
+		site?: Config["site"];
+	};
+	dev: StartDevWorkerInput["dev"] & {
+		persist: string;
+	};
+	entrypoint: {
+		path: string;
+	};
+};
+
+export type HookValues = string | number | boolean | object | undefined | null;
 export type Hook<T extends HookValues, Args extends unknown[] = []> =
 	| T
 	| ((...args: Args) => T);

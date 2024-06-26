@@ -43,7 +43,11 @@ import type { ValidatorFn } from "./validation-helpers";
 export type NormalizeAndValidateConfigArgs = {
 	env?: string;
 	"legacy-env"?: boolean;
+	// This is not relevant in dev. It's only purpose is loosening Worker name validation when deploying to a dispatch namespace
 	"dispatch-namespace"?: string;
+	remote?: boolean;
+	localProtocol?: string;
+	upstreamProtocol?: string;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -456,7 +460,7 @@ function normalizeAndValidatePagesBuildOutputDir(
 function normalizeAndValidateDev(
 	diagnostics: Diagnostics,
 	rawDev: RawDevConfig,
-	args: Record<string, unknown>
+	args: NormalizeAndValidateConfigArgs
 ): DevConfig {
 	assert(typeof args === "object" && args !== null && !Array.isArray(args));
 	const {

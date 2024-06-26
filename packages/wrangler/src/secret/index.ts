@@ -104,7 +104,6 @@ async function createDraftWorker({
 				migrations: undefined,
 				compatibility_date: undefined,
 				compatibility_flags: undefined,
-				usage_model: undefined,
 				keepVars: false, // this doesn't matter since it's a new script anyway
 				keepSecrets: false, // this doesn't matter since it's a new script anyway
 				logpush: false,

@@ -53,9 +53,9 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: { remote },
 		});
 
@@ -88,10 +88,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: { remote },
 		});
 
@@ -158,10 +158,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: { remote },
 		});
 
@@ -202,10 +202,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
                 `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: { remote },
 		});
 
@@ -298,10 +298,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: {
 				remote,
 				server: { port: await getPort() },
@@ -316,7 +316,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		let undiciRes = await undici.fetch(`http://127.0.0.1:${oldPort}`);
 		await expect(undiciRes.text()).resolves.toBe("body:1");
 
-		worker.patchConfig({
+		await worker.patchConfig({
 			dev: {
 				...worker.config.dev,
 				remote,
@@ -352,10 +352,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: {
 				remote,
 				liveReload: true,
@@ -400,7 +400,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
                 }
             `,
 		});
-		worker.patchConfig({
+		await worker.patchConfig({
 			dev: {
 				...worker.config.dev,
 				liveReload: false,
@@ -427,10 +427,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: {
 				remote,
 				origin: {
@@ -444,7 +444,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			`URL: http://www.google.com/test/path/1`
 		);
 
-		worker.patchConfig({
+		await worker.patchConfig({
 			dev: {
 				...worker.config.dev,
 				origin: {
@@ -486,10 +486,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
 			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+
 			dev: {
 				remote,
 				origin: {

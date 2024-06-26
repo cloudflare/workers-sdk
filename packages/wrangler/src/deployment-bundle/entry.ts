@@ -36,7 +36,7 @@ export async function getEntry(
 	args: {
 		script?: string;
 		format?: CfScriptFormat | undefined;
-		assets?: string | undefined;
+		assets?: string | undefined | boolean;
 		moduleRoot?: string;
 	},
 	config: Config,

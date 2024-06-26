@@ -5,7 +5,9 @@ export { DevEnv };
 export * from "./types";
 export * from "./events";
 
-export function startWorker(options: StartDevWorkerOptions): Worker {
+export async function startWorker(
+	options: StartDevWorkerOptions
+): Promise<Worker> {
 	const devEnv = new DevEnv();
 
 	return devEnv.startWorker(options);

@@ -666,7 +666,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
 			compatibility_flags: compatibilityFlags,
-			usage_model: config.usage_model,
 			keepVars,
 			keepSecrets: keepVars, // keepVars implies keepSecrets
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,

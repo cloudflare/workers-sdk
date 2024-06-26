@@ -8,6 +8,7 @@ import type {
 	Hook,
 	HookValues,
 	ServiceFetch,
+	StartDevWorkerInput,
 	StartDevWorkerOptions,
 } from "./types";
 
@@ -55,11 +56,11 @@ export function urlFromParts(
 
 type UnwrapHook<H> = H extends Hook<infer T> ? T : never;
 export function unwrapHook<
-	H extends AsyncHook<T, Args>,
+	H extends AsyncHook<T, Args> | undefined,
 	T extends HookValues = UnwrapHook<H>,
 	Args extends unknown[] = [],
 >(
-	hook: H | undefined,
+	hook: H,
 	...args: Args
 ): H extends undefined ? UnwrapHook<H> | undefined : UnwrapHook<H> {
 	return typeof hook === "function" ? hook(...args) : hook;
@@ -386,8 +387,30 @@ export function extractBindingsOfType<
 >(
 	type: Type,
 	bindings: StartDevWorkerOptions["bindings"]
-): Extract<Binding, { type: Type }>[] {
-	return Object.values(bindings ?? {}).filter(
-		(b): b is Extract<Binding, { type: Type }> => b.type === type
-	);
+): (Extract<Binding, { type: Type }> & {
+	binding: string;
+	/* ugh why durable objects :( */ name: string;
+})[] {
+	return Object.entries(bindings ?? {})
+		.filter(
+			(binding): binding is [string, Extract<Binding, { type: Type }>] =>
+				binding[1].type === type
+		)
+		.map((binding) => ({
+			...binding[1],
+			binding: binding[0],
+			name: binding[0],
+		})) as (Extract<Binding, { type: Type }> & {
+		binding: string;
+		/* ugh why durable objects :( */ name: string;
+	})[];
+}
+
+// DO NOT USE!
+// StartDevWorkerInput and StartDevWorkerOptions are not generally assignable to each other, but they're assignable _enough_ to make the faking of events work when --x-dev-env is turned off
+// Typescript needs some help to figure this out though
+export function fakeResolvedInput(
+	input: StartDevWorkerInput
+): StartDevWorkerOptions {
+	return input as StartDevWorkerOptions;
 }

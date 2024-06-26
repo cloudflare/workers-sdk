@@ -2,6 +2,7 @@ import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { FatalError, UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
@@ -26,7 +27,7 @@ export type {
 } from "./environment";
 
 type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
-	experimentalJsonConfig: boolean | undefined;
+	experimentalJsonConfig?: boolean | undefined;
 };
 
 /**
@@ -52,10 +53,12 @@ export function readConfig(
 	requirePagesConfig?: boolean,
 	hideWarnings: boolean = false
 ): Config {
+	const isJsonConfigEnabled =
+		getFlag("JSON_CONFIG_FILE") ?? args.experimentalJsonConfig;
 	let rawConfig: RawConfig = {};
 
 	if (!configPath) {
-		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
+		configPath = findWranglerToml(process.cwd(), isJsonConfigEnabled);
 	}
 
 	try {
@@ -98,7 +101,7 @@ export function readConfig(
 	}
 	if (
 		isPagesConfigFile &&
-		(configPath?.endsWith("json") || args.experimentalJsonConfig)
+		(configPath?.endsWith("json") || isJsonConfigEnabled)
 	) {
 		throw new UserError(
 			`Pages doesn't currently support JSON formatted config \`${

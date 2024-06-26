@@ -1,6 +1,11 @@
 import process from "process";
 import { hideBin } from "yargs/helpers";
-import { unstable_dev, DevEnv as unstable_DevEnv, unstable_pages } from "./api";
+import {
+	unstable_dev,
+	DevEnv as unstable_DevEnv,
+	unstable_pages,
+	startWorker as unstable_startWorker,
+} from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
 import type { UnstableDevOptions, UnstableDevWorker } from "./api";
@@ -26,7 +31,7 @@ if (typeof vitest === "undefined" && require.main === module) {
  * It makes it possible to import wrangler from 'wrangler',
  * and call wrangler.unstable_dev().
  */
-export { unstable_dev, unstable_pages, unstable_DevEnv };
+export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
 export type { UnstableDevWorker, UnstableDevOptions };
 
 export * from "./api/integrations";

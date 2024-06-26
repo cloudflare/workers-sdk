@@ -43,10 +43,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	#customBuildAborter = new AbortController();
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
-		assert(config.entrypoint?.path);
-		assert(config.directory);
-		assert(config.build?.format);
-		assert(config.build?.moduleRoot);
 		// If a new custom build comes in, we need to cancel in-flight builds
 		this.#customBuildAborter.abort();
 		this.#customBuildAborter = new AbortController();
@@ -66,8 +62,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				return;
 			}
 			assert(this.#tmpDir);
-			assert(config.build?.moduleRules, "config.build?.moduleRules");
-			assert(config.build?.define, "config.build?.define");
 			if (!config.build?.bundle) {
 				// if we're not bundling, let's just copy the entry to the destination directory
 				const destinationDir = this.#tmpDir.path;
@@ -174,8 +168,10 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			return;
 		}
 
-		const pathsToWatch = config.build?.custom?.watch;
-		assert(pathsToWatch);
+		const pathsToWatch = config.build.custom.watch;
+
+		// This is always present if a custom command is provided, defaulting to `./src`
+		assert(pathsToWatch, "config.build.custom.watch");
 
 		this.#customBuildWatcher = watch(pathsToWatch, {
 			persistent: true,
@@ -200,12 +196,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			return;
 		}
 		assert(this.#tmpDir);
-		assert(config.build?.moduleRules, "config.build?.moduleRules");
-		assert(config.build?.define, "config.build?.define");
-		assert(config.entrypoint?.path, "config.entrypoint?.path");
-		assert(config.directory, "config.directory");
-		assert(config.build.format, "config.build.format");
-		assert(config.build.moduleRoot, "config.build.moduleRoot");
 		const entry: Entry = {
 			file: config.entrypoint.path,
 			directory: config.directory,

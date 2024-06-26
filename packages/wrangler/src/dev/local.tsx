@@ -53,7 +53,6 @@ export interface LocalProps {
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
 	services: Config["services"] | undefined;
-	experimentalDevEnv: boolean;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -162,11 +161,7 @@ export function Local(props: LocalProps) {
 		}
 	}, [props.bindings.durable_objects?.bindings]);
 
-	if (!props.experimentalDevEnv) {
-		// this condition WILL be static and therefore safe to wrap around a hook
-		// eslint-disable-next-line react-hooks/rules-of-hooks
-		useLocalWorker(props);
-	}
+	useLocalWorker(props);
 
 	return null;
 }

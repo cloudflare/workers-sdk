@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
-import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
@@ -50,13 +49,6 @@ async function convertToConfigBundle(
 ): Promise<MF.ConfigBundle> {
 	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
 		event.config.bindings
-	);
-
-	const persistence = getLocalPersistencePath(
-		typeof event.config.dev?.persist === "object"
-			? event.config.dev?.persist.path
-			: undefined,
-		event.config.config?.path
 	);
 
 	const crons = [];
@@ -112,7 +104,7 @@ async function convertToConfigBundle(
 		initialIp: "127.0.0.1",
 		rules: [],
 		inspectorPort: 0,
-		localPersistencePath: persistence,
+		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
 		queueConsumers,

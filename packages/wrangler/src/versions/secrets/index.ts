@@ -193,8 +193,6 @@ export async function copyWorkerVersionWithNewSecrets({
 		compatibility_date: versionInfo.resources.script_runtime.compatibility_date,
 		compatibility_flags:
 			versionInfo.resources.script_runtime.compatibility_flags,
-		usage_model: versionInfo.resources.script_runtime
-			.usage_model as CfWorkerInit["usage_model"],
 		keepVars: false, // we're re-uploading everything
 		keepSecrets: false, // handled in keepBindings
 		keepBindings,
