@@ -16,7 +16,7 @@ export class DevEnv extends EventEmitter {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	startWorker(_options: StartDevWorkerOptions): Worker {
+	startWorker(options: StartDevWorkerOptions): Worker {
 		const worker = createWorkerObject(this);
 
 		this.config.set(options);
@@ -156,6 +156,7 @@ export function createWorkerObject(devEnv: DevEnv): Worker {
 			return devEnv.proxy.ready.promise.then((ev) => ev.inspectorUrl);
 		},
 		get config() {
+			assert(devEnv.config.latestConfig);
 			return devEnv.config.latestConfig;
 		},
 		setConfig(config) {
@@ -171,11 +172,19 @@ export function createWorkerObject(devEnv: DevEnv): Worker {
 			return proxyWorker.dispatchFetch(...args);
 		},
 		async queue(...args) {
+			assert(
+				this.config.name,
+				"Worker name must be defined to use `Worker.queue()`"
+			);
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.queue(...args);
 		},
 		async scheduled(...args) {
+			assert(
+				this.config.name,
+				"Worker name must be defined to use `Worker.scheduled()`"
+			);
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.scheduled(...args);
