@@ -31,7 +31,7 @@ There are four main properties of this class:
 - `tmpPath`: the temporary directory created for this instance.
 - `seed()`: used to write test files to the temporary directory.
 - `run()`: used to run simple Wrangler commands, such as creating a KV namespace. It returns a promise to the result of the command.
-- `runLongLived()`: used to run Wrangler commands that do not exit, such as `wrangler dev` and `wrangler tail`. It returns an object can be used to monitor and interact with the running command.
+- `runLongLived()`: used to run Wrangler commands that do not exit, such as `wrangler dev` and `wrangler tail`. It returns an object that can be used to monitor and interact with the running command.
 
 ### Example of simple command test
 
