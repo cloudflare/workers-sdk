@@ -1,17 +1,15 @@
-import shellac from "shellac";
+import { execSync } from "child_process";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
-// TODO(DEVX-1262): re-enable when we have set an API token with the proper AI permissions
 describe("switching runtimes", () => {
-	let run: typeof shellac;
+	let root: string;
 	beforeEach(async () => {
-		const root = await makeRoot();
+		root = await makeRoot();
 
-		run = shellac.in(root).env(process.env);
 		await seed(root, {
 			"wrangler.toml": dedent`
 					name = "dev-env-app"
@@ -116,11 +114,21 @@ describe("switching runtimes", () => {
 		});
 	});
 	it("can switch from local to remote, with first fetch returning remote", async () => {
-		const { stdout } = await run`$ node index.mjs local`;
+		const stdout = execSync(`node index.mjs local`, {
+			timeout: 20_000,
+			encoding: "utf-8",
+			cwd: root,
+			stdio: "pipe",
+		});
 		expect(stdout).toContain("Hello World remote runtime");
 	});
 	it("can switch from remote to local, with first fetch returning local", async () => {
-		const { stdout } = await run`$ node index.mjs remote`;
+		const stdout = execSync(`node index.mjs remote`, {
+			timeout: 20_000,
+			encoding: "utf-8",
+			cwd: root,
+			stdio: "pipe",
+		});
 		expect(stdout).toContain("Hello World local runtime");
 	});
 });

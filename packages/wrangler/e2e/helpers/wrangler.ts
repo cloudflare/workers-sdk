@@ -1,130 +1,73 @@
-import { spawn } from "node:child_process";
-import events from "node:events";
-import rl from "node:readline";
-import { PassThrough } from "node:stream";
-import { ReadableStream } from "node:stream/web";
+import assert from "node:assert";
 import { pathToFileURL } from "node:url";
-import psList from "ps-list";
-import { readUntil } from "./read-until";
-import type { ChildProcess } from "node:child_process";
+import { LongLivedCommand, runCommand } from "./command";
+import type { CommandOptions } from "./command";
 
 // Replace all backslashes with forward slashes to ensure that their use
-// in shellac scripts doesn't break.
+// in scripts doesn't break.
 export const WRANGLER = process.env.WRANGLER?.replaceAll("\\", "/") ?? "";
 export const WRANGLER_IMPORT = pathToFileURL(
 	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ?? ""
 );
 
-export function runWrangler(
+export type WranglerCommandOptions = CommandOptions & { debug?: boolean };
+
+export async function runWrangler(
 	wranglerCommand: string,
-	options: { cwd?: string; env?: typeof process.env; debug?: boolean } = {},
-	// The caller is responsible for cleaning up Wrangler processes. `runWrangler` will register started processes in this Set
-	cleanup?: Set<ChildProcess>
+	{ cwd, env = process.env, debug, timeout }: WranglerCommandOptions = {}
 ) {
-	if (options.debug) {
-		process.env.WRANGLER_LOG = "debug";
+	if (debug) {
+		env = { ...env, WRANGLER_LOG: "debug" };
 	}
-	// Enforce a `wrangler` prefix to make commands clearer to read
-	if (!wranglerCommand.startsWith("wrangler ")) {
-		throw new Error(
-			"Commands must start with `wrangler` (e.g. `wrangler dev`)"
+	return runCommand(getWranglerCommand(wranglerCommand), { cwd, env, timeout });
+}
+
+export function runWranglerLongLived(
+	wranglerCommand: string,
+	options: WranglerCommandOptions = {}
+) {
+	return new WranglerLongLivedCommand(wranglerCommand, options);
+}
+
+export class WranglerLongLivedCommand extends LongLivedCommand {
+	constructor(wranglerCommand: string, options: WranglerCommandOptions = {}) {
+		super(getWranglerCommand(wranglerCommand), getOptions(options));
+	}
+
+	async waitForReady(): Promise<{ url: string }> {
+		const match = await this.readUntil(/Ready on (?<url>https?:\/\/.*)/, 5_000);
+		return match.groups as { url: string };
+	}
+
+	async waitForReload(): Promise<void> {
+		await this.readUntil(
+			/Detected changes, restarted server|Reloading local server\.\.\./
 		);
 	}
-	const runnableCommand = `${WRANGLER} ${wranglerCommand.slice(
-		"wrangler ".length
-	)}`;
-	const wranglerProcess = spawn(runnableCommand, [], {
-		shell: true,
-		cwd: options.cwd,
-		stdio: "pipe",
-		env: options.env,
-	});
-	if (cleanup) {
-		cleanup.add(wranglerProcess);
+}
+
+function getWranglerCommand(command: string) {
+	// Enforce a `wrangler` prefix to make commands clearer to read
+	assert(
+		command.startsWith("wrangler "),
+		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
+			command
+	);
+	return `${WRANGLER} ${command.slice("wrangler ".length)}`;
+}
+
+function getOptions({
+	cwd,
+	env = process.env,
+	debug,
+	timeout,
+}: WranglerCommandOptions): CommandOptions {
+	if (debug) {
+		env = { ...env, WRANGLER_LOG: "debug" };
 	}
-	const output = new PassThrough();
-	wranglerProcess.stdout.pipe(output);
-	wranglerProcess.stderr.pipe(output);
-
-	const exitPromise = events.once(wranglerProcess, "exit");
-
-	const lineBuffer: string[] = [];
-
-	const lines = new ReadableStream<string>({
-		start(controller) {
-			const lineInterface = rl.createInterface(output);
-			lineInterface.on("line", (line) => {
-				// eslint-disable-next-line turbo/no-undeclared-env-vars
-				if (process.env.VITEST_MODE === "WATCH") {
-					console.log(line);
-				}
-				lineBuffer.push(line);
-				try {
-					controller.enqueue(line);
-				} catch {}
-			});
-			void exitPromise.then(() => controller.close());
-		},
-	});
-
 	return {
-		// Wait for changes in the output of this Wrangler process.
-		async readUntil(
-			regexp: RegExp,
-			timeout?: number
-		): Promise<RegExpMatchArray> {
-			return readUntil(lines, regexp, timeout);
-		},
-		// Return a snapshot of the output so far
-		get output() {
-			return lineBuffer.join("\n");
-		},
-		// This is a custom thenable—awaiting `runWrangler` will wait for the process to exit
-		async then(
-			resolve: (output: string) => void,
-			reject: (output: string) => void
-		) {
-			const [exitCode] = await exitPromise;
-			if (exitCode !== 0) {
-				lineBuffer.unshift(`Failed to run ${JSON.stringify(wranglerCommand)}:`);
-				reject(lineBuffer.join("\n"));
-			} else {
-				resolve(lineBuffer.join("\n"));
-			}
-		},
+		cwd,
+		env,
+		timeout,
 	};
-}
-
-export async function waitForReady(
-	worker: ReturnType<typeof runWrangler>
-): Promise<{ url: string }> {
-	const match = await worker.readUntil(/Ready on (?<url>https?:\/\/.*)/);
-	return match.groups as { url: string };
-}
-
-export async function waitForReload(
-	worker: ReturnType<typeof runWrangler>
-): Promise<void> {
-	await worker.readUntil(
-		/Detected changes, restarted server|Reloading local server\.\.\./
-	);
-}
-
-export async function killAllWranglerDev() {
-	// TODO: Figure out why hanging wrangler processes are sometimes left around
-	// In the meantime, let's forcefully kill all `wrangler dev` and `workerd` processes we can find before each test
-	const processes = await psList({ all: false });
-	const wranglerDev = processes.filter(
-		(p) =>
-			(p.cmd?.includes("node") &&
-				p.cmd.includes("wrangler-dist") &&
-				p.cmd.includes("cli.js") &&
-				p.cmd.includes("dev")) ||
-			p.name === "workerd"
-	);
-
-	for (const proc of wranglerDev) {
-		console.log("killing hanging process", proc.name, proc.cmd);
-		process.kill(proc.pid, 9);
-	}
 }
