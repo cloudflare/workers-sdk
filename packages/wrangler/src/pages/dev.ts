@@ -341,6 +341,10 @@ export const Handler = async (args: PagesDevArguments) => {
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
 	);
 
+	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+	// There is no sane way to get the true value out of yargs, so here we are.
+	const enableBundling = args.bundle ?? !args.noBundle;
+
 	const singleWorkerScriptPath = args.scriptPath ?? DEFAULT_SCRIPT_PATH;
 	const workerScriptPath =
 		directory !== undefined
@@ -349,14 +353,57 @@ export const Handler = async (args: PagesDevArguments) => {
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
-	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
-	// There is no sane way to get the true value out of yargs, so here we are.
-	const enableBundling = args.bundle ?? !args.noBundle;
-
 	const functionsDirectory = "./functions";
-	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
 
+	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
+	/*
+	 * to be able to switch between Pages project types (Functions | Advanced
+	 * Mode | _worker.js directory | assets only) in watch mode, we need to
+	 * ensure that we pass the same compiled worker script path down to
+	 * `unstable_dev`, which then passes it further to a different esbuild
+	 * build process as an entrypoint
+	 *
+	 * this works for compiled Workers, but not for things like _worker.js
+	 * with `--no-bundle` flag set, which would need to pass the _worker.js
+	 * file itself to `unstable_dev`
+	 *
+	 * also, haven't tested assets-only and _worker.js directory
+	 */
+	let compiledWorkerScriptPath = join(
+		getPagesTmpDir(),
+		`./compiledWorker-${Math.random()}.mjs`
+	);
 	let scriptPath = "";
+
+	const buildPagesWithWorkerJs = async () => {
+		if (enableBundling) {
+			scriptPath = compiledWorkerScriptPath;
+			try {
+				await buildRawWorker({
+					workerScriptPath: usingWorkerDirectory
+						? join(workerScriptPath, "index.js")
+						: workerScriptPath,
+					outfile: scriptPath,
+					directory: directory ?? ".",
+					nodejsCompatMode,
+					local: true,
+					sourcemap: true,
+					watch: false,
+					onEnd: () => scriptReadyResolve(),
+					defineNavigatorUserAgent,
+				});
+				return scriptPath;
+			} catch (e: unknown) {
+				logger.warn("Failed to bundle _worker.js.", e);
+			}
+		} else {
+			scriptPath = workerScriptPath;
+			await checkRawWorker(workerScriptPath, nodejsCompatMode, () =>
+				scriptReadyResolve()
+			);
+			return scriptPath;
+		}
+	};
 
 	const nodejsCompatMode = validateNodeCompat({
 		legacyNodeCompat: args.nodeCompat,
@@ -402,43 +449,8 @@ export const Handler = async (args: PagesDevArguments) => {
 			}
 		});
 	} else if (usingWorkerScript) {
-		scriptPath = workerScriptPath;
-		let runBuild = async () => {
-			await checkRawWorker(workerScriptPath, nodejsCompatMode, () =>
-				scriptReadyResolve()
-			);
-		};
+		scriptPath = (await buildPagesWithWorkerJs()) ?? scriptPath;
 
-		if (enableBundling) {
-			// We want to actually run the `_worker.js` script through the bundler
-			// So update the final path to the script that will be uploaded and
-			// change the `runBuild()` function to bundle the `_worker.js`.
-			scriptPath = join(
-				getPagesTmpDir(),
-				`./bundledWorker-${Math.random()}.mjs`
-			);
-			runBuild = async () => {
-				try {
-					await buildRawWorker({
-						workerScriptPath: usingWorkerDirectory
-							? join(workerScriptPath, "index.js")
-							: workerScriptPath,
-						outfile: scriptPath,
-						directory: directory ?? ".",
-						nodejsCompatMode,
-						local: true,
-						sourcemap: true,
-						watch: false,
-						onEnd: () => scriptReadyResolve(),
-						defineNavigatorUserAgent,
-					});
-				} catch (e: unknown) {
-					logger.warn("Failed to bundle _worker.js.", e);
-				}
-			};
-		}
-
-		await runBuild();
 		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
@@ -446,14 +458,12 @@ export const Handler = async (args: PagesDevArguments) => {
 			if (event === "unlink") {
 				return;
 			}
-			await runBuild();
+			scriptPath = (await buildPagesWithWorkerJs()) ?? scriptPath;
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		scriptPath = join(
-			getPagesTmpDir(),
-			`./functionsWorker-${Math.random()}.mjs`
-		);
+		scriptPath = compiledWorkerScriptPath;
+
 		const routesModule = join(
 			getPagesTmpDir(),
 			`./functionsRoutes-${Math.random()}.mjs`
@@ -642,6 +652,30 @@ export const Handler = async (args: PagesDevArguments) => {
 				}
 			});
 		}
+	}
+
+	if (directory) {
+		watch([directory], {
+			persistent: true,
+			ignoreInitial: true,
+		})
+			.on("add", async (path) => {
+				if (path.includes("/_worker.js")) {
+					await buildPagesWithWorkerJs();
+					scriptEntrypoint = scriptPath;
+				}
+			})
+			.on("unlink", (path) => {
+				if (path.includes("/_worker.js")) {
+					if (usingWorkerDirectory) {
+						return;
+					}
+
+					if (usingFunctions) {
+						return;
+					}
+				}
+			});
 	}
 
 	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
