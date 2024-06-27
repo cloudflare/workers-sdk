@@ -19,7 +19,7 @@
 		"miniflare": "workspace:*",
 		"undici": "^5.28.4",
 		"wrangler": "workspace:*",
-		"ws": "^8.14.2"
+		"ws": "^8.17.1"
 	},
 	"volta": {
 		"extends": "../../package.json"
