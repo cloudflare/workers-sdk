@@ -168,7 +168,7 @@ export async function startWorkerRegistry(
 			persistent: true,
 		}).on("all", async () => {
 			await loadWorkerDefinitions();
-			listener?.(globalWorkers);
+			listener?.({ ...globalWorkers });
 		});
 		return;
 	}
@@ -305,7 +305,7 @@ export async function getRegisteredWorkers(): Promise<
 > {
 	if (getFlag("FILE_BASED_REGISTRY")) {
 		globalWorkers = await loadWorkerDefinitions();
-		return globalWorkers;
+		return { ...globalWorkers };
 	}
 
 	try {
