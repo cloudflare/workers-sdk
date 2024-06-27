@@ -46,6 +46,7 @@
 		"acorn-walk": "^8.2.0",
 		"capnp-ts": "^0.7.0",
 		"exit-hook": "^2.2.1",
+		"find-up": "^6.3.0",
 		"glob-to-regexp": "^0.4.1",
 		"stoppable": "^1.1.0",
 		"undici": "^5.28.4",
