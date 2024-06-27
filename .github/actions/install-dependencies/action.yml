@@ -40,3 +40,7 @@ runs:
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
+
+    - name: Turn off turbo telemetry
+      shell: bash
+      run: npx turbo telemetry disable
