@@ -226,7 +226,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		 * to create that project for them
 		 */
 		if (projectName !== undefined && !isExistingProject) {
-			const message = `The project you specified does not exist: "${projectName}". Would you like to create it?"`;
+			const message = `The project you specified does not exist: "${projectName}". Would you like to create it?`;
 			const items: NewOrExistingItem[] = [
 				{
 					key: "new",
