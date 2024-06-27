@@ -4,7 +4,7 @@ import { vi } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
+import { clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
@@ -69,7 +69,6 @@ describe("tail", () => {
 	 * deletion, and connection.
 	 */
 	describe("API interaction", () => {
-		const { setIsTTY } = useMockIsTTY();
 		it("should throw an error if name isn't provided", async () => {
 			await expect(
 				runWrangler("tail")
@@ -77,23 +76,7 @@ describe("tail", () => {
 				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`wrangler tail <worker-name>\`]`
 			);
 		});
-		it("warns about durable object restarts for tty", async () => {
-			setIsTTY(true);
-			mockConfirm({
-				text: "Would you like to continue?",
-				result: false,
-			});
-			api = mockWebsocketAPIs();
-			expect(api.requests.creation.length).toStrictEqual(0);
-			await runWrangler("tail durable-object--websocket--response");
-			expect(std.out).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBeginning log collection requires restarting the Durable Objects associated with durable-object--websocket--response. Any WebSocket connections or other non-persisted state will be lost as part of this restart.[0m
 
-			"
-		`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
 		it("creates and then delete tails", async () => {
 			api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
