@@ -46,7 +46,7 @@
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^5.0.1",
 		"turbo": "^1.10.14",
-		"typescript": "^5.4.5",
+		"typescript": "^5.5.2",
 		"vite": "^5.0.12",
 		"vitest": "^1.2.2"
 	},
@@ -72,7 +72,7 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"capnpc-ts>typescript": "5.4.5"
+			"capnpc-ts>typescript": "5.5.2"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",

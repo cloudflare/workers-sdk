@@ -146,9 +146,10 @@ export async function copyWorkerVersionWithNewSecrets({
 	);
 
 	// Filter out secrets because we're gonna inherit them
-	const bindings = versionInfo.resources.bindings.filter(
-		(binding) => binding.type !== "secret_text"
-	);
+	const bindings: WorkerMetadataBinding[] =
+		versionInfo.resources.bindings.filter(
+			(binding) => binding.type !== "secret_text"
+		);
 
 	// We cannot upload a DO with a namespace_id so remove it
 	for (const binding of bindings) {
