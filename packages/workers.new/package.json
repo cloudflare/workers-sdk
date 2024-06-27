@@ -6,13 +6,16 @@
 		"check:lint": "eslint . --max-warnings=0",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=$WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$WORKERS_NEW_CLOUDFLARE_API_TOKEN wrangler deploy",
 		"dev": "wrangler dev",
-		"test": "vitest run",
-		"test:ci": "vitest run"
+		"test": "vitest -c tests/vitest.config.mts",
+		"test:ci": "vitest -c tests/vitest.config.mts"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240620.0",
+		"@types/node": "20.8.3",
+		"miniflare": "workspace:*",
+		"typescript": "^5.4.5",
+		"vitest": "1.5.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

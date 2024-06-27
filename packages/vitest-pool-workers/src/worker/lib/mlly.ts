@@ -1,4 +1,4 @@
-function isObject(value: unknown) {
+function isObject(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object";
 }
 
@@ -9,7 +9,11 @@ export function resolvePathSync() {
 // https://github.com/unjs/mlly/blob/71563c22ec7dbf25672d46bc679619dbd65e79d2/src/cjs.ts#L34
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function interopDefault(sourceModule: any): any {
-	if (!isObject(sourceModule) || !("default" in sourceModule)) {
+	if (
+		!isObject(sourceModule) ||
+		!("default" in sourceModule) ||
+		!isObject(sourceModule.default)
+	) {
 		return sourceModule;
 	}
 	const newModule = sourceModule.default;

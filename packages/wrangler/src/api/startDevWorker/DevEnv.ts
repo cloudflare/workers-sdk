@@ -8,7 +8,7 @@ import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { DevWorker, StartDevWorkerOptions } from "./types";
+import type { StartDevWorkerOptions, Worker } from "./types";
 
 export class DevEnv extends EventEmitter {
 	config: ConfigController;
@@ -16,10 +16,10 @@ export class DevEnv extends EventEmitter {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	startWorker(_options: StartDevWorkerOptions): DevWorker {
+	startWorker(options: StartDevWorkerOptions): Worker {
 		const worker = createWorkerObject(this);
-		// TODO: uncomment this when dev-env fixture tests are no longer faked
-		// this.config.set(options);
+
+		this.config.set(options);
 
 		return worker;
 	}
@@ -144,12 +144,19 @@ export class DevEnv extends EventEmitter {
 	}
 }
 
-export function createWorkerObject(devEnv: DevEnv): DevWorker {
+export function createWorkerObject(devEnv: DevEnv): Worker {
 	return {
 		get ready() {
 			return devEnv.proxy.ready.promise.then(() => undefined);
 		},
+		get url() {
+			return devEnv.proxy.ready.promise.then((ev) => ev.url);
+		},
+		get inspectorUrl() {
+			return devEnv.proxy.ready.promise.then((ev) => ev.inspectorUrl);
+		},
 		get config() {
+			assert(devEnv.config.latestConfig);
 			return devEnv.config.latestConfig;
 		},
 		setConfig(config) {
@@ -164,13 +171,23 @@ export function createWorkerObject(devEnv: DevEnv): DevWorker {
 
 			return proxyWorker.dispatchFetch(...args);
 		},
-		async queue(..._args) {
-			// const { worker } = await devEnv.proxy.ready;
-			// return worker.queue(...args);
+		async queue(...args) {
+			assert(
+				this.config.name,
+				"Worker name must be defined to use `Worker.queue()`"
+			);
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
+			const w = await proxyWorker.getWorker(this.config.name);
+			return w.queue(...args);
 		},
-		async scheduled(..._args) {
-			// const { worker } = await devEnv.proxy.ready;
-			// return worker.scheduled(...args);
+		async scheduled(...args) {
+			assert(
+				this.config.name,
+				"Worker name must be defined to use `Worker.scheduled()`"
+			);
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
+			const w = await proxyWorker.getWorker(this.config.name);
+			return w.scheduled(...args);
 		},
 		async dispose() {
 			await devEnv.teardown();
