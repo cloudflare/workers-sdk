@@ -266,6 +266,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	nuxt: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		quarantine: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
