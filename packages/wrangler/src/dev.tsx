@@ -409,7 +409,7 @@ async function updateDevEnvRegistry(
 	devEnv: DevEnv,
 	registry: WorkerRegistry | undefined
 ) {
-	const boundWorkers = await getBoundRegisteredWorkers(
+	let boundWorkers = await getBoundRegisteredWorkers(
 		{
 			name: devEnv.config.latestConfig?.name,
 			services: extractBindingsOfType(
@@ -425,6 +425,11 @@ async function updateDevEnvRegistry(
 		},
 		registry
 	);
+
+	// Normalise an empty registry to undefined
+	if (boundWorkers && Object.keys(boundWorkers).length === 0) {
+		boundWorkers = undefined;
+	}
 
 	// Make sure we're not patching an empty config
 	if (!devEnv.config.latestConfig) {

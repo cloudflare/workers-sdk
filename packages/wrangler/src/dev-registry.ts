@@ -69,17 +69,25 @@ async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 	const newWorkers = new Set<string>();
 	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
 	for (const workerName of workerDefinitions) {
-		const file = await readFile(
-			path.join(DEV_REGISTRY_PATH, workerName),
-			"utf8"
-		);
-		const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
-		// Cleanup old workers
-		if (stats.mtime < subMinutes(new Date(), 10)) {
-			await unregisterWorker(workerName);
-		} else {
-			globalWorkers[workerName] = JSON.parse(file);
-			newWorkers.add(workerName);
+		try {
+			const file = await readFile(
+				path.join(DEV_REGISTRY_PATH, workerName),
+				"utf8"
+			);
+			const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
+			// Cleanup old workers
+			if (stats.mtime < subMinutes(new Date(), 10)) {
+				await unregisterWorker(workerName);
+			} else {
+				globalWorkers[workerName] = JSON.parse(file);
+				newWorkers.add(workerName);
+			}
+		} catch (e) {
+			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel Wrangler process
+			logger.debug(
+				"Error while loading worker definition from the registry",
+				e
+			);
 		}
 	}
 
@@ -344,14 +352,10 @@ export async function getBoundRegisteredWorkers(
 	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
 
 	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
-		return undefined;
+		return {};
 	}
 	const workerDefinitions =
 		existingWorkerDefinitions ?? (await getRegisteredWorkers());
-
-	if (workerDefinitions === undefined) {
-		return undefined;
-	}
 
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
