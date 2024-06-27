@@ -1,14 +1,18 @@
 import assert from "node:assert";
+import events from "node:events";
 import path from "node:path";
+import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import { DevEnv } from "./api";
+import { extractBindingsOfType } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
-import Dev from "./dev/dev";
+import { getBoundRegisteredWorkers } from "./dev-registry";
+import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 import { maybeRegisterLocalWorker } from "./dev/local";
@@ -39,6 +43,7 @@ import type {
 	Rule,
 } from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
+import type { WorkerRegistry } from "./dev-registry";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -400,6 +405,54 @@ export type StartDevOptions = DevArguments &
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
 	};
 
+async function updateDevEnvRegistry(
+	devEnv: DevEnv,
+	registry: WorkerRegistry | undefined
+) {
+	let boundWorkers = await getBoundRegisteredWorkers(
+		{
+			name: devEnv.config.latestConfig?.name,
+			services: extractBindingsOfType(
+				"service",
+				devEnv.config.latestConfig?.bindings
+			),
+			durableObjects: {
+				bindings: extractBindingsOfType(
+					"durable_object_namespace",
+					devEnv.config.latestConfig?.bindings
+				),
+			},
+		},
+		registry
+	);
+
+	// Normalise an empty registry to undefined
+	if (boundWorkers && Object.keys(boundWorkers).length === 0) {
+		boundWorkers = undefined;
+	}
+
+	// Make sure we're not patching an empty config
+	if (!devEnv.config.latestConfig) {
+		await events.once(devEnv, "configUpdate");
+	}
+
+	if (
+		util.isDeepStrictEqual(
+			boundWorkers,
+			devEnv.config.latestConfig?.dev?.registry
+		)
+	) {
+		return;
+	}
+
+	devEnv.config.patch({
+		dev: {
+			...devEnv.config.latestConfig?.dev,
+			registry: boundWorkers,
+		},
+	});
+}
+
 export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
@@ -472,6 +525,13 @@ export async function startDev(args: StartDevOptions) {
 		const devEnv = new DevEnv();
 
 		if (args.experimentalDevEnv) {
+			const teardownRegistryPromise = devRegistry((registry) =>
+				updateDevEnvRegistry(devEnv, registry)
+			);
+			devEnv.once("teardown", async () => {
+				const teardownRegistry = await teardownRegistryPromise;
+				await teardownRegistry(devEnv.config.latestConfig?.name);
+			});
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
 			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
 				if (process.send) {
@@ -643,6 +703,13 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const devEnv = new DevEnv();
 	if (!args.disableDevRegistry && args.experimentalDevEnv) {
+		const teardownRegistryPromise = devRegistry((registry) =>
+			updateDevEnvRegistry(devEnv, registry)
+		);
+		devEnv.once("teardown", async () => {
+			const teardownRegistry = await teardownRegistryPromise;
+			await teardownRegistry(devEnv.config.latestConfig?.name);
+		});
 		devEnv.runtimes.forEach((runtime) => {
 			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
 				if (!reloadEvent.config.dev?.remote) {

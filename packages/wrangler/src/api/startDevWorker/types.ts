@@ -25,7 +25,7 @@ import type {
 	CfUnsafe,
 	CfVectorize,
 } from "../../deployment-bundle/worker";
-import type { WorkerDefinition } from "../../dev-registry";
+import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
@@ -151,8 +151,8 @@ export interface StartDevWorkerOptions {
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
 
-		/** Gets a fetcher to a specific worker, used for multi-worker development */
-		getRegisteredWorker?(name: string): WorkerDefinition | undefined;
+		/** Describes the registry of other Workers running locally */
+		registry?: WorkerRegistry;
 
 		testScheduled?: boolean;
 	};

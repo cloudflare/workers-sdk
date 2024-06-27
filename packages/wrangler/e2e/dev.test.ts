@@ -205,18 +205,21 @@ describe.each([
 	});
 });
 
-describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --x-dev-env" }])(
-	"dev registry $cmd",
-	({ cmd }) => {
-		let a: string;
-		let b: string;
-		let helper: WranglerE2ETestHelper;
+describe.each([
+	{ cmd: "wrangler dev" },
+	{ cmd: "wrangler dev --x-dev-env" },
+	{ cmd: "wrangler dev --x-registry" },
+	{ cmd: "wrangler dev --x-dev-env --x-registry" },
+])("dev registry $cmd", ({ cmd }) => {
+	let a: string;
+	let b: string;
+	let helper: WranglerE2ETestHelper;
 
-		beforeEach(async () => {
-			helper = new WranglerE2ETestHelper();
-			a = await makeRoot();
-			await baseSeed(a, {
-				"wrangler.toml": dedent`
+	beforeEach(async () => {
+		helper = new WranglerE2ETestHelper();
+		a = await makeRoot();
+		await baseSeed(a, {
+			"wrangler.toml": dedent`
 					name = "a"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
@@ -225,86 +228,83 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --x-dev-env" }])(
 					binding = "BEE"
 					service = 'b'
 			`,
-				"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent/* javascript */ `
 				export default {
 					fetch(req, env) {
 						return env.BEE.fetch(req);
 					},
 				};
 				`,
-				"package.json": dedent`
+			"package.json": dedent`
 					{
 						"name": "a",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-			});
+		});
 
-			b = await makeRoot();
-			await baseSeed(b, {
-				"wrangler.toml": dedent`
+		b = await makeRoot();
+		await baseSeed(b, {
+			"wrangler.toml": dedent`
 					name = "b"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
 			`,
-				"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent/* javascript */ `
 				export default{
 					fetch() {
 						return new Response("hello world");
 					},
 				};
 			`,
-				"package.json": dedent`
+			"package.json": dedent`
 					{
 						"name": "b",
 						"version": "0.0.0",
 						"private": true
 					}
 					`,
-			});
 		});
+	});
 
-		it("can fetch b", async () => {
-			const worker = helper.runLongLived(cmd, { cwd: b });
+	it("can fetch b", async () => {
+		const worker = helper.runLongLived(cmd, { cwd: b });
 
-			const { url } = await worker.waitForReady();
+		const { url } = await worker.waitForReady();
 
-			await expect(fetch(url).then((r) => r.text())).resolves.toBe(
-				"hello world"
-			);
-		});
+		await expect(fetch(url).then((r) => r.text())).resolves.toBe("hello world");
+	});
 
-		it("can fetch b through a (start b, start a)", async () => {
-			const workerB = helper.runLongLived(cmd, { cwd: b });
-			// We don't need b's URL, but ensure that b starts up before a
-			await workerB.waitForReady();
+	it("can fetch b through a (start b, start a)", async () => {
+		const workerB = helper.runLongLived(cmd, { cwd: b });
+		// We don't need b's URL, but ensure that b starts up before a
+		await workerB.waitForReady();
 
-			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady();
+		const workerA = helper.runLongLived(cmd, { cwd: a });
+		const { url } = await workerA.waitForReady();
 
-			await workerA.waitForReload();
-			// Give the dev registry some time to settle
-			await setTimeout(500);
+		await workerA.waitForReload();
+		// Give the dev registry some time to settle
+		await setTimeout(500);
 
-			await expect(fetchText(url)).resolves.toBe("hello world");
-		});
+		await expect(fetchText(url)).resolves.toBe("hello world");
+	});
 
-		it("can fetch b through a (start a, start b)", async () => {
-			const workerA = helper.runLongLived(cmd, { cwd: a });
-			const { url } = await workerA.waitForReady();
+	it("can fetch b through a (start a, start b)", async () => {
+		const workerA = helper.runLongLived(cmd, { cwd: a });
+		const { url } = await workerA.waitForReady();
 
-			const workerB = helper.runLongLived(cmd, { cwd: b });
-			await workerB.waitForReady();
+		const workerB = helper.runLongLived(cmd, { cwd: b });
+		await workerB.waitForReady();
 
-			await workerA.waitForReload();
-			// Give the dev registry some time to settle
-			await setTimeout(500);
+		await workerA.waitForReload();
+		// Give the dev registry some time to settle
+		await setTimeout(500);
 
-			await expect(fetchText(url)).resolves.toBe("hello world");
-		});
-	}
-);
+		await expect(fetchText(url)).resolves.toBe("hello world");
+	});
+});
 
 describe("hyperdrive dev tests", () => {
 	let server: nodeNet.Server;

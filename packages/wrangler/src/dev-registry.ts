@@ -21,6 +21,7 @@ import { version as wranglerVersion } from "../package.json";
 import { getFlag } from "./experimental-flags";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
+import type { Binding } from "./api";
 import type { Config } from "./config";
 import type { HttpTerminator } from "http-terminator";
 import type { Server } from "node:http";
@@ -68,17 +69,25 @@ async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
 	const newWorkers = new Set<string>();
 	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
 	for (const workerName of workerDefinitions) {
-		const file = await readFile(
-			path.join(DEV_REGISTRY_PATH, workerName),
-			"utf8"
-		);
-		const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
-		// Cleanup old workers
-		if (stats.mtime < subMinutes(new Date(), 10)) {
-			await unregisterWorker(workerName);
-		} else {
-			globalWorkers[workerName] = JSON.parse(file);
-			newWorkers.add(workerName);
+		try {
+			const file = await readFile(
+				path.join(DEV_REGISTRY_PATH, workerName),
+				"utf8"
+			);
+			const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
+			// Cleanup old workers
+			if (stats.mtime < subMinutes(new Date(), 10)) {
+				await unregisterWorker(workerName);
+			} else {
+				globalWorkers[workerName] = JSON.parse(file);
+				newWorkers.add(workerName);
+			}
+		} catch (e) {
+			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel Wrangler process
+			logger.debug(
+				"Error while loading worker definition from the registry",
+				e
+			);
 		}
 	}
 
@@ -151,12 +160,15 @@ export async function startWorkerRegistryServer(port: number) {
  * that exposes endpoints for registering and unregistering
  * services, as well as getting the state of the registry.
  */
-export async function startWorkerRegistry() {
+export async function startWorkerRegistry(
+	listener?: (registry: WorkerRegistry | undefined) => void
+) {
 	if (getFlag("FILE_BASED_REGISTRY")) {
 		globalWatcher ??= watch(DEV_REGISTRY_PATH, {
 			persistent: true,
 		}).on("all", async () => {
 			await loadWorkerDefinitions();
+			listener?.({ ...globalWorkers });
 		});
 		return;
 	}
@@ -293,7 +305,7 @@ export async function getRegisteredWorkers(): Promise<
 > {
 	if (getFlag("FILE_BASED_REGISTRY")) {
 		globalWorkers = await loadWorkerDefinitions();
-		return globalWorkers;
+		return { ...globalWorkers };
 	}
 
 	try {
@@ -314,15 +326,24 @@ export async function getRegisteredWorkers(): Promise<
  * a function that takes your serviceNames and durableObjectNames and returns a
  * list of the running workers that we're bound to
  */
-export async function getBoundRegisteredWorkers({
-	name,
-	services,
-	durableObjects,
-}: {
-	name: string | undefined;
-	services: Config["services"] | undefined;
-	durableObjects: Config["durable_objects"] | undefined;
-}) {
+export async function getBoundRegisteredWorkers(
+	{
+		name,
+		services,
+		durableObjects,
+	}: {
+		name: string | undefined;
+		services:
+			| Config["services"]
+			| Extract<Binding, { type: "service" }>[]
+			| undefined;
+		durableObjects:
+			| Config["durable_objects"]
+			| { bindings: Extract<Binding, { type: "durable_object_namespace" }>[] }
+			| undefined;
+	},
+	existingWorkerDefinitions?: WorkerRegistry | undefined
+): Promise<WorkerRegistry | undefined> {
 	const serviceNames = (services || []).map(
 		(serviceBinding) => serviceBinding.service
 	);
@@ -333,7 +354,9 @@ export async function getBoundRegisteredWorkers({
 	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
 		return {};
 	}
-	const workerDefinitions = await getRegisteredWorkers();
+	const workerDefinitions =
+		existingWorkerDefinitions ?? (await getRegisteredWorkers());
+
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
 			([key, _value]) =>
