@@ -184,10 +184,11 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		if (willInstantiateMiniflareInstance) {
 			void Promise.all([
 				proxyWorker.ready,
+				proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
 				this.reconnectInspectorProxyWorker(),
 			])
-				.then(() => {
-					this.emitReadyEvent(proxyWorker);
+				.then(([url, inspectorUrl]) => {
+					this.emitReadyEvent(proxyWorker, url, inspectorUrl);
 				})
 				.catch((error) => {
 					this.emitErrorEvent(
@@ -498,10 +499,12 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	//   Event Dispatchers
 	// *********************
 
-	emitReadyEvent(proxyWorker: Miniflare) {
+	emitReadyEvent(proxyWorker: Miniflare, url: URL, inspectorUrl: URL) {
 		const data: ReadyEvent = {
 			type: "ready",
 			proxyWorker,
+			url,
+			inspectorUrl,
 		};
 
 		this.emit("ready", data);

@@ -129,30 +129,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/dev-env:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
-      '@types/ws':
-        specifier: ^8.5.7
-        version: 8.5.9
-      get-port:
-        specifier: ^7.0.0
-        version: 7.0.0
-      miniflare:
-        specifier: workspace:*
-        version: link:../../packages/miniflare
-      undici:
-        specifier: ^5.28.4
-        version: 5.28.4
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-      ws:
-        specifier: ^8.17.1
-        version: 8.17.1
-
   fixtures/durable-objects-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
