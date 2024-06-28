@@ -24,7 +24,7 @@ import type WebSocket from "ws";
 
 vi.mock("ws", async (importOriginal) => {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	const realModule = await importOriginal<typeof import("ws")>();
+	const realModule = await importOriginal<typeof import("ws").default>();
 	const module = {
 		__esModule: true,
 	};
