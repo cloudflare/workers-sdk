@@ -1,6 +1,5 @@
 import { SELF } from "cloudflare:test";
 import { expect, it } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 it("responds with request body", async () => {
 	const response = await SELF.fetch("https://example.com/", {

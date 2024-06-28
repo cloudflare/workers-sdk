@@ -59,7 +59,7 @@ describe("Command Helpers", () => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-				`'foo/10 bar/20-baz/'`
+				`'foo/10 bar/20-baz/'`,
 			);
 		});
 
@@ -67,7 +67,7 @@ describe("Command Helpers", () => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-				`"foo/10 bar/20-baz/"`
+				`"foo/10 bar/20-baz/"`,
 			);
 		});
 	});

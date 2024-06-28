@@ -2,8 +2,6 @@ name: Tests + Checks
 
 on: pull_request
 
-env:
-  node-version: 16.18
 jobs:
   add-to-project:
     if: github.ref != 'refs/heads/changeset-release/main'
@@ -25,34 +23,21 @@ jobs:
     name: "Checks"
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-13]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v2
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
         with:
-          version: 8.8.0
-
-      - name: Use Node.js ${{ env.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.node-version }}
-          cache: "pnpm"
-
-      - name: "Configure turbo repo cache environment variables"
-        run: |
-          touch .env
-          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
-          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
-          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
-          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
-
-      - name: Install NPM Dependencies
-        run: pnpm install --frozen-lockfile
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Build
         run: pnpm run build
@@ -76,42 +61,35 @@ jobs:
     name: "Tests"
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-13]
         filter: ["./fixtures/*", "./packages/*", "./tools"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8.8.0
-      - name: Use Node.js ${{ env.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.node-version }}
-          cache: "pnpm"
 
-      - name: "Configure turbo repo cache environment variables"
-        run: |
-          touch .env
-          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
-          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
-          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
-          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
-
-      - name: Install NPM Dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Run tests
-        run: pnpm run test:ci --filter=${{ matrix.filter }}
+        run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ runner.os }}
+
+      - name: Run changeset version tests
+        run: node .github/changeset-version.test.js
 
       - name: Upload debug logs
         if: always()
@@ -120,5 +98,9 @@ jobs:
           name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
           path: ${{ runner.temp }}/wrangler-debug-logs/
 
-      - name: Run changeset version tests
-        run: node .github/changeset-version.test.js
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/test-report/

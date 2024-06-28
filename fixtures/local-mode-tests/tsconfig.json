@@ -9,7 +9,7 @@
 		"target": "esnext",
 		"strict": true,
 		"noEmit": true,
-		"types": ["@cloudflare/workers-types"],
+		"types": ["@cloudflare/workers-types", "node"],
 		"lib": ["esnext"],
 		"skipLibCheck": true
 	},

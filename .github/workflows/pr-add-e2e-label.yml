@@ -15,3 +15,4 @@ jobs:
       - uses: actions/labeler@v5
         with:
           configuration-path: .github/pr-add-e2e-label.config.yml
+          repo-token: ${{ secrets.GH_ACCESS_TOKEN }}

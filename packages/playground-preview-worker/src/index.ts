@@ -89,6 +89,7 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
+	// @ts-expect-error https://github.com/cloudflare/workerd/issues/2273
 	const setCookieHeader = responseHeaders.getSetCookie();
 	for (const cookie of setCookieHeader) {
 		rawHeaders.append("cf-ew-raw-set-cookie", cookie);
@@ -135,7 +136,7 @@ app.use("*", async (c, next) => {
 		"sentry",
 		setupSentry(
 			c.req.raw,
-			c.executionCtx,
+			c.executionCtx as ExecutionContext, // TODO: fix hono's types?
 			c.env.SENTRY_DSN,
 			c.env.SENTRY_ACCESS_CLIENT_ID,
 			c.env.SENTRY_ACCESS_CLIENT_SECRET
@@ -161,8 +162,9 @@ app.get(`${rootDomain}/`, async (c) => {
 	const origin = await fetch(c.req.url, c.req);
 	const mutable = new Response(origin.body, origin);
 	const setCookieHeader = cookified.headers.get("Set-Cookie");
-	if (setCookieHeader !== null)
+	if (setCookieHeader !== null) {
 		mutable.headers.set("Set-Cookie", setCookieHeader);
+	}
 
 	return mutable;
 });

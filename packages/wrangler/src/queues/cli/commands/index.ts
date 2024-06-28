@@ -24,7 +24,7 @@ export function queues(yargs: CommonYargsArgv) {
 
 	yargs.command(
 		"consumer",
-		"Configure Queue Consumers",
+		"Configure Queue consumers",
 		async (consumersYargs) => {
 			await consumers(consumersYargs);
 		}

@@ -1,16 +1,24 @@
+import assert from "node:assert";
+import events from "node:events";
 import path from "node:path";
+import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
-import React from "react";
+import { DevEnv } from "./api";
+import { extractBindingsOfType } from "./api/startDevWorker/utils";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import Dev from "./dev/dev";
+import { validateNodeCompat } from "./deployment-bundle/node-compat";
+import { getBoundRegisteredWorkers } from "./dev-registry";
+import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
+import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
+import { run } from "./experimental-flags";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
@@ -27,7 +35,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "./index";
-import type { ProxyData } from "./api";
+import type { ProxyData, ReadyEvent, ReloadCompleteEvent } from "./api";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -35,6 +43,7 @@ import type {
 	Rule,
 } from "./config/environment";
 import type { CfModule, CfWorkerInit } from "./deployment-bundle/worker";
+import type { WorkerRegistry } from "./dev-registry";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
@@ -42,6 +51,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
 import type { Json } from "miniflare";
+import type React from "react";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -287,12 +297,28 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Show interactive dev session  (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			})
+			.option("experimental-dev-env", {
+				alias: ["x-dev-env"],
+				type: "boolean",
+				describe:
+					"Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)",
+				default: false,
+			})
+			.option("experimental-registry", {
+				alias: ["x-registry"],
+				type: "boolean",
+				describe:
+					"Use the experimental file based dev registry for multi-worker development",
+				default: false,
+			})
 	);
 }
 
 type DevArguments = StrictYargsOptionsToInterface<typeof devOptions>;
 
 export async function devHandler(args: DevArguments) {
+	await printWranglerBanner();
+
 	if (isWebContainer()) {
 		logger.error(
 			`Oh no! 😟 You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
@@ -313,7 +339,13 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 
 	let watcher;
 	try {
-		const devInstance = await startDev(args);
+		const devInstance = await run(
+			{
+				DEV_ENV: args.experimentalDevEnv,
+				FILE_BASED_REGISTRY: args.experimentalRegistry,
+			},
+			() => startDev(args)
+		);
 		watcher = devInstance.watcher;
 		const { waitUntilExit } = devInstance.devReactElement;
 		await waitUntilExit();
@@ -371,8 +403,55 @@ export type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
-		updateCheck?: boolean;
 	};
+
+async function updateDevEnvRegistry(
+	devEnv: DevEnv,
+	registry: WorkerRegistry | undefined
+) {
+	let boundWorkers = await getBoundRegisteredWorkers(
+		{
+			name: devEnv.config.latestConfig?.name,
+			services: extractBindingsOfType(
+				"service",
+				devEnv.config.latestConfig?.bindings
+			),
+			durableObjects: {
+				bindings: extractBindingsOfType(
+					"durable_object_namespace",
+					devEnv.config.latestConfig?.bindings
+				),
+			},
+		},
+		registry
+	);
+
+	// Normalise an empty registry to undefined
+	if (boundWorkers && Object.keys(boundWorkers).length === 0) {
+		boundWorkers = undefined;
+	}
+
+	// Make sure we're not patching an empty config
+	if (!devEnv.config.latestConfig) {
+		await events.once(devEnv, "configUpdate");
+	}
+
+	if (
+		util.isDeepStrictEqual(
+			boundWorkers,
+			devEnv.config.latestConfig?.dev?.registry
+		)
+	) {
+		return;
+	}
+
+	devEnv.config.patch({
+		dev: {
+			...devEnv.config.latestConfig?.dev,
+			registry: boundWorkers,
+		},
+	});
+}
 
 export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
@@ -381,7 +460,7 @@ export async function startDev(args: StartDevOptions) {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
-		await printWranglerBanner(args.updateCheck);
+
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
@@ -415,8 +494,6 @@ export async function startDev(args: StartDevOptions) {
 
 		const {
 			entry,
-			legacyNodeCompat,
-			nodejsCompat,
 			upstreamProtocol,
 			host,
 			routes,
@@ -429,6 +506,13 @@ export async function startDev(args: StartDevOptions) {
 			additionalModules,
 		} = await validateDevServerSettings(args, config);
 
+		const nodejsCompatMode = validateNodeCompat({
+			legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+			compatibilityFlags:
+				args.compatibilityFlags ?? config.compatibility_flags ?? [],
+			noBundle: args.noBundle ?? config.no_bundle ?? false,
+		});
+
 		await metrics.sendMetricsEvent(
 			"run dev",
 			{
@@ -437,6 +521,52 @@ export async function startDev(args: StartDevOptions) {
 			},
 			{ sendMetrics: config.send_metrics, offline: !args.remote }
 		);
+
+		const devEnv = new DevEnv();
+
+		if (args.experimentalDevEnv) {
+			const teardownRegistryPromise = devRegistry((registry) =>
+				updateDevEnvRegistry(devEnv, registry)
+			);
+			devEnv.once("teardown", async () => {
+				const teardownRegistry = await teardownRegistryPromise;
+				await teardownRegistry(devEnv.config.latestConfig?.name);
+			});
+			// The ProxyWorker will have a stable host and port, so only listen for the first update
+			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
+				if (process.send) {
+					const url = await event.proxyWorker.ready;
+
+					process.send(
+						JSON.stringify({
+							event: "DEV_SERVER_READY",
+							ip: url.hostname,
+							port: parseInt(url.port),
+						})
+					);
+				}
+			});
+			if (!args.disableDevRegistry) {
+				devEnv.runtimes.forEach((runtime) => {
+					runtime.on(
+						"reloadComplete",
+						async (reloadEvent: ReloadCompleteEvent) => {
+							if (!reloadEvent.config.dev?.remote) {
+								assert(devEnv.proxy.proxyWorker);
+								const url = await devEnv.proxy.proxyWorker.ready;
+
+								await maybeRegisterLocalWorker(
+									url,
+									reloadEvent.config.name,
+									reloadEvent.proxyData.internalDurableObjects,
+									reloadEvent.proxyData.entrypointAddresses
+								);
+							}
+						}
+					);
+				});
+			}
+		}
 
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
@@ -459,8 +589,7 @@ export async function startDev(args: StartDevOptions) {
 					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
-					legacyNodeCompat={legacyNodeCompat}
-					nodejsCompat={nodejsCompat}
+					nodejsCompatMode={nodejsCompatMode}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
 					initialMode={args.remote ? "remote" : "local"}
@@ -512,6 +641,10 @@ export async function startDev(args: StartDevOptions) {
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args.testScheduled}
 					projectRoot={projectRoot}
+					experimentalDevEnv={args.experimentalDevEnv}
+					rawArgs={args}
+					rawConfig={configParam}
+					devEnv={devEnv}
 				/>
 			);
 		}
@@ -536,7 +669,6 @@ export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
 		logger.loggerLevel = args.logLevel;
 	}
-	await printWranglerBanner(args.updateCheck);
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
@@ -545,8 +677,6 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const {
 		entry,
-		legacyNodeCompat,
-		nodejsCompat,
 		upstreamProtocol,
 		host,
 		routes,
@@ -559,11 +689,43 @@ export async function startApiDev(args: StartDevOptions) {
 		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: args.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
+
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
 		{ local: !args.remote },
 		{ sendMetrics: config.send_metrics, offline: !args.remote }
 	);
+
+	const devEnv = new DevEnv();
+	if (!args.disableDevRegistry && args.experimentalDevEnv) {
+		const teardownRegistryPromise = devRegistry((registry) =>
+			updateDevEnvRegistry(devEnv, registry)
+		);
+		devEnv.once("teardown", async () => {
+			const teardownRegistry = await teardownRegistryPromise;
+			await teardownRegistry(devEnv.config.latestConfig?.name);
+		});
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (reloadEvent: ReloadCompleteEvent) => {
+				if (!reloadEvent.config.dev?.remote) {
+					assert(devEnv.proxy.proxyWorker);
+					const url = await devEnv.proxy.proxyWorker.ready;
+
+					await maybeRegisterLocalWorker(
+						url,
+						reloadEvent.config.name,
+						reloadEvent.proxyData.internalDurableObjects,
+						reloadEvent.proxyData.entrypointAddresses
+					);
+				}
+			});
+		});
+	}
 
 	// eslint-disable-next-line no-inner-declarations
 	async function getDevServer(configParam: Config) {
@@ -589,8 +751,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
-			legacyNodeCompat,
-			nodejsCompat,
+			nodejsCompatMode: nodejsCompatMode,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.remote ? "remote" : "local",
@@ -602,6 +763,7 @@ export async function startApiDev(args: StartDevOptions) {
 			httpsKeyPath: args.httpsKeyPath,
 			httpsCertPath: args.httpsCertPath,
 			localUpstream: args.localUpstream ?? host ?? getInferredHost(routes),
+			local: args.local ?? !args.remote,
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,
 			accountId:
@@ -633,16 +795,25 @@ export async function startApiDev(args: StartDevOptions) {
 			showInteractiveDevSession: args.showInteractiveDevSession,
 			forceLocal: args.forceLocal,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
-			local: !args.remote,
 			firstPartyWorker: configParam.first_party_worker,
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
 			disableDevRegistry: args.disableDevRegistry ?? false,
 			projectRoot,
+			experimentalDevEnv: args.experimentalDevEnv,
+			rawArgs: args,
+			rawConfig: configParam,
+			devEnv,
 		});
 	}
 
-	const devServer = await getDevServer(config);
+	const devServer = await run(
+		{
+			DEV_ENV: args.experimentalDevEnv,
+			FILE_BASED_REGISTRY: args.experimentalRegistry,
+		},
+		() => getDevServer(config)
+	);
 	if (!devServer) {
 		const error = new Error("Failed to start dev server.");
 		logger.error(error.message);
@@ -684,7 +855,12 @@ function maskVars(bindings: CfWorkerInit["bindings"], configParam: Config) {
 	return maskedVars;
 }
 
-async function getHostAndRoutes(args: StartDevOptions, config: Config) {
+async function getHostAndRoutes(
+	args: Pick<StartDevOptions, "host" | "routes">,
+	config: Pick<Config, "route" | "routes"> & {
+		dev: Pick<Config["dev"], "host">;
+	}
+) {
 	// TODO: if worker_dev = false and no routes, then error (only for dev)
 	// Compute zone info from the `host` and `route` args and config;
 	const host = args.host || config.dev.host;
@@ -695,7 +871,7 @@ async function getHostAndRoutes(args: StartDevOptions, config: Config) {
 }
 
 export function getInferredHost(routes: Route[] | undefined) {
-	if (routes) {
+	if (routes?.length) {
 		const firstRoute = routes[0];
 		const host = getHostFromRoute(firstRoute);
 
@@ -717,7 +893,7 @@ export function getInferredHost(routes: Route[] | undefined) {
 	}
 }
 
-async function validateDevServerSettings(
+export async function validateDevServerSettings(
 	args: StartDevOptions,
 	config: Config
 ) {
@@ -735,7 +911,9 @@ async function validateDevServerSettings(
 	// React/Ink and useEffect()s, which swallow the error and turn it into a logw. Because it's a non-recoverable user error,
 	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
 	// the error to be thrown where it will correctly exit the Wrangler process
-	if (args.remote) await getZoneIdForPreview(host, routes);
+	if (args.remote) {
+		await getZoneIdForPreview(host, routes);
+	}
 	const initialIp = args.ip || config.dev.ip;
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
@@ -796,21 +974,6 @@ async function validateDevServerSettings(
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const legacyNodeCompat = args.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-
-	const compatibilityFlags =
-		args.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-		);
-	}
 
 	if (args.experimentalEnableLocalPersistence) {
 		logger.warn(
@@ -830,8 +993,6 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		legacyNodeCompat,
-		nodejsCompat,
 		getLocalPort,
 		getInspectorPort,
 		getRuntimeInspectorPort,
@@ -844,7 +1005,10 @@ async function validateDevServerSettings(
 	};
 }
 
-function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
+export function getBindingsAndAssetPaths(
+	args: StartDevOptions,
+	configParam: Config
+) {
 	const cliVars = collectKeyValues(args.var);
 
 	// now log all available bindings into the terminal
@@ -874,7 +1038,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 					args.site,
 					args.siteInclude,
 					args.siteExclude
-			  );
+				);
 	return { assetPaths, bindings };
 }
 

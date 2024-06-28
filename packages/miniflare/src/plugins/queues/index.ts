@@ -1,10 +1,10 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
 import {
+	kVoid,
 	Service,
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
-	kVoid,
 } from "../../runtime";
 import {
 	QueueBindings,
@@ -14,16 +14,20 @@ import {
 } from "../../workers";
 import { getUserServiceName } from "../core";
 import {
-	Plugin,
-	SERVICE_LOOPBACK,
 	getMiniflareObjectBindings,
 	kProxyNodeBinding,
-	objectEntryWorker
+	objectEntryWorker,
+	Plugin,
+	SERVICE_LOOPBACK,
 } from "../shared";
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
-		.union([z.record(QueueProducerOptionsSchema), z.string().array(), z.record(z.string())])
+		.union([
+			z.record(QueueProducerOptionsSchema),
+			z.string().array(),
+			z.record(z.string()),
+		])
 		.optional(),
 	queueConsumers: z
 		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
@@ -118,19 +122,28 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 };
 
 function bindingEntries(
-	namespaces?: Record<string, { queueName: string, deliveryDelay?: number }> | string[] | Record<string, string>
+	namespaces?:
+		| Record<string, { queueName: string; deliveryDelay?: number }>
+		| string[]
+		| Record<string, string>
 ): [bindingName: string, id: string][] {
 	if (Array.isArray(namespaces)) {
 		return namespaces.map((bindingName) => [bindingName, bindingName]);
 	} else if (namespaces !== undefined) {
-		return Object.entries(namespaces).map(([name, opts]) => [name, typeof opts === 'string' ? opts : opts.queueName]);
+		return Object.entries(namespaces).map(([name, opts]) => [
+			name,
+			typeof opts === "string" ? opts : opts.queueName,
+		]);
 	} else {
 		return [];
 	}
 }
 
 function bindingKeys(
-	namespaces?: Record<string, { queueName: string, deliveryDelay?: number }> | string[] | Record<string, string>
+	namespaces?:
+		| Record<string, { queueName: string; deliveryDelay?: number }>
+		| string[]
+		| Record<string, string>
 ): string[] {
 	if (Array.isArray(namespaces)) {
 		return namespaces;

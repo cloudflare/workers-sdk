@@ -157,13 +157,25 @@ describe("getPlatformProxy - env", () => {
 	});
 
 	type EntrypointService = Service<
-		Omit<NamedEntrypoint, "getCounter"> & Rpc.WorkerEntrypointBranded
+		Omit<NamedEntrypoint, "getCounter" | "getHelloWorldFn" | "getHelloFn"> &
+			Rpc.WorkerEntrypointBranded
 	> & {
 		getCounter: () => Promise<
 			Promise<{
 				value: Promise<number>;
 				increment: (amount: number) => Promise<number>;
 			}>
+		>;
+		getHelloWorldFn: () => Promise<() => Promise<string>>;
+		getHelloFn: () => Promise<
+			(
+				greet: string,
+				name: string,
+				options?: {
+					suffix?: string;
+					capitalize?: boolean;
+				}
+			) => Promise<string>
 		>;
 	};
 
@@ -190,6 +202,24 @@ describe("getPlatformProxy - env", () => {
 			expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
 			expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
 			expect(await counter.value).toMatchInlineSnapshot(`12`);
+		});
+		it("can obtain and interact with returned functions", async () => {
+			const helloWorldFn = await rpc.getHelloWorldFn();
+			expect(helloWorldFn()).toEqual("Hello World!");
+
+			const helloFn = await rpc.getHelloFn();
+			expect(await helloFn("hi", "world")).toEqual("hi world");
+			expect(
+				await helloFn("hi", "world", {
+					capitalize: true,
+				})
+			).toEqual("HI WORLD");
+			expect(
+				await helloFn("Sup", "world", {
+					capitalize: true,
+					suffix: "?!",
+				})
+			).toEqual("SUP WORLD?!");
 		});
 	});
 
@@ -341,6 +371,7 @@ async function startWorkers(): Promise<UnstableDevWorker[]> {
 			const workerPath = path.join(workersDirPath, workerName);
 			return unstable_dev(path.join(workerPath, "index.ts"), {
 				config: path.join(workerPath, "wrangler.toml"),
+				ip: "127.0.0.1",
 			});
 		})
 	);

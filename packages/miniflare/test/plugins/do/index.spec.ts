@@ -5,11 +5,11 @@ import { setTimeout } from "timers/promises";
 import test from "ava";
 import {
 	DeferredPromise,
+	kUnsafeEphemeralUniqueKey,
 	MessageEvent,
 	Miniflare,
 	MiniflareOptions,
 	RequestInit,
-	kUnsafeEphemeralUniqueKey,
 } from "miniflare";
 import { useTmp } from "../../test-shared";
 

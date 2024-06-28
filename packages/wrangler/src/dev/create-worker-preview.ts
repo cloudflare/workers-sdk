@@ -243,7 +243,7 @@ async function createPreviewToken(
 		? {
 				routes: ctx.routes
 					? // extract all the route patterns
-					  ctx.routes.map((route) => {
+						ctx.routes.map((route) => {
 							if (typeof route === "string") {
 								return route;
 							}
@@ -251,10 +251,10 @@ async function createPreviewToken(
 								return `${route.pattern}/*`;
 							}
 							return route.pattern;
-					  })
+						})
 					: // if there aren't any patterns, then just match on all routes
-					  ["*/*"],
-		  }
+						["*/*"],
+			}
 		: { workers_dev: true };
 
 	const formData = createWorkerUploadForm(worker);
@@ -286,7 +286,7 @@ async function createPreviewToken(
 						// ctx.env && !ctx.legacyEnv
 						//   ? `${ctx.env}.${worker.name}`
 						//   : worker.name
-				  }.${host.split(".").slice(1).join(".")}`
+					}.${host.split(".").slice(1).join(".")}`
 				: host),
 
 		inspectorUrl,

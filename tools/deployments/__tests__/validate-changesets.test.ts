@@ -22,6 +22,7 @@ describe("findPackageNames()", () => {
 		expect(findPackageNames()).toMatchInlineSnapshot(`
 			Set {
 			  "create-cloudflare",
+			  "devprod-status-bot",
 			  "edge-preview-authenticated-proxy",
 			  "format-errors",
 			  "@cloudflare/kv-asset-handler",

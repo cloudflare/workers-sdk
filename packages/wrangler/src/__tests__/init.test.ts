@@ -2,9 +2,11 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
-import { File, FormData, Response } from "undici";
+import { File, FormData } from "undici";
+import { vi } from "vitest";
 import { version as wranglerVersion } from "../../package.json";
 import { downloadWorker } from "../init";
 import { getPackageManager } from "../package-manager";
@@ -18,6 +20,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { RawConfig } from "../config";
 import type { UserLimits } from "../config/environment";
 import type { PackageManager } from "../package-manager";
+import type { Mock } from "vitest";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
@@ -40,10 +43,10 @@ describe("init", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	afterEach(() => {
@@ -280,7 +283,7 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --type javascript")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The --type option is no longer supported."`
+					`[Error: The --type option is no longer supported.]`
 				);
 			});
 
@@ -288,32 +291,32 @@ describe("init", () => {
 				await expect(
 					runWrangler("init --type rust")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The --type option is no longer supported."`
+					`[Error: The --type option is no longer supported.]`
 				);
 			});
 
 			it("should error if `--type webpack` is used", async () => {
 				await expect(runWrangler("init --type webpack")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-              "The --type option is no longer supported.
-              If you wish to use webpack then you will need to create a custom build."
-            `);
+					[Error: The --type option is no longer supported.
+					If you wish to use webpack then you will need to create a custom build.]
+				`);
 			});
 
 			it("should error if `--site` is used", async () => {
 				await expect(runWrangler("init --site")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-              "The --site option is no longer supported.
-              If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
+					[Error: The --site option is no longer supported.
+					If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
 
-              \`\`\`
-              git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
-              cd my-site
-              \`\`\`
+					\`\`\`
+					git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template my-site
+					cd my-site
+					\`\`\`
 
-              Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
-              Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/."
-            `);
+					Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
+					Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.]
+				`);
 			});
 		});
 
@@ -2468,16 +2471,17 @@ describe("init", () => {
 
 		describe("from dashboard", () => {
 			function makeWorker({
+				main = "src/index.js",
 				id = "memory-crystal",
 				usage_model = "bundled",
 				compatibility_date = "1987-09-27",
-				content = `
-		export default {
-			async fetch(request, env, ctx) {
-				return new Response("Hello World!");
-			},
-		};
-		`,
+				content = dedent/*javascript*/ `
+							export default {
+								async fetch(request, env, ctx) {
+									return new Response("Hello World!");
+								},
+							};
+						`,
 				schedules = [
 					{
 						cron: "0 0 0 * * *",
@@ -2578,6 +2582,7 @@ describe("init", () => {
 				workersDev = true,
 				limits,
 			}: {
+				main?: string;
 				id?: string;
 				usage_model?: string;
 				compatibility_date?: string | null;
@@ -2590,6 +2595,7 @@ describe("init", () => {
 				limits?: UserLimits;
 			} = {}) {
 				return {
+					main,
 					schedules,
 					service: {
 						id,
@@ -2743,179 +2749,185 @@ describe("init", () => {
 			function mockSupportingDashRequests(expectedAccountId: string) {
 				msw.use(
 					// This is fetched twice in normal usage
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.bindings,
-								})
+								},
+								{ status: 200 }
 							);
 						}
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.routes,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/domains/records`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.customDomains,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: { enabled: worker.workersDev },
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
-							expect(req.params.environment).toEqual(
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
+							expect(params.environment).toEqual(
 								worker.service.default_environment.environment
 							);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: worker.service.default_environment,
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual(expectedAccountId);
-							expect(req.params.scriptName).toEqual(worker.service.id);
+						({ params }) => {
+							expect(params.accountId).toEqual(expectedAccountId);
+							expect(params.scriptName).toEqual(worker.service.id);
 
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
 									result: {
 										schedules: worker.schedules,
 									},
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
-						async (_, res, ctx) => {
+						async () => {
 							if (typeof worker.content === "string") {
-								return res(ctx.text(worker.content));
+								return HttpResponse.text(worker.content, {
+									headers: {
+										"cf-entrypoint": worker.main,
+									},
+								});
 							}
 
-							const response = new Response(worker.content);
-
-							return res.once(
-								ctx.set(
-									"Content-Type",
-									response.headers.get("Content-Type") ?? ""
-								),
-								ctx.set("cf-entrypoint", `index.js`),
-								ctx.body(await response.text())
-							);
-						}
+							return HttpResponse.formData(worker.content, {
+								headers: {
+									"cf-entrypoint": worker.main,
+								},
+							});
+						},
+						{ once: true }
 					),
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/standard`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(200),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: true,
 									errors: [],
 									messages: [],
@@ -2924,9 +2936,11 @@ describe("init", () => {
 											worker.service.default_environment.script.usage_model ===
 											"standard",
 									},
-								})
+								},
+								{ status: 200 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 			}
@@ -3063,12 +3077,11 @@ describe("init", () => {
 
 			it("should fail on init --from-dash on non-existent worker name", async () => {
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName`,
-						(req, res, ctx) => {
-							return res.once(
-								ctx.status(404),
-								ctx.json({
+						() => {
+							return HttpResponse.json(
+								{
 									success: false,
 									errors: [
 										{
@@ -3078,9 +3091,11 @@ describe("init", () => {
 									],
 									messages: [],
 									result: worker.service,
-								})
+								},
+								{ status: 404 }
 							);
-						}
+						},
+						{ once: true }
 					)
 				);
 				await expect(
@@ -3307,9 +3322,9 @@ describe("init", () => {
 				});
 
 				const mockDate = "2000-01-01";
-				jest
-					.spyOn(Date.prototype, "toISOString")
-					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+				vi.spyOn(Date.prototype, "toISOString").mockImplementation(
+					() => `${mockDate}T00:00:00.000Z`
+				);
 
 				mockConfirm(
 					{
@@ -3350,10 +3365,10 @@ describe("init", () => {
 					id: "isolinear-optical-chip",
 				});
 				msw.use(
-					rest.get(
+					http.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-						(req, res) => {
-							return res.networkError("Mock Network Error");
+						() => {
+							return HttpResponse.error();
 						}
 					)
 				);
@@ -3376,10 +3391,10 @@ describe("init", () => {
 				).rejects.toThrowError();
 
 				expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred FetchError: request to https://api.cloudflare.com/client/v4/accounts/LCARS/workers/services/isolinear-optical-chip/environments/test/bindings failed, reason: Mock Network Error: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
+"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError Occurred TypeError: Failed to fetch: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.[0m
 
-			"
-		`);
+"
+`);
 			});
 
 			it("should not include migrations in config file when none are necessary", async () => {
@@ -3443,15 +3458,15 @@ describe("init", () => {
 					"index.js",
 					new File(
 						[
-							`
-				import handleRequest from './other.js';
+							dedent/*javascript*/ `
+								import handleRequest from './other.js';
 
-				export default {
-					async fetch(request, env, ctx) {
-						return handleRequest(request, env, ctx);
-					},
-				};
-			`,
+								export default {
+									async fetch(request, env, ctx) {
+										return handleRequest(request, env, ctx);
+									},
+								};
+							`,
 						],
 						"index.js",
 						{ type: "application/javascript+module" }
@@ -3461,17 +3476,18 @@ describe("init", () => {
 					"other.js",
 					new File(
 						[
-							`
-					export default function (request, env, ctx) {
-						return new Response("Hello World!");
-					}
-				`,
+							dedent/*javascript*/ `
+								export default function (request, env, ctx) {
+									return new Response("Hello World!");
+								}
+							`,
 						],
 						"other.js",
 						{ type: "application/javascript+module" }
 					)
 				);
 				worker = makeWorker({
+					main: "index.js",
 					id: "isolinear-optical-chip",
 					content: fd,
 				});

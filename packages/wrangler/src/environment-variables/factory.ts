@@ -1,5 +1,3 @@
-import { logger } from "../logger";
-
 type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
 	| "CLOUDFLARE_API_BASE_URL"
@@ -42,7 +40,6 @@ export function getEnvironmentVariableFactory({
 	variableName: VariableNames;
 	deprecatedName?: DeprecatedNames;
 }): () => string | undefined;
-
 /**
  * Create a function used to access an environment variable, with a default value.
  *
@@ -58,7 +55,6 @@ export function getEnvironmentVariableFactory({
 	deprecatedName?: DeprecatedNames;
 	defaultValue: () => string;
 }): () => string;
-
 /**
  * Create a function used to access an environment variable.
  *
@@ -82,7 +78,8 @@ export function getEnvironmentVariableFactory({
 			if (!hasWarned) {
 				// Only show the warning once.
 				hasWarned = true;
-				logger.warn(
+				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
+				console.warn(
 					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
 				);
 			}

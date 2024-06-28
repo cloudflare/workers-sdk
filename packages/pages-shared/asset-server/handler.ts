@@ -133,7 +133,7 @@ export async function generateHandler<
 	Asset extends { body: ReadableStream | null; contentType: string } = {
 		body: ReadableStream | null;
 		contentType: string;
-	}
+	},
 >({
 	request,
 	metadata,
@@ -226,10 +226,10 @@ export async function generateHandler<
 					destination.origin === new URL(request.url).origin
 						? `${destination.pathname}${destination.search || search}${
 								destination.hash
-						  }`
+							}`
 						: `${destination.href}${destination.search ? "" : search}${
 								destination.hash
-						  }`;
+							}`;
 				switch (status) {
 					case 301:
 						return new MovedPermanentlyResponse(location, undefined, {
@@ -350,19 +350,24 @@ export async function generateHandler<
 			// "Early Hints cache entries are keyed by request URI and ignore query strings."
 			// https://developers.cloudflare.com/cache/about/early-hints/
 			const earlyHintsCacheKey = `${protocol}//${host}${pathname}`;
-			const earlyHintsResponse = await earlyHintsCache.match(
-				earlyHintsCacheKey
-			);
+			const earlyHintsResponse =
+				await earlyHintsCache.match(earlyHintsCacheKey);
 			if (earlyHintsResponse) {
 				const earlyHintsLinkHeader = earlyHintsResponse.headers.get("Link");
 				if (earlyHintsLinkHeader) {
 					headers.set("Link", earlyHintsLinkHeader);
-					if (setMetrics) setMetrics({ earlyHintsResult: "used-hit" });
+					if (setMetrics) {
+						setMetrics({ earlyHintsResult: "used-hit" });
+					}
 				} else {
-					if (setMetrics) setMetrics({ earlyHintsResult: "notused-hit" });
+					if (setMetrics) {
+						setMetrics({ earlyHintsResult: "notused-hit" });
+					}
 				}
 			} else {
-				if (setMetrics) setMetrics({ earlyHintsResult: "notused-miss" });
+				if (setMetrics) {
+					setMetrics({ earlyHintsResult: "notused-miss" });
+				}
 
 				const clonedResponse = response.clone();
 
@@ -373,26 +378,29 @@ export async function generateHandler<
 								const links: { href: string; rel: string; as?: string }[] = [];
 
 								const transformedResponse = new HTMLRewriter()
-									.on("link[rel~=preconnect],link[rel~=preload]", {
-										element(element) {
-											for (const [attributeName] of element.attributes) {
-												if (
-													!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
-														attributeName.toLowerCase()
-													)
-												) {
-													return;
+									.on(
+										"link[rel~=preconnect],link[rel~=preload],link[rel~=modulepreload]",
+										{
+											element(element) {
+												for (const [attributeName] of element.attributes) {
+													if (
+														!ALLOWED_EARLY_HINT_LINK_ATTRIBUTES.includes(
+															attributeName.toLowerCase()
+														)
+													) {
+														return;
+													}
 												}
-											}
 
-											const href = element.getAttribute("href") || undefined;
-											const rel = element.getAttribute("rel") || undefined;
-											const as = element.getAttribute("as") || undefined;
-											if (href && !href.startsWith("data:") && rel) {
-												links.push({ href, rel, as });
-											}
-										},
-									})
+												const href = element.getAttribute("href") || undefined;
+												const rel = element.getAttribute("rel") || undefined;
+												const as = element.getAttribute("as") || undefined;
+												if (href && !href.startsWith("data:") && rel) {
+													links.push({ href, rel, as });
+												}
+											},
+										}
+									)
 									.transform(clonedResponse);
 
 								// Needed to actually execute the HTMLRewriter handlers
@@ -429,7 +437,9 @@ export async function generateHandler<
 				}
 			}
 		} else {
-			if (setMetrics) setMetrics({ earlyHintsResult: "disabled" });
+			if (setMetrics) {
+				setMetrics({ earlyHintsResult: "disabled" });
+			}
 		}
 
 		// Iterate through rules and find rules that match the path
@@ -482,7 +492,19 @@ export async function generateHandler<
 	if (responseWithoutHeaders.status >= 500) {
 		return responseWithoutHeaders;
 	}
-	return await attachHeaders(responseWithoutHeaders);
+
+	const responseWithHeaders = await attachHeaders(responseWithoutHeaders);
+	if (responseWithHeaders.status === 404) {
+		// Remove any user-controlled cache-control headers
+		// This is to prevent the footgun of potentionally caching this 404 for a long time
+		if (responseWithHeaders.headers.has("cache-control")) {
+			responseWithHeaders.headers.delete("cache-control");
+		}
+		// Add cache-control: no-store to prevent this from being cached on the responding zones.
+		responseWithHeaders.headers.append("cache-control", "no-store");
+	}
+
+	return responseWithHeaders;
 
 	async function serveAsset(
 		servingAssetEntry: AssetEntry,
@@ -675,7 +697,9 @@ export async function generateHandler<
 				logError(err as Error);
 			}
 		} else {
-			if (setMetrics) setMetrics({ preservationCacheResult: "disabled" });
+			if (setMetrics) {
+				setMetrics({ preservationCacheResult: "disabled" });
+			}
 		}
 
 		// Traverse upwards from the current path looking for a custom 404 page
@@ -748,13 +772,17 @@ export function isPreservationCacheResponseExpiring(
 	response: Response
 ): boolean {
 	const ageHeader = response.headers.get("age");
-	if (!ageHeader) return false;
+	if (!ageHeader) {
+		return false;
+	}
 	try {
 		const age = parseInt(ageHeader);
 		// Add up to 12 hours of jitter to help prevent a
 		// thundering heard when a lot of assets expire at once.
 		const jitter = Math.floor(Math.random() * 43_200);
-		if (age > CACHE_PRESERVATION_WRITE_FREQUENCY + jitter) return true;
+		if (age > CACHE_PRESERVATION_WRITE_FREQUENCY + jitter) {
+			return true;
+		}
 	} catch {
 		return false;
 	}

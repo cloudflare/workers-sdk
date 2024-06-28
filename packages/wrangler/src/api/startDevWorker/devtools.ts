@@ -9,7 +9,7 @@ export type DevToolsEvent<Method extends _EventMethods> = Method extends unknown
 	? {
 			method: Method;
 			params: _Params<Protocol.Events[Method]>;
-	  }
+		}
 	: never;
 
 export type DevToolsEvents = DevToolsEvent<_EventMethods>;
@@ -21,12 +21,12 @@ export type DevToolsCommandRequest<Method extends _CommandMethods> =
 			? {
 					id: number;
 					method: Method;
-			  }
+				}
 			: {
 					id: number;
 					method: Method;
 					params: _Params<Protocol.Commands[Method]["paramsType"]>;
-			  }
+				}
 		: never;
 
 export type DevToolsCommandRequests = DevToolsCommandRequest<_CommandMethods>;
@@ -36,6 +36,6 @@ export type DevToolsCommandResponse<Method extends _CommandMethods> =
 		? {
 				id: number;
 				result: Protocol.Commands[Method]["returnType"];
-		  }
+			}
 		: never;
 export type DevToolsCommandResponses = DevToolsCommandResponse<_CommandMethods>;

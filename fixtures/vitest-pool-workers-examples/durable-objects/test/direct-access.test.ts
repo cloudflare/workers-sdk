@@ -1,4 +1,9 @@
-import { env, runInDurableObject, SELF } from "cloudflare:test";
+import {
+	env,
+	listDurableObjectIds,
+	runInDurableObject,
+	SELF,
+} from "cloudflare:test";
 import { expect, it } from "vitest";
 import { Counter } from "../src/";
 
@@ -22,9 +27,18 @@ it("increments count and allows direct access to instance/storage", async () => 
 		expect(instance.count).toBe(2);
 		expect(await state.storage.get<number>("count")).toBe(2);
 	});
+
+	// Check IDs can be listed
+	const ids = await listDurableObjectIds(env.COUNTER);
+	expect(ids.length).toBe(1);
+	expect(ids[0].equals(id)).toBe(true);
 });
 
 it("uses isolated storage for each test", async () => {
+	// Check Durable Object from previous test removed
+	const ids = await listDurableObjectIds(env.COUNTER);
+	expect(ids.length).toBe(0);
+
 	// Check writes in previous test undone
 	const response = await SELF.fetch("https://example.com/path");
 	expect(await response.text()).toBe("1");

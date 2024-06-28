@@ -7,6 +7,7 @@ import { logger } from "../logger";
 import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
+import { tryAttachSourcemapToModule } from "./source-maps";
 import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
@@ -45,14 +46,17 @@ function isValidPythonPackageName(name: string): boolean {
  */
 export async function findAdditionalModules(
 	entry: Entry,
-	rules: Rule[] | ParsedRules
+	rules: Rule[] | ParsedRules,
+	attachSourcemaps = false
 ): Promise<CfModule[]> {
 	const files = getFiles(entry.moduleRoot, entry.moduleRoot);
 	const relativeEntryPoint = path
 		.relative(entry.moduleRoot, entry.file)
 		.replaceAll("\\", "/");
 
-	if (Array.isArray(rules)) rules = parseRules(rules);
+	if (Array.isArray(rules)) {
+		rules = parseRules(rules);
+	}
 	const modules = (await matchFiles(files, entry.moduleRoot, rules))
 		.filter((m) => m.name !== relativeEntryPoint)
 		.map((m) => ({
@@ -79,7 +83,9 @@ export async function findAdditionalModules(
 		}
 
 		for (const requirement of pythonRequirements.split("\n")) {
-			if (requirement === "") continue;
+			if (requirement === "") {
+				continue;
+			}
 			if (!isValidPythonPackageName(requirement)) {
 				throw new UserError(
 					`Invalid Python package name "${requirement}" found in requirements.txt. Note that requirements.txt should contain package names only, not version specifiers.`
@@ -94,6 +100,13 @@ export async function findAdditionalModules(
 			});
 		}
 	}
+
+	// The modules we find might also have sourcemaps associated with them, so when we go to copy
+	// them into the output directory we need to preserve the sourcemaps.
+	if (attachSourcemaps) {
+		modules.forEach((module) => tryAttachSourcemapToModule(module));
+	}
+
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
 		logger.table(
@@ -186,7 +199,9 @@ export async function* findAdditionalModuleWatchDirs(
 	yield root;
 	for (const entry of await readdir(root, { withFileTypes: true })) {
 		if (entry.isDirectory()) {
-			if (entry.name === "node_modules" || entry.name === ".git") continue;
+			if (entry.name === "node_modules" || entry.name === ".git") {
+				continue;
+			}
 			yield* findAdditionalModuleWatchDirs(path.join(root, entry.name));
 		}
 	}
@@ -205,5 +220,10 @@ export async function writeAdditionalModules(
 		logger.debug("Writing additional module to output", modulePath);
 		await mkdir(path.dirname(modulePath), { recursive: true });
 		await writeFile(modulePath, module.content);
+
+		if (module.sourceMap) {
+			const sourcemapPath = path.resolve(destination, module.sourceMap.name);
+			await writeFile(sourcemapPath, module.sourceMap.content);
+		}
 	}
 }

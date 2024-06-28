@@ -69,21 +69,21 @@ const updateTypeDefinitions = (ctx: C3Context) => {
 					b.tsInterfaceBody([
 						b.tsPropertySignature(
 							b.identifier("env"),
-							b.tsTypeAnnotation(b.tsTypeReference(b.identifier("Env")))
+							b.tsTypeAnnotation(b.tsTypeReference(b.identifier("Env"))),
 						),
 						b.tsPropertySignature(
 							b.identifier("cf"),
 							b.tsTypeAnnotation(
-								b.tsTypeReference(b.identifier("CfProperties"))
-							)
+								b.tsTypeReference(b.identifier("CfProperties")),
+							),
 						),
 						b.tsPropertySignature(
 							b.identifier("ctx"),
 							b.tsTypeAnnotation(
-								b.tsTypeReference(b.identifier("ExecutionContext"))
-							)
+								b.tsTypeReference(b.identifier("ExecutionContext")),
+							),
 						),
-					])
+					]),
 				);
 
 				moduleBlock.body.unshift(platformInterface);

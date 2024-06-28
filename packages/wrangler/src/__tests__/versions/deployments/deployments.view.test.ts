@@ -1,7 +1,10 @@
 import { UserError } from "../../../errors";
+import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
 
 describe("deployments view", () => {
+	mockConsoleMethods();
+
 	test("error when run with no args", async () => {
 		const result = runWrangler("deployments view  --x-versions");
 

@@ -1,14 +1,14 @@
-import { Blob, Buffer } from "node:buffer";
-import childProcess from "node:child_process";
+import { Buffer } from "node:buffer";
+import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
-import commandExists from "command-exists";
+import { sync } from "command-exists";
 import * as esbuild from "esbuild";
-import { MockedRequest, rest } from "msw";
+import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
-import { FormData } from "undici";
+import { vi } from "vitest";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -43,7 +43,7 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
-import { FileReaderSync } from "./helpers/msw/read-file-sync";
+import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
@@ -56,7 +56,9 @@ import type {
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
-import type { RestRequest } from "msw";
+import type { Mock } from "vitest";
+
+vi.mock("command-exists");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -71,17 +73,18 @@ describe("deploy", () => {
 	} = mockOAuthFlow();
 
 	beforeEach(() => {
-		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.stubGlobal("setTimeout", (fn: () => void) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
+		msw.use(...mswListNewDeploymentsLatestFull);
 		logger.loggerLevel = "log";
 	});
 
 	afterEach(() => {
+		vi.unstubAllGlobals();
 		clearDialogs();
 	});
 
@@ -133,10 +136,7 @@ describe("deploy", () => {
 		mockApiToken({ apiToken: null });
 
 		beforeEach(() => {
-			// @ts-expect-error disable the mock we'd setup earlier
-			// or else our server won't bother listening for oauth requests
-			// and will timeout and fail
-			global.setTimeout.mockRestore();
+			vi.unstubAllGlobals();
 		});
 
 		it("drops a user into the login flow if they're unauthenticated", async () => {
@@ -258,6 +258,7 @@ describe("deploy", () => {
 
 			it("should not throw an error in non-TTY if 'CLOUDFLARE_API_TOKEN' & 'account_id' are in scope", async () => {
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "123456789",
 				};
 				setIsTTY(false);
@@ -287,6 +288,7 @@ describe("deploy", () => {
 
 			it("should not throw an error if 'CLOUDFLARE_ACCOUNT_ID' & 'CLOUDFLARE_API_TOKEN' are in scope", async () => {
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "hunter2",
 					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 				};
@@ -317,6 +319,7 @@ describe("deploy", () => {
 			it("should throw an error in non-TTY & there is more than one account associated with API token", async () => {
 				setIsTTY(false);
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "hunter2",
 					CLOUDFLARE_ACCOUNT_ID: undefined,
 				};
@@ -334,12 +337,12 @@ describe("deploy", () => {
 
 				await expect(runWrangler("deploy index.js")).rejects
 					.toMatchInlineSnapshot(`
-			[Error: More than one account available but unable to select one in non-interactive mode.
-			Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-			Available accounts are (\`<name>\`: \`<account_id>\`):
-			  \`enterprise\`: \`1701\`
-			  \`enterprise-nx\`: \`nx01\`]
-		`);
+					[Error: More than one account available but unable to select one in non-interactive mode.
+					Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+					Available accounts are (\`<name>\`: \`<account_id>\`):
+					  \`enterprise\`: \`1701\`
+					  \`enterprise-nx\`: \`nx01\`]
+				`);
 			});
 
 			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async () => {
@@ -348,6 +351,7 @@ describe("deploy", () => {
 					account_id: undefined,
 				});
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: undefined,
 					CLOUDFLARE_ACCOUNT_ID: "badwolf",
 				};
@@ -374,6 +378,7 @@ describe("deploy", () => {
 					account_id: undefined,
 				});
 				process.env = {
+					...process.env,
 					CLOUDFLARE_API_TOKEN: "picard",
 					CLOUDFLARE_ACCOUNT_ID: undefined,
 				};
@@ -571,17 +576,17 @@ describe("deploy", () => {
 				await expect(
 					runWrangler("deploy index.js --env some-env --legacy-env true")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-			                "Processing wrangler.toml configuration:
-			                  - No environment found in configuration with name \\"some-env\\".
-			                    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
-			                    The available configured environment names are: [\\"other-env\\"]
+					[Error: Processing wrangler.toml configuration:
+					  - No environment found in configuration with name "some-env".
+					    Before using \`--env=some-env\` there should be an equivalent environment section in the configuration.
+					    The available configured environment names are: ["other-env"]
 
-			                    Consider adding an environment configuration section to the wrangler.toml file:
-			                    \`\`\`
-			                    [env.some-env]
-			                    \`\`\`
-			                "
-		              `);
+					    Consider adding an environment configuration section to the wrangler.toml file:
+					    \`\`\`
+					    [env.some-env]
+					    \`\`\`
+					]
+				`);
 			});
 
 			it("should throw an error w/ helpful message when using --env --name", async () => {
@@ -592,11 +597,11 @@ describe("deploy", () => {
 					"deploy index.js --name voyager --env some-env --legacy-env true"
 				).catch((err) =>
 					expect(err).toMatchInlineSnapshot(`
-				            [Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
-				                [env.some-env]
-				                name = "voyager"
-				                ]
-			          `)
+						[Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
+						    [env.some-env]
+						    name = "voyager"
+						    ]
+					`)
 				);
 			});
 		});
@@ -1087,9 +1092,9 @@ describe("deploy", () => {
 			});
 			await expect(runWrangler("deploy ./index --env=staging")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
-			Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
-		`);
+				[Error: Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
+				Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth]
+			`);
 		});
 
 		describe("custom domains", () => {
@@ -1267,7 +1272,7 @@ Update them to point to this script instead?`,
 				await expect(
 					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Cannot use \\"*.example.com\\" as a Custom Domain; wildcard operators (*) are not allowed"`
+					`[Error: Cannot use "*.example.com" as a Custom Domain; wildcard operators (*) are not allowed]`
 				);
 
 				writeWranglerToml({
@@ -1281,7 +1286,7 @@ Update them to point to this script instead?`,
 				await expect(
 					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"Cannot use \\"api.example.com/at/a/path\\" as a Custom Domain; paths are not allowed"`
+					`[Error: Cannot use "api.example.com/at/a/path" as a Custom Domain; paths are not allowed]`
 				);
 			});
 
@@ -1509,11 +1514,11 @@ Update them to point to this script instead?`,
 			});
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "Processing wrangler.toml configuration:
-			                - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
-			                  They serve the same purpose: to point to the entry-point of your worker.
-			                  Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config."
-		            `);
+				[Error: Processing wrangler.toml configuration:
+				  - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
+				    They serve the same purpose: to point to the entry-point of your worker.
+				    Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config.]
+			`);
 		});
 
 		it("should be able to transpile TypeScript (esm)", async () => {
@@ -1761,9 +1766,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy ./index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "Processing wrangler.toml configuration:
-			                - \\"site.bucket\\" is a required field."
-		            `);
+				[Error: Processing wrangler.toml configuration:
+				  - "site.bucket" is a required field.]
+			`);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -1920,11 +1925,11 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "Processing wrangler.toml configuration:
-			                - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
-			                  They serve the same purpose: to point to the entry-point of your worker.
-			                  Delete the deprecated \`site.entry-point\` field from your config."
-		            `);
+				[Error: Processing wrangler.toml configuration:
+				  - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
+				    They serve the same purpose: to point to the entry-point of your worker.
+				    Delete the deprecated \`site.entry-point\` field from your config.]
+			`);
 		});
 
 		it("should error if there is no entry-point specified", async () => {
@@ -1935,7 +1940,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field."`
+				`[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -2000,13 +2005,13 @@ addEventListener('fetch', event => {});`
 
 		describe("should source map validation errors", () => {
 			function mockDeployWithValidationError(message: string) {
-				const handler = rest.put(
+				const handler = http.put(
 					"*/accounts/:accountId/workers/scripts/:scriptName",
-					async (req, res, ctx) => {
+					async () => {
 						const body = createFetchResult(null, false, [
 							{ code: 10021, message },
 						]);
-						return res(ctx.json(body));
+						return HttpResponse.json(body);
 					}
 				);
 				msw.use(handler);
@@ -2218,7 +2223,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"`
+				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2244,7 +2249,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2271,7 +2276,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2290,14 +2295,13 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 			});
 			writeWorkerSource();
 			await expect(
 				runWrangler("deploy --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2320,7 +2324,6 @@ addEventListener('fetch', event => {});`
 		it("should error if config.assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "abc",
 				site: {
 					bucket: "xyz",
@@ -2330,7 +2333,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -2404,7 +2407,6 @@ addEventListener('fetch', event => {});`
 		it("should warn if config.assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				// @ts-expect-error we allow string inputs here
 				assets: "./assets",
 			});
 			const assets = [
@@ -2601,7 +2603,18 @@ addEventListener('fetch', event => {});`
 				find_additional_modules: true,
 				rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],
 			});
-			writeWorkerSource({ type: "esm" });
+			// Create a Worker that imports a CommonJS module to trigger esbuild to add
+			// extra boilerplate to convert to ESM imports.
+			fs.writeFileSync(`another.cjs`, `module.exports.foo = 100;`);
+			fs.writeFileSync(
+				`index.js`,
+				`import { foo } from "./another.cjs";
+					export default {
+						async fetch(request) {
+							return new Response('Hello' + foo);
+						},
+					};`
+			);
 			fs.mkdirSync("a/b/c", { recursive: true });
 			fs.writeFileSync(
 				"a/1.mjs",
@@ -2621,6 +2634,11 @@ addEventListener('fetch', event => {});`
 			);
 			writeAssets(assets);
 			mockUploadWorkerRequest({
+				expectedEntry(entry) {
+					// Ensure that we have not included the watch stub in production code.
+					// This is only needed in `wrangler dev`.
+					expect(entry).not.toMatch(/modules-watch-stub\.js/);
+				},
 				expectedBindings: [
 					{
 						name: "__STATIC_CONTENT",
@@ -3289,7 +3307,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits"`
+				`[Error: File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits]`
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
@@ -3427,7 +3445,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
+				`[Error: The asset path key "folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits",]`
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
@@ -3703,17 +3721,15 @@ addEventListener('fetch', event => {});`
 			const bulkUrl =
 				"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk";
 			msw.use(
-				rest.put(bulkUrl, async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.namespaceId).toEqual(kvNamespace.id);
+				http.put(bulkUrl, async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.namespaceId).toEqual(kvNamespace.id);
 					requestCount++;
-					return res(
-						ctx.status(500),
-						ctx.json(
-							createFetchResult([], false, [
-								{ code: 1000, message: "Whoops! Something went wrong!" },
-							])
-						)
+					return HttpResponse.json(
+						createFetchResult([], false, [
+							{ code: 1000, message: "Whoops! Something went wrong!" },
+						]),
+						{ status: 500 }
 					);
 				})
 			);
@@ -3721,7 +3737,7 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed."`
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed.]`
 			);
 
 			expect(requestCount).toBeLessThan(3);
@@ -4394,9 +4410,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
-			jest.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
-			jest.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
-			jest.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+			vi.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
+			vi.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
+			vi.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
 
 			writeWorkerSource();
 			let err: undefined | Error;
@@ -4468,20 +4484,19 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({ available_on_subdomain: false });
 			mockSubDomainRequest();
 			msw.use(
-				rest.post(
+				http.post(
 					`*/accounts/:accountId/workers/scripts/:scriptName/subdomain`,
-					async (req, res, ctx) => {
-						return res.once(
-							ctx.json(
-								createFetchResult(null, /* success */ false, [
-									{
-										code: 10034,
-										message: "workers.api.error.email_verification_required",
-									},
-								])
-							)
+					async () => {
+						return HttpResponse.json(
+							createFetchResult(null, /* success */ false, [
+								{
+									code: 10034,
+									message: "workers.api.error.email_verification_required",
+								},
+							])
 						);
-					}
+					},
+					{ once: true }
 				)
 			);
 
@@ -4511,9 +4526,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy ./index")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
-			https://dash.cloudflare.com/some-account-id/workers/onboarding"
-		`);
+				[Error: You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
+				https://dash.cloudflare.com/some-account-id/workers/onboarding]
+			`);
 		});
 
 		it("should not deploy to workers.dev if there are any routes defined", async () => {
@@ -4934,9 +4949,7 @@ addEventListener('fetch', event => {});`
 	});
 	describe("custom builds", () => {
 		beforeEach(() => {
-			// @ts-expect-error disable the mock we'd setup earlier
-			// or else custom builds will timeout immediately
-			global.setTimeout.mockRestore();
+			vi.unstubAllGlobals();
 		});
 		it("should run a custom build before publishing", async () => {
 			writeWranglerToml({
@@ -5008,9 +5021,9 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".
-			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
-		            `);
+				[Error: The expected output file at "index.js" was not found after running custom build: node -e "4+4;".
+				The \`main\` property in wrangler.toml should point to the file generated by the custom build.]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
 			"
@@ -5039,16 +5052,16 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "The expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".
-			              The \`main\` property in wrangler.toml should point to the file generated by the custom build.
-			              The provided entry-point path, \\".\\", points to a directory, rather than a file.
+				[Error: The expected output file at "." was not found after running custom build: node -e "4+4;".
+				The \`main\` property in wrangler.toml should point to the file generated by the custom build.
+				The provided entry-point path, ".", points to a directory, rather than a file.
 
-			              Did you mean to set the main field to one of:
-			              \`\`\`
-			              main = \\"./worker.js\\"
-			              main = \\"./dist/index.ts\\"
-			              \`\`\`"
-		            `);
+				Did you mean to set the main field to one of:
+				\`\`\`
+				main = "./worker.js"
+				main = "./dist/index.ts"
+				\`\`\`]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4;\\"
 			"
@@ -6071,14 +6084,14 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-						              [Error: Processing wrangler.toml configuration:
-						                - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
-						                - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
-						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-						                - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-						                - Bindings must have unique names, so that they can all be referenced in the worker.
-						                  Please change your bindings to have unique names.]
-					            `);
+				[Error: Processing wrangler.toml configuration:
+				  - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
+				  - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
+				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+				  - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+				  - Bindings must have unique names, so that they can all be referenced in the worker.
+				    Please change your bindings to have unique names.]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6178,15 +6191,15 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-						              [Error: Processing wrangler.toml configuration:
-						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-						                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-						                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-						                - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-						                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-						                - Bindings must have unique names, so that they can all be referenced in the worker.
-						                  Please change your bindings to have unique names.]
-					            `);
+				[Error: Processing wrangler.toml configuration:
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - Bindings must have unique names, so that they can all be referenced in the worker.
+				    Please change your bindings to have unique names.]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6328,17 +6341,17 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
-						              [Error: Processing wrangler.toml configuration:
-						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
-						                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
-						                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-						                - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
-						                - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
-						                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
-						                - Bindings must have unique names, so that they can all be referenced in the worker.
-						                  Please change your bindings to have unique names.]
-					            `);
+				[Error: Processing wrangler.toml configuration:
+				  - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
+				  - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
+				  - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+				  - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+				  - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+				  - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
+				  - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
+				  - Bindings must have unique names, so that they can all be referenced in the worker.
+				    Please change your bindings to have unique names.]
+			`);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -6417,7 +6430,7 @@ addEventListener('fetch', event => {});`
 				await expect(
 					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
+					`[Error: You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -6569,7 +6582,7 @@ addEventListener('fetch', event => {});`
 				await expect(
 					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
+					`[Error: You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -6687,7 +6700,7 @@ addEventListener('fetch', event => {});`
 				await expect(
 					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
+					`[Error: You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -6934,9 +6947,9 @@ addEventListener('fetch', event => {});`
 
 				await expect(() => runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with the \\"unsafe.capnp\\" object, which expects a \\"base_path\\" and an array of \\"source_schemas\\" to compile, or a \\"compiled_schema\\" property."
-		`);
+					[Error: Processing wrangler.toml configuration:
+					  - "logfwdr" binding "schema" property has been replaced with the "unsafe.capnp" object, which expects a "base_path" and an array of "source_schemas" to compile, or a "compiled_schema" property.]
+				`);
 			});
 		});
 
@@ -7159,12 +7172,12 @@ addEventListener('fetch', event => {});`
 
 				await expect(runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-			                              "You seem to be trying to use Durable Objects in a Worker written as a service-worker.
-			                              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
-			                              { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
-			                              Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
-			                              https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"
-		                          `);
+					[Error: You seem to be trying to use Durable Objects in a Worker written as a service-worker.
+					You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
+					{ name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject } ==> { name = EXAMPLE_DO_BINDING, class_name = ExampleDurableObject, script_name = example-do-binding-worker }
+					Alternatively, migrate your worker to ES Module syntax to implement a Durable Object in this Worker:
+					https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]
+				`);
 			});
 		});
 
@@ -7661,9 +7674,9 @@ addEventListener('fetch', event => {});`
 
 					await expect(() => runWrangler("deploy index.js")).rejects
 						.toThrowErrorMatchingInlineSnapshot(`
-				"Processing wrangler.toml configuration:
-				  - The field \\"unsafe.capnp\\" cannot contain both \\"compiled_schema\\" and one of \\"base_path\\" or \\"source_schemas\\"."
-			`);
+						[Error: Processing wrangler.toml configuration:
+						  - The field "unsafe.capnp" cannot contain both "compiled_schema" and one of "base_path" or "source_schemas".]
+					`);
 				});
 				it("should error when no schemas are specified", async () => {
 					writeWranglerToml({
@@ -7676,13 +7689,13 @@ addEventListener('fetch', event => {});`
 
 					await expect(() => runWrangler("deploy index.js")).rejects
 						.toThrowErrorMatchingInlineSnapshot(`
-				"Processing wrangler.toml configuration:
-				  - The field \\"unsafe.capnp.base_path\\", when present, should be a string but got undefined
-				  - Expected \\"unsafe.capnp.source_schemas\\" to be an array of strings but got undefined"
-			`);
+						[Error: Processing wrangler.toml configuration:
+						  - The field "unsafe.capnp.base_path", when present, should be a string but got undefined
+						  - Expected "unsafe.capnp.source_schemas" to be an array of strings but got undefined]
+					`);
 				});
 				it("should error when the capnp compiler is not present, but is required", async () => {
-					jest.spyOn(commandExists, "sync").mockReturnValue(false);
+					(sync as Mock).mockReturnValue(false);
 					writeWranglerToml({
 						unsafe: {
 							capnp: {
@@ -7696,29 +7709,27 @@ addEventListener('fetch', event => {});`
 					await expect(() =>
 						runWrangler("deploy index.js")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"The capnp compiler is required to upload capnp schemas, but is not present."`
+						`[Error: The capnp compiler is required to upload capnp schemas, but is not present.]`
 					);
 				});
 				it("should accept an uncompiled capnp schema", async () => {
-					jest.spyOn(commandExists, "sync").mockReturnValue(true);
-					jest
-						.spyOn(childProcess, "spawnSync")
-						.mockImplementation((cmd, args) => {
-							expect(cmd).toBe("capnp");
-							expect(args?.[0]).toBe("compile");
-							expect(args?.[1]).toBe("-o-");
-							expect(args?.[2]).toContain("--src-prefix=");
-							expect(args?.[3]).toContain("my-compiled-schema");
-							return {
-								pid: -1,
-								error: undefined,
-								stderr: Buffer.from([]),
-								stdout: Buffer.from("my compiled capnp data"),
-								status: 0,
-								signal: null,
-								output: [null],
-							};
-						});
+					(sync as Mock).mockReturnValue(true);
+					(spawnSync as Mock).mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe("capnp");
+						expect(args?.[0]).toBe("compile");
+						expect(args?.[1]).toBe("-o-");
+						expect(args?.[2]).toContain("--src-prefix=");
+						expect(args?.[3]).toContain("my-compiled-schema");
+						return {
+							pid: -1,
+							error: undefined,
+							stderr: Buffer.from([]),
+							stdout: Buffer.from("my compiled capnp data"),
+							status: 0,
+							signal: null,
+							output: [null],
+						};
+					});
 
 					writeWranglerToml({
 						unsafe: {
@@ -8521,17 +8532,17 @@ export default{
 			writeWorkerSource();
 			await runWrangler("deploy index.js --node-compat --dry-run");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			--dry-run: exiting now.",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				--dry-run: exiting now.",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs.[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async () => {
@@ -8569,17 +8580,17 @@ export default{
 			);
 			await runWrangler("deploy index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			--dry-run: exiting now.",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				--dry-run: exiting now.",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs.[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 	});
 
@@ -8654,7 +8665,7 @@ export default{
 					"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
+				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
 	});
@@ -8720,22 +8731,17 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(_, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult(null, false, [
-									{
-										code: 11337,
-										message:
-											"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
-									},
-								])
-							)
-						);
-					}
-				)
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 11337,
+								message:
+									"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+							},
+						])
+					);
+				})
 			);
 
 			fs.writeFileSync(
@@ -8792,21 +8798,16 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(req, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult({}, false, [
-									{
-										code: 10027,
-										message: "workers.api.error.script_too_large",
-									},
-								])
-							)
-						);
-					}
-				)
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({}, false, [
+							{
+								code: 10027,
+								message: "workers.api.error.script_too_large",
+							},
+						])
+					);
+				})
 			);
 
 			fs.writeFileSync(
@@ -8873,21 +8874,16 @@ export default{
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
 			msw.use(
-				rest.put(
-					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(req, res, ctx) => {
-						return res(
-							ctx.json(
-								createFetchResult({}, false, [
-									{
-										code: 10021,
-										message: "Error: Script startup exceeded CPU time limit.",
-									},
-								])
-							)
-						);
-					}
-				)
+				http.put("*/accounts/:accountId/workers/scripts/:scriptName", () => {
+					return HttpResponse.json(
+						createFetchResult({}, false, [
+							{
+								code: 10021,
+								message: "Error: Script startup exceeded CPU time limit.",
+							},
+						])
+					);
+				})
 			);
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
@@ -9104,13 +9100,13 @@ export default{
 				"deploy index.js --no-bundle --node-compat --dry-run --outdir dist"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs.[0m
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
 
-			"
-		`);
+				"
+			`);
 		});
 
 		it("should warn that no-bundle and node-compat can't be used together", async () => {
@@ -9124,13 +9120,13 @@ export default{
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Wrangler compile-time Node.js compatibility polyfill mode for builtins and globals. This is experimental and has serious tradeoffs.[0m
 
 
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
 
-			"
-		`);
+				"
+			`);
 		});
 	});
 
@@ -9141,27 +9137,20 @@ export default{
 		mockUploadWorkerRequest();
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		msw.use(
-			rest.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult(null, false, [
-								{ code: 10000, message: "Authentication error" },
-							])
-						)
-					);
-				}
-			),
-			rest.get(
+			http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					])
+				);
+			}),
+			http.get(
 				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult({
-								latest: { number: "2" },
-							})
-						)
+				() => {
+					return HttpResponse.json(
+						createFetchResult({
+							latest: { number: "2" },
+						})
 					);
 				}
 			)
@@ -9170,7 +9159,7 @@ export default{
 		await expect(
 			runWrangler("deploy index.js")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed."`
+			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"
@@ -9575,20 +9564,18 @@ export default{
 			mockGetQueueByName(queueName, existingQueue);
 
 			msw.use(
-				rest.put(
+				http.put(
 					`*/accounts/:accountId/queues/:queueId/consumers/:consumerId`,
-					async (req, res, ctx) => {
-						expect(req.params.queueId).toEqual(queueId);
-						expect(req.params.consumerId).toEqual("queue1-consumer-id");
-						expect(req.params.accountId).toEqual("some-account-id");
-						return res(
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: null,
-							})
-						);
+					async ({ params }) => {
+						expect(params.queueId).toEqual(queueId);
+						expect(params.consumerId).toEqual("queue1-consumer-id");
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						});
 					}
 				)
 			);
@@ -9716,6 +9703,70 @@ export default{
 					batch_size: 5,
 					max_retries: 10,
 					max_wait_time_ms: 3000,
+				},
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Consumer for queue1
+			Current Deployment ID: Galaxy-Class
+			Current Version ID: Galaxy-Class
+
+
+			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+		`);
+		});
+
+		it("should support queue consumer with max_batch_timeout of 0", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: queueName,
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 0,
+							max_retries: 10,
+							max_concurrency: null,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			const consumerId = "consumer-id";
+			const existingQueue: QueueResponse = {
+				queue_id: queueId,
+				queue_name: queueName,
+				created_on: "",
+				producers: [],
+				consumers: [
+					{
+						type: "worker",
+						script: "test-name",
+						consumer_id: consumerId,
+						settings: {},
+					},
+				],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+				modified_on: "",
+			};
+			mockGetQueueByName(queueName, existingQueue);
+			mockPutQueueConsumerById(queueId, queueName, consumerId, {
+				dead_letter_queue: "myDLQ",
+				type: "worker",
+				script_name: "test-name",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 0,
 				},
 			});
 
@@ -10109,6 +10160,7 @@ export default{
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			process.env = {
+				...process.env,
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 			};
@@ -10138,6 +10190,7 @@ export default{
 
 		it("should not send keepVars by default", async () => {
 			process.env = {
+				...process.env,
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 			};
@@ -10167,6 +10220,7 @@ export default{
 
 		it("should send keepVars when `keep_vars = true`", async () => {
 			process.env = {
+				...process.env,
 				CLOUDFLARE_API_TOKEN: "hunter2",
 				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
 			};
@@ -10251,11 +10305,6 @@ function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
-//
-//
-//
-//
-//
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
 function mockUpdateWorkerRequest({
 	env,
@@ -10270,20 +10319,21 @@ function mockUpdateWorkerRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		rest.post(
+		http.post(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				const body = await req.json();
+				const body = await request.json();
 				expect(body).toEqual({ enabled });
-				return res.once(ctx.json(createFetchResult(null)));
-			}
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
 		)
 	);
 	return requests;
@@ -10302,24 +10352,25 @@ function mockPublishRoutesRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				const body = await req.json();
+				const body = await request.json();
 				expect(body).toEqual(
 					routes.map((route) =>
 						typeof route !== "object" ? { pattern: route } : route
 					)
 				);
-				return res.once(ctx.json(createFetchResult(null)));
-			}
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -10335,34 +10386,35 @@ function mockUnauthorizedPublishRoutesRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-			(req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(null, false, [
-							{ message: "Authentication error", code: 10000 },
-						])
-					)
+			() => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ message: "Authentication error", code: 10000 },
+					])
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 }
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+		http.get("*/zones", ({ request }) => {
+			const url = new URL(request.url);
 
-			return res(
-				ctx.status(200),
-				ctx.json({
+			expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
+
+			return HttpResponse.json(
+				{
 					success: true,
 					errors: [],
 					messages: [],
 					result: zones,
-				})
+				},
+				{ status: 200 }
 			);
 		})
 	);
@@ -10370,17 +10422,17 @@ function mockGetZones(domain: string, zones: { id: string }[] = []) {
 
 function mockGetWorkerRoutes(zoneId: string) {
 	msw.use(
-		rest.get("*/zones/:zoneId/workers/routes", (req, res, ctx) => {
-			expect(req.params.zoneId).toEqual(zoneId);
+		http.get("*/zones/:zoneId/workers/routes", ({ params }) => {
+			expect(params.zoneId).toEqual(zoneId);
 
-			return res(
-				ctx.status(200),
-				ctx.json({
+			return HttpResponse.json(
+				{
 					success: true,
 					errors: [],
 					messages: [],
 					result: [],
-				})
+				},
+				{ status: 200 }
 			);
 		})
 	);
@@ -10391,25 +10443,30 @@ function mockPublishRoutesFallbackRequest(route: {
 	script: string;
 }) {
 	msw.use(
-		rest.post(`*/zones/:zoneId/workers/routes`, async (req, res, ctx) => {
-			const body = await req.json();
-			expect(body).toEqual(route);
-			return res.once(ctx.json(createFetchResult(route.pattern)));
-		})
+		http.post(
+			`*/zones/:zoneId/workers/routes`,
+			async ({ request }) => {
+				const body = await request.json();
+				expect(body).toEqual(route);
+				return HttpResponse.json(createFetchResult(route.pattern));
+			},
+			{ once: true }
+		)
 	);
 }
 
 function mockCustomDomainLookup(origin: CustomDomain) {
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/domains/records/:domainTag`,
 
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.domainTag).toEqual(origin.id);
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.domainTag).toEqual(origin.id);
 
-				return res.once(ctx.json(createFetchResult(origin)));
-			}
+				return HttpResponse.json(createFetchResult(origin));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -10428,28 +10485,28 @@ function mockCustomDomainsChangesetRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 	msw.use(
-		rest.post(
+		http.post<{ accountId: string; scriptName: string; envName: string }>(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
 
-				const domains: Array<
+				const domains = (await request.json()) as Array<
 					{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
-				> = await req.json();
+				>;
 
 				const changeset: CustomDomainChangeset = {
 					added: domains.map((domain) => {
 						return {
 							...domain,
 							id: "",
-							service: req.params.scriptName as string,
-							environment: req.params.envName as string,
+							service: params.scriptName,
+							environment: params.envName,
 							zone_name: "",
 							zone_id: "",
 						};
@@ -10465,8 +10522,9 @@ function mockCustomDomainsChangesetRequest({
 					conflicting: dnsRecordConflicts,
 				};
 
-				return res.once(ctx.json(createFetchResult(changeset)));
-			}
+				return HttpResponse.json(createFetchResult(changeset));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -10492,24 +10550,25 @@ function mockPublishCustomDomainsRequest({
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.scriptName).toEqual(
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
 					legacyEnv && env ? `test-name-${env}` : "test-name"
 				);
 				if (!legacyEnv) {
-					expect(req.params.envName).toEqual(env);
+					expect(params.envName).toEqual(env);
 				}
-				const body = await req.json();
+				const body = await request.json();
 				expect(body).toEqual({
 					...publishFlags,
 					origins: domains,
 				});
 
-				return res.once(ctx.json(createFetchResult(null)));
-			}
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
 		)
 	);
 }
@@ -10517,10 +10576,14 @@ function mockPublishCustomDomainsRequest({
 /** Create a mock handler for the request to get a list of all KV namespaces. */
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
 	msw.use(
-		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
-			return res.once(ctx.json(createFetchResult(namespaces)));
-		})
+		http.get(
+			"*/accounts/:accountId/storage/kv/namespaces",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json(createFetchResult(namespaces));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -10548,12 +10611,12 @@ function mockUploadAssetsToKVRequest(
 		uploads: StaticAssetUpload[];
 	}[] = [];
 	msw.use(
-		rest.put(
+		http.put(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-				const uploads = await req.json();
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
+				const uploads = (await request.json()) as StaticAssetUpload[];
 				if (assets) {
 					expect(assets.length).toEqual(uploads.length);
 					for (let i = 0; i < uploads.length; i++) {
@@ -10562,7 +10625,7 @@ function mockUploadAssetsToKVRequest(
 				}
 
 				requests.push({ uploads });
-				return res(ctx.json(createFetchResult([])));
+				return HttpResponse.json(createFetchResult([]));
 			}
 		)
 	);
@@ -10589,22 +10652,21 @@ function mockDeleteUnusedAssetsRequest(
 	assets: string[]
 ) {
 	msw.use(
-		rest.delete(
+		http.delete(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-			async (req, res, ctx) => {
-				expect(req.params.accountId).toEqual("some-account-id");
-				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-				const deletes = await req.json();
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.namespaceId).toEqual(expectedNamespaceId);
+				const deletes = await request.json();
 				expect(assets).toEqual(deletes);
-				return res.once(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
-			}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: null,
+				});
+			},
+			{ once: true }
 		)
 	);
 }
@@ -10614,17 +10676,19 @@ type LegacyScriptInfo = { id: string; migration_tag?: string };
 function mockLegacyScriptData(options: { scripts: LegacyScriptInfo[] }) {
 	const { scripts } = options;
 	msw.use(
-		rest.get("*/accounts/:accountId/workers/scripts", (req, res, ctx) => {
-			expect(req.params.accountId).toEqual("some-account-id");
-			return res.once(
-				ctx.json({
+		http.get(
+			"*/accounts/:accountId/workers/scripts",
+			({ params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				return HttpResponse.json({
 					success: true,
 					errors: [],
 					messages: [],
 					result: scripts,
-				})
-			);
-		})
+				});
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -10639,88 +10703,80 @@ function mockServiceScriptData(options: {
 	if (options.env) {
 		if (!script) {
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-					(_, res, ctx) => {
-						return res.once(
-							ctx.json({
-								success: false,
-								errors: [
-									{
-										code: 10092,
-										message: "workers.api.error.environment_not_found",
-									},
-								],
-								messages: [],
-								result: null,
-							})
-						);
-					}
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 10092,
+									message: "workers.api.error.environment_not_found",
+								},
+							],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
 				)
 			);
 			return;
 		}
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.scriptName).toEqual(
-						options.scriptName || "test-name"
-					);
-					expect(req.params.envName).toEqual(options.env);
-					return res.once(
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { script },
-						})
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.scriptName).toEqual(options.scriptName || "test-name");
+					expect(params.envName).toEqual(options.env);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { script },
+					});
+				},
+				{ once: true }
 			)
 		);
 	} else {
 		if (!script) {
 			msw.use(
-				rest.get(
+				http.get(
 					"*/accounts/:accountId/workers/services/:scriptName",
-					(req, res, ctx) => {
-						return res.once(
-							ctx.json({
-								success: false,
-								errors: [
-									{
-										code: 10090,
-										message: "workers.api.error.service_not_found",
-									},
-								],
-								messages: [],
-								result: null,
-							})
-						);
-					}
+					() => {
+						return HttpResponse.json({
+							success: false,
+							errors: [
+								{
+									code: 10090,
+									message: "workers.api.error.service_not_found",
+								},
+							],
+							messages: [],
+							result: null,
+						});
+					},
+					{ once: true }
 				)
 			);
 			return;
 		}
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
-				(req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.scriptName).toEqual(
-						options.scriptName || "test-name"
-					);
-					return res.once(
-						ctx.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: { default_environment: { script } },
-						})
-					);
-				}
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.scriptName).toEqual(options.scriptName || "test-name");
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { default_environment: { script } },
+					});
+				},
+				{ once: true }
 			)
 		);
 	}
@@ -10729,26 +10785,23 @@ function mockServiceScriptData(options: {
 function mockGetQueueByName(queueName: string, queue: QueueResponse | null) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.get(
-			"*/accounts/:accountId/queues?*",
-			async (request, response, context) => {
-				requests.count += 1;
-				expect(await request.text()).toEqual("");
-				if (queue) {
-					const nameParam = request.url.searchParams.getAll("name");
-					expect(nameParam.length).toBeGreaterThan(0);
-					expect(nameParam[0]).toEqual(queueName);
-				}
-				return response(
-					context.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: queue ? [queue] : [],
-					})
-				);
+		http.get("*/accounts/:accountId/queues?*", async ({ request }) => {
+			const url = new URL(request.url);
+
+			requests.count += 1;
+			expect(await request.text()).toEqual("");
+			if (queue) {
+				const nameParam = url.searchParams.getAll("name");
+				expect(nameParam.length).toBeGreaterThan(0);
+				expect(nameParam[0]).toEqual(queueName);
 			}
-		)
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: queue ? [queue] : [],
+			});
+		})
 	);
 	return requests;
 }
@@ -10757,27 +10810,25 @@ function mockGetServiceByName(serviceName: string, defaultEnvironment: string) {
 	const requests = { count: 0 };
 	const resource = `*/accounts/:accountId/workers/services/:serviceName`;
 	msw.use(
-		rest.get(resource, async (request, response, context) => {
+		http.get(resource, async ({ params }) => {
 			requests.count += 1;
-			expect(request.params.accountId).toEqual("some-account-id");
-			expect(request.params.serviceName).toEqual(serviceName);
+			expect(params.accountId).toEqual("some-account-id");
+			expect(params.serviceName).toEqual(serviceName);
 
-			return response(
-				context.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {
-						id: serviceName,
-						default_environment: {
-							environment: defaultEnvironment,
-							script: {
-								last_deployed_from: "wrangler",
-							},
+			return HttpResponse.json({
+				success: true,
+				errors: [],
+				messages: [],
+				result: {
+					id: serviceName,
+					default_environment: {
+						environment: defaultEnvironment,
+						script: {
+							last_deployed_from: "wrangler",
 						},
 					},
-				})
-			);
+				},
+			});
 		})
 	);
 	return requests;
@@ -10791,21 +10842,19 @@ function mockPutQueueConsumerById(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.put(
+		http.put(
 			`*/accounts/:accountId/queues/${expectedQueueId}/consumers/${expectedConsumerId}`,
-			async (req, res, ctx) => {
-				const body = await req.json();
-				expect(req.params.accountId).toEqual("some-account-id");
+			async ({ request, params }) => {
+				const body = await request.json();
+				expect(params.accountId).toEqual("some-account-id");
 				expect(body).toEqual(expectedBody);
 				requests.count += 1;
-				return res(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: { queue_name: expectedQueueName },
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: { queue_name: expectedQueueName },
+				});
 			}
 		)
 	);
@@ -10818,22 +10867,21 @@ function mockPostConsumerById(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.post(
+		http.post(
 			"*/accounts/:accountId/queues/:queueId/consumers",
-			async (request, response, context) => {
+			async ({ request, params }) => {
 				requests.count += 1;
-				expect(request.params.queueId).toEqual(expectedQueueId);
-				expect(request.params.accountId).toEqual("some-account-id");
+				expect(params.queueId).toEqual(expectedQueueId);
+				expect(params.accountId).toEqual("some-account-id");
 				expect(await request.json()).toEqual(expectedBody);
-				return response.once(
-					context.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: {},
-					})
-				);
-			}
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {},
+				});
+			},
+			{ once: true }
 		)
 	);
 	return requests;
@@ -10845,14 +10893,15 @@ function mockPutQueueById(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.put(`*/accounts/:accountId/queues/:queueId`, async (req, res, ctx) => {
-			const body = await req.json();
-			expect(req.params.queueId).toEqual(expectedQueueId);
-			expect(req.params.accountId).toEqual("some-account-id");
-			expect(body).toEqual(expectedBody);
-			requests.count += 1;
-			return res(
-				ctx.json({
+		http.put(
+			`*/accounts/:accountId/queues/:queueId`,
+			async ({ request, params }) => {
+				const body = await request.json();
+				expect(params.queueId).toEqual(expectedQueueId);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(body).toEqual(expectedBody);
+				requests.count += 1;
+				return HttpResponse.json({
 					success: true,
 					errors: [],
 					messages: [],
@@ -10862,9 +10911,9 @@ function mockPutQueueById(
 							delivery_delay: expectedBody.settings?.delivery_delay,
 						},
 					},
-				})
-			);
-		})
+				});
+			}
+		)
 	);
 	return requests;
 }
@@ -10875,65 +10924,22 @@ function mockPostQueueHTTPConsumer(
 ) {
 	const requests = { count: 0 };
 	msw.use(
-		rest.post(
+		http.post(
 			`*/accounts/:accountId/queues/:queueId/consumers`,
-			async (req, res, ctx) => {
-				const body = await req.json();
-				expect(req.params.queueId).toEqual(expectedQueueId);
-				expect(req.params.accountId).toEqual("some-account-id");
+			async ({ request, params }) => {
+				const body = await request.json();
+				expect(params.queueId).toEqual(expectedQueueId);
+				expect(params.accountId).toEqual("some-account-id");
 				expect(body).toEqual(expectedBody);
 				requests.count += 1;
-				return res(
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: {},
-					})
-				);
+				return HttpResponse.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: {},
+				});
 			}
 		)
 	);
 	return requests;
 }
-
-// MSW FormData & Blob polyfills to test FormData requests
-function mockFormDataToString(this: FormData) {
-	const entries = [];
-	for (const [key, value] of this.entries()) {
-		if (value instanceof Blob) {
-			const reader = new FileReaderSync();
-			reader.readAsText(value);
-			const result = reader.result;
-			entries.push([key, result]);
-		} else {
-			entries.push([key, value]);
-		}
-	}
-	return JSON.stringify({
-		__formdata: entries,
-	});
-}
-
-async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
-	const { __formdata } = await this.json();
-	expect(__formdata).toBeInstanceOf(Array);
-
-	const form = new FormData();
-	for (const [key, value] of __formdata) {
-		form.set(key, value);
-	}
-	return form;
-}
-
-// The following two functions workaround the fact that MSW does not yet support FormData in requests.
-// We use the fact that MSW relies upon `node-fetch` internally, which will call `toString()` on the FormData object,
-// rather than passing it through or serializing it as a proper FormData object.
-// The hack is to serialize FormData to a JSON string by overriding `FormData.toString()`.
-// And then to deserialize back to a FormData object by monkey-patching a `formData()` helper onto `MockedRequest`.
-FormData.prototype.toString = mockFormDataToString;
-export interface RestRequestWithFormData extends MockedRequest, RestRequest {
-	formData(): Promise<FormData>;
-}
-(MockedRequest.prototype as RestRequestWithFormData).formData =
-	mockFormDataFromString;

@@ -4,12 +4,12 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
+		"dev": "wrangler dev --test-scheduled",
+		"start": "wrangler dev --test-scheduled",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
-		"typescript": "^5.0.4",
-		"wrangler": "^3.0.0"
+		"typescript": "^5.5.2",
+		"wrangler": "^3.60.3"
 	}
 }

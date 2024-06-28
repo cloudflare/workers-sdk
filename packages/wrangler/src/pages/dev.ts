@@ -7,11 +7,13 @@ import { unstable_dev } from "../api";
 import { readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
+import { printWranglerBanner } from "../update-check";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
@@ -240,6 +242,13 @@ export function Options(yargs: CommonYargsArgv) {
 					"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 				type: "boolean",
 			},
+			"experimental-registry": {
+				alias: ["x-registry"],
+				type: "boolean",
+				describe:
+					"Use the experimental file based dev registry for multi-worker development",
+				default: false,
+			},
 		});
 }
 
@@ -250,6 +259,8 @@ export const Handler = async (args: PagesDevArguments) => {
 		logger.loggerLevel = args.logLevel;
 	}
 
+	await printWranglerBanner();
+
 	if (args.experimentalLocal) {
 		logger.warn(
 			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
@@ -259,6 +270,17 @@ export const Handler = async (args: PagesDevArguments) => {
 	if (args.config) {
 		throw new FatalError(
 			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			1
+		);
+	}
+
+	if (args.experimentalJsonConfig) {
+		throw new FatalError("Pages does not support `wrangler.json`", 1);
+	}
+
+	if (args.env) {
+		throw new FatalError(
+			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
 			1
 		);
 	}
@@ -288,7 +310,9 @@ export const Handler = async (args: PagesDevArguments) => {
 			port: args.proxy,
 			command,
 		});
-		if (proxyPort === undefined) return undefined;
+		if (proxyPort === undefined) {
+			return undefined;
+		}
 	} else {
 		directory = resolve(directory);
 	}
@@ -334,8 +358,13 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	let scriptPath = "";
 
-	const legacyNodeCompat = args.nodeCompat;
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: args.nodeCompat,
+		compatibilityFlags:
+			args.compatibilityFlags ?? config.compatibility_flags ?? [],
+		noBundle: args.noBundle ?? config.no_bundle ?? false,
+	});
+
 	const defineNavigatorUserAgent = isNavigatorDefined(
 		compatibilityDate,
 		compatibilityFlags
@@ -348,8 +377,9 @@ export const Handler = async (args: PagesDevArguments) => {
 				workerJSDirectory: workerScriptPath,
 				bundle: enableBundling,
 				buildOutputDirectory: directory ?? ".",
-				nodejsCompat,
+				nodejsCompatMode,
 				defineNavigatorUserAgent,
+				sourceMaps: config?.upload_source_maps ?? false,
 			});
 			modules = bundleResult.modules;
 			scriptPath = bundleResult.resolvedEntryPointPath;
@@ -374,7 +404,7 @@ export const Handler = async (args: PagesDevArguments) => {
 	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
 		let runBuild = async () => {
-			await checkRawWorker(workerScriptPath, nodejsCompat, () =>
+			await checkRawWorker(workerScriptPath, nodejsCompatMode, () =>
 				scriptReadyResolve()
 			);
 		};
@@ -395,7 +425,7 @@ export const Handler = async (args: PagesDevArguments) => {
 							: workerScriptPath,
 						outfile: scriptPath,
 						directory: directory ?? ".",
-						nodejsCompat,
+						nodejsCompatMode,
 						local: true,
 						sourcemap: true,
 						watch: false,
@@ -429,20 +459,8 @@ export const Handler = async (args: PagesDevArguments) => {
 			`./functionsRoutes-${Math.random()}.mjs`
 		);
 
-		if (legacyNodeCompat) {
-			console.warn(
-				"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-			);
-		}
+		logger.debug(`Compiling worker to "${scriptPath}"...`);
 
-		if (legacyNodeCompat && nodejsCompat) {
-			throw new FatalError(
-				"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file.",
-				1
-			);
-		}
-
-		logger.log(`Compiling worker to "${scriptPath}"...`);
 		const onEnd = () => scriptReadyResolve();
 		try {
 			const buildFn = async () => {
@@ -453,8 +471,7 @@ export const Handler = async (args: PagesDevArguments) => {
 					watch: false,
 					onEnd,
 					buildOutputDirectory: directory,
-					legacyNodeCompat,
-					nodejsCompat,
+					nodejsCompatMode,
 					local: true,
 					routesModule,
 					defineNavigatorUserAgent,
@@ -616,11 +633,8 @@ export const Handler = async (args: PagesDevArguments) => {
 
 					logger.error(error);
 					logger.warn(
-						`Falling back to the following _routes.json default: ${JSON.stringify(
-							defaultRoutesJSONSpec,
-							null,
-							2
-						)}`
+						`Ignoring provided _routes.json file, and falling back to the following default routes configuration:\n` +
+							`${JSON.stringify(defaultRoutesJSONSpec, null, 2)}`
 					);
 
 					routesJSONContents = JSON.stringify(defaultRoutesJSONSpec);
@@ -640,7 +654,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		httpsCertPath: args.httpsCertPath,
 		compatibilityDate,
 		compatibilityFlags,
-		nodeCompat: legacyNodeCompat,
+		nodeCompat: nodejsCompatMode === "legacy",
 		vars,
 		kv: kv_namespaces,
 		durableObjects: do_bindings,
@@ -653,13 +667,12 @@ export const Handler = async (args: PagesDevArguments) => {
 						type: "ESModule",
 						globs: ["**/*.js", "**/*.mjs"],
 					},
-			  ]
+				]
 			: undefined,
 		bundle: enableBundling,
 		persistTo: args.persistTo,
 		inspect: undefined,
 		logLevel: args.logLevel,
-		updateCheck: true,
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
@@ -674,6 +687,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			showInteractiveDevSession: args.showInteractiveDevSession,
 			testMode: false,
 			watch: true,
+			fileBasedRegistry: args.experimentalRegistry,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");
@@ -743,7 +757,9 @@ function getPort(pid: number) {
 			.filter((line) => line !== null) as RegExpExecArray[];
 
 		const match = matches[0];
-		if (match) return parseInt(match[1]);
+		if (match) {
+			return parseInt(match[1]);
+		}
 	} catch (thrown) {
 		logger.error(
 			`Error scanning for ports of process with PID ${pid}: ${thrown}`
@@ -848,10 +864,8 @@ function resolvePagesDevServerSettings(
 		const currentDate = new Date().toISOString().substring(0, 10);
 		logger.warn(
 			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
-				"Pass it in your terminal:\n" +
-				"```\n" +
-				`--compatibility-date=${currentDate}\n` +
-				"```\n" +
+				`❯❯ Add one to your wrangler.toml file: compatibility_date = "${currentDate}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=${currentDate}\n\n` +
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 		compatibilityDate = currentDate;

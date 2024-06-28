@@ -1,0 +1,16 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Debug Current Test File",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "pnpm",
+			"args": ["test:file", "${file}"],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"skipFiles": ["<node_internals>/**"],
+			"cwd": "${workspaceFolder}/tools"
+		}
+	]
+}

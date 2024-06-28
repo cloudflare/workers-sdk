@@ -3,7 +3,6 @@ import { dirname } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import PQueue from "p-queue";
-import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
@@ -196,7 +195,9 @@ export const upload = async (
 
 	for (const bucket of buckets) {
 		// Don't upload empty buckets (can happen for tiny projects)
-		if (bucket.files.length === 0) continue;
+		if (bucket.files.length === 0) {
+			continue;
+		}
 
 		attempts = 0;
 		let gatewayErrors = 0;
@@ -353,6 +354,13 @@ export const upload = async (
 
 // Decode and check that the current JWT has not expired
 function isJwtExpired(token: string): boolean | undefined {
+	// During testing we don't use valid JWTs, so don't try and parse them
+	if (
+		typeof vitest !== "undefined" &&
+		(token === "<<funfetti-auth-jwt>>" || token === "<<funfetti-auth-jwt2>>")
+	) {
+		return false;
+	}
 	try {
 		const decodedJwt = JSON.parse(
 			Buffer.from(token.split(".")[1], "base64").toString()

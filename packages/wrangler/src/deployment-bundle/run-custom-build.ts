@@ -14,7 +14,7 @@ import type { Config } from "../config";
 export async function runCustomBuild(
 	expectedEntryAbsolute: string,
 	expectedEntryRelative: string,
-	build: Config["build"]
+	build: Pick<Config["build"], "command" | "cwd">
 ) {
 	if (build.command) {
 		logger.log("Running custom build:", build.command);

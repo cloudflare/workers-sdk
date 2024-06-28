@@ -1,8 +1,11 @@
-let setTimeoutSpy: jest.SpyInstance;
+import { vi } from "vitest";
+import type { MockInstance } from "vitest";
+
+let setTimeoutSpy: MockInstance;
 
 export function mockSetTimeout() {
 	beforeEach(() => {
-		setTimeoutSpy = jest
+		setTimeoutSpy = vi
 			.spyOn(global, "setTimeout")
 			// @ts-expect-error we're using a very simple setTimeout mock here
 			.mockImplementation((fn, _period) => {

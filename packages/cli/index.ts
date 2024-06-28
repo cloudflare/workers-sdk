@@ -92,8 +92,12 @@ export const format = (
 			(i === 0 ? firstLinePrefix : linePrefix) + space() + formatLine(line)
 	);
 
-	if (newlineBefore) formattedLines.unshift(linePrefix);
-	if (newlineAfter) formattedLines.push(linePrefix);
+	if (newlineBefore) {
+		formattedLines.unshift(linePrefix);
+	}
+	if (newlineAfter) {
+		formattedLines.push(linePrefix);
+	}
 
 	return formattedLines.join("\n");
 };
@@ -119,7 +123,9 @@ export const startSection = (
 			subheading ? dim(subheading) : ""
 		}`
 	);
-	if (printNewLine) newline();
+	if (printNewLine) {
+		newline();
+	}
 };
 
 export const endSection = (heading: string, subheading?: string) => {
@@ -157,15 +163,16 @@ export const warn = (
 		shape = shapes.corners.bl,
 		// current default for backcompat -- TODO: change default to true once all callees have been updated
 		multiline = false,
+		newlineBefore = true,
 	} = {}
 ) => {
 	logRaw(
 		format(msg, {
 			firstLinePrefix: gray(shape) + space() + status.warning,
 			linePrefix: gray(shapes.bar),
-			newlineBefore: true,
 			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
 			multiline,
+			newlineBefore,
 		})
 	);
 };

@@ -1,3 +1,4 @@
+import { setupTest } from "./test";
 import type {
 	D1Database,
 	D1ExecResult,
@@ -5,7 +6,6 @@ import type {
 	D1Result,
 } from "@cloudflare/workers-types/experimental";
 import type { Miniflare } from "miniflare";
-import { setupTest } from "./test";
 
 const kSend = Symbol("kSend");
 

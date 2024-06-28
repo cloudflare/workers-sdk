@@ -34,7 +34,9 @@ const getLogLevelFromEnv = getEnvironmentVariableFactory({
 function getLoggerLevel(): LoggerLevel {
 	const fromEnv = getLogLevelFromEnv()?.toLowerCase();
 	if (fromEnv !== undefined) {
-		if (fromEnv in LOGGER_LEVELS) return fromEnv as LoggerLevel;
+		if (fromEnv in LOGGER_LEVELS) {
+			return fromEnv as LoggerLevel;
+		}
 		const expected = Object.keys(LOGGER_LEVELS)
 			.map((level) => `"${level}"`)
 			.join(" | ");
@@ -88,7 +90,7 @@ export class Logger {
 		const message = this.formatMessage(messageLevel, format(...args));
 
 		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
-		const inUnitTests = typeof jest !== "undefined";
+		const inUnitTests = typeof vitest !== "undefined";
 		if (!inUnitTests) {
 			void appendToDebugLogFile(messageLevel, message);
 		}
@@ -135,7 +137,9 @@ export const logger = new Logger();
 
 export function logBuildWarnings(warnings: Message[]) {
 	const logs = formatMessagesSync(warnings, { kind: "warning", color: true });
-	for (const log of logs) console.warn(log);
+	for (const log of logs) {
+		console.warn(log);
+	}
 }
 
 /**
@@ -144,6 +148,8 @@ export function logBuildWarnings(warnings: Message[]) {
  */
 export function logBuildFailure(errors: Message[], warnings: Message[]) {
 	const logs = formatMessagesSync(errors, { kind: "error", color: true });
-	for (const log of logs) console.error(log);
+	for (const log of logs) {
+		console.error(log);
+	}
 	logBuildWarnings(warnings);
 }

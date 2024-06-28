@@ -4,5 +4,8 @@
 	"description": "Shared fixtures for testing",
 	"devDependencies": {
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

@@ -77,7 +77,9 @@ export function reviveError(jsonError: JsonError): Error {
 	// construction, we override the stack trace to the one from the Worker in the
 	// JSON-serialised error.
 	const error = new ctor(jsonError.message, { cause });
-	if (jsonError.name !== undefined) error.name = jsonError.name;
+	if (jsonError.name !== undefined) {
+		error.name = jsonError.name;
+	}
 	error.stack = jsonError.stack;
 
 	return error;

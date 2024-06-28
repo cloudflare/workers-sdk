@@ -1,5 +1,4 @@
 import Table from "ink-table";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";

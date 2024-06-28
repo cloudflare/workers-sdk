@@ -1,7 +1,7 @@
 // `@types/node` should be included
 Buffer.from("test");
 
-// @ts-expect-error `@types/jest` should NOT be included
+// @ts-expect-error `vitest/globals` should NOT be included
 test("test");
 
 // @ts-expect-error `@cloudflare/workers-types` should NOT be included

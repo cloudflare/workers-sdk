@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import TOML from "@iarna/toml";
+import { dedent } from "ts-dedent";
 import { getConstellationWarningFromEnv } from "../constellation/utils";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -39,6 +40,12 @@ import type {
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
+export type NormalizeAndValidateConfigArgs = {
+	env?: string;
+	"legacy-env"?: boolean;
+	"dispatch-namespace"?: string;
+};
+
 const ENGLISH = new Intl.ListFormat("en-US");
 
 export function isPagesConfig(rawConfig: RawConfig): boolean {
@@ -56,7 +63,7 @@ export function isPagesConfig(rawConfig: RawConfig): boolean {
 export function normalizeAndValidateConfig(
 	rawConfig: RawConfig,
 	configPath: string | undefined,
-	args: Record<string, unknown>
+	args: NormalizeAndValidateConfigArgs
 ): {
 	config: Config;
 	diagnostics: Diagnostics;
@@ -211,7 +218,7 @@ export function normalizeAndValidateConfig(
 			const envNames = rawConfig.env
 				? `The available configured environment names are: ${JSON.stringify(
 						Object.keys(rawConfig.env)
-				  )}\n`
+					)}\n`
 				: "";
 			const message =
 				`No environment found in configuration with name "${envName}".\n` +
@@ -243,11 +250,6 @@ export function normalizeAndValidateConfig(
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
-		migrations: normalizeAndValidateMigrations(
-			diagnostics,
-			rawConfig.migrations ?? [],
-			activeEnv.durable_objects
-		),
 		site: normalizeAndValidateSite(
 			diagnostics,
 			configPath,
@@ -370,11 +372,11 @@ function normalizeAndValidateBuild(
 								process.cwd(),
 								path.join(path.dirname(configPath), `${dir}`)
 							)
-					  )
+						)
 					: path.relative(
 							process.cwd(),
 							path.join(path.dirname(configPath), `${watch_dir}`)
-					  )
+						)
 				: watch_dir,
 		cwd,
 		deprecatedUpload,
@@ -521,118 +523,6 @@ function normalizeAndValidateDev(
 	);
 	validateOptionalProperty(diagnostics, "dev", "host", host, "string");
 	return { ip, port, inspector_port, local_protocol, upstream_protocol, host };
-}
-
-/**
- * Validate the `migrations` configuration and return the normalized values.
- */
-function normalizeAndValidateMigrations(
-	diagnostics: Diagnostics,
-	rawMigrations: Config["migrations"],
-	durableObjects: Config["durable_objects"]
-): Config["migrations"] {
-	if (!Array.isArray(rawMigrations)) {
-		diagnostics.errors.push(
-			`The optional "migrations" field should be an array, but got ${JSON.stringify(
-				rawMigrations
-			)}`
-		);
-		return [];
-	} else {
-		for (let i = 0; i < rawMigrations.length; i++) {
-			const { tag, new_classes, renamed_classes, deleted_classes, ...rest } =
-				rawMigrations[i];
-
-			validateAdditionalProperties(
-				diagnostics,
-				"migrations",
-				Object.keys(rest),
-				[]
-			);
-
-			validateRequiredProperty(
-				diagnostics,
-				`migrations[${i}]`,
-				`tag`,
-				tag,
-				"string"
-			);
-			validateOptionalTypedArray(
-				diagnostics,
-				`migrations[${i}].new_classes`,
-				new_classes,
-				"string"
-			);
-			if (renamed_classes !== undefined) {
-				if (!Array.isArray(renamed_classes)) {
-					diagnostics.errors.push(
-						`Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
-							renamed_classes
-						)}.`
-					);
-				} else if (
-					renamed_classes.some(
-						(c) =>
-							typeof c !== "object" ||
-							!isRequiredProperty(c, "from", "string") ||
-							!isRequiredProperty(c, "to", "string")
-					)
-				) {
-					diagnostics.errors.push(
-						`Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
-							renamed_classes
-						)}.`
-					);
-				}
-			}
-			validateOptionalTypedArray(
-				diagnostics,
-				`migrations[${i}].deleted_classes`,
-				deleted_classes,
-				"string"
-			);
-		}
-
-		if (
-			Array.isArray(durableObjects?.bindings) &&
-			durableObjects.bindings.length > 0
-		) {
-			// intrinsic [durable_objects] implies [migrations]
-			const exportedDurableObjects = (durableObjects.bindings || []).filter(
-				(binding) => !binding.script_name
-			);
-			if (exportedDurableObjects.length > 0 && rawMigrations.length === 0) {
-				if (
-					!exportedDurableObjects.some(
-						(exportedDurableObject) =>
-							typeof exportedDurableObject.class_name !== "string"
-					)
-				) {
-					const durableObjectClassnames = exportedDurableObjects.map(
-						(durable) => durable.class_name
-					);
-
-					diagnostics.warnings.push(
-						`In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(
-							", "
-						)}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
-
-  \`\`\`
-  [[migrations]]
-  tag = "v1" # Should be unique for each entry
-  new_classes = [${durableObjectClassnames
-		.map((name) => `"${name}"`)
-		.join(", ")}]
-  \`\`\`
-
-Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`
-					);
-				}
-			}
-		}
-
-		return rawMigrations;
-	}
 }
 
 /**
@@ -811,7 +701,7 @@ function normalizeAndValidateModulePaths(
 					? path.relative(
 							process.cwd(),
 							path.join(path.dirname(configPath), filePath)
-					  )
+						)
 					: filePath;
 			}
 		}
@@ -1308,6 +1198,14 @@ function normalizeAndValidateEnvironment(
 				bindings: [],
 			}
 		),
+		migrations: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"migrations",
+			validateMigrations,
+			[]
+		),
 		kv_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1549,6 +1447,12 @@ function normalizeAndValidateEnvironment(
 		),
 	};
 
+	warnIfDurableObjectsHaveNoMigrations(
+		diagnostics,
+		environment.durable_objects,
+		environment.migrations
+	);
+
 	return environment;
 }
 
@@ -1571,7 +1475,7 @@ function validateAndNormalizeTsconfig(
 		? path.relative(
 				process.cwd(),
 				path.join(path.dirname(configPath), tsconfig)
-		  )
+			)
 		: tsconfig;
 }
 
@@ -2015,8 +1919,9 @@ const validateCflogfwdrObject: (env: string) => ValidatorFn =
 			envName,
 			validateCflogfwdrBinding
 		);
-		if (!bindingsValidation(diagnostics, field, value, topLevelEnv))
+		if (!bindingsValidation(diagnostics, field, value, topLevelEnv)) {
 			return false;
+		}
 
 		const v = value as {
 			bindings: [];
@@ -2161,6 +2066,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (isRequiredProperty(value, "type", "string")) {
 		const safeBindings = [
 			"plain_text",
+			"secret_text",
 			"json",
 			"wasm_module",
 			"data_blob",
@@ -2182,6 +2088,17 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 				`The binding type "${value.type}" is directly supported by wrangler.\n` +
 					`Consider migrating this unsafe binding to a format for '${value.type}' bindings that is supported by wrangler for optimal support.\n` +
 					"For more details, see https://developers.cloudflare.com/workers/cli-wrangler/configuration"
+			);
+		}
+
+		if (
+			value.type === "metadata" &&
+			isRequiredProperty(value, "name", "string")
+		) {
+			diagnostics.warnings.push(
+				"The deployment object in the metadata binding is now deprecated. " +
+					"Please switch using the version_metadata binding for access to version specific fields: " +
+					"https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata"
 			);
 		}
 	} else {
@@ -3126,4 +3043,122 @@ function normalizeAndValidateLimits(
 		() => true,
 		undefined
 	);
+}
+
+/**
+ * Validate the `migrations` configuration and return the normalized values.
+ */
+const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
+	const rawMigrations = value ?? [];
+	if (!Array.isArray(rawMigrations)) {
+		diagnostics.errors.push(
+			`The optional "${field}" field should be an array, but got ${JSON.stringify(
+				rawMigrations
+			)}`
+		);
+		return false;
+	}
+
+	let valid = true;
+	for (let i = 0; i < rawMigrations.length; i++) {
+		const { tag, new_classes, renamed_classes, deleted_classes, ...rest } =
+			rawMigrations[i];
+
+		valid =
+			validateAdditionalProperties(
+				diagnostics,
+				"migrations",
+				Object.keys(rest),
+				[]
+			) && valid;
+
+		valid =
+			validateRequiredProperty(
+				diagnostics,
+				`migrations[${i}]`,
+				`tag`,
+				tag,
+				"string"
+			) && valid;
+
+		valid =
+			validateOptionalTypedArray(
+				diagnostics,
+				`migrations[${i}].new_classes`,
+				new_classes,
+				"string"
+			) && valid;
+
+		if (renamed_classes !== undefined) {
+			if (!Array.isArray(renamed_classes)) {
+				diagnostics.errors.push(
+					`Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
+						renamed_classes
+					)}.`
+				);
+				valid = false;
+			} else if (
+				renamed_classes.some(
+					(c) =>
+						typeof c !== "object" ||
+						!isRequiredProperty(c, "from", "string") ||
+						!isRequiredProperty(c, "to", "string")
+				)
+			) {
+				diagnostics.errors.push(
+					`Expected "migrations[${i}].renamed_classes" to be an array of "{from: string, to: string}" objects but got ${JSON.stringify(
+						renamed_classes
+					)}.`
+				);
+				valid = false;
+			}
+		}
+		valid =
+			validateOptionalTypedArray(
+				diagnostics,
+				`migrations[${i}].deleted_classes`,
+				deleted_classes,
+				"string"
+			) && valid;
+	}
+	return valid;
+};
+
+function warnIfDurableObjectsHaveNoMigrations(
+	diagnostics: Diagnostics,
+	durableObjects: Config["durable_objects"],
+	migrations: Config["migrations"]
+) {
+	if (
+		Array.isArray(durableObjects.bindings) &&
+		durableObjects.bindings.length > 0
+	) {
+		// intrinsic [durable_objects] implies [migrations]
+		const exportedDurableObjects = (durableObjects.bindings || []).filter(
+			(binding) => !binding.script_name
+		);
+		if (exportedDurableObjects.length > 0 && migrations.length === 0) {
+			if (
+				!exportedDurableObjects.some(
+					(exportedDurableObject) =>
+						typeof exportedDurableObject.class_name !== "string"
+				)
+			) {
+				const durableObjectClassnames = exportedDurableObjects.map(
+					(durable) => durable.class_name
+				);
+
+				diagnostics.warnings.push(dedent`
+				In wrangler.toml, you have configured [durable_objects] exported by this Worker (${durableObjectClassnames.join(", ")}), but no [migrations] for them. This may not work as expected until you add a [migrations] section to your wrangler.toml. Add this configuration to your wrangler.toml:
+
+				  \`\`\`
+				  [[migrations]]
+				  tag = "v1" # Should be unique for each entry
+				  new_classes = [${durableObjectClassnames.map((name) => `"${name}"`).join(", ")}]
+				  \`\`\`
+
+				Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details.`);
+			}
+		}
+	}
 }

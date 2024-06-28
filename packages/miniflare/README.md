@@ -823,3 +823,15 @@ defined at the top-level.
 
   Returns the same object returned from incoming `Request`'s `cf` property. This
   object depends on the `cf` property from `SharedOptions`.
+
+## Configuration
+
+### Local `workerd`
+
+You can override the `workerd` binary being used by miniflare with a your own local build by setting the `MINIFLARE_WORKERD_PATH` environment variable.
+
+For example:
+
+```shell
+$ export MINIFLARE_WORKERD_PATH="<WORKERD_REPO_DIR>/bazel-bin/src/workerd/server/workerd"
+```

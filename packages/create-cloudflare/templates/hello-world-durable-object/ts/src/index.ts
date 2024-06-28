@@ -49,7 +49,7 @@ export class MyDurableObject extends DurableObject {
 
 	/**
 	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
-	 *  Object instance receives a request from a Worker via the same method invokation on the stub
+	 *  Object instance receives a request from a Worker via the same method invocation on the stub
 	 *
 	 * @param name - The name provided to a Durable Object instance from a Worker
 	 * @returns The greeting to be sent back to the Worker
@@ -68,7 +68,7 @@ export default {
 	 * @param ctx - The execution context of the Worker
 	 * @returns The response to be sent back to the client
 	 */
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(request, env, ctx): Promise<Response> {
 		// We will create a `DurableObjectId` using the pathname from the Worker request
 		// This id refers to a unique instance of our 'MyDurableObject' class above
 		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
@@ -83,4 +83,4 @@ export default {
 
 		return new Response(greeting);
 	},
-};
+} satisfies ExportedHandler<Env>;

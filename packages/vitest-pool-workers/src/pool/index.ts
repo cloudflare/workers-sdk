@@ -43,10 +43,16 @@ import {
 } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
+	WorkersConfigPluginAPI,
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
-import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
+import type {
+	CloseEvent,
+	MiniflareOptions,
+	SharedOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { Readable } from "node:stream";
 import type { MessagePort } from "node:worker_threads";
 import type {
@@ -120,10 +126,14 @@ function forEachMiniflare(
 	mfs: SingleOrPerTestFileMiniflare,
 	callback: (mf: Miniflare) => Promise<unknown>
 ): Promise<unknown> {
-	if (mfs instanceof Miniflare) return callback(mfs);
+	if (mfs instanceof Miniflare) {
+		return callback(mfs);
+	}
 
 	const promises: Promise<unknown>[] = [];
-	for (const mf of mfs.values()) promises.push(callback(mf));
+	for (const mf of mfs.values()) {
+		promises.push(callback(mf));
+	}
 	return Promise.all(promises);
 }
 
@@ -139,7 +149,9 @@ const allProjects = new Map<string /* projectName */, Project>();
 
 function getRunnerName(project: WorkspaceProject, testFile?: string) {
 	const name = `${WORKER_NAME_PREFIX}runner-${project.getName()}`;
-	if (testFile === undefined) return name;
+	if (testFile === undefined) {
+		return name;
+	}
 	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
 	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
 	return `${name}-${testFileHash}-${testFile}`;
@@ -149,7 +161,9 @@ function isDurableObjectDesignatorToSelf(
 	value: unknown
 ): value is string | { className: string } {
 	// Either this is a simple `string` designator to the current worker...
-	if (typeof value === "string") return true;
+	if (typeof value === "string") {
+		return true;
+	}
 	// ...or it's an object designator without a `scriptName`. We're assuming the
 	// user isn't able to guess the current worker name, so if a `scriptName` is
 	// set, the designator is definitely for another worker.
@@ -206,6 +220,35 @@ const DEFINES_MODULE_PATH = path.join(
 );
 
 /**
+ * Prefix all service binding named entrypoints, so they don't clash with other
+ * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
+ * names of non-default entrypoints defined in this worker.
+ */
+function fixupServiceBindingsToSelf(
+	worker: SourcelessWorkerOptions
+): Set<string> {
+	const result = new Set<string>();
+	if (worker.serviceBindings === undefined) {
+		return result;
+	}
+	for (const value of Object.values(worker.serviceBindings)) {
+		// Assume user cannot guess name of current worker, so can only bind to self
+		// if `name` is `kCurrentWorker`
+		if (
+			typeof value === "object" &&
+			"name" in value &&
+			value.name === kCurrentWorker &&
+			value.entrypoint !== undefined &&
+			value.entrypoint !== "default"
+		) {
+			result.add(value.entrypoint);
+			value.entrypoint = USER_OBJECT_MODULE_NAME + value.entrypoint;
+		}
+	}
+	return result;
+}
+
+/**
  * Prefix all Durable Object class names, so they don't clash with other
  * identifiers in `src/worker/index.ts`. Returns a `Set` containing original
  * names of Durable Object classes defined in this worker.
@@ -217,7 +260,9 @@ function fixupDurableObjectBindingsToSelf(
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
 	const result = new Set<string>();
-	if (worker.durableObjects === undefined) return result;
+	if (worker.durableObjects === undefined) {
+		return result;
+	}
 	for (const key of Object.keys(worker.durableObjects)) {
 		const designator = worker.durableObjects[key];
 		// `designator` hasn't been validated at this point
@@ -240,7 +285,7 @@ function fixupDurableObjectBindingsToSelf(
 
 type ProjectWorkers = [
 	runnerWorker: WorkerOptions,
-	...auxiliaryWorkers: WorkerOptions[]
+	...auxiliaryWorkers: WorkerOptions[],
 ];
 
 const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";
@@ -363,19 +408,28 @@ function buildProjectWorkerOptions(
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
 		handleLoopbackRequest;
 
-	// Build wrappers for Durable Objects defined in this worker
+	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};
-	const durableObjectClassNames =
-		fixupDurableObjectBindingsToSelf(runnerWorker);
-	const durableObjectWrappers = Array.from(durableObjectClassNames)
-		.sort() // Sort for deterministic output to minimise `Miniflare` restarts
-		.map((className) => {
-			const quotedClassName = JSON.stringify(className);
-			return `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
-		});
-	durableObjectWrappers.unshift(
-		'import { createDurableObjectWrapper } from "cloudflare:test-internal";'
-	);
+	// Sort for deterministic output to minimise `Miniflare` restarts
+	const serviceBindingEntrypointNames = Array.from(
+		fixupServiceBindingsToSelf(runnerWorker)
+	).sort();
+	const durableObjectClassNames = Array.from(
+		fixupDurableObjectBindingsToSelf(runnerWorker)
+	).sort();
+	const wrappers = [
+		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from "cloudflare:test-internal";',
+	];
+	for (const entrypointName of serviceBindingEntrypointNames) {
+		const quotedEntrypointName = JSON.stringify(entrypointName);
+		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${entrypointName} = createWorkerEntrypointWrapper(${quotedEntrypointName});`;
+		wrappers.push(wrapper);
+	}
+	for (const className of durableObjectClassNames) {
+		const quotedClassName = JSON.stringify(className);
+		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
+		wrappers.push(wrapper);
+	}
 
 	// Make sure we define the `RunnerObject` Durable Object
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
@@ -399,8 +453,12 @@ function buildProjectWorkerOptions(
 	`;
 
 	// Make sure we define the runner script, including object wrappers & defines
-	if ("script" in runnerWorker) delete runnerWorker.script;
-	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
+	if ("script" in runnerWorker) {
+		delete runnerWorker.script;
+	}
+	if ("scriptPath" in runnerWorker) {
+		delete runnerWorker.scriptPath;
+	}
 
 	// We want module names to be their absolute path without the leading	slash
 	// (i.e. the modules root should be the root directory). On Windows, we'd
@@ -421,7 +479,7 @@ function buildProjectWorkerOptions(
 		{
 			type: "ESModule",
 			path: path.join(modulesRoot, USER_OBJECT_MODULE_PATH),
-			contents: durableObjectWrappers.join("\n"),
+			contents: wrappers.join("\n"),
 		},
 		{
 			type: "ESModule",
@@ -464,12 +522,12 @@ function buildProjectWorkerOptions(
 	return workers;
 }
 
-const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
+const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	log: mfLog,
 	verbose: true,
 	handleRuntimeStdio,
 	unsafeStickyBlobs: true,
-};
+} satisfies Partial<MiniflareOptions>;
 
 type ModuleFallbackService = NonNullable<
 	MiniflareOptions["unsafeModuleFallbackService"]
@@ -479,7 +537,9 @@ type ModuleFallbackService = NonNullable<
 const moduleFallbackServices = new WeakMap<Vitest, ModuleFallbackService>();
 function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 	let service = moduleFallbackServices.get(ctx);
-	if (service !== undefined) return service;
+	if (service !== undefined) {
+		return service;
+	}
 	service = handleModuleFallbackRequest.bind(undefined, ctx.vitenode.server);
 	moduleFallbackServices.set(ctx, service);
 	return service;
@@ -579,7 +639,9 @@ async function getProjectMiniflare(
 function maybeGetResolvedMainPath(project: Project): string | undefined {
 	const projectPath = getProjectPath(project.project);
 	const main = project.options.main;
-	if (main === undefined) return;
+	if (main === undefined) {
+		return;
+	}
 	if (typeof projectPath === "string") {
 		return path.resolve(path.dirname(projectPath), main);
 	} else {
@@ -617,6 +679,18 @@ async function runTests(
 		providedContext: project.project.getProvidedContext(),
 	};
 
+	// Find the vitest-pool-workers:config plugin and give it the path to the main file.
+	// This allows that plugin to inject a virtual dependency on main so that vitest
+	// will automatically re-run tests when that gets updated, avoiding the user having
+	// to manually add such an import in their tests.
+	const configPlugin = project.project.server.config.plugins.find(
+		({ name }) => name === "@cloudflare/vitest-pool-workers:config"
+	);
+	if (configPlugin !== undefined) {
+		const api = configPlugin.api as WorkersConfigPluginAPI;
+		api.setMain(project.options.main);
+	}
+
 	// We reset storage at the end of tests when the user is presumably looking at
 	// results. We don't need to reset storage on the first run as instances were
 	// just created.
@@ -635,6 +709,7 @@ async function runTests(
 				filePath: workerPath,
 				name: "run",
 				data,
+				cwd: process.cwd(),
 			}),
 		},
 	});
@@ -662,11 +737,17 @@ async function runTests(
 		async fetch(...args) {
 			const specifier = args[0];
 
-			// Mark built-in modules and any virtual modules (e.g. `cloudflare:test`)
-			// as external
+			// Mark built-in modules (e.g. `cloudflare:test-runner`) as external.
+			// Note we explicitly don't mark `cloudflare:test` as external here, as
+			// this is handled by a Vite plugin injected by `defineWorkersConfig()`.
+			// The virtual `cloudflare:test` module will define a dependency on the
+			// specific `main` entrypoint, ensuring tests reload when it changes.
+			// Note Vite's module graph is constructed using static analysis, so the
+			// dynamic import of `main` won't add an imported-by edge to the graph.
 			if (
-				/^(cloudflare|workerd):/.test(specifier) ||
-				workerdBuiltinModules.has(specifier)
+				specifier !== "cloudflare:test" &&
+				(/^(cloudflare|workerd):/.test(specifier) ||
+					workerdBuiltinModules.has(specifier))
 			) {
 				return { externalize: specifier };
 			}
@@ -742,11 +823,15 @@ function getPackageJson(dirPath: string): PackageJson | undefined {
 			const contents = fs.readFileSync(pkgJsonPath, "utf8");
 			return JSON.parse(contents);
 		} catch (e) {
-			if (!isFileNotFoundError(e)) throw e;
+			if (!isFileNotFoundError(e)) {
+				throw e;
+			}
 		}
 		const nextDirPath = path.dirname(dirPath);
 		// `path.dirname()` of the root directory is the root directory
-		if (nextDirPath === dirPath) return;
+		if (nextDirPath === dirPath) {
+			return;
+		}
 		dirPath = nextDirPath;
 	}
 }
@@ -830,7 +915,9 @@ export default function (ctx: Vitest): ProcessPool {
 			const filesByProject = new Map<WorkspaceProject, string[]>();
 			for (const [project, file] of specs) {
 				let group = filesByProject.get(project);
-				if (group === undefined) filesByProject.set(project, (group = []));
+				if (group === undefined) {
+					filesByProject.set(project, (group = []));
+				}
 				group.push(file);
 			}
 			for (const [workspaceProject, files] of filesByProject) {

@@ -1,6 +1,9 @@
 import * as cli from "@cloudflare/cli";
-import { inputPrompt, spinnerWhile } from "@cloudflare/cli/interactive";
+import { spinnerWhile } from "@cloudflare/cli/interactive";
+import { confirm, prompt } from "../../dialogs";
 import { UserError } from "../../errors";
+import { logger } from "../../logger";
+import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
@@ -12,6 +15,8 @@ import type {
 } from "../../yargs-types";
 import type { VersionId } from "../types";
 
+export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
+
 export type VersionsRollbackArgs = StrictYargsOptionsToInterface<
 	typeof versionsRollbackOptions
 >;
@@ -19,12 +24,13 @@ export type VersionsRollbackArgs = StrictYargsOptionsToInterface<
 export default function registerVersionsRollbackCommand(
 	yargs: CommonYargsArgv,
 	epilogue: string,
-	subHelp: SubHelp
+	subHelp: SubHelp,
+	description = "🔙 Rollback to a Worker Version"
 ) {
 	return yargs
 		.command(
 			"rollback [version-id]",
-			"🔙 Rollback to a Worker Version",
+			description,
 			versionsRollbackOptions,
 			versionsRollbackHandler
 		)
@@ -45,7 +51,7 @@ export function versionsRollbackOptions(rollbackYargs: CommonYargsArgv) {
 		})
 		.option("message", {
 			alias: "m",
-			describe: "The reason for this rollback (optional)",
+			describe: "The reason for this rollback",
 			type: "string",
 			default: undefined,
 		})
@@ -78,14 +84,12 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 			endMessage: "",
 		}));
 
-	const message = await inputPrompt({
-		type: "text",
-		label: "Message",
-		question:
-			"Please provide a message for this rollback (120 characters max, optional)?",
-		defaultValue: args.message ?? "Rollback",
-		acceptDefault: args.yes,
-	});
+	const message = await prompt(
+		"Please provide an optional message for this rollback (120 characters max)?",
+		{
+			defaultValue: args.message ?? "Rollback",
+		}
+	);
 
 	const version = await fetchVersion(accountId, workerName, versionId);
 	cli.warn(
@@ -95,27 +99,54 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 	const rollbackTraffic = new Map([[versionId, 100]]);
 	printVersions([version], rollbackTraffic);
 
-	const confirm = await inputPrompt({
-		type: "confirm",
-		label: "Rollback",
-		question:
-			"Are you sure you want to deploy this Worker Version to 100% of traffic?",
-		defaultValue: args.yes, // defaultValue: false.    if --yes, defaultValue: true
-		acceptDefault: args.yes,
-	});
-
-	if (!confirm) {
+	const confirmed = await confirm(
+		"Are you sure you want to deploy this Worker Version to 100% of traffic?",
+		{ defaultValue: true }
+	);
+	if (!confirmed) {
 		cli.cancel("Aborting rollback...");
 		return;
 	}
 
-	await spinnerWhile({
-		async promise() {
-			await createDeployment(accountId, workerName, rollbackTraffic, message);
-		},
-		startMessage: `Performing rollback`,
-		endMessage: "",
-	});
+	logger.log("Performing rollback...");
+	try {
+		await createDeployment(accountId, workerName, rollbackTraffic, message);
+	} catch (e) {
+		if (
+			e instanceof APIError &&
+			e.code === CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE
+		) {
+			// This is not great but is the best way I could think to handle for now
+			const errorMsg = e.notes[0].text.replace(
+				` [code: ${CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE}]`,
+				""
+			);
+			const targetString = "The following secrets have changed:";
+			const changedSecrets = errorMsg
+				.substring(errorMsg.indexOf(targetString) + targetString.length + 1)
+				.split(", ");
+
+			const secretConfirmation = await confirm(
+				"The following secrets have changed since the target version was deployed. " +
+					`Please confirm you wish to continue with the rollback\n` +
+					changedSecrets.map((secret) => `  * ${secret}`).join("\n")
+			);
+
+			if (secretConfirmation) {
+				await createDeployment(
+					accountId,
+					workerName,
+					rollbackTraffic,
+					message,
+					true
+				);
+			} else {
+				cli.cancel("Aborting rollback...");
+			}
+		} else {
+			throw e;
+		}
+	}
 
 	cli.success(
 		`Worker Version ${versionId} has been deployed to 100% of traffic.`
@@ -140,7 +171,9 @@ async function fetchDefaultRollbackVersionId(
 			({ percentage }) => percentage === 100
 		);
 
-		if (stableVersion) return stableVersion.version_id;
+		if (stableVersion) {
+			return stableVersion.version_id;
+		}
 	}
 
 	// if we get here, we did not find a stable version

@@ -6,20 +6,15 @@ import { Toast } from "@cloudflare/component-toast";
 import { Div, Form, Label, Output } from "@cloudflare/elements";
 import { isDarkMode, theme } from "@cloudflare/style-const";
 import { createStyledComponent } from "@cloudflare/style-container";
-import React, {
-	useCallback,
-	useContext,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { FrameError } from "../FrameErrorBoundary";
 import { InputField } from "../InputField";
 import { ServiceContext } from "../QuickEditor";
-import SplitPane from "../SplitPane";
 import { fetchWorker } from "./fetchWorker";
-import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
+import RequestHeaders from "./RequestHeaders";
 import ResponseView from "./ResponseView";
+import type { HeaderEntry } from "./RequestHeaders";
+import type React from "react";
 
 const HTTP_METHODS = [
 	"GET",
@@ -33,9 +28,8 @@ const HTTP_METHODS = [
 
 const SELECT_OPTIONS = HTTP_METHODS.map((m) => ({ label: m, value: m }));
 
-type HTTPMethod = typeof HTTP_METHODS extends ReadonlyArray<infer T>
-	? T
-	: never;
+type HTTPMethod =
+	typeof HTTP_METHODS extends ReadonlyArray<infer T> ? T : never;
 
 const BodyInput = createStyledComponent(
 	() => ({
@@ -168,7 +162,9 @@ export function HTTPTab() {
 								Headers{" "}
 							</StyledLabel>
 							<Button
-								onClick={() => setHeaders((headers) => [...headers, ["", ""]])}
+								onClick={() =>
+									setHeaders((prevHeaders) => [...prevHeaders, ["", ""]])
+								}
 								ml="auto"
 								type="plain"
 							>
@@ -192,7 +188,7 @@ export function HTTPTab() {
 								p={2}
 								rows={5}
 								value={body}
-								onChange={(e: any) => setBody(e.target.value)}
+								onChange={(e) => setBody(e.target.value)}
 							/>
 						</Div>
 					)}
@@ -213,7 +209,7 @@ export function HTTPTab() {
 						<ResponseView response={response} loading={isLoading} />
 					) : (
 						<Toast type="info">
-							Send a request to test your Worker's response.
+							Send a request to test your Worker&apos;s response.
 						</Toast>
 					)}
 				</Output>

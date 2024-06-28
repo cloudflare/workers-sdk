@@ -13,6 +13,10 @@ import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
 
+export interface WorkersConfigPluginAPI {
+	setMain(newMain?: string): void;
+}
+
 const PLUGIN_VALUES = Object.values(PLUGINS);
 
 const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
@@ -84,9 +88,14 @@ function isZodErrorLike(value: unknown): value is ZodError {
 
 type ZodErrorRef = { value?: ZodError };
 function coalesceZodErrors(ref: ZodErrorRef, thrown: unknown) {
-	if (!isZodErrorLike(thrown)) throw thrown;
-	if (ref.value === undefined) ref.value = thrown;
-	else ref.value.issues.push(...thrown.issues);
+	if (!isZodErrorLike(thrown)) {
+		throw thrown;
+	}
+	if (ref.value === undefined) {
+		ref.value = thrown;
+	} else {
+		ref.value.issues.push(...thrown.issues);
+	}
 }
 
 function parseWorkerOptions(
@@ -115,10 +124,14 @@ function parseWorkerOptions(
 			coalesceZodErrors(errorRef, e);
 		}
 	}
-	if (errorRef.value !== undefined) throw errorRef.value;
+	if (errorRef.value !== undefined) {
+		throw errorRef.value;
+	}
 
 	// Remove the placeholder script added if any
-	if (withoutScript) delete value["script"];
+	if (withoutScript) {
+		delete value["script"];
+	}
 	return result;
 }
 
@@ -171,7 +184,9 @@ async function parseCustomPoolOptions(
 		});
 	}
 
-	if (errorRef.value !== undefined) throw errorRef.value;
+	if (errorRef.value !== undefined) {
+		throw errorRef.value;
+	}
 
 	// Try to parse Wrangler config if any
 	if (options.wrangler?.configPath !== undefined) {
@@ -247,7 +262,9 @@ export async function parseProjectOptions(
 			path: OPTIONS_PATH_ARRAY,
 		});
 	} catch (e) {
-		if (!isZodErrorLike(e)) throw e;
+		if (!isZodErrorLike(e)) {
+			throw e;
+		}
 		let formatted: string;
 		try {
 			formatted = formatZodError(e, {

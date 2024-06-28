@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Response } from "undici";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import { loadSourceMaps } from "../../deployment-bundle/source-maps";
 import type { Config } from "../../config";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { CfPlacement, CfWorkerInit } from "../../deployment-bundle/worker";
@@ -85,8 +86,11 @@ function createWorkerBundleFormData(
 		usage_model: undefined,
 		keepVars: undefined,
 		keepSecrets: undefined,
+		keepBindings: undefined,
 		logpush: undefined,
-		sourceMaps: undefined,
+		sourceMaps: config?.upload_source_maps
+			? loadSourceMaps(mainModule, workerBundle.modules, workerBundle)
+			: undefined,
 		placement: placement,
 		tail_consumers: undefined,
 		limits: config?.limits,

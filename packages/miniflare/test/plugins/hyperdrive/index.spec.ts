@@ -109,7 +109,9 @@ test("sets default port based on protocol", async (t) => {
 			}
 		}`,
 		hyperdrives: {
-			HYPERDRIVE: "postgresql://user:password@localhost/database" as string | URL,
+			HYPERDRIVE: "postgresql://user:password@localhost/database" as
+				| string
+				| URL,
 		},
 	} satisfies MiniflareOptions;
 	const mf = new Miniflare(opts);
@@ -119,7 +121,9 @@ test("sets default port based on protocol", async (t) => {
 	t.is(await res.text(), "5432");
 
 	// Check `URL` accepted too
-	opts.hyperdrives.HYPERDRIVE = new URL("postgres://user:password@localhost/database");
+	opts.hyperdrives.HYPERDRIVE = new URL(
+		"postgres://user:password@localhost/database"
+	);
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost/");
 	t.is(await res.text(), "5432");

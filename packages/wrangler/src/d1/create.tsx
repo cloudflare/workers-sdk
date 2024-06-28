@@ -1,5 +1,4 @@
 import { Box, Text } from "ink";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
@@ -71,8 +70,8 @@ export const Handler = withConfig<HandlerOptions>(
 						{db.created_in_region
 							? ` in region ${db.created_in_region}`
 							: location
-							? ` using primary location hint ${location}`
-							: ``}
+								? ` using primary location hint ${location}`
+								: ``}
 					</Text>
 					<Text>Created your new D1 database.</Text>
 					<Text>&nbsp;</Text>

@@ -1,17 +1,19 @@
-const makeServiceWorkerEnv = require("service-worker-mock");
+import makeServiceWorkerEnv from "service-worker-mock";
 
 const HASH = "123HASHBROWN";
 
-export const getEvent = (request: Request): any => {
-	const waitUntil = async (callback: any) => {
-		await callback;
+export const getEvent = (
+	request: Request
+): Pick<FetchEvent, "request" | "waitUntil"> => {
+	const waitUntil = async (maybePromise: unknown) => {
+		await maybePromise;
 	};
 	return {
 		request,
 		waitUntil,
 	};
 };
-const store: any = {
+const store = {
 	"key1.123HASHBROWN.txt": "val1",
 	"key1.123HASHBROWN.png": "val1",
 	"index.123HASHBROWN.html": "index.html",
@@ -30,9 +32,9 @@ const store: any = {
 	"image.123HASHBROWN.webp": "imagewebp",
 	"你好/index.123HASHBROWN.html": "My path is non-ascii",
 };
-export const mockKV = (store: any) => {
+export const mockKV = (kvStore: Record<string, string>) => {
 	return {
-		get: (path: string) => store[path] || null,
+		get: (path: string) => kvStore[path] || null,
 	};
 };
 
@@ -57,22 +59,22 @@ export const mockManifest = () => {
 	});
 };
 
-let cacheStore: any = new Map();
+const cacheStore = new Map<string, Response>();
 interface CacheKey {
-	url: object;
-	headers: object;
+	url: string;
+	headers: HeadersInit;
 }
 export const mockCaches = () => {
 	return {
 		default: {
-			async match(key: any) {
-				let cacheKey: CacheKey = {
+			async match(key: Request) {
+				const cacheKey: CacheKey = {
 					url: key.url,
 					headers: {},
 				};
 				let response;
 				if (key.headers.has("if-none-match")) {
-					let makeStrongEtag = key.headers
+					const makeStrongEtag = key.headers
 						.get("if-none-match")
 						.replace("W/", "");
 					Reflect.set(cacheKey.headers, "etag", makeStrongEtag);
@@ -102,23 +104,25 @@ export const mockCaches = () => {
 					}
 					// ... which we are using in this repository to set status 206
 					if (response.headers.has("content-range")) {
+						// @ts-expect-error overridding status in this mock
 						response.status = 206;
 					} else {
+						// @ts-expect-error overridding status in this mock
 						response.status = 200;
 					}
-					let etag = response.headers.get("etag");
+					const etag = response.headers.get("etag");
 					if (etag && !etag.includes("W/")) {
 						response.headers.set("etag", `W/${etag}`);
 					}
 				}
 				return response;
 			},
-			async put(key: any, val: Response) {
-				let headers = new Headers(val.headers);
-				let url = new URL(key.url);
-				let resWithBody = new Response(val.body, { headers, status: 200 });
-				let resNoBody = new Response(null, { headers, status: 304 });
-				let cacheKey: CacheKey = {
+			async put(key: Request, val: Response) {
+				const headers = new Headers(val.headers);
+				const url = new URL(key.url);
+				const resWithBody = new Response(val.body, { headers, status: 200 });
+				const resNoBody = new Response(null, { headers, status: 304 });
+				const cacheKey: CacheKey = {
 					url: key.url,
 					headers: {
 						etag: `"${url.pathname.replace("/", "")}"`,
@@ -135,16 +139,16 @@ export const mockCaches = () => {
 
 // mocks functionality used inside worker request
 export function mockRequestScope() {
-	Object.assign(global, makeServiceWorkerEnv());
-	Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() });
-	Object.assign(global, { __STATIC_CONTENT: mockKV(store) });
-	Object.assign(global, { caches: mockCaches() });
+	Object.assign(globalThis, makeServiceWorkerEnv());
+	Object.assign(globalThis, { __STATIC_CONTENT_MANIFEST: mockManifest() });
+	Object.assign(globalThis, { __STATIC_CONTENT: mockKV(store) });
+	Object.assign(globalThis, { caches: mockCaches() });
 }
 
 // mocks functionality used on global isolate scope. such as the KV namespace bind
 export function mockGlobalScope() {
-	Object.assign(global, { __STATIC_CONTENT_MANIFEST: mockManifest() });
-	Object.assign(global, { __STATIC_CONTENT: mockKV(store) });
+	Object.assign(globalThis, { __STATIC_CONTENT_MANIFEST: mockManifest() });
+	Object.assign(globalThis, { __STATIC_CONTENT: mockKV(store) });
 }
 
 export const sleep = (milliseconds: number) => {

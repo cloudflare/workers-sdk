@@ -7,7 +7,9 @@ export const standardURLPlugin: () => Plugin = () => ({
 	name: "standard URL plugin",
 	setup(pluginBuild) {
 		pluginBuild.onResolve({ filter: /^node:url$|^url$/ }, ({ importer }) => {
-			if (importer === "standard-url-plugin") return;
+			if (importer === "standard-url-plugin") {
+				return;
+			}
 			return {
 				path: "wrangler-url-polyfill",
 				namespace: "wrangler-url",

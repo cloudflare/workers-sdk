@@ -6,23 +6,20 @@ import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { RuntimeController } from "./BaseController";
+import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { DevWorker, StartDevWorkerOptions } from "./types";
+import type { StartDevWorkerOptions, Worker } from "./types";
 
-/**
- * @internal
- */
 export class DevEnv extends EventEmitter {
 	config: ConfigController;
 	bundler: BundlerController;
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	startWorker(options: StartDevWorkerOptions): DevWorker {
+	startWorker(options: StartDevWorkerOptions): Worker {
 		const worker = createWorkerObject(this);
 
-		this.config.setOptions(options);
+		this.config.set(options);
 
 		return worker;
 	}
@@ -43,9 +40,10 @@ export class DevEnv extends EventEmitter {
 		this.runtimes = runtimes;
 		this.proxy = proxy;
 
-		[config, bundler, ...runtimes, proxy].forEach((controller) =>
-			controller.on("error", (event) => this.emitErrorEvent(event))
-		);
+		const controllers: Controller[] = [config, bundler, ...runtimes, proxy];
+		controllers.forEach((controller) => {
+			controller.on("error", (event: ErrorEvent) => this.emitErrorEvent(event));
+		});
 
 		this.on("error", (event: ErrorEvent) => {
 			// TODO: when we're are comfortable with StartDevWorker/DevEnv stability,
@@ -100,7 +98,7 @@ export class DevEnv extends EventEmitter {
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
-			this.runtimes.forEach((runtime) => runtime.teardown()),
+			...this.runtimes.map((runtime) => runtime.teardown()),
 			this.proxy.teardown(),
 		]);
 	}
@@ -117,20 +115,16 @@ export class DevEnv extends EventEmitter {
 			const inspectorPort = config.dev?.inspector?.port;
 			const randomPorts = [0, undefined];
 
-			// console.log({ port, inspectorPort, ev });
 			if (!randomPorts.includes(port) || !randomPorts.includes(inspectorPort)) {
 				// emit the event here while the ConfigController is unimplemented
 				// this will cause the ProxyController to try reinstantiating the ProxyWorker(s)
 				// TODO: change this to `this.config.updateOptions({ dev: { server: { port: 0 }, inspector: { port: 0 } } });` when the ConfigController is implemented
 				this.config.emitConfigUpdateEvent({
-					type: "configUpdate",
-					config: {
-						...config,
-						dev: {
-							...config.dev,
-							server: { ...config.dev?.server, port: 0 }, // override port
-							inspector: { ...config.dev?.inspector, port: 0 }, // override port
-						},
+					...config,
+					dev: {
+						...config.dev,
+						server: { ...config.dev?.server, port: 0 }, // override port
+						inspector: { ...config.dev?.inspector, port: 0 }, // override port
 					},
 				});
 			}
@@ -150,19 +144,26 @@ export class DevEnv extends EventEmitter {
 	}
 }
 
-export function createWorkerObject(devEnv: DevEnv): DevWorker {
+export function createWorkerObject(devEnv: DevEnv): Worker {
 	return {
 		get ready() {
 			return devEnv.proxy.ready.promise.then(() => undefined);
 		},
+		get url() {
+			return devEnv.proxy.ready.promise.then((ev) => ev.url);
+		},
+		get inspectorUrl() {
+			return devEnv.proxy.ready.promise.then((ev) => ev.inspectorUrl);
+		},
 		get config() {
-			return devEnv.config.config;
+			assert(devEnv.config.latestConfig);
+			return devEnv.config.latestConfig;
 		},
-		setOptions(options) {
-			return devEnv.config.setOptions(options);
+		setConfig(config) {
+			return devEnv.config.set(config);
 		},
-		updateOptions(options) {
-			return devEnv.config.updateOptions(options);
+		patchConfig(config) {
+			return devEnv.config.patch(config);
 		},
 		async fetch(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
@@ -170,13 +171,23 @@ export function createWorkerObject(devEnv: DevEnv): DevWorker {
 
 			return proxyWorker.dispatchFetch(...args);
 		},
-		async queue(..._args) {
-			// const { worker } = await devEnv.proxy.ready;
-			// return worker.queue(...args);
+		async queue(...args) {
+			assert(
+				this.config.name,
+				"Worker name must be defined to use `Worker.queue()`"
+			);
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
+			const w = await proxyWorker.getWorker(this.config.name);
+			return w.queue(...args);
 		},
-		async scheduled(..._args) {
-			// const { worker } = await devEnv.proxy.ready;
-			// return worker.scheduled(...args);
+		async scheduled(...args) {
+			assert(
+				this.config.name,
+				"Worker name must be defined to use `Worker.scheduled()`"
+			);
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
+			const w = await proxyWorker.getWorker(this.config.name);
+			return w.scheduled(...args);
 		},
 		async dispose() {
 			await devEnv.teardown();

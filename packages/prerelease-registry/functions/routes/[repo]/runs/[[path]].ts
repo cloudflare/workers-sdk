@@ -14,8 +14,9 @@ export const onRequestGet: PagesFunction<
 
 	const runID = parseInt(path[0]);
 	const name = path[1];
-	if (isNaN(runID) || name === undefined)
+	if (isNaN(runID) || name === undefined) {
 		return Response.json({ path, runID, name }, { status: 404 });
+	}
 
 	const gitHubFetch = generateGitHubFetch(env);
 

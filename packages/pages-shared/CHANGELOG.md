@@ -1,5 +1,76 @@
 # @cloudflare/pages-shared
 
+## 0.11.45
+
+### Patch Changes
+
+- Updated dependencies [[`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059)]:
+  - miniflare@3.20240620.0
+
+## 0.11.44
+
+### Patch Changes
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- Updated dependencies [[`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f), [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4), [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99)]:
+  - miniflare@3.20240610.1
+
+## 0.11.43
+
+### Patch Changes
+
+- Updated dependencies [[`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c)]:
+  - miniflare@3.20240610.0
+
+## 0.11.42
+
+### Patch Changes
+
+- Updated dependencies [[`ab95473`](https://github.com/cloudflare/workers-sdk/commit/ab9547380fd6fbc1d20c8dd4211faedbe94e5b33)]:
+  - miniflare@3.20240605.0
+
+## 0.11.41
+
+### Patch Changes
+
+- Updated dependencies [[`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2)]:
+  - miniflare@3.20240524.2
+
+## 0.11.40
+
+### Patch Changes
+
+- Updated dependencies [[`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a)]:
+  - miniflare@3.20240524.1
+
+## 0.11.39
+
+### Patch Changes
+
+- Updated dependencies [[`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d), [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b)]:
+  - miniflare@3.20240524.0
+
+## 0.11.38
+
+### Patch Changes
+
+- [#5875](https://github.com/cloudflare/workers-sdk/pull/5875) [`ddfeeef`](https://github.com/cloudflare/workers-sdk/commit/ddfeeef920f0b565ed7f39da40b5b75cb234db00) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: no longer allow zone caching for responses that returned 404. This is to prevent some files in a new deployment from returning and subsequently caching 404s while the deployment propagates across the network.
+
+## 0.11.37
+
+### Patch Changes
+
+- [#5674](https://github.com/cloudflare/workers-sdk/pull/5674) [`f461855`](https://github.com/cloudflare/workers-sdk/commit/f461855795dce7a12977bddffb238d075f827277) Thanks [@itsmatteomanf](https://github.com/itsmatteomanf)! - Add `modulepreload` to list of possible early hints links
+
 ## 0.11.36
 
 ### Patch Changes

@@ -35,7 +35,7 @@ export const validateTemplateUrl = (value: Arg) => {
  */
 export const validateProjectDirectory = (
 	relativePath: string,
-	args: Partial<C3Args>
+	args: Partial<C3Args>,
 ) => {
 	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);
@@ -103,7 +103,9 @@ export const isAllowedExistingFile = (file: string) => {
 		".gitkeep",
 	]);
 
-	if (allowedExistingFiles.has(file)) return true;
+	if (allowedExistingFiles.has(file)) {
+		return true;
+	}
 
 	const allowedExistingPatters = [
 		/readme(\.md)?$/i,
@@ -115,7 +117,9 @@ export const isAllowedExistingFile = (file: string) => {
 	];
 
 	for (const regex of allowedExistingPatters) {
-		if (regex.test(file)) return true;
+		if (regex.test(file)) {
+			return true;
+		}
 	}
 
 	return false;

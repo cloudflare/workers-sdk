@@ -1,47 +1,20 @@
-import crypto from "node:crypto";
+import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import shellac from "shellac";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
-import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
-import { normalizeOutput } from "./helpers/normalize";
-import { retry } from "./helpers/retry";
-import { makeRoot } from "./helpers/setup";
-import { WRANGLER } from "./helpers/wrangler";
-
-function matchWorkersDev(stdout: string): string {
-	return stdout.match(
-		/https:\/\/tmp-e2e-wrangler-.+?\.(.+?\.workers\.dev)/
-	)?.[1] as string;
-}
+import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { generateResourceName } from "./helpers/generate-resource-name";
 
 describe("c3 integration", () => {
-	let workerName: string;
-	let workerPath: string;
-	let workersDev: string | null = null;
-	let runInRoot: typeof shellac;
-	let runInWorker: typeof shellac;
+	const helper = new WranglerE2ETestHelper();
+	const workerName = generateResourceName("c3");
 	let c3Packed: string;
-	let normalize: (str: string) => string;
 
 	beforeAll(async () => {
-		const root = await makeRoot();
-		runInRoot = shellac.in(root).env(process.env);
-		workerName = `tmp-e2e-wrangler-${crypto.randomBytes(4).toString("hex")}`;
-		workerPath = path.join(root, workerName);
-		runInWorker = shellac.in(workerPath).env(process.env);
-		normalize = (str) =>
-			normalizeOutput(str, {
-				[workerName]: "tmp-e2e-wrangler",
-				[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-			});
-
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
-		const { stdout: version } = await shellac.in(pathToC3)`
-			$ pnpm pack --pack-destination ./pack
-			$ ls pack`;
-
+		execSync("pnpm pack --pack-destination ./pack", { cwd: pathToC3 });
+		const version = execSync("ls pack", { encoding: "utf-8", cwd: pathToC3 });
 		c3Packed = path.join(pathToC3, "pack", version);
 	});
 
@@ -55,49 +28,21 @@ describe("c3 integration", () => {
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		await runInRoot.env(env)`$$ ${WRANGLER} init ${workerName} --yes`;
+		const init = await helper.run(`wrangler init ${workerName} --yes`, {
+			env,
+		});
 
-		expect(existsSync(workerPath)).toBe(true);
+		expect(init.stdout).toContain("APPLICATION CREATED");
+
+		expect(existsSync(path.join(helper.tmpPath, workerName))).toBe(true);
 	});
 
-	it("deploy the worker", async () => {
-		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded tmp-e2e-wrangler (TIMINGS)
-			Published tmp-e2e-wrangler (TIMINGS)
-			  https://tmp-e2e-wrangler.SUBDOMAIN.workers.dev
-			Current Deployment ID: 00000000-0000-0000-0000-000000000000
-			Current Version ID: 00000000-0000-0000-0000-000000000000
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
-		expect(stderr).toMatchInlineSnapshot('""');
-		workersDev = matchWorkersDev(stdout);
-		const { text } = await retry(
-			(s) => s.status !== 200,
-			async () => {
-				const r = await fetch(`https://${workerName}.${workersDev}`);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Hello World!"');
-	});
-
-	it("delete the worker", async () => {
-		const { stdout, stderr } = await runInWorker`$$ ${WRANGLER} delete`;
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete tmp-e2e-wrangler? This action cannot be undone.
-			🤖 Using fallback value in non-interactive context: yes
-			Successfully deleted tmp-e2e-wrangler"
-		`);
-		expect(stderr).toMatchInlineSnapshot('""');
-		const { status } = await retry(
-			(s) => s.status === 200 || s.status === 500,
-			async () => {
-				const r = await fetch(`https://${workerName}.${workersDev}`);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(status).toBe(404);
+	it("can run `wrangler dev` on generated worker", async () => {
+		const worker = helper.runLongLived(`wrangler dev`, {
+			cwd: path.join(helper.tmpPath, workerName),
+		});
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+		expect(await res.text()).toBe("Hello World!");
 	});
 });

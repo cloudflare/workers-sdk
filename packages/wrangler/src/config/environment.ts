@@ -170,6 +170,30 @@ interface EnvironmentInheritable {
 	jsx_fragment: string;
 
 	/**
+	 * A list of migrations that should be uploaded with your Worker.
+	 *
+	 * These define changes in your Durable Object declarations.
+	 *
+	 * More details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations
+	 *
+	 * @default []
+	 * @inheritable
+	 */
+	migrations: {
+		/** A unique identifier for this migration. */
+		tag: string;
+		/** The new Durable Objects being defined. */
+		new_classes?: string[];
+		/** The Durable Objects being renamed. */
+		renamed_classes?: {
+			from: string;
+			to: string;
+		}[];
+		/** The Durable Objects being removed. */
+		deleted_classes?: string[];
+	}[];
+
+	/**
 	 * "Cron" definitions to trigger a Worker's "scheduled" function.
 	 *
 	 * Lets you call Workers periodically, much like a cron job.
@@ -832,12 +856,13 @@ export type ConfigModuleRuleType =
 	| "Text"
 	| "Data"
 	| "PythonModule"
-	| "PythonRequirement";
+	| "PythonRequirement"
+	| "NodeJsCompatModule";
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
 	service: string;
-	/** (Optional) The environt of the service. */
+	/** (Optional) The environment of the service. */
 	environment?: string;
 };
 

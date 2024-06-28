@@ -18,25 +18,22 @@ describe("pages", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler pages
+			"wrangler pages
 
-		⚡️ Configure Cloudflare Pages
+			⚡️ Configure Cloudflare Pages
 
-		Commands:
-		  wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
-		  wrangler pages project                         ⚡️ Interact with your Pages projects
-		  wrangler pages deployment                      🚀 Interact with the deployments of a project
-		  wrangler pages deploy [directory]              🆙 Deploy a directory of static assets as a Pages deployment  [aliases: publish]
-		  wrangler pages secret                          🤫 Generate a secret that can be referenced in a Pages project
-		  wrangler pages download                        ⚡️ Download settings from your project
+			COMMANDS
+			  wrangler pages dev [directory] [-- command..]  Develop your full-stack Pages application locally
+			  wrangler pages project                         Interact with your Pages projects
+			  wrangler pages deployment                      Interact with the deployments of a project
+			  wrangler pages deploy [directory]              Deploy a directory of static assets as a Pages deployment  [aliases: publish]
+			  wrangler pages secret                          Generate a secret that can be referenced in a Pages project
+			  wrangler pages download                        Download settings from your project
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]"
+		`);
 	});
 
 	describe("deprecation message for deprecated options", () => {
@@ -44,7 +41,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Could not automatically determine proxy port. Please specify the proxy port with --proxy."`
+				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -60,7 +57,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Could not automatically determine proxy port. Please specify the proxy port with --proxy."`
+				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -85,7 +82,7 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`."`
+				`[Error: Must specify a directory of static assets to serve, or a command to run, or a proxy port, or configure \`pages_build_output_dir\` in \`wrangler.toml\`.]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);

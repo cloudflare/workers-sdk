@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -48,21 +48,18 @@ describe("create", () => {
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
 		msw.use(
-			rest.post("*/accounts/:accountId/d1/database", async (_req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
-						result: {
-							uuid: "51e7c314-456e-4167-b6c3-869ad188fc23",
-							name: "test",
-							primary_location_hint: "OC",
-							created_in_region: "OC",
-						},
-						success: true,
-						errors: [],
-						messages: [],
-					})
-				);
+			http.post("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json({
+					result: {
+						uuid: "51e7c314-456e-4167-b6c3-869ad188fc23",
+						name: "test",
+						primary_location_hint: "OC",
+						created_in_region: "OC",
+					},
+					success: true,
+					errors: [],
+					messages: [],
+				});
 			})
 		);
 		await runWrangler("d1 create test --location oc");

@@ -17,6 +17,7 @@ import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
+import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
@@ -110,7 +111,7 @@ export type ServiceMetadataRes = {
 			environment: string;
 			created_on: string;
 			modified_on: string;
-		}
+		},
 	];
 };
 
@@ -140,7 +141,7 @@ type CronTriggersRes = {
 			cron: string;
 			created_on: Date;
 			modified_on: Date;
-		}
+		},
 	];
 };
 
@@ -340,7 +341,7 @@ export async function initHandler(args: InitArgs) {
 					? `✨ Initialized git repository at ${path.relative(
 							process.cwd(),
 							creationDirectory
-					  )}`
+						)}`
 					: `✨ Initialized git repository`
 			);
 		}
@@ -835,7 +836,7 @@ async function getNewWorkerTestType(yesFlag?: boolean) {
 					},
 				],
 				defaultOption: 1,
-		  });
+			});
 }
 
 function getNewWorkerTemplate(
@@ -936,7 +937,7 @@ async function getWorkerConfig(
 
 	const allRoutes: Route[] = [
 		...routes.map(
-			(r) => ({ pattern: r.pattern, zone_name: r.zone_name } as ZoneNameRoute)
+			(r) => ({ pattern: r.pattern, zone_name: r.zone_name }) as ZoneNameRoute
 		),
 		...customDomains.map(
 			(c) =>
@@ -944,7 +945,7 @@ async function getWorkerConfig(
 					pattern: c.hostname,
 					zone_name: c.zone_name,
 					custom_domain: true,
-				} as CustomDomainRoute)
+				}) as CustomDomainRoute
 		),
 	];
 
@@ -970,14 +971,14 @@ async function getWorkerConfig(
 							new_classes: durableObjectClassNames,
 						},
 					],
-			  }
+				}
 			: {}),
 		...(cronTriggers.schedules.length
 			? {
 					triggers: {
 						crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
 					},
-			  }
+				}
 			: {}),
 		tail_consumers: serviceEnvMetadata.script.tail_consumers,
 		...mappedBindings,
@@ -1137,7 +1138,9 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 					default: {
 						// If we don't know what the type is, its an unsafe binding
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						if (!(binding as any)?.type) break;
+						if (!(binding as any)?.type) {
+							break;
+						}
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
 							metadata: configObj.unsafe?.metadata ?? undefined,
@@ -1149,12 +1152,6 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
-}
-
-function* createBatches<T>(array: T[], size: number): IterableIterator<T[]> {
-	for (let i = 0; i < array.length; i += size) {
-		yield array.slice(i, i + size);
-	}
 }
 
 /** Assert that there is no type argument passed. */

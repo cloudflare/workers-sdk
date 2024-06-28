@@ -24,7 +24,8 @@ export async function getWorkersDevSubdomain(
 			);
 
 			const wantsToRegister = await confirm(
-				"Would you like to register a workers.dev subdomain now?"
+				"Would you like to register a workers.dev subdomain now?",
+				{ fallbackValue: false }
 			);
 			if (!wantsToRegister) {
 				const solutionMessage =

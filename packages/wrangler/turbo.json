@@ -4,13 +4,15 @@
 	"pipeline": {
 		"build": {
 			"inputs": [
+				"!**/__tests__/**",
+				"!**/.wrangler/**",
 				"bin/**",
 				"src/**",
-				"**/__tests__/**",
 				"scripts/**",
 				"templates/**",
 				"*.json",
-				"*.js"
+				"*.js",
+				"*.ts"
 			],
 			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
 			"env": [
@@ -44,18 +46,19 @@
 				"WRANGLER_SEND_METRICS",
 				"https_proxy",
 				"HTTPS_PROXY",
-				"JEST_WORKER_ID",
 				"http_proxy",
 				"HTTP_PROXY",
 				"CI_OS",
 				"SENTRY_DSN",
 				"SYSTEMROOT",
+				"WRANGLER_DISABLE_EXPERIMENTAL_WARNING",
 				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
-				"WRANGLER_WORKER_REGISTRY_PORT"
+				"WRANGLER_WORKER_REGISTRY_PORT",
+				"WRANGLER_API_ENVIRONMENT"
 			]
 		},
 		"test:ci": {
-			"inputs": ["src/__tests__/**"],
+			"inputs": ["!**/.wrangler/**", "**/__tests__/**"],
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {

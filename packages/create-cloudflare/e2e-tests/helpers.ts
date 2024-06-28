@@ -7,7 +7,8 @@ import {
 } from "fs";
 import crypto from "node:crypto";
 import { tmpdir } from "os";
-import { basename, join } from "path";
+import path from "path";
+import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/retry";
@@ -65,7 +66,7 @@ export type RunnerConfig = {
 export const runC3 = async (
 	argv: string[] = [],
 	promptHandlers: PromptHandler[] = [],
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const cmd = ["node", "./dist/cli.js", ...argv];
 	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
@@ -113,7 +114,7 @@ export const runC3 = async (
 export const spawnWithLogging = (
 	args: string[],
 	opts: SpawnOptionsWithoutStdio,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const [cmd, ...argv] = args;
 
@@ -154,7 +155,7 @@ export const spawnWithLogging = (
  */
 export const waitForExit = async (
 	proc: ChildProcessWithoutNullStreams,
-	onData?: (chunk: string) => void
+	onData?: (chunk: string) => void,
 ) => {
 	const stdout: string[] = [];
 	const stderr: string[] = [];
@@ -197,9 +198,23 @@ export const waitForExit = async (
 export const createTestLogStream = (ctx: TaskContext) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(ctx)}.ansi`;
-	return createWriteStream(join(getLogPath(ctx.task.suite), fileName), {
+	return createWriteStream(path.join(getLogPath(ctx.task.suite), fileName), {
 		flags: "a",
 	});
+};
+
+export const recreateDiffsFolder = () => {
+	// Recreate the diffs folder
+	const diffsPath = getDiffsPath();
+	rmSync(diffsPath, {
+		recursive: true,
+		force: true,
+	});
+	mkdirSync(diffsPath, { recursive: true });
+};
+
+export const getDiffsPath = () => {
+	return path.resolve("./.e2e-diffs");
 };
 
 export const recreateLogFolder = (suite: Suite) => {
@@ -216,10 +231,14 @@ const getLogPath = (suite: Suite) => {
 	const { file } = suite;
 
 	const suiteFilename = file
-		? basename(file.name).replace(".test.ts", "")
+		? path.basename(file.name).replace(".test.ts", "")
 		: "unknown";
 
-	return join("./.e2e-logs/", process.env.TEST_PM as string, suiteFilename);
+	return path.join(
+		"./.e2e-logs/",
+		process.env.TEST_PM as string,
+		suiteFilename,
+	);
 };
 
 const normalizeTestName = (ctx: TaskContext) => {
@@ -237,22 +256,22 @@ const normalizeTestName = (ctx: TaskContext) => {
 export const testProjectDir = (suite: string) => {
 	const tmpDirPath =
 		process.env.E2E_PROJECT_PATH ??
-		realpathSync(mkdtempSync(join(tmpdir(), `c3-tests-${suite}`)));
+		realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
 
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
 	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
-	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
+	const getPath = (suffix: string) => path.join(tmpDirPath, getName(suffix));
 	const clean = (suffix: string) => {
 		try {
 			if (process.env.E2E_PROJECT_PATH) {
 				return;
 			}
 
-			realpathSync(mkdtempSync(join(tmpdir(), `c3-tests-${suite}`)));
-			const path = getPath(suffix);
-			rmSync(path, {
+			realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
+			const filepath = getPath(suffix);
+			rmSync(filepath, {
 				recursive: true,
 				force: true,
 				maxRetries: 10,
@@ -274,11 +293,11 @@ export const testProjectDir = (suite: string) => {
 
 export const testDeploymentCommitMessage = async (
 	projectName: string,
-	framework: string
+	framework: string,
 ) => {
 	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
 		// Wait for 2 seconds between each attempt
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await setTimeout(2000);
 		// Note: we cannot simply run git and check the result since the commit can be part of the
 		//       deployment even without git, so instead we fetch the deployment info from the pages api
 		const response = await fetch(
@@ -287,7 +306,7 @@ export const testDeploymentCommitMessage = async (
 				headers: {
 					Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
 				},
-			}
+			},
 		);
 
 		const result = (
@@ -314,10 +333,10 @@ export const testDeploymentCommitMessage = async (
 	});
 
 	expect(projectLatestCommitMessage).toMatch(
-		/Initialize web application via create-cloudflare CLI/
+		/Initialize web application via create-cloudflare CLI/,
 	);
 	expect(projectLatestCommitMessage).toContain(
-		`C3 = create-cloudflare@${version}`
+		`C3 = create-cloudflare@${version}`,
 	);
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);

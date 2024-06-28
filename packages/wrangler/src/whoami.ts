@@ -56,7 +56,9 @@ export interface UserInfo {
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
 	const apiToken = getAPIToken();
-	if (!apiToken) return;
+	if (!apiToken) {
+		return;
+	}
 
 	const tokenPermissions = await getTokenPermissions();
 
@@ -67,8 +69,8 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
 		authType: usingGlobalAuthKey
 			? "Global API Key"
 			: usingEnvAuth
-			? "API Token"
-			: "OAuth Token",
+				? "API Token"
+				: "OAuth Token",
 		email: "authEmail" in apiToken ? apiToken.authEmail : await getEmail(),
 		accounts: await getAccounts(),
 		tokenPermissions,

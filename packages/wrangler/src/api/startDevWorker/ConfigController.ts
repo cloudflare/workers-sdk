@@ -1,17 +1,52 @@
-import { EventEmitter } from "node:events";
-// import { readFileSync } from "../../parse";
-import { notImplemented } from "./NotImplementedError";
-import type { ConfigUpdateEvent, ErrorEvent } from "./events";
+import assert from "node:assert";
+import { Controller } from "./BaseController";
+import type { ControllerEventMap } from "./BaseController";
+import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-export class ConfigController extends EventEmitter {
-	config?: StartDevWorkerOptions;
+export type ConfigControllerEventMap = ControllerEventMap & {
+	configUpdate: [ConfigUpdateEvent];
+};
 
-	setOptions(_: StartDevWorkerOptions) {
-		notImplemented(this.setOptions.name, this.constructor.name);
+type Options = StartDevWorkerOptions;
+export class ConfigController extends Controller<ConfigControllerEventMap> {
+	latestInput?: Options;
+	latestConfig?: Options;
+
+	public set(input: Options) {
+		this.#updateConfig(input);
 	}
-	updateOptions(_: Partial<StartDevWorkerOptions>) {
-		notImplemented(this.updateOptions.name, this.constructor.name);
+	public patch(input: Partial<Options>) {
+		assert(
+			this.latestInput,
+			"Cannot call updateConfig without previously calling setConfig"
+		);
+
+		const config: Options = {
+			...this.latestInput,
+			...input,
+		};
+
+		this.#updateConfig(config);
+	}
+
+	#updateConfig(input: Options) {
+		const directory = input.directory;
+
+		this.latestConfig = {
+			directory,
+			build: {
+				moduleRules: [],
+				additionalModules: [],
+				define: {},
+				format: "modules",
+				moduleRoot: directory, // TODO: this default needs to come from getEntry() once readConfig has been moved into ConfigController
+				...input.build,
+			},
+			...input,
+		};
+		this.latestInput = input;
+		this.emitConfigUpdateEvent(this.latestConfig);
 	}
 
 	// ******************
@@ -19,24 +54,14 @@ export class ConfigController extends EventEmitter {
 	// ******************
 
 	async teardown() {
-		notImplemented(this.teardown.name, this.constructor.name);
+		// do nothing
 	}
 
 	// *********************
 	//   Event Dispatchers
 	// *********************
 
-	emitConfigUpdateEvent(data: ConfigUpdateEvent) {
-		this.emit("configUpdate", data);
+	emitConfigUpdateEvent(config: Options) {
+		this.emit("configUpdate", { type: "configUpdate", config });
 	}
-
-	// *********************
-	//   Event Subscribers
-	// *********************
-
-	on(event: "configUpdate", listener: (_: ConfigUpdateEvent) => void): this;
-	// @ts-expect-error Missing overload implementation (only need the signature types, base implementation is fine)
-	on(event: "error", listener: (_: ErrorEvent) => void): this;
-	// @ts-expect-error Missing initialisation (only need the signature types, base implementation is fine)
-	once: typeof this.on;
 }

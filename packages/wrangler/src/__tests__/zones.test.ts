@@ -1,23 +1,29 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { getHostFromUrl, getZoneForRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
-		rest.get("*/zones", (req, res, ctx) => {
-			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+		http.get(
+			"*/zones",
+			({ request }) => {
+				const url = new URL(request.url);
 
-			return res.once(
-				ctx.status(200),
-				ctx.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: zones,
-				})
-			);
-		})
+				expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
+
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: zones,
+					},
+					{ status: 200 }
+				);
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -71,9 +77,9 @@ describe("Zones", () => {
 			mockGetZones("wrong.com", []);
 			await expect(getZoneForRoute("wrong.com/*")).rejects
 				.toMatchInlineSnapshot(`
-			[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
-			For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
-		`);
+				[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
+				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
+			`);
 		});
 		test("zone_id route", async () => {
 			// example-id and other-id intentionally different to show that the API is not called

@@ -5,8 +5,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 3 * * *" # Run at 3am each day
-env:
-  node-version: 18.17.1
 jobs:
   cleanup:
     timeout-minutes: 30
@@ -15,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

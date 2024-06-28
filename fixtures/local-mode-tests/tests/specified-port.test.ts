@@ -28,6 +28,7 @@ describe("specific port", () => {
 			{
 				config: path.resolve(__dirname, "..", "wrangler.module.toml"),
 				port: await getPort(),
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,

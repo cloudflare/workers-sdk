@@ -5,10 +5,10 @@ import { fileURLToPath, pathToFileURL } from "url";
 import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
-import { DeferredPromise, Log, LogLevel, Miniflare, fetch } from "miniflare";
-import type { RawSourceMap } from "source-map";
+import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
 import NodeWebSocket from "ws";
 import { escapeRegexpComponent, useTmp } from "../../../test-shared";
+import type { RawSourceMap } from "source-map";
 
 const FIXTURES_PATH = path.resolve(
 	__dirname,

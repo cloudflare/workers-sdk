@@ -1,4 +1,4 @@
-import { Miniflare } from "miniflare";
+import { kCurrentWorker, Miniflare } from "miniflare";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -8,6 +8,7 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 } from "../../../dev/miniflare";
+import { run } from "../../../experimental-flags";
 import { getAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
@@ -25,7 +26,12 @@ export type GetPlatformProxyOptions = {
 	 */
 	environment?: string;
 	/**
-	 * The path to the config object to use (default `wrangler.toml`)
+	 * The path to the config file to use.
+	 * If no path is specified the default behavior is to search from the
+	 * current directory up the filesystem for a `wrangler.toml` to use.
+	 *
+	 * Note: this field is optional but if a path is specified it must
+	 *       point to a valid file on the filesystem
 	 */
 	configPath?: string;
 	/**
@@ -41,6 +47,12 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
+	/**
+	 * Use the experimental file-based dev registry for service discovery
+	 *
+	 * Note: this feature is experimental
+	 */
+	experimentalRegistry?: boolean;
 };
 
 /**
@@ -48,7 +60,7 @@ export type GetPlatformProxyOptions = {
  */
 export type PlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 > = {
 	/**
 	 * Environment object containing the various Cloudflare bindings
@@ -82,7 +94,7 @@ export type PlatformProxy<
  */
 export async function getPlatformProxy<
 	Env = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
@@ -93,10 +105,12 @@ export async function getPlatformProxy<
 		env,
 	});
 
-	const miniflareOptions = await getMiniflareOptionsFromConfig(
-		rawConfig,
-		env,
-		options
+	const miniflareOptions = await run(
+		{
+			FILE_BASED_REGISTRY: Boolean(options.experimentalRegistry),
+			DEV_ENV: false,
+		},
+		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
 
 	const mf = new Miniflare({
@@ -261,7 +275,9 @@ export function unstable_getMiniflareWorkerOptions(
 	if (bindings.services !== undefined) {
 		bindingOptions.serviceBindings = Object.fromEntries(
 			bindings.services.map((binding) => {
-				return [binding.binding, binding.service];
+				const name =
+					binding.service === config.name ? kCurrentWorker : binding.service;
+				return [binding.binding, { name, entrypoint: binding.entrypoint }];
 			})
 		);
 	}

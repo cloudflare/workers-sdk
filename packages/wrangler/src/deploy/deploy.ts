@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import { cancel } from "@cloudflare/cli";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -19,6 +20,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
@@ -44,6 +46,7 @@ import {
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
 import { logVersionIdChange } from "../utils/deployment-id-version-id-change";
+import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import type { Config } from "../config";
 import type {
@@ -126,7 +129,9 @@ export function sleep(ms: number) {
 const scriptStartupErrorRegex = /startup/i;
 
 function errIsScriptSize(err: unknown): err is { code: 10027 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10027 = workers.api.error.script_too_large
 	if ((err as { code: number }).code === 10027) {
@@ -137,7 +142,9 @@ function errIsScriptSize(err: unknown): err is { code: 10027 } {
 }
 
 function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10021 = validation error
 	// no explicit error code for more granular errors than "invalid script"
@@ -265,7 +272,9 @@ export async function publishCustomDomains(
 			const message = `Custom Domains already exist for these domains:
 ${existingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) return fail();
+			if (!(await confirm(message))) {
+				return fail();
+			}
 			config.override_existing_origin = true;
 		}
 
@@ -276,7 +285,9 @@ Update them to point to this script instead?`;
 			const message = `You already have DNS records that conflict for these Custom Domains:
 ${conflicitingRendered}
 Update them to point to this script instead?`;
-			if (!(await confirm(message))) return fail();
+			if (!(await confirm(message))) {
+				return fail();
+			}
 			config.override_existing_dns_record = true;
 		}
 	}
@@ -369,31 +380,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: props.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: props.noBundle ?? config.no_bundle ?? false,
+	});
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	assert(
-		!(legacyNodeCompat && nodejsCompat),
-		"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-	);
 
-	// Warn if user tries minify or node-compat with no-bundle
+	// Warn if user tries minify with no-bundle
 	if (props.noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
-	}
-
-	if (props.noBundle && legacyNodeCompat) {
-		logger.warn(
-			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
@@ -425,17 +423,26 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	const notProd = Boolean(!props.legacyEnv && props.env);
+	const prod = Boolean(props.legacyEnv || !props.env);
+	const notProd = !prod;
 	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
 	const workerUrl = props.dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
 		: notProd
-		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
-		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
+
+	if (!props.dispatchNamespace && prod && accountId && scriptName) {
+		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
+		if (!yes) {
+			cancel("Aborting deploy...");
+			return;
+		}
+	}
 
 	if (
 		!props.isWorkersSite &&
@@ -464,6 +471,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
+
 	try {
 		if (props.noBundle) {
 			// if we're not building, let's just copy the entry to the destination directory
@@ -515,8 +523,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
 						sourcemap: uploadSourceMaps,
-						legacyNodeCompat,
-						nodejsCompat,
+						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets,
@@ -532,7 +539,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 					}
-			  );
+				);
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -571,7 +578,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
-			  })
+				})
 			: undefined;
 
 		const assets = await syncAssets(
@@ -668,14 +675,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			limits: config.limits,
 		};
 
-		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
-		// We do not care about the timing outside of testing
-		const bundleSizePromise = printBundleSize(
+		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
-		else void bundleSizePromise;
 
 		const withoutStaticAssets = {
 			...bindings,
@@ -730,15 +733,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					// Print some useful information returned after publishing
 					// Not all fields will be populated for every worker
 					// These fields are likely to be scraped by tools, so do not rename
-					if (result.id) logger.log("Worker ID: ", result.id);
-					if (result.etag) logger.log("Worker ETag: ", result.etag);
-					if (result.pipeline_hash)
+					if (result.id) {
+						logger.log("Worker ID: ", result.id);
+					}
+					if (result.etag) {
+						logger.log("Worker ETag: ", result.etag);
+					}
+					if (result.pipeline_hash) {
 						logger.log("Worker PipelineHash: ", result.pipeline_hash);
-					if (result.mutable_pipeline_id)
+					}
+					if (result.mutable_pipeline_id) {
 						logger.log(
 							"Worker Mutable PipelineID (Development ONLY!):",
 							result.mutable_pipeline_id
 						);
+					}
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
@@ -764,12 +773,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						if (bundleType === "commonjs") {
+							return resolvedEntryPointPath;
+						}
 						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						if (moduleName === entryPointName) {
+							return resolvedEntryPointPath;
+						}
 						// Otherwise, return the file path of the matching module (if any)
 						for (const module of modules) {
-							if (moduleName === module.name) return module.filePath;
+							if (moduleName === module.name) {
+								return module.filePath;
+							}
 						}
 					};
 					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
@@ -1075,9 +1090,10 @@ export async function updateQueueConsumers(
 				settings: {
 					batch_size: consumer.max_batch_size,
 					max_retries: consumer.max_retries,
-					max_wait_time_ms: consumer.max_batch_timeout
-						? 1000 * consumer.max_batch_timeout
-						: undefined,
+					max_wait_time_ms:
+						consumer.max_batch_timeout !== undefined
+							? 1000 * consumer.max_batch_timeout
+							: undefined,
 					max_concurrency: consumer.max_concurrency,
 					retry_delay: consumer.retry_delay,
 				},
@@ -1108,7 +1124,7 @@ export async function updateQueueConsumers(
 	return updateConsumers;
 }
 
-async function noBundleWorker(
+export async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
 	outDir: string | undefined

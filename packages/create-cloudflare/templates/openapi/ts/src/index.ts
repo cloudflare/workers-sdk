@@ -26,4 +26,4 @@ router.all("*", () =>
 
 export default {
 	fetch: router.handle,
-};
+} satisfies ExportedHandler;

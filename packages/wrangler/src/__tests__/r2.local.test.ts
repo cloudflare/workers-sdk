@@ -1,11 +1,12 @@
 import * as fs from "node:fs";
+import { vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 // Miniflare's use of undici doesn't play well with jest-mock-fetch
 // and it is not needed here anyway.
-jest.unmock("undici");
+vi.unmock("undici");
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -19,7 +20,7 @@ describe("r2", () => {
 						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The specified key does not exist."`
+					`[Error: The specified key does not exist.]`
 				);
 
 				fs.writeFileSync("wormhole-img.png", "passageway");
@@ -79,7 +80,7 @@ describe("r2", () => {
 						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The specified key does not exist."`
+					`[Error: The specified key does not exist.]`
 				);
 			});
 
@@ -98,7 +99,7 @@ describe("r2", () => {
 						`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png --local --persist-to ./different-dir`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The specified key does not exist."`
+					`[Error: The specified key does not exist.]`
 				);
 
 				await runWrangler(

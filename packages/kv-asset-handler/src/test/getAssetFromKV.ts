@@ -7,12 +7,13 @@ import {
 	mockRequestScope,
 	sleep,
 } from "../mocks";
-import { KVError } from "../types";
+import type { KVError } from "../types";
 
 mockGlobalScope();
 
+// @ts-expect-error we use a require for a mock
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getAssetFromKV, mapRequestToAsset } = require("../index");
-
 test("getAssetFromKV return correct val from KV and default caching", async (t) => {
 	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/key1.txt"));
@@ -163,9 +164,9 @@ test("getAssetFromKV custom key modifier", async (t) => {
 	const event = getEvent(new Request("https://blah.com/docs/sub/blah.png"));
 
 	const customRequestMapper = (request: Request) => {
-		let defaultModifiedRequest = mapRequestToAsset(request);
+		const defaultModifiedRequest = mapRequestToAsset(request);
 
-		let url = new URL(defaultModifiedRequest.url);
+		const url = new URL(defaultModifiedRequest.url);
 		url.pathname = url.pathname.replace("/docs", "");
 		return new Request(url.toString(), request);
 	};
@@ -187,9 +188,9 @@ test("getAssetFromKV request override with existing manifest file", async (t) =>
 	const event = getEvent(new Request("https://blah.com/image.png")); // real file in manifest
 
 	const customRequestMapper = (request: Request) => {
-		let defaultModifiedRequest = mapRequestToAsset(request);
+		const defaultModifiedRequest = mapRequestToAsset(request);
 
-		let url = new URL(defaultModifiedRequest.url);
+		const url = new URL(defaultModifiedRequest.url);
 		url.pathname = "/image.webp"; // other different file in manifest
 		return new Request(url.toString(), request);
 	};
@@ -223,15 +224,16 @@ test("getAssetFromKV when setting custom cache setting", async (t) => {
 	const event1 = getEvent(new Request("https://blah.com/"));
 	const event2 = getEvent(new Request("https://blah.com/key1.png?blah=34"));
 	const cacheOnlyPngs = (req: Request) => {
-		if (new URL(req.url).pathname.endsWith(".png"))
+		if (new URL(req.url).pathname.endsWith(".png")) {
 			return {
 				browserTTL: 720,
 				edgeTTL: 720,
 			};
-		else
+		} else {
 			return {
 				bypassCache: true,
 			};
+		}
 	};
 
 	const res1 = await getAssetFromKV(event1, { cacheControl: cacheOnlyPngs });
@@ -367,10 +369,10 @@ test("getAssetFromKV TTls set to null should not cache on browser or edge", asyn
 });
 test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async (t) => {
 	mockRequestScope();
-	let CUSTOM_NAMESPACE = mockKV({
+	const CUSTOM_NAMESPACE = mockKV({
 		"key1.123HASHBROWN.txt": "val1",
 	});
-	Object.assign(global, { CUSTOM_NAMESPACE });
+	Object.assign(globalThis, { CUSTOM_NAMESPACE });
 	const event = getEvent(new Request("https://blah.com/"));
 	const res = await getAssetFromKV(event);
 	if (res) {
@@ -382,7 +384,7 @@ test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async 
 });
 test("getAssetFromKV when custom namespace without the asset should fail", async (t) => {
 	mockRequestScope();
-	let CUSTOM_NAMESPACE = mockKV({
+	const CUSTOM_NAMESPACE = mockKV({
 		"key5.123HASHBROWN.txt": "customvalu",
 	});
 
@@ -394,8 +396,8 @@ test("getAssetFromKV when custom namespace without the asset should fail", async
 });
 test("getAssetFromKV when namespace not bound fails", async (t) => {
 	mockRequestScope();
-	var MY_CUSTOM_NAMESPACE = undefined;
-	Object.assign(global, { MY_CUSTOM_NAMESPACE });
+	const MY_CUSTOM_NAMESPACE: unknown = undefined;
+	Object.assign(globalThis, { MY_CUSTOM_NAMESPACE });
 
 	const event = getEvent(new Request("https://blah.com/"));
 	const error: KVError = await t.throwsAsync(

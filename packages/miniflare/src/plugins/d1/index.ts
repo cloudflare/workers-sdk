@@ -8,9 +8,6 @@ import {
 } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {
-	PersistenceSchema,
-	Plugin,
-	SERVICE_LOOPBACK,
 	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
@@ -18,6 +15,9 @@ import {
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
+	PersistenceSchema,
+	Plugin,
+	SERVICE_LOOPBACK,
 } from "../shared";
 
 export const D1OptionsSchema = z.object({
@@ -47,11 +47,11 @@ export const D1_PLUGIN: Plugin<
 		return databases.map<Worker_Binding>(([name, id]) => {
 			const binding = name.startsWith("__D1_BETA__")
 				? // Used before Wrangler 3.3
-				  {
+					{
 						service: { name: `${D1_DATABASE_SERVICE_PREFIX}:${id}` },
-				  }
+					}
 				: // Used after Wrangler 3.3
-				  {
+					{
 						wrapped: {
 							moduleName: "cloudflare-internal:d1-api",
 							innerBindings: [
@@ -61,7 +61,7 @@ export const D1_PLUGIN: Plugin<
 								},
 							],
 						},
-				  };
+					};
 
 			return { name, ...binding };
 		});

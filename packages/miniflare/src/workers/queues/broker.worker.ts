@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { Colorize, bold, green, grey, red, reset, yellow } from "kleur/colors";
+import { bold, Colorize, green, grey, red, reset, yellow } from "kleur/colors";
 import {
 	HttpError,
 	LogLevel,
@@ -39,7 +39,7 @@ const DEFAULT_RETRIES = 2;
 
 const exceptionQueueResponse: FetcherQueueResult = {
 	outcome: "exception",
-	retryBatch: { retry: false, },
+	retryBatch: { retry: false },
 	ackAll: false,
 	retryMessages: [],
 	explicitAcks: [],
@@ -263,8 +263,11 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		// Get messages to retry. If dispatching the batch failed for any reason,
 		// retry all messages.
 		const retryAll = response.retryBatch.retry || response.outcome !== "ok";
-		const retryMessages = new Map(response.retryMessages?.map((r) => [r.msgId, r.delaySeconds]))
-		const globalDelay = response.retryBatch.delaySeconds ?? consumer.retryDelay ?? 0;
+		const retryMessages = new Map(
+			response.retryMessages?.map((r) => [r.msgId, r.delaySeconds])
+		);
+		const globalDelay =
+			response.retryBatch.delaySeconds ?? consumer.retryDelay ?? 0;
 
 		let failedMessages = 0;
 		const toDeadLetterQueue: QueueMessage[] = [];
@@ -363,7 +366,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 			const fn = () => {
 				this.#messages.push(msg);
 				this.#ensurePendingFlush();
-			}
+			};
 
 			const delay = message.delaySecs ?? globalDelay;
 			this.timers.setTimeout(fn, delay * 1000);
@@ -395,7 +398,8 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		// a no-op. This allows us to enqueue a maximum size batch with additional
 		// ID and timestamp information.
 		validateBatchSize(req.headers);
-		const delay = validateMessageDelay(req.headers) ?? this.#maybeProducer?.deliveryDelay;
+		const delay =
+			validateMessageDelay(req.headers) ?? this.#maybeProducer?.deliveryDelay;
 		const body = QueuesBatchRequestSchema.parse(await req.json());
 
 		// If we don't have a consumer, drop the message

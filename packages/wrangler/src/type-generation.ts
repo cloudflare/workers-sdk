@@ -326,7 +326,7 @@ async function generateTypes(
 	}
 
 	if (configToDTS.ai) {
-		envTypeStructure.push(constructType(configToDTS.ai.binding, "unknown"));
+		envTypeStructure.push(constructType(configToDTS.ai.binding, "Ai"));
 	}
 
 	if (configToDTS.version_metadata) {

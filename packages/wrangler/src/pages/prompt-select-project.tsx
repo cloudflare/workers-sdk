@@ -1,6 +1,5 @@
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
-import React from "react";
 import { listProjects } from "./projects";
 
 export async function promptSelectProject({

@@ -1,6 +1,6 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "<TBD>"
-main = "src/index.ts"
+main = "src/index.js"
 compatibility_date = "<TBD>"
 
 # Automatically place your workloads in an optimal location to minimize latency.

@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import * as path from "path";
 import Table from "ink-table";
-import React from "react";
 import { fetchResult } from "../cfetch";
 import { performApiFetch } from "../cfetch/internal";
 import { withConfig } from "../config";

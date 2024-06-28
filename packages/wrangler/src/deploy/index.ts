@@ -274,9 +274,11 @@ export async function deployHandler(
 					args.site,
 					args.siteInclude,
 					args.siteExclude
-			  );
+				);
 
-	if (!args.dryRun) await standardPricingWarning(config);
+	if (!args.dryRun) {
+		await standardPricingWarning(config);
+	}
 
 	await deploy({
 		config,

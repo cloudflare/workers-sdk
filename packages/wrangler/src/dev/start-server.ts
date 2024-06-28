@@ -1,8 +1,8 @@
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import { DevEnv } from "../api";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -21,6 +21,11 @@ import {
 import { logger } from "../logger";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
+import {
+	getAccountChoices,
+	requireApiToken,
+	saveAccountToCache,
+} from "../user";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
@@ -29,6 +34,7 @@ import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
+import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
@@ -44,7 +50,7 @@ export async function startDevServer(
 	let workerDefinitions: WorkerRegistry = {};
 	validateDevProps(props);
 
-	if (props.build.command) {
+	if (props.build.command && !props.experimentalDevEnv) {
 		const relativeFile =
 			path.relative(props.entry.directory, props.entry.file) || ".";
 		await runCustomBuild(props.entry.file, relativeFile, props.build).catch(
@@ -62,7 +68,7 @@ export async function startDevServer(
 
 	//start the worker registry
 	logger.log("disableDevRegistry: ", props.disableDevRegistry);
-	if (!props.disableDevRegistry) {
+	if (!props.disableDevRegistry && !props.experimentalDevEnv) {
 		try {
 			await startWorkerRegistry();
 			if (props.local) {
@@ -83,10 +89,11 @@ export async function startDevServer(
 		}
 	}
 
-	const devEnv = new DevEnv();
+	const devEnv = props.devEnv;
 	const startDevWorkerOptions: StartDevWorkerOptions = {
 		name: props.name ?? "worker",
-		script: { contents: "" },
+		entrypoint: { path: props.entry.file },
+		directory: props.entry.directory,
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -98,24 +105,49 @@ export async function startDevServer(
 			inspector: {
 				port: props.inspectorPort,
 			},
-			urlOverrides: {
+			origin: {
 				secure: props.upstreamProtocol === "https",
 				hostname: props.localUpstream,
 			},
 			liveReload: props.liveReload,
 			remote: !props.local,
+			auth: async () => {
+				let accountId = props.accountId;
+				if (accountId === undefined) {
+					const accountChoices = await getAccountChoices();
+					if (accountChoices.length === 1) {
+						saveAccountToCache({
+							id: accountChoices[0].id,
+							name: accountChoices[0].name,
+						});
+						accountId = accountChoices[0].id;
+					} else {
+						throw logger.error(
+							"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+						);
+					}
+				}
+
+				return { accountId, apiToken: requireApiToken() };
+			},
+		},
+		build: {
+			format: props.entry.format,
+			moduleRoot: props.entry.moduleRoot,
 		},
 	};
 
 	// temp: fake these events by calling the handler directly
-	devEnv.proxy.onConfigUpdate({
-		type: "configUpdate",
-		config: startDevWorkerOptions,
-	});
-	devEnv.proxy.onBundleStart({
-		type: "bundleStart",
-		config: startDevWorkerOptions,
-	});
+	if (!props.experimentalDevEnv) {
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: startDevWorkerOptions,
+		});
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: startDevWorkerOptions,
+		});
+	}
 
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
@@ -131,8 +163,7 @@ export async function startDevServer(
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
-		legacyNodeCompat: props.legacyNodeCompat,
-		nodejsCompat: props.nodejsCompat,
+		nodejsCompatMode: props.nodejsCompatMode,
 		define: props.define,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
@@ -146,6 +177,18 @@ export async function startDevServer(
 			props.compatibilityFlags
 		),
 	});
+
+	if (props.experimentalDevEnv) {
+		// to comply with the current contract of this function, call props.onReady on reloadComplete
+		devEnv.runtimes.forEach((runtime) => {
+			runtime.on("reloadComplete", async (ev) => {
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+
+				props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+			});
+		});
+	}
 
 	if (props.local) {
 		// temp: fake these events by calling the handler directly
@@ -196,25 +239,31 @@ export async function startDevServer(
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
+				if (!props.experimentalDevEnv) {
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: startDevWorkerOptions,
+						bundle,
+						proxyData,
+					});
+				}
 			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
 			services: props.bindings.services,
+			experimentalDevEnv: props.experimentalDevEnv,
 		});
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+				await Promise.allSettled([
+					stop(),
+					stopWorkerRegistry(),
+					devEnv.teardown(),
+				]);
 			},
-			// TODO: inspectorUrl,
 		};
 	} else {
 		const { stop } = await startRemoteServer({
@@ -250,21 +299,29 @@ export async function startDevServer(
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
+				if (!props.experimentalDevEnv) {
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: startDevWorkerOptions,
+						bundle,
+						proxyData,
+					});
+				}
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
+			experimentalDevEnv: props.experimentalDevEnv,
+			setAccountId: /* noop */ () => {},
 		});
+
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
+				await Promise.allSettled([
+					stop(),
+					stopWorkerRegistry(),
+					devEnv.teardown(),
+				]);
 			},
-			// TODO: inspectorUrl,
 		};
 	}
 }
@@ -290,8 +347,7 @@ async function runEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	legacyNodeCompat,
-	nodejsCompat,
+	nodejsCompatMode,
 	define,
 	noBundle,
 	findAdditionalModules,
@@ -313,8 +369,7 @@ async function runEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	legacyNodeCompat: boolean | undefined;
-	nodejsCompat: boolean | undefined;
+	nodejsCompatMode: NodeJSCompatMode | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
 	testScheduled?: boolean;
@@ -341,7 +396,7 @@ async function runEsbuild({
 				entry,
 				findAdditionalModules: findAdditionalModules ?? false,
 				rules,
-		  });
+			});
 
 	const bundleResult =
 		processEntrypoint || !noBundle
@@ -354,8 +409,7 @@ async function runEsbuild({
 					jsxFragment,
 					tsconfig,
 					minify,
-					legacyNodeCompat,
-					nodejsCompat,
+					nodejsCompatMode,
 					define,
 					checkFetch: true,
 					assets,
@@ -367,25 +421,29 @@ async function runEsbuild({
 					doBindings,
 					projectRoot,
 					defineNavigatorUserAgent,
-			  })
+				})
 			: undefined;
 
+	const entrypointPath = bundleResult?.resolvedEntryPointPath ?? entry.file;
 	return {
 		id: 0,
 		entry,
-		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+		path: entrypointPath,
 		type: bundleResult?.bundleType ?? getBundleType(entry.format),
 		modules: bundleResult ? bundleResult.modules : additionalModules,
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,
+		entrypointSource: await readFile(entrypointPath, "utf8"),
 	};
 }
 
 export async function startLocalServer(
 	props: LocalProps
 ): Promise<{ stop: () => Promise<void> }> {
-	if (!props.bundle || !props.format) return { async stop() {} };
+	if (!props.bundle || !props.format) {
+		return { async stop() {} };
+	}
 
 	// Log warnings for experimental dev-registry-dependent options
 	if (props.bindings.services && props.bindings.services.length > 0) {

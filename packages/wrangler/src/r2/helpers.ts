@@ -170,7 +170,9 @@ export async function putR2Object(
 	const headers: HeadersInit = {};
 	for (const key of headerKeys) {
 		const value = options[key] || "";
-		if (value && typeof value === "string") headers[key] = value;
+		if (value && typeof value === "string") {
+			headers[key] = value;
+		}
 	}
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
@@ -362,7 +364,7 @@ export const R2EventableOperations = [
 	"CompleteMultipartUpload",
 	"CopyObject",
 ] as const;
-export type R2EventableOperation = typeof R2EventableOperations[number];
+export type R2EventableOperation = (typeof R2EventableOperations)[number];
 
 export const actionsForEventCategories: Record<
 	"object-create" | "object-delete",
@@ -438,7 +440,7 @@ export async function tableFromNotificationGetResponse(
 > {
 	const reducer = async ([_, { queue, rules }]: [
 		DetailID,
-		NotificationDetail[DetailID]
+		NotificationDetail[DetailID],
 	]) => {
 		const queueResp = await queueIdentifier(config, queue);
 		const rows = [];

@@ -1,10 +1,13 @@
+import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
 import path from "node:path";
+import { spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
+import md5File from "md5-file";
 import { Miniflare } from "miniflare";
-import React from "react";
+import { fetch } from "undici";
 import { printWranglerBanner } from "../";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
@@ -12,11 +15,10 @@ import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { JsonFriendlyFatalError, UserError } from "../errors";
 import { logger } from "../logger";
-import { readFileSync } from "../parse";
+import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
@@ -25,7 +27,12 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type {
+	Database,
+	ImportInitResponse,
+	ImportPollingResponse,
+	PollingFailure,
+} from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
 
 export type QueryResult = {
@@ -81,7 +88,8 @@ export function Options(yargs: CommonYargsArgv) {
 		.option("batch-size", {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
-			default: DEFAULT_BATCH_SIZE,
+			deprecated: true,
+			hidden: true,
 		});
 }
 
@@ -98,7 +106,6 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		command,
 		json,
 		preview,
-		batchSize,
 	} = args;
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
@@ -109,8 +116,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 
 	const config = readConfig(args.config, args);
 
-	if (file && command)
+	if (file && command) {
 		return logger.error(`Error: can't provide both --command and --file.`);
+	}
 
 	const isInteractive = process.stdout.isTTY;
 	try {
@@ -119,17 +127,18 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			remote,
 			config,
 			name: database,
-			shouldPrompt: isInteractive && !yes,
+			shouldPrompt: isInteractive && !yes && !json,
 			persistTo,
 			file,
 			command,
 			json,
 			preview,
-			batchSize,
 		});
 
 		// Early exit if prompt rejected
-		if (!response) return;
+		if (!response) {
+			return;
+		}
 
 		if (isInteractive && !json) {
 			// Render table if single result
@@ -174,6 +183,10 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	}
 };
 
+type ExecuteInput =
+	| { file: string; command: never }
+	| { file: never; command: string };
+
 export async function executeSql({
 	local,
 	remote,
@@ -185,7 +198,6 @@ export async function executeSql({
 	command,
 	json,
 	preview,
-	batchSize,
 }: {
 	local: boolean | undefined;
 	remote: boolean | undefined;
@@ -197,7 +209,6 @@ export async function executeSql({
 	command: string | undefined;
 	json: boolean | undefined;
 	preview: boolean | undefined;
-	batchSize: number;
 }) {
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
@@ -205,58 +216,60 @@ export async function executeSql({
 		logger.loggerLevel = "error";
 	}
 
-	const sql = file ? readFileSync(file) : command;
-	if (!sql) throw new UserError(`Error: must provide --command or --file.`);
+	const input = file
+		? ({ file } as ExecuteInput)
+		: command
+			? ({ command } as ExecuteInput)
+			: null;
+	if (!input) {
+		throw new UserError(`Error: must provide --command or --file.`);
+	}
 	if (local && remote) {
 		throw new UserError(
 			`Error: can't use --local and --remote at the same time`
 		);
 	}
-	if (preview && !remote)
+	if (preview && !remote) {
 		throw new UserError(`Error: can't use --preview without --remote`);
-	if (persistTo && !local)
-		throw new UserError(`Error: can't use --persist-to without --local`);
-	logger.log(`🌀 Mapping SQL input into an array of statements`);
-	const queries = splitSqlQuery(sql);
-
-	if (file && sql) {
-		if (queries[0].startsWith("SQLite format 3")) {
-			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
-			throw new UserError(
-				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
-			);
-		}
 	}
+	if (persistTo && !local) {
+		throw new UserError(`Error: can't use --persist-to without --local`);
+	}
+	if (input.file) {
+		await checkForSQLiteBinary(input.file);
+	}
+
 	const result =
 		remote || preview
 			? await executeRemotely({
 					config,
 					name,
 					shouldPrompt,
-					batches: batchSplit(queries, batchSize),
-					json,
+					input,
 					preview,
-			  })
+				})
 			: await executeLocally({
 					config,
 					name,
-					queries,
+					input,
 					persistTo,
-			  });
+				});
 
-	if (json) logger.loggerLevel = existingLogLevel;
+	if (json) {
+		logger.loggerLevel = existingLogLevel;
+	}
 	return result;
 }
 
 async function executeLocally({
 	config,
 	name,
-	queries,
+	input,
 	persistTo,
 }: {
 	config: Config;
 	name: string;
-	queries: string[];
+	input: ExecuteInput;
 	persistTo: string | undefined;
 }) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
@@ -287,6 +300,9 @@ async function executeLocally({
 	});
 	const db = await mf.getD1Database("DATABASE");
 
+	const sql = input.file ? readFileSync(input.file) : input.command;
+	const queries = splitSqlQuery(sql);
+
 	let results: D1Result<Record<string, string | number | boolean>>[];
 	try {
 		results = await db.batch(queries.map((query) => db.prepare(query)));
@@ -300,8 +316,12 @@ async function executeLocally({
 		results: (result.results ?? []).map((row) =>
 			Object.fromEntries(
 				Object.entries(row).map(([key, value]) => {
-					if (Array.isArray(value)) value = `[${value.join(", ")}]`;
-					if (value === null) value = "null";
+					if (Array.isArray(value)) {
+						value = `[${value.join(", ")}]`;
+					}
+					if (value === null) {
+						value = "null";
+					}
 					return [key, value];
 				})
 			)
@@ -315,30 +335,25 @@ async function executeRemotely({
 	config,
 	name,
 	shouldPrompt,
-	batches,
-	json,
+	input,
 	preview,
 }: {
 	config: Config;
 	name: string;
 	shouldPrompt: boolean | undefined;
-	batches: string[];
-	json: boolean | undefined;
+	input: ExecuteInput;
 	preview: boolean | undefined;
 }) {
-	const multiple_batches = batches.length > 1;
-	// in JSON mode, we don't want a prompt here
-	if (multiple_batches && !json) {
-		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
+	if (input.file) {
+		const warning = `⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.`;
 
 		if (shouldPrompt) {
-			const ok = await confirm(
-				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
-			);
-			if (!ok) return null;
-			logger.log(`🌀 Let's go`);
+			const ok = await confirm(`${warning}\n  Ok to proceed?`);
+			if (!ok) {
+				return null;
+			}
 		} else {
-			logger.error(warning);
+			logger.warn(warning);
 		}
 	}
 
@@ -348,41 +363,206 @@ async function executeRemotely({
 		accountId,
 		name
 	);
-	if (preview && !db.previewDatabaseUuid) {
-		const error = new UserError(
-			"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
-		);
-		logger.error(error.message);
-		throw error;
+	if (preview) {
+		if (!db.previewDatabaseUuid) {
+			throw new UserError(
+				"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
+			);
+		}
+		db.uuid = db.previewDatabaseUuid;
 	}
-	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
-	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);
+	logger.log(
+		`🌀 Executing on ${
+			db.previewDatabaseUuid ? "preview" : "remote"
+		} database ${name} (${db.uuid}):`
+	);
 	logger.log(
 		"🌀 To execute on your local development database, remove the --remote flag from your wrangler command."
 	);
 
-	const results: QueryResult[] = [];
-	for (const sql of batches) {
-		if (multiple_batches)
-			logger.log(
-				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
-			);
+	if (input.file) {
+		// TODO: do we need to update hashing code if we upload in parts?
+		const etag = await md5File(input.file);
 
-		const result = await fetchResult<QueryResult[]>(
-			`/accounts/${accountId}/d1/database/${dbUuid}/query`,
+		logger.log(
+			chalk.gray(
+				`Note: if the execution fails to complete, your DB will return to its original state and you can safely retry.`
+			)
+		);
+
+		const initResponse = await spinnerWhile({
+			promise: d1ApiPost<
+				ImportInitResponse | ImportPollingResponse | PollingFailure
+			>(accountId, db, "import", { action: "init", etag }),
+			startMessage: "Checking if file needs uploading",
+		});
+
+		// An init response usually returns a {filename, uploadUrl} pair, except if we've detected that file
+		// already exists and is valid, to save people reuploading. In which case `initResponse` has already
+		// kicked the import process off.
+		const uploadRequired = "uploadUrl" in initResponse;
+		if (!uploadRequired) {
+			logger.log(`🌀 File already uploaded. Processing.`);
+		}
+		const firstPollResponse = uploadRequired
+			? // Upload the file to R2, then inform D1 to start processing it. The server delays before responding
+				// in case the file is quite small and can be processed without a second round-trip.
+				await uploadAndBeginIngestion(
+					accountId,
+					db,
+					input.file,
+					etag,
+					initResponse
+				)
+			: initResponse;
+
+		// If the file takes longer than the specified delay (~1s) to import, we'll need to continue polling
+		// until it's complete. If it's already finished, this call will early-exit.
+		const finalResponse = await pollUntilComplete(
+			firstPollResponse,
+			accountId,
+			db
+		);
+
+		if (finalResponse.status !== "complete") {
+			throw new APIError({ text: `D1 reset before execute completed!` });
+		}
+
+		const {
+			result: { numQueries, finalBookmark, meta },
+		} = finalResponse;
+		logger.log(
+			`🚣 Executed ${numQueries} queries in ${(meta.duration / 1000).toFixed(
+				2
+			)} seconds (${meta.rows_read} rows read, ${
+				meta.rows_written
+			} rows written)\n` +
+				chalk.gray(`   Database is currently at bookmark ${finalBookmark}.`)
+		);
+
+		return [
 			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
-				},
-				body: JSON.stringify({ sql }),
+				results: [
+					{
+						"Total queries executed": numQueries,
+						"Rows read": meta.rows_read,
+						"Rows written": meta.rows_written,
+						"Database size (MB)": (meta.size_after / 1_000_000).toFixed(2),
+					},
+				],
+				success: true,
+				finalBookmark,
+				meta,
+			},
+		];
+	} else {
+		const result = await d1ApiPost<QueryResult[]>(accountId, db, "query", {
+			sql: input.command,
+		});
+		logResult(result);
+		return result;
+	}
+}
+
+async function uploadAndBeginIngestion(
+	accountId: string,
+	db: Database,
+	file: string,
+	etag: string,
+	initResponse: ImportInitResponse
+) {
+	const { uploadUrl, filename } = initResponse;
+
+	const { size } = await fs.stat(file);
+
+	const uploadResponse = await spinnerWhile({
+		promise: fetch(uploadUrl, {
+			method: "PUT",
+			headers: {
+				"Content-length": `${size}`,
+			},
+			body: createReadStream(file),
+			duplex: "half", // required for NodeJS streams over .fetch ?
+		}),
+		startMessage: `🌀 Uploading ${filename}`,
+		endMessage: `🌀 Uploading complete.`,
+	});
+
+	if (uploadResponse.status !== 200) {
+		throw new UserError(
+			`File could not be uploaded. Please retry.\nGot response: ${await uploadResponse.text()}`
+		);
+	}
+
+	const etagResponse = uploadResponse.headers.get("etag");
+	if (!etagResponse) {
+		throw new UserError(`File did not upload successfully. Please retry.`);
+	}
+	if (etag !== etagResponse.replace(/^"|"$/g, "")) {
+		throw new UserError(
+			`File contents did not upload successfully. Please retry.`
+		);
+	}
+
+	return await d1ApiPost<ImportPollingResponse | PollingFailure>(
+		accountId,
+		db,
+		"import",
+		{ action: "ingest", filename, etag }
+	);
+}
+
+async function pollUntilComplete(
+	response: ImportPollingResponse | PollingFailure,
+	accountId: string,
+	db: Database
+): Promise<ImportPollingResponse> {
+	if (!response.success) {
+		throw new Error(response.error);
+	}
+
+	response.messages.forEach((line) => {
+		logger.log(`🌀 ${line}`);
+	});
+
+	if (response.status === "complete") {
+		return response;
+	} else if (response.status === "error") {
+		throw new APIError({
+			text: response.errors?.join("\n"),
+			notes: response.messages.map((text) => ({ text })),
+		});
+	} else {
+		const newResponse = await d1ApiPost<ImportPollingResponse | PollingFailure>(
+			accountId,
+			db,
+			"import",
+			{
+				action: "poll",
+				currentBookmark: response.at_bookmark,
 			}
 		);
-		logResult(result);
-		results.push(...result);
+		return await pollUntilComplete(newResponse, accountId, db);
 	}
-	return results;
+}
+
+async function d1ApiPost<T>(
+	accountId: string,
+	db: Database,
+	action: string,
+	body: unknown
+) {
+	return await fetchResult<T>(
+		`/accounts/${accountId}/d1/database/${db.uuid}/${action}`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
+			},
+			body: JSON.stringify(body),
+		}
+	);
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
@@ -399,23 +579,19 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[], batchSize: number) {
-	logger.log(`🌀 Parsing ${queries.length} statements`);
-	const num_batches = Math.ceil(queries.length / batchSize);
-	const batches: string[] = [];
-	for (let i = 0; i < num_batches; i++) {
-		batches.push(queries.slice(i * batchSize, (i + 1) * batchSize).join("; "));
-	}
-	if (num_batches > 1) {
-		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${batchSize} statements per batch. Use --batch-size to override.)`
-		);
-	}
-	return batches;
-}
-
 function shorten(query: string | undefined, length: number) {
 	return query && query.length > length
 		? query.slice(0, length) + "..."
 		: query;
+}
+
+async function checkForSQLiteBinary(filename: string) {
+	const fd = await fs.open(filename, "r");
+	const buffer = Buffer.alloc(15);
+	await fd.read(buffer, 0, 15);
+	if (buffer.toString("utf8") === "SQLite format 3") {
+		throw new UserError(
+			"Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again."
+		);
+	}
 }

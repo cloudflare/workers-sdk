@@ -1,8 +1,10 @@
 import { isDarkMode, theme } from "@cloudflare/style-const";
-import React, { createContext, useContext, useState } from "react";
-// @ts-expect-error Types are wrong
-import ReactSplitPane, { Props as ReactSplitPaneProps } from "react-split-pane";
+import { createContext, useContext, useState } from "react";
+import ReactSplitPane from "react-split-pane";
 import { BORDER_GRAY } from "./constants";
+import type React from "react";
+// @ts-expect-error Types are wrong
+import type { Props as ReactSplitPaneProps } from "react-split-pane";
 
 export const DragContext = createContext(false);
 

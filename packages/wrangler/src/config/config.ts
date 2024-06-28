@@ -67,29 +67,6 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	dev: Dev;
 
 	/**
-	 * A list of migrations that should be uploaded with your Worker.
-	 *
-	 * These define changes in your Durable Object declarations.
-	 *
-	 * More details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations
-	 *
-	 * @default []
-	 */
-	migrations: {
-		/** A unique identifier for this migration. */
-		tag: string;
-		/** The new Durable Objects being defined. */
-		new_classes?: string[];
-		/** The Durable Objects being renamed. */
-		renamed_classes?: {
-			from: string;
-			to: string;
-		}[];
-		/** The Durable Objects being removed. */
-		deleted_classes?: string[];
-	}[];
-
-	/**
 	 * The definition of a Worker Site, a feature that lets you upload
 	 * static assets with your Worker.
 	 *
@@ -149,6 +126,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				browser_TTL: number | undefined;
 				serve_single_page_app: boolean;
 		  }
+		| string
 		| undefined;
 
 	/**
@@ -352,7 +330,6 @@ export const defaultWranglerConfig: Config = {
 	/* TOP-LEVEL ONLY FIELDS */
 	configPath: undefined,
 	legacy_env: true,
-	migrations: [],
 	site: undefined,
 	assets: undefined,
 	wasm_modules: undefined,
@@ -372,6 +349,7 @@ export const defaultWranglerConfig: Config = {
 	tsconfig: undefined,
 	jsx_factory: "React.createElement",
 	jsx_fragment: "React.Fragment",
+	migrations: [],
 	triggers: {
 		crons: [],
 	},

@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -31,21 +31,22 @@ describe("pages project delete", () => {
 
 	it("should delete a project with the given name", async () => {
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.projectName).toEqual("some-project-name");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.projectName).toEqual("some-project-name");
+					return HttpResponse.json(
+						{
 							result: null,
 							success: true,
 							errors: [],
 							messages: [],
-						})
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -75,21 +76,22 @@ describe("pages project delete", () => {
 
 	it("should delete a project without asking if --yes provided", async () => {
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/pages/projects/:projectName",
-				async (req, res, ctx) => {
-					expect(req.params.accountId).toEqual("some-account-id");
-					expect(req.params.projectName).toEqual("some-project-name");
-					return res.once(
-						ctx.status(200),
-						ctx.json({
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.projectName).toEqual("some-project-name");
+					return HttpResponse.json(
+						{
 							result: null,
 							success: true,
 							errors: [],
 							messages: [],
-						})
+						},
+						{ status: 200 }
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 

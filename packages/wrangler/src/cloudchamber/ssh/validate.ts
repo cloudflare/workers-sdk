@@ -50,8 +50,9 @@ export function validatePublicSSHKeyCLI(
 	{ json }: { json: boolean }
 ) {
 	const bail = (reason: string) => {
-		if (!json) crash(reason);
-		else {
+		if (!json) {
+			crash(reason);
+		} else {
 			logger.log(JSON.stringify({ error: reason }, null, 4));
 			exit(1);
 		}

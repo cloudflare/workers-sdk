@@ -1,8 +1,6 @@
 import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
-import { fetchResult, fetchScriptContent } from "../cfetch";
 import { readConfig } from "../config";
-import { confirm } from "../dialogs";
 import { createFatalError, UserError } from "../errors";
 import {
 	getLegacyScriptName,
@@ -19,7 +17,6 @@ import {
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
 } from "./createTail";
-import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -129,29 +126,7 @@ export async function tailHandler(args: TailArgs) {
 		clientIp: args.ip,
 		versionId: args.versionId,
 	};
-	const scriptContent: string = await fetchScriptContent(
-		(!isLegacyEnv(config) ? args.env : undefined)
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/content`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}`
-	);
 
-	const bindings = await fetchResult<WorkerMetadata["bindings"]>(
-		(!isLegacyEnv(config) ? args.env : undefined)
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/bindings`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}/bindings`
-	);
-	if (
-		scriptContent.toLowerCase().includes("websocket") &&
-		bindings.find((b) => b.type === "durable_object_namespace")
-	) {
-		logger.warn(
-			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
-		);
-
-		if (!(await confirm("Would you like to continue?"))) {
-			return;
-		}
-	}
 	const filters = translateCLICommandToFilterMessage(cliFilters);
 
 	const { tail, expiration, deleteTail } = await createTail(

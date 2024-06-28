@@ -23,21 +23,21 @@ import {
 } from "@cloudflare/workers-types/experimental";
 import test, { ThrowsExpectation } from "ava";
 import {
+	_forceColour,
+	_transformsForContentEncodingAndContentType,
+	createFetchMock,
 	DeferredPromise,
+	fetch,
+	kCurrentWorker,
 	MessageEvent,
 	Miniflare,
 	MiniflareCoreError,
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 	Response,
-	WorkerOptions,
-	Worker_Module,
-	_forceColour,
-	_transformsForContentEncodingAndContentType,
-	createFetchMock,
-	fetch,
-	kCurrentWorker,
 	viewToBuffer,
+	Worker_Module,
+	WorkerOptions,
 } from "miniflare";
 import {
 	CloseEvent as StandardCloseEvent,
@@ -279,7 +279,10 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	const { http } = await useServer(t, (req, res) => {
 		const testEncoding = req.headers["x-test-encoding"]?.toString();
 		const contentType = "text/html"; // known content-type that will always be compressed
-		const encoders = _transformsForContentEncodingAndContentType(testEncoding, contentType);
+		const encoders = _transformsForContentEncodingAndContentType(
+			testEncoding,
+			contentType
+		);
 		let initialStream: Writable = res;
 		for (let i = encoders.length - 1; i >= 0; i--) {
 			encoders[i].pipe(initialStream);
@@ -287,7 +290,7 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 		}
 		res.writeHead(200, {
 			"Content-Encoding": testEncoding,
-			"Content-Type": contentType
+			"Content-Type": contentType,
 		});
 		initialStream.write(testBody);
 		initialStream.end();
@@ -314,9 +317,17 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 		});
 		t.is(await res.text(), testBody, encoding);
 		// This header is mostly just for this test -- but is an indication for anyone who wants to know if the response _was_ compressed
-        t.is(res.headers.get('MF-Content-Encoding'), encoding, `Expected the response, before decoding, to be encoded as ${encoding}`);
+		t.is(
+			res.headers.get("MF-Content-Encoding"),
+			encoding,
+			`Expected the response, before decoding, to be encoded as ${encoding}`
+		);
 		// Ensure this header has been removed -- undici.fetch has already decoded (decompressed) the response
-        t.is(res.headers.get('Content-Encoding'), null, 'Expected Content-Encoding header to be removed');
+		t.is(
+			res.headers.get("Content-Encoding"),
+			null,
+			"Expected Content-Encoding header to be removed"
+		);
 	};
 
 	await test("gzip");
@@ -498,7 +509,7 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 	// Check `Content-Type: text/html` is compressed (FL always compresses html)
 	res = await fetch(defaultCompressedUrl);
 	t.is(res.headers.get("Content-Type"), "text/html");
-	t.is(res.headers.get("Content-Encoding"), 'gzip');
+	t.is(res.headers.get("Content-Encoding"), "gzip");
 	t.is(await res.text(), testBody);
 
 	// Check `Content-Type: text/event-stream` is not compressed (FL does not compress this mime type)
@@ -1543,6 +1554,52 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 
 	t.is(helloWorld, "Hello World from a nested function");
 });
+test("Miniflare: getBindings() handles wrapped bindings returning functions returning functions", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					GreetFactory: {
+						scriptName: "greet-factory-obj-implementation",
+					},
+				},
+				modules: true,
+				script: "",
+			},
+			{
+				modules: true,
+				name: "greet-factory-obj-implementation",
+				script: `
+					export default function (env) {
+						const factory = {
+							getGreetFunction(name) {
+								return (name) => {
+									return this.greeting + ' ' + name;
+								}
+							},
+							greeting: "Salutations",
+						};
+						return factory;
+					}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	interface Env {
+		GreetFactory: {
+			greeting: string;
+			getGreetFunction: () => (str: string) => string;
+		};
+	}
+	const { GreetFactory } = await mf.getBindings<Env>();
+
+	const greetFunction = GreetFactory.getGreetFunction();
+
+	t.is(greetFunction("Esteemed World"), "Salutations Esteemed World");
+	t.is(GreetFactory.greeting, "Salutations");
+});
 test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
@@ -1908,9 +1965,7 @@ test("Miniflare: exits cleanly", async (t) => {
 			"--no-warnings", // Hide experimental warnings
 			"-e",
 			`
-			const { Miniflare, Log, LogLevel } = require(${JSON.stringify(
-						miniflarePath
-					)});
+			const { Miniflare, Log, LogLevel } = require(${JSON.stringify(miniflarePath)});
 			const mf = new Miniflare({
 				verbose: true,
 				modules: true,

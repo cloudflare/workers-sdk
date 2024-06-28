@@ -1,8 +1,8 @@
 import path from "path";
-import type { D1Database } from "@cloudflare/workers-types/experimental";
 import { TestFn } from "ava";
+import { miniflareTest, MiniflareTestContext } from "../../test-shared";
+import type { D1Database } from "@cloudflare/workers-types/experimental";
 import type { Miniflare, MiniflareOptions } from "miniflare";
-import { MiniflareTestContext, miniflareTest } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(
 	__dirname,
@@ -18,6 +18,8 @@ export interface Context extends MiniflareTestContext {
 	db: D1Database;
 	tableColours: string;
 	tableKitchenSink: string;
+	tablePalettes: string;
+	bindings: Record<string, unknown>;
 }
 
 export let binding: string;

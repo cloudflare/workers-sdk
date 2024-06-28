@@ -13,31 +13,46 @@ import type {
 } from "./worker.js";
 import type { Json } from "miniflare";
 
+const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
+	esm: "application/javascript+module",
+	commonjs: "application/javascript",
+	"compiled-wasm": "application/wasm",
+	buffer: "application/octet-stream",
+	text: "text/plain",
+	python: "text/x-python",
+	"python-requirement": "text/x-python-requirement",
+	"nodejs-compat-module": undefined,
+};
+
 export function toMimeType(type: CfModuleType): string {
-	switch (type) {
-		case "esm":
-			return "application/javascript+module";
-		case "commonjs":
-			return "application/javascript";
-		case "compiled-wasm":
-			return "application/wasm";
-		case "buffer":
-			return "application/octet-stream";
-		case "text":
-			return "text/plain";
-		case "python":
-			return "text/x-python";
-		case "python-requirement":
-			return "text/x-python-requirement";
-		default:
-			throw new TypeError("Unsupported module: " + type);
+	const mimeType = moduleTypeMimeType[type];
+	if (mimeType === undefined) {
+		throw new TypeError("Unsupported module: " + type);
 	}
+
+	return mimeType;
+}
+
+export function fromMimeType(mimeType: string): CfModuleType {
+	const moduleType = Object.keys(moduleTypeMimeType).find(
+		(type) => moduleTypeMimeType[type as CfModuleType] === mimeType
+	) as CfModuleType | undefined;
+	if (moduleType === undefined) {
+		throw new TypeError("Unsupported mime type: " + mimeType);
+	}
+
+	return moduleType;
 }
 
 export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
+
+	// Inherit is _not_ in safeBindings because it is here for API use only
+	// wrangler supports this per type today through keep_bindings
+	| { type: "inherit"; name: string }
 	| { type: "plain_text"; name: string; text: string }
+	| { type: "secret_text"; name: string; text: string }
 	| { type: "json"; name: string; json: Json }
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
@@ -143,12 +158,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		main,
 		sourceMaps,
 		bindings,
+		rawBindings,
 		migrations,
 		usage_model,
 		compatibility_date,
 		compatibility_flags,
 		keepVars,
 		keepSecrets,
+		keepBindings,
 		logpush,
 		placement,
 		tail_consumers,
@@ -158,7 +175,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	let { modules } = worker;
 
-	const metadataBindings: WorkerMetadata["bindings"] = [];
+	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
 
 	Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
 		if (typeof value === "string") {
@@ -305,7 +322,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	for (const [name, filePath] of Object.entries(bindings.wasm_modules || {})) {
+	for (const [name, source] of Object.entries(bindings.wasm_modules || {})) {
 		metadataBindings.push({
 			name,
 			type: "wasm_module",
@@ -314,9 +331,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 		formData.set(
 			name,
-			new File([readFileSync(filePath)], filePath, {
-				type: "application/wasm",
-			})
+			new File(
+				[typeof source === "string" ? readFileSync(source) : source],
+				typeof source === "string" ? source : name,
+				{
+					type: "application/wasm",
+				}
+			)
 		);
 	}
 
@@ -359,7 +380,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	for (const [name, filePath] of Object.entries(bindings.data_blobs || {})) {
+	for (const [name, source] of Object.entries(bindings.data_blobs || {})) {
 		metadataBindings.push({
 			name,
 			type: "data_blob",
@@ -368,9 +389,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 		formData.set(
 			name,
-			new File([readFileSync(filePath)], filePath, {
-				type: "application/octet-stream",
-			})
+			new File(
+				[typeof source === "string" ? readFileSync(source) : source],
+				typeof source === "string" ? source : name,
+				{
+					type: "application/octet-stream",
+				}
+			)
 		);
 	}
 
@@ -406,7 +431,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		for (const subDir of subDirs) {
 			// Ignore `.` as it's not a subdirectory, and we don't want to
 			// register the manifest module in the root twice.
-			if (subDir === ".") continue;
+			if (subDir === ".") {
+				continue;
+			}
 			const relativePath = path.posix.relative(subDir, manifestModuleName);
 			const filePath = path.posix.join(subDir, manifestModuleName);
 			modules.push({
@@ -449,8 +476,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 						module.type === "compiled-wasm"
 							? "wasm_module"
 							: module.type === "text"
-							? "text_blob"
-							: "data_blob",
+								? "text_blob"
+								: "data_blob",
 					part: name,
 				});
 
@@ -462,8 +489,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 							module.type === "compiled-wasm"
 								? "application/wasm"
 								: module.type === "text"
-								? "text/plain"
-								: "application/octet-stream",
+									? "text/plain"
+									: "application/octet-stream",
 					})
 				);
 				// And then remove it from the modules collection
@@ -497,6 +524,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	if (keepSecrets) {
 		keep_bindings ??= [];
 		keep_bindings.push("secret_text", "secret_key");
+	}
+	if (keepBindings) {
+		keep_bindings ??= [];
+		keep_bindings.push(...keepBindings);
 	}
 
 	const metadata: WorkerMetadata = {

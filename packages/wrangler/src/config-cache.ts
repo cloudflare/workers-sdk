@@ -9,7 +9,9 @@ let cacheMessageShown = false;
 
 let __cacheFolder: string | null | undefined;
 function getCacheFolder() {
-	if (__cacheFolder || __cacheFolder === null) return __cacheFolder;
+	if (__cacheFolder || __cacheFolder === null) {
+		return __cacheFolder;
+	}
 
 	const closestNodeModulesDirectory = findUpSync("node_modules", {
 		type: "directory",
@@ -52,7 +54,9 @@ export function getConfigCache<T>(fileName: string): Partial<T> {
 			);
 			showCacheMessage(Object.keys(configCache), cacheFolder);
 			return configCache;
-		} else return {};
+		} else {
+			return {};
+		}
 	} catch (err) {
 		return {};
 	}

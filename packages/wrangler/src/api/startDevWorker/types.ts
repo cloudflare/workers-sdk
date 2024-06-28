@@ -1,66 +1,122 @@
-import type { RawConfig } from "../../config/config";
+import type { Config } from "../../config";
+import type {
+	CustomDomainRoute,
+	Rule,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "../../config/environment";
+import type { NodeJSCompatMode } from "../../deployment-bundle/node-compat";
+import type {
+	CfAnalyticsEngineDataset,
+	CfConstellation,
+	CfD1Database,
+	CfDispatchNamespace,
+	CfDurableObject,
+	CfHyperdrive,
+	CfKvNamespace,
+	CfLogfwdrBinding,
+	CfModule,
+	CfMTlsCertificate,
+	CfQueue,
+	CfR2Bucket,
+	CfScriptFormat,
+	CfSendEmailBindings,
+	CfService,
+	CfUnsafe,
+	CfVectorize,
+} from "../../deployment-bundle/worker";
+import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
-import type { DispatchFetch, Json, Request, Response } from "miniflare";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
+import type {
+	DispatchFetch,
+	Json,
+	Miniflare,
+	Request,
+	Response,
+} from "miniflare";
 import type * as undici from "undici";
 
-export interface DevWorker {
+type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
+export interface Worker {
 	ready: Promise<void>;
-	config?: StartDevWorkerOptions;
-	setOptions(options: StartDevWorkerOptions): void;
-	updateOptions(options: Partial<StartDevWorkerOptions>): void;
+	url: Promise<URL>;
+	inspectorUrl: Promise<URL>;
+	config: StartDevWorkerOptions;
+	setConfig: ConfigController["set"];
+	patchConfig: ConfigController["patch"];
 	fetch: DispatchFetch;
-	scheduled(cron?: string): Promise<void>;
-	queue(queueName: string, ...messages: unknown[]): Promise<void>;
+	scheduled: MiniflareWorker["scheduled"];
+	queue: MiniflareWorker["queue"];
 	dispose(): Promise<void>;
 }
 
 export interface StartDevWorkerOptions {
 	/** The name of the worker. */
-	name: string;
+	name?: string;
 	/**
 	 * The javascript or typescript entry-point of the worker.
 	 * This is the `main` property of a wrangler.toml.
 	 * You can specify a file path or provide the contents directly.
 	 */
-	script: File<string>;
+	entrypoint?: FilePath;
 	/** The configuration of the worker. */
-	config?: File<string | RawConfig> & { env?: string };
+	config?: FilePath;
+	/** A worker's directory. Usually where the wrangler.toml file is located */
+	directory?: string;
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
+
+	env?: string;
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
-	/** Options applying to (legacy) Worker Sites. Please consider using Cloudflare Pages. */
-	site?: {
-		path: string;
-		include?: string[];
-		exclude?: string[];
-	};
+	/**
+	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
+	 *
+	 * When defined this will override any user settings.
+	 * Otherwise, Wrangler will use the user's preference.
+	 */
+	sendMetrics?: boolean;
+	usageModel?: "bundled" | "unbound";
 
 	/** Options applying to the worker's build step. Applies to deploy and dev. */
 	build?: {
 		/** Whether the worker and its dependencies are bundled. Defaults to true. */
 		bundle?: boolean;
+
+		additionalModules?: CfModule[];
+
+		findAdditionalModules?: boolean;
+		processEntrypoint?: boolean;
 		/** Specifies types of modules matched by globs. */
-		moduleRules?: ModuleRule[];
-		/** Replace global identifiers with constant expressions, e.g. ['debug=true','version="1.0.0"'] or { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
-		define: string[] | Record<string, string>;
+		moduleRules?: Rule[];
+		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
+		define?: Record<string, string>;
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
-		minify: boolean;
+		minify?: boolean;
 		/** Options controlling a custom build step. */
-		custom: {
+		custom?: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
-			command: string;
+			command?: string;
 			/** The cwd to run the command in. */
 			workingDirectory?: string;
 			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
 			watch?: string | string[];
 		};
+		jsxFactory?: string;
+		jsxFragment?: string;
+		tsconfig?: string;
+		nodejsCompatMode?: NodeJSCompatMode;
+		moduleRoot?: string;
+
+		format?: CfScriptFormat;
 	};
 
 	/** Options applying to the worker's development preview environment. */
@@ -70,7 +126,7 @@ export interface StartDevWorkerOptions {
 		/** Whether the worker runs on the edge or locally. */
 		remote?: boolean;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
-		auth?: Hook<CfAccount>;
+		auth?: AsyncHook<CfAccount>;
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: boolean | { path: string };
 		/** Controls which logs are logged 🤙. */
@@ -89,25 +145,45 @@ export interface StartDevWorkerOptions {
 			httpsCertPath?: string;
 		};
 		/** Controls what request.url looks like inside the worker. */
-		urlOverrides?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
+		origin?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
 		/** A hook for outbound fetch calls from within the worker. */
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
+
+		/** Describes the registry of other Workers running locally */
+		registry?: WorkerRegistry;
+
+		testScheduled?: boolean;
 	};
+	legacy?: {
+		site?: Config["site"];
+		assets?: Config["assets"];
+		enableServiceEnvironments?: boolean;
+	};
+	unsafe?: Omit<CfUnsafe, "bindings">;
 }
 
-export type Hook<T, Args extends unknown[] = unknown[]> =
+export type HookValues = string | number | boolean | object;
+export type Hook<T extends HookValues, Args extends unknown[] = []> =
 	| T
-	| Promise<T>
-	| ((...args: Args) => T | Promise<T>);
+	| ((...args: Args) => T);
+export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
+	| Hook<T, Args>
+	| Hook<Promise<T>, Args>;
+
+export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-export type File<Contents = string> =
-	| { path: string } // `path` resolved relative to cwd
-	| { contents: Contents; path?: string }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
+export type File<Contents = string, Path = string> =
+	| { path: Path } // `path` resolved relative to cwd
+	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
 export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instances of `Uint8Array`
+export type FilePath<Path = string> = Extract<
+	File<undefined, Path>,
+	{ path: Path }
+>; // file that must be on disk -- reminder to allow uses of `contents` eventually
 
 export interface Location {
 	hostname?: string;
@@ -125,77 +201,45 @@ export type PatternRoute = {
 export type WorkersDevRoute = { workersDev: true };
 export type Route = PatternRoute | WorkersDevRoute;
 
-export interface ModuleRule {
-	type:
-		| "ESModule"
-		| "CommonJS"
-		| "NodeJSCompat"
-		| "CompiledWasm"
-		| "Text"
-		| "Data";
-	include?: string[];
-	fallthrough?: boolean;
-}
+type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 
 export type Trigger =
 	| { type: "workers.dev" }
-	| { type: "route"; pattern: string; customDomain: true }
-	| {
-			type: "route";
-			pattern: string;
-			zoneId: string;
-			customDomain?: true;
-			zoneName?: never;
-	  }
-	| {
-			type: "route";
-			pattern: string;
-			zoneName: string;
-			customDomain?: true;
-			zoneId?: never;
-	  }
-	| { type: "schedule"; schedule: string }
-	| {
-			type: "queue-consumer";
-			name: string;
-			maxBatchSize?: number;
-			maxBatchTimeout?: number;
-			maxRetries?: string;
-			deadLetterQueue?: string;
-	  };
+	| { type: "route"; pattern: string } // SimpleRoute
+	| ({ type: "route" } & ZoneIdRoute)
+	| ({ type: "route" } & ZoneNameRoute)
+	| ({ type: "route" } & CustomDomainRoute)
+	| { type: "cron"; cron: string }
+	| ({ type: "queue-consumer" } & QueueConsumer);
 
+type BindingOmit<T> = Omit<T, "binding" | "name">;
 export type Binding =
-	| { type: "kv"; id: string }
-	| { type: "r2"; bucket_name: string }
-	| {
-			type: "d1";
-			/** The binding name used to refer to the D1 database in the worker. */
-			binding: string;
-			/** The name of this D1 database. */
-			database_name: string;
-			/** The UUID of this D1 database (not required). */
-			database_id: string;
-			/** The UUID of this D1 database for Wrangler Dev (if specified). */
-			preview_database_id?: string;
-			/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
-			migrations_table?: string;
-			/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
-			migrations_dir?: string;
-			/** Internal use only. */
-			database_internal_env?: string;
-	  }
-	| {
-			type: "durable-object";
-			className: string;
-			service?: ServiceDesignator;
-	  }
-	| { type: "service"; service: ServiceDesignator | ServiceFetch }
-	| { type: "queue-producer"; name: string }
-	| { type: "constellation"; project_id: string }
-	| { type: "var"; value: string | Json | Uint8Array }
-	| { type: `unsafe-${string}`; [key: string]: unknown };
+	| { type: "plain_text"; value: string }
+	| { type: "json"; value: Json }
+	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
+	| ({ type: "send_email" } & BindingOmit<CfSendEmailBindings>)
+	| { type: "wasm_module"; source: BinaryFile }
+	| { type: "text_blob"; source: File }
+	| { type: "browser" }
+	| { type: "ai" }
+	| { type: "version_metadata" }
+	| { type: "data_blob"; source: BinaryFile }
+	| ({ type: "durable_object_namespace" } & BindingOmit<CfDurableObject>)
+	| ({ type: "queue" } & BindingOmit<CfQueue>)
+	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
+	| ({ type: "d1" } & Omit<CfD1Database, "binding">)
+	| ({ type: "vectorize" } & Omit<CfVectorize, "binding">)
+	| ({ type: "constellation" } & Omit<CfConstellation, "binding">)
+	| ({ type: "hyperdrive" } & Omit<CfHyperdrive, "binding">)
+	| ({ type: "service" } & Omit<CfService, "binding">)
+	| { type: "fetcher"; fetcher: ServiceFetch }
+	| ({ type: "analytics_engine" } & Omit<CfAnalyticsEngineDataset, "binding">)
+	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
+	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
+	| ({ type: "logfwdr" } & Omit<CfLogfwdrBinding, "name">)
+	| { type: `unsafe_${string}` };
 
-export type ServiceFetch = (request: Request) => Promise<Response>;
+export type ServiceFetch = (request: Request) => Promise<Response> | Response;
 
 export interface ServiceDesignator {
 	name: string;

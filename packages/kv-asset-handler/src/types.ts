@@ -10,7 +10,7 @@ export type Options = {
 	cacheControl:
 		| ((req: Request) => Partial<CacheControl>)
 		| Partial<CacheControl>;
-	ASSET_NAMESPACE: any;
+	ASSET_NAMESPACE: KVNamespace;
 	ASSET_MANIFEST: AssetManifestType | string;
 	mapRequestToAsset?: (req: Request, options?: Partial<Options>) => Request;
 	defaultMimeType: string;

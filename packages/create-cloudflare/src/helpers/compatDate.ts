@@ -39,8 +39,8 @@ export async function getWorkerdCompatibilityDate() {
 
 	s.stop(
 		`${brandColor("compatibility date")} ${dim(
-			` Could not find workerd date, falling back to ${fallbackDate}`
-		)}`
+			` Could not find workerd date, falling back to ${fallbackDate}`,
+		)}`,
 	);
 	return fallbackDate;
 }
@@ -71,7 +71,7 @@ export function getLatestTypesEntrypoint(ctx: C3Context) {
 		ctx.project.path,
 		"node_modules",
 		"@cloudflare",
-		"workers-types"
+		"workers-types",
 	);
 
 	try {

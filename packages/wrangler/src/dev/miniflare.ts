@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import * as esmLexer from "es-module-lexer";
 import {
@@ -20,10 +19,10 @@ import {
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
-import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import type { ServiceFetch } from "../api";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -43,13 +42,7 @@ import type {
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type {
-	MiniflareOptions,
-	Request,
-	Response,
-	SourceOptions,
-	WorkerOptions,
-} from "miniflare";
+import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
@@ -115,7 +108,7 @@ function createDurableObjectClass({ className, proxyUrl }) {
 	// Forward regular HTTP requests to the other "wrangler dev" session
 	klass.prototype.fetch = function(request) {
 		if (proxyUrl === undefined) {
-			return new Response(\`[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
+			return new Response(\`\${className} \${proxyUrl}[wrangler] Couldn't find \\\`wrangler dev\\\` session for class "\${className}" to proxy to\`, { status: 503 });
 		}
 		const proxyRequest = new Request(proxyUrl, request);
 		proxyRequest.headers.set(HEADER_URL, request.url);
@@ -174,16 +167,15 @@ export interface ConfigBundle {
 	name: string | undefined;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
-	compatibilityDate: string;
+	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	usageModel: "bundled" | "unbound" | undefined; // TODO: do we need this?
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
-	inspectorPort: number;
+	inspectorPort: number | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
@@ -195,7 +187,7 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	services: Config["services"] | undefined;
-	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
+	serviceBindings: Record<string, ServiceFetch>;
 }
 
 export class WranglerLog extends Log {
@@ -203,7 +195,9 @@ export class WranglerLog extends Log {
 
 	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
-		if (message.includes(EXTERNAL_SERVICE_WORKER_NAME)) return;
+		if (message.includes(EXTERNAL_SERVICE_WORKER_NAME)) {
+			return;
+		}
 		super.log(message);
 	}
 
@@ -211,10 +205,14 @@ export class WranglerLog extends Log {
 		// Only log warning about requesting a compatibility date after the workerd
 		// binary's version once, and only if there's an update available.
 		if (message.startsWith("The latest compatibility date supported by")) {
-			if (this.#warnedCompatibilityDateFallback) return;
+			if (this.#warnedCompatibilityDateFallback) {
+				return;
+			}
 			this.#warnedCompatibilityDateFallback = true;
 			return void updateCheck().then((maybeNewVersion) => {
-				if (maybeNewVersion === undefined) return;
+				if (maybeNewVersion === undefined) {
+					return;
+				}
 				message += [
 					"",
 					"Features enabled by your requested compatibility date may not be available.",
@@ -232,18 +230,20 @@ function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
-function getIdentifier(name: string) {
+export function getIdentifier(name: string) {
 	return name.replace(IDENTIFIER_UNSAFE_REGEXP, "_");
 }
 
 export function castLogLevel(level: LoggerLevel): LogLevel {
 	let key = level.toUpperCase() as Uppercase<LoggerLevel>;
-	if (key === "LOG") key = "INFO";
+	if (key === "LOG") {
+		key = "INFO";
+	}
 
 	return LogLevel[key];
 }
 
-function buildLog(): Log {
+export function buildLog(): Log {
 	let level = castLogLevel(logger.loggerLevel);
 
 	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
@@ -263,18 +263,22 @@ async function getEntrypointNames(entrypointSource: string) {
 }
 
 async function buildSourceOptions(
-	config: ConfigBundle
+	config: Omit<ConfigBundle, "rules">
 ): Promise<{ sourceOptions: SourceOptions; entrypointNames: string[] }> {
-	const scriptPath = realpathSync(config.bundle.path);
+	const scriptPath = config.bundle.path;
 	if (config.format === "modules") {
 		const isPython = config.bundle.type === "python";
 
 		const { entrypointSource, modules } = isPython
 			? {
-					entrypointSource: readFileSync(scriptPath, "utf8"),
+					entrypointSource: config.bundle.entrypointSource,
 					modules: config.bundle.modules,
-			  }
-			: withSourceURLs(scriptPath, config.bundle.modules);
+				}
+			: withSourceURLs(
+					scriptPath,
+					config.bundle.entrypointSource,
+					config.bundle.modules
+				);
 
 		const entrypointNames = isPython
 			? []
@@ -302,7 +306,10 @@ async function buildSourceOptions(
 		return { sourceOptions, entrypointNames };
 	} else {
 		// Miniflare will handle adding `//# sourceURL` comments if they're missing
-		return { sourceOptions: { scriptPath }, entrypointNames: [] };
+		return {
+			sourceOptions: { script: config.bundle.entrypointSource, scriptPath },
+			entrypointNames: [],
+		};
 	}
 }
 
@@ -385,7 +392,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const wasmBindings = { ...bindings.wasm_modules };
 	if (config.format === "service-worker" && config.bundle) {
 		// For the service-worker format, blobs are accessible on the global scope
-		const scriptPath = realpathSync(config.bundle.path);
+		const scriptPath = config.bundle.path;
 		const modulesRoot = path.dirname(scriptPath);
 		for (const { type, name } of config.bundle.modules) {
 			if (type === "text") {
@@ -427,6 +434,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			// services support JSRPC over HTTP CONNECT using a special hostname.
 			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
 			let address: `${string}:${number}`;
+			let style = HttpOptions_Style.PROXY;
 			if (service.entrypoint !== undefined) {
 				// If the user has requested a named entrypoint...
 				if (target.entrypointAddresses === undefined) {
@@ -452,7 +460,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					target.entrypointAddresses?.["default"];
 				if (defaultEntrypointAddress === undefined) {
 					// If the "server" `wrangler` is too old to provide direct entrypoint
-					// addresses, fallback to sending requests directly to the target...
+					// addresses (or uses service-worker syntax), fallback to sending requests directly to the target...
 					if (target.protocol === "https") {
 						// ...unless the target is listening on HTTPS, in which case throw.
 						// We can't support this as `workerd` requires us to explicitly
@@ -464,6 +472,8 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 						);
 					}
 					address = `${target.host}:${target.port}`;
+					// Removing this line causes `Internal Service Error` responses from service-worker syntax workers, since they don't seem to support the PROXY protocol
+					style = HttpOptions_Style.HOST;
 				} else {
 					address = `${defaultEntrypointAddress.host}:${defaultEntrypointAddress.port}`;
 				}
@@ -473,7 +483,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				external: {
 					address,
 					http: {
-						style: HttpOptions_Style.PROXY,
+						style,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
 					},
 				},
@@ -525,6 +535,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 					const identifier = getIdentifier(`do_${script_name}_${class_name}`);
 					const classNameJson = JSON.stringify(class_name);
+
 					if (
 						target?.host === undefined ||
 						target.port === undefined ||
@@ -709,6 +720,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isWarning(chunk: string) {
 			return /\.c\+\+:\d+: warning:/.test(chunk);
 		},
+		isCodeMovedWarning(chunk: string) {
+			return /CODE_MOVED for unknown code block/.test(chunk);
+		},
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
@@ -772,6 +786,11 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			logger.warn(chunk);
 		}
 
+		// known case: "error: CODE_MOVED for unknown code block?", warning for workerd devs, not application devs
+		else if (classifiers.isCodeMovedWarning(chunk)) {
+			// ignore entirely, don't even send it to the debug log file
+		}
+
 		// anything not exlicitly handled above should be logged as an error (via stderr)
 		else {
 			logger.error(getSourceMappedString(chunk));
@@ -779,9 +798,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	});
 }
 
-async function buildMiniflareOptions(
+export async function buildMiniflareOptions(
 	log: Log,
-	config: ConfigBundle,
+	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{
 	options: MiniflareOptions;
@@ -816,18 +835,6 @@ async function buildMiniflareOptions(
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 
-	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
-	if (config.localProtocol === "https") {
-		const cert = await getHttpsOptions(
-			config.httpsKeyPath,
-			config.httpsCertPath
-		);
-		httpsOptions = {
-			httpsKey: cert.key,
-			httpsCert: cert.cert,
-		};
-	}
-
 	const options: MiniflareOptions = {
 		host: config.initialIp,
 		port: config.initialPort,
@@ -840,7 +847,6 @@ async function buildMiniflareOptions(
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
 
-		...httpsOptions,
 		...persistOptions,
 		workers: [
 			{
@@ -918,7 +924,9 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 	#mutex = new Mutex();
 
 	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		if (opts?.signal?.aborted) return;
+		if (opts?.signal?.aborted) {
+			return;
+		}
 		try {
 			const { options, internalObjects, entrypointNames } =
 				await buildMiniflareOptions(
@@ -926,7 +934,9 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 					config,
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
-			if (opts?.signal?.aborted) return;
+			if (opts?.signal?.aborted) {
+				return;
+			}
 			if (this.#mf === undefined) {
 				this.#mf = new Miniflare(options);
 			} else {
@@ -942,7 +952,9 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 				entrypointAddresses[name] = { host: directUrl.hostname, port };
 			}
 
-			if (opts?.signal?.aborted) return;
+			if (opts?.signal?.aborted) {
+				return;
+			}
 
 			const event = new ReloadedEvent("reloaded", {
 				url,

@@ -33,7 +33,7 @@ describe("Cli", () => {
 			await parseArgs(["my-project", "123"]);
 
 			expect(consoleErrorMock).toHaveBeenCalledWith(
-				expect.stringMatching(/Too many positional arguments provided/)
+				expect.stringMatching(/Too many positional arguments provided/),
 			);
 			expect(processExitMock).toHaveBeenCalledWith(1);
 		});

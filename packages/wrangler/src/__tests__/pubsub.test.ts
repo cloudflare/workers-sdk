@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -22,29 +22,29 @@ describe("wrangler", () => {
 			it("shows usage details", async () => {
 				await runWrangler("pubsub --help");
 				expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "wrangler pubsub
+					Object {
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "wrangler pubsub
 
-			📮 Interact and manage Pub/Sub Brokers
+					📮 Manage Pub/Sub brokers [private beta]
 
-			Commands:
-			  wrangler pubsub namespace  Manage your Pub/Sub Namespaces
-			  wrangler pubsub broker     Interact with your Pub/Sub Brokers
+					COMMANDS
+					  wrangler pubsub namespace  Manage your Pub/Sub Namespaces
+					  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+					GLOBAL FLAGS
+					  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+					  -c, --config                    Path to .toml configuration file  [string]
+					  -e, --env                       Environment to use for operations and .env files  [string]
+					  -h, --help                      Show help  [boolean]
+					  -v, --version                   Show version number  [boolean]
 
-			👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
-			  "warn": "",
-			}
-		`);
+					👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
+					  "warn": "",
+					}
+				`);
 			});
 		});
 
@@ -53,31 +53,31 @@ describe("wrangler", () => {
 				it("shows usage details", async () => {
 					await runWrangler("pubsub namespace --help");
 					expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "wrangler pubsub namespace
+						Object {
+						  "debug": "",
+						  "err": "",
+						  "info": "",
+						  "out": "wrangler pubsub namespace
 
-				Manage your Pub/Sub Namespaces
+						Manage your Pub/Sub Namespaces
 
-				Commands:
-				  wrangler pubsub namespace create <name>    Create a new Pub/Sub Namespace
-				  wrangler pubsub namespace list             List your existing Pub/Sub Namespaces
-				  wrangler pubsub namespace delete <name>    Delete a Pub/Sub Namespace
-				  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
+						COMMANDS
+						  wrangler pubsub namespace create <name>    Create a new Pub/Sub Namespace
+						  wrangler pubsub namespace list             List your existing Pub/Sub Namespaces
+						  wrangler pubsub namespace delete <name>    Delete a Pub/Sub Namespace
+						  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
-				  "warn": "",
-				}
-			`);
+						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
+						  "warn": "",
+						}
+					`);
 				});
 			});
 
@@ -85,16 +85,18 @@ describe("wrangler", () => {
 				function mockCreateRequest(expectedNamespaceName: string) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.post(
+						http.post(
 							"*/accounts/:accountId/pubsub/namespaces",
-							async (req, res, ctx) => {
-								expect(req.params.accountId).toEqual("some-account-id");
-								const namespace = await req.json();
+							async ({ request, params }) => {
+								expect(params.accountId).toEqual("some-account-id");
+								const namespace = (await request.json()) as Record<
+									string,
+									string
+								>;
 								expect(namespace.name).toEqual(expectedNamespaceName);
 								requests.count++;
-								return res.once(
-									ctx.status(200),
-									ctx.json({
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
@@ -104,9 +106,11 @@ describe("wrangler", () => {
 											created_at: "3005-01-01T00:00:00.000000Z",
 											updated_at: "3005-01-01T00:00:00.000000Z",
 										},
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -124,22 +128,23 @@ describe("wrangler", () => {
 				function mockListRequest(namespaces: PubSubNamespace[]) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces",
-							async (req, res, ctx) => {
+							async ({ params }) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
+								expect(params.accountId).toEqual("some-account-id");
 
-								return res.once(
-									ctx.status(200),
-									ctx.json({
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
 										result: namespaces,
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -170,37 +175,37 @@ describe("wrangler", () => {
 				it("shows usage details", async () => {
 					await runWrangler("pubsub broker --help");
 					expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "wrangler pubsub broker
+						Object {
+						  "debug": "",
+						  "err": "",
+						  "info": "",
+						  "out": "wrangler pubsub broker
 
-				Interact with your Pub/Sub Brokers
+						Interact with your Pub/Sub Brokers
 
-				Commands:
-				  wrangler pubsub broker create <name>            Create a new Pub/Sub Broker
-				  wrangler pubsub broker update <name>            Update an existing Pub/Sub Broker's configuration.
-				  wrangler pubsub broker list                     List the Pub/Sub Brokers within a Namespace
-				  wrangler pubsub broker delete <name>            Delete an existing Pub/Sub Broker
-				  wrangler pubsub broker describe <name>          Describe an existing Pub/Sub Broker.
-				  wrangler pubsub broker issue <name>             Issue new client credentials for a specific Pub/Sub Broker.
-				  wrangler pubsub broker revoke <name>            Revoke a set of active client credentials associated with the given Broker
-				  wrangler pubsub broker unrevoke <name>          Restore access to a set of previously revoked client credentials.
-				  wrangler pubsub broker show-revocations <name>  Show all previously revoked client credentials.
-				  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
+						COMMANDS
+						  wrangler pubsub broker create <name>            Create a new Pub/Sub Broker
+						  wrangler pubsub broker update <name>            Update an existing Pub/Sub Broker's configuration.
+						  wrangler pubsub broker list                     List the Pub/Sub Brokers within a Namespace
+						  wrangler pubsub broker delete <name>            Delete an existing Pub/Sub Broker
+						  wrangler pubsub broker describe <name>          Describe an existing Pub/Sub Broker.
+						  wrangler pubsub broker issue <name>             Issue new client credentials for a specific Pub/Sub Broker.
+						  wrangler pubsub broker revoke <name>            Revoke a set of active client credentials associated with the given Broker
+						  wrangler pubsub broker unrevoke <name>          Restore access to a set of previously revoked client credentials.
+						  wrangler pubsub broker show-revocations <name>  Show all previously revoked client credentials.
+						  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]
 
-				👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
-				  "warn": "",
-				}
-			`);
+						👷🏽 'wrangler pubsub ...' commands are currently in private beta. If your account isn't authorized, commands will fail. Visit the Pub/Sub docs for more info: https://developers.cloudflare.com/pub-sub/",
+						  "warn": "",
+						}
+					`);
 				});
 			});
 
@@ -208,17 +213,16 @@ describe("wrangler", () => {
 				function mockCreateRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.post(
+						http.post(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
-							async (req, res, ctx) => {
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								const broker = await req.json();
+							async ({ request, params }) => {
+								expect(params.accountId).toEqual("some-account-id");
+								expect(params.namespaceName).toEqual("some-namespace");
+								const broker = (await request.json()) as Record<string, string>;
 								expect(broker.name).toEqual(expectedBrokerName);
 								requests.count++;
-								return res.once(
-									ctx.status(200),
-									ctx.json({
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
@@ -226,9 +230,11 @@ describe("wrangler", () => {
 											name: expectedBrokerName,
 											created_on: "01-01-2001",
 										},
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -251,7 +257,7 @@ describe("wrangler", () => {
 					await expect(
 						runWrangler("pubsub broker create my-broker")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"Missing required argument: namespace"`
+						`[Error: Missing required argument: namespace]`
 					);
 				});
 			});
@@ -265,22 +271,21 @@ describe("wrangler", () => {
 				) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.patch(
+						http.patch(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
-							async (req, res, cxt) => {
+							async ({ request, params }) => {
 								requests.count += 1;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(expectedBrokerName);
+								expect(params.accountId).toEqual("some-account-id");
+								expect(params.namespaceName).toEqual("some-namespace");
+								expect(params.brokerName).toEqual(expectedBrokerName);
 
-								const patchBody: PubSubBrokerUpdate = await req.json();
+								const patchBody = (await request.json()) as PubSubBrokerUpdate;
 
 								expect(patchBody.expiration).toEqual(expectedExpiration);
 								expect(patchBody.description).toEqual(expectedDescription);
 								expect(patchBody.on_publish).toEqual(expectedOnPublishConfig);
-								return res.once(
-									cxt.status(200),
-									cxt.json({
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
@@ -288,9 +293,11 @@ describe("wrangler", () => {
 											name: expectedBrokerName,
 											created_on: "01-01-2001",
 										},
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -323,22 +330,23 @@ describe("wrangler", () => {
 				function mockListRequest(brokers: PubSubBroker[]) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
-							async (req, res, cxt) => {
+							async ({ params }) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								return res.once(
-									cxt.status(200),
-									cxt.json({
+								expect(params.accountId).toEqual("some-account-id");
+								expect(params.namespaceName).toEqual("some-namespace");
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
 										result: brokers,
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -367,23 +375,24 @@ describe("wrangler", () => {
 				function mockGetRequest(broker: PubSubBroker) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
-							(req, res, cxt) => {
+							({ params }) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(broker.name);
-								return res.once(
-									cxt.status(200),
-									cxt.json({
+								expect(params.accountId).toEqual("some-account-id");
+								expect(params.namespaceName).toEqual("some-namespace");
+								expect(params.brokerName).toEqual(broker.name);
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
 										result: broker,
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -407,16 +416,15 @@ describe("wrangler", () => {
 				function mockIssueRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
-							(req, res, cxt) => {
+							({ params }) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(expectedBrokerName);
-								return res.once(
-									cxt.status(200),
-									cxt.json({
+								expect(params.accountId).toEqual("some-account-id");
+								expect(params.namespaceName).toEqual("some-namespace");
+								expect(params.brokerName).toEqual(expectedBrokerName);
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
@@ -424,9 +432,11 @@ describe("wrangler", () => {
 											"MOCK-89T6DXG3SVG1WQRA": `<base-64-encoded-JWT>`,
 											"MOCK-393REE4WRRE4NHAV96": `<base-64-encoded-JWT>`,
 										},
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;
@@ -454,25 +464,26 @@ describe("wrangler", () => {
 				function mockIssueRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
 					msw.use(
-						rest.get(
+						http.get(
 							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
-							(req, res, cxt) => {
+							({ params }) => {
 								requests.count++;
-								expect(req.params.accountId).toEqual("some-account-id");
-								expect(req.params.namespaceName).toEqual("some-namespace");
-								expect(req.params.brokerName).toEqual(expectedBrokerName);
-								return res.once(
-									cxt.status(200),
-									cxt.json({
+								expect(params.accountId).toEqual("some-account-id");
+								expect(params.namespaceName).toEqual("some-namespace");
+								expect(params.brokerName).toEqual(expectedBrokerName);
+								return HttpResponse.json(
+									{
 										success: true,
 										errors: [],
 										messages: [],
 										result: {
 											public_keys: "Mock-Public-Key",
 										},
-									})
+									},
+									{ status: 200 }
 								);
-							}
+							},
+							{ once: true }
 						)
 					);
 					return requests;

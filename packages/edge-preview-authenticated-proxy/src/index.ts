@@ -66,7 +66,10 @@ class RawHttpFailed extends HttpError {
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor(private tokenId: string, reportable: boolean) {
+	constructor(
+		private tokenId: string,
+		reportable: boolean
+	) {
 		super("Token and remote not found", 400, reportable);
 	}
 	get data(): { tokenId: string } {
@@ -84,7 +87,12 @@ class InvalidURL extends HttpError {
 }
 
 function assertValidURL(maybeUrl: string) {
-	if (!URL.canParse(maybeUrl)) throw new InvalidURL(maybeUrl);
+	// @ts-expect-error This actually does exist in workers,
+	// but the types don't seem to have them. Following up in
+	// https://github.com/cloudflare/workerd/issues/2273
+	if (!URL.canParse(maybeUrl)) {
+		throw new InvalidURL(maybeUrl);
+	}
 }
 
 function switchRemote(url: URL, remote: string) {
@@ -233,6 +241,10 @@ async function handleRawHttp(request: Request, url: URL) {
 
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
+
+	// @ts-expect-error This actually does exist in workers,
+	// but the types don't seem to have them. Following up in
+	// https://github.com/cloudflare/workerd/issues/2273
 	const setCookieHeader = responseHeaders.getSetCookie();
 	for (const setCookie of setCookieHeader) {
 		rawHeaders.append("cf-ew-raw-set-cookie", setCookie);

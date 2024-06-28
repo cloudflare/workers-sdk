@@ -19,6 +19,7 @@ import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
+import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -71,7 +72,9 @@ type Props = {
 const scriptStartupErrorRegex = /startup/i;
 
 function errIsScriptSize(err: unknown): err is { code: 10027 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10027 = workers.api.error.script_too_large
 	if ((err as { code: number }).code === 10027) {
@@ -82,7 +85,9 @@ function errIsScriptSize(err: unknown): err is { code: 10027 } {
 }
 
 function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
-	if (!err) return false;
+	if (!err) {
+		return false;
+	}
 
 	// 10021 = validation error
 	// no explicit error code for more granular errors than "invalid script"
@@ -159,32 +164,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
-	if (legacyNodeCompat) {
-		logger.warn(
-			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
+	const nodejsCompatMode = validateNodeCompat({
+		legacyNodeCompat: props.nodeCompat ?? config.node_compat ?? false,
+		compatibilityFlags: props.compatibilityFlags ?? config.compatibility_flags,
+		noBundle: props.noBundle ?? config.no_bundle ?? false,
+	});
 
 	const compatibilityFlags =
 		props.compatibilityFlags ?? config.compatibility_flags;
-	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new UserError(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
-		);
-	}
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
 		logger.warn(
 			"`--minify` and `--no-bundle` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process."
-		);
-	}
-
-	if (props.noBundle && legacyNodeCompat) {
-		logger.warn(
-			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
 	}
 
@@ -288,8 +280,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
 						sourcemap: uploadSourceMaps,
-						legacyNodeCompat,
-						nodejsCompat,
+						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets,
@@ -305,7 +296,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 					}
-			  );
+				);
 
 		// Add modules to dependencies for size warning
 		for (const module of modules) {
@@ -331,7 +322,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					config,
 					legacyEnv: props.legacyEnv,
 					env: props.env,
-			  })
+				})
 			: undefined;
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -400,14 +391,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 		};
 
-		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
-		// We do not care about the timing outside of testing
-		const bundleSizePromise = printBundleSize(
+		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-		if (process.env.JEST_WORKER_ID !== undefined) await bundleSizePromise;
-		else void bundleSizePromise;
 
 		const withoutStaticAssets = {
 			...bindings,
@@ -472,12 +459,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					const maybeNameToFilePath = (moduleName: string) => {
 						// If this is a service worker, always return the entrypoint path.
 						// Service workers can't have additional JavaScript modules.
-						if (bundleType === "commonjs") return resolvedEntryPointPath;
+						if (bundleType === "commonjs") {
+							return resolvedEntryPointPath;
+						}
 						// Similarly, if the name matches the entrypoint, return its path
-						if (moduleName === entryPointName) return resolvedEntryPointPath;
+						if (moduleName === entryPointName) {
+							return resolvedEntryPointPath;
+						}
 						// Otherwise, return the file path of the matching module (if any)
 						for (const module of modules) {
-							if (moduleName === module.name) return module.filePath;
+							if (moduleName === module.name) {
+								return module.filePath;
+							}
 						}
 					};
 					const retrieveSourceMap: RetrieveSourceMapFunction = (moduleName) =>
@@ -504,7 +497,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
-	if (!accountId) throw new UserError("Missing accountId");
+	if (!accountId) {
+		throw new UserError("Missing accountId");
+	}
 
 	const uploadMs = Date.now() - start;
 

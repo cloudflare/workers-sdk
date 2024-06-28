@@ -16,11 +16,13 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 	}
 
 	logger.log(
-		text +
+		"\n" +
+			text +
 			"\n" +
 			(supportsColor.stdout
 				? chalk.hex("#FF8800")("-".repeat(text.length))
-				: "-".repeat(text.length))
+				: "-".repeat(text.length)) +
+			"\n"
 	);
 
 	// Log a slightly more noticeable message if this is a major bump

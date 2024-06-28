@@ -1,7 +1,8 @@
+import assert from "node:assert";
 import path from "node:path";
 import { Text } from "ink";
 import SelectInput from "ink-select-input";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -41,6 +42,63 @@ import type {
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 
+export function handlePreviewSessionUploadError(
+	err: unknown,
+	accountId: string
+): boolean {
+	assert(err && typeof err === "object");
+	// we want to log the error, but not end the process
+	// since it could recover after the developer fixes whatever's wrong
+	// instead of logging the raw API error to the user,
+	// give them friendly instructions
+	if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
+		// code 10049 happens when the preview token expires
+		if ("code" in err && err.code === 10049) {
+			logger.log("Preview token expired, fetching a new one");
+
+			// since we want a new preview token when this happens,
+			// lets increment the counter, and trigger a rerun of
+			// the useEffect above
+			return true;
+		} else if (!handleUserFriendlyError(err as ParseError, accountId)) {
+			logger.error("Error on remote worker:", err);
+		}
+	}
+	return false;
+}
+
+export function handlePreviewSessionCreationError(
+	err: unknown,
+	accountId: string
+) {
+	assert(err && typeof err === "object");
+	// instead of logging the raw API error to the user,
+	// give them friendly instructions
+	// for error 10063 (workers.dev subdomain required)
+	if ("code" in err && err.code === 10063) {
+		const errorMessage =
+			"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
+		const solutionMessage =
+			"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
+		const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
+		logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
+	} else if (
+		"cause" in err &&
+		(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
+	) {
+		logger.error(
+			`Could not access \`${(err.cause as { code: string; hostname: string }).hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
+		);
+	} else if (err instanceof UserError) {
+		logger.error(err.message);
+	}
+	// we want to log the error, but not end the process
+	// since it could recover after the developer fixes whatever's wrong
+	else if ((err as { code: string }).code !== "ABORT_ERR") {
+		logger.error("Error while creating remote dev session:", err);
+	}
+}
+
 interface RemoteProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
@@ -68,33 +126,39 @@ interface RemoteProps {
 		| undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
+
+	setAccountId: (accountId: string) => void;
+	experimentalDevEnv: boolean;
 }
 
 export function Remote(props: RemoteProps) {
-	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
-	useWorker({
-		name: props.name,
-		bundle: props.bundle,
-		format: props.format,
-		modules: props.bundle ? props.bundle.modules : [],
-		accountId,
-		bindings: props.bindings,
-		assetPaths: props.assetPaths,
-		isWorkersSite: props.isWorkersSite,
-		compatibilityDate: props.compatibilityDate,
-		compatibilityFlags: props.compatibilityFlags,
-		usageModel: props.usageModel,
-		env: props.env,
-		legacyEnv: props.legacyEnv,
-		host: props.host,
-		routes: props.routes,
-		onReady: props.onReady,
-		sendMetrics: props.sendMetrics,
-		port: props.port,
-	});
+	if (!props.experimentalDevEnv) {
+		// this condition WILL be static and therefore safe to wrap around a hook
+		// eslint-disable-next-line react-hooks/rules-of-hooks
+		useWorker({
+			name: props.name,
+			bundle: props.bundle,
+			format: props.format,
+			modules: props.bundle ? props.bundle.modules : [],
+			accountId: props.accountId,
+			bindings: props.bindings,
+			assetPaths: props.assetPaths,
+			isWorkersSite: props.isWorkersSite,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			usageModel: props.usageModel,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			host: props.host,
+			routes: props.routes,
+			onReady: props.onReady,
+			sendMetrics: props.sendMetrics,
+			port: props.port,
+		});
+	}
 
 	const errorHandler = useErrorHandler();
 
@@ -115,7 +179,7 @@ export function Remote(props: RemoteProps) {
 						id: accounts[0].id,
 						name: accounts[0].name,
 					});
-					setAccountId(accounts[0].id);
+					props.setAccountId(accounts[0].id);
 				} else {
 					setAccountChoices(accounts);
 				}
@@ -128,12 +192,12 @@ export function Remote(props: RemoteProps) {
 
 	// If we have not already chosen an account and there are multiple accounts available
 	// allow the users to select one.
-	return accountId === undefined && accountChoices !== undefined ? (
+	return props.accountId === undefined && accountChoices !== undefined ? (
 		<ChooseAccount
 			accounts={accountChoices}
 			onSelect={(selectedAccount) => {
 				saveAccountToCache(selectedAccount);
-				setAccountId(selectedAccount.id);
+				props.setAccountId(selectedAccount.id);
 			}}
 			onError={(err) => errorHandler(err)}
 		></ChooseAccount>
@@ -203,30 +267,8 @@ export function useWorker(
 		}
 
 		start().catch((err) => {
-			// instead of logging the raw API error to the user,
-			// give them friendly instructions
-			// for error 10063 (workers.dev subdomain required)
-			if (err.code === 10063) {
-				const errorMessage =
-					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-				const solutionMessage =
-					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-			} else if (
-				(err.cause as { code: string; hostname: string })?.code === "ENOTFOUND"
-			) {
-				logger.error(
-					`Could not access \`${err.cause.hostname}\`. Make sure the domain is set up to be proxied by Cloudflare.\nFor more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route`
-				);
-			} else if (err instanceof UserError) {
-				logger.error(err.message);
-			}
-			// we want to log the error, but not end the process
-			// since it could recover after the developer fixes whatever's wrong
-			else if ((err as { code: string }).code !== "ABORT_ERR") {
-				logger.error("Error while creating remote dev session:", err);
-			}
+			assert(props.accountId);
+			handlePreviewSessionCreationError(err, props.accountId);
 		});
 
 		return () => {
@@ -254,7 +296,9 @@ export function useWorker(
 			}
 			setToken(undefined); // reset token in case we're re-running
 
-			if (!props.bundle || !props.format) return;
+			if (!props.bundle || !props.format) {
+				return;
+			}
 
 			if (!startedRef.current) {
 				startedRef.current = true;
@@ -353,22 +397,16 @@ export function useWorker(
 			);
 		}
 		start().catch((err) => {
-			// we want to log the error, but not end the process
-			// since it could recover after the developer fixes whatever's wrong
-			// instead of logging the raw API error to the user,
-			// give them friendly instructions
-			if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
-				// code 10049 happens when the preview token expires
-				if (err.code === 10049) {
-					logger.log("Preview token expired, fetching a new one");
-
-					// since we want a new preview token when this happens,
-					// lets increment the counter, and trigger a rerun of
-					// the useEffect above
-					setRestartCounter((prevCount) => prevCount + 1);
-				} else if (!handleUserFriendlyError(err, props.accountId)) {
-					logger.error("Error on remote worker:", err);
-				}
+			assert(props.accountId);
+			const shouldRestartSession = handlePreviewSessionUploadError(
+				err,
+				props.accountId
+			);
+			if (shouldRestartSession) {
+				// since we want a new preview token when this happens,
+				// lets increment the counter, and trigger a rerun of
+				// the useEffect above
+				setRestartCounter((prevCount) => prevCount + 1);
 			}
 		});
 
@@ -512,7 +550,9 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			logger.error(error.message);
 			throw error;
 		}
-		if (!props.bundle || !props.format) return;
+		if (!props.bundle || !props.format) {
+			return;
+		}
 
 		const init = await createRemoteWorkerInit({
 			bundle: props.bundle,
@@ -555,7 +595,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 	});
 }
 
-async function createRemoteWorkerInit(props: {
+export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
 	accountId: string;
@@ -572,12 +612,16 @@ async function createRemoteWorkerInit(props: {
 }) {
 	const { entrypointSource: content, modules } = withSourceURLs(
 		props.bundle.path,
+		props.bundle.entrypointSource,
 		props.modules
 	);
 
 	// TODO: For Dev we could show the reporter message in the interactive box.
 	void printBundleSize(
-		{ name: path.basename(props.bundle.path), content: content },
+		{
+			name: path.basename(props.bundle.path),
+			content,
+		},
 		props.modules
 	);
 
@@ -702,7 +746,7 @@ function ChooseAccount(props: {
  * messages, does not perform any logic other than logging errors.
  * @returns if the error was handled or not
  */
-function handleUserFriendlyError(error: ParseError, accountId?: string) {
+export function handleUserFriendlyError(error: ParseError, accountId?: string) {
 	switch ((error as unknown as { code: number }).code) {
 		// code 10021 is a validation error
 		case 10021: {

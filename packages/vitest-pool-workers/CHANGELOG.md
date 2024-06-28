@@ -1,5 +1,125 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.7
+
+### Patch Changes
+
+- Updated dependencies [[`1621992`](https://github.com/cloudflare/workers-sdk/commit/162199289d51dbaf3f7a371d777012d0039fbdfb), [`26855f3`](https://github.com/cloudflare/workers-sdk/commit/26855f39ae635feebb9d5768b64494e73d979b47), [`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059), [`9c7df38`](https://github.com/cloudflare/workers-sdk/commit/9c7df38871b9fcfda4890a00507e6ef149e0cbcd), [`0075621`](https://github.com/cloudflare/workers-sdk/commit/007562109b583adb6ae15bba5f50029735af24e5), [`e2972cf`](https://github.com/cloudflare/workers-sdk/commit/e2972cf2ce785f5d56b1476e30102e05febba320), [`d39d595`](https://github.com/cloudflare/workers-sdk/commit/d39d59589f7fe3102276bad6b93caf10c39e5f20), [`05c5607`](https://github.com/cloudflare/workers-sdk/commit/05c56073b4e8c71ab6e0b287adddddc00d763170)]:
+  - wrangler@3.62.0
+  - miniflare@3.20240620.0
+
+## 0.4.6
+
+### Patch Changes
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- [#6079](https://github.com/cloudflare/workers-sdk/pull/6079) [`2e531b4`](https://github.com/cloudflare/workers-sdk/commit/2e531b4f6f791fee4afb12051ef33f37011e82a6) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: define `defineWorkersConfig` using overload signatures
+
+  The type definition of `defineWorkersConfig` doesn't work with `mergeConfig` of `vitest/config` because of type mismatch.
+  This function should be an overload function like `defineConfig`
+
+- Updated dependencies [[`dc597a3`](https://github.com/cloudflare/workers-sdk/commit/dc597a38218b428141c55c4e65633953c87ed180), [`15aff8f`](https://github.com/cloudflare/workers-sdk/commit/15aff8f6e6ce533f25495193e702a6bec76fa81c), [`b4c0233`](https://github.com/cloudflare/workers-sdk/commit/b4c02333829c2312f883e897f812f9877dba603a), [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f), [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4), [`c643a81`](https://github.com/cloudflare/workers-sdk/commit/c643a8193a3c0739b33d3c0072ae716bc8f1565b), [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99), [`db66101`](https://github.com/cloudflare/workers-sdk/commit/db661015d37ce75c021413e3ca7c4f0488790cbc), [`374bc44`](https://github.com/cloudflare/workers-sdk/commit/374bc44cce65e2f83f10452122719d3ab28827b3), [`267761b`](https://github.com/cloudflare/workers-sdk/commit/267761b3f5a60e9ea72067d42302895f9d459460), [`84e6aeb`](https://github.com/cloudflare/workers-sdk/commit/84e6aeb189a4f385c49b7c6d451d0613186b29be)]:
+  - wrangler@3.61.0
+  - miniflare@3.20240610.1
+
+## 0.4.5
+
+### Patch Changes
+
+- [#6007](https://github.com/cloudflare/workers-sdk/pull/6007) [`335e6e7`](https://github.com/cloudflare/workers-sdk/commit/335e6e760637a9ce184093ee6a1b5934d796d67e) Thanks [@Skye-31](https://github.com/Skye-31)! - fix: improve `runInDurableObject` type
+
+  [#5975](https://github.com/cloudflare/workers-sdk/pull/5975) updated the type for `runInDurableObject` to infer the stub's type correctly for RPC methods, however it used the wrong `DurableObjects` type. This PR fixes the type used to properly support RPC methods.
+
+- Updated dependencies [[`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c), [`122ef06`](https://github.com/cloudflare/workers-sdk/commit/122ef0681a8aa5338993cb21f111f84ef5c3a443), [`169a9fa`](https://github.com/cloudflare/workers-sdk/commit/169a9fa260b7cb76cf5ef9e9e29a4fd33af8cf2f), [`53acdbc`](https://github.com/cloudflare/workers-sdk/commit/53acdbc00a95e621d90d225d943c36df41768571)]:
+  - miniflare@3.20240610.0
+  - wrangler@3.60.3
+
+## 0.4.4
+
+### Patch Changes
+
+- Updated dependencies [[`e6a3d24`](https://github.com/cloudflare/workers-sdk/commit/e6a3d243a73f0101d57e6e35c25585884ebea674)]:
+  - wrangler@3.60.2
+
+## 0.4.3
+
+### Patch Changes
+
+- Updated dependencies [[`f1f1834`](https://github.com/cloudflare/workers-sdk/commit/f1f18347ddfff509a58acea2a815c40fe86fd56c)]:
+  - wrangler@3.60.1
+
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`1e68fe5`](https://github.com/cloudflare/workers-sdk/commit/1e68fe5448ffa4d0551dc7255405983c329235c8), [`e144f63`](https://github.com/cloudflare/workers-sdk/commit/e144f63f8c418c77a3b73d387f7e7d22e8f1f730), [`35b1a2f`](https://github.com/cloudflare/workers-sdk/commit/35b1a2f59bf0849e65782a278463cd0c3d294817), [`21573f4`](https://github.com/cloudflare/workers-sdk/commit/21573f4fd3484145405c5666b4dc9f7338f56887), [`ab95473`](https://github.com/cloudflare/workers-sdk/commit/ab9547380fd6fbc1d20c8dd4211faedbe94e5b33), [`bac79fb`](https://github.com/cloudflare/workers-sdk/commit/bac79fb7379941cd70d3a99d0d2cdb23e2409e50), [`6f83641`](https://github.com/cloudflare/workers-sdk/commit/6f836416446e3c04656d17477bcbbd39386622b5), [`1cc52f1`](https://github.com/cloudflare/workers-sdk/commit/1cc52f14c70112f5257263a4adee0c54add3a00d), [`e648825`](https://github.com/cloudflare/workers-sdk/commit/e6488257f9376d415d970b045d77f0223d2f7884)]:
+  - wrangler@3.60.0
+  - miniflare@3.20240605.0
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2), [`bf803d7`](https://github.com/cloudflare/workers-sdk/commit/bf803d74c2bd1fc9f6e090bad08db09c6ff88246)]:
+  - miniflare@3.20240524.2
+  - wrangler@3.59.0
+
+## 0.4.0
+
+### Minor Changes
+
+- [#5916](https://github.com/cloudflare/workers-sdk/pull/5916) [`e42f320`](https://github.com/cloudflare/workers-sdk/commit/e42f32071871b0208e9f00cfd7078d8a5c03fe38) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feature: add support for JSRPC
+
+### Patch Changes
+
+- Updated dependencies [[`9e4d8bc`](https://github.com/cloudflare/workers-sdk/commit/9e4d8bcb8811b9dc2570de26660baa4361a52749), [`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a), [`93b98cb`](https://github.com/cloudflare/workers-sdk/commit/93b98cb7e2ba5f73acbc20b4a3ca9a404a37a5dc), [`8e5e589`](https://github.com/cloudflare/workers-sdk/commit/8e5e5897f0de5f8a4990f88165d7a963018a06ef)]:
+  - wrangler@3.58.0
+  - miniflare@3.20240524.1
+
+## 0.3.0
+
+### Minor Changes
+
+- [#5900](https://github.com/cloudflare/workers-sdk/pull/5900) [`5bf0a6b`](https://github.com/cloudflare/workers-sdk/commit/5bf0a6b7fa365305143f0d1ce1426bb55bc3a085) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feature: add support for testing Pages Functions
+
+### Patch Changes
+
+- [#5904](https://github.com/cloudflare/workers-sdk/pull/5904) [`c36fb59`](https://github.com/cloudflare/workers-sdk/commit/c36fb59a1bf905b8847659cc87b1b625849f0bdc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: automatically re-run `SELF` tests without `import <main>`
+
+  By injecting a side-effect only import into tests when there is a `main` field specified
+  we can get Vitest to "know" when the SELF Worker has been modified and re-run tests automatically.
+
+- [#5911](https://github.com/cloudflare/workers-sdk/pull/5911) [`8cb0ee7`](https://github.com/cloudflare/workers-sdk/commit/8cb0ee7fc7a84ab34bcb2a05b690a7bc2899005d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure `console.log()`s displayed in `SELF` integration tests
+
+- Updated dependencies [[`53f22a0`](https://github.com/cloudflare/workers-sdk/commit/53f22a086837df7130d165fe9243f2d1f1559d73), [`57daae0`](https://github.com/cloudflare/workers-sdk/commit/57daae0b2bd70c4f25b2abcabfc7fb03dba0c878), [`a905f31`](https://github.com/cloudflare/workers-sdk/commit/a905f318166a9ceac1fb70487b3a47e5f4158780), [`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d), [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b)]:
+  - wrangler@3.57.2
+  - miniflare@3.20240524.0
+
+## 0.2.12
+
+### Patch Changes
+
+- Updated dependencies [[`f2ceb3a`](https://github.com/cloudflare/workers-sdk/commit/f2ceb3a5b993fa56782a6fdf39cd73dbe5c30c83), [`441a05f`](https://github.com/cloudflare/workers-sdk/commit/441a05f4df10e73405a23031cd6a20073d0e15e6), [`d5e00e4`](https://github.com/cloudflare/workers-sdk/commit/d5e00e4a61a4232ebe01069a753ecb642c272b5d), [`a12b031`](https://github.com/cloudflare/workers-sdk/commit/a12b031e4157728e9b6e70667c16481fa32f401e)]:
+  - wrangler@3.57.1
+
+## 0.2.11
+
+### Patch Changes
+
+- [#5838](https://github.com/cloudflare/workers-sdk/pull/5838) [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update undici to the latest version to avoid a potential vulnerability
+
+- Updated dependencies [[`7e97ba8`](https://github.com/cloudflare/workers-sdk/commit/7e97ba8778be3cf1d93d44ed191748853c6661e0), [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161), [`63f7acb`](https://github.com/cloudflare/workers-sdk/commit/63f7acb37e7e7ceb60594ac91baf95cd30037d76), [`2869e03`](https://github.com/cloudflare/workers-sdk/commit/2869e0379667d755d1de5543cb80886cc42c211f), [`86a6e09`](https://github.com/cloudflare/workers-sdk/commit/86a6e09d8a369a3bb8aee8c252174bd01e090c54), [`df2daf2`](https://github.com/cloudflare/workers-sdk/commit/df2daf2c858229fd812bf1fe818b206ef1345a00)]:
+  - wrangler@3.57.0
+
 ## 0.2.10
 
 ### Patch Changes
@@ -91,16 +211,16 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-  	test: {
-  		poolOptions: {
-  			workers: {
-  				wrangler: {
-  					configPath: "./wrangler.toml",
-  					environment: "production",
-  				},
-  			},
-  		},
-  	},
+    test: {
+      poolOptions: {
+        workers: {
+          wrangler: {
+            configPath: "./wrangler.toml",
+            environment: "production",
+          },
+        },
+      },
+    },
   });
   ```
 
