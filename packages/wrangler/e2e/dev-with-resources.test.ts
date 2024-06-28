@@ -305,7 +305,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	it("exposes KV namespace bindings", async () => {
 		const ns = await helper.kv(isLocal);
-		await helper.runLongLived(
+		await helper.run(
 			`wrangler kv key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
 		);
 
