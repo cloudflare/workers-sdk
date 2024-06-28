@@ -93,7 +93,6 @@ export class DevEnv extends EventEmitter {
 	// *********************
 
 	async teardown() {
-		console.log("RUNNING TEARDWON");
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
