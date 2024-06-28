@@ -305,7 +305,9 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
-export default async function deploy(props: Props): Promise<void> {
+export default async function deploy(
+	props: Props
+): Promise<{ sourceMapSize?: number }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	if (!props.dispatchNamespace && accountId && name) {
@@ -324,14 +326,14 @@ export default async function deploy(props: Props): Promise<void> {
 					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return;
+					return {};
 				}
 			} else if (default_environment.script.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
 				if (!(await confirm("Would you like to continue?"))) {
-					return;
+					return {};
 				}
 			}
 		} catch (e) {
@@ -441,7 +443,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
 		if (!yes) {
 			cancel("Aborting deploy...");
-			return;
+			return {};
 		}
 	}
 
@@ -472,6 +474,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
+
+	let sourceMapSize;
 
 	try {
 		if (props.noBundle) {
@@ -676,6 +680,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			limits: config.limits,
 		};
 
+		sourceMapSize = worker.sourceMaps?.reduce(
+			(acc, m) => acc + m.content.length,
+			0
+		);
+
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
@@ -810,7 +819,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return;
+		return {};
 	}
 	assert(accountId, "Missing accountId");
 
@@ -821,7 +830,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, deploymentId);
-		return;
+		return {};
 	}
 
 	// deploy triggers
@@ -831,6 +840,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Current Version ID:", deploymentId);
 
 	logVersionIdChange();
+
+	return { sourceMapSize };
 }
 
 function deployWfpUserWorker(
