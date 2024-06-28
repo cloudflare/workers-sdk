@@ -16,93 +16,75 @@ describe("switching runtimes", () => {
 					account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 					compatibility_date = "2023-01-01"
 			`,
+			"index.ts": dedent/*javascript*/ `
+				export default {
+					async fetch(request, env) {
+						return new Response(
+							env.ORDER + ": I am " + (env.REMOTE ? "remote" : "local")
+						);
+					},
+				};
+			`,
 			"index.mjs": dedent/*javascript*/ `
-					const firstRemote = process.argv[2] === "remote"
-					import { unstable_DevEnv as DevEnv } from "${WRANGLER_IMPORT}";
+				import { setTimeout } from "timers/promises";
+				import { unstable_DevEnv as DevEnv } from "${WRANGLER_IMPORT}";
 
-					const devEnv = new DevEnv()
+				const firstRemote = process.argv[2] === "remote";
 
-					let config = {
-						name: "worker",
-						script: "",
-						compatibilityFlags: ["nodejs_compat"],
-						compatibilityDate: "2023-10-01",
-						dev: {
-							remote: firstRemote,
-							auth: {
-								accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-								apiToken: process.env.CLOUDFLARE_API_TOKEN
-							}
-						}
-					};
-					let bundle = {
-						type: "esm",
-						modules: [],
-						id: 0,
-						path: "/virtual/esm/index.mjs",
-						entrypointSource: "export default { fetch() { return new Response('Hello World " + (firstRemote ? 'local' : 'remote') + " runtime') } }",
-						entry: {
-							file: "esm/index.mjs",
-							directory: "/virtual/",
-							format: "modules",
-							moduleRoot: "/virtual",
-							name: undefined,
+				const devEnv = new DevEnv();
+
+				let config = {
+					name: "worker",
+					entrypoint: "index.ts",
+					compatibilityFlags: ["nodejs_compat"],
+					compatibilityDate: "2023-10-01",
+					bindings: {
+						REMOTE: {
+							type: "json",
+							value: firstRemote,
 						},
-						dependencies: {},
-						sourceMapPath: undefined,
-						sourceMapMetadata: undefined,
-					};
+						ORDER: {
+							type: "plain_text",
+							value: "1",
+						},
+					},
+					dev: {
+						remote: firstRemote,
+						auth: {
+							accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+							apiToken: process.env.CLOUDFLARE_API_TOKEN,
+						},
+					},
+				};
+				void devEnv.config.set(config);
 
-					devEnv.proxy.onConfigUpdate({
-						type: "configUpdate",
-						config,
-					});
+				const { url } = await devEnv.proxy.ready.promise;
+				console.log(await fetch(url).then((r) => r.text()));
 
-					devEnv.runtimes.forEach((runtime) =>
-						runtime.onBundleStart({
-							type: "bundleStart",
-							config,
-						})
-					);
+				void devEnv.config.patch({
+					bindings: {
+						REMOTE: {
+							type: "json",
+							value: !firstRemote,
+						},
+						ORDER: {
+							type: "plain_text",
+							value: "2",
+						},
+					},
+					dev: {
+						...config.dev,
+						remote: !firstRemote,
+					},
+				});
 
-					devEnv.runtimes.forEach((runtime) =>
-						runtime.onBundleComplete({
-							type: "bundleComplete",
-							config,
-							bundle,
-						})
-					);
+				// Give the config some time to propagate
+				await setTimeout(500);
 
-					// Immediately switch runtime
-					config = { ...config, dev: { ...config.dev, remote: !firstRemote } };
-					bundle = {...bundle, entrypointSource: "export default { fetch() { return new Response('Hello World " + (firstRemote ? 'local' : 'remote') + " runtime') } }"}
+				console.log(await fetch(url).then((r) => r.text()));
 
-					devEnv.proxy.onConfigUpdate({
-						type: "configUpdate",
-						config,
-					});
-
-					devEnv.runtimes.forEach((runtime) =>
-						runtime.onBundleStart({
-							type: "bundleStart",
-							config,
-						})
-					);
-
-					devEnv.runtimes.forEach((runtime) =>
-						runtime.onBundleComplete({
-							type: "bundleComplete",
-							config,
-							bundle,
-						})
-					);
-
-					const { proxyWorker } = await devEnv.proxy.ready.promise;
-					await devEnv.proxy.runtimeMessageMutex.drained();
-
-					console.log(await proxyWorker.dispatchFetch("http://example.com").then(r => r.text()))
-
-					process.exit(0);
+				await devEnv.teardown();
+				process.exit(0);
 					`,
 			"package.json": dedent`
 					{
@@ -113,22 +95,24 @@ describe("switching runtimes", () => {
 					`,
 		});
 	});
-	it("can switch from local to remote, with first fetch returning remote", async () => {
+	it("can switch from local to remote", async () => {
 		const stdout = execSync(`node index.mjs local`, {
 			timeout: 20_000,
 			encoding: "utf-8",
 			cwd: root,
 			stdio: "pipe",
 		});
-		expect(stdout).toContain("Hello World remote runtime");
+		expect(stdout).toContain("1: I am local");
+		expect(stdout).toContain("2: I am remote");
 	});
-	it("can switch from remote to local, with first fetch returning local", async () => {
+	it("can switch from remote to local", async () => {
 		const stdout = execSync(`node index.mjs remote`, {
 			timeout: 20_000,
 			encoding: "utf-8",
 			cwd: root,
 			stdio: "pipe",
 		});
-		expect(stdout).toContain("Hello World local runtime");
+		expect(stdout).toContain("1: I am remote");
+		expect(stdout).toContain("2: I am local");
 	});
 });

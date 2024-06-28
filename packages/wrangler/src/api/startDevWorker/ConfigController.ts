@@ -42,6 +42,9 @@ export type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
 };
 
+const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
+const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
+
 async function resolveDevConfig(
 	config: Config,
 	input: StartDevWorkerInput
@@ -64,8 +67,6 @@ async function resolveDevConfig(
 	const initialIp = input.dev?.server?.hostname ?? config.dev.ip;
 
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
-	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, initialIpListenCheck);
-	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 
 	return {
 		auth:
@@ -80,7 +81,9 @@ async function resolveDevConfig(
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,
 			port:
-				input.dev?.server?.port ?? config.dev.port ?? (await getLocalPort()),
+				input.dev?.server?.port ??
+				config.dev.port ??
+				(await getLocalPort(initialIpListenCheck)),
 			secure:
 				input.dev?.server?.secure || config.dev.local_protocol === "https",
 			httpsKeyPath: input.dev?.server?.httpsKeyPath,
@@ -114,7 +117,7 @@ async function resolveBindings(
 		vars: Object.fromEntries(
 			extractBindingsOfType("plain_text", input.bindings).map((b) => [
 				b.binding,
-				b,
+				b.value,
 			])
 		),
 		durableObjects: extractBindingsOfType(
@@ -319,8 +322,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		}
 	}
 	public async set(input: StartDevWorkerInput) {
-		void this.#ensureWatchingConfig(input.config);
-
 		return await this.#updateConfig(input);
 	}
 	public async patch(input: Partial<StartDevWorkerInput>) {
@@ -328,7 +329,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
 		);
-		void this.#ensureWatchingConfig(input.config);
 
 		const config: StartDevWorkerInput = {
 			...this.latestInput,
@@ -359,6 +359,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 						? "https"
 						: "http",
 		});
+		void this.#ensureWatchingConfig(fileConfig.configPath);
 
 		const resolvedConfig = await resolveConfig(fileConfig, input);
 		this.latestConfig = resolvedConfig;
