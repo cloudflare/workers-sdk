@@ -15,6 +15,9 @@ patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: r2d7tqjujhdts7e7zxsa3stjki
     path: patches/@cloudflare__component-listbox@1.10.6.patch
+  '@types/ws@8.5.9':
+    hash: mw3ykjzm5ymyssype4rey657be
+    path: patches/@types__ws@8.5.9.patch
   capnp-ts@0.7.0:
     hash: l4yimnxyvkiyj6alnps2ec3sii
     path: patches/capnp-ts@0.7.0.patch
@@ -1099,7 +1102,7 @@ importers:
         version: 2.0.2
       '@types/ws':
         specifier: ^8.5.7
-        version: 8.5.9
+        version: 8.5.9(patch_hash=mw3ykjzm5ymyssype4rey657be)
       '@typescript-eslint/eslint-plugin':
         specifier: ^6.9.0
         version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.5.2))(eslint@8.57.0)(typescript@5.5.2)
@@ -1682,7 +1685,7 @@ importers:
         version: 8.1.1
       '@types/ws':
         specifier: ^8.5.7
-        version: 8.5.9
+        version: 8.5.9(patch_hash=mw3ykjzm5ymyssype4rey657be)
       '@types/yargs':
         specifier: ^17.0.22
         version: 17.0.24
@@ -13792,7 +13795,7 @@ snapshots:
 
   '@types/wrap-ansi@3.0.0': {}
 
-  '@types/ws@8.5.9':
+  '@types/ws@8.5.9(patch_hash=mw3ykjzm5ymyssype4rey657be)':
     dependencies:
       '@types/node': 20.8.3
 

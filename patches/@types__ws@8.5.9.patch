@@ -1,0 +1,42 @@
+diff --git a/index.d.ts b/index.d.ts
+index 0dcc4ea1ec9e23224c4f926197f24e62ed477563..9c7307e34ed2f6c1a4b15d68fe6dba20d1abaecc 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -201,7 +201,7 @@ declare class WebSocket extends EventEmitter {
+ }
+ 
+ declare const WebSocketAlias: typeof WebSocket;
+-interface WebSocketAlias extends WebSocket {} // tslint:disable-line no-empty-interface
++interface WebSocketAlias extends WebSocket { } // tslint:disable-line no-empty-interface
+ 
+ declare namespace WebSocket {
+     /**
+@@ -320,9 +320,9 @@ declare namespace WebSocket {
+         backlog?: number | undefined;
+         server?: HTTPServer<V> | HTTPSServer<V> | undefined;
+         verifyClient?:
+-            | VerifyClientCallbackAsync<InstanceType<V>>
+-            | VerifyClientCallbackSync<InstanceType<V>>
+-            | undefined;
++        | VerifyClientCallbackAsync<InstanceType<V>>
++        | VerifyClientCallbackSync<InstanceType<V>>
++        | undefined;
+         handleProtocols?: (protocols: Set<string>, request: InstanceType<V>) => string | false;
+         path?: string | undefined;
+         noServer?: boolean | undefined;
+@@ -399,12 +399,12 @@ declare namespace WebSocket {
+     }
+ 
+     const WebSocketServer: typeof Server;
+-    interface WebSocketServer extends Server {} // tslint:disable-line no-empty-interface
++    interface WebSocketServer extends Server { } // tslint:disable-line no-empty-interface
+     const WebSocket: typeof WebSocketAlias;
+-    interface WebSocket extends WebSocketAlias {} // tslint:disable-line no-empty-interface
++    interface WebSocket extends WebSocketAlias { } // tslint:disable-line no-empty-interface
+ 
+     // WebSocket stream
+     function createWebSocketStream(websocket: WebSocket, options?: DuplexOptions): Duplex;
+ }
+ 
+-export = WebSocket;
++export default WebSocket;

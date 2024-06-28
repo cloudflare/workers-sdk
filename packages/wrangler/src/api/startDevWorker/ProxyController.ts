@@ -1,9 +1,10 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { LogLevel, Miniflare, Mutex, Response, WebSocket } from "miniflare";
+import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
+import WebSocket from "ws";
 import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
@@ -205,7 +206,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		}
 
 		const existingWebSocket = await this.inspectorProxyWorkerWebSocket?.promise;
-		if (existingWebSocket?.readyState === WebSocket.READY_STATE_OPEN) {
+		if (existingWebSocket?.readyState === WebSocket.OPEN) {
 			return existingWebSocket;
 		}
 
@@ -215,15 +216,18 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		try {
 			assert(this.proxyWorker);
-			const inspectorProxyWorker = await this.proxyWorker.getWorker(
+			console.log(
+				await this.proxyWorker.unsafeGetDirectURL("InspectorProxyWorker")
+			);
+			const inspectorProxyWorkerUrl = await this.proxyWorker.unsafeGetDirectURL(
 				"InspectorProxyWorker"
 			);
-			({ webSocket } = await inspectorProxyWorker.fetch(
-				"http://dummy/cdn-cgi/InspectorProxyWorker/websocket",
+			webSocket = new WebSocket(
+				`${inspectorProxyWorkerUrl.href}/cdn-cgi/InspectorProxyWorker/websocket`,
 				{
-					headers: { Authorization: this.secret, Upgrade: "websocket" },
+					headers: { Authorization: this.secret },
 				}
-			));
+			);
 		} catch (cause) {
 			if (this._torndown) {
 				return;
@@ -257,7 +261,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			void this.reconnectInspectorProxyWorker();
 		});
 
-		webSocket.accept();
 		this.inspectorProxyWorkerWebSocket?.resolve(webSocket);
 
 		return webSocket;

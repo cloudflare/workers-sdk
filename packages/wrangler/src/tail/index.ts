@@ -22,7 +22,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { TailCLIFilters } from "./createTail";
-import type { RawData } from "ws";
+import type WebSocket from "ws";
 
 export function tailOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -147,7 +147,7 @@ export async function tailHandler(args: TailArgs) {
 		);
 	}
 
-	const printLog: (data: RawData) => void =
+	const printLog: (data: WebSocket.RawData) => void =
 		args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
 
 	tail.on("message", printLog);
