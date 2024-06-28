@@ -60,9 +60,9 @@ export interface StartDevWorkerInput {
 	 * This is the `main` property of a wrangler.toml.
 	 * You can specify a file path or provide the contents directly.
 	 */
-	entrypoint?: FilePath;
+	entrypoint?: string;
 	/** The configuration of the worker. */
-	config?: FilePath;
+	config?: string;
 
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
@@ -182,9 +182,7 @@ export type StartDevWorkerOptions = StartDevWorkerInput & {
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string;
 	};
-	entrypoint: {
-		path: string;
-	};
+	entrypoint: string;
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;

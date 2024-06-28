@@ -38,7 +38,7 @@ function configDefaults(
 ): StartDevWorkerOptions {
 	const persist = path.join(process.cwd(), ".wrangler/persist");
 	return {
-		entrypoint: { path: "NOT_REAL" },
+		entrypoint: "NOT_REAL",
 		directory: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
@@ -62,7 +62,7 @@ describe("happy path bundle + watch", () => {
 		const config: Partial<StartDevWorkerOptions> = {
 			legacy: {},
 			name: "worker",
-			entrypoint: { path: path.resolve("src/index.ts") },
+			entrypoint: path.resolve("src/index.ts"),
 			directory: path.resolve("src"),
 			build: {
 				additionalModules: [],
@@ -133,7 +133,7 @@ describe("happy path bundle + watch", () => {
 		const config: Partial<StartDevWorkerOptions> = {
 			legacy: {},
 			name: "worker",
-			entrypoint: { path: path.resolve("src/index.ts") },
+			entrypoint: path.resolve("src/index.ts"),
 			directory: path.resolve("src"),
 			build: {
 				additionalModules: [],
@@ -198,7 +198,7 @@ describe("happy path bundle + watch", () => {
 		const config: Partial<StartDevWorkerOptions> = {
 			legacy: {},
 			name: "worker",
-			entrypoint: { path: path.resolve("out.ts") },
+			entrypoint: path.resolve("out.ts"),
 			directory: path.resolve("."),
 			build: {
 				additionalModules: [],
@@ -272,7 +272,7 @@ describe("switching", () => {
 		const config: Partial<StartDevWorkerOptions> = {
 			legacy: {},
 			name: "worker",
-			entrypoint: { path: path.resolve("src/index.ts") },
+			entrypoint: path.resolve("src/index.ts"),
 			directory: path.resolve("src"),
 
 			build: {
@@ -317,7 +317,7 @@ describe("switching", () => {
 		});
 		const configCustom: Partial<StartDevWorkerOptions> = {
 			name: "worker",
-			entrypoint: { path: path.resolve("out.ts") },
+			entrypoint: path.resolve("out.ts"),
 			directory: process.cwd(),
 			build: {
 				additionalModules: [],
@@ -389,7 +389,7 @@ describe("switching", () => {
 		});
 		const configCustom: Partial<StartDevWorkerOptions> = {
 			name: "worker",
-			entrypoint: { path: path.resolve("out.ts") },
+			entrypoint: path.resolve("out.ts"),
 			directory: process.cwd(),
 
 			build: {
@@ -437,7 +437,7 @@ describe("switching", () => {
 		const config: Partial<StartDevWorkerOptions> = {
 			legacy: {},
 			name: "worker",
-			entrypoint: { path: path.resolve("src/index.ts") },
+			entrypoint: path.resolve("src/index.ts"),
 			directory: path.resolve("src"),
 
 			build: {

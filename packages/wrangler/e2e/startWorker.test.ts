@@ -54,7 +54,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		});
 
 		const worker = await devEnv.startWorker({
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: { remote },
 		});
@@ -90,7 +90,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: { remote },
 		});
@@ -160,7 +160,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: { remote },
 		});
@@ -204,7 +204,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: { remote },
 		});
@@ -300,7 +300,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: {
 				remote,
@@ -354,7 +354,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: {
 				remote,
@@ -429,7 +429,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: {
 				remote,
@@ -488,7 +488,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 
 		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 			dev: {
 				remote,

@@ -50,11 +50,11 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#customBuildAborter;
 		const relativeFile =
-			path.relative(config.directory, config.entrypoint.path) || ".";
+			path.relative(config.directory, config.entrypoint) || ".";
 		logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
-			await runCustomBuild(config.entrypoint.path, relativeFile, {
+			await runCustomBuild(config.entrypoint, relativeFile, {
 				cwd: config.build?.custom?.workingDirectory,
 				command: config.build?.custom?.command,
 			});
@@ -66,23 +66,23 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				// if we're not bundling, let's just copy the entry to the destination directory
 				const destinationDir = this.#tmpDir.path;
 				writeFileSync(
-					path.join(destinationDir, path.basename(config.entrypoint.path)),
-					readFileSync(config.entrypoint.path, "utf-8")
+					path.join(destinationDir, path.basename(config.entrypoint)),
+					readFileSync(config.entrypoint, "utf-8")
 				);
 			}
 
 			const entry: Entry = {
-				file: config.entrypoint.path,
+				file: config.entrypoint,
 				directory: config.directory,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
 			};
 
-			const entryDirectory = path.dirname(config.entrypoint.path);
+			const entryDirectory = path.dirname(config.entrypoint);
 			const moduleCollector = createModuleCollector({
 				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
 					entryDirectory,
-					config.entrypoint.path
+					config.entrypoint
 				),
 				entry,
 				// `moduleCollector` doesn't get used when `noBundle` is set, so
@@ -132,7 +132,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				return;
 			}
 			const entrypointPath = realpathSync(
-				bundleResult?.resolvedEntryPointPath ?? config.entrypoint.path
+				bundleResult?.resolvedEntryPointPath ?? config.entrypoint
 			);
 
 			this.emitBundleCompleteEvent(config, {
@@ -141,7 +141,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				path: entrypointPath,
 				type:
 					bundleResult?.bundleType ??
-					getBundleType(config.build.format, config.entrypoint.path),
+					getBundleType(config.build.format, config.entrypoint),
 				modules: bundleResult.modules,
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
@@ -197,7 +197,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		}
 		assert(this.#tmpDir);
 		const entry: Entry = {
-			file: config.entrypoint.path,
+			file: config.entrypoint,
 			directory: config.directory,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,

@@ -407,7 +407,7 @@ function DevSession(props: DevSessionProps) {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
-			entrypoint: { path: props.entry.file },
+			entrypoint: props.entry.file,
 			directory: props.entry.directory,
 			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 

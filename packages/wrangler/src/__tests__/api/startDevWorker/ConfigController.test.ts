@@ -29,7 +29,7 @@ describe("ConfigController", () => {
 			`,
 		});
 		const config: StartDevWorkerInput = {
-			entrypoint: { path: "src/index.ts" },
+			entrypoint: "src/index.ts",
 		};
 
 		await controller.set(config);
@@ -65,7 +65,7 @@ describe("ConfigController", () => {
 			`,
 		});
 		const config: StartDevWorkerInput = {
-			entrypoint: { path: "src/index.ts" },
+			entrypoint: "src/index.ts",
 		};
 
 		await controller.set(config);

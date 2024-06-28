@@ -577,8 +577,8 @@ export async function startDev(args: StartDevOptions) {
 			}
 			await devEnv.config.set({
 				name: args.name,
-				config: configPath ? { path: configPath } : undefined,
-				entrypoint: args.script ? { path: args.script } : undefined,
+				config: configPath,
+				entrypoint: args.script,
 				compatibilityDate: args.compatibilityDate,
 				compatibilityFlags: args.compatibilityFlags,
 				triggers: args.routes?.map<Extract<Trigger, { type: "route" }>>(
@@ -688,7 +688,7 @@ export async function startDev(args: StartDevOptions) {
 				{
 					local: !args.remote,
 					usesTypeScript: /\.tsx?$/.test(
-						devEnv.config.latestConfig?.entrypoint?.path as string
+						devEnv.config.latestConfig?.entrypoint as string
 					),
 				},
 				{

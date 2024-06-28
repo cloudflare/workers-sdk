@@ -198,7 +198,7 @@ async function resolveConfig(
 	const entry = await getEntry(
 		{
 			assets: Boolean(legacyAssets),
-			script: input.entrypoint?.path,
+			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 		},
 		config,
@@ -213,7 +213,7 @@ async function resolveConfig(
 		name: getScriptName({ name: input.name, env: input.env }, config),
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
-		entrypoint: { path: entry.file },
+		entrypoint: entry.file,
 		directory: entry.directory,
 		bindings,
 		sendMetrics: input.sendMetrics ?? config.send_metrics,
@@ -318,7 +318,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		}
 	}
 	public async set(input: StartDevWorkerInput) {
-		void this.#ensureWatchingConfig(input.config?.path);
+		void this.#ensureWatchingConfig(input.config);
 
 		return await this.#updateConfig(input);
 	}
@@ -327,7 +327,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
 		);
-		void this.#ensureWatchingConfig(input.config?.path);
+		void this.#ensureWatchingConfig(input.config);
 
 		const config: StartDevWorkerInput = {
 			...this.latestInput,
@@ -340,7 +340,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	async #updateConfig(input: StartDevWorkerInput) {
 		this.latestInput = input;
 
-		const fileConfig = readConfig(input.config?.path, {
+		const fileConfig = readConfig(input.config, {
 			env: input.env,
 			"dispatch-namespace": undefined,
 			"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
