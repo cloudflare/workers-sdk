@@ -589,7 +589,7 @@ export async function startDev(args: StartDevOptions) {
 				),
 
 				build: {
-					bundle: !args.noBundle,
+					bundle: args.bundle !== undefined ? args.bundle : undefined,
 					define: collectKeyValues(args.define),
 					jsxFactory: args.jsxFactory,
 					jsxFragment: args.jsxFragment,
