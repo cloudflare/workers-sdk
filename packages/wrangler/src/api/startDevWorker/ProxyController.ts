@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
+import events from "node:events";
 import path from "node:path";
 import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
@@ -216,9 +217,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		try {
 			assert(this.proxyWorker);
-			console.log(
-				await this.proxyWorker.unsafeGetDirectURL("InspectorProxyWorker")
-			);
+
 			const inspectorProxyWorkerUrl = await this.proxyWorker.unsafeGetDirectURL(
 				"InspectorProxyWorker"
 			);
@@ -260,6 +259,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 			void this.reconnectInspectorProxyWorker();
 		});
+
+		await events.once(webSocket, "open");
 
 		this.inspectorProxyWorkerWebSocket?.resolve(webSocket);
 
