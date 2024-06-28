@@ -45,9 +45,7 @@ describe("ConfigController", () => {
 					moduleRules: [],
 				},
 				directory: process.cwd(),
-				entrypoint: {
-					path: path.join(process.cwd(), "src/index.ts"),
-				},
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
 			},
 		});
 	});
@@ -73,7 +71,7 @@ describe("ConfigController", () => {
 		await expect(event1).resolves.toMatchObject({
 			type: "configUpdate",
 			config: {
-				entrypoint: { path: path.join(process.cwd(), "src/index.ts") },
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
 				directory: process.cwd(),
 				build: {
 					additionalModules: [],
@@ -97,7 +95,7 @@ describe("ConfigController", () => {
 		await expect(event2).resolves.toMatchObject({
 			type: "configUpdate",
 			config: {
-				entrypoint: { path: path.join(process.cwd(), "src/index.ts") },
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
 				directory: process.cwd(),
 				build: {
 					additionalModules: [],
@@ -124,7 +122,7 @@ describe("ConfigController", () => {
 		await expect(event3).resolves.toMatchObject({
 			type: "configUpdate",
 			config: {
-				entrypoint: { path: path.join(process.cwd(), "src/index.ts") },
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
 				directory: process.cwd(),
 				build: {
 					additionalModules: [],
