@@ -662,6 +662,7 @@ export async function startDev(args: StartDevOptions) {
 					liveReload: args.liveReload,
 					testScheduled: args.testScheduled,
 					logLevel: args.logLevel,
+					registry: devEnv.config.latestConfig?.dev.registry,
 				},
 				legacy: {
 					site: (config) => {

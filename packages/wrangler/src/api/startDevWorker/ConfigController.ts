@@ -101,6 +101,7 @@ async function resolveDevConfig(
 		testScheduled: input.dev?.testScheduled,
 		// absolute resolved path
 		persist: localPersistencePath,
+		registry: input.dev?.registry,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
