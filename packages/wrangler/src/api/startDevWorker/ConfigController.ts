@@ -346,8 +346,18 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			"dispatch-namespace": undefined,
 			"legacy-env": !input.legacy?.enableServiceEnvironments ?? true,
 			remote: input.dev?.remote,
-			upstreamProtocol: input.dev?.origin?.secure ? "https" : "http",
-			localProtocol: input.dev?.server?.secure ? "https" : "http",
+			upstreamProtocol:
+				input.dev?.origin?.secure === undefined
+					? undefined
+					: input.dev?.origin?.secure
+						? "https"
+						: "http",
+			localProtocol:
+				input.dev?.server?.secure === undefined
+					? undefined
+					: input.dev?.server?.secure
+						? "https"
+						: "http",
 		});
 
 		const resolvedConfig = await resolveConfig(fileConfig, input);

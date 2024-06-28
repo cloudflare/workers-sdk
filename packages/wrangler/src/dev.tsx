@@ -648,7 +648,10 @@ export async function startDev(args: StartDevOptions) {
 					server: {
 						hostname: args.ip,
 						port: args.port,
-						secure: args.localProtocol === "https",
+						secure:
+							args.localProtocol === undefined
+								? undefined
+								: args.localProtocol === "https",
 						httpsCertPath: args.httpsCertPath,
 						httpsKeyPath: args.httpsKeyPath,
 					},
@@ -657,6 +660,10 @@ export async function startDev(args: StartDevOptions) {
 					},
 					origin: {
 						hostname: args.host ?? args.localUpstream,
+						secure:
+							args.upstreamProtocol === undefined
+								? undefined
+								: args.upstreamProtocol === "https",
 					},
 					persist: args.persistTo,
 					liveReload: args.liveReload,
