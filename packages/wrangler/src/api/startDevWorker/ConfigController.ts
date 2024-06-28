@@ -305,6 +305,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestConfig?: StartDevWorkerOptions;
 
 	#configWatcher?: ReturnType<typeof watch>;
+	#abortController?: AbortController;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
@@ -321,10 +322,10 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			});
 		}
 	}
-	public async set(input: StartDevWorkerInput) {
-		return await this.#updateConfig(input);
+	public set(input: StartDevWorkerInput) {
+		return this.#updateConfig(input);
 	}
-	public async patch(input: Partial<StartDevWorkerInput>) {
+	public patch(input: Partial<StartDevWorkerInput>) {
 		assert(
 			this.latestInput,
 			"Cannot call updateConfig without previously calling setConfig"
@@ -335,10 +336,13 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			...input,
 		};
 
-		return await this.#updateConfig(config);
+		return this.#updateConfig(config);
 	}
 
 	async #updateConfig(input: StartDevWorkerInput) {
+		this.#abortController?.abort();
+		this.#abortController = new AbortController();
+		const signal = this.#abortController.signal;
 		this.latestInput = input;
 
 		const fileConfig = readConfig(input.config, {
@@ -362,6 +366,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		void this.#ensureWatchingConfig(fileConfig.configPath);
 
 		const resolvedConfig = await resolveConfig(fileConfig, input);
+		if (signal.aborted) {
+			return;
+		}
 		this.latestConfig = resolvedConfig;
 		this.emitConfigUpdateEvent(resolvedConfig);
 		return this.latestConfig;
