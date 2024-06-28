@@ -68,7 +68,7 @@
 		"@types/rimraf": "^4.0.5",
 		"@types/stoppable": "^1.1.1",
 		"@types/which": "^2.0.1",
-		"@types/ws": "^8.5.7",
+		"@types/ws": "^8.5.10",
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
 		"ava": "^6.0.1",
