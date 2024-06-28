@@ -78,6 +78,7 @@ type Props = {
 	assetPaths: AssetPaths | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
+	alias: Record<string, string> | undefined;
 	triggers: string[] | undefined;
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
@@ -526,6 +527,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
+						alias: config.alias,
 						assets: config.assets,
 						// enable the cache when publishing
 						bypassAssetCache: false,

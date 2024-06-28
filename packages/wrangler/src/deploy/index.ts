@@ -134,6 +134,12 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("alias", {
+				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("triggers", {
 				describe: "cron schedules to attach",
 				alias: ["schedule", "schedules"],
@@ -263,6 +269,7 @@ export async function deployHandler(
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
+	const cliAlias = collectKeyValues(args.alias);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
@@ -293,6 +300,7 @@ export async function deployHandler(
 		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
+		alias: cliAlias,
 		triggers: args.triggers,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,

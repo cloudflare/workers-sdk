@@ -227,6 +227,7 @@ export type DevProps = {
 	liveReload: boolean;
 	bindings: CfWorkerInit["bindings"];
 	define: Config["define"];
+	alias: Config["alias"];
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
@@ -596,6 +597,7 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		nodejsCompatMode: props.nodejsCompatMode,
 		define: props.define,
+		alias: props.alias,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,

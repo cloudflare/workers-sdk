@@ -207,6 +207,7 @@ export async function unstable_dev(
 		upstreamProtocol: undefined,
 		var: undefined,
 		define: undefined,
+		alias: undefined,
 		jsxFactory: undefined,
 		jsxFragment: undefined,
 		tsconfig: undefined,

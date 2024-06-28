@@ -50,6 +50,7 @@ export function buildPluginFromFunctions({
 		// and they document that on their README.md, we should let them.
 		nodejsCompatMode: nodejsCompatMode ?? "v1",
 		define: {},
+		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
 		external,
 		plugins: [
