@@ -16,12 +16,12 @@ import {
 	getHostAndRoutes,
 	getInferredHost,
 	maskVars,
-	memoizeGetPort,
 } from "../../dev";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { getAccountId, requireApiToken } from "../../user";
+import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { Controller } from "./BaseController";
 import {
 	convertCfWorkerInitBindingstoBindings,

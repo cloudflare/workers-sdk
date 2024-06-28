@@ -4,7 +4,6 @@ import path from "node:path";
 import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
-import getPort from "get-port";
 import { render } from "ink";
 import { DevEnv } from "./api";
 import {
@@ -35,6 +34,7 @@ import {
 	collectKeyValues,
 	collectPlainTextVars,
 } from "./utils/collectKeyValues";
+import { memoizeGetPort } from "./utils/memoizeGetPort";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute, getZoneIdForPreview } from "./zones";
 import {
@@ -1011,24 +1011,7 @@ export async function startApiDev(args: StartDevOptions) {
 		},
 	};
 }
-/**
- * Get an available TCP port number.
- *
- * Avoiding calling `getPort()` multiple times by memoizing the first result.
- */
-export function memoizeGetPort(defaultPort: number, host: string) {
-	let portValue: number | undefined;
-	let cachedHost = host;
-	return async (forHost: string = host) => {
-		if (forHost !== cachedHost) {
-			portValue = undefined;
-			cachedHost = forHost;
-		}
-		// Check a specific host to avoid probing all local addresses.
-		portValue = portValue ?? (await getPort({ port: defaultPort, host: host }));
-		return portValue;
-	};
-}
+
 /**
  * mask anything that was overridden in .dev.vars
  * so that we don't log potential secrets into the terminal
