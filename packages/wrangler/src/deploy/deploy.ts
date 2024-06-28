@@ -879,7 +879,13 @@ export async function publishRoutes(
 		workerUrl,
 		scriptName,
 		notProd,
-	}: { workerUrl: string; scriptName: string; notProd: boolean }
+		accountId,
+	}: {
+		workerUrl: string;
+		scriptName: string;
+		notProd: boolean;
+		accountId: string;
+	}
 ): Promise<string[]> {
 	try {
 		return await fetchResult(`${workerUrl}/routes`, {
@@ -898,7 +904,11 @@ export async function publishRoutes(
 		if (isAuthenticationError(e)) {
 			// An authentication error is probably due to a known issue,
 			// where the user is logged in via an API token that does not have "All Zones".
-			return await publishRoutesFallback(routes, { scriptName, notProd });
+			return await publishRoutesFallback(routes, {
+				scriptName,
+				notProd,
+				accountId,
+			});
 		} else {
 			throw e;
 		}
@@ -912,7 +922,11 @@ export async function publishRoutes(
  */
 async function publishRoutesFallback(
 	routes: Route[],
-	{ scriptName, notProd }: { scriptName: string; notProd: boolean }
+	{
+		scriptName,
+		notProd,
+		accountId,
+	}: { scriptName: string; notProd: boolean; accountId: string }
 ) {
 	if (notProd) {
 		throw new UserError(
@@ -933,7 +947,7 @@ async function publishRoutesFallback(
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
-		const zone = await getZoneForRoute(route);
+		const zone = await getZoneForRoute({ route, accountId });
 		if (zone) {
 			activeZones.set(zone.id, zone.host);
 			routesToDeploy.set(

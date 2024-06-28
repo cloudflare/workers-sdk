@@ -315,7 +315,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			├ Finding latest stable Worker Version to rollback to
 			│
 			│
-			? Please provide an optional message for this rollback (120 characters max)?
+			? Please provide an optional message for this rollback (120 characters max)
 			🤖 Using default value in non-interactive context: Rollback via e2e test
 			│
 			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.
@@ -425,7 +425,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			│           Tag:  e2e-upload
 			│       Message:  Upload via e2e test
 			│
-			? Please provide an optional message for this rollback (120 characters max)?
+			? Please provide an optional message for this rollback (120 characters max)
 			🤖 Using default value in non-interactive context: Rollback to old version
 			│
 			├  WARNING  You are about to rollback to Worker Version 00000000-0000-0000-0000-000000000000.

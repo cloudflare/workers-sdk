@@ -537,6 +537,9 @@ export async function startDev(args: StartDevOptions) {
 			args.config ||
 			(args.script && findWranglerToml(path.dirname(args.script)));
 
+		const projectRoot = configPath && path.dirname(configPath);
+		let config = readConfig(configPath, args);
+
 		const devEnv = new DevEnv();
 
 		if (args.experimentalDevEnv) {
@@ -646,7 +649,8 @@ export async function startDev(args: StartDevOptions) {
 				dev: {
 					auth: async () => {
 						return {
-							accountId: args.accountId ?? (await getAccountId()),
+							accountId:
+								args.accountId ?? config.account_id ?? (await getAccountId()),
 							apiToken: requireApiToken(),
 						};
 					},
@@ -678,10 +682,10 @@ export async function startDev(args: StartDevOptions) {
 					registry: devEnv.config.latestConfig?.dev.registry,
 				},
 				legacy: {
-					site: (config) => {
-						const assetPaths = getResolvedAssetPaths(args, config);
+					site: (configParam) => {
+						const assetPaths = getResolvedAssetPaths(args, configParam);
 
-						return Boolean(args.site || config.site) && assetPaths
+						return Boolean(args.site || configParam.site) && assetPaths
 							? {
 									bucket: path.join(
 										assetPaths.baseDirectory,
@@ -692,7 +696,7 @@ export async function startDev(args: StartDevOptions) {
 								}
 							: undefined;
 					},
-					assets: (config) => config.assets,
+					assets: (configParam) => configParam.assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 			} satisfies StartDevWorkerInput);
@@ -713,8 +717,6 @@ export async function startDev(args: StartDevOptions) {
 
 			return devEnv;
 		}
-		const projectRoot = configPath && path.dirname(configPath);
-		let config = readConfig(configPath, args);
 
 		if (config.configPath && !args.experimentalDevEnv) {
 			watcher = watch(config.configPath, {
@@ -1116,7 +1118,10 @@ export async function validateDevServerSettings(
 	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
 	// the error to be thrown where it will correctly exit the Wrangler process
 	if (args.remote) {
-		await getZoneIdForPreview(host, routes);
+		const accountId =
+			args.accountId ?? config.account_id ?? (await getAccountId());
+		assert(accountId, "Account ID must be provided for remote dev");
+		await getZoneIdForPreview({ host, routes, accountId });
 	}
 	const initialIp = args.ip || config.dev.ip;
 	const initialIpListenCheck = initialIp === "*" ? "0.0.0.0" : initialIp;
