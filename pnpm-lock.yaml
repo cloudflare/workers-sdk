@@ -15,9 +15,6 @@ patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: r2d7tqjujhdts7e7zxsa3stjki
     path: patches/@cloudflare__component-listbox@1.10.6.patch
-  '@types/ws@8.5.9':
-    hash: mw3ykjzm5ymyssype4rey657be
-    path: patches/@types__ws@8.5.9.patch
   capnp-ts@0.7.0:
     hash: l4yimnxyvkiyj6alnps2ec3sii
     path: patches/capnp-ts@0.7.0.patch
@@ -1685,7 +1682,7 @@ importers:
         version: 8.1.1
       '@types/ws':
         specifier: ^8.5.7
-        version: 8.5.9(patch_hash=mw3ykjzm5ymyssype4rey657be)
+        version: 8.5.9
       '@types/yargs':
         specifier: ^17.0.22
         version: 17.0.24
@@ -13802,7 +13799,7 @@ snapshots:
     dependencies:
       '@types/node': 20.8.3
 
-  '@types/ws@8.5.9(patch_hash=mw3ykjzm5ymyssype4rey657be)':
+  '@types/ws@8.5.9':
     dependencies:
       '@types/node': 20.8.3
 

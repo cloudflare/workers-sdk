@@ -52,7 +52,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 	public proxyWorker?: Miniflare;
 	proxyWorkerOptions?: MiniflareOptions;
-	inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
+	private inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
 
 	protected latestConfig?: StartDevWorkerOptions;
 	protected latestBundle?: EsbuildBundle;
@@ -201,7 +201,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		}
 	}
 
-	async reconnectInspectorProxyWorker(): Promise<WebSocket | undefined> {
+	private async reconnectInspectorProxyWorker(): Promise<
+		WebSocket | undefined
+	> {
 		if (this._torndown) {
 			return;
 		}
