@@ -257,6 +257,7 @@ export function normalizeAndValidateConfig(
 			activeEnv.main
 		),
 		assets: normalizeAndValidateAssets(diagnostics, configPath, rawConfig),
+		alias: normalizeAndValidateAliases(diagnostics, configPath, rawConfig),
 		wasm_modules: normalizeAndValidateModulePaths(
 			diagnostics,
 			configPath,
@@ -606,6 +607,43 @@ function normalizeAndValidateSite(
 		};
 	}
 	return undefined;
+}
+
+/**
+ * Validate the `alias` configuration
+ */
+function normalizeAndValidateAliases(
+	diagnostics: Diagnostics,
+	configPath: string | undefined,
+	rawConfig: RawConfig
+): Config["alias"] {
+	if (rawConfig?.alias === undefined) {
+		return undefined;
+	}
+	if (
+		["string", "boolean", "number"].includes(typeof rawConfig?.alias) ||
+		typeof rawConfig?.alias !== "object"
+	) {
+		diagnostics.errors.push(
+			`Expected alias to be an object, but got ${typeof rawConfig?.alias}`
+		);
+		return undefined;
+	}
+
+	let isValid = true;
+	for (const [key, value] of Object.entries(rawConfig?.alias)) {
+		if (typeof value !== "string") {
+			diagnostics.errors.push(
+				`Expected alias["${key}"] to be a string, but got ${typeof value}`
+			);
+			isValid = false;
+		}
+	}
+	if (isValid) {
+		return rawConfig.alias;
+	}
+
+	return;
 }
 
 /**

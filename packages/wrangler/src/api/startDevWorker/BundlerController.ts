@@ -121,6 +121,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
 						checkFetch: true,
+						alias: config.build.alias,
 						assets: config.legacy?.assets,
 						// enable the cache when publishing
 						bypassAssetCache: false,
@@ -232,6 +233,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				minify: config.build?.minify,
 				nodejsCompatMode: config.build.nodejsCompatMode,
 				define: config.build.define,
+				alias: config.build.alias,
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },

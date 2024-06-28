@@ -52,6 +52,7 @@ type Props = {
 	compatibilityFlags: string[] | undefined;
 	vars: Record<string, string> | undefined;
 	defines: Record<string, string> | undefined;
+	alias: Record<string, string> | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	tsconfig: string | undefined;
@@ -282,6 +283,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
+						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
 						assets: config.assets,
 						// enable the cache when publishing

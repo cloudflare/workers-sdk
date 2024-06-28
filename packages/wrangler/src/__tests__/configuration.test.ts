@@ -384,6 +384,67 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[alias]", () => {
+			it("errors with a non-object", () => {
+				const { config: _config, diagnostics } = normalizeAndValidateConfig(
+					{
+						alias: "some silly string",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected alias to be an object, but got string"
+				`);
+			});
+
+			it("errors with non string values", () => {
+				const { config: _config, diagnostics } = normalizeAndValidateConfig(
+					{
+						alias: {
+							"some-module": 123,
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected alias[\\"some-module\\"] to be a string, but got number"
+				`);
+			});
+
+			it("returns the alias config when valid", () => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						alias: {
+							"some-module": "./path/to/some-module",
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+
+				expect(config.alias).toMatchInlineSnapshot(`
+					Object {
+					  "some-module": "./path/to/some-module",
+					}
+				`);
+			});
+		});
+
 		describe("[assets]", () => {
 			it("normalizes a string input to an object", () => {
 				const { config, diagnostics } = normalizeAndValidateConfig(

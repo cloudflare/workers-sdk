@@ -118,6 +118,12 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("alias", {
+				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("jsx-factory", {
 				describe: "The function that is called for each JSX element",
 				type: "string",
@@ -193,6 +199,7 @@ export async function versionsUploadHandler(
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
+	const cliAlias = collectKeyValues(args.alias);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
@@ -211,6 +218,7 @@ export async function versionsUploadHandler(
 		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
+		alias: cliAlias,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,

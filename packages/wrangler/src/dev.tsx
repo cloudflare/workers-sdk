@@ -201,6 +201,12 @@ export function devOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("alias", {
+				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("jsx-factory", {
 				describe: "The function that is called for each JSX element",
 				type: "string",
@@ -501,6 +507,7 @@ export async function startDev(args: StartDevOptions) {
 			getInspectorPort,
 			getRuntimeInspectorPort,
 			cliDefines,
+			cliAlias,
 			localPersistencePath,
 			processEntrypoint,
 			additionalModules,
@@ -592,6 +599,7 @@ export async function startDev(args: StartDevOptions) {
 					nodejsCompatMode={nodejsCompatMode}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
+					alias={{ ...configParam.alias, ...cliAlias }}
 					initialMode={args.remote ? "remote" : "local"}
 					jsxFactory={args.jsxFactory || configParam.jsx_factory}
 					jsxFragment={args.jsxFragment || configParam.jsx_fragment}
@@ -684,6 +692,7 @@ export async function startApiDev(args: StartDevOptions) {
 		getInspectorPort,
 		getRuntimeInspectorPort,
 		cliDefines,
+		cliAlias,
 		localPersistencePath,
 		processEntrypoint,
 		additionalModules,
@@ -754,6 +763,7 @@ export async function startApiDev(args: StartDevOptions) {
 			nodejsCompatMode: nodejsCompatMode,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
+			alias: { ...config.alias, ...cliAlias },
 			initialMode: args.remote ? "remote" : "local",
 			jsxFactory: args.jsxFactory ?? configParam.jsx_factory,
 			jsxFragment: args.jsxFragment ?? configParam.jsx_fragment,
@@ -989,6 +999,7 @@ export async function validateDevServerSettings(
 	);
 
 	const cliDefines = collectKeyValues(args.define);
+	const cliAlias = collectKeyValues(args.alias);
 
 	return {
 		entry,
@@ -999,6 +1010,7 @@ export async function validateDevServerSettings(
 		host,
 		routes,
 		cliDefines,
+		cliAlias,
 		localPersistencePath,
 		processEntrypoint: !!args.processEntrypoint,
 		additionalModules: args.additionalModules ?? [],

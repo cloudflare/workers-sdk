@@ -167,6 +167,7 @@ export async function startDevServer(
 		define: props.define,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
+		alias: props.alias,
 		assets: props.assetsConfig,
 		testScheduled: props.testScheduled,
 		local: props.local,
@@ -343,6 +344,7 @@ async function runEsbuild({
 	processEntrypoint,
 	additionalModules,
 	rules,
+	alias,
 	assets,
 	serveAssetsFromWorker,
 	tsconfig,
@@ -364,6 +366,7 @@ async function runEsbuild({
 	processEntrypoint: boolean;
 	additionalModules: CfModule[];
 	rules: Config["rules"];
+	alias: Config["alias"];
 	assets: Config["assets"];
 	define: Config["define"];
 	serveAssetsFromWorker: boolean;
@@ -412,6 +415,7 @@ async function runEsbuild({
 					nodejsCompatMode,
 					define,
 					checkFetch: true,
+					alias,
 					assets,
 					// disable the cache in dev
 					bypassAssetCache: true,
