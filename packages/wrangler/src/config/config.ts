@@ -163,6 +163,12 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| undefined;
 
 	/**
+	 * A map of module aliases. Lets you swap out a module for any others.
+	 * Corresponds with esbuild's `alias` config
+	 */
+	alias: { [key: string]: string } | undefined;
+
+	/**
 	 * By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
 	 *
 	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next deploy.
@@ -336,6 +342,7 @@ export const defaultWranglerConfig: Config = {
 	text_blobs: undefined,
 	data_blobs: undefined,
 	keep_vars: undefined,
+	alias: undefined,
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
 	account_id: undefined,

@@ -75,6 +75,7 @@ export function buildWorkerFromFunctions({
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
+		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
 		external,
 		plugins: [
@@ -229,6 +230,7 @@ export function buildRawWorker({
 		watch,
 		nodejsCompatMode,
 		define: {},
+		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
 		external,
 		plugins: [

@@ -99,6 +99,8 @@ export interface StartDevWorkerOptions {
 		moduleRules?: Rule[];
 		/** Replace global identifiers with constant expressions, e.g. { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
 		define?: Record<string, string>;
+		/** Alias modules */
+		alias?: Record<string, string>;
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
 		minify?: boolean;
 		/** Options controlling a custom build step. */

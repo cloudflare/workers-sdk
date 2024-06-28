@@ -74,6 +74,7 @@ export type BundleOptions = {
 	minify?: boolean;
 	nodejsCompatMode?: NodeJSCompatMode;
 	define: Config["define"];
+	alias: Config["alias"];
 	checkFetch: boolean;
 	targetConsumer: "dev" | "deploy";
 	testScheduled?: boolean;
@@ -108,6 +109,7 @@ export async function bundleWorker(
 		tsconfig,
 		minify,
 		nodejsCompatMode,
+		alias,
 		define,
 		checkFetch,
 		assets,
@@ -312,6 +314,7 @@ export async function bundleWorker(
 				...define,
 			},
 		}),
+		alias,
 		loader: {
 			...COMMON_ESBUILD_OPTIONS.loader,
 			...(loader || {}),

@@ -44,6 +44,7 @@ export type EsbuildBundleProps = {
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
+	alias: Config["alias"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
@@ -75,6 +76,7 @@ export function runBuild(
 		minify,
 		nodejsCompatMode,
 		define,
+		alias,
 		noBundle,
 		findAdditionalModules,
 		durableObjects,
@@ -94,6 +96,7 @@ export function runBuild(
 		rules: Config["rules"];
 		assets: Config["assets"];
 		define: Config["define"];
+		alias: Config["alias"];
 		serveAssetsFromWorker: boolean;
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
@@ -210,6 +213,7 @@ export function runBuild(
 						minify,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
+						alias,
 						define,
 						checkFetch: true,
 						assets,
@@ -293,6 +297,7 @@ export function useEsbuild({
 	tsconfig,
 	minify,
 	nodejsCompatMode,
+	alias,
 	define,
 	noBundle,
 	findAdditionalModules,
@@ -322,6 +327,7 @@ export function useEsbuild({
 				tsconfig,
 				minify,
 				nodejsCompatMode,
+				alias,
 				define,
 				noBundle,
 				findAdditionalModules,
@@ -351,6 +357,7 @@ export function useEsbuild({
 		findAdditionalModules,
 		minify,
 		nodejsCompatMode,
+		alias,
 		define,
 		assets,
 		durableObjects,
