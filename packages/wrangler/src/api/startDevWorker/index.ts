@@ -1,11 +1,13 @@
 import { DevEnv } from "./DevEnv";
-import type { StartDevWorkerOptions, Worker } from "./types";
+import type { StartDevWorkerInput, Worker } from "./types";
 
 export { DevEnv };
 export * from "./types";
 export * from "./events";
 
-export function startWorker(options: StartDevWorkerOptions): Worker {
+export async function startWorker(
+	options: StartDevWorkerInput
+): Promise<Worker> {
 	const devEnv = new DevEnv();
 
 	return devEnv.startWorker(options);

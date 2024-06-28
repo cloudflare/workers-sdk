@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
+import { fakeResolvedInput } from "../api/startDevWorker/utils";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -30,7 +31,7 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
-import type { ProxyData, StartDevWorkerOptions } from "../api";
+import type { ProxyData, StartDevWorkerInput } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -45,6 +46,7 @@ export async function startDevServer(
 	props: DevProps & {
 		local: boolean;
 		disableDevRegistry: boolean;
+		experimentalDevEnv: boolean;
 	}
 ) {
 	let workerDefinitions: WorkerRegistry = {};
@@ -90,10 +92,9 @@ export async function startDevServer(
 	}
 
 	const devEnv = props.devEnv;
-	const startDevWorkerOptions: StartDevWorkerOptions = {
+	const startDevWorkerOptions: StartDevWorkerInput = {
 		name: props.name ?? "worker",
-		entrypoint: { path: props.entry.file },
-		directory: props.entry.directory,
+		entrypoint: props.entry.file,
 		dev: {
 			server: {
 				hostname: props.initialIp,
@@ -132,8 +133,9 @@ export async function startDevServer(
 			},
 		},
 		build: {
-			format: props.entry.format,
+			// format: props.entry.format,
 			moduleRoot: props.entry.moduleRoot,
+			nodejsCompatMode: null,
 		},
 	};
 
@@ -141,11 +143,11 @@ export async function startDevServer(
 	if (!props.experimentalDevEnv) {
 		devEnv.proxy.onConfigUpdate({
 			type: "configUpdate",
-			config: startDevWorkerOptions,
+			config: fakeResolvedInput(startDevWorkerOptions),
 		});
 		devEnv.proxy.onBundleStart({
 			type: "bundleStart",
-			config: startDevWorkerOptions,
+			config: fakeResolvedInput(startDevWorkerOptions),
 		});
 	}
 
@@ -195,7 +197,7 @@ export async function startDevServer(
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
-			config: startDevWorkerOptions,
+			config: fakeResolvedInput(startDevWorkerOptions),
 			bundle,
 		});
 
@@ -243,7 +245,7 @@ export async function startDevServer(
 				if (!props.experimentalDevEnv) {
 					devEnv.proxy.onReloadComplete({
 						type: "reloadComplete",
-						config: startDevWorkerOptions,
+						config: fakeResolvedInput(startDevWorkerOptions),
 						bundle,
 						proxyData,
 					});
@@ -303,7 +305,7 @@ export async function startDevServer(
 				if (!props.experimentalDevEnv) {
 					devEnv.proxy.onReloadComplete({
 						type: "reloadComplete",
-						config: startDevWorkerOptions,
+						config: fakeResolvedInput(startDevWorkerOptions),
 						bundle,
 						proxyData,
 					});
@@ -443,7 +445,7 @@ async function runEsbuild({
 }
 
 export async function startLocalServer(
-	props: LocalProps
+	props: LocalProps & { experimentalDevEnv: boolean }
 ): Promise<{ stop: () => Promise<void> }> {
 	if (!props.bundle || !props.format) {
 		return { async stop() {} };

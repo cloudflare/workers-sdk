@@ -167,7 +167,7 @@ export interface CfR2Bucket {
 export interface CfD1Database {
 	binding: string;
 	database_id: string;
-	database_name?: string;
+	database_name: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
@@ -334,7 +334,6 @@ export interface CfWorkerInit {
 	migrations: CfDurableObjectMigrations | undefined;
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
-	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
 	keepSecrets: boolean | undefined;
 	keepBindings?: WorkerMetadata["keep_bindings"];

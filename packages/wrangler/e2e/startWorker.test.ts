@@ -5,8 +5,8 @@ import { setTimeout } from "timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WebSocket } from "ws";
+import { beforeEach, describe, expect, it } from "vitest";
+import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 
 const OPTIONS = [
@@ -53,9 +53,9 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = devEnv.startWorker({
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+		const worker = await devEnv.startWorker({
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: { remote },
 		});
 
@@ -88,10 +88,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: { remote },
 		});
 
@@ -158,10 +158,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: { remote },
 		});
 
@@ -185,10 +185,6 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		ws.close();
 	});
 	it("User worker exception", async (t) => {
-		const consoleErrorSpy = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {});
-
 		const devEnv = new DevEnv();
 		t.onTestFinished(() => devEnv.teardown());
 
@@ -202,20 +198,14 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
                 `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: { remote },
 		});
 
-		let res = await worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toMatch(/^Error: Boom!/);
-
-		await setTimeout(100); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
-		expect(consoleErrorSpy).toBeCalledWith(
-			expect.stringContaining("Error: Boom!")
-		);
+		await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom!");
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -228,13 +218,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		});
 		await setTimeout(300);
 
-		res = await worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toMatch(/^Error: Boom 2!/);
-
-		await setTimeout(100); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
-		expect(consoleErrorSpy).toBeCalledWith(
-			expect.stringContaining("Error: Boom 2!")
-		);
+		await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom 2!");
 
 		// test eyeball requests receive the pretty error page
 		await helper.seed({
@@ -274,15 +258,11 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		});
 		await setTimeout(300);
 
-		res = await worker.fetch("http://dummy");
+		let res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:3");
 
-		consoleErrorSpy.mockReset();
 		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:3");
-
-		await setTimeout(100); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
-		expect(consoleErrorSpy).not.toHaveBeenCalled();
 	});
 	it("config.dev.{server,inspector} changes, restart the server instance", async (t) => {
 		const devEnv = new DevEnv();
@@ -298,10 +278,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: {
 				remote,
 				server: { port: await getPort() },
@@ -316,7 +296,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		let undiciRes = await undici.fetch(`http://127.0.0.1:${oldPort}`);
 		await expect(undiciRes.text()).resolves.toBe("body:1");
 
-		worker.patchConfig({
+		await worker.patchConfig({
 			dev: {
 				...worker.config.dev,
 				remote,
@@ -352,10 +332,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: {
 				remote,
 				liveReload: true,
@@ -400,7 +380,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
                 }
             `,
 		});
-		worker.patchConfig({
+		await worker.patchConfig({
 			dev: {
 				...worker.config.dev,
 				liveReload: false,
@@ -427,10 +407,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
             `,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: {
 				remote,
 				origin: {
@@ -444,7 +424,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			`URL: http://www.google.com/test/path/1`
 		);
 
-		worker.patchConfig({
+		await worker.patchConfig({
 			dev: {
 				...worker.config.dev,
 				origin: {
@@ -486,10 +466,10 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			"src/index.ts": script,
 		});
 
-		const worker = devEnv.startWorker({
+		const worker = await devEnv.startWorker({
 			name: "test-worker",
-			entrypoint: { path: path.resolve(helper.tmpPath, "src/index.ts") },
-			directory: helper.tmpPath,
+			entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+
 			dev: {
 				remote,
 				origin: {

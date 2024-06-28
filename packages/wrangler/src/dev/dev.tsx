@@ -10,22 +10,11 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import {
-	getDevCompatibilityDate,
-	getRules,
-	getScriptName,
-	isLegacyEnv,
-} from "..";
-import {
 	convertCfWorkerInitBindingstoBindings,
 	createDeferred,
+	fakeResolvedInput,
 } from "../api/startDevWorker/utils";
-import { validateNodeCompat } from "../deployment-bundle/node-compat";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
-import {
-	getBindingsAndAssetPaths,
-	getInferredHost,
-	validateDevServerSettings,
-} from "../dev";
 import {
 	getBoundRegisteredWorkers,
 	getRegisteredWorkers,
@@ -48,6 +37,7 @@ import type {
 	DevEnv,
 	ProxyData,
 	ReloadCompleteEvent,
+	StartDevWorkerInput,
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
@@ -264,147 +254,11 @@ export type DevProps = {
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
-	experimentalDevEnv: boolean;
 	rawConfig: Config;
 	rawArgs: StartDevOptions;
 	devEnv: DevEnv;
 };
 
-// TODO: use in finalisation or followup stage of SDW
-async function _toSDW(
-	args: StartDevOptions,
-	accountId: Promise<string>,
-	workerDefinitions: WorkerRegistry,
-	config: Config
-): Promise<StartDevWorkerOptions> {
-	const {
-		entry,
-		upstreamProtocol,
-		host,
-		routes,
-		getLocalPort,
-		getInspectorPort,
-		cliDefines,
-		localPersistencePath,
-		processEntrypoint,
-		additionalModules,
-	} = await validateDevServerSettings(args, config);
-
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: args.nodeCompat ?? config.node_compat ?? false,
-		compatibilityFlags:
-			args.compatibilityFlags ?? config.compatibility_flags ?? [],
-		noBundle: args.noBundle ?? config.no_bundle ?? false,
-	});
-
-	const { assetPaths, bindings } = getBindingsAndAssetPaths(args, config);
-
-	const devRoutes =
-		routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
-			typeof r === "string"
-				? {
-						type: "route",
-						pattern: r,
-					}
-				: { type: "route", ...r }
-		) ?? [];
-	const queueConsumers =
-		config.queues.consumers?.map<Extract<Trigger, { type: "queue-consumer" }>>(
-			(c) => ({
-				...c,
-				type: "queue-consumer",
-			})
-		) ?? [];
-
-	const crons =
-		config.triggers.crons?.map<Extract<Trigger, { type: "cron" }>>((c) => ({
-			cron: c,
-			type: "cron",
-		})) ?? [];
-
-	return {
-		name: getScriptName({ name: args.name, env: args.env }, config),
-		compatibilityDate: getDevCompatibilityDate(config, args.compatibilityDate),
-		compatibilityFlags: args.compatibilityFlags || config.compatibility_flags,
-		entrypoint: { path: entry.file },
-		directory: entry.directory,
-		bindings: convertCfWorkerInitBindingstoBindings(bindings),
-
-		triggers: [...devRoutes, ...queueConsumers, ...crons],
-		env: args.env,
-		sendMetrics: config.send_metrics,
-		build: {
-			additionalModules: additionalModules,
-			processEntrypoint: processEntrypoint,
-			bundle: !(args.bundle ?? !config.no_bundle),
-			findAdditionalModules: config.find_additional_modules,
-			moduleRoot: entry.moduleRoot,
-			moduleRules: args.rules ?? getRules(config),
-
-			minify: args.minify ?? config.minify,
-			define: { ...config.define, ...cliDefines },
-			custom: {
-				command: (config.build || {}).command,
-				watch: (config.build || {}).watch_dir,
-				workingDirectory: (config.build || {}).cwd,
-			},
-			format: entry.format,
-			nodejsCompatMode: nodejsCompatMode,
-			jsxFactory: args.jsxFactory || config.jsx_factory,
-			jsxFragment: args.jsxFragment || config.jsx_fragment,
-			tsconfig: args.tsconfig ?? config.tsconfig,
-		},
-		dev: {
-			auth: async () => {
-				return {
-					accountId: await accountId,
-					apiToken: requireApiToken(),
-				};
-			},
-			remote: !args.local,
-			server: {
-				hostname: args.ip || config.dev.ip,
-				port: args.port ?? config.dev.port ?? (await getLocalPort()),
-				secure: (args.localProtocol || config.dev.local_protocol) === "https",
-				httpsKeyPath: args.httpsKeyPath,
-				httpsCertPath: args.httpsCertPath,
-			},
-			inspector: {
-				port:
-					args.inspectorPort ??
-					config.dev.inspector_port ??
-					(await getInspectorPort()),
-			},
-			origin: {
-				secure: upstreamProtocol === "https",
-				hostname: args.localUpstream ?? host ?? getInferredHost(routes),
-			},
-			liveReload: args.liveReload || false,
-			testScheduled: args.testScheduled,
-			registry: workerDefinitions,
-			persist: { path: localPersistencePath },
-		},
-		legacy: {
-			site:
-				Boolean(args.site || config.site) && assetPaths
-					? {
-							bucket: path.join(
-								assetPaths.baseDirectory,
-								assetPaths?.assetDirectory
-							),
-							include: assetPaths.includePatterns,
-							exclude: assetPaths.excludePatterns,
-						}
-					: undefined,
-			assets: config.assets,
-			enableServiceEnvironments: !isLegacyEnv(config),
-		},
-		unsafe: {
-			capnp: bindings.unsafe?.capnp,
-			metadata: bindings.unsafe?.metadata,
-		},
-	} satisfies StartDevWorkerOptions;
-}
 export function DevImplementation(props: DevProps): JSX.Element {
 	validateDevProps(props);
 
@@ -520,17 +374,14 @@ function DevSession(props: DevSessionProps) {
 		};
 	}, [devEnv]);
 
-	const workerDefinitions = props.experimentalDevEnv
-		? undefined
-		: // eslint-disable-next-line react-hooks/rules-of-hooks
-			useDevRegistry(
-				props.name,
-				props.bindings.services,
-				props.bindings.durable_objects,
-				props.local ? "local" : "remote"
-			);
+	const workerDefinitions = useDevRegistry(
+		props.name,
+		props.bindings.services,
+		props.bindings.durable_objects,
+		props.local ? "local" : "remote"
+	);
 
-	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(() => {
+	const startDevWorkerOptions: StartDevWorkerInput = useMemo(() => {
 		const routes =
 			props.routes?.map<Extract<Trigger, { type: "route" }>>((r) =>
 				typeof r === "string"
@@ -557,13 +408,12 @@ function DevSession(props: DevSessionProps) {
 			name: props.name ?? "worker",
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
-			entrypoint: { path: props.entry.file },
+			entrypoint: props.entry.file,
 			directory: props.entry.directory,
 			bindings: convertCfWorkerInitBindingstoBindings(props.bindings),
 
 			triggers: [...routes, ...queueConsumers, ...crons],
 			env: props.env,
-			sendMetrics: props.sendMetrics,
 			build: {
 				additionalModules: props.additionalModules,
 				processEntrypoint: props.processEntrypoint,
@@ -580,7 +430,7 @@ function DevSession(props: DevSessionProps) {
 				jsxFactory: props.jsxFactory,
 				jsxFragment: props.jsxFragment,
 				tsconfig: props.tsconfig,
-				nodejsCompatMode: props.nodejsCompatMode,
+				nodejsCompatMode: props.nodejsCompatMode ?? null,
 				format: props.entry.format,
 				moduleRoot: props.entry.moduleRoot,
 			},
@@ -608,6 +458,7 @@ function DevSession(props: DevSessionProps) {
 				},
 				liveReload: props.liveReload,
 				testScheduled: props.testScheduled,
+				persist: "",
 			},
 			legacy: {
 				site:
@@ -646,7 +497,6 @@ function DevSession(props: DevSessionProps) {
 		props.additionalModules,
 		props.env,
 		props.legacyEnv,
-		props.sendMetrics,
 		props.noBundle,
 		props.findAdditionalModules,
 		props.minify,
@@ -672,24 +522,20 @@ function DevSession(props: DevSessionProps) {
 	]);
 
 	const onBundleStart = useCallback(() => {
-		if (!props.experimentalDevEnv) {
-			devEnv.proxy.onBundleStart({
-				type: "bundleStart",
-				config: startDevWorkerOptions,
-			});
-		}
-	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: fakeResolvedInput(startDevWorkerOptions),
+		});
+	}, [devEnv, startDevWorkerOptions]);
 	const onBundleComplete = useCallback(
 		(bundle: EsbuildBundle) => {
-			if (!props.experimentalDevEnv) {
-				devEnv.proxy.onReloadStart({
-					type: "reloadStart",
-					config: startDevWorkerOptions,
-					bundle,
-				});
-			}
+			devEnv.proxy.onReloadStart({
+				type: "reloadStart",
+				config: fakeResolvedInput(startDevWorkerOptions),
+				bundle,
+			});
 		},
-		[devEnv, startDevWorkerOptions, props.experimentalDevEnv]
+		[devEnv, startDevWorkerOptions]
 	);
 	const esbuildStartTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 	const latestReloadCompleteEvent = useRef<ReloadCompleteEvent>();
@@ -727,64 +573,47 @@ function DevSession(props: DevSessionProps) {
 	const directory = useTmpDir(props.projectRoot);
 
 	useEffect(() => {
-		if (!props.experimentalDevEnv) {
-			// temp: fake these events by calling the handler directly
-			devEnv.proxy.onConfigUpdate({
-				type: "configUpdate",
-				config: startDevWorkerOptions,
-			});
-		} else {
-			// Ensure we preserve `getRegisteredWorker`, which is set with `DevEnv.config.patch()` elsewhere
-			devEnv.config.set({
-				...startDevWorkerOptions,
-				dev: {
-					...startDevWorkerOptions.dev,
-					registry: devEnv.config.latestConfig?.dev?.registry,
-				},
-			});
-		}
-	}, [devEnv, startDevWorkerOptions, props.experimentalDevEnv]);
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: fakeResolvedInput(startDevWorkerOptions),
+		});
+	}, [devEnv, startDevWorkerOptions]);
 
-	if (!props.experimentalDevEnv) {
-		// eslint-disable-next-line react-hooks/rules-of-hooks
-		useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
-	}
+	useCustomBuild(props.entry, props.build, onBundleStart, onCustomBuildEnd);
 
-	const bundle = props.experimentalDevEnv
-		? undefined
-		: // eslint-disable-next-line react-hooks/rules-of-hooks
-			useEsbuild({
-				entry: props.entry,
-				destination: directory,
-				jsxFactory: props.jsxFactory,
-				processEntrypoint: props.processEntrypoint,
-				additionalModules: props.additionalModules,
-				rules: props.rules,
-				jsxFragment: props.jsxFragment,
-				serveAssetsFromWorker: Boolean(
-					props.assetPaths && !props.isWorkersSite && props.local
-				),
-				tsconfig: props.tsconfig,
-				minify: props.minify,
-				nodejsCompatMode: props.nodejsCompatMode,
-				define: props.define,
-				alias: props.alias,
-				noBundle: props.noBundle,
-				findAdditionalModules: props.findAdditionalModules,
-				assets: props.assetsConfig,
-				durableObjects: props.bindings.durable_objects || { bindings: [] },
-				local: props.local,
-				// Enable the bundling to know whether we are using dev or deploy
-				targetConsumer: "dev",
-				testScheduled: props.testScheduled ?? false,
-				projectRoot: props.projectRoot,
-				onStart: onEsbuildStart,
-				onComplete: onBundleComplete,
-				defineNavigatorUserAgent: isNavigatorDefined(
-					props.compatibilityDate,
-					props.compatibilityFlags
-				),
-			});
+	const bundle = useEsbuild({
+		entry: props.entry,
+		destination: directory,
+		jsxFactory: props.jsxFactory,
+		processEntrypoint: props.processEntrypoint,
+		additionalModules: props.additionalModules,
+		rules: props.rules,
+		jsxFragment: props.jsxFragment,
+		serveAssetsFromWorker: Boolean(
+			props.assetPaths && !props.isWorkersSite && props.local
+		),
+		tsconfig: props.tsconfig,
+		minify: props.minify,
+		nodejsCompatMode: props.nodejsCompatMode,
+		define: props.define,
+		alias: props.alias,
+		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
+		assets: props.assetsConfig,
+		durableObjects: props.bindings.durable_objects || { bindings: [] },
+		local: props.local,
+		// Enable the bundling to know whether we are using dev or deploy
+		targetConsumer: "dev",
+		testScheduled: props.testScheduled ?? false,
+		projectRoot: props.projectRoot,
+		onStart: onEsbuildStart,
+		onComplete: onBundleComplete,
+		defineNavigatorUserAgent: isNavigatorDefined(
+			props.compatibilityDate,
+			props.compatibilityFlags
+		),
+	});
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -831,7 +660,7 @@ function DevSession(props: DevSessionProps) {
 		if (bundle) {
 			latestReloadCompleteEvent.current = {
 				type: "reloadComplete",
-				config: startDevWorkerOptions,
+				config: fakeResolvedInput(startDevWorkerOptions),
 				bundle,
 				proxyData,
 			};
@@ -874,7 +703,6 @@ function DevSession(props: DevSessionProps) {
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
 			services={props.bindings.services}
-			experimentalDevEnv={props.experimentalDevEnv}
 		/>
 	) : (
 		<Remote
@@ -906,7 +734,6 @@ function DevSession(props: DevSessionProps) {
 			// startDevWorker
 			accountId={accountId}
 			setAccountId={setAccountIdAndResolveDeferred}
-			experimentalDevEnv={props.experimentalDevEnv}
 		/>
 	);
 }

@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach } from "vitest";
 
 const teardownCallbacks: (() => void | Promise<void>)[] = [];
+// TODO: Switch to vitest.onTestFinished()
 export function teardown(callback: () => void | Promise<void>) {
 	// `unshift()` so teardown callbacks executed in reverse
 	teardownCallbacks.unshift(callback);
@@ -28,6 +29,11 @@ afterEach(async () => {
 
 export function useTmp() {
 	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "wrangler-vitest-"));
-	teardown(() => fs.rmSync(tmp, { recursive: true, force: true }));
+	teardown(() => {
+		try {
+			// This sometimes fails with EBUSY on Windows
+			fs.rmSync(tmp, { recursive: true, force: true });
+		} catch {}
+	});
 	return tmp;
 }

@@ -83,7 +83,6 @@ function createWorkerBundleFormData(
 		migrations: undefined,
 		compatibility_date: config?.compatibility_date,
 		compatibility_flags: config?.compatibility_flags,
-		usage_model: undefined,
 		keepVars: undefined,
 		keepSecrets: undefined,
 		keepBindings: undefined,

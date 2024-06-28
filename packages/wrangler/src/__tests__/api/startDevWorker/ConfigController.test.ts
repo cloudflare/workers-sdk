@@ -1,7 +1,11 @@
 import events from "node:events";
+import path from "node:path";
+import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
-import type { ConfigUpdateEvent, StartDevWorkerOptions } from "../../../api";
+import { runInTempDir } from "../../helpers/run-in-tmp";
+import { seed } from "../../helpers/seed";
+import type { ConfigUpdateEvent, StartDevWorkerInput } from "../../../api";
 
 async function waitForConfigUpdate(
 	controller: ConfigController
@@ -11,15 +15,24 @@ async function waitForConfigUpdate(
 }
 
 describe("ConfigController", () => {
+	runInTempDir();
 	it("should emit configUpdate events with defaults applied", async () => {
 		const controller = new ConfigController();
 		const event = waitForConfigUpdate(controller);
-		const config: StartDevWorkerOptions = {
-			entrypoint: { path: "src/index.ts" },
-			directory: "./",
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+		});
+		const config: StartDevWorkerInput = {
+			entrypoint: "src/index.ts",
 		};
 
-		controller.set(config);
+		await controller.set(config);
 
 		await expect(event).resolves.toMatchObject({
 			type: "configUpdate",
@@ -28,13 +41,11 @@ describe("ConfigController", () => {
 					additionalModules: [],
 					define: {},
 					format: "modules",
-					moduleRoot: "./",
+					moduleRoot: path.join(process.cwd(), "src"),
 					moduleRules: [],
 				},
-				directory: "./",
-				entrypoint: {
-					path: "src/index.ts",
-				},
+				directory: process.cwd(),
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
 			},
 		});
 	});
@@ -42,30 +53,38 @@ describe("ConfigController", () => {
 	it("should shallow merge patched config", async () => {
 		const controller = new ConfigController();
 		const event1 = waitForConfigUpdate(controller);
-		const config: StartDevWorkerOptions = {
-			entrypoint: { path: "src/index.ts" },
-			directory: "./",
+		await seed({
+			"src/index.ts": dedent/* javascript */ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello world")
+					}
+				} satisfies ExportedHandler
+			`,
+		});
+		const config: StartDevWorkerInput = {
+			entrypoint: "src/index.ts",
 		};
 
-		controller.set(config);
+		await controller.set(config);
 
 		await expect(event1).resolves.toMatchObject({
 			type: "configUpdate",
 			config: {
-				entrypoint: { path: "src/index.ts" },
-				directory: "./",
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
+				directory: process.cwd(),
 				build: {
 					additionalModules: [],
 					define: {},
 					format: "modules",
-					moduleRoot: "./",
+					moduleRoot: path.join(process.cwd(), "src"),
 					moduleRules: [],
 				},
 			},
 		});
 
 		const event2 = waitForConfigUpdate(controller);
-		controller.patch({
+		await controller.patch({
 			dev: {
 				remote: true,
 				liveReload: true,
@@ -76,13 +95,13 @@ describe("ConfigController", () => {
 		await expect(event2).resolves.toMatchObject({
 			type: "configUpdate",
 			config: {
-				entrypoint: { path: "src/index.ts" },
-				directory: "./",
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
+				directory: process.cwd(),
 				build: {
 					additionalModules: [],
 					define: {},
 					format: "modules",
-					moduleRoot: "./",
+					moduleRoot: path.join(process.cwd(), "src"),
 					moduleRules: [],
 				},
 				dev: {
@@ -94,26 +113,26 @@ describe("ConfigController", () => {
 		});
 
 		const event3 = waitForConfigUpdate(controller);
-		controller.patch({
+		await controller.patch({
 			dev: {
-				server: { hostname: "myexample.com" },
+				origin: { hostname: "myexample.com" },
 			},
 		});
 		// expect `dev` field to be overwritten and all other config to remain intact
 		await expect(event3).resolves.toMatchObject({
 			type: "configUpdate",
 			config: {
-				entrypoint: { path: "src/index.ts" },
-				directory: "./",
+				entrypoint: path.join(process.cwd(), "src/index.ts"),
+				directory: process.cwd(),
 				build: {
 					additionalModules: [],
 					define: {},
 					format: "modules",
-					moduleRoot: "./",
+					moduleRoot: path.join(process.cwd(), "src"),
 					moduleRules: [],
 				},
 				dev: {
-					server: { hostname: "myexample.com" },
+					origin: { hostname: "myexample.com" },
 				},
 			},
 		});

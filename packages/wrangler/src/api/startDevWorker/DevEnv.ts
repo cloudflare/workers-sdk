@@ -8,7 +8,7 @@ import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { StartDevWorkerOptions, Worker } from "./types";
+import type { StartDevWorkerInput, Worker } from "./types";
 
 export class DevEnv extends EventEmitter {
 	config: ConfigController;
@@ -16,10 +16,10 @@ export class DevEnv extends EventEmitter {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
-	startWorker(options: StartDevWorkerOptions): Worker {
+	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
 		const worker = createWorkerObject(this);
 
-		this.config.set(options);
+		await this.config.set(options);
 
 		return worker;
 	}
@@ -93,14 +93,13 @@ export class DevEnv extends EventEmitter {
 	// *********************
 
 	async teardown() {
-		this.emit("teardown");
-
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
 			...this.runtimes.map((runtime) => runtime.teardown()),
 			this.proxy.teardown(),
 		]);
+		this.emit("teardown");
 	}
 
 	emitErrorEvent(ev: ErrorEvent) {

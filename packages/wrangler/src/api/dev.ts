@@ -8,6 +8,8 @@ import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { ProxyData } from "./startDevWorker";
+import type { FSWatcher } from "chokidar";
+import type { Instance } from "ink";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 
@@ -250,14 +252,20 @@ export async function unstable_dev(
 		};
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-		const devServer = await run(
+		const devServer = (await run(
 			{
-				DEV_ENV: devEnv,
+				DEV_ENV: false,
 				FILE_BASED_REGISTRY: fileBasedRegistry,
+				JSON_CONFIG_FILE: Boolean(devOptions.experimentalJsonConfig),
 			},
 			() => startDev(devOptions)
-		);
+		)) as {
+			devReactElement: Instance;
+			watcher: FSWatcher | undefined;
+			stop: () => Promise<void>;
+		};
 		const { port, address, proxyData } = await readyPromise;
+
 		return {
 			port,
 			address,

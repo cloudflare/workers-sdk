@@ -128,37 +128,32 @@ interface RemoteProps {
 	sendMetrics: boolean | undefined;
 
 	setAccountId: (accountId: string) => void;
-	experimentalDevEnv: boolean;
 }
 
 export function Remote(props: RemoteProps) {
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
-	if (!props.experimentalDevEnv) {
-		// this condition WILL be static and therefore safe to wrap around a hook
-		// eslint-disable-next-line react-hooks/rules-of-hooks
-		useWorker({
-			name: props.name,
-			bundle: props.bundle,
-			format: props.format,
-			modules: props.bundle ? props.bundle.modules : [],
-			accountId: props.accountId,
-			bindings: props.bindings,
-			assetPaths: props.assetPaths,
-			isWorkersSite: props.isWorkersSite,
-			compatibilityDate: props.compatibilityDate,
-			compatibilityFlags: props.compatibilityFlags,
-			usageModel: props.usageModel,
-			env: props.env,
-			legacyEnv: props.legacyEnv,
-			host: props.host,
-			routes: props.routes,
-			onReady: props.onReady,
-			sendMetrics: props.sendMetrics,
-			port: props.port,
-		});
-	}
+	useWorker({
+		name: props.name,
+		bundle: props.bundle,
+		format: props.format,
+		modules: props.bundle ? props.bundle.modules : [],
+		accountId: props.accountId,
+		bindings: props.bindings,
+		assetPaths: props.assetPaths,
+		isWorkersSite: props.isWorkersSite,
+		compatibilityDate: props.compatibilityDate,
+		compatibilityFlags: props.compatibilityFlags,
+		usageModel: props.usageModel,
+		env: props.env,
+		legacyEnv: props.legacyEnv,
+		host: props.host,
+		routes: props.routes,
+		onReady: props.onReady,
+		sendMetrics: props.sendMetrics,
+		port: props.port,
+	});
 
 	const errorHandler = useErrorHandler();
 
@@ -319,7 +314,6 @@ export function useWorker(
 				bindings: props.bindings,
 				compatibilityDate: props.compatibilityDate,
 				compatibilityFlags: props.compatibilityFlags,
-				usageModel: props.usageModel,
 			});
 
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
@@ -438,7 +432,9 @@ export function useWorker(
 	return token;
 }
 
-export async function startRemoteServer(props: RemoteProps) {
+export async function startRemoteServer(
+	props: RemoteProps & { experimentalDevEnv: boolean }
+) {
 	let accountId = props.accountId;
 	if (accountId === undefined) {
 		const accountChoices = await getAccountChoices();
@@ -567,7 +563,6 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 			bindings: props.bindings,
 			compatibilityDate: props.compatibilityDate,
 			compatibilityFlags: props.compatibilityFlags,
-			usageModel: props.usageModel,
 		});
 		const workerPreviewToken = await createWorkerPreview(
 			init,
@@ -608,7 +603,6 @@ export async function createRemoteWorkerInit(props: {
 	bindings: CfWorkerInit["bindings"];
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	usageModel: "bundled" | "unbound" | undefined;
 }) {
 	const { entrypointSource: content, modules } = withSourceURLs(
 		props.bundle.path,
@@ -674,7 +668,6 @@ export async function createRemoteWorkerInit(props: {
 		migrations: undefined, // no migrations in dev
 		compatibility_date: props.compatibilityDate,
 		compatibility_flags: props.compatibilityFlags,
-		usage_model: props.usageModel,
 		keepVars: true,
 		keepSecrets: true,
 		logpush: false,

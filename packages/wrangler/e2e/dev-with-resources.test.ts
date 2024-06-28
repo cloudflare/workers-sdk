@@ -4,7 +4,7 @@ import getPort from "get-port";
 import dedent from "ts-dedent";
 import { Agent, fetch } from "undici";
 import { beforeEach, describe, expect, it } from "vitest";
-import { WebSocket } from "ws";
+import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
@@ -305,7 +305,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	it("exposes KV namespace bindings", async () => {
 		const ns = await helper.kv(isLocal);
-		await helper.runLongLived(
+		await helper.run(
 			`wrangler kv key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
 		);
 
