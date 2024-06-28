@@ -5,7 +5,7 @@ import { setTimeout } from "timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 
@@ -185,10 +185,6 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		ws.close();
 	});
 	it("User worker exception", async (t) => {
-		const consoleErrorSpy = vi
-			.spyOn(console, "error")
-			.mockImplementation(() => {});
-
 		const devEnv = new DevEnv();
 		t.onTestFinished(() => devEnv.teardown());
 
@@ -209,13 +205,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 			dev: { remote },
 		});
 
-		let res = await worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toMatch(/^Error: Boom!/);
-
-		await setTimeout(100); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
-		expect(consoleErrorSpy).toBeCalledWith(
-			expect.stringContaining("Error: Boom!")
-		);
+		await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom!");
 
 		await helper.seed({
 			"src/index.ts": dedent`
@@ -228,13 +218,7 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		});
 		await setTimeout(300);
 
-		res = await worker.fetch("http://dummy");
-		await expect(res.text()).resolves.toMatch(/^Error: Boom 2!/);
-
-		await setTimeout(100); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
-		expect(consoleErrorSpy).toBeCalledWith(
-			expect.stringContaining("Error: Boom 2!")
-		);
+		await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom 2!");
 
 		// test eyeball requests receive the pretty error page
 		await helper.seed({
@@ -274,15 +258,11 @@ describe.each(OPTIONS)("DevEnv", ({ remote }) => {
 		});
 		await setTimeout(300);
 
-		res = await worker.fetch("http://dummy");
+		let res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:3");
 
-		consoleErrorSpy.mockReset();
 		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:3");
-
-		await setTimeout(100); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
-		expect(consoleErrorSpy).not.toHaveBeenCalled();
 	});
 	it("config.dev.{server,inspector} changes, restart the server instance", async (t) => {
 		const devEnv = new DevEnv();
