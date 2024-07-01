@@ -1,9 +1,10 @@
 import { setTimeout } from "node:timers/promises";
 import { Log } from "miniflare";
 import { vitest } from "vitest";
-import hotkeys from "../cli-hotkeys";
+import registerHotKeys from "../cli-hotkeys";
 import { Logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 
 const writeToMockedStdin = (input: string) => _internalKeyPressCallback(input);
 let _internalKeyPressCallback: (input: string) => void;
@@ -17,8 +18,10 @@ vitest.mock("../utils/onKeyPress", async () => {
 	};
 });
 
-describe("Hotkeys", () => {
+describe("Hot Keys", () => {
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+	setIsTTY(true);
 
 	describe("callbacks", () => {
 		it("calls handlers when a key is pressed", async () => {
@@ -31,7 +34,7 @@ describe("Hotkeys", () => {
 				{ keys: ["c"], label: "third option", handler: handlerC },
 			];
 
-			hotkeys(options);
+			registerHotKeys(options);
 
 			writeToMockedStdin("a");
 			expect(handlerA).toHaveBeenCalled();
@@ -58,7 +61,7 @@ describe("Hotkeys", () => {
 				{ keys: ["a"], label: "first option", handler: handlerA },
 			];
 
-			hotkeys(options);
+			registerHotKeys(options);
 
 			writeToMockedStdin("a");
 			expect(handlerA).toHaveBeenCalled();
@@ -75,7 +78,7 @@ describe("Hotkeys", () => {
 				{ keys: ["a"], label: "first option", handler: handlerA },
 			];
 
-			hotkeys(options);
+			registerHotKeys(options);
 
 			writeToMockedStdin("z");
 			expect(handlerA).not.toHaveBeenCalled();
@@ -87,7 +90,7 @@ describe("Hotkeys", () => {
 				{ keys: ["a", "b", "c"], label: "first option", handler: handlerA },
 			];
 
-			hotkeys(options);
+			registerHotKeys(options);
 
 			writeToMockedStdin("a");
 			expect(handlerA).toHaveBeenCalled();
@@ -112,7 +115,7 @@ describe("Hotkeys", () => {
 				{ keys: ["b"], label: "second option", handler: handlerB },
 			];
 
-			hotkeys(options);
+			registerHotKeys(options);
 
 			writeToMockedStdin("a");
 			expect(std.err).toMatchInlineSnapshot(`
@@ -145,10 +148,10 @@ describe("Hotkeys", () => {
 				{ keys: ["c"], label: () => "third option", handler: handlerC },
 			];
 
-			const unregisterHotKeys = hotkeys(options);
+			const unregisterregisterHotKeys = registerHotKeys(options);
 
 			expect(
-				// @ts-expect-error _getBottomFloat is declared Private
+				// @ts-expect-error _getBottomFloat is declared private
 				Logger._getBottomFloat()
 			).toMatchInlineSnapshot(`
 				"╭─────────────────────────────────────────────────────────╮
@@ -157,7 +160,7 @@ describe("Hotkeys", () => {
 			`);
 
 			expect(
-				// @ts-expect-error _getBottomFloat is declared Private
+				// @ts-expect-error _getBottomFloat is declared private
 				Log._getBottomFloat()
 			).toMatchInlineSnapshot(`
 				"╭─────────────────────────────────────────────────────────╮
@@ -165,15 +168,15 @@ describe("Hotkeys", () => {
 				╰─────────────────────────────────────────────────────────╯"
 			`);
 
-			unregisterHotKeys();
+			unregisterregisterHotKeys();
 
 			expect(
-				// @ts-expect-error _getBottomFloat is declared Private
+				// @ts-expect-error _getBottomFloat is declared private
 				Logger._getBottomFloat
 			).toBeUndefined();
 
 			expect(
-				// @ts-expect-error _getBottomFloat is declared Private
+				// @ts-expect-error _getBottomFloat is declared private
 				Log._getBottomFloat
 			).toBeUndefined();
 		});
