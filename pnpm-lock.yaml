@@ -10,6 +10,7 @@ overrides:
   '@types/react-transition-group>@types/react': ^18
   '@cloudflare/elements>@types/react': ^18
   capnpc-ts>typescript: 5.4.5
+  vitest-pool-workers>vite: 5.1.0
 
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
@@ -970,7 +971,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 2.0.5(eslint@8.49.0)
+        version: 2.0.6(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.10.0(eslint@8.49.0)(typescript@5.4.5))(eslint@8.49.0)
@@ -6122,8 +6123,8 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-config-turbo@2.0.5:
-    resolution: {integrity: sha512-iE/oD0ZBM6OQFbS/bKnc3UtqhMmJ1IEfqTQ0qCY1CauHm7gj85aRRX/1ydDYKLpu0RupBqzVPybsWxPif9rsig==}
+  eslint-config-turbo@2.0.6:
+    resolution: {integrity: sha512-PkRjFnZUZWPcrYT4Xoi5OWOUtnn6xVGh88I6TsayiH4AQZuLs/MDmzfJRK+PiWIrI7Q7sbsVEQP+nUyyRE3uAw==}
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -6262,6 +6263,7 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
 
+<<<<<<< HEAD
   eslint-plugin-testing-library@5.11.0:
     resolution: {integrity: sha512-ELY7Gefo+61OfXKlQeXNIDVVLPcvKTeiQOoMZG9TeuWa7Ln4dUNRv8JdRWBQI9Mbb427XGlVB1aa1QPZxBJM8Q==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0, npm: '>=6'}
@@ -6270,6 +6272,10 @@ packages:
 
   eslint-plugin-turbo@2.0.5:
     resolution: {integrity: sha512-nCTXZdaKmdRybBdjnMrDFG+ppLc9toUqB01Hf0pfhkQw8OoC29oJIVPsCSvuL/W58RKD02CNEUrwnVt57t36IQ==}
+=======
+  eslint-plugin-turbo@2.0.6:
+    resolution: {integrity: sha512-yGnpMvyBxI09ZrF5bGpaniBz57MiExTCsRnNxP+JnbMFD+xU3jG3ukRzehVol8LYNdC/G7E4HoH+x7OEpoSGAQ==}
+>>>>>>> 8ad4ed671 (chore: override vitest-pool-workers vite version)
     peerDependencies:
       eslint: '>6.6.0'
 
@@ -15814,10 +15820,10 @@ snapshots:
     dependencies:
       eslint: 8.57.0
 
-  eslint-config-turbo@2.0.5(eslint@8.49.0):
+  eslint-config-turbo@2.0.6(eslint@8.49.0):
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 2.0.5(eslint@8.49.0)
+      eslint-plugin-turbo: 2.0.6(eslint@8.49.0)
 
   eslint-import-resolver-node@0.3.7:
     dependencies:
@@ -16068,6 +16074,7 @@ snapshots:
       semver: 6.3.1
       string.prototype.matchall: 4.0.8
 
+<<<<<<< HEAD
   eslint-plugin-testing-library@5.11.0(eslint@8.57.0)(typescript@5.4.5):
     dependencies:
       '@typescript-eslint/utils': 5.59.9(eslint@8.57.0)(typescript@5.4.5)
@@ -16077,6 +16084,9 @@ snapshots:
       - typescript
 
   eslint-plugin-turbo@2.0.5(eslint@8.49.0):
+=======
+  eslint-plugin-turbo@2.0.6(eslint@8.49.0):
+>>>>>>> 8ad4ed671 (chore: override vitest-pool-workers vite version)
     dependencies:
       dotenv: 16.0.3
       eslint: 8.49.0
