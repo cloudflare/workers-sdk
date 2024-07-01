@@ -102,6 +102,7 @@ export class Logger {
 	}
 
 	private static _getBottomFloat?: () => string;
+	private static _previousBottomFloatLineCount = 0;
 	static registerGlobalBottomFloat(getBottomFloat: () => string) {
 		if (process.stdin.isTTY) {
 			Logger._getBottomFloat = getBottomFloat;
@@ -115,10 +116,8 @@ export class Logger {
 		message: string
 	) {
 		const bottomFloat = Logger._getBottomFloat?.();
-		if (bottomFloat) {
-			const lines = bottomFloat.split("\n").length;
-
-			process.stdout.moveCursor(0, -lines);
+		if (Logger._previousBottomFloatLineCount) {
+			process.stdout.moveCursor(0, -Logger._previousBottomFloatLineCount);
 			process.stdout.clearScreenDown();
 		}
 
@@ -126,6 +125,7 @@ export class Logger {
 
 		if (bottomFloat) {
 			console.log(bottomFloat);
+			Logger._previousBottomFloatLineCount = bottomFloat.split("\n").length;
 		}
 	}
 
