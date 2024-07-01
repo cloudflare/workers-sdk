@@ -1,7 +1,7 @@
 import readline from "readline";
 import { Transform } from "stream";
 
-type KeypressEvent = {
+export type KeypressEvent = {
 	name: string;
 	sequence: string;
 	ctrl: boolean;

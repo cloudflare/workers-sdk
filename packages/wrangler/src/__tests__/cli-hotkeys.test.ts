@@ -5,9 +5,17 @@ import registerHotKeys from "../cli-hotkeys";
 import { Logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import type { KeypressEvent } from "../utils/onKeyPress";
 
-const writeToMockedStdin = (input: string) => _internalKeyPressCallback(input);
-let _internalKeyPressCallback: (input: string) => void;
+const writeToMockedStdin = (input: string) =>
+	_internalKeyPressCallback({
+		name: input,
+		sequence: input,
+		ctrl: false,
+		meta: false,
+		shift: false,
+	});
+let _internalKeyPressCallback: (input: KeypressEvent) => void;
 vitest.mock("../utils/onKeyPress", async () => {
 	return {
 		onKeyPress(callback: () => void) {
@@ -152,15 +160,6 @@ describe("Hot Keys", () => {
 
 			expect(
 				// @ts-expect-error _getBottomFloat is declared private
-				Logger._getBottomFloat()
-			).toMatchInlineSnapshot(`
-				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option  │
-				╰─────────────────────────────────────────────────────────╯"
-			`);
-
-			expect(
-				// @ts-expect-error _getBottomFloat is declared private
 				Log._getBottomFloat()
 			).toMatchInlineSnapshot(`
 				"╭─────────────────────────────────────────────────────────╮
@@ -169,11 +168,6 @@ describe("Hot Keys", () => {
 			`);
 
 			unregisterregisterHotKeys();
-
-			expect(
-				// @ts-expect-error _getBottomFloat is declared private
-				Logger._getBottomFloat
-			).toBeUndefined();
 
 			expect(
 				// @ts-expect-error _getBottomFloat is declared private

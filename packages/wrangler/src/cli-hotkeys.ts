@@ -1,6 +1,6 @@
 import { Log } from "miniflare";
 import { unwrapHook } from "./api/startDevWorker/utils";
-import { Logger, logger } from "./logger";
+import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";
 
