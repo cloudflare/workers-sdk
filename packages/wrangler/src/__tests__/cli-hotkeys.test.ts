@@ -2,6 +2,7 @@ import { setTimeout } from "node:timers/promises";
 import { Log } from "miniflare";
 import { vitest } from "vitest";
 import registerHotKeys from "../cli-hotkeys";
+import { logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import type { KeypressEvent } from "../utils/onKeyPress";
@@ -157,23 +158,26 @@ describe("Hot Keys", () => {
 				{ keys: ["c"], label: () => "third option", handler: handlerC },
 			];
 
-			const unregisterregisterHotKeys = registerHotKeys(options);
+			const unregisterHotKeys = registerHotKeys(options);
+			logger.log("something 1");
 
-			expect(
-				// @ts-expect-error _getBottomFloat is declared private
-				Log._getBottomFloat()
-			).toMatchInlineSnapshot(`
-				"╭─────────────────────────────────────────────────────────╮
+			expect(std.out).toMatchInlineSnapshot(`
+				"something 1
+				╭─────────────────────────────────────────────────────────╮
 				│  [a] first option, [b] second option, [c] third option  │
 				╰─────────────────────────────────────────────────────────╯"
 			`);
 
-			unregisterregisterHotKeys();
+			unregisterHotKeys();
+			logger.log("something 2");
 
-			expect(
-				// @ts-expect-error _getBottomFloat is declared private
-				Log._getBottomFloat
-			).toBeUndefined();
+			expect(std.out).toMatchInlineSnapshot(`
+				"something 1
+				╭─────────────────────────────────────────────────────────╮
+				│  [a] first option, [b] second option, [c] third option  │
+				╰─────────────────────────────────────────────────────────╯
+				something 2"
+			`);
 		});
 	});
 });

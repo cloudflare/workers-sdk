@@ -87,7 +87,9 @@ export class Logger {
 		return this.doLog("log", [t.toString()]);
 	}
 	dir(...args: Parameters<(typeof console)["dir"]>) {
-		Log.unsafe_logWithBottomFloat(() => console.dir(...args));
+		Logger.#beforeLogHook?.();
+		console.dir(...args);
+		Logger.#afterLogHook?.();
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
@@ -101,8 +103,19 @@ export class Logger {
 
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			Log.unsafe_logWithBottomFloat(() => console[messageLevel](message));
+			Logger.#beforeLogHook?.();
+			console[messageLevel](message);
+			Logger.#afterLogHook?.();
 		}
+	}
+
+	static #beforeLogHook: (() => void) | undefined;
+	static registerBeforeLogHook(callback: (() => void) | undefined) {
+		this.#beforeLogHook = callback;
+	}
+	static #afterLogHook: (() => void) | undefined;
+	static registerAfterLogHook(callback: (() => void) | undefined) {
+		this.#afterLogHook = callback;
 	}
 
 	private formatMessage(

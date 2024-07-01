@@ -67,36 +67,18 @@ export class Log {
 	}
 
 	protected log(message: string): void {
-		Log.unsafe_logWithBottomFloat(() => console.log(message));
+		Log.#beforeLogHook?.();
+		console.log(message);
+		Log.#afterLogHook?.();
 	}
 
-	private static _getBottomFloat?: () => string;
-	private static _previousBottomFloatLineCount = 0;
-	static unsafe_registerGlobalBottomFloat(getBottomFloat: () => string) {
-		if (process.stdin.isTTY) {
-			Log._getBottomFloat = getBottomFloat;
-		}
+	static #beforeLogHook: (() => void) | undefined;
+	static unstable_registerBeforeLogHook(callback: (() => void) | undefined) {
+		this.#beforeLogHook = callback;
 	}
-	static unsafe_unregisterGlobalBottomFloat() {
-		Log._getBottomFloat = undefined;
-	}
-	static unsafe_logWithBottomFloat(doLog: () => void) {
-		if (Log._previousBottomFloatLineCount) {
-			readline.moveCursor(
-				process.stdout,
-				0,
-				-Log._previousBottomFloatLineCount
-			);
-			process.stdout.clearScreenDown();
-		}
-
-		doLog();
-
-		const bottomFloat = Log._getBottomFloat?.();
-		if (bottomFloat) {
-			console.log(bottomFloat);
-			Log._previousBottomFloatLineCount = 3;
-		}
+	static #afterLogHook: (() => void) | undefined;
+	static unstable_registerAfterLogHook(callback: (() => void) | undefined) {
+		this.#afterLogHook = callback;
 	}
 
 	logWithLevel(level: LogLevel, message: string): void {

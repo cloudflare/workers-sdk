@@ -1,6 +1,7 @@
+import readline from "readline";
 import { Log } from "miniflare";
 import { unwrapHook } from "./api/startDevWorker/utils";
-import { logger } from "./logger";
+import { Logger, logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";
 
@@ -58,10 +59,32 @@ export default function (
 		}
 	});
 
-	Log.unsafe_registerGlobalBottomFloat(formatInstructions);
+	let previousInstructionsLineCount = 0;
+	function clearPreviousInstructions() {
+		if (previousInstructionsLineCount) {
+			readline.moveCursor(process.stdout, 0, -previousInstructionsLineCount);
+			process.stdout.clearScreenDown();
+		}
+	}
+	function printInstructions() {
+		const bottomFloat = formatInstructions();
+		if (bottomFloat) {
+			console.log(bottomFloat);
+			previousInstructionsLineCount = bottomFloat.split("\n").length;
+		}
+	}
+
+	Logger.registerBeforeLogHook(clearPreviousInstructions);
+	Logger.registerAfterLogHook(printInstructions);
+	Log.unstable_registerBeforeLogHook(clearPreviousInstructions);
+	Log.unstable_registerAfterLogHook(printInstructions);
 
 	return () => {
 		unregisterKeyPress();
-		Log.unsafe_unregisterGlobalBottomFloat();
+		// clearPreviousInstructions();
+		Logger.registerBeforeLogHook(undefined);
+		Logger.registerAfterLogHook(undefined);
+		Log.unstable_registerBeforeLogHook(undefined);
+		Log.unstable_registerAfterLogHook(undefined);
 	};
 }
