@@ -175,13 +175,13 @@ export function logConsoleMessage(
 	if (method in console) {
 		switch (method) {
 			case "dir":
-				logger.dir(args);
+				logger.console("dir", args);
 				break;
 			case "table":
 				logger.table(args.map((value) => ({ value })));
 				break;
 			default:
-				logger.log(...args);
+				logger.console(method, ...args);
 				break;
 		}
 	} else {

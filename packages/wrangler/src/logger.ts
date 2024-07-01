@@ -85,9 +85,16 @@ export class Logger {
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
 	}
-	dir(...args: Parameters<(typeof console)["dir"]>) {
+	console<M extends keyof Omit<Console, "Console">>(
+		method: M,
+		...args: Parameters<Console[M]>
+	) {
+		if (typeof console[method] !== "function") {
+			throw new Error(`console.${method}() is not a function`);
+		}
+
 		Logger.#beforeLogHook?.();
-		console.dir(...args);
+		console[method](console, args);
 		Logger.#afterLogHook?.();
 	}
 
