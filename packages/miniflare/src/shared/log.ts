@@ -66,20 +66,20 @@ export class Log {
 	}
 
 	protected log(message: string): void {
-		Log.logWithBottomFloat(() => console.log(message));
+		Log.unsafe_logWithBottomFloat(() => console.log(message));
 	}
 
 	private static _getBottomFloat?: () => string;
 	private static _previousBottomFloatLineCount = 0;
-	static registerGlobalBottomFloat(getBottomFloat: () => string) {
+	static unsafe_registerGlobalBottomFloat(getBottomFloat: () => string) {
 		if (process.stdin.isTTY) {
 			Log._getBottomFloat = getBottomFloat;
 		}
 	}
-	static unregisterGlobalBottomFloat() {
+	static unsafe_unregisterGlobalBottomFloat() {
 		Log._getBottomFloat = undefined;
 	}
-	static logWithBottomFloat(doLog: () => void) {
+	static unsafe_logWithBottomFloat(doLog: () => void) {
 		if (Log._previousBottomFloatLineCount) {
 			process.stdout.moveCursor(0, -Log._previousBottomFloatLineCount);
 			process.stdout.clearScreenDown();

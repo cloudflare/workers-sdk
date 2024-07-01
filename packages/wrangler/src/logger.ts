@@ -87,7 +87,7 @@ export class Logger {
 		return this.doLog("log", [t.toString()]);
 	}
 	dir(...args: Parameters<(typeof console)["dir"]>) {
-		Log.logWithBottomFloat(() => console.dir(...args));
+		Log.unsafe_logWithBottomFloat(() => console.dir(...args));
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
@@ -101,7 +101,7 @@ export class Logger {
 
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			Log.logWithBottomFloat(() => console[messageLevel](message));
+			Log.unsafe_logWithBottomFloat(() => console[messageLevel](message));
 		}
 	}
 

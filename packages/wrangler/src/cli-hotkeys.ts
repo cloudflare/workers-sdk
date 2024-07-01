@@ -58,10 +58,10 @@ export default function (
 		}
 	});
 
-	Log.registerGlobalBottomFloat(formatInstructions);
+	Log.unsafe_registerGlobalBottomFloat(formatInstructions);
 
 	return () => {
 		unregisterKeyPress();
-		Log.unregisterGlobalBottomFloat();
+		Log.unsafe_unregisterGlobalBottomFloat();
 	};
 }
