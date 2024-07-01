@@ -48,7 +48,6 @@ import {
 } from "./index";
 import type {
 	ProxyData,
-	ReadyEvent,
 	ReloadCompleteEvent,
 	StartDevWorkerInput,
 	Trigger,
@@ -544,10 +543,8 @@ export async function startDev(args: StartDevOptions) {
 
 		if (args.experimentalDevEnv) {
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
-			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
+			void devEnv.proxy.ready.promise.then(({ url }) => {
 				if (process.send) {
-					const url = await event.proxyWorker.ready;
-
 					process.send(
 						JSON.stringify({
 							event: "DEV_SERVER_READY",
@@ -557,6 +554,7 @@ export async function startDev(args: StartDevOptions) {
 					);
 				}
 			});
+
 			if (!args.disableDevRegistry) {
 				const teardownRegistryPromise = devRegistry((registry) =>
 					updateDevEnvRegistry(devEnv, registry)
@@ -570,8 +568,7 @@ export async function startDev(args: StartDevOptions) {
 						"reloadComplete",
 						async (reloadEvent: ReloadCompleteEvent) => {
 							if (!reloadEvent.config.dev?.remote) {
-								assert(devEnv.proxy.proxyWorker);
-								const url = await devEnv.proxy.proxyWorker.ready;
+								const { url } = await devEnv.proxy.ready.promise;
 
 								await maybeRegisterLocalWorker(
 									url,

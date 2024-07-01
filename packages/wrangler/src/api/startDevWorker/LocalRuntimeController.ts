@@ -239,12 +239,16 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 
 	#teardown = async (): Promise<void> => {
+		logger.debug("LocalRuntimeController teardown beginning...");
+
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
 		await this.#mf?.dispose();
 		this.#mf = undefined;
+
+		logger.debug("LocalRuntimeController teardown complete");
 	};
 	async teardown() {
 		return this.#mutex.runWith(this.#teardown);

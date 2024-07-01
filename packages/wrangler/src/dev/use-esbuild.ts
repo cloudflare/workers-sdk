@@ -116,7 +116,7 @@ export function runBuild(
 	) => void,
 	onErr: (err: Error) => void
 ) {
-	let stopWatching: (() => void) | undefined = undefined;
+	let stopWatching: (() => Promise<void>) | undefined = undefined;
 
 	const entryDirectory = path.dirname(entry.file);
 	const moduleCollector = noBundle
@@ -252,9 +252,7 @@ export function runBuild(
 				await updateBundle();
 			});
 
-			stopWatching = () => {
-				void watcher.close();
-			};
+			stopWatching = () => watcher.close();
 		}
 		const entrypointPath = realpathSync(
 			bundleResult?.resolvedEntryPointPath ?? entry.file
@@ -279,9 +277,7 @@ export function runBuild(
 		onErr(err);
 	});
 
-	return () => {
-		stopWatching?.();
-	};
+	return () => stopWatching?.();
 }
 
 export function useEsbuild({
@@ -313,7 +309,7 @@ export function useEsbuild({
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
 	useEffect(() => {
-		return runBuild(
+		const stopWatching = runBuild(
 			{
 				entry,
 				destination,
@@ -342,6 +338,10 @@ export function useEsbuild({
 			setBundle,
 			(err) => exit(err)
 		);
+
+		return () => {
+			void stopWatching();
+		};
 	}, [
 		entry,
 		destination,

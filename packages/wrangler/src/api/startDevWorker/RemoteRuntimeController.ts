@@ -253,8 +253,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async teardown() {
+		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
+		logger.debug("RemoteRuntimeController teardown complete");
 	}
 
 	// *********************
