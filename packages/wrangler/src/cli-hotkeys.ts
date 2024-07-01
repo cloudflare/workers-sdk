@@ -35,14 +35,24 @@ export default function (
 	}
 
 	const unregisterKeyPress = onKeyPress(async (key) => {
-		key = key.toLowerCase();
+		let char = key.name.toLowerCase();
+
+		if (key?.meta) {
+			char = "meta+" + char;
+		}
+		if (key?.ctrl) {
+			char = "ctrl+" + char;
+		}
+		if (key?.shift) {
+			char = "shift+" + char;
+		}
 
 		for (const { keys, handler } of options) {
-			if (keys.includes(key)) {
+			if (keys.includes(char)) {
 				try {
 					await handler();
 				} catch {
-					logger.error(`Error while handling hotkey [${key}]`);
+					logger.error(`Error while handling hotkey [${char}]`);
 				}
 			}
 		}

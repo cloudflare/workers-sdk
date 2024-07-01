@@ -1,9 +1,15 @@
 import readline from "readline";
 import { Transform } from "stream";
 
-type KeypressEvent = { name: string; ctrl: boolean };
+type KeypressEvent = {
+	name: string;
+	sequence: string;
+	ctrl: boolean;
+	meta: boolean;
+	shift: boolean;
+};
 
-export function onKeyPress(callback: (key: string) => void) {
+export function onKeyPress(callback: (key: KeypressEvent) => void) {
 	// Listening for events on process.stdin (eg .on('keypress')) causes it to go into 'old mode'
 	// which keeps this nodejs process alive even after calling .off('keypress')
 	// WORKAROUND: piping stdin via a transform stream allows us to call stream.destroy()
@@ -21,13 +27,9 @@ export function onKeyPress(callback: (key: string) => void) {
 		process.stdin.setRawMode(true);
 	}
 
-	const handler = async (char: string, key: KeypressEvent) => {
-		if (key && key.ctrl && key.name == "c") {
-			char = "CTRL+C";
-		}
-
-		if (char) {
-			callback(char);
+	const handler = async (_char: string, key: KeypressEvent) => {
+		if (key) {
+			callback(key);
 		}
 	};
 
