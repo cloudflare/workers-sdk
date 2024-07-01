@@ -2,9 +2,8 @@ import { setTimeout } from "node:timers/promises";
 import { Log } from "miniflare";
 import { vitest } from "vitest";
 import hotkeys from "../cli-hotkeys";
-import { Logger, logger } from "../logger";
+import { Logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { useMockIsTTY } from "./helpers/mock-istty";
 
 const writeToMockedStdin = (input: string) => _internalKeyPressCallback(input);
 let _internalKeyPressCallback: (input: string) => void;
@@ -12,6 +11,8 @@ vitest.mock("../utils/onKeyPress", async () => {
 	return {
 		onKeyPress(callback: () => void) {
 			_internalKeyPressCallback = callback;
+
+			return () => {};
 		},
 	};
 });
@@ -134,7 +135,7 @@ describe("Hotkeys", () => {
 	});
 
 	describe("instructions", () => {
-		it("provides formatted instructions", async () => {
+		it("provides formatted instructions to Wrangler's & Miniflare's logger implementations", async () => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 			const handlerC = vi.fn();
@@ -144,7 +145,7 @@ describe("Hotkeys", () => {
 				{ keys: ["c"], label: () => "third option", handler: handlerC },
 			];
 
-			hotkeys(options);
+			const unregisterHotKeys = hotkeys(options);
 
 			expect(
 				// @ts-expect-error _getBottomFloat is declared Private
@@ -163,6 +164,18 @@ describe("Hotkeys", () => {
 				│  [a] first option, [b] second option, [c] third option  │
 				╰─────────────────────────────────────────────────────────╯"
 			`);
+
+			unregisterHotKeys();
+
+			expect(
+				// @ts-expect-error _getBottomFloat is declared Private
+				Logger._getBottomFloat
+			).toBeUndefined();
+
+			expect(
+				// @ts-expect-error _getBottomFloat is declared Private
+				Log._getBottomFloat
+			).toBeUndefined();
 		});
 	});
 });
