@@ -585,7 +585,7 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
-			if (process.stdout.isTTY && (args.showInteractiveDevSession ?? true)) {
+			if (process.stdout.isTTY && args.showInteractiveDevSession !== false) {
 				const unregisterHotKeys = registerHotKeys([
 					{
 						keys: ["b"],
