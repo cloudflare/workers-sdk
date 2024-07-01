@@ -1,4 +1,5 @@
 import path from "path";
+import readline from "readline";
 import { Colorize, dim, green, grey, red, reset, yellow } from "kleur/colors";
 import { LogLevel } from "../workers";
 
@@ -81,7 +82,11 @@ export class Log {
 	}
 	static unsafe_logWithBottomFloat(doLog: () => void) {
 		if (Log._previousBottomFloatLineCount) {
-			process.stdout.moveCursor(0, -Log._previousBottomFloatLineCount);
+			readline.moveCursor(
+				process.stdout,
+				0,
+				-Log._previousBottomFloatLineCount
+			);
 			process.stdout.clearScreenDown();
 		}
 
