@@ -10,6 +10,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
+import cliHotkeys from "./cli-hotkeys";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
@@ -17,12 +18,14 @@ import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
+import { openInspector } from "./dev/inspect";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
+import openInBrowser from "./open-in-browser";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
@@ -581,6 +584,62 @@ export async function startDev(args: StartDevOptions) {
 					);
 				});
 			}
+
+			if (process.stdout.isTTY && (args.showInteractiveDevSession ?? true)) {
+				const unregisterHotkeys = cliHotkeys([
+					{
+						keys: ["b"],
+						label: "open a browser",
+						handler: async () => {
+							const { url } = await devEnv.proxy.ready.promise;
+							await openInBrowser(url.href);
+						},
+					},
+					{
+						keys: ["d"],
+						label: "open devtools",
+						handler: async () => {
+							const { inspectorUrl } = await devEnv.proxy.ready.promise;
+
+							// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
+							await openInspector(
+								parseInt(inspectorUrl.port),
+								devEnv.config.latestConfig?.name
+							);
+						},
+					},
+					{
+						keys: ["l"],
+						label: () =>
+							`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
+						handler: async () => {
+							await devEnv.config.patch({
+								dev: {
+									...devEnv.config.latestConfig?.dev,
+									remote: !devEnv.config.latestConfig?.dev?.remote,
+								},
+							});
+						},
+					},
+					{
+						keys: ["c"],
+						label: "clear console",
+						handler: async ({ printInstructions }) => {
+							console.clear();
+							printInstructions();
+						},
+					},
+					{
+						keys: ["x", "q", "ctrl+c"],
+						label: "to exit",
+						handler: async () => {
+							await devEnv.teardown();
+							unregisterHotkeys();
+						},
+					},
+				]);
+			}
+
 			await devEnv.config.set({
 				name: args.name,
 				config: configPath,
