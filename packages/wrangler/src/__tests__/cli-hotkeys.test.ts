@@ -83,14 +83,19 @@ describe("Hot Keys", () => {
 
 		it("ignores unbound keys", async () => {
 			const handlerA = vi.fn();
+			const handlerD = vi.fn();
 			const options = [
 				{ keys: ["a"], label: "first option", handler: handlerA },
+				{ keys: ["d"], label: "disabled", disabled: true, handler: handlerD },
 			];
 
 			registerHotKeys(options);
 
 			writeToMockedStdin("z");
 			expect(handlerA).not.toHaveBeenCalled();
+
+			writeToMockedStdin("d");
+			expect(handlerD).not.toHaveBeenCalled();
 		});
 
 		it("calls handler if any additional key bindings are pressed", async () => {
@@ -151,10 +156,12 @@ describe("Hot Keys", () => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 			const handlerC = vi.fn();
+			const handlerD = vi.fn();
 			const options = [
 				{ keys: ["a"], label: "first option", handler: handlerA },
 				{ keys: ["b"], label: "second option", handler: handlerB },
 				{ keys: ["c"], label: () => "third option", handler: handlerC },
+				{ keys: ["d"], label: "disabled", disabled: true, handler: handlerD },
 			];
 
 			const unregisterHotKeys = registerHotKeys(options);

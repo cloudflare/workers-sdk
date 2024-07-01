@@ -610,6 +610,7 @@ export async function startDev(args: StartDevOptions) {
 					},
 					{
 						keys: ["l"],
+						disabled: args.forceLocal,
 						label: () =>
 							`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
 						handler: async () => {

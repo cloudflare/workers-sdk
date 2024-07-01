@@ -8,6 +8,7 @@ import type { Hook } from "./api";
 export default function (
 	options: Array<{
 		keys: string[];
+		disabled?: boolean;
 		label: Hook<string>;
 		handler: () => void | Promise<void>;
 	}>
@@ -25,6 +26,7 @@ export default function (
 	 */
 	function formatInstructions() {
 		const instructions = options
+			.filter((option) => !option.disabled)
 			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`)
 			.join(", ");
 
@@ -48,7 +50,11 @@ export default function (
 			char = "shift+" + char;
 		}
 
-		for (const { keys, handler } of options) {
+		for (const { keys, handler, disabled } of options) {
+			if (disabled) {
+				continue;
+			}
+
 			if (keys.includes(char)) {
 				try {
 					await handler();
