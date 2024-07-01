@@ -632,8 +632,8 @@ export async function startDev(args: StartDevOptions) {
 						keys: ["x", "q", "ctrl+c"],
 						label: "to exit",
 						handler: async () => {
-							await devEnv.teardown();
 							unregisterHotKeys();
+							await devEnv.teardown();
 						},
 					},
 				]);
