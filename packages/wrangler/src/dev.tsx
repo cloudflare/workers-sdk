@@ -5,7 +5,6 @@ import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import { render } from "ink";
-import { Log } from "miniflare";
 import { DevEnv } from "./api";
 import {
 	convertCfWorkerInitBindingstoBindings,
@@ -24,7 +23,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
-import { Logger, logger } from "./logger";
+import { logger } from "./logger";
 import * as metrics from "./metrics";
 import openInBrowser from "./open-in-browser";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
