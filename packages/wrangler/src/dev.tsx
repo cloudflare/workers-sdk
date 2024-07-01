@@ -11,7 +11,7 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import cliHotkeys from "./cli-hotkeys";
+import registerHotKeys from "./cli-hotkeys";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
@@ -587,7 +587,7 @@ export async function startDev(args: StartDevOptions) {
 			}
 
 			if (process.stdout.isTTY && (args.showInteractiveDevSession ?? true)) {
-				const { unregisterKeyPress, formatInstructions } = cliHotkeys([
+				const unregisterHotKeys = registerHotKeys([
 					{
 						keys: ["b"],
 						label: "open a browser",
@@ -634,13 +634,10 @@ export async function startDev(args: StartDevOptions) {
 						label: "to exit",
 						handler: async () => {
 							await devEnv.teardown();
-							unregisterKeyPress();
+							unregisterHotKeys();
 						},
 					},
 				]);
-
-				Logger.registerGlobalBottomFloat(formatInstructions);
-				Log.registerGlobalBottomFloat(formatInstructions);
 			}
 
 			await devEnv.config.set({

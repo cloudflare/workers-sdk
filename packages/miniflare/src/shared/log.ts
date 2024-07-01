@@ -69,14 +69,17 @@ export class Log {
 		this.logWithBottomFloat(message);
 	}
 
-	static #getBottomFloat?: () => string;
+	private static _getBottomFloat?: () => string;
 	static registerGlobalBottomFloat(getBottomFloat: () => string) {
 		if (process.stdin.isTTY) {
-			Log.#getBottomFloat = getBottomFloat;
+			Log._getBottomFloat = getBottomFloat;
 		}
 	}
+	static unregisterGlobalBottomFloat() {
+		Log._getBottomFloat = undefined;
+	}
 	private logWithBottomFloat(message: string) {
-		const bottomFloat = Log.#getBottomFloat?.();
+		const bottomFloat = Log._getBottomFloat?.();
 		if (bottomFloat) {
 			const lines = bottomFloat.split("\n").length;
 

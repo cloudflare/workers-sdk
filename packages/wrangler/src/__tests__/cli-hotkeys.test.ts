@@ -1,7 +1,8 @@
 import { setTimeout } from "node:timers/promises";
+import { Log } from "miniflare";
 import { vitest } from "vitest";
 import hotkeys from "../cli-hotkeys";
-import { logger } from "../logger";
+import { Logger, logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 
@@ -143,11 +144,22 @@ describe("Hotkeys", () => {
 				{ keys: ["c"], label: () => "third option", handler: handlerC },
 			];
 
-			const result = hotkeys(options);
+			hotkeys(options);
 
-			expect(result.formatInstructions()).toMatchInlineSnapshot(`
-				"
-				╭─────────────────────────────────────────────────────────╮
+			expect(
+				// @ts-expect-error _getBottomFloat is declared Private
+				Logger._getBottomFloat()
+			).toMatchInlineSnapshot(`
+				"╭─────────────────────────────────────────────────────────╮
+				│  [a] first option, [b] second option, [c] third option  │
+				╰─────────────────────────────────────────────────────────╯"
+			`);
+
+			expect(
+				// @ts-expect-error _getBottomFloat is declared Private
+				Log._getBottomFloat()
+			).toMatchInlineSnapshot(`
+				"╭─────────────────────────────────────────────────────────╮
 				│  [a] first option, [b] second option, [c] third option  │
 				╰─────────────────────────────────────────────────────────╯"
 			`);

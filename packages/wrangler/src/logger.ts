@@ -101,17 +101,20 @@ export class Logger {
 		}
 	}
 
-	static #getBottomFloat?: () => string;
+	private static _getBottomFloat?: () => string;
 	static registerGlobalBottomFloat(getBottomFloat: () => string) {
 		if (process.stdin.isTTY) {
-			Logger.#getBottomFloat = getBottomFloat;
+			Logger._getBottomFloat = getBottomFloat;
 		}
+	}
+	static unregisterGlobalBottomFloat() {
+		Logger._getBottomFloat = undefined;
 	}
 	private doLogWithBottomFloat(
 		messageLevel: Exclude<LoggerLevel, "none">,
 		message: string
 	) {
-		const bottomFloat = Logger.#getBottomFloat?.();
+		const bottomFloat = Logger._getBottomFloat?.();
 		if (bottomFloat) {
 			const lines = bottomFloat.split("\n").length;
 

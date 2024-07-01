@@ -1,5 +1,6 @@
+import { Log } from "miniflare";
 import { unwrapHook } from "./api/startDevWorker/utils";
-import { logger } from "./logger";
+import { Logger, logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";
 
@@ -11,7 +12,7 @@ export default function (
 	}>
 ) {
 	/**
-	 * Prints all options, comma-separated, prefixed by the first key in square brackets.
+	 * Formats all options, comma-separated, prefixed by the first key in square brackets.
 	 *
 	 * Example output:
 	 *  ╭─────────────────────────────────────────────────────────╮
@@ -27,7 +28,6 @@ export default function (
 			.join(", ");
 
 		return (
-			`\n` +
 			`╭──${"─".repeat(instructions.length)}──╮\n` +
 			`│  ${instructions}  │\n` +
 			`╰──${"─".repeat(instructions.length)}──╯`
@@ -48,5 +48,12 @@ export default function (
 		}
 	});
 
-	return { unregisterKeyPress, formatInstructions };
+	Logger.registerGlobalBottomFloat(formatInstructions);
+	Log.registerGlobalBottomFloat(formatInstructions);
+
+	return () => {
+		unregisterKeyPress();
+		Logger.unregisterGlobalBottomFloat();
+		Log.unregisterGlobalBottomFloat();
+	};
 }
