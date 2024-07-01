@@ -32,6 +32,9 @@ export function mockGetMembershipsFail() {
 
 /**
  * Functions to help with mocking various parts of the OAuth Flow
+ *
+ * Most tests should not need to do this.
+ * Only use it if you want to check the OAuth flow as part of the test.
  */
 export const mockOAuthFlow = () => {
 	// the response to send when wrangler wants an oauth grant

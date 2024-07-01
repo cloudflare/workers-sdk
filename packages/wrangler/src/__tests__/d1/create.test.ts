@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -13,7 +13,6 @@ describe("create", () => {
 	mockConsoleMethods();
 	runInTempDir();
 	const std = mockConsoleMethods();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should throw if local flag is provided", async () => {
@@ -30,7 +29,6 @@ describe("create", () => {
 
 	it("should throw if location flag isn't in the list", async () => {
 		setIsTTY(false);
-		mockOAuthServerCallback();
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
@@ -43,7 +41,6 @@ describe("create", () => {
 
 	it("should try send a request to the API for a valid input", async () => {
 		setIsTTY(false);
-		mockOAuthServerCallback();
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);

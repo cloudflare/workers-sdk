@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -14,12 +14,10 @@ describe("info", () => {
 	mockConsoleMethods();
 	runInTempDir();
 	const std = mockConsoleMethods();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should display version when alpha", async () => {
 		setIsTTY(false);
-		mockOAuthServerCallback();
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
@@ -69,7 +67,6 @@ describe("info", () => {
 
 	it("should not display version when not alpha", async () => {
 		setIsTTY(false);
-		mockOAuthServerCallback();
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
