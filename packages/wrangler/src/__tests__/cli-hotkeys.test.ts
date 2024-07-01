@@ -1,5 +1,4 @@
 import { setTimeout } from "node:timers/promises";
-import { Log } from "miniflare";
 import { vitest } from "vitest";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
