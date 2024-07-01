@@ -72,8 +72,7 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"capnpc-ts>typescript": "5.5.5",
-			"vitest-pool-workers>vite": "5.1.0"
+			"capnpc-ts>typescript": "5.5.2"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
