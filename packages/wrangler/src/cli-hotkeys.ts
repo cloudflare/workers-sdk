@@ -58,12 +58,10 @@ export default function (
 		}
 	});
 
-	Logger.registerGlobalBottomFloat(formatInstructions);
 	Log.registerGlobalBottomFloat(formatInstructions);
 
 	return () => {
 		unregisterKeyPress();
-		Logger.unregisterGlobalBottomFloat();
 		Log.unregisterGlobalBottomFloat();
 	};
 }

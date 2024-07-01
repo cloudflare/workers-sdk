@@ -2,6 +2,7 @@ import { format } from "node:util";
 import chalk from "chalk";
 import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
+import { Log } from "miniflare";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getSanitizeLogs } from "./environment-variables/misc-variables";
 import { appendToDebugLogFile } from "./utils/log-file";
@@ -85,6 +86,9 @@ export class Logger {
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
 	}
+	dir(...args: Parameters<(typeof console)["dir"]>) {
+		Log.logWithBottomFloat(() => console.dir(...args));
+	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		const message = this.formatMessage(messageLevel, format(...args));
@@ -97,35 +101,7 @@ export class Logger {
 
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			this.doLogWithBottomFloat(messageLevel, message);
-		}
-	}
-
-	private static _getBottomFloat?: () => string;
-	private static _previousBottomFloatLineCount = 0;
-	static registerGlobalBottomFloat(getBottomFloat: () => string) {
-		if (process.stdin.isTTY) {
-			Logger._getBottomFloat = getBottomFloat;
-		}
-	}
-	static unregisterGlobalBottomFloat() {
-		Logger._getBottomFloat = undefined;
-	}
-	private doLogWithBottomFloat(
-		messageLevel: Exclude<LoggerLevel, "none">,
-		message: string
-	) {
-		const bottomFloat = Logger._getBottomFloat?.();
-		if (Logger._previousBottomFloatLineCount) {
-			process.stdout.moveCursor(0, -Logger._previousBottomFloatLineCount);
-			process.stdout.clearScreenDown();
-		}
-
-		console[messageLevel](message);
-
-		if (bottomFloat) {
-			console.log(bottomFloat);
-			Logger._previousBottomFloatLineCount = bottomFloat.split("\n").length;
+			Log.logWithBottomFloat(() => console[messageLevel](message));
 		}
 	}
 

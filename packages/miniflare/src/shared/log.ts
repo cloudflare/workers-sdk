@@ -66,10 +66,11 @@ export class Log {
 	}
 
 	protected log(message: string): void {
-		this.logWithBottomFloat(message);
+		Log.logWithBottomFloat(() => console.log(message));
 	}
 
 	private static _getBottomFloat?: () => string;
+	private static _previousBottomFloatLineCount = 0;
 	static registerGlobalBottomFloat(getBottomFloat: () => string) {
 		if (process.stdin.isTTY) {
 			Log._getBottomFloat = getBottomFloat;
@@ -78,19 +79,18 @@ export class Log {
 	static unregisterGlobalBottomFloat() {
 		Log._getBottomFloat = undefined;
 	}
-	private logWithBottomFloat(message: string) {
-		const bottomFloat = Log._getBottomFloat?.();
-		if (bottomFloat) {
-			const lines = bottomFloat.split("\n").length;
-
-			process.stdout.moveCursor(0, -lines);
+	static logWithBottomFloat(doLog: () => void) {
+		if (Log._previousBottomFloatLineCount) {
+			process.stdout.moveCursor(0, -Log._previousBottomFloatLineCount);
 			process.stdout.clearScreenDown();
 		}
 
-		console.log(message);
+		doLog();
 
+		const bottomFloat = Log._getBottomFloat?.();
 		if (bottomFloat) {
 			console.log(bottomFloat);
+			Log._previousBottomFloatLineCount = 3;
 		}
 	}
 

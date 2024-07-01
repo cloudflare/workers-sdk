@@ -175,14 +175,13 @@ export function logConsoleMessage(
 	if (method in console) {
 		switch (method) {
 			case "dir":
-				console.dir(args);
+				logger.dir(args);
 				break;
 			case "table":
-				console.table(args);
+				logger.table(args.map((value) => ({ value })));
 				break;
 			default:
-				// eslint-disable-next-line prefer-spread
-				console[method].apply(console, args);
+				logger.log(...args);
 				break;
 		}
 	} else {
