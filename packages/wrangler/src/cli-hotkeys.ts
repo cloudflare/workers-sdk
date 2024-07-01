@@ -7,9 +7,7 @@ export default function (
 	options: Array<{
 		keys: string[];
 		label: Hook<string>;
-		handler: (helpers: {
-			printInstructions: () => void;
-		}) => void | Promise<void>;
+		handler: () => void | Promise<void>;
 	}>
 ) {
 	/**
@@ -23,31 +21,32 @@ export default function (
 	 * Limitations:
 	 *  - doesn't break nicely across lines
 	 */
-	function printInstructions() {
+	function formatInstructions() {
 		const instructions = options
 			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`)
 			.join(", ");
 
-		logger.log(
+		return (
+			`\n` +
 			`╭──${"─".repeat(instructions.length)}──╮\n` +
-				`│  ${instructions}  │\n` +
-				`╰──${"─".repeat(instructions.length)}──╯\n`
+			`│  ${instructions}  │\n` +
+			`╰──${"─".repeat(instructions.length)}──╯`
 		);
 	}
 
-	printInstructions();
-
-	return onKeyPress(async (key) => {
+	const unregisterKeyPress = onKeyPress(async (key) => {
 		key = key.toLowerCase();
 
 		for (const { keys, handler } of options) {
 			if (keys.includes(key)) {
 				try {
-					await handler({ printInstructions });
+					await handler();
 				} catch {
 					logger.error(`Error while handling hotkey [${key}]`);
 				}
 			}
 		}
 	});
+
+	return { unregisterKeyPress, formatInstructions };
 }

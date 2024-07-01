@@ -5,6 +5,7 @@ import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
 import { render } from "ink";
+import { Log } from "miniflare";
 import { DevEnv } from "./api";
 import {
 	convertCfWorkerInitBindingstoBindings,
@@ -23,7 +24,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
-import { logger } from "./logger";
+import { Logger, logger } from "./logger";
 import * as metrics from "./metrics";
 import openInBrowser from "./open-in-browser";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
@@ -586,7 +587,7 @@ export async function startDev(args: StartDevOptions) {
 			}
 
 			if (process.stdout.isTTY && (args.showInteractiveDevSession ?? true)) {
-				const unregisterHotkeys = cliHotkeys([
+				const { unregisterKeyPress, formatInstructions } = cliHotkeys([
 					{
 						keys: ["b"],
 						label: "open a browser",
@@ -624,9 +625,8 @@ export async function startDev(args: StartDevOptions) {
 					{
 						keys: ["c"],
 						label: "clear console",
-						handler: async ({ printInstructions }) => {
+						handler: async () => {
 							console.clear();
-							printInstructions();
 						},
 					},
 					{
@@ -634,10 +634,13 @@ export async function startDev(args: StartDevOptions) {
 						label: "to exit",
 						handler: async () => {
 							await devEnv.teardown();
-							unregisterHotkeys();
+							unregisterKeyPress();
 						},
 					},
 				]);
+
+				Logger.registerGlobalBottomFloat(formatInstructions);
+				Log.registerGlobalBottomFloat(formatInstructions);
 			}
 
 			await devEnv.config.set({

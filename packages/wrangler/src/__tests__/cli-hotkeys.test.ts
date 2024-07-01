@@ -3,6 +3,7 @@ import { vitest } from "vitest";
 import hotkeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { useMockIsTTY } from "./helpers/mock-istty";
 
 const writeToMockedStdin = (input: string) => _internalKeyPressCallback(input);
 let _internalKeyPressCallback: (input: string) => void;
@@ -31,27 +32,21 @@ describe("Hotkeys", () => {
 			hotkeys(options);
 
 			writeToMockedStdin("a");
-			expect(handlerA).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerA).toHaveBeenCalled();
 			expect(handlerB).not.toHaveBeenCalled();
 			expect(handlerC).not.toHaveBeenCalled();
 			handlerA.mockClear();
 
 			writeToMockedStdin("b");
 			expect(handlerA).not.toHaveBeenCalled();
-			expect(handlerB).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerB).toHaveBeenCalled();
 			expect(handlerC).not.toHaveBeenCalled();
 			handlerB.mockClear();
 
 			writeToMockedStdin("c");
 			expect(handlerA).not.toHaveBeenCalled();
 			expect(handlerB).not.toHaveBeenCalled();
-			expect(handlerC).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerC).toHaveBeenCalled();
 			handlerC.mockClear();
 		});
 
@@ -64,15 +59,11 @@ describe("Hotkeys", () => {
 			hotkeys(options);
 
 			writeToMockedStdin("a");
-			expect(handlerA).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 
 			writeToMockedStdin("A");
-			expect(handlerA).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 		});
 
@@ -97,21 +88,15 @@ describe("Hotkeys", () => {
 			hotkeys(options);
 
 			writeToMockedStdin("a");
-			expect(handlerA).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 
 			writeToMockedStdin("b");
-			expect(handlerA).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 
 			writeToMockedStdin("c");
-			expect(handlerA).toHaveBeenCalledWith({
-				printInstructions: expect.any(Function),
-			});
+			expect(handlerA).toHaveBeenCalled();
 			handlerA.mockClear();
 		});
 
@@ -148,7 +133,7 @@ describe("Hotkeys", () => {
 	});
 
 	describe("instructions", () => {
-		it("prints instructions immediately", async () => {
+		it("provides formatted instructions", async () => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 			const handlerC = vi.fn();
@@ -158,88 +143,13 @@ describe("Hotkeys", () => {
 				{ keys: ["c"], label: () => "third option", handler: handlerC },
 			];
 
-			hotkeys(options);
+			const result = hotkeys(options);
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"╭─────────────────────────────────────────────────────────╮
+			expect(result.formatInstructions()).toMatchInlineSnapshot(`
+				"
+				╭─────────────────────────────────────────────────────────╮
 				│  [a] first option, [b] second option, [c] third option  │
-				╰─────────────────────────────────────────────────────────╯
-				"
-			`);
-		});
-
-		it("handlers can reprint instructions", async () => {
-			const handlerA = vi.fn();
-			const handlerB = vi.fn();
-			const handlerC = vi.fn().mockImplementation(({ printInstructions }) => {
-				logger.log("triggered handlerC");
-				printInstructions();
-			});
-			const options = [
-				{ keys: ["a"], label: "first option", handler: handlerA },
-				{ keys: ["b"], label: "second option", handler: handlerB },
-				{
-					keys: ["c"],
-					label: () =>
-						`third option (called: ${handlerC.mock.calls.length} times)`,
-					handler: handlerC,
-				},
-			];
-
-			hotkeys(options);
-
-			expect(std.out).toMatchInlineSnapshot(`
-				"╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 0 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-				"
-			`);
-
-			writeToMockedStdin("a");
-			expect(std.out).toMatchInlineSnapshot(`
-				"╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 0 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-				"
-			`);
-
-			writeToMockedStdin("b");
-			expect(std.out).toMatchInlineSnapshot(`
-				"╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 0 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-				"
-			`);
-
-			writeToMockedStdin("c");
-			expect(std.out).toMatchInlineSnapshot(`
-				"╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 0 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-
-				triggered handlerC
-				╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 1 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-				"
-			`);
-
-			writeToMockedStdin("c");
-			expect(std.out).toMatchInlineSnapshot(`
-				"╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 0 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-
-				triggered handlerC
-				╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 1 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-
-				triggered handlerC
-				╭───────────────────────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option (called: 2 times)  │
-				╰───────────────────────────────────────────────────────────────────────────╯
-				"
+				╰─────────────────────────────────────────────────────────╯"
 			`);
 		});
 	});
