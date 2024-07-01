@@ -97,7 +97,32 @@ export class Logger {
 
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			console[messageLevel](message);
+			this.doLogWithBottomFloat(messageLevel, message);
+		}
+	}
+
+	static #getBottomFloat?: () => string;
+	static registerGlobalBottomFloat(getBottomFloat: () => string) {
+		if (process.stdin.isTTY) {
+			Logger.#getBottomFloat = getBottomFloat;
+		}
+	}
+	private doLogWithBottomFloat(
+		messageLevel: Exclude<LoggerLevel, "none">,
+		message: string
+	) {
+		const bottomFloat = Logger.#getBottomFloat?.();
+		if (bottomFloat) {
+			const lines = bottomFloat.split("\n").length;
+
+			process.stdout.moveCursor(0, -lines);
+			process.stdout.clearScreenDown();
+		}
+
+		console[messageLevel](message);
+
+		if (bottomFloat) {
+			console.log(bottomFloat);
 		}
 	}
 

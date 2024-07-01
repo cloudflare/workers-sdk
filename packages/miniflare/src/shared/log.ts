@@ -66,7 +66,29 @@ export class Log {
 	}
 
 	protected log(message: string): void {
+		this.logWithBottomFloat(message);
+	}
+
+	static #getBottomFloat?: () => string;
+	static registerGlobalBottomFloat(getBottomFloat: () => string) {
+		if (process.stdin.isTTY) {
+			Log.#getBottomFloat = getBottomFloat;
+		}
+	}
+	private logWithBottomFloat(message: string) {
+		const bottomFloat = Log.#getBottomFloat?.();
+		if (bottomFloat) {
+			const lines = bottomFloat.split("\n").length;
+
+			process.stdout.moveCursor(0, -lines);
+			process.stdout.clearScreenDown();
+		}
+
 		console.log(message);
+
+		if (bottomFloat) {
+			console.log(bottomFloat);
+		}
 	}
 
 	logWithLevel(level: LogLevel, message: string): void {
