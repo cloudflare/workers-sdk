@@ -1,16 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { fetchGraphqlResult } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { msw } from "./helpers/msw";
 
 describe("fetchGraphqlResult", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 
 	it("should make a request against the graphql endpoint by default", async () => {
-		mockOAuthServerCallback();
 		msw.use(
 			http.post("*/graphql", async () => {
 				return HttpResponse.json(
@@ -40,7 +37,6 @@ describe("fetchGraphqlResult", () => {
 	});
 
 	it("should accept a request with no init, but return no data", async () => {
-		mockOAuthServerCallback();
 		const now = new Date().toISOString();
 		msw.use(
 			http.post("*/graphql", async () => {

@@ -3,7 +3,7 @@ import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -14,7 +14,6 @@ describe("time-travel", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 	runInTempDir();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("restore", () => {
@@ -43,7 +42,6 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 			]);
@@ -80,7 +78,6 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 			]);

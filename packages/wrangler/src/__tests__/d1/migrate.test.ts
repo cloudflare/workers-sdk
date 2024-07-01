@@ -5,7 +5,7 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -37,7 +37,6 @@ describe("migrate", () => {
 	describe("apply", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken();
-		const { mockOAuthServerCallback } = mockOAuthFlow();
 		it("should not attempt to login in local mode", async () => {
 			setIsTTY(false);
 			writeWranglerToml({
@@ -101,7 +100,6 @@ describe("migrate", () => {
 					},
 				],
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
@@ -185,7 +183,6 @@ Your database may not be available to serve requests during the migration, conti
 				],
 				account_id: "nx01",
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
