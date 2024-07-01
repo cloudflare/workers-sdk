@@ -2,7 +2,6 @@ import { setTimeout } from "node:timers/promises";
 import { Log } from "miniflare";
 import { vitest } from "vitest";
 import registerHotKeys from "../cli-hotkeys";
-import { Logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import type { KeypressEvent } from "../utils/onKeyPress";
@@ -29,7 +28,9 @@ vitest.mock("../utils/onKeyPress", async () => {
 describe("Hot Keys", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
-	setIsTTY(true);
+	beforeEach(() => {
+		setIsTTY(true);
+	});
 
 	describe("callbacks", () => {
 		it("calls handlers when a key is pressed", async () => {
