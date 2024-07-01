@@ -63,7 +63,7 @@ export default function (
 	function clearPreviousInstructions() {
 		if (previousInstructionsLineCount) {
 			readline.moveCursor(process.stdout, 0, -previousInstructionsLineCount);
-			process.stdout.clearScreenDown();
+			readline.clearScreenDown(process.stdout);
 		}
 	}
 	function printInstructions() {
