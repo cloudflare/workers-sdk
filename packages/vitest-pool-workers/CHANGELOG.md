@@ -1,5 +1,19 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.4.8
+
+### Patch Changes
+
+- [#6180](https://github.com/cloudflare/workers-sdk/pull/6180) [`b994604`](https://github.com/cloudflare/workers-sdk/commit/b9946049b0cfe273b8d950f5abcb25ddd386a872) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: pass env to getBindings to support reading `.dev.vars.{environment}`
+
+  https://github.com/cloudflare/workers-sdk/pull/5612 added support for selecting the environment of config used, but it missed passing it to the code that reads `.dev.vars.{environment}`
+
+  Closes #5641
+
+- Updated dependencies [[`42a7930`](https://github.com/cloudflare/workers-sdk/commit/42a7930c6d81610c14005503c078610f28b9bc33), [`35689ea`](https://github.com/cloudflare/workers-sdk/commit/35689ead46379a50008af3d83ddaae16617cfbd4), [`e048958`](https://github.com/cloudflare/workers-sdk/commit/e048958778bf8c43a0a23c0f555c1538acc32f09), [`7951815`](https://github.com/cloudflare/workers-sdk/commit/795181509a4735b16f426ac02873f04c208116c8), [`4cdad9b`](https://github.com/cloudflare/workers-sdk/commit/4cdad9bf3870519efa46b34ecd928f26bf5cfa0f), [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664), [`b994604`](https://github.com/cloudflare/workers-sdk/commit/b9946049b0cfe273b8d950f5abcb25ddd386a872), [`d03b102`](https://github.com/cloudflare/workers-sdk/commit/d03b10272513e5860c4aab338e2acecd18a990d8), [`02dda3d`](https://github.com/cloudflare/workers-sdk/commit/02dda3d4d130bb9282e73499a78e04945b941ada), [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8), [`4072114`](https://github.com/cloudflare/workers-sdk/commit/4072114c8ba03f35d36d14061d9a9919d61c91d5), [`9466531`](https://github.com/cloudflare/workers-sdk/commit/9466531e858ffe184ad22651a8f67999398f8a55), [`9272ef5`](https://github.com/cloudflare/workers-sdk/commit/9272ef5511c2882aed6525564c1b13c3d4a3f7e5)]:
+  - miniflare@3.20240701.0
+  - wrangler@3.63.0
+
 ## 0.4.7
 
 ### Patch Changes

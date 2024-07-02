@@ -1,5 +1,89 @@
 # wrangler
 
+## 3.63.0
+
+### Minor Changes
+
+- [#6167](https://github.com/cloudflare/workers-sdk/pull/6167) [`e048958`](https://github.com/cloudflare/workers-sdk/commit/e048958778bf8c43a0a23c0f555c1538acc32f09) Thanks [@threepointone](https://github.com/threepointone)! - feature: alias modules in the worker
+
+  Sometimes, users want to replace modules with other modules. This commonly happens inside a third party dependency itself. As an example, a user might have imported `node-fetch`, which will probably never work in workerd. You can use the alias config to replace any of these imports with a module of your choice.
+
+  Let's say you make a `fetch-nolyfill.js`
+
+  ```ts
+  export default fetch; // all this does is export the standard fetch function`
+  ```
+
+  You can then configure `wrangler.toml` like so:
+
+  ```toml
+  # ...
+  [alias]
+  "node-fetch": "./fetch-nolyfill"
+  ```
+
+  So any calls to `import fetch from 'node-fetch';` will simply use our nolyfilled version.
+
+  You can also pass aliases in the cli (for both `dev` and `deploy`). Like:
+
+  ```bash
+  npx wrangler dev --alias node-fetch:./fetch-nolyfill
+  ```
+
+- [#6073](https://github.com/cloudflare/workers-sdk/pull/6073) [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664) Thanks [@geelen](https://github.com/geelen)! - Added D1 export support for local databases
+
+### Patch Changes
+
+- [#6149](https://github.com/cloudflare/workers-sdk/pull/6149) [`35689ea`](https://github.com/cloudflare/workers-sdk/commit/35689ead46379a50008af3d83ddaae16617cfbd4) Thanks [@RamIdeas](https://github.com/RamIdeas)! - refactor: React-free hotkeys implementation, behind the `--x-dev-env` flag
+
+- [#6022](https://github.com/cloudflare/workers-sdk/pull/6022) [`7951815`](https://github.com/cloudflare/workers-sdk/commit/795181509a4735b16f426ac02873f04c208116c8) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Fix `pages dev` watch mode [Functions]
+
+  The watch mode in `pages dev` for Pages Functions projects is currently partially broken, as it only watches for file system changes in the
+  "/functions" directory, but not for changes in any of the Functions' dependencies. This means that given a Pages Function `math-is-fun.ts`, defined as follows:
+
+  ```
+  import { ADD } from "../math/add";
+
+  export async function onRequest() {
+  	return new Response(`${ADD} is fun!`);
+  }
+  ```
+
+  `pages dev` will reload for any changes in `math-is-fun.ts` itself, but not for any changes in `math/add.ts`, which is its dependency.
+
+  Similarly, `pages dev` will not reload for any changes in non-JS module imports, such as wasm/html/binary module imports.
+
+  This commit fixes all these things, plus adds some extra polish to the `pages dev` watch mode experience.
+
+- [#6164](https://github.com/cloudflare/workers-sdk/pull/6164) [`4cdad9b`](https://github.com/cloudflare/workers-sdk/commit/4cdad9bf3870519efa46b34ecd928f26bf5cfa0f) Thanks [@threepointone](https://github.com/threepointone)! - fix: use account id for listing zones
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/4944
+
+  Trying to fetch `/zones` fails when it spans more than 500 zones. The fix to use an account id when doing so. This patch passes the account id to the zones call, threading it through all the functions that require it.
+
+- [#6180](https://github.com/cloudflare/workers-sdk/pull/6180) [`b994604`](https://github.com/cloudflare/workers-sdk/commit/b9946049b0cfe273b8d950f5abcb25ddd386a872) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: pass env to getBindings to support reading `.dev.vars.{environment}`
+
+  https://github.com/cloudflare/workers-sdk/pull/5612 added support for selecting the environment of config used, but it missed passing it to the code that reads `.dev.vars.{environment}`
+
+  Closes #5641
+
+- [#6124](https://github.com/cloudflare/workers-sdk/pull/6124) [`d03b102`](https://github.com/cloudflare/workers-sdk/commit/d03b10272513e5860c4aab338e2acecd18a990d8) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feat: `url` and `inspectorUrl` properties have been exposed on the worker object returned by `new unstable_DevEnv().startWorker(options)`
+
+- [#6147](https://github.com/cloudflare/workers-sdk/pull/6147) [`02dda3d`](https://github.com/cloudflare/workers-sdk/commit/02dda3d4d130bb9282e73499a78e04945b941ada) Thanks [@penalosa](https://github.com/penalosa)! - refactor: React free dev registry
+
+- [#6127](https://github.com/cloudflare/workers-sdk/pull/6127) [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: Bump ws dependency
+
+- [#6140](https://github.com/cloudflare/workers-sdk/pull/6140) [`4072114`](https://github.com/cloudflare/workers-sdk/commit/4072114c8ba03f35d36d14061d9a9919d61c91d5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add extra error logging to auth response errors
+
+- [#6160](https://github.com/cloudflare/workers-sdk/pull/6160) [`9466531`](https://github.com/cloudflare/workers-sdk/commit/9466531e858ffe184ad22651a8f67999398f8a55) Thanks [@sm-bean](https://github.com/sm-bean)! - fix: removes unnecessary wrangler tail warning against resetting durable object
+
+  fixes https://jira.cfdata.org/browse/STOR-3318
+
+- [#6142](https://github.com/cloudflare/workers-sdk/pull/6142) [`9272ef5`](https://github.com/cloudflare/workers-sdk/commit/9272ef5511c2882aed6525564c1b13c3d4a3f7e5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: improve the `getPlatformProxy` `configPath` option ts-doc comment to clarify its behavior
+
+- Updated dependencies [[`42a7930`](https://github.com/cloudflare/workers-sdk/commit/42a7930c6d81610c14005503c078610f28b9bc33), [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664), [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8)]:
+  - miniflare@3.20240701.0
+
 ## 3.62.0
 
 ### Minor Changes
