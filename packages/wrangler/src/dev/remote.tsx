@@ -18,6 +18,7 @@ import {
 	saveAccountToCache,
 } from "../user";
 import { getAccessToken } from "../user/access";
+import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import {
 	createPreviewSession,
@@ -51,7 +52,7 @@ export function handlePreviewSessionUploadError(
 	// since it could recover after the developer fixes whatever's wrong
 	// instead of logging the raw API error to the user,
 	// give them friendly instructions
-	if ((err as unknown as { code: string }).code !== "ABORT_ERR") {
+	if (isAbortError(err)) {
 		// code 10049 happens when the preview token expires
 		if ("code" in err && err.code === 10049) {
 			logger.log("Preview token expired, fetching a new one");
@@ -94,7 +95,7 @@ export function handlePreviewSessionCreationError(
 	}
 	// we want to log the error, but not end the process
 	// since it could recover after the developer fixes whatever's wrong
-	else if ((err as { code: string }).code !== "ABORT_ERR") {
+	else if (isAbortError(err)) {
 		logger.error("Error while creating remote dev session:", err);
 	}
 }
@@ -578,7 +579,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 		// since it could recover after the developer fixes whatever's wrong
 		// instead of logging the raw API error to the user,
 		// give them friendly instructions
-		if ((err as unknown as { code: string })?.code !== "ABORT_ERR") {
+		if (isAbortError(err)) {
 			// code 10049 happens when the preview token expires
 			if (err.code === 10049) {
 				logger.log("Preview token expired, restart server to fetch a new one");

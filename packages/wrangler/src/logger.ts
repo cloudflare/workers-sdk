@@ -85,6 +85,18 @@ export class Logger {
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
 	}
+	console<M extends Exclude<keyof Console, "Console">>(
+		method: M,
+		...args: Parameters<Console[M]>
+	) {
+		if (typeof console[method] !== "function") {
+			throw new Error(`console.${method}() is not a function`);
+		}
+
+		Logger.#beforeLogHook?.();
+		(console[method] as (...args: unknown[]) => unknown).apply(console, args);
+		Logger.#afterLogHook?.();
+	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		const message = this.formatMessage(messageLevel, format(...args));
@@ -97,8 +109,19 @@ export class Logger {
 
 		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
+			Logger.#beforeLogHook?.();
 			console[messageLevel](message);
+			Logger.#afterLogHook?.();
 		}
+	}
+
+	static #beforeLogHook: (() => void) | undefined;
+	static registerBeforeLogHook(callback: (() => void) | undefined) {
+		this.#beforeLogHook = callback;
+	}
+	static #afterLogHook: (() => void) | undefined;
+	static registerAfterLogHook(callback: (() => void) | undefined) {
+		this.#afterLogHook = callback;
 	}
 
 	private formatMessage(

@@ -17,18 +17,20 @@ import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
+import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
+import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
-	getAccountId,
 	loginOrRefreshIfRequired,
 	requireApiToken,
+	requireAuth,
 } from "./user";
 import {
 	collectKeyValues,
@@ -48,7 +50,6 @@ import {
 } from "./index";
 import type {
 	ProxyData,
-	ReadyEvent,
 	ReloadCompleteEvent,
 	StartDevWorkerInput,
 	Trigger,
@@ -544,10 +545,8 @@ export async function startDev(args: StartDevOptions) {
 
 		if (args.experimentalDevEnv) {
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
-			devEnv.proxy.once("ready", async (event: ReadyEvent) => {
+			void devEnv.proxy.ready.promise.then(({ url }) => {
 				if (process.send) {
-					const url = await event.proxyWorker.ready;
-
 					process.send(
 						JSON.stringify({
 							event: "DEV_SERVER_READY",
@@ -557,6 +556,7 @@ export async function startDev(args: StartDevOptions) {
 					);
 				}
 			});
+
 			if (!args.disableDevRegistry) {
 				const teardownRegistryPromise = devRegistry((registry) =>
 					updateDevEnvRegistry(devEnv, registry)
@@ -570,8 +570,7 @@ export async function startDev(args: StartDevOptions) {
 						"reloadComplete",
 						async (reloadEvent: ReloadCompleteEvent) => {
 							if (!reloadEvent.config.dev?.remote) {
-								assert(devEnv.proxy.proxyWorker);
-								const url = await devEnv.proxy.proxyWorker.ready;
+								const { url } = await devEnv.proxy.ready.promise;
 
 								await maybeRegisterLocalWorker(
 									url,
@@ -584,6 +583,12 @@ export async function startDev(args: StartDevOptions) {
 					);
 				});
 			}
+
+			let unregisterHotKeys: () => void;
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+			}
+
 			await devEnv.config.set({
 				name: args.name,
 				config: configPath,
@@ -648,9 +653,15 @@ export async function startDev(args: StartDevOptions) {
 				},
 				dev: {
 					auth: async () => {
+						let accountId = args.accountId;
+						if (!accountId) {
+							unregisterHotKeys?.();
+							accountId = await requireAuth({});
+							unregisterHotKeys = registerDevHotKeys(devEnv, args);
+						}
+
 						return {
-							accountId:
-								args.accountId ?? config.account_id ?? (await getAccountId()),
+							accountId,
 							apiToken: requireApiToken(),
 						};
 					},
@@ -1118,8 +1129,9 @@ export async function validateDevServerSettings(
 	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
 	// the error to be thrown where it will correctly exit the Wrangler process
 	if (args.remote) {
-		const accountId =
-			args.accountId ?? config.account_id ?? (await getAccountId());
+		const accountId = await requireAuth({
+			account_id: args.accountId ?? config.account_id,
+		});
 		assert(accountId, "Account ID must be provided for remote dev");
 		await getZoneIdForPreview({ host, routes, accountId });
 	}

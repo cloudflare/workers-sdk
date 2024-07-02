@@ -280,10 +280,14 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	async teardown() {
-		await this.#customBuildWatcher?.close();
-		await this.#bundlerCleanup?.();
+		logger.debug("BundlerController teardown beginning...");
 		this.#customBuildAborter?.abort();
 		this.#tmpDir?.remove();
+		await Promise.all([
+			this.#bundlerCleanup?.(),
+			this.#customBuildWatcher?.close(),
+		]);
+		logger.debug("BundlerController teardown complete");
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {

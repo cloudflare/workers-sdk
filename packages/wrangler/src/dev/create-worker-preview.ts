@@ -6,6 +6,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
+import { isAbortError } from "../utils/isAbortError";
 import type {
 	CfWorkerContext,
 	CfWorkerInit,
@@ -333,7 +334,7 @@ export async function createWorkerPreview(
 			}
 		},
 		(err) => {
-			if ((err as { code: string }).code !== "ABORT_ERR") {
+			if (isAbortError(err)) {
 				logger.warn("worker failed to prewarm: ", err);
 			}
 		}

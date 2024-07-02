@@ -485,7 +485,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 	_torndown = false;
 	async teardown() {
-		logger.debug("ProxyController teardown");
+		logger.debug("ProxyController teardown beginning...");
 		this._torndown = true;
 
 		const { proxyWorker } = this;
@@ -499,6 +499,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					/* ignore */
 				}),
 		]);
+
+		logger.debug("ProxyController teardown complete");
 	}
 
 	// *********************

@@ -379,7 +379,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// ******************
 
 	async teardown() {
+		logger.debug("ConfigController teardown beginning...");
 		await this.#configWatcher?.close();
+		logger.debug("ConfigController teardown complete");
 	}
 
 	// *********************

@@ -8,6 +8,7 @@ import serveStatic from "serve-static";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { getAccessToken } from "../user/access";
+import { castAsAbortError, isAbortError } from "../utils/isAbortError";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type { HttpTerminator } from "http-terminator";
 import type {
@@ -197,7 +198,7 @@ export async function startPreviewServer({
 			},
 		};
 	} catch (err) {
-		if ((err as { code: string }).code !== "ABORT_ERR") {
+		if (isAbortError(err)) {
 			logger.error(`Failed to start server: ${err}`);
 		}
 		logger.error("Failed to create proxy server:", err);
@@ -336,7 +337,7 @@ export function usePreviewServer({
 				proxy.server.listen(port, ip === "*" ? "::" : ip);
 			})
 			.catch((err) => {
-				if ((err as { code: string }).code !== "ABORT_ERR") {
+				if (isAbortError(err)) {
 					logger.error(`Failed to start server: ${err}`);
 				}
 			});
@@ -667,7 +668,7 @@ export async function waitForPortToBeAvailable(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		options.abortSignal.addEventListener("abort", () => {
 			const abortError = new Error("waitForPortToBeAvailable() aborted");
-			(abortError as Error & { code: string }).code = "ABORT_ERR";
+			castAsAbortError(abortError);
 			doReject(abortError);
 		});
 

@@ -93,13 +93,23 @@ export class DevEnv extends EventEmitter {
 	// *********************
 
 	async teardown() {
+		logger.debug("DevEnv teardown beginning...");
+
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
 			...this.runtimes.map((runtime) => runtime.teardown()),
 			this.proxy.teardown(),
 		]);
+
+		this.config.removeAllListeners();
+		this.bundler.removeAllListeners();
+		this.runtimes.forEach((runtime) => runtime.removeAllListeners());
+		this.proxy.removeAllListeners();
+
 		this.emit("teardown");
+
+		logger.debug("DevEnv teardown complete");
 	}
 
 	emitErrorEvent(ev: ErrorEvent) {
