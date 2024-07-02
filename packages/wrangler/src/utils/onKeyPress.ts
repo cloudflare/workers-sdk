@@ -1,5 +1,6 @@
 import readline from "readline";
 import { PassThrough } from "stream";
+import { isNonInteractiveOrCI } from "../is-interactive";
 
 export type KeypressEvent = {
 	name: string;
@@ -18,7 +19,7 @@ export function onKeyPress(callback: (key: KeypressEvent) => void) {
 	const stream = new PassThrough();
 	process.stdin.pipe(stream);
 
-	if (process.stdin.isTTY) {
+	if (!isNonInteractiveOrCI()) {
 		readline.emitKeypressEvents(stream);
 		process.stdin.setRawMode(true);
 	}
@@ -32,7 +33,7 @@ export function onKeyPress(callback: (key: KeypressEvent) => void) {
 	stream.on("keypress", handler);
 
 	return () => {
-		if (process.stdin.isTTY) {
+		if (!isNonInteractiveOrCI()) {
 			process.stdin.setRawMode(false);
 		}
 		stream.off("keypress", handler);
