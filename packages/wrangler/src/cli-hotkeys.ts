@@ -27,13 +27,31 @@ export default function (
 	function formatInstructions() {
 		const instructions = options
 			.filter((option) => !unwrapHook(option.disabled))
-			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`)
-			.join(", ");
+			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`);
+
+		let stringifiedInstructions = instructions.join(", ");
+
+		const ADDITIONAL_CHARS = 6; // 3 chars on each side of the instructions for the box and spacing ("│  " and "  │")
+		const willWrap =
+			stringifiedInstructions.length + ADDITIONAL_CHARS >
+			process.stdout.columns;
+		if (willWrap) {
+			stringifiedInstructions = instructions.join("\n");
+		}
+
+		const maxLineLength = Math.max(
+			...stringifiedInstructions.split("\n").map((line) => line.length)
+		);
+
+		stringifiedInstructions = stringifiedInstructions
+			.split("\n")
+			.map((line) => `│  ${line.padEnd(maxLineLength, " ")}  │`)
+			.join("\n");
 
 		return (
-			`╭──${"─".repeat(instructions.length)}──╮\n` +
-			`│  ${instructions}  │\n` +
-			`╰──${"─".repeat(instructions.length)}──╯`
+			`╭──${"─".repeat(maxLineLength)}──╮\n` +
+			stringifiedInstructions +
+			`\n╰──${"─".repeat(maxLineLength)}──╯`
 		);
 	}
 
