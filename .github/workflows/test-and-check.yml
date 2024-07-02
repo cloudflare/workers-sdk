@@ -14,7 +14,38 @@ jobs:
     steps:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
+  build:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
+      cancel-in-progress: true
+
+    name: "Build"
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Build & populate turbo cache
+        run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
+
   check:
+    needs: build
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
@@ -54,6 +85,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
   test:
+    needs: build
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
@@ -64,7 +96,79 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./fixtures/*", "./packages/*", "./tools"]
+        filter:
+          [
+            "fixtures/additional-modules",
+            "fixtures/ai-app",
+            "fixtures/d1-worker-app",
+            "fixtures/durable-objects-app",
+            "fixtures/entrypoints-rpc-tests",
+            "fixtures/external-durable-objects-app",
+            "fixtures/external-service-bindings-app",
+            "fixtures/get-bindings-proxy",
+            "fixtures/get-platform-proxy",
+            "fixtures/import-wasm-example",
+            "fixtures/import-wasm-static",
+            "fixtures/interactive-dev-tests",
+            "fixtures/isomorphic-random-example",
+            "fixtures/legacy-site-app",
+            "fixtures/local-mode-tests",
+            "fixtures/no-bundle-import",
+            "fixtures/node-app-pages",
+            "fixtures/nodejs-hybrid-app",
+            "fixtures/pages-d1-shim",
+            "fixtures/pages-dev-proxy-with-script",
+            "fixtures/pages-functions-app",
+            "fixtures/pages-functions-wasm-app",
+            "fixtures/pages-functions-with-config-file-app",
+            "fixtures/pages-functions-with-routes-app",
+            "fixtures/pages-plugin-example",
+            "fixtures/pages-plugin-mounted-on-root-app",
+            "fixtures/pages-proxy-app",
+            "fixtures/pages-simple-assets",
+            "fixtures/pages-workerjs-and-functions-app",
+            "fixtures/pages-workerjs-app",
+            "fixtures/pages-workerjs-directory",
+            "fixtures/pages-workerjs-wasm-app",
+            "fixtures/pages-workerjs-with-config-file-app",
+            "fixtures/pages-workerjs-with-routes-app",
+            "fixtures/pages-ws-app",
+            "fixtures/ratelimit-app",
+            "fixtures/routing-app",
+            "fixtures/rules-app",
+            "fixtures/service-bindings-app",
+            "fixtures/shared",
+            "fixtures/sites-app",
+            "fixtures/type-generation",
+            "fixtures/unstable_dev",
+            "fixtures/vitest-pool-workers-examples",
+            "fixtures/wasm-app",
+            "fixtures/worker-app",
+            "fixtures/worker-ts",
+            "fixtures/workers-chat-demo",
+            "packages/cli",
+            "packages/create-cloudflare",
+            "packages/devprod-status-bot",
+            "packages/edge-preview-authenticated-proxy",
+            "packages/eslint-config-worker",
+            "packages/format-errors",
+            "packages/kv-asset-handler",
+            "packages/miniflare",
+            "packages/pages-shared",
+            "packages/playground-preview-worker",
+            "packages/prerelease-registry",
+            "packages/quick-edit",
+            "packages/quick-edit-extension",
+            "packages/solarflare-theme",
+            "packages/turbo-r2-archive",
+            "packages/vitest-pool-workers",
+            "packages/workers-playground",
+            "packages/workers-tsconfig",
+            "packages/workers.new",
+            "packages/wrangler",
+            "packages/wrangler-devtools",
+            "tools",
+          ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
