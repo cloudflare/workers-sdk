@@ -22,7 +22,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
-import { isNonInteractiveOrCI } from "./is-interactive";
+import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
@@ -585,7 +585,7 @@ export async function startDev(args: StartDevOptions) {
 			}
 
 			let unregisterHotKeys: () => void;
-			if (!isNonInteractiveOrCI() && args.showInteractiveDevSession !== false) {
+			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
