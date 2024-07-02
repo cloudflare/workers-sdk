@@ -32,7 +32,9 @@ export function onKeyPress(callback: (key: KeypressEvent) => void) {
 	stream.on("keypress", handler);
 
 	return () => {
-		process.stdin.setRawMode(false);
+		if (process.stdin.isTTY) {
+			process.stdin.setRawMode(false);
+		}
 		stream.off("keypress", handler);
 		stream.destroy();
 	};
