@@ -267,7 +267,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async teardown() {
-		logger.log(chalk.dim("⎔ Shutting down remote preview..."));
+		if (this.#session) {
+			logger.log(chalk.dim("⎔ Shutting down remote preview..."));
+		}
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
