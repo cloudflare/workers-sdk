@@ -1129,8 +1129,9 @@ export async function validateDevServerSettings(
 	// we want it to exit the Wrangler process early to allow the user to fix it. Calling it here forces
 	// the error to be thrown where it will correctly exit the Wrangler process
 	if (args.remote) {
-		const accountId =
-			args.accountId ?? config.account_id ?? (await getAccountId());
+		const accountId = await requireAuth({
+			account_id: args.accountId ?? config.account_id,
+		});
 		assert(accountId, "Account ID must be provided for remote dev");
 		await getZoneIdForPreview({ host, routes, accountId });
 	}
