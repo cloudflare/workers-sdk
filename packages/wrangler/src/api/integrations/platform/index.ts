@@ -237,7 +237,7 @@ export type SourcelessWorkerOptions = Omit<
 
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
-	environment?: string
+	env?: string
 ): {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
@@ -245,7 +245,7 @@ export function unstable_getMiniflareWorkerOptions(
 } {
 	const config = readConfig(configPath, {
 		experimentalJsonConfig: true,
-		env: environment,
+		env,
 	});
 
 	const modulesRules: ModuleRule[] = config.rules
@@ -256,7 +256,6 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const env = undefined;
 	const bindings = getBindings(config, env, true, {});
 	const { bindingOptions } = buildMiniflareBindingOptions({
 		name: undefined,
