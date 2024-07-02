@@ -9,7 +9,7 @@ import {
 	noopModuleCollector,
 } from "../../deployment-bundle/module-collection";
 import { FatalError } from "../../errors";
-import { logger } from "../../logger";
+import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
@@ -351,19 +351,13 @@ export function buildNotifierPlugin(onEnd: () => void): Plugin {
 		name: "wrangler notifier and monitor",
 		setup(pluginBuild) {
 			pluginBuild.onEnd((result) => {
-				if (result.errors.length > 0) {
-					logger.error(
-						`${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`
-					);
-				} else if (result.warnings.length > 0) {
-					logger.warn(
-						`${result.warnings.length} warning(s) when compiling Worker.`
-					);
-					onEnd();
+				if (result.errors.length > 0 || result.warnings.length > 0) {
+					logBuildFailure(result.errors, result.warnings);
 				} else {
 					logger.log("✨ Compiled Worker successfully");
-					onEnd();
 				}
+
+				onEnd();
 			});
 		},
 	};
