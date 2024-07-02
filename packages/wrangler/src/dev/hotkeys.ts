@@ -6,7 +6,7 @@ import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
 	devEnv: DevEnv,
-	{ forceLocal = false } = {}
+	args: { forceLocal?: boolean }
 ) {
 	const unregisterHotKeys = registerHotKeys([
 		{
@@ -32,7 +32,7 @@ export default function registerDevHotKeys(
 		},
 		{
 			keys: ["l"],
-			disabled: forceLocal,
+			disabled: () => args.forceLocal ?? false,
 			label: () =>
 				`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
 			handler: async () => {

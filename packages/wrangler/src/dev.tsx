@@ -584,10 +584,9 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
-			const { forceLocal } = args;
 			let unregisterHotKeys: () => void;
 			if (!isNonInteractiveOrCI() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, { forceLocal });
+				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
 
 			await devEnv.config.set({
@@ -658,7 +657,7 @@ export async function startDev(args: StartDevOptions) {
 						if (!accountId) {
 							unregisterHotKeys?.();
 							accountId = await requireAuth({});
-							unregisterHotKeys = registerDevHotKeys(devEnv, { forceLocal });
+							unregisterHotKeys = registerDevHotKeys(devEnv, args);
 						}
 
 						return {
