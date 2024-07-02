@@ -85,16 +85,19 @@ export class Logger {
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
 	}
-	console<M extends keyof Omit<Console, "Console">>(
-		method: M,
-		...args: Parameters<Console[M]>
-	) {
+	console<
+		M extends keyof Omit<Console, "Console">,
+		P extends Parameters<Console[M]>,
+	>(method: M, ...args: P) {
 		if (typeof console[method] !== "function") {
 			throw new Error(`console.${method}() is not a function`);
 		}
 
 		Logger.#beforeLogHook?.();
-		console[method](console, args);
+		console[method](
+			// @ts-expect-error Parameters<Console[M]> isn't satisfying "A spread argument must either have a tuple type or be passed to a rest parameter"
+			...args
+		);
 		Logger.#afterLogHook?.();
 	}
 

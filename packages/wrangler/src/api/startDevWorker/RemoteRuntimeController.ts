@@ -51,6 +51,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#abortController.signal
 			);
 		} catch (err: unknown) {
+			if (err instanceof Error && err.name == "AbortError") {
+				return; // ignore
+			}
+
 			handlePreviewSessionCreationError(err, props.accountId);
 		}
 	}
@@ -98,6 +102,10 @@ export class RemoteRuntimeController extends RuntimeController {
 
 			return workerPreviewToken;
 		} catch (err: unknown) {
+			if (err instanceof Error && err.name == "AbortError") {
+				return; // ignore
+			}
+
 			const shouldRestartSession = handlePreviewSessionUploadError(
 				err,
 				props.accountId
@@ -110,6 +118,8 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
+		logger.log(chalk.dim("⎔ Starting remote preview..."));
+
 		try {
 			const routes = config.triggers
 				?.filter(
@@ -213,6 +223,10 @@ export class RemoteRuntimeController extends RuntimeController {
 				},
 			});
 		} catch (error) {
+			if (error instanceof Error && error.name == "AbortError") {
+				return; // ignore
+			}
+
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Error reloading remote server",
@@ -236,7 +250,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		const id = ++this.#currentBundleId;
 
 		if (!ev.config.dev?.remote) {
-			void this.teardown();
+			void this.#mutex.runWith(() => this.teardown());
 			return;
 		}
 
@@ -253,6 +267,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async teardown() {
+		logger.log(chalk.dim("⎔ Shutting down remote preview..."));
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();

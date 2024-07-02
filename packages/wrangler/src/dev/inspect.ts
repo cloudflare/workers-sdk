@@ -175,7 +175,7 @@ export function logConsoleMessage(
 	if (method in console) {
 		switch (method) {
 			case "dir":
-				logger.console("dir", args);
+				logger.console("dir", ...args);
 				break;
 			case "table":
 				logger.table(args.map((value) => ({ value })));

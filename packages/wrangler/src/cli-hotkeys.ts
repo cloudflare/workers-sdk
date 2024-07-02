@@ -84,10 +84,11 @@ export default function (
 	Logger.registerAfterLogHook(printInstructions);
 	Log.unstable_registerBeforeLogHook(clearPreviousInstructions);
 	Log.unstable_registerAfterLogHook(printInstructions);
+	printInstructions();
 
 	return () => {
 		unregisterKeyPress();
-		// clearPreviousInstructions();
+		clearPreviousInstructions();
 		Logger.registerBeforeLogHook(undefined);
 		Logger.registerAfterLogHook(undefined);
 		Log.unstable_registerBeforeLogHook(undefined);

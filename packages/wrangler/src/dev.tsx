@@ -10,7 +10,6 @@ import {
 	convertCfWorkerInitBindingstoBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
-import registerHotKeys from "./cli-hotkeys";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
 import { validateNodeCompat } from "./deployment-bundle/node-compat";
@@ -18,20 +17,19 @@ import { getBoundRegisteredWorkers } from "./dev-registry";
 import Dev, { devRegistry } from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
-import { openInspector } from "./dev/inspect";
+import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { startDevServer } from "./dev/start-server";
 import { UserError } from "./errors";
 import { run } from "./experimental-flags";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
-import openInBrowser from "./open-in-browser";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import {
 	getAccountFromCache,
-	getAccountId,
 	loginOrRefreshIfRequired,
 	requireApiToken,
+	requireAuth,
 } from "./user";
 import {
 	collectKeyValues,
@@ -585,59 +583,10 @@ export async function startDev(args: StartDevOptions) {
 				});
 			}
 
+			const { forceLocal } = args;
+			let unregisterHotKeys: () => void;
 			if (process.stdout.isTTY && args.showInteractiveDevSession !== false) {
-				const unregisterHotKeys = registerHotKeys([
-					{
-						keys: ["b"],
-						label: "open a browser",
-						handler: async () => {
-							const { url } = await devEnv.proxy.ready.promise;
-							await openInBrowser(url.href);
-						},
-					},
-					{
-						keys: ["d"],
-						label: "open devtools",
-						handler: async () => {
-							const { inspectorUrl } = await devEnv.proxy.ready.promise;
-
-							// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
-							await openInspector(
-								parseInt(inspectorUrl.port),
-								devEnv.config.latestConfig?.name
-							);
-						},
-					},
-					{
-						keys: ["l"],
-						disabled: args.forceLocal,
-						label: () =>
-							`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
-						handler: async () => {
-							await devEnv.config.patch({
-								dev: {
-									...devEnv.config.latestConfig?.dev,
-									remote: !devEnv.config.latestConfig?.dev?.remote,
-								},
-							});
-						},
-					},
-					{
-						keys: ["c"],
-						label: "clear console",
-						handler: async () => {
-							console.clear();
-						},
-					},
-					{
-						keys: ["x", "q", "ctrl+c"],
-						label: "to exit",
-						handler: async () => {
-							unregisterHotKeys();
-							await devEnv.teardown();
-						},
-					},
-				]);
+				unregisterHotKeys = registerDevHotKeys(devEnv, { forceLocal });
 			}
 
 			await devEnv.config.set({
@@ -704,9 +653,15 @@ export async function startDev(args: StartDevOptions) {
 				},
 				dev: {
 					auth: async () => {
+						let accountId = args.accountId;
+						if (!accountId) {
+							unregisterHotKeys?.();
+							accountId = await requireAuth({});
+							unregisterHotKeys = registerDevHotKeys(devEnv, { forceLocal });
+						}
+
 						return {
-							accountId:
-								args.accountId ?? config.account_id ?? (await getAccountId()),
+							accountId,
 							apiToken: requireApiToken(),
 						};
 					},

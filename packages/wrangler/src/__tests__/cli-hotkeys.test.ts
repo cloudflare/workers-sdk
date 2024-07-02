@@ -164,11 +164,22 @@ describe("Hot Keys", () => {
 				{ keys: ["d"], label: "disabled", disabled: true, handler: handlerD },
 			];
 
+			// should print instructions immediately
 			const unregisterHotKeys = registerHotKeys(options);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"╭─────────────────────────────────────────────────────────╮
+				│  [a] first option, [b] second option, [c] third option  │
+				╰─────────────────────────────────────────────────────────╯"
+			`);
+
 			logger.log("something 1");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"something 1
+				"╭─────────────────────────────────────────────────────────╮
+				│  [a] first option, [b] second option, [c] third option  │
+				╰─────────────────────────────────────────────────────────╯
+				something 1
 				╭─────────────────────────────────────────────────────────╮
 				│  [a] first option, [b] second option, [c] third option  │
 				╰─────────────────────────────────────────────────────────╯"
@@ -178,7 +189,10 @@ describe("Hot Keys", () => {
 			logger.log("something 2");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"something 1
+				"╭─────────────────────────────────────────────────────────╮
+				│  [a] first option, [b] second option, [c] third option  │
+				╰─────────────────────────────────────────────────────────╯
+				something 1
 				╭─────────────────────────────────────────────────────────╮
 				│  [a] first option, [b] second option, [c] third option  │
 				╰─────────────────────────────────────────────────────────╯
