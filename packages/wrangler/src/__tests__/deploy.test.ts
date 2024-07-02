@@ -10400,12 +10400,19 @@ function mockUnauthorizedPublishRoutesRequest({
 	);
 }
 
-function mockGetZones(domain: string, zones: { id: string }[] = []) {
+function mockGetZones(
+	domain: string,
+	zones: { id: string }[] = [],
+	accountId = "some-account-id"
+) {
 	msw.use(
 		http.get("*/zones", ({ request }) => {
 			const url = new URL(request.url);
 
-			expect([...url.searchParams.entries()]).toEqual([["name", domain]]);
+			expect([...url.searchParams.entries()]).toEqual([
+				["name", domain],
+				["account.id", accountId],
+			]);
 
 			return HttpResponse.json(
 				{

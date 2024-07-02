@@ -85,7 +85,7 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 		}));
 
 	const message = await prompt(
-		"Please provide an optional message for this rollback (120 characters max)?",
+		"Please provide an optional message for this rollback (120 characters max)",
 		{
 			defaultValue: args.message ?? "Rollback",
 		}

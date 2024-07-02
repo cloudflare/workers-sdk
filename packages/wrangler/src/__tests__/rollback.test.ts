@@ -119,7 +119,7 @@ describe("rollback", () => {
 		mockPostDeployment();
 
 		mockPrompt({
-			text: "Please provide a message for this rollback (120 characters max, optional)?",
+			text: "Please provide an optional message for this rollback (120 characters max)",
 			result: "Test rollback",
 		});
 
@@ -168,7 +168,7 @@ describe("rollback", () => {
 		mockPostDeployment(true);
 
 		mockPrompt({
-			text: "Please provide a message for this rollback (120 characters max, optional)?",
+			text: "Please provide an optional message for this rollback (120 characters max)",
 			result: "Test rollback",
 		});
 

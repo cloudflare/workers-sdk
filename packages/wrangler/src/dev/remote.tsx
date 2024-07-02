@@ -694,7 +694,11 @@ export async function getWorkerAccountAndContext(props: {
 	};
 
 	// What zone should the realish preview for this Worker run on?
-	const zoneId = await getZoneIdForPreview(props.host, props.routes);
+	const zoneId = await getZoneIdForPreview({
+		host: props.host,
+		routes: props.routes,
+		accountId: props.accountId,
+	});
 
 	const workerContext: CfWorkerContext = {
 		env: props.env,
