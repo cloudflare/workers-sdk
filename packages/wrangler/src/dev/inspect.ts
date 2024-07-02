@@ -175,7 +175,11 @@ export function logConsoleMessage(
 	if (method in console) {
 		switch (method) {
 			case "dir":
-				logger.console("dir", ...args);
+				logger.console(
+					"dir",
+					// @ts-expect-error A spread argument must either have a tuple type or be passed to a rest parameter.
+					...args
+				);
 				break;
 			case "table":
 				logger.table(args.map((value) => ({ value })));
