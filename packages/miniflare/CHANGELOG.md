@@ -1,5 +1,23 @@
 # miniflare
 
+## 3.20240701.0
+
+### Minor Changes
+
+- [#6073](https://github.com/cloudflare/workers-sdk/pull/6073) [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664) Thanks [@geelen](https://github.com/geelen)! - Added D1 export support for local databases
+
+### Patch Changes
+
+- [#6181](https://github.com/cloudflare/workers-sdk/pull/6181) [`42a7930`](https://github.com/cloudflare/workers-sdk/commit/42a7930c6d81610c14005503c078610f28b9bc33) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20240620.1 | 1.20240701.0 |
+
+- [#6127](https://github.com/cloudflare/workers-sdk/pull/6127) [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: Bump ws dependency
+
 ## 3.20240620.0
 
 ### Patch Changes
