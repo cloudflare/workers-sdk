@@ -34,8 +34,11 @@ const supportedPagesConfigFields = [
 	"ai",
 	"version_metadata",
 	"dev",
+	"mtls_certificates",
+	"browser",
 	// normalizeAndValidateConfig() sets this value
 	"configPath",
+	"upload_source_maps",
 ] as const;
 
 export function validatePagesConfig(
@@ -98,7 +101,9 @@ function validatePagesEnvironmentNames(
 	envNames: string[],
 	diagnostics: Diagnostics
 ) {
-	if (!envNames?.length) return;
+	if (!envNames?.length) {
+		return;
+	}
 
 	const unsupportedPagesEnvNames = envNames.filter(
 		(name) => name !== "preview" && name !== "production"

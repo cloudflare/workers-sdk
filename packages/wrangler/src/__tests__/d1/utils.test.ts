@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { type Config } from "../../config";
 import {
 	getDatabaseByNameOrBinding,
@@ -114,10 +114,9 @@ describe("getDatabaseByNameOrBinding", () => {
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
 		msw.use(
-			rest.get("*/accounts/:accountId/d1/database", async (req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
+			http.get("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json(
+					{
 						result: [
 							{
 								file_size: 7421952,
@@ -130,7 +129,8 @@ describe("getDatabaseByNameOrBinding", () => {
 						success: true,
 						errors: [],
 						messages: [],
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);
@@ -154,15 +154,15 @@ describe("getDatabaseByNameOrBinding", () => {
 			version: "alpha",
 		};
 		msw.use(
-			rest.get("*/accounts/:accountId/d1/database", async (req, res, ctx) => {
-				return res(
-					ctx.status(200),
-					ctx.json({
+			http.get("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json(
+					{
 						result: [mockDb],
 						success: true,
 						errors: [],
 						messages: [],
-					})
+					},
+					{ status: 200 }
 				);
 			})
 		);

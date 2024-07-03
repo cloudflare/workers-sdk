@@ -1,14 +1,8 @@
 import chalk from "chalk";
 import prompts from "prompts";
 import { UserError } from "./errors";
-import { CI } from "./is-ci";
-import isInteractive from "./is-interactive";
+import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
-
-// TODO: Use this function across the codebase.
-function isNonInteractiveOrCI(): boolean {
-	return !isInteractive() || CI.isCI();
-}
 
 export class NoDefaultValueProvided extends UserError {
 	constructor() {

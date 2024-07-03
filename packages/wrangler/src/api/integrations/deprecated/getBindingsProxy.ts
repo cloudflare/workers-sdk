@@ -10,7 +10,7 @@ export type GetBindingsProxyOptions = GetPlatformProxyOptions;
  */
 export type BindingsProxy<
 	Bindings = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 > = Omit<PlatformProxy<Bindings, CfProperties>, "env"> & {
 	/**
 	 * Object containing the various proxies
@@ -29,7 +29,7 @@ export type BindingsProxy<
  */
 export async function getBindingsProxy<
 	Bindings = Record<string, unknown>,
-	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties
+	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetBindingsProxyOptions = {}
 ): Promise<BindingsProxy<Bindings, CfProperties>> {

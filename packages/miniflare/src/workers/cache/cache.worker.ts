@@ -10,14 +10,13 @@ import {
 	MiniflareDurableObject,
 	MiniflareDurableObjectCf,
 	MultipartReadableStream,
+	parseRanges,
 	PURGE,
 	PUT,
 	RouteHandler,
 	Timers,
-	parseRanges,
 } from "miniflare:shared";
 import { isSitesRequest } from "../kv";
-
 import { CacheObjectCf } from "./constants";
 import {
 	CacheMiss,

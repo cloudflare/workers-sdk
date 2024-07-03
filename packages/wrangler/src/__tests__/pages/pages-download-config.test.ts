@@ -2,7 +2,7 @@
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
 import { supportedCompatibilityDate } from "miniflare";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -226,14 +226,13 @@ function makePagesProject(
 
 function mockSupportingDashRequests(expectedAccountId: string) {
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/NOT_REAL`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res.once(
-					ctx.status(404),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: false,
 						errors: [
 							{
@@ -243,79 +242,80 @@ function mockSupportingDashRequests(expectedAccountId: string) {
 							},
 						],
 						result: null,
-					})
+					},
+					{ status: 404 }
 				);
-			}
+			},
+			{ once: true }
 		),
 
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/INHERIT`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res.once(
-					ctx.status(200),
-					ctx.json(
-						makePagesProject(
-							{
-								compatibility_flags: ["some-flag"],
-								placement: undefined,
-								compatibility_date: "2023-02-14",
-								always_use_latest_compatibility_date: false,
-								limits: {
-									cpu_ms: 500,
-								},
+				return HttpResponse.json(
+					makePagesProject(
+						{
+							compatibility_flags: ["some-flag"],
+							placement: undefined,
+							compatibility_date: "2023-02-14",
+							always_use_latest_compatibility_date: false,
+							limits: {
+								cpu_ms: 500,
 							},
-							{
-								compatibility_flags: ["some-flag"],
-								placement: undefined,
-								compatibility_date: "2023-02-14",
-								limits: {
-									cpu_ms: 500,
-								},
-							}
-						)
-					)
+						},
+						{
+							compatibility_flags: ["some-flag"],
+							placement: undefined,
+							compatibility_date: "2023-02-14",
+							limits: {
+								cpu_ms: 500,
+							},
+						}
+					),
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/NO_PROD_LIMITS`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res.once(
-					ctx.status(200),
-					ctx.json(
-						makePagesProject({ limits: { cpu_ms: 500 } }, { limits: undefined })
-					)
+				return HttpResponse.json(
+					makePagesProject({ limits: { cpu_ms: 500 } }, { limits: undefined }),
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res.once(ctx.status(200), ctx.json(makePagesProject()));
-			}
+				return HttpResponse.json(makePagesProject(), { status: 200 });
+			},
+			{ once: true }
 		),
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/workers/durable_objects/namespaces/:doId`,
-			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(expectedAccountId);
+			({ params }) => {
+				expect(params.accountId).toEqual(expectedAccountId);
 
-				return res(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						result: {
-							script: `some-script-${req.params.doId}`,
-							class: `some-class-${req.params.doId}`,
-							environment: `some-environment-${req.params.doId}`,
+							script: `some-script-${params.doId}`,
+							class: `some-class-${params.doId}`,
+							environment: `some-environment-${params.doId}`,
 						},
-					})
+					},
+					{ status: 200 }
 				);
 			}
 		)
@@ -854,14 +854,14 @@ describe("pages download config", () => {
 		await expect(
 			runWrangler(`pages download config`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"Must specify a project name."`
+			`[Error: Must specify a project name.]`
 		);
 	});
 	it("should fail if project does not exist", async () => {
 		await expect(
 			runWrangler(`pages download config NOT_REAL`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`"A request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed."`
+			`[APIError: A request to the Cloudflare API (/accounts/MOCK_ACCOUNT_ID/pages/projects/NOT_REAL) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"
@@ -1031,7 +1031,7 @@ describe("pages download config", () => {
 			await expect(
 				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not overwriting existing \`wrangler.toml\` file"`
+				`[Error: Not overwriting existing \`wrangler.toml\` file]`
 			);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`
@@ -1205,7 +1205,7 @@ describe("pages download config", () => {
 			await expect(
 				runWrangler(`pages download config ${MOCK_PROJECT_NAME}`)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not overwriting existing \`wrangler.toml\` file"`
+				`[Error: Not overwriting existing \`wrangler.toml\` file]`
 			);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(`

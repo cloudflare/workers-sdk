@@ -146,17 +146,29 @@ export function compareRoutes(
 		const isParamB = segmentsB[i].includes(":");
 
 		// sort wildcard segments after non-wildcard segments
-		if (isWildcardA && !isWildcardB) return 1;
-		if (!isWildcardA && isWildcardB) return -1;
+		if (isWildcardA && !isWildcardB) {
+			return 1;
+		}
+		if (!isWildcardA && isWildcardB) {
+			return -1;
+		}
 
 		// sort dynamic param segments after non-param segments
-		if (isParamA && !isParamB) return 1;
-		if (!isParamA && isParamB) return -1;
+		if (isParamA && !isParamB) {
+			return 1;
+		}
+		if (!isParamA && isParamB) {
+			return -1;
+		}
 	}
 
 	// sort routes that specify an HTTP before those that don't
-	if (methodA && !methodB) return -1;
-	if (!methodA && methodB) return 1;
+	if (methodA && !methodB) {
+		return -1;
+	}
+	if (!methodA && methodB) {
+		return 1;
+	}
 
 	// all else equal, just sort the paths lexicographically
 	return routePathA.localeCompare(routePathB);

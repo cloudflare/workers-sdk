@@ -10,6 +10,8 @@
 	"publisher": "cloudflare",
 	"browser": "./dist/extension.js",
 	"scripts": {
+		"check:lint": "eslint src --max-warnings=0",
+		"check:type": "tsc",
 		"package-web": "node -r esbuild-register scripts/bundle.ts",
 		"vscode:prepublish": "pnpm run package-web",
 		"watch-web": "pnpm run package-web -- --watch"
@@ -41,13 +43,15 @@
 	],
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"@cloudflare/workers-types": "^4.20240419.0",
-		"esbuild": "0.16.3",
-		"esbuild-register": "^3.4.2",
-		"typescript": "^4.9.5"
+		"@cloudflare/workers-types": "^4.20240620.0",
+		"esbuild": "0.17.19",
+		"esbuild-register": "^3.5.0"
 	},
 	"engines": {
 		"vscode": "^1.76.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	},
 	"enabledApiProposals": [
 		"fileSearchProvider",

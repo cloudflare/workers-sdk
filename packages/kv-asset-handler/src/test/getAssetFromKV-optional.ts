@@ -1,24 +1,18 @@
 import test from "ava";
-import {
-	getEvent,
-	mockGlobalScope,
-	mockKV,
-	mockManifest,
-	mockRequestScope,
-	sleep,
-} from "../mocks";
+import { getEvent, mockGlobalScope, mockRequestScope } from "../mocks";
 
 mockGlobalScope();
 
-const { getAssetFromKV, mapRequestToAsset } = require("../index");
-
+// @ts-expect-error we use a require for a mock
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getAssetFromKV } = require("../index");
 // manually reset manifest global, to test optional behaviour
-Object.assign(global, { __STATIC_CONTENT_MANIFEST: undefined });
+Object.assign(globalThis, { __STATIC_CONTENT_MANIFEST: undefined });
 
 test("getAssetFromKV return correct val from KV without manifest", async (t) => {
 	mockRequestScope();
 	// manually reset manifest global, to test optional behaviour
-	Object.assign(global, { __STATIC_CONTENT_MANIFEST: undefined });
+	Object.assign(globalThis, { __STATIC_CONTENT_MANIFEST: undefined });
 
 	const event = getEvent(new Request("https://blah.com/key1.123HASHBROWN.txt"));
 	const res = await getAssetFromKV(event);

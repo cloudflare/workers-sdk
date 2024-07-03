@@ -16,7 +16,7 @@ export function d1(yargs: CommonYargsArgv) {
 			.command("list", "List D1 databases", List.Options, List.Handler)
 			.command(
 				"info <name>",
-				"Get information about a D1 database, including the current database size and state.",
+				"Get information about a D1 database, including the current database size and state",
 				Info.Options,
 				Info.Handler
 			)
@@ -38,7 +38,7 @@ export function d1(yargs: CommonYargsArgv) {
 				Delete.Options,
 				Delete.Handler
 			)
-			.command("backup", "Interact with D1 Backups", (backupArgs) =>
+			.command("backup", "Interact with D1 backups", (backupArgs) =>
 				backupArgs
 					.demandCommand()
 					.command(
@@ -82,7 +82,7 @@ export function d1(yargs: CommonYargsArgv) {
 			// )
 			.command(
 				"execute <database>",
-				"Executed command or SQL file",
+				"Execute a command or SQL file",
 				Execute.Options,
 				Execute.Handler
 			)
@@ -94,24 +94,24 @@ export function d1(yargs: CommonYargsArgv) {
 			)
 			.command(
 				"time-travel",
-				"Use Time Travel to restore, fork or copy a database at a specific point-in-time.",
+				"Use Time Travel to restore, fork or copy a database at a specific point-in-time",
 				(yargs2) =>
 					yargs2
 						.demandCommand()
 						.command(
 							"info <database>",
-							"Retrieve information about a database at a specific point-in-time using Time Travel.",
+							"Retrieve information about a database at a specific point-in-time using Time Travel",
 							TimeTravel.InfoOptions,
 							TimeTravel.InfoHandler
 						)
 						.command(
 							"restore <database>",
-							"Restore a database back to a specific point-in-time.",
+							"Restore a database back to a specific point-in-time",
 							TimeTravel.RestoreOptions,
 							TimeTravel.RestoreHandler
 						)
 			)
-			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
+			.command("migrations", "Interact with D1 migrations", (yargs2) =>
 				yargs2
 					.demandCommand()
 					.command(
@@ -122,13 +122,13 @@ export function d1(yargs: CommonYargsArgv) {
 					)
 					.command(
 						"create <database> <message>",
-						"Create a new Migration",
+						"Create a new migration",
 						Migrations.CreateOptions,
 						Migrations.CreateHandler
 					)
 					.command(
 						"apply <database>",
-						"Apply D1 Migrations",
+						"Apply D1 migrations",
 						Migrations.ApplyOptions,
 						Migrations.ApplyHandler
 					)

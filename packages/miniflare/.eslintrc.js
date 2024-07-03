@@ -3,10 +3,8 @@ module.exports = {
 	extends: ["plugin:prettier/recommended"],
 	plugins: ["import", "es"],
 	rules: {
-		"import/order": ["warn", { alphabetize: { order: "asc" } }],
 		"no-undef-init": "off",
-		"sort-imports": ["warn", { ignoreDeclarationSort: true }],
-		"prettier/prettier": "off"
+		"prettier/prettier": "off",
 	},
 	overrides: [
 		{

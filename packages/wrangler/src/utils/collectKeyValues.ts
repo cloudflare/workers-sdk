@@ -1,3 +1,5 @@
+import type { Binding } from "../api";
+
 /**
  * a function that takes an array of strings in `key:value` format
  * (typically from yargs or config) and returns back
@@ -10,5 +12,20 @@ export function collectKeyValues(array?: string[]) {
 			recordsToCollect[key] = value.join(":");
 			return recordsToCollect;
 		}, {}) || {}
+	);
+}
+
+export function collectPlainTextVars(
+	array?: string[]
+): Record<string, Extract<Binding, { type: "plain_text" }>> {
+	return (
+		array?.reduce<Record<string, Extract<Binding, { type: "plain_text" }>>>(
+			(recordsToCollect, v) => {
+				const [key, ...value] = v.split(":");
+				recordsToCollect[key] = { type: "plain_text", value: value.join(":") };
+				return recordsToCollect;
+			},
+			{}
+		) || {}
 	);
 }

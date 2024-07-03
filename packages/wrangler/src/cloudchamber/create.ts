@@ -198,7 +198,9 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 				value: keyOpt.id,
 			})),
 			validate: (values: Arg) => {
-				if (!Array.isArray(values)) return "unknown error";
+				if (!Array.isArray(values)) {
+					return "unknown error";
+				}
 				if (values.length === 0) {
 					return "Select atleast one ssh key!";
 				}
@@ -225,13 +227,19 @@ export async function handleCreateCommand(
 		question: whichImageQuestion,
 		label: "image",
 		validate: (value) => {
-			if (typeof value !== "string") return "unknown error";
-			if (value.length === 0) return "you should fill this input";
-			if (value.endsWith(":latest")) return "we don't allow :latest tags";
+			if (typeof value !== "string") {
+				return "unknown error";
+			}
+			if (value.length === 0) {
+				return "you should fill this input";
+			}
+			if (value.endsWith(":latest")) {
+				return "we don't allow :latest tags";
+			}
 		},
 		defaultValue: args.image ?? "",
 		initialValue: args.image ?? "",
-		helpText: ":latest tags are not allowed!",
+		helpText: 'i.e. "docker.io/org/app:1.2", :latest tags are not allowed!',
 		type: "text",
 	});
 
@@ -291,8 +299,9 @@ export async function handleCreateCommand(
 
 	stop();
 	updateStatus(`${status.success} Created deployment!`);
-	if (deployment.network?.ipv4)
+	if (deployment.network?.ipv4) {
 		log(`${deployment.id}\nIP: ${deployment.network.ipv4}`);
+	}
 
 	endSection("Creating a placement for your container");
 	startSection("Create a Cloudflare container", "Step 2 of 2");

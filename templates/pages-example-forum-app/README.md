@@ -30,7 +30,7 @@ $ yarn wrangler generate my-project pages-example-forum-app
 $ pnpm wrangler generate my-project pages-example-forum-app
 ```
 
-To run this locally, ensure you have `Wrangler` version `>=16.7.0` then run
+To run this locally:
 
 ```sh
 npm install && npm run start

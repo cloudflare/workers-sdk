@@ -20,8 +20,8 @@ type ArrayRecordKeys<O extends object, K extends keyof O> = K extends unknown
 	? Extract<O[K], unknown[]> extends never
 		? never
 		: Extract<O[K], Record<string, unknown>> extends never
-		? never
-		: K
+			? never
+			: K
 	: never;
 // "kvNamespaces" | "r2Buckets" | "queueProducers" | "queueConsumers" | ...
 type WorkerOptionsArrayRecordKeys = ArrayRecordKeys<
@@ -35,7 +35,7 @@ type WorkerOptionsRecord<K extends WorkerOptionsArrayRecordKeys> = Extract<
 >;
 /** Converts the array-form of key `K` in `WorkerOptions` to its object form */
 function convertWorkerOptionsArrayToObject<
-	K extends WorkerOptionsArrayRecordKeys
+	K extends WorkerOptionsArrayRecordKeys,
 >(key: K, array: Extract<WorkerOptions[K], unknown[]>): WorkerOptionsRecord<K> {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const _: string[] = array; // Static assert that `array` is a `string[]`

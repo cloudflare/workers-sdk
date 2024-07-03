@@ -1,7 +1,6 @@
 import { execSync } from "node:child_process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
-import React from "react";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
@@ -11,7 +10,10 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
+import {
+	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
+	PAGES_CONFIG_CACHE_FILENAME,
+} from "./constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
@@ -21,7 +23,12 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { PagesConfigCache } from "./types";
-import type { Project } from "@cloudflare/types";
+import type {
+	Deployment,
+	DeploymentStage,
+	Project,
+	UnifiedDeploymentLogMessages,
+} from "@cloudflare/types";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -73,6 +80,12 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				hidden: true,
 			},
+			"upload-source-maps": {
+				type: "boolean",
+				default: false,
+				description:
+					"Whether to upload any server-side sourcemaps with this deployment",
+			},
 		});
 }
 
@@ -89,6 +102,17 @@ export const Handler = async (args: PagesDeployArgs) => {
 	if (args.config) {
 		throw new FatalError(
 			"Pages does not support custom paths for the `wrangler.toml` configuration file",
+			1
+		);
+	}
+
+	if (args.experimentalJsonConfig) {
+		throw new FatalError("Pages does not support `wrangler.json`", 1);
+	}
+
+	if (args.env) {
+		throw new FatalError(
+			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
 			1
 		);
 	}
@@ -202,7 +226,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		 * to create that project for them
 		 */
 		if (projectName !== undefined && !isExistingProject) {
-			const message = `The project you specified does not exist: "${projectName}". Would you like to create it?"`;
+			const message = `The project you specified does not exist: "${projectName}". Would you like to create it?`;
 			const items: NewOrExistingItem[] = [
 				{
 					key: "new",
@@ -329,6 +353,8 @@ export const Handler = async (args: PagesDeployArgs) => {
 		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 		// There is no sane way to get the true value out of yargs, so here we are.
 		bundle: args.bundle ?? !args.noBundle,
+		// Sourcemaps from deploy arguments will take precedence so people can try it for one-off deployments without updating their wrangler.toml
+		sourceMaps: config?.upload_source_maps || args.uploadSourceMaps,
 		args,
 	});
 
@@ -337,9 +363,76 @@ export const Handler = async (args: PagesDeployArgs) => {
 		project_name: projectName,
 	});
 
-	logger.log(
-		`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
-	);
+	let latestDeploymentStage: DeploymentStage | undefined;
+	let attempts = 0;
+
+	logger.log("🌎 Deploying...");
+
+	while (
+		attempts < MAX_DEPLOYMENT_STATUS_ATTEMPTS &&
+		latestDeploymentStage?.name !== "deploy" &&
+		latestDeploymentStage?.status !== "success" &&
+		latestDeploymentStage?.status !== "failure"
+	) {
+		try {
+			/*
+			 * Exponential backoff
+			 * On every retry, exponentially increase the wait time: 1 second, then
+			 * 2s, then 4s, then 8s, etc.
+			 */
+			await new Promise((resolvePromise) =>
+				setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+			);
+
+			logger.debug(
+				`attempt #${attempts}: Attempting to fetch status for deployment with id "${deploymentResponse.id}" ...`
+			);
+
+			const deployment = await fetchResult<Deployment>(
+				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
+			);
+			latestDeploymentStage = deployment.latest_stage;
+		} catch (err) {
+			// don't retry if API call retruned an error
+			logger.debug(
+				`Attempt to get deployment status for deployment with id "${deploymentResponse.id}" failed: ${err}`
+			);
+		}
+	}
+
+	if (
+		latestDeploymentStage?.name === "deploy" &&
+		latestDeploymentStage?.status === "success"
+	) {
+		logger.log(
+			`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
+		);
+	} else if (
+		latestDeploymentStage?.name === "deploy" &&
+		latestDeploymentStage?.status === "failure"
+	) {
+		// get persistent logs so we can show users the failure message
+		const logs = await fetchResult<UnifiedDeploymentLogMessages>(
+			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
+		);
+		// last log entry will be the most relevant for Direct Uploads
+		const failureMessage = logs.data[logs.total - 1].line
+			.replace("Error:", "")
+			.trim();
+
+		throw new FatalError(
+			`Deployment failed!
+${failureMessage}`,
+			1
+		);
+	} else {
+		logger.log(
+			`✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.\n\n` +
+				`⚡️ Visit your deployment at ${deploymentResponse.url}\n` +
+				`⚡️ Check the deployment details on the Cloudflare dashboard: https://dash.cloudflare.com/${accountId}/pages/view/${projectName}/${deploymentResponse.id}`
+		);
+	}
+
 	await metrics.sendMetricsEvent("create pages deployment");
 };
 

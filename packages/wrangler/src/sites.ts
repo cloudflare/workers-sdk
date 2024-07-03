@@ -150,9 +150,10 @@ export async function syncAssets(
 	// Get all existing keys in asset namespace
 	logger.info("Fetching list of already uploaded assets...");
 	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
-	const namespaceKeyInfoMap = new Map<string, typeof namespaceKeysResponse[0]>(
-		namespaceKeysResponse.map((x) => [x.name, x])
-	);
+	const namespaceKeyInfoMap = new Map<
+		string,
+		(typeof namespaceKeysResponse)[0]
+	>(namespaceKeysResponse.map((x) => [x.name, x]));
 	const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
 	const assetDirectory = path.join(
@@ -203,7 +204,9 @@ export async function syncAssets(
 	logger.info("Building list of assets to upload...");
 	for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
 		const assetFile = path.relative(assetDirectory, absAssetFile);
-		if (!include(assetFile) || exclude(assetFile)) continue;
+		if (!include(assetFile) || exclude(assetFile)) {
+			continue;
+		}
 
 		const content = await readFile(absAssetFile, "base64");
 		// While KV accepts files that are 25 MiB **before** b64 encoding
@@ -247,7 +250,9 @@ export async function syncAssets(
 		manifest[manifestKey] = assetKey;
 	}
 	// Add the last (potentially only or empty) bucket to the batch
-	if (uploadBucket.length > 0) uploadBuckets.push(uploadBucket);
+	if (uploadBucket.length > 0) {
+		uploadBuckets.push(uploadBucket);
+	}
 
 	for (const key of namespaceKeys) {
 		logDiff(
@@ -274,7 +279,9 @@ export async function syncAssets(
 			// JavaScript is single(ish)-threaded, so we don't need to worry about
 			// parallel access here.
 			const nextBucket = uploadBuckets.shift();
-			if (nextBucket === undefined) break;
+			if (nextBucket === undefined) {
+				break;
+			}
 
 			// Read all files in the bucket as base64
 			// TODO(perf): consider streaming the bulk upload body, rather than
@@ -289,7 +296,9 @@ export async function syncAssets(
 					value: await readFile(absAssetFile, "base64"),
 					base64: true,
 				});
-				if (controller.signal.aborted) break;
+				if (controller.signal.aborted) {
+					break;
+				}
 			}
 
 			// Upload the bucket to the KV namespace, suppressing logs, we do our own
@@ -474,8 +483,8 @@ export function getAssetPaths(
 		typeof config.assets === "string"
 			? config.assets
 			: config.assets !== undefined
-			? config.assets.bucket
-			: undefined;
+				? config.assets.bucket
+				: undefined;
 
 	const includePatterns =
 		(typeof config.assets !== "string" && config.assets?.include) || [];
@@ -489,7 +498,7 @@ export function getAssetPaths(
 				assetDirectory,
 				includePatterns,
 				excludePatterns,
-		  }
+			}
 		: undefined;
 }
 

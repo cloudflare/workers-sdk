@@ -1,7 +1,8 @@
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
-import { readFile } from "helpers/files";
+import { runCommand } from "helpers/command";
+import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
@@ -19,8 +20,10 @@ import { getFrameworkMap } from "../src/templates";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	createTestLogStream,
+	getDiffsPath,
 	isQuarantineMode,
 	keys,
+	recreateDiffsFolder,
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
@@ -68,6 +71,7 @@ const { name: pm, npx } = detectPackageManager();
 const frameworkTests: Record<string, FrameworkTestConfig> = {
 	astro: {
 		testCommitMessage: true,
+		quarantine: true,
 		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
@@ -103,6 +107,12 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "Dinosaurs are cool",
 		},
 		flags: [`--package-manager`, pm],
+		promptHandlers: [
+			{
+				matcher: /Which language do you want to use\?/,
+				input: [keys.enter],
+			},
+		],
 	},
 	analog: {
 		testCommitMessage: true,
@@ -130,10 +140,12 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 			expectedText: "C3_TEST",
 		},
 		flags: ["--skipTailwind"],
+		quarantine: true,
 	},
 	angular: {
 		testCommitMessage: true,
 		timeout: LONG_TIMEOUT,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Congratulations! Your app is running.",
@@ -157,6 +169,7 @@ const frameworkTests: Record<string, FrameworkTestConfig> = {
 	},
 	hono: {
 		testCommitMessage: false,
+		unsupportedOSs: ["win32"],
 		verifyDeploy: {
 			route: "/",
 			expectedText: "Hello Hono!",
@@ -353,6 +366,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	beforeAll(async (ctx) => {
 		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
+		recreateDiffsFolder();
 	});
 
 	beforeEach(async (ctx) => {
@@ -395,7 +409,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				if (!verifyDeploy) {
 					expect(
 						true,
-						"A `deploy` configuration must be defined for all framework tests"
+						"A `deploy` configuration must be defined for all framework tests",
 					).toBe(false);
 					return;
 				}
@@ -408,7 +422,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						{
 							argv: [...(flags ? ["--", ...flags] : [])],
 							promptHandlers,
-						}
+						},
 					);
 
 					// Relevant project files should have been created
@@ -425,7 +439,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 						framework,
 						projectName,
 						`${deploymentUrl}${verifyDeploy.route}`,
-						verifyDeploy.expectedText
+						verifyDeploy.expectedText,
 					);
 
 					// Copy over any test fixture files
@@ -440,6 +454,12 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					await verifyDevScript(framework, projectPath, logStream);
 					await verifyBuildCfTypesScript(framework, projectPath, logStream);
 					await verifyBuildScript(framework, projectPath, logStream);
+					await storeDiff(framework, projectPath);
+				} catch (e) {
+					console.error("ERROR", e);
+					expect.fail(
+						"Failed due to an exception while running C3. See logs for more details",
+					);
 				} finally {
 					clean(framework);
 					// Cleanup the project in case we need to retry it
@@ -453,16 +473,31 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			{
 				retry: TEST_RETRIES,
 				timeout: timeout || TEST_TIMEOUT,
-			}
+			},
 		);
 	});
 });
+
+const storeDiff = async (framework: string, projectPath: string) => {
+	if (!process.env.SAVE_DIFFS) {
+		return;
+	}
+
+	const outputPath = join(getDiffsPath(), `${framework}.diff`);
+
+	const output = await runCommand(["git", "diff"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	writeFile(outputPath, output);
+};
 
 const runCli = async (
 	framework: string,
 	projectPath: string,
 	logStream: WriteStream,
-	{ argv = [], promptHandlers = [] }: RunnerConfig
+	{ argv = [], promptHandlers = [] }: RunnerConfig,
 ) => {
 	const args = [
 		projectPath,
@@ -472,7 +507,7 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		"--no-git",
+		process.env.SAVE_DIFFS ? "--git" : "--no-git",
 	];
 
 	args.push(...argv);
@@ -498,7 +533,7 @@ const verifyDeployment = async (
 	framework: string,
 	projectName: string,
 	deploymentUrl: string,
-	expectedText: string
+	expectedText: string,
 ) => {
 	if (NO_DEPLOY) {
 		return;
@@ -516,7 +551,7 @@ const verifyDeployment = async (
 		const body = await res.text();
 		if (!body.includes(expectedText)) {
 			throw new Error(
-				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`
+				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`,
 			);
 		}
 	});
@@ -525,7 +560,7 @@ const verifyDeployment = async (
 const verifyDevScript = async (
 	framework: string,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { verifyDev } = frameworkTests[framework];
 	if (!verifyDev) {
@@ -554,7 +589,7 @@ const verifyDevScript = async (
 				VITEST: undefined,
 			},
 		},
-		logStream
+		logStream,
 	);
 
 	// Retry requesting the test route from the devserver
@@ -584,7 +619,7 @@ const verifyDevScript = async (
 const verifyBuildCfTypesScript = async (
 	framework: string,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { verifyBuildCfTypes } = frameworkTests[framework];
 
@@ -602,14 +637,14 @@ const verifyBuildCfTypesScript = async (
 
 	// the file contains the env interface
 	expect(outputFileContentPreLines).toContain(
-		`interface ${envInterfaceName} {`
+		`interface ${envInterfaceName} {`,
 	);
 
 	// Run the `cf-typegen` script to generate types for bindings in fixture
 	const buildTypesProc = spawnWithLogging(
 		[pm, "run", "cf-typegen"],
 		{ cwd: projectPath },
-		logStream
+		logStream,
 	);
 	await waitForExit(buildTypesProc);
 
@@ -618,7 +653,7 @@ const verifyBuildCfTypesScript = async (
 
 	// the file still contains the env interface
 	expect(outputFileContentPostLines).toContain(
-		`interface ${envInterfaceName} {`
+		`interface ${envInterfaceName} {`,
 	);
 
 	// the file doesn't contain the "Generated by Wrangler" comment without a timestamp anymore
@@ -627,15 +662,15 @@ const verifyBuildCfTypesScript = async (
 	// but it contains the "Generated by Wrangler" comment now with a timestamp
 	expect(
 		/\/\/ Generated by Wrangler on [a-zA-Z]*? [a-zA-Z]*? \d{2} \d{4} \d{2}:\d{2}:\d{2}/.test(
-			outputFileContentPost
-		)
+			outputFileContentPost,
+		),
 	).toBeTruthy();
 };
 
 const verifyBuildScript = async (
 	framework: string,
 	projectPath: string,
-	logStream: WriteStream
+	logStream: WriteStream,
 ) => {
 	const { verifyBuild } = frameworkTests[framework];
 
@@ -654,7 +689,7 @@ const verifyBuildScript = async (
 				NODE_ENV: "production",
 			},
 		},
-		logStream
+		logStream,
 	);
 	await waitForExit(buildProc);
 
@@ -666,7 +701,7 @@ const verifyBuildScript = async (
 		{
 			cwd: projectPath,
 		},
-		logStream
+		logStream,
 	);
 
 	// Wait a few seconds for dev server to spin up

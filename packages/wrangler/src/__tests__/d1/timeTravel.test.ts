@@ -1,9 +1,9 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -14,7 +14,6 @@ describe("time-travel", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 	runInTempDir();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("restore", () => {
@@ -43,33 +42,29 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 			]);
 			msw.use(
-				rest.get(
-					"*/accounts/:accountId/d1/database/*",
-					async (_req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								result: {
-									uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-									name: "northwind",
-									created_at: "2023-05-23T08:33:54.590Z",
-									version: "alpha",
-									num_tables: 13,
-									file_size: 33067008,
-									running_in_region: "WEUR",
-								},
-								success: true,
-								errors: [],
-								messages: [],
-							})
-						);
-					}
-				)
+				http.get("*/accounts/:accountId/d1/database/*", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+								name: "northwind",
+								created_at: "2023-05-23T08:33:54.590Z",
+								version: "alpha",
+								num_tables: 13,
+								file_size: 33067008,
+								running_in_region: "WEUR",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
 			);
 			await expect(
 				throwIfDatabaseIsAlpha("1701", "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06")
@@ -83,33 +78,29 @@ describe("time-travel", () => {
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 				],
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 			]);
 			msw.use(
-				rest.get(
-					"*/accounts/:accountId/d1/database/*",
-					async (_req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								result: {
-									uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
-									name: "northwind",
-									created_at: "2023-05-23T08:33:54.590Z",
-									version: "production",
-									num_tables: 13,
-									file_size: 33067008,
-									running_in_region: "WEUR",
-								},
-								success: true,
-								errors: [],
-								messages: [],
-							})
-						);
-					}
-				)
+				http.get("*/accounts/:accountId/d1/database/*", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+								name: "northwind",
+								created_at: "2023-05-23T08:33:54.590Z",
+								version: "production",
+								num_tables: 13,
+								file_size: 33067008,
+								running_in_region: "WEUR",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
 			);
 			const result = await throwIfDatabaseIsAlpha(
 				"1701",

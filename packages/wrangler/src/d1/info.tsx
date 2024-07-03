@@ -1,6 +1,5 @@
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
-import React from "react";
 import { printWranglerBanner } from "..";
 import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";

@@ -2,7 +2,7 @@ const { execSync } = require("child_process");
 
 module.exports = function () {
 	const diff = execSync(
-		"git diff HEAD~2 packages/create-cloudflare/src/frameworks/package.json"
+		`git diff origin/${process.env.GITHUB_BASE_REF} -- packages/create-cloudflare/src/frameworks/package.json`
 	).toString();
 
 	const changedPackages = diff

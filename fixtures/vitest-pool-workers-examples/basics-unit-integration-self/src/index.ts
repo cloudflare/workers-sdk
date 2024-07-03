@@ -8,7 +8,7 @@ export default {
 	},
 	async scheduled(controller, env, ctx) {
 		// ...
-	}
+	},
 } satisfies ExportedHandler;
 // ^ Using `satisfies` provides type checking/completions for `ExportedHandler`
 //   whilst still allowing us to call `worker.fetch()` in tests without

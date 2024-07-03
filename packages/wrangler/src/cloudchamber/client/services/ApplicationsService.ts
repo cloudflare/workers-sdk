@@ -6,7 +6,9 @@ import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { Application } from "../models/Application";
 import type { ApplicationID } from "../models/ApplicationID";
+import type { ApplicationJob } from "../models/ApplicationJob";
 import type { ApplicationName } from "../models/ApplicationName";
+import type { CreateApplicationJobRequest } from "../models/CreateApplicationJobRequest";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { Image } from "../models/Image";
@@ -135,6 +137,35 @@ export class ApplicationsService {
 				id: id,
 			},
 			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an account/location is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Create a new job within an application
+	 * Returns the created job
+	 * @param id
+	 * @param requestBody
+	 * @returns ApplicationJob A single job within an application
+	 * @throws ApiError
+	 */
+	public static createApplicationJob(
+		id: ApplicationID,
+		requestBody: CreateApplicationJobRequest
+	): CancelablePromise<ApplicationJob> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/applications/{id}/jobs",
+			path: {
+				id: id,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Can't create the application job because it has bad inputs`,
 				401: `Unauthorized`,
 				404: `Response body when an account/location is not found`,
 				500: `There has been an internal error`,

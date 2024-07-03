@@ -1,11 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { env, SELF } from "cloudflare:test";
 import { expect, it } from "vitest";
-import "../src/"; // Currently required to automatically rerun tests when `main` changes
 
 it("consumes queue messages", async () => {
 	// `SELF` here points to the worker running in the current isolate.
-	// This gets its handler from the `main` option in `vitest.config.ts`.
+	// This gets its handler from the `main` option in `vitest.config.mts`.
 	// Importantly, it uses the exact `import("../src").default` instance we could
 	// import in this file as its handler. Note the `SELF.queue()` method
 	// is experimental, and requires the `service_binding_extra_handlers`

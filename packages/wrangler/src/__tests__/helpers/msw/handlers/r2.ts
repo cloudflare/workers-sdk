@@ -1,4 +1,4 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
 
 type StorageClass = "Standard" | "InfrequentAccess";
@@ -11,26 +11,26 @@ function isValidStorageClass(
 
 export const mswR2handlers = [
 	// List endpoint r2Buckets
-	rest.get("*/accounts/:accountId/r2/buckets", (_, response, context) =>
-		response.once(
-			context.json(
+	http.get(
+		"*/accounts/:accountId/r2/buckets",
+		() =>
+			HttpResponse.json(
 				createFetchResult({
 					buckets: [
 						{ name: "bucket-1", creation_date: "01-01-2001" },
 						{ name: "bucket-2", creation_date: "01-01-2001" },
 					],
 				})
-			)
-		)
+			),
+		{ once: true }
 	),
-	rest.post(
+	http.post(
 		"*/accounts/:accountId/r2/buckets",
-		async (request, response, context) => {
-			const { storageClass } = await request.json();
+		async ({ request }) => {
+			const { storageClass } = (await request.json()) as Record<string, string>;
 			if (storageClass !== null && !isValidStorageClass(storageClass)) {
-				return response.once(
-					context.status(400),
-					context.json({
+				return HttpResponse.json(
+					{
 						success: false,
 						errors: [
 							{
@@ -40,63 +40,60 @@ export const mswR2handlers = [
 						],
 						messages: [],
 						result: null,
-					})
+					},
+					{ status: 400 }
 				);
 			}
 
-			return response.once(context.json(createFetchResult({})));
-		}
+			return HttpResponse.json(createFetchResult({}));
+		},
+		{ once: true }
 	),
-	rest.put(
+	http.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
-		(_, response, context) => response.once(context.json(createFetchResult({})))
+		() => HttpResponse.json(createFetchResult({})),
+		{ once: true }
 	),
-	rest.delete(
+	http.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
-		(_, response, context) =>
-			response.once(context.json(createFetchResult(null)))
+		() => HttpResponse.json(createFetchResult(null)),
+		{ once: true }
 	),
-	rest.get(
+	http.get(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-		(_, response, context) => {
+		() => {
 			const imageBuffer = Buffer.from("wormhole-img.png");
-			return response.once(
-				context.set("Content-Length", imageBuffer.byteLength.toString()),
-				context.set("Content-Type", "image/png"),
-
-				context.body(imageBuffer)
-			);
-		}
+			return new HttpResponse(imageBuffer);
+		},
+		{ once: true }
 	),
-	rest.put(
+	http.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-		(_, response, context) =>
-			response.once(
-				context.json(
-					createFetchResult({
-						accountId: "some-account-id",
-						bucketName: "bucketName-object-test",
-						objectName: "wormhole-img.png",
-					})
-				)
-			)
+		() =>
+			HttpResponse.json(
+				createFetchResult({
+					accountId: "some-account-id",
+					bucketName: "bucketName-object-test",
+					objectName: "wormhole-img.png",
+				})
+			),
+		{ once: true }
 	),
-	rest.delete(
+	http.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-		(_, response, context) =>
-			response.once(context.json(createFetchResult(null)))
+		() => HttpResponse.json(createFetchResult(null)),
+		{ once: true }
 	),
-	rest.patch(
+	http.patch(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
-		(request, response, context) => {
+		({ request }) => {
 			const storageClassValue = request.headers.get("cf-r2-storage-class");
 			if (
 				storageClassValue === null ||
 				!isValidStorageClass(storageClassValue)
 			) {
-				return response.once(
-					context.status(400),
-					context.json({
+				return HttpResponse.json(
+					{
 						success: false,
 						errors: [
 							{
@@ -106,11 +103,13 @@ export const mswR2handlers = [
 						],
 						messages: [],
 						result: null,
-					})
+					},
+					{ status: 400 }
 				);
 			}
 
-			return response.once(context.json(createFetchResult(null)));
-		}
+			return HttpResponse.json(createFetchResult(null));
+		},
+		{ once: true }
 	),
 ];

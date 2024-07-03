@@ -30,8 +30,36 @@ import {
 	usingLocalNamespace,
 } from "./helpers";
 import type { EventNames } from "../metrics";
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
+
+export function registerKvSubcommands(
+	kvYargs: CommonYargsArgv,
+	subHelp: SubHelp
+) {
+	return kvYargs
+		.command(
+			"namespace",
+			`Interact with your Workers KV Namespaces`,
+			(namespaceYargs) => {
+				return kvNamespace(namespaceYargs.command(subHelp));
+			}
+		)
+		.command(
+			"key",
+			`Individually manage Workers KV key-value pairs`,
+			(keyYargs) => {
+				return kvKey(keyYargs.command(subHelp));
+			}
+		)
+		.command(
+			"bulk",
+			`Interact with multiple Workers KV key-value pairs at once`,
+			(bulkYargs) => {
+				return kvBulk(bulkYargs.command(subHelp));
+			}
+		);
+}
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
@@ -81,19 +109,16 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 				logger.log(
 					`Add the following to your configuration file in your kv_namespaces array${envString}:`
 				);
-				logger.log(
-					`{ binding = "${getValidBindingName(
-						args.namespace,
-						"KV"
-					)}", ${previewString}id = "${namespaceId}" }`
-				);
+				logger.log(`[[kv_namespaces]]`);
+				logger.log(`binding = "${getValidBindingName(args.namespace, "KV")}"`);
+				logger.log(`${previewString}id = "${namespaceId}"`);
 
 				// TODO: automatically write this block to the wrangler.toml config file??
 			}
 		)
 		.command(
 			"list",
-			"Outputs a list of all KV namespaces associated with your account id.",
+			"Output a list of all KV namespaces associated with your account id",
 			(listArgs) => listArgs,
 			async (args) => {
 				const config = readConfig(args.config, args);
@@ -112,7 +137,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 		)
 		.command(
 			"delete",
-			"Deletes a given namespace.",
+			"Delete a given namespace.",
 			(yargs) => {
 				return yargs
 					.option("binding", {
@@ -178,7 +203,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 	return kvYargs
 		.command(
 			"put <key> [value]",
-			"Writes a single key/value pair to the given namespace.",
+			"Write a single key/value pair to the given namespace",
 			(yargs) => {
 				return yargs
 					.positional("key", {
@@ -245,7 +270,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				const value = args.path
 					? readFileSyncToBuffer(args.path)
 					: // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					  args.value!;
+						args.value!;
 
 				const metadataLog = metadata
 					? ` with metadata "${JSON.stringify(metadata)}"`
@@ -297,7 +322,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"list",
-			"Outputs a list of all keys in a given namespace.",
+			"Output a list of all keys in a given namespace",
 			(yargs) => {
 				return yargs
 					.option("binding", {
@@ -363,7 +388,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"get <key>",
-			"Reads a single value by key from the given namespace.",
+			"Read a single value by key from the given namespace",
 			(yargs) => {
 				return yargs
 					.positional("key", {
@@ -453,7 +478,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"delete <key>",
-			"Removes a single key value pair from the given namespace.",
+			"Remove a single key value pair from the given namespace",
 			(yargs) => {
 				return yargs
 					.positional("key", {
@@ -730,7 +755,9 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 						config.configPath,
 						namespaceId,
 						async (namespace) => {
-							for (const key of content) await namespace.delete(key);
+							for (const key of content) {
+								await namespace.delete(key);
+							}
 						}
 					);
 

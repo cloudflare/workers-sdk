@@ -10,11 +10,11 @@ import {
 } from "../../runtime";
 import { CacheBindings, SharedBindings } from "../../workers";
 import {
+	getMiniflareObjectBindings,
+	getPersistPath,
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	getMiniflareObjectBindings,
-	getPersistPath,
 } from "../shared";
 
 export const CacheOptionsSchema = z.object({

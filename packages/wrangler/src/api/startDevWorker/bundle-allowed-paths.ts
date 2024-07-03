@@ -39,7 +39,9 @@ function getBundleReferencedPaths(
 	bundle: EsbuildBundle
 ): BundleReferencedPaths {
 	let allowed = bundleReferencedPathsCache.get(bundle);
-	if (allowed !== undefined) return allowed;
+	if (allowed !== undefined) {
+		return allowed;
+	}
 	allowed = { sourcePaths: new Set(), sourceMapPaths: new Set() };
 	bundleReferencedPathsCache.set(bundle, allowed);
 
@@ -48,7 +50,9 @@ function getBundleReferencedPaths(
 		// `Debugger.getScriptSource` commands instead, which get the code from V8.
 
 		const sourceMappingURL = maybeGetSourceMappingURL(sourcePath);
-		if (sourceMappingURL === undefined) continue;
+		if (sourceMappingURL === undefined) {
+			continue;
+		}
 		const sourceMappingPath = fileURLToPath(sourceMappingURL);
 		allowed.sourceMapPaths.add(sourceMappingPath);
 
@@ -71,8 +75,12 @@ function getBundleReferencedPaths(
 function* getBundleSourcePaths(bundle: EsbuildBundle): Generator<string> {
 	yield bundle.path;
 	for (const module of bundle.modules) {
-		if (module.type !== "esm" && module.type !== "commonjs") continue;
-		if (module.filePath === undefined) continue;
+		if (module.type !== "esm" && module.type !== "commonjs") {
+			continue;
+		}
+		if (module.filePath === undefined) {
+			continue;
+		}
 		yield module.filePath;
 	}
 }
@@ -80,7 +88,9 @@ function* getBundleSourcePaths(bundle: EsbuildBundle): Generator<string> {
 function maybeGetSourceMappingURL(sourcePath: string): URL | undefined {
 	const source = fs.readFileSync(sourcePath, "utf8");
 	const sourceMappingURLIndex = source.lastIndexOf("//# sourceMappingURL=");
-	if (sourceMappingURLIndex === -1) return;
+	if (sourceMappingURLIndex === -1) {
+		return;
+	}
 
 	const sourceMappingURLMatch = source
 		.substring(sourceMappingURLIndex)
@@ -91,7 +101,9 @@ function maybeGetSourceMappingURL(sourcePath: string): URL | undefined {
 	const sourceURL = pathToFileURL(sourcePath);
 	try {
 		const sourceMappingURL = new URL(sourceMappingURLSpecifier, sourceURL);
-		if (sourceMappingURL.protocol !== "file:") return;
+		if (sourceMappingURL.protocol !== "file:") {
+			return;
+		}
 		return sourceMappingURL;
 	} catch {
 		// If we can't parse `sourceMappingURLSpecifier`, ignore it

@@ -36,7 +36,9 @@ export const getDatabaseByNameOrBinding = async (
 	name: string
 ): Promise<Database> => {
 	const dbFromConfig = getDatabaseInfoFromConfig(config, name);
-	if (dbFromConfig) return dbFromConfig;
+	if (dbFromConfig) {
+		return dbFromConfig;
+	}
 
 	const allDBs = await listDatabases(accountId);
 	const matchingDB = allDBs.find((db) => db.name === name);

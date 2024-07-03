@@ -17,14 +17,14 @@ describe("updateWranglerToml", () => {
 
 	beforeEach(() => {
 		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
-			Promise.resolve(mockCompatDate)
+			Promise.resolve(mockCompatDate),
 		);
 		vi.mocked(existsSync).mockImplementation(() => true);
 		mockWorkersTypesDirectory();
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`,
 		);
 	});
 
@@ -62,7 +62,7 @@ describe("updateWranglerToml", () => {
 
 	test("string literal replacement", async () => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
-			"\n"
+			"\n",
 		);
 		vi.mocked(readFile).mockReturnValue(toml);
 

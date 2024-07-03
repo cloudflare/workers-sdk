@@ -87,7 +87,6 @@ export async function localPropsToConfigBundle(
 		compatibilityDate: props.compatibilityDate,
 		compatibilityFlags: props.compatibilityFlags,
 		inspectorPort: props.runtimeInspectorPort,
-		usageModel: props.usageModel,
 		bindings: props.bindings,
 		workerDefinitions: props.workerDefinitions,
 		assetPaths: props.assetPaths,
@@ -115,11 +114,15 @@ export function maybeRegisterLocalWorker(
 	internalDurableObjects: CfDurableObject[] | undefined,
 	entrypointAddresses: WorkerEntrypointsDefinition | undefined
 ) {
-	if (name === undefined) return;
+	if (name === undefined) {
+		return;
+	}
 
 	let protocol = url.protocol;
 	protocol = protocol.substring(0, url.protocol.length - 1);
-	if (protocol !== "http" && protocol !== "https") return;
+	if (protocol !== "http" && protocol !== "https") {
+		return;
+	}
 
 	const port = parseInt(url.port);
 	return registerWorker(name, {
@@ -138,15 +141,6 @@ export function maybeRegisterLocalWorker(
 }
 
 export function Local(props: LocalProps) {
-	useLocalWorker(props);
-
-	return null;
-}
-
-function useLocalWorker(props: LocalProps) {
-	const miniflareServerRef = useRef<MiniflareServer>();
-	const removeMiniflareServerExitListenerRef = useRef<() => void>();
-
 	useEffect(() => {
 		if (props.bindings.services && props.bindings.services.length > 0) {
 			logger.warn(
@@ -167,10 +161,21 @@ function useLocalWorker(props: LocalProps) {
 		}
 	}, [props.bindings.durable_objects?.bindings]);
 
+	useLocalWorker(props);
+
+	return null;
+}
+
+function useLocalWorker(props: LocalProps) {
+	const miniflareServerRef = useRef<MiniflareServer>();
+	const removeMiniflareServerExitListenerRef = useRef<() => void>();
+
 	useEffect(() => {
 		const abortController = new AbortController();
 
-		if (!props.bundle || !props.format) return;
+		if (!props.bundle || !props.format) {
+			return;
+		}
 		let server = miniflareServerRef.current;
 		if (server === undefined) {
 			logger.log(chalk.dim("⎔ Starting local server..."));

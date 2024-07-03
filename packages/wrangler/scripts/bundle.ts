@@ -93,7 +93,9 @@ const embedWorkersPlugin: Plugin = {
 				kind: "import-statement",
 				resolveDir: TEMPLATES_DIR,
 			});
-			if (result.errors.length > 0) return { errors: result.errors };
+			if (result.errors.length > 0) {
+				return { errors: result.errors };
+			}
 			return { path: result.path, namespace };
 		});
 		build.onLoad({ filter: /.*/, namespace }, async (args) => {
@@ -137,7 +139,9 @@ async function run() {
 		console.log("Built. Watching for changes...");
 		await buildMain({ watch: true });
 	} else {
-		for (const ctx of workersContexts.values()) await ctx.dispose();
+		for (const ctx of workersContexts.values()) {
+			await ctx.dispose();
+		}
 	}
 }
 

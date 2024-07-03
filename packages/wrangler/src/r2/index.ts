@@ -24,7 +24,7 @@ import {
 } from "./helpers";
 import * as Notification from "./notification";
 import * as Sippy from "./sippy";
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 const CHUNK_SIZE = 1024;
@@ -50,10 +50,12 @@ async function createFileReadableStream(filePath: string) {
 	});
 }
 
-export function r2(r2Yargs: CommonYargsArgv) {
+export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 	return r2Yargs
+		.command(subHelp)
 		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
 			return r2ObjectYargs
+				.demandCommand()
 				.command(
 					"get <objectPath>",
 					"Fetch an object from an R2 bucket",
@@ -145,7 +147,9 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							}
 							await stream.promises.pipeline(input, output);
 						}
-						if (!pipe) logger.log("Download complete.");
+						if (!pipe) {
+							logger.log("Download complete.");
+						}
 					}
 				)
 				.command(
@@ -277,7 +281,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							objectSize = blob.size;
 						}
 
-						if (objectSize > MAX_UPLOAD_SIZE) {
+						if (objectSize > MAX_UPLOAD_SIZE && !local) {
 							throw new FatalError(
 								`Error: Wrangler only supports uploading files up to ${prettyBytes(
 									MAX_UPLOAD_SIZE,
@@ -425,6 +429,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 		})
 
 		.command("bucket", "Manage R2 buckets", (r2BucketYargs) => {
+			r2BucketYargs.demandCommand();
 			r2BucketYargs.command(
 				"create <name>",
 				"Create a new R2 bucket",

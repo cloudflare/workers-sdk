@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "3.20240419.0",
+	"version": "3.20240701.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -22,6 +22,9 @@
 	"author": "MrBBot <me@mrbbot.dev>",
 	"main": "./dist/src/index.js",
 	"types": "./dist/src/index.d.ts",
+	"bin": {
+		"miniflare": "bootstrap.js"
+	},
 	"files": [
 		"dist/src",
 		"bootstrap.js"
@@ -29,16 +32,14 @@
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
 		"capnp:workerd": "capnpc -o ts src/runtime/config/workerd.capnp",
+		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
+		"check:type": "tsc",
 		"clean": "rimraf ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
+		"lint:fix": "pnpm run check:lint --fix",
 		"test": "node scripts/build.mjs && ava && rimraf ./.tmp",
 		"test:ci": "pnpm run test",
-		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
-		"lint:fix": "pnpm run check:lint --fix",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
-	},
-	"bin": {
-		"miniflare": "bootstrap.js"
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
@@ -48,35 +49,35 @@
 		"exit-hook": "^2.2.1",
 		"glob-to-regexp": "^0.4.1",
 		"stoppable": "^1.1.0",
-		"undici": "^5.28.2",
-		"workerd": "1.20240419.0",
-		"ws": "^8.11.0",
+		"undici": "^5.28.4",
+		"workerd": "1.20240701.0",
+		"ws": "^8.17.1",
 		"youch": "^3.2.2",
-		"zod": "^3.20.6"
+		"zod": "^3.22.3"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^4.0.0",
+		"@ava/typescript": "^4.1.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240419.0",
-		"@microsoft/api-extractor": "^7.36.3",
+		"@cloudflare/workers-types": "^4.20240620.0",
+		"@microsoft/api-extractor": "^7.47.0",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/http-cache-semantics": "^4.0.1",
-		"@types/node": "^18.11.9",
-		"@types/rimraf": "^3.0.2",
+		"@types/node": "20.8.3",
+		"@types/rimraf": "^4.0.5",
 		"@types/stoppable": "^1.1.1",
 		"@types/which": "^2.0.1",
-		"@types/ws": "^8.5.3",
+		"@types/ws": "^8.5.7",
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
-		"ava": "^5.2.0",
+		"ava": "^6.0.1",
 		"capnpc-ts": "^0.7.0",
 		"concurrently": "^8.2.2",
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
-		"esbuild": "^0.16.17",
-		"eslint": "^8.6.0",
+		"esbuild": "0.17.19",
+		"eslint": "^8.49.0",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-es": "^4.1.0",
 		"eslint-plugin-import": "2.26.x",
@@ -84,10 +85,8 @@
 		"expect-type": "^0.15.0",
 		"http-cache-semantics": "^4.1.0",
 		"kleur": "^4.1.5",
-		"prettier": "^3.0.3",
-		"rimraf": "^3.0.2",
-		"source-map": "^0.6.0",
-		"typescript": "^5.4.5",
+		"rimraf": "^5.0.1",
+		"source-map": "^0.6.1",
 		"which": "^2.0.2"
 	},
 	"engines": {

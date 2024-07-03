@@ -1,12 +1,14 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { createFetchResult, msw } from "./msw";
 
 export function mockCollectKnownRoutesRequest(
 	routes: { pattern: string; script: string }[]
 ) {
 	msw.use(
-		rest.get(`*/zones/:zoneId/workers/routes`, (_, res, ctx) =>
-			res.once(ctx.json(createFetchResult(routes)))
+		http.get(
+			`*/zones/:zoneId/workers/routes`,
+			() => HttpResponse.json(createFetchResult(routes)),
+			{ once: true }
 		)
 	);
 }

@@ -18,7 +18,7 @@ export default function EditorPane() {
 									name: "workers-playground",
 									entrypoint: draftWorker?.service?.entrypoint,
 									files: draftWorker?.service?.modules,
-							  }
+								}
 							: undefined
 					}
 					onChange={({ entrypoint, files }) =>

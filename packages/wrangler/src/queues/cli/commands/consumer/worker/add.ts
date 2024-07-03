@@ -61,9 +61,10 @@ function createBody(
 		settings: {
 			batch_size: args.batchSize,
 			max_retries: args.messageRetries,
-			max_wait_time_ms: args.batchTimeout // API expects milliseconds
-				? 1000 * args.batchTimeout
-				: undefined,
+			max_wait_time_ms:
+				args.batchTimeout !== undefined // API expects milliseconds
+					? 1000 * args.batchTimeout
+					: undefined,
 			max_concurrency: args.maxConcurrency,
 			retry_delay: args.retryDelaySecs,
 		},

@@ -1,11 +1,7 @@
 import { useCallback } from "react";
-import {
-	Channel,
-	FromErrorPage,
-	SourcesLoadedMessage,
-	ToErrorPage,
-} from "../ipc";
-import { TypedModule } from "../useDraftWorker";
+import { Channel } from "../ipc";
+import type { FromErrorPage, SourcesLoadedMessage, ToErrorPage } from "../ipc";
+import type { TypedModule } from "../useDraftWorker";
 
 function getFilesFromModules(modules: Record<string, TypedModule>) {
 	return Object.entries(modules)

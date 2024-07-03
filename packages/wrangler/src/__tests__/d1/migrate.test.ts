@@ -1,11 +1,11 @@
 import { cwd } from "process";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
-import { mockGetMemberships, mockOAuthFlow } from "../helpers/mock-oauth-flow";
+import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -37,7 +37,6 @@ describe("migrate", () => {
 	describe("apply", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken();
-		const { mockOAuthServerCallback } = mockOAuthFlow();
 		it("should not attempt to login in local mode", async () => {
 			setIsTTY(false);
 			writeWranglerToml({
@@ -101,7 +100,6 @@ describe("migrate", () => {
 					},
 				],
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
@@ -126,12 +124,11 @@ Your database may not be available to serve requests during the migration, conti
 		it("multiple accounts: should let the user apply migrations with an account_id in config", async () => {
 			setIsTTY(false);
 			msw.use(
-				rest.post(
+				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
+					async () => {
+						return HttpResponse.json(
+							{
 								result: [
 									{
 										results: [],
@@ -142,30 +139,36 @@ Your database may not be available to serve requests during the migration, conti
 								success: true,
 								errors: [],
 								messages: [],
-							})
+							},
+							{ status: 200 }
 						);
 					}
 				)
 			);
 			msw.use(
-				rest.get(
-					"*/accounts/:accountId/d1/database/:databaseId",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								result: {
-									file_size: 7421952,
-									name: "benchmark3-v1",
-									num_tables: 2,
-									uuid: "7b0c1d24-ec57-4179-8663-9b82dafe9277",
-									version: "alpha",
-								},
-								success: true,
-								errors: [],
-								messages: [],
-							})
-						);
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 7421952,
+								name: "benchmark3-v1",
+								num_tables: 2,
+								uuid: "7b0c1d24-ec57-4179-8663-9b82dafe9277",
+								version: "alpha",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/backup",
+					async ({ params }) => {
+						// All we need to do here is check that the right account ID was provided.
+						expect(params.accountId).toMatchInlineSnapshot(`"nx01"`);
+						return HttpResponse.error();
 					}
 				)
 			);
@@ -180,7 +183,6 @@ Your database may not be available to serve requests during the migration, conti
 				],
 				account_id: "nx01",
 			});
-			mockOAuthServerCallback();
 			mockGetMemberships([
 				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
@@ -196,11 +198,11 @@ Ok to create /tmp/my-migrations-go-here?`,
 Your database may not be available to serve requests during the migration, continue?`,
 				result: true,
 			});
-			//if we get to this point, wrangler knows the account_id
+
 			await expect(
 				runWrangler("d1 migrations apply db --remote")
-			).rejects.toThrowError(
-				`request to https://api.cloudflare.com/client/v4/accounts/nx01/d1/database/xxxx/backup failed`
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[TypeError: Failed to fetch]`
 			);
 		});
 	});

@@ -30,7 +30,7 @@ async function installCFWorker() {
 			dev: true,
 			startText: "Installing adapter dependencies",
 			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		}
+		},
 	);
 }
 async function updateAppCode() {
@@ -45,7 +45,7 @@ async function updateAppCode() {
 		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
 		appConfig.replace(
 			"providers: [",
-			"providers: [provideHttpClient(withFetch()), "
+			"providers: [provideHttpClient(withFetch()), ",
 		);
 	writeFile(resolve(appConfigPath), newAppConfig);
 	s.stop(`${brandColor(`updated`)} ${dim(appConfigPath)}`);

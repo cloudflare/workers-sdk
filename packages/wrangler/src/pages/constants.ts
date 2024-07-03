@@ -1,13 +1,19 @@
 import { version as wranglerVersion } from "../../package.json";
 
+const isWindows = process.platform === "win32";
+
 export const MAX_ASSET_COUNT = 20_000;
 export const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 export const PAGES_CONFIG_CACHE_FILENAME = "pages.json";
-export const MAX_BUCKET_SIZE = 50 * 1024 * 1024;
-export const MAX_BUCKET_FILE_COUNT = 5000;
+export const MAX_BUCKET_SIZE = 40 * 1024 * 1024;
+// Reduce the maximum number of files in a bucket on Windows
+// This helps to avoid EMFILE errors when reading them into memory.
+export const MAX_BUCKET_FILE_COUNT = isWindows ? 1000 : 2000;
 export const BULK_UPLOAD_CONCURRENCY = 3;
 export const MAX_UPLOAD_ATTEMPTS = 5;
+export const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 export const MAX_DEPLOYMENT_ATTEMPTS = 3;
+export const MAX_DEPLOYMENT_STATUS_ATTEMPTS = 5;
 export const MAX_CHECK_MISSING_ATTEMPTS = 5;
 export const SECONDS_TO_WAIT_FOR_PROXY = 5;
 export const isInPagesCI = !!process.env.CF_PAGES;

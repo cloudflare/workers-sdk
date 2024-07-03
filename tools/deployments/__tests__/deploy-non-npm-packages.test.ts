@@ -97,6 +97,7 @@ describe("findDeployablePackageNames()", () => {
 	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
+			  "devprod-status-bot",
 			  "edge-preview-authenticated-proxy",
 			  "format-errors",
 			  "playground-preview-worker",

@@ -13,12 +13,14 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
 import { versionsListHandler, versionsListOptions } from "./list";
+import { registerVersionsSecretsSubcommands } from "./secrets";
 import versionsUpload from "./upload";
 import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
+	SubHelp,
 } from "../yargs-types";
 
 async function standardPricingWarning(config: Config) {
@@ -116,6 +118,12 @@ export function versionsUploadOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 				array: true,
 			})
+			.option("alias", {
+				describe: "A module pair to be substituted in the script",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			})
 			.option("jsx-factory", {
 				describe: "The function that is called for each JSX element",
 				type: "string",
@@ -191,6 +199,7 @@ export async function versionsUploadHandler(
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
+	const cliAlias = collectKeyValues(args.alias);
 
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
@@ -209,6 +218,7 @@ export async function versionsUploadHandler(
 		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
+		alias: cliAlias,
 		jsxFactory: args.jsxFactory,
 		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
@@ -228,7 +238,8 @@ export async function versionsUploadHandler(
 }
 
 export default function registerVersionsSubcommands(
-	versionYargs: CommonYargsArgv
+	versionYargs: CommonYargsArgv,
+	subHelp: SubHelp
 ) {
 	versionYargs
 		.command(
@@ -254,5 +265,12 @@ export default function registerVersionsSubcommands(
 			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]",
 			versionsDeployOptions,
 			versionsDeployHandler
+		)
+		.command(
+			"secret",
+			"Generate a secret that can be referenced in a Worker",
+			(yargs) => {
+				return registerVersionsSecretsSubcommands(yargs.command(subHelp));
+			}
 		);
 }

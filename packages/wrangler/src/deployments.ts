@@ -81,11 +81,12 @@ export async function deployments(
 		const triggerStr = versions.annotations?.["workers/triggered_by"]
 			? `${formatTrigger(
 					versions.annotations["workers/triggered_by"]
-			  )} from ${formatSource(versions.metadata.source)}`
+				)} from ${formatSource(versions.metadata.source)}`
 			: `${formatSource(versions.metadata.source)}`;
 
 		let version = `
 Deployment ID: ${versions.id}
+Version ID:    ${versions.id}
 Created on:    ${versions.metadata.created_on}
 Author:        ${versions.metadata.author_email}
 Source:        ${triggerStr}`;
@@ -193,7 +194,7 @@ export async function rollbackDeployment(
 		);
 	}
 
-	let deployment_id = await rollbackRequest(
+	let rollbackVersion = await rollbackRequest(
 		accountId,
 		scriptName,
 		deploymentId,
@@ -209,10 +210,11 @@ export async function rollbackDeployment(
 	);
 
 	deploymentId = addHyphens(deploymentId) ?? deploymentId;
-	deployment_id = addHyphens(deployment_id) ?? deployment_id;
+	rollbackVersion = addHyphens(rollbackVersion) ?? rollbackVersion;
 
 	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
-	logger.log("Current Deployment ID:", deployment_id);
+	logger.log("Current Deployment ID:", rollbackVersion);
+	logger.log("Current Version ID:", rollbackVersion);
 
 	logVersionIdChange();
 }
@@ -280,7 +282,7 @@ export async function viewDeployment(
 	const triggerStr = deploymentDetails.annotations?.["workers/triggered_by"]
 		? `${formatTrigger(
 				deploymentDetails.annotations["workers/triggered_by"]
-		  )} from ${formatSource(deploymentDetails.metadata.source)}`
+			)} from ${formatSource(deploymentDetails.metadata.source)}`
 		: `${formatSource(deploymentDetails.metadata.source)}`;
 
 	const rollbackStr = deploymentDetails.annotations?.["workers/rollback_from"]
@@ -304,6 +306,7 @@ export async function viewDeployment(
 
 	const version = `
 Deployment ID:       ${deploymentDetails.id}
+Version ID:          ${deploymentDetails.id}
 Created on:          ${deploymentDetails.metadata.created_on}
 Author:              ${deploymentDetails.metadata.author_email}
 Source:              ${triggerStr}${rollbackStr}${reasonStr}

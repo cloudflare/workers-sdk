@@ -82,10 +82,10 @@ describe("trimSqlQuery()", () => {
 		INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
 		COMMIT;`)
 		).toThrowErrorMatchingInlineSnapshot(`
-		"Wrangler could not process the provided SQL file, as it contains several transactions.
-		D1 runs your SQL in a transaction for you.
-		Please export an SQL file from your SQLite database and try again."
-	`);
+			[Error: Wrangler could not process the provided SQL file, as it contains several transactions.
+			D1 runs your SQL in a transaction for you.
+			Please export an SQL file from your SQLite database and try again.]
+		`);
 	});
 
 	it("should handle strings", () => {

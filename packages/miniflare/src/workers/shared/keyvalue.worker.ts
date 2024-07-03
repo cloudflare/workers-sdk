@@ -8,7 +8,7 @@ import {
 import { base64Decode, base64Encode } from "./data";
 import { MiniflareDurableObject } from "./object.worker";
 import { InclusiveRange } from "./range";
-import { TypedSql, drain, get } from "./sql.worker";
+import { drain, get, TypedSql } from "./sql.worker";
 import { Timers } from "./timers.worker";
 import { Awaitable } from "./types";
 

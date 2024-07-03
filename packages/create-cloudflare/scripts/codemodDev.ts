@@ -21,7 +21,7 @@ import * as recast from "recast";
  */
 export const testTransform = (
 	filePath: string,
-	methods: recast.types.Visitor
+	methods: recast.types.Visitor,
 ) => {
 	const ast = parseFile(join(__dirname, filePath));
 

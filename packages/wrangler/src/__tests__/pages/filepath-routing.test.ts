@@ -238,7 +238,7 @@ describe("filepath-routing", () => {
 					baseURL: "/base" as UrlPath,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Invalid Pages function route parameter - \\"[hyphen-not-allowed]\\". Parameter names must only contain alphanumeric and underscore characters."`
+				`[Error: Invalid Pages function route parameter - "[hyphen-not-allowed]". Parameter names must only contain alphanumeric and underscore characters.]`
 			);
 		});
 
@@ -254,7 +254,7 @@ describe("filepath-routing", () => {
 					baseURL: "/base" as UrlPath,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Invalid Pages function route parameter - \\"[[hyphen-not-allowed]]\\". Parameters names must only contain alphanumeric and underscore characters."`
+				`[Error: Invalid Pages function route parameter - "[[hyphen-not-allowed]]". Parameters names must only contain alphanumeric and underscore characters.]`
 			);
 		});
 	});

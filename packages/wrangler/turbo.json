@@ -3,6 +3,17 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
+			"inputs": [
+				"!**/__tests__/**",
+				"!**/.wrangler/**",
+				"bin/**",
+				"src/**",
+				"scripts/**",
+				"templates/**",
+				"*.json",
+				"*.js",
+				"*.ts"
+			],
 			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
 			"env": [
 				"NODE_EXTRA_CA_CERTS",
@@ -35,15 +46,24 @@
 				"WRANGLER_SEND_METRICS",
 				"https_proxy",
 				"HTTPS_PROXY",
-				"JEST_WORKER_ID",
 				"http_proxy",
 				"HTTP_PROXY",
 				"CI_OS",
 				"SENTRY_DSN",
 				"SYSTEMROOT",
+				"WRANGLER_DISABLE_EXPERIMENTAL_WARNING",
 				"WRANGLER_DISABLE_REQUEST_BODY_DRAINING",
-				"WRANGLER_WORKER_REGISTRY_PORT"
+				"WRANGLER_WORKER_REGISTRY_PORT",
+				"WRANGLER_API_ENVIRONMENT"
 			]
+		},
+		"test:ci": {
+			"inputs": ["!**/.wrangler/**", "**/__tests__/**"],
+			"dependsOn": ["build"]
+		},
+		"test:e2e": {
+			"inputs": ["e2e/**"],
+			"dependsOn": ["build"]
 		}
 	}
 }

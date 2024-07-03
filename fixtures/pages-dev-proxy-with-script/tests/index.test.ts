@@ -42,7 +42,14 @@ async function startWranglerPagesDevProxy(extraArgs: string[] = []): Promise<{
 	return new Promise(async (resolve) => {
 		const childProcess = fork(
 			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["pages", "dev", "--port=0", "--proxy=9999", ...extraArgs],
+			[
+				"pages",
+				"dev",
+				"--ip=127.0.0.1",
+				"--port=0",
+				"--proxy=9999",
+				...extraArgs,
+			],
 			{
 				cwd: path.resolve(__dirname, ".."),
 				env: { BROWSER: "none", ...process.env },

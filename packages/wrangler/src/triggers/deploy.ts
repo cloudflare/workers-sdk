@@ -87,7 +87,9 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 		return;
 	}
 
-	if (!accountId) throw new UserError("Missing accountId");
+	if (!accountId) {
+		throw new UserError("Missing accountId");
+	}
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
@@ -144,7 +146,7 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 			// to bother with all the error handling tomfoolery.
 			const routesWithOtherBindings: Record<string, string[]> = {};
 			for (const route of routes) {
-				const zone = await getZoneForRoute(route);
+				const zone = await getZoneForRoute({ route, accountId });
 				if (!zone) {
 					continue;
 				}
@@ -192,7 +194,12 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(routesOnly, { workerUrl, scriptName, notProd }).then(() => {
+			publishRoutes(routesOnly, {
+				workerUrl,
+				scriptName,
+				notProd,
+				accountId,
+			}).then(() => {
 				if (routesOnly.length > 10) {
 					return routesOnly
 						.slice(0, 9)

@@ -28,23 +28,12 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Use pnpm 8.8.0
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8.8.0
-
-      - name: Use Node.js 16.18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.18
-          cache: "pnpm"
-
-      - name: Install NPM dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
 
       - name: Build tools and libraries
         run: pnpm run build

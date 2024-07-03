@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
+import { parse, stringify } from "devalue";
 import type {
 	Blob as WorkerBlob,
 	BlobOptions as WorkerBlobOptions,
@@ -10,7 +11,6 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-import { parse, stringify } from "devalue";
 
 // This file implements `devalue` reducers and revivers for structured-
 // serialisable types not supported by default. See serialisable types here:
@@ -234,6 +234,11 @@ export function stringifyWithStreams<RS>(
 
 		...reducers,
 	};
+	if (typeof value === "function") {
+		value = new __MiniflareFunctionWrapper(
+			value as ConstructorParameters<typeof __MiniflareFunctionWrapper>[0]
+		);
+	}
 	const stringifiedValue = stringify(value, streamReducers);
 	// If we didn't need to buffer anything, we've just encoded correctly. Note
 	// `unbufferedStream` may be undefined if the `value` didn't contain streams.
@@ -270,6 +275,25 @@ export function stringifyWithStreams<RS>(
 		return { value: stringifiedValue, unbufferedStream };
 	});
 }
+
+// functions can't be stringified, so we wrap them into a class that we then use to pseudo-serialize them
+// we also add a proxy and make sure that properties set on the function object are accessible
+// (this is in particular necessary for RpcStubs)
+export class __MiniflareFunctionWrapper {
+	constructor(
+		fnWithProps: ((...args: unknown[]) => unknown) & {
+			[key: string | symbol]: unknown;
+		}
+	) {
+		return new Proxy(this, {
+			get: (_, key) => {
+				if (key === "__miniflareWrappedFunction") return fnWithProps;
+				return fnWithProps[key];
+			},
+		});
+	}
+}
+
 export function parseWithReadableStreams<RS>(
 	impl: PlatformImpl<RS>,
 	stringified: StringifiedWithStream<RS>,

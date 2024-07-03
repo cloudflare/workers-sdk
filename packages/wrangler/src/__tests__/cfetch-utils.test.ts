@@ -1,6 +1,7 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { hasMorePages } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -46,21 +47,20 @@ describe("throwFetchError", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
+	mockConsoleMethods();
 
 	it("should include api errors and messages in error", async () => {
 		msw.use(
-			rest.get("*/user", (req, res, ctx) => {
-				return res(
-					ctx.json(
-						createFetchResult(
-							null,
-							false,
-							[
-								{ code: 10001, message: "error one" },
-								{ code: 10002, message: "error two" },
-							],
-							["message one", "message two"]
-						)
+			http.get("*/user", () => {
+				return HttpResponse.json(
+					createFetchResult(
+						null,
+						false,
+						[
+							{ code: 10001, message: "error one" },
+							{ code: 10002, message: "error two" },
+						],
+						["message one", "message two"]
 					)
 				);
 			})
@@ -81,14 +81,12 @@ describe("throwFetchError", () => {
 
 	it("should include api errors without messages", async () => {
 		msw.use(
-			rest.get("*/user", (req, res, ctx) => {
-				return res(
-					ctx.json({
-						result: null,
-						success: false,
-						errors: [{ code: 10000, message: "error" }],
-					})
-				);
+			http.get("*/user", () => {
+				return HttpResponse.json({
+					result: null,
+					success: false,
+					errors: [{ code: 10000, message: "error" }],
+				});
 			})
 		);
 		await expect(runWrangler("whoami")).rejects.toMatchObject({

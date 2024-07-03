@@ -1,9 +1,11 @@
-import MockWebSocket from "jest-websocket-mock";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
+import { vi } from "vitest";
+import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
+import { MockWebSocket } from "../helpers/mock-web-socket";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -20,15 +22,41 @@ import type {
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
+vi.mock("ws", async (importOriginal) => {
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	const realModule = await importOriginal<typeof import("ws")>();
+	const module = {
+		__esModule: true,
+	};
+	Object.defineProperties(module, {
+		default: {
+			get() {
+				return MockWebSocket;
+			},
+		},
+		WebSocket: {
+			get() {
+				return MockWebSocket;
+			},
+		},
+		WebSocketServer: {
+			get() {
+				return realModule.WebSocketServer;
+			},
+		},
+	});
+	return module;
+});
+
 describe("pages deployment tail", () => {
 	runInTempDir();
 
-	// This `afterEach()` must come before `mockAccountId()` and `mockApiToken()`.
-	// Closing the sockets will trigger an authenticated fetch call which would
-	// otherwise fail.
-	afterEach(() => {
+	let api: MockAPI;
+	afterEach(async () => {
+		await api?.closeHelper?.();
+
 		mockWebSockets.forEach((ws) => ws.close());
-		mockWebSockets.splice(0);
+		mockWebSockets = [];
 	});
 
 	mockAccountId();
@@ -40,13 +68,6 @@ describe("pages deployment tail", () => {
 		process.env.CF_PAGES = "1";
 	});
 
-	beforeEach(() => {
-		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
-		// dare you... Have fun fixing this tests :)
-		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
-		const mockWs = jest["requireMock"]("ws");
-		mockWs.useOriginal = false;
-	});
 	afterAll(() => {
 		delete process.env.CF_PAGES;
 	});
@@ -57,17 +78,18 @@ describe("pages deployment tail", () => {
 	 */
 	describe("API interaction", () => {
 		it("should throw an error if deployment isn't provided", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await expect(
 				runWrangler("pages deployment tail")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a deployment in non-interactive mode."`
+				`[Error: Must specify a deployment in non-interactive mode.]`
 			);
 			expect(api.requests.deployments.count).toStrictEqual(0);
+			await api.closeHelper();
 		});
 
 		it("creates and then delete tails by deployment ID", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler(
@@ -80,10 +102,11 @@ describe("pages deployment tail", () => {
 
 			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
+			await api.closeHelper();
 		});
 
 		it("creates and then deletes tails by deployment URL", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler(
@@ -96,18 +119,19 @@ describe("pages deployment tail", () => {
 
 			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
+			await api.closeHelper();
 		});
 
 		it("errors when passing in a deployment without a project", async () => {
 			await expect(
 				runWrangler("pages deployment tail foo")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Must specify a project name in non-interactive mode."`
+				`[Error: Must specify a project name in non-interactive mode.]`
 			);
 		});
 
 		it("creates and then delete tails by project name", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
 			await runWrangler(
@@ -123,7 +147,7 @@ describe("pages deployment tail", () => {
 		});
 
 		it("errors when the websocket closes unexpectedly", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await api.closeHelper();
 
 			await expect(
@@ -136,7 +160,7 @@ describe("pages deployment tail", () => {
 		});
 
 		it("activates debug mode when the cli arg is passed in", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --debug"
 			);
@@ -144,6 +168,7 @@ describe("pages deployment tail", () => {
 				"debug",
 				true
 			);
+			await api.closeHelper();
 		});
 	});
 
@@ -162,17 +187,18 @@ describe("pages deployment tail", () => {
 		});
 
 		it("should send sampling rate filter", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --sampling-rate 0.25"
 			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ sampling_rate: 0.25 }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends single status filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --status error"
 			);
@@ -183,10 +209,11 @@ describe("pages deployment tail", () => {
 					},
 				],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends multiple status filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --status error --status canceled"
 			);
@@ -203,50 +230,55 @@ describe("pages deployment tail", () => {
 					},
 				],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends single HTTP method filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST"
 			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ method: ["POST"] }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends multiple HTTP method filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --method POST --method GET"
 			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ method: ["POST", "GET"] }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends header filters without a query", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --header X-CUSTOM-HEADER"
 			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ header: { key: "X-CUSTOM-HEADER" } }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends header filters with a query", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --header X-CUSTOM-HEADER:some-value"
 			);
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ header: { key: "X-CUSTOM-HEADER", query: "some-value" } }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends single IP filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			const fakeIp = "192.0.2.1";
 
 			await runWrangler(
@@ -255,10 +287,11 @@ describe("pages deployment tail", () => {
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ client_ip: [`${fakeIp}`] }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends multiple IP filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			const fakeIp = "192.0.2.1";
 
 			await runWrangler(
@@ -267,10 +300,11 @@ describe("pages deployment tail", () => {
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ client_ip: [`${fakeIp}`, "self"] }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends search filters", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			const search = "filterMe";
 
 			await runWrangler(
@@ -279,10 +313,11 @@ describe("pages deployment tail", () => {
 			expect(api.requests.creation[0]).toEqual({
 				filters: [{ query: `${search}` }],
 			});
+			await api.closeHelper();
 		});
 
 		it("sends everything but the kitchen sink", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			const sampling_rate = 0.69;
 			const status = ["ok", "error"];
 			const method = ["GET", "POST", "PUT"];
@@ -322,6 +357,7 @@ describe("pages deployment tail", () => {
 				`pages deployment tail mock-deployment-id --project-name mock-project ${cliFilters}`
 			);
 			expect(api.requests.creation[0]).toEqual(expectedWebsocketMessage);
+			await api.closeHelper();
 		});
 	});
 
@@ -329,7 +365,7 @@ describe("pages deployment tail", () => {
 		const { setIsTTY } = useMockIsTTY();
 
 		it("logs request messages in JSON format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
 			);
@@ -340,10 +376,11 @@ describe("pages deployment tail", () => {
 
 			api.ws.send(serializedMessage);
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			await api.closeHelper();
 		});
 
 		it("logs scheduled messages in JSON format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
 			);
@@ -354,10 +391,11 @@ describe("pages deployment tail", () => {
 
 			api.ws.send(serializedMessage);
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			await api.closeHelper();
 		});
 
 		it("logs alarm messages in json format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
 			);
@@ -368,10 +406,11 @@ describe("pages deployment tail", () => {
 
 			api.ws.send(serializedMessage);
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			await api.closeHelper();
 		});
 
 		it("logs email messages in json format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
 			);
@@ -382,10 +421,11 @@ describe("pages deployment tail", () => {
 
 			api.ws.send(serializedMessage);
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			await api.closeHelper();
 		});
 
 		it("logs queue messages in json format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
 			);
@@ -396,10 +436,11 @@ describe("pages deployment tail", () => {
 
 			api.ws.send(serializedMessage);
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			await api.closeHelper();
 		});
 
 		it("logs request messages in pretty format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
 			);
@@ -423,10 +464,11 @@ describe("pages deployment tail", () => {
 					"Connected to deployment mock-deployment-id, waiting for logs...
 					GET https://example.org/ - Ok @ [mock event timestamp]"
 			`);
+			await api.closeHelper();
 		});
 
 		it("logs scheduled messages in pretty format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
 			);
@@ -450,10 +492,11 @@ describe("pages deployment tail", () => {
 					"Connected to deployment mock-deployment-id, waiting for logs...
 					\\"* * * * *\\" @ [mock timestamp string] - Ok"
 			`);
+			await api.closeHelper();
 		});
 
 		it("logs alarm messages in pretty format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
 			);
@@ -477,10 +520,11 @@ describe("pages deployment tail", () => {
 					"Connected to deployment mock-deployment-id, waiting for logs...
 					Alarm @ [mock scheduled time] - Ok"
 			`);
+			await api.closeHelper();
 		});
 
 		it("logs email messages in pretty format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
 			);
@@ -504,10 +548,11 @@ describe("pages deployment tail", () => {
 					"Connected to deployment mock-deployment-id, waiting for logs...
 					Email from:${mockEmailEventFrom} to:${mockEmailEventTo} size:${mockEmailEventSize} @ [mock event timestamp] - Ok"
 			`);
+			await api.closeHelper();
 		});
 
 		it("logs queue messages in pretty format", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
 			);
@@ -531,10 +576,11 @@ describe("pages deployment tail", () => {
 					"Connected to deployment mock-deployment-id, waiting for logs...
 					Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
 			`);
+			await api.closeHelper();
 		});
 
 		it("should not crash when the tail message has a void event", async () => {
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
 			);
@@ -557,11 +603,12 @@ describe("pages deployment tail", () => {
 			"Connected to deployment mock-deployment-id, waiting for logs...
 			Unknown Event - Ok @ [mock timestamp string]"
 		`);
+			await api.closeHelper();
 		});
 
 		it("defaults to logging in pretty format when the output is a TTY", async () => {
 			setIsTTY(true);
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project"
 			);
@@ -585,12 +632,13 @@ describe("pages deployment tail", () => {
 			        "Connected to deployment mock-deployment-id, waiting for logs...
 			        GET https://example.org/ - Ok @ [mock event timestamp]"
 		      `);
+			await api.closeHelper();
 		});
 
 		it("defaults to logging in json format when the output is not a TTY", async () => {
 			setIsTTY(false);
 
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project"
 			);
@@ -601,11 +649,12 @@ describe("pages deployment tail", () => {
 
 			api.ws.send(serializedMessage);
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+			await api.closeHelper();
 		});
 
 		it("logs console messages and exceptions", async () => {
 			setIsTTY(true);
-			const api = mockTailAPIs();
+			api = mockTailAPIs();
 
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project"
@@ -653,6 +702,7 @@ describe("pages deployment tail", () => {
 					"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+			await api.closeHelper();
 		});
 	});
 });
@@ -741,7 +791,7 @@ type MockAPI = {
 		creation: RequestInit[];
 		deletion: RequestCounter;
 	};
-	ws: MockWebSocket;
+	ws: MockWebSocketServer;
 	nextMessageJson(): Promise<unknown>;
 	closeHelper: () => Promise<void>;
 };
@@ -754,13 +804,12 @@ type MockAPI = {
 function mockListDeployments(): RequestCounter {
 	const requests: RequestCounter = { count: 0 };
 	msw.use(
-		rest.get(
+		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments`,
-			(_, res, ctx) => {
+			() => {
 				requests.count++;
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
@@ -783,9 +832,11 @@ function mockListDeployments(): RequestCounter {
 								project_name: "mock-project",
 							},
 						],
-					})
+					},
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 
@@ -809,13 +860,12 @@ type RequestCounter = {
 function mockCreateTailRequest(): RequestInit[] {
 	const requests: RequestInit[] = [];
 	msw.use(
-		rest.post(
+		http.post(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails`,
-			async (req, res, ctx) => {
-				requests.push(await req.json());
-				return res.once(
-					ctx.status(200),
-					ctx.json({
+			async ({ request }) => {
+				requests.push((await request.json()) as RequestInit);
+				return HttpResponse.json(
+					{
 						success: true,
 						errors: [],
 						messages: [],
@@ -824,9 +874,11 @@ function mockCreateTailRequest(): RequestInit[] {
 							url: websocketURL,
 							expires_at: mockTailExpiration,
 						},
-					})
+					},
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 
@@ -871,22 +923,23 @@ const mockEmailEventSize = 45416;
 function mockDeleteTailRequest(): RequestCounter {
 	const requests = { count: 0 };
 	msw.use(
-		rest.delete(
+		http.delete(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails/:tailId`,
-			(_, res, ctx) => {
+			() => {
 				requests.count++;
-				return res.once(
-					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: null })
+				return HttpResponse.json(
+					{ success: true, errors: [], messages: [], result: null },
+					{ status: 200 }
 				);
-			}
+			},
+			{ once: true }
 		)
 	);
 
 	return requests;
 }
 
-const mockWebSockets: MockWebSocket[] = [];
+let mockWebSockets: MockWebSocketServer[] = [];
 
 const websocketURL = "ws://localhost:1234";
 /**
@@ -925,7 +978,7 @@ function mockTailAPIs(): MockAPI {
 		},
 	};
 
-	api.ws = new MockWebSocket(websocketURL);
+	api.ws = new MockWebSocketServer(websocketURL);
 	mockWebSockets.push(api.ws);
 
 	api.requests.creation = mockCreateTailRequest();

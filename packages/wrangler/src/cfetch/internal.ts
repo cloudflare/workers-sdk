@@ -104,6 +104,7 @@ export async function fetchInternal<ResponseType>(
 					text: `${method} ${resource} -> ${response.status} ${response.statusText}`,
 				},
 			],
+			status: response.status,
 		});
 	}
 }
@@ -122,8 +123,8 @@ function cloneHeaders(
 	return headers instanceof Headers
 		? Object.fromEntries(headers.entries())
 		: Array.isArray(headers)
-		? Object.fromEntries(headers)
-		: { ...headers };
+			? Object.fromEntries(headers)
+			: { ...headers };
 }
 
 async function requireLoggedIn(): Promise<void> {

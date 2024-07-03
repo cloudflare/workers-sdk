@@ -11,18 +11,21 @@ describe("multiple workers", () => {
 
 		workers = await Promise.all([
 			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,

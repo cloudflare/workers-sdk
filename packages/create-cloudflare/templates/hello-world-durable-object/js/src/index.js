@@ -32,7 +32,7 @@ export class MyDurableObject extends DurableObject {
 
 	/**
 	 * The Durable Object exposes an RPC method sayHello which will be invoked when when a Durable
-	 *  Object instance receives a request from a Worker via the same method invokation on the stub
+	 *  Object instance receives a request from a Worker via the same method invocation on the stub
 	 *
 	 * @param {string} name - The name provided to a Durable Object instance from a Worker
 	 * @returns {Promise<string>} The greeting to be sent back to the Worker

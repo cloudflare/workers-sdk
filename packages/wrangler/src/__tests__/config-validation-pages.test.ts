@@ -171,6 +171,8 @@ describe("validatePagesConfig()", () => {
 						{ binding: "TEST_AED_BINDING", dataset: "test-dataset" },
 					],
 					ai: { binding: "TEST_AI_BINDING" },
+					browser: { binding: "MY_BROWSER" },
+					mtls_certificates: [{ binding: "CERT", certificate_id: "some - id" }],
 					dev: {
 						ip: "127.0.0.0",
 						port: 1234,

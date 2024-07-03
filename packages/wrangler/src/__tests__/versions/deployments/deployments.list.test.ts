@@ -1,6 +1,7 @@
 import { normalizeOutput } from "../../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
+import { mockConsoleMethods } from "../../helpers/mock-console";
 import { msw, mswGetVersion, mswListNewDeployments } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
@@ -10,10 +11,11 @@ describe("deployments list", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
+	mockConsoleMethods();
 	const std = collectCLIOutput();
 
 	beforeEach(() => {
-		msw.use(mswListNewDeployments, mswGetVersion);
+		msw.use(mswListNewDeployments, mswGetVersion());
 	});
 
 	describe("without wrangler.toml", () => {
@@ -194,7 +196,7 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(writeWranglerToml);
+		beforeEach(() => writeWranglerToml());
 
 		test("prints deployments to stdout", async () => {
 			const result = runWrangler("deployments list  --experimental-versions");

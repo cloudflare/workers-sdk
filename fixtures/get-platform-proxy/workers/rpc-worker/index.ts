@@ -21,6 +21,30 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 	getCounter() {
 		return new Counter();
 	}
+
+	getHelloWorldFn() {
+		return () => "Hello World!";
+	}
+
+	getHelloFn() {
+		return (
+			greet: string,
+			name: string,
+			{
+				suffix,
+				capitalize,
+			}: {
+				suffix?: string;
+				capitalize?: boolean;
+			} = {}
+		) => {
+			const result = `${greet} ${name}${suffix ?? ""}`;
+			if (capitalize) {
+				return result.toUpperCase();
+			}
+			return result;
+		};
+	}
 }
 
 class Counter extends RpcTarget {

@@ -1,5 +1,493 @@
 # wrangler
 
+## 3.63.0
+
+### Minor Changes
+
+- [#6167](https://github.com/cloudflare/workers-sdk/pull/6167) [`e048958`](https://github.com/cloudflare/workers-sdk/commit/e048958778bf8c43a0a23c0f555c1538acc32f09) Thanks [@threepointone](https://github.com/threepointone)! - feature: alias modules in the worker
+
+  Sometimes, users want to replace modules with other modules. This commonly happens inside a third party dependency itself. As an example, a user might have imported `node-fetch`, which will probably never work in workerd. You can use the alias config to replace any of these imports with a module of your choice.
+
+  Let's say you make a `fetch-nolyfill.js`
+
+  ```ts
+  export default fetch; // all this does is export the standard fetch function`
+  ```
+
+  You can then configure `wrangler.toml` like so:
+
+  ```toml
+  # ...
+  [alias]
+  "node-fetch": "./fetch-nolyfill"
+  ```
+
+  So any calls to `import fetch from 'node-fetch';` will simply use our nolyfilled version.
+
+  You can also pass aliases in the cli (for both `dev` and `deploy`). Like:
+
+  ```bash
+  npx wrangler dev --alias node-fetch:./fetch-nolyfill
+  ```
+
+- [#6073](https://github.com/cloudflare/workers-sdk/pull/6073) [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664) Thanks [@geelen](https://github.com/geelen)! - Added D1 export support for local databases
+
+### Patch Changes
+
+- [#6149](https://github.com/cloudflare/workers-sdk/pull/6149) [`35689ea`](https://github.com/cloudflare/workers-sdk/commit/35689ead46379a50008af3d83ddaae16617cfbd4) Thanks [@RamIdeas](https://github.com/RamIdeas)! - refactor: React-free hotkeys implementation, behind the `--x-dev-env` flag
+
+- [#6022](https://github.com/cloudflare/workers-sdk/pull/6022) [`7951815`](https://github.com/cloudflare/workers-sdk/commit/795181509a4735b16f426ac02873f04c208116c8) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Fix `pages dev` watch mode [Functions]
+
+  The watch mode in `pages dev` for Pages Functions projects is currently partially broken, as it only watches for file system changes in the
+  "/functions" directory, but not for changes in any of the Functions' dependencies. This means that given a Pages Function `math-is-fun.ts`, defined as follows:
+
+  ```
+  import { ADD } from "../math/add";
+
+  export async function onRequest() {
+  	return new Response(`${ADD} is fun!`);
+  }
+  ```
+
+  `pages dev` will reload for any changes in `math-is-fun.ts` itself, but not for any changes in `math/add.ts`, which is its dependency.
+
+  Similarly, `pages dev` will not reload for any changes in non-JS module imports, such as wasm/html/binary module imports.
+
+  This commit fixes all these things, plus adds some extra polish to the `pages dev` watch mode experience.
+
+- [#6164](https://github.com/cloudflare/workers-sdk/pull/6164) [`4cdad9b`](https://github.com/cloudflare/workers-sdk/commit/4cdad9bf3870519efa46b34ecd928f26bf5cfa0f) Thanks [@threepointone](https://github.com/threepointone)! - fix: use account id for listing zones
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/4944
+
+  Trying to fetch `/zones` fails when it spans more than 500 zones. The fix to use an account id when doing so. This patch passes the account id to the zones call, threading it through all the functions that require it.
+
+- [#6180](https://github.com/cloudflare/workers-sdk/pull/6180) [`b994604`](https://github.com/cloudflare/workers-sdk/commit/b9946049b0cfe273b8d950f5abcb25ddd386a872) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: pass env to getBindings to support reading `.dev.vars.{environment}`
+
+  https://github.com/cloudflare/workers-sdk/pull/5612 added support for selecting the environment of config used, but it missed passing it to the code that reads `.dev.vars.{environment}`
+
+  Closes #5641
+
+- [#6124](https://github.com/cloudflare/workers-sdk/pull/6124) [`d03b102`](https://github.com/cloudflare/workers-sdk/commit/d03b10272513e5860c4aab338e2acecd18a990d8) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feat: `url` and `inspectorUrl` properties have been exposed on the worker object returned by `new unstable_DevEnv().startWorker(options)`
+
+- [#6147](https://github.com/cloudflare/workers-sdk/pull/6147) [`02dda3d`](https://github.com/cloudflare/workers-sdk/commit/02dda3d4d130bb9282e73499a78e04945b941ada) Thanks [@penalosa](https://github.com/penalosa)! - refactor: React free dev registry
+
+- [#6127](https://github.com/cloudflare/workers-sdk/pull/6127) [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: Bump ws dependency
+
+- [#6140](https://github.com/cloudflare/workers-sdk/pull/6140) [`4072114`](https://github.com/cloudflare/workers-sdk/commit/4072114c8ba03f35d36d14061d9a9919d61c91d5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add extra error logging to auth response errors
+
+- [#6160](https://github.com/cloudflare/workers-sdk/pull/6160) [`9466531`](https://github.com/cloudflare/workers-sdk/commit/9466531e858ffe184ad22651a8f67999398f8a55) Thanks [@sm-bean](https://github.com/sm-bean)! - fix: removes unnecessary wrangler tail warning against resetting durable object
+
+  fixes https://jira.cfdata.org/browse/STOR-3318
+
+- [#6142](https://github.com/cloudflare/workers-sdk/pull/6142) [`9272ef5`](https://github.com/cloudflare/workers-sdk/commit/9272ef5511c2882aed6525564c1b13c3d4a3f7e5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: improve the `getPlatformProxy` `configPath` option ts-doc comment to clarify its behavior
+
+- Updated dependencies [[`42a7930`](https://github.com/cloudflare/workers-sdk/commit/42a7930c6d81610c14005503c078610f28b9bc33), [`7ed675e`](https://github.com/cloudflare/workers-sdk/commit/7ed675e3a43cfd996496bf1be2b31d34bde36664), [`1568c25`](https://github.com/cloudflare/workers-sdk/commit/1568c251112e06feb1d3d1df844eaa660bb9fbe8)]:
+  - miniflare@3.20240701.0
+
+## 3.62.0
+
+### Minor Changes
+
+- [#5950](https://github.com/cloudflare/workers-sdk/pull/5950) [`0075621`](https://github.com/cloudflare/workers-sdk/commit/007562109b583adb6ae15bba5f50029735af24e5) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feat: add `wrangler versions secret put`, `wrangler versions secret bulk` and `wrangler versions secret list`
+
+  `wrangler versions secret put` allows for you to add/update a secret even if the latest version is not fully deployed. A new version with this secret will be created, the existing secrets and config are copied from the latest version.
+
+  `wrangler versions secret bulk` allows you to bulk add/update multiple secrets at once, this behaves the same as `secret put` and will only make one new version.
+
+  `wrangler versions secret list` lists the secrets available to the currently deployed versions. `wrangler versions secret list --latest-version` or `wrangler secret list` will list for the latest version.
+
+  Additionally, we will now prompt for extra confirmation if attempting to rollback to a version with different secrets than the currently deployed.
+
+### Patch Changes
+
+- [#6118](https://github.com/cloudflare/workers-sdk/pull/6118) [`1621992`](https://github.com/cloudflare/workers-sdk/commit/162199289d51dbaf3f7a371d777012d0039fbdfb) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: rollback in the case of a secret change, the prompt meant to show was not showing due to the spinner in an interactive env. It will now properly show.
+
+  chore: improve the view of `wrangler versions view` and change up copy a little for `versions secret` commands.
+
+- [#6105](https://github.com/cloudflare/workers-sdk/pull/6105) [`26855f3`](https://github.com/cloudflare/workers-sdk/commit/26855f39ae635feebb9d5768b64494e73d979b47) Thanks [@helloimalastair](https://github.com/helloimalastair)! - feat: Add help messages to all invalid `r2` commands
+
+- [#3735](https://github.com/cloudflare/workers-sdk/pull/3735) [`9c7df38`](https://github.com/cloudflare/workers-sdk/commit/9c7df38871b9fcfda4890a00507e6ef149e0cbcd) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - chore: Cleanup `wrangler --help` output
+
+  This commit cleans up and standardizes the look and feel of all `wrangler` commands as displayed by `wrangler --help` and `wrangler <cmd> --help`.
+
+- [#6080](https://github.com/cloudflare/workers-sdk/pull/6080) [`e2972cf`](https://github.com/cloudflare/workers-sdk/commit/e2972cf2ce785f5d56b1476e30102e05febba320) Thanks [@threepointone](https://github.com/threepointone)! - chore: run eslint (with react config) on workers-playground/wrangler
+
+  This enables eslint (with our react config) for the workers-playground project. Additionally, this enables the react-jsx condition in relevant tsconfig/eslint config, letting us write jsx without having React in scope.
+
+- [#6001](https://github.com/cloudflare/workers-sdk/pull/6001) [`d39d595`](https://github.com/cloudflare/workers-sdk/commit/d39d59589f7fe3102276bad6b93caf10c39e5f20) Thanks [@penalosa](https://github.com/penalosa)! - chore: changes to how `wrangler dev` launches your worker, behind the experimental `--x-dev-env` flag
+
+- [#5214](https://github.com/cloudflare/workers-sdk/pull/5214) [`05c5607`](https://github.com/cloudflare/workers-sdk/commit/05c56073b4e8c71ab6e0b287adddddc00d763170) Thanks [@penalosa](https://github.com/penalosa)! - feat: Experimental file based service discovery when running multiple Wrangler instances locally. To try it out, make sure all your local Wrangler instances are running with the `--x-registry` flag.
+
+- Updated dependencies [[`7d02856`](https://github.com/cloudflare/workers-sdk/commit/7d02856ae2cbd90eb94324f9f6fcb44cd2c44059), [`d4e1e9f`](https://github.com/cloudflare/workers-sdk/commit/d4e1e9fc3439c3d6bd2d1d145d3edc85b551f276)]:
+  - miniflare@3.20240620.0
+  - @cloudflare/kv-asset-handler@0.3.4
+
+## 3.61.0
+
+### Minor Changes
+
+- [#5995](https://github.com/cloudflare/workers-sdk/pull/5995) [`374bc44`](https://github.com/cloudflare/workers-sdk/commit/374bc44cce65e2f83f10452122719d3ab28827b3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: allow Durable Object migrations to be overridable in environments
+
+  By making the `migrations` key inheritable, users can provide different migrations
+  for each wrangler.toml environment.
+
+  Resolves [#729](https://github.com/cloudflare/workers-sdk/issues/729)
+
+### Patch Changes
+
+- [#6039](https://github.com/cloudflare/workers-sdk/pull/6039) [`dc597a3`](https://github.com/cloudflare/workers-sdk/commit/dc597a38218b428141c55c4e65633953c87ed180) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: hybrid nodejs compat now supports requiring the default export of a CJS module
+
+  Fixes [#6028](https://github.com/cloudflare/workers-sdk/issues/6028)
+
+- [#6051](https://github.com/cloudflare/workers-sdk/pull/6051) [`15aff8f`](https://github.com/cloudflare/workers-sdk/commit/15aff8f6e6ce533f25495193e702a6bec76fa81c) Thanks [@threepointone](https://github.com/threepointone)! - fix: Don't check expiry dates on custom certs
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/5964
+
+  For `wrangler dev`, we don't have to check whether certificates have expired when they're provided by the user.
+
+- [#6052](https://github.com/cloudflare/workers-sdk/pull/6052) [`b4c0233`](https://github.com/cloudflare/workers-sdk/commit/b4c02333829c2312f883e897f812f9877dba603a) Thanks [@threepointone](https://github.com/threepointone)! - chore: Add `.wrangler` and `.DS_Store` to `.gitignore` generated by `wrangler init`
+
+  This commit adds a small QOL improvement to `init` (to be deprecated in the future), for those who still use this wrangler command.
+
+- [#6050](https://github.com/cloudflare/workers-sdk/pull/6050) [`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more deps
+
+  This is the last of the patches that normalize dependencies across the codebase. In this batch: `ws`, `vitest`, `zod` , `rimraf`, `@types/rimraf`, `ava`, `source-map`, `glob`, `cookie`, `@types/cookie`, `@microsoft/api-extractor`, `@types/mime`, `@types/yargs`, `devtools-protocol`, `@vitest/ui`, `execa`, `strip-ansi`
+
+  This patch also sorts dependencies in every `package.json`
+
+- [#6029](https://github.com/cloudflare/workers-sdk/pull/6029) [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize some dependencies in workers-sdk
+
+  This is the first of a few expected patches that normalize dependency versions, This normalizes `undici`, `concurrently`, `@types/node`, `react`, `react-dom`, `@types/react`, `@types/react-dom`, `eslint`, `typescript`. There are no functional code changes (but there are a couple of typecheck fixes).
+
+- [#6046](https://github.com/cloudflare/workers-sdk/pull/6046) [`c643a81`](https://github.com/cloudflare/workers-sdk/commit/c643a8193a3c0739b33d3c0072ae716bc8f1565b) Thanks [@threepointone](https://github.com/threepointone)! - chore: Normalize more dependencies.
+
+  Follow up to https://github.com/cloudflare/workers-sdk/pull/6029, this normalizes some more dependencies : `get-port`, `chalk`, `yargs`, `toucan-js`, `@typescript-eslint/parser`, `@typescript-eslint/eslint-plugin`, `esbuild-register`, `hono`, `glob-to-regexp`, `@cloudflare/workers-types`
+
+- [#6058](https://github.com/cloudflare/workers-sdk/pull/6058) [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99) Thanks [@threepointone](https://github.com/threepointone)! - chore: Quieter builds
+
+  This patch cleans up warnings we were seeing when doing a full build. Specifically:
+
+  - fixtures/remix-pages-app had a bunch of warnings about impending features that it should be upgraded to, so I did that. (tbh this one needs a full upgrade of packages, but we'll get to that later when we're upgrading across the codebase)
+  - updated `@microsoft/api-extractor` so it didn't complain that it didn't match the `typescript` version (that we'd recently upgraded)
+  - it also silenced a bunch of warnings when exporting types from `wrangler`. We'll need to fix those, but we'll do that when we work on unstable_dev etc.
+  - workers-playground was complaining about the size of the bundle being generated, so I increased the limit on it
+
+- [#6043](https://github.com/cloudflare/workers-sdk/pull/6043) [`db66101`](https://github.com/cloudflare/workers-sdk/commit/db661015d37ce75c021413e3ca7c4f0488790cbc) Thanks [@threepointone](https://github.com/threepointone)! - fix: avoid esbuild warning when running dev/bundle
+
+  I've been experimenting with esbuild 0.21.4 with wrangler. It's mostly been fine. But I get this warning every time
+
+  ```
+  ▲ [WARNING] Import "__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__" will always be undefined because there is no matching export in "src/index.ts" [import-is-undefined]
+
+      .wrangler/tmp/bundle-Z3YXTd/middleware-insertion-facade.js:8:23:
+        8 │ .....(OTHER_EXPORTS.__INJECT_FOR_TESTING_WRANGLER_MIDDLEWARE__ ?? []),
+          ╵
+  ```
+
+  This is because esbuild@0.18.5 enabled a warning by default whenever an undefined import is accessed on an imports object. However we abuse imports to inject stuff in `middleware.test.ts`. A simple fix is to only inject that code in tests.
+
+- [#6062](https://github.com/cloudflare/workers-sdk/pull/6062) [`267761b`](https://github.com/cloudflare/workers-sdk/commit/267761b3f5a60e9ea72067d42302895f9d459460) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: typo in `wrangler d1 execute` saying "Databas" instead of "Database"
+
+- [#6064](https://github.com/cloudflare/workers-sdk/pull/6064) [`84e6aeb`](https://github.com/cloudflare/workers-sdk/commit/84e6aeb189a4f385c49b7c6d451d0613186b29be) Thanks [@helloimalastair](https://github.com/helloimalastair)! - fix: Wrangler is now able to upload files to local R2 buckets above the 300 MiB limit
+
+- Updated dependencies [[`a0c3327`](https://github.com/cloudflare/workers-sdk/commit/a0c3327dd63059d3e24085a95f48f8a98605c49f), [`f5ad1d3`](https://github.com/cloudflare/workers-sdk/commit/f5ad1d3e562ce63b59f6ab136f1cdd703605bca4), [`31cd51f`](https://github.com/cloudflare/workers-sdk/commit/31cd51f251050b0d6db97857a8d1d5427c855d99)]:
+  - miniflare@3.20240610.1
+  - @cloudflare/kv-asset-handler@0.3.3
+
+## 3.60.3
+
+### Patch Changes
+
+- [#6025](https://github.com/cloudflare/workers-sdk/pull/6025) [`122ef06`](https://github.com/cloudflare/workers-sdk/commit/122ef0681a8aa5338993cb21f111f84ef5c3a443) Thanks [@IgorMinar](https://github.com/IgorMinar)! - fix: avoid path collisions between performance and Performance Node.js polyfills
+
+  It turns out that ESBuild paths are case insensitive, which can result in path collisions between polyfills for `globalThis.performance` and `globalThis.Performance`, etc.
+
+  This change ensures that we encode all global names to lowercase and decode them appropriately.
+
+- [#6009](https://github.com/cloudflare/workers-sdk/pull/6009) [`169a9fa`](https://github.com/cloudflare/workers-sdk/commit/169a9fa260b7cb76cf5ef9e9e29a4fd33af8cf2f) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: reduce the number of parallel file reads on Windows to avoid EMFILE type errors
+
+  Fixes #1586
+
+- [`53acdbc`](https://github.com/cloudflare/workers-sdk/commit/53acdbc00a95e621d90d225d943c36df41768571) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: warn if user tries normal deploy when in the middle of a gradual version rollout
+
+- Updated dependencies [[`c4146fc`](https://github.com/cloudflare/workers-sdk/commit/c4146fc021cbb0556cc95899184b7a44d58ad77c)]:
+  - miniflare@3.20240610.0
+
+## 3.60.2
+
+### Patch Changes
+
+- [#5307](https://github.com/cloudflare/workers-sdk/pull/5307) [`e6a3d24`](https://github.com/cloudflare/workers-sdk/commit/e6a3d243a73f0101d57e6e35c25585884ebea674) Thanks [@achanda](https://github.com/achanda)! - fix: add more timePeriods to `wrangler d1 insights`
+
+  This PR updates `wrangler d1 insights` to accept arbitrary timePeriod values up to 31 days.
+
+## 3.60.1
+
+### Patch Changes
+
+- [#6002](https://github.com/cloudflare/workers-sdk/pull/6002) [`f1f1834`](https://github.com/cloudflare/workers-sdk/commit/f1f18347ddfff509a58acea2a815c40fe86fd56c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Revert a change in 3.60.0 which incorrectly batched assets for Pages uploads (https://github.com/cloudflare/workers-sdk/pull/5632).
+
+## 3.60.0 [DEPRECATED]
+
+### Minor Changes
+
+- [#5878](https://github.com/cloudflare/workers-sdk/pull/5878) [`1e68fe5`](https://github.com/cloudflare/workers-sdk/commit/1e68fe5448ffa4d0551dc7255405983c329235c8) Thanks [@IgorMinar](https://github.com/IgorMinar)! - feat: add experimental support for hybrid Node.js compatibility
+
+  _This feature is experimental and not yet available for general consumption._
+
+  Use a combination of workerd Node.js builtins (behind the `experimental:nodejs_compat_v2` flag) and
+  Unenv polyfills (configured to only add those missing from the runtime) to provide a new more effective
+  Node.js compatibility approach.
+
+- [#5988](https://github.com/cloudflare/workers-sdk/pull/5988) [`e144f63`](https://github.com/cloudflare/workers-sdk/commit/e144f63f8c418c77a3b73d387f7e7d22e8f1f730) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: rename the `wrangler secret:bulk` command to `wrangler secret bulk`
+
+  The old command is now deprecated (but still functional) and will be removed in a future release. The new command is now more consistent with the rest of the wrangler CLI commands.
+
+- [#5989](https://github.com/cloudflare/workers-sdk/pull/5989) [`35b1a2f`](https://github.com/cloudflare/workers-sdk/commit/35b1a2f59bf0849e65782a278463cd0c3d294817) Thanks [@RamIdeas](https://github.com/RamIdeas)! - feature: rename `wrangler kv:...` commands to `wrangler kv ...`
+
+  The old commands are now deprecated (but still functional) and will be removed in a future release. The new commands are now more consistent with the rest of the wrangler CLI commands.
+
+- [#5861](https://github.com/cloudflare/workers-sdk/pull/5861) [`1cc52f1`](https://github.com/cloudflare/workers-sdk/commit/1cc52f14c70112f5257263a4adee0c54add3a00d) Thanks [@zebp](https://github.com/zebp)! - feat: allow for Pages projects to upload sourcemaps
+
+  Pages projects can now upload sourcemaps for server bundles to enable remapped stacktraces in realtime logs when deployed with `upload_source_map` set to `true` in `wrangler.toml`.
+
+### Patch Changes
+
+- [#5939](https://github.com/cloudflare/workers-sdk/pull/5939) [`21573f4`](https://github.com/cloudflare/workers-sdk/commit/21573f4fd3484145405c5666b4dc9f7338f56887) Thanks [@penalosa](https://github.com/penalosa)! - refactor: Adds the experimental flag `--x-dev-env` which opts in to using an experimental code path for `wrangler dev` and `wrangler dev --remote`. There should be no observable behaviour changes when this flag is enabled.
+
+- [#5934](https://github.com/cloudflare/workers-sdk/pull/5934) [`bac79fb`](https://github.com/cloudflare/workers-sdk/commit/bac79fb7379941cd70d3a99d0d2cdb23e2409e50) Thanks [@dbenCF](https://github.com/dbenCF)! - fix: Update create KV namespace binding details message for easier implementation
+
+- [#5927](https://github.com/cloudflare/workers-sdk/pull/5927) [`6f83641`](https://github.com/cloudflare/workers-sdk/commit/6f836416446e3c04656d17477bcbbd39386622b5) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Clean `pages dev` terminal ouput
+
+  This work includes a series of improvements to the `pages dev` terminal output, in an attempt to make this output more structured, organised, cleaner, easier to follow, and therefore more helpful for our users <3
+
+- [#5960](https://github.com/cloudflare/workers-sdk/pull/5960) [`e648825`](https://github.com/cloudflare/workers-sdk/commit/e6488257f9376d415d970b045d77f0223d2f7884) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: avoid injecting esbuild watch stubs into production Worker code
+
+  When we added the ability to include additional modules in the deployed bundle of a Worker,
+  we inadvertently also included some boiler plate code that is only needed at development time.
+
+  This fix ensures that this code is only injected if we are running esbuild in watch mode
+  (e.g. `wrangler dev`) and not when building for deployment.
+
+  It is interesting to note that this boilerplate only gets included in the production code
+  if there is an import of CommonJS code in the Worker, which esbuild needs to convert to an
+  ESM import.
+
+  Fixes [#4269](https://github.com/cloudflare/workers-sdk/issues/4269)
+
+- Updated dependencies [[`ab95473`](https://github.com/cloudflare/workers-sdk/commit/ab9547380fd6fbc1d20c8dd4211faedbe94e5b33)]:
+  - miniflare@3.20240605.0
+
+## 3.59.0
+
+### Minor Changes
+
+- [#5963](https://github.com/cloudflare/workers-sdk/pull/5963) [`bf803d7`](https://github.com/cloudflare/workers-sdk/commit/bf803d74c2bd1fc9f6e090bad08db09c6ff88246) Thanks [@Skye-31](https://github.com/Skye-31)! - Feature: Add support for hiding the `"unsafe" fields are experimental` warning using an environment variable
+
+  By setting `WRANGLER_DISABLE_EXPERIMENTAL_WARNING` to any truthy value, these warnings will be hidden.
+
+### Patch Changes
+
+- Updated dependencies [[`bdbb7f8`](https://github.com/cloudflare/workers-sdk/commit/bdbb7f890d3fa5b6fa7ac79a3bb650ece9417fb2)]:
+  - miniflare@3.20240524.2
+
+## 3.58.0
+
+### Minor Changes
+
+- [#5933](https://github.com/cloudflare/workers-sdk/pull/5933) [`93b98cb`](https://github.com/cloudflare/workers-sdk/commit/93b98cb7e2ba5f73acbc20b4a3ca9a404a37a5dc) Thanks [@WalshyDev](https://github.com/WalshyDev)! - feature: allow for writing authentication details per API environment. This allows someone targetting staging to have their staging auth details saved separately from production, this saves them logging in and out when switching environments.
+
+### Patch Changes
+
+- [#5938](https://github.com/cloudflare/workers-sdk/pull/5938) [`9e4d8bc`](https://github.com/cloudflare/workers-sdk/commit/9e4d8bcb8811b9dc2570de26660baa4361a52749) Thanks [@threepointone](https://github.com/threepointone)! - fix: let "assets" in wrangler.toml be a string
+
+  The experimental "assets" field can be either a string or an object. However the type definition marks it only as an object. This is a problem because we use this to generate the json schema, which gets picked up by vscode's even better toml extension, and shows it to be an error when used with a string (even though it works fine). The fix is to simply change the type definition to add a string variant.
+
+- [#5758](https://github.com/cloudflare/workers-sdk/pull/5758) [`8e5e589`](https://github.com/cloudflare/workers-sdk/commit/8e5e5897f0de5f8a4990f88165d7a963018a06ef) Thanks [@Jackenmen](https://github.com/Jackenmen)! - fix: use correct type for AI binding instead of unknown
+
+- Updated dependencies [[`e0e7725`](https://github.com/cloudflare/workers-sdk/commit/e0e772575c079787f56615ec3d7a6a4af0633b5a)]:
+  - miniflare@3.20240524.1
+
+## 3.57.2
+
+### Patch Changes
+
+- [#5905](https://github.com/cloudflare/workers-sdk/pull/5905) [`53f22a0`](https://github.com/cloudflare/workers-sdk/commit/53f22a086837df7130d165fe9243f2d1f1559d73) Thanks [@penalosa](https://github.com/penalosa)! - fix: Remove WARP certificate injection. Instead, you should ensure that any custom certificates that are needed are included in `NODE_EXTRA_CA_CERTS`.
+
+- [#5930](https://github.com/cloudflare/workers-sdk/pull/5930) [`57daae0`](https://github.com/cloudflare/workers-sdk/commit/57daae0b2bd70c4f25b2abcabfc7fb03dba0c878) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: improve error message when updating secret for a non-deployed latest version.
+
+- [#5703](https://github.com/cloudflare/workers-sdk/pull/5703) [`a905f31`](https://github.com/cloudflare/workers-sdk/commit/a905f318166a9ceac1fb70487b3a47e5f4158780) Thanks [@penalosa](https://github.com/penalosa)! - fix: Don't use `ExportedHandler["middleware"]` for injecting middleware
+
+- Updated dependencies [[`64ccdd6`](https://github.com/cloudflare/workers-sdk/commit/64ccdd6a6777c5fd85116af0d660cb3ee2e1de4d), [`4458a9e`](https://github.com/cloudflare/workers-sdk/commit/4458a9ea1a2b7748d6066557f48f68ec430d383b)]:
+  - miniflare@3.20240524.0
+
+## 3.57.1
+
+### Patch Changes
+
+- [#5859](https://github.com/cloudflare/workers-sdk/pull/5859) [`f2ceb3a`](https://github.com/cloudflare/workers-sdk/commit/f2ceb3a5b993fa56782a6fdf39cd73dbe5c30c83) Thanks [@w-kuhn](https://github.com/w-kuhn)! - fix: queue consumer max_batch_timeout should accept a 0 value
+
+- [#5862](https://github.com/cloudflare/workers-sdk/pull/5862) [`441a05f`](https://github.com/cloudflare/workers-sdk/commit/441a05f4df10e73405a23031cd6a20073d0e15e6) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: `wrangler pages deploy` should fail if deployment was unsuccessful
+
+  If a Pages project fails to deploy, `wrangler pages deploy` will log
+  an error message, but exit successfully. It should instead throw a
+  `FatalError`.
+
+- [#5812](https://github.com/cloudflare/workers-sdk/pull/5812) [`d5e00e4`](https://github.com/cloudflare/workers-sdk/commit/d5e00e4a61a4232ebe01069a753ecb642c272b5d) Thanks [@thomasgauvin](https://github.com/thomasgauvin)! - fix: remove Hyperdrive warning for local development.
+
+  Hyperdrive bindings are now supported when developing locally with Hyperdrive. We should update our logs to reflect this.
+
+- [#5626](https://github.com/cloudflare/workers-sdk/pull/5626) [`a12b031`](https://github.com/cloudflare/workers-sdk/commit/a12b031e4157728e9b6e70667c16481fa32f401e) Thanks [@RamIdeas](https://github.com/RamIdeas)! - chore: ignore workerd output (error: CODE_MOVED) not intended for end-user devs
+
+## 3.57.0
+
+### Minor Changes
+
+- [#5696](https://github.com/cloudflare/workers-sdk/pull/5696) [`7e97ba8`](https://github.com/cloudflare/workers-sdk/commit/7e97ba8778be3cf1d93d44ed191748853c6661e0) Thanks [@geelen](https://github.com/geelen)! - feature: Improved `d1 execute --file --remote` performance & added support for much larger SQL files within a single transaction.
+
+- [#5819](https://github.com/cloudflare/workers-sdk/pull/5819) [`63f7acb`](https://github.com/cloudflare/workers-sdk/commit/63f7acb37e7e7ceb60594ac91baf95cd30037d76) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Show feedback on Pages project deployment failure
+
+  Today, if uploading a Pages Function, or deploying a Pages project fails for whatever reason, there’s no feedback shown to the user. Worse yet, the shown message is misleading, saying the deployment was successful, when in fact it was not:
+
+  ```
+  ✨ Deployment complete!
+  ```
+
+  This commit ensures that we provide users with:
+
+  - the correct feedback with respect to their Pages deployment
+  - the appropriate messaging depending on the status of their project's deployment status
+  - the appropriate logs in case of a deployment failure
+
+- [#5814](https://github.com/cloudflare/workers-sdk/pull/5814) [`2869e03`](https://github.com/cloudflare/workers-sdk/commit/2869e0379667d755d1de5543cb80886cc42c211f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Display correct global flags in `wrangler pages --help`
+
+  Running `wrangler pages --help` will list, amongst others, the following global flags:
+
+  ```
+  -j, --experimental-json-config
+  -c, --config
+  -e, --env
+  -h, --help
+  -v, --version
+  ```
+
+  This is not accurate, since flags such as `--config`, `--experimental-json-config`, or `env` are not supported by Pages.
+
+  This commit ensures we display the correct global flags that apply to Pages.
+
+- [#5818](https://github.com/cloudflare/workers-sdk/pull/5818) [`df2daf2`](https://github.com/cloudflare/workers-sdk/commit/df2daf2c858229fd812bf1fe818b206ef1345a00) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: Deprecate usage of the deployment object on the unsafe metadata binding in favor of the new version_metadata binding.
+
+  If you're currently using the old binding, please move over to the new version_metadata binding by adding:
+
+  ```toml
+  [version_metadata]
+  binding = "CF_VERSION_METADATA"
+  ```
+
+  and updating your usage accordingly. You can find the docs for the new binding here: https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata
+
+### Patch Changes
+
+- [#5838](https://github.com/cloudflare/workers-sdk/pull/5838) [`609debd`](https://github.com/cloudflare/workers-sdk/commit/609debdf744569278a050070846e420ffbfac161) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update undici to the latest version to avoid a potential vulnerability
+
+- [#5832](https://github.com/cloudflare/workers-sdk/pull/5832) [`86a6e09`](https://github.com/cloudflare/workers-sdk/commit/86a6e09d8a369a3bb8aee8c252174bd01e090c54) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not allow non-string values in bulk secret uploads
+
+  Prior to Wrangler 3.4.0 we displayed an error if the user tried to upload a
+  JSON file that contained non-string secrets, since these are not supported
+  by the Cloudflare backend.
+
+  This change reintroduces that check to give the user a helpful error message
+  rather than a cryptic `workers.api.error.invalid_script_config` error code.
+
+## 3.56.0
+
+### Minor Changes
+
+- [#5712](https://github.com/cloudflare/workers-sdk/pull/5712) [`151bc3d`](https://github.com/cloudflare/workers-sdk/commit/151bc3d31cb970a8caa84fad687c8b1b47ced73f) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support `mtls_certificates` and `browser` bindings when using `wrangler.toml` with a Pages project
+
+### Patch Changes
+
+- [#5813](https://github.com/cloudflare/workers-sdk/pull/5813) [`9627cef`](https://github.com/cloudflare/workers-sdk/commit/9627cef2f1aadb44aa677e429b6cb6af9c8ee495) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Upload Pages project assets with more grace
+
+  - Reduces the maximum bucket size from 50 MiB to 40 MiB.
+  - Reduces the maximum asset count from 5000 to 2000.
+  - Allows for more retries (with increased sleep between attempts) when encountering an API gateway failure.
+
+- Updated dependencies [[`0725f6f`](https://github.com/cloudflare/workers-sdk/commit/0725f6f73199daf7f11eec9830bc4d1f66c05d62), [`89b6d7f`](https://github.com/cloudflare/workers-sdk/commit/89b6d7f3832b350b470a981eb3b4388517612363)]:
+  - miniflare@3.20240512.0
+
+## 3.55.0
+
+### Minor Changes
+
+- [#5570](https://github.com/cloudflare/workers-sdk/pull/5570) [`66bdad0`](https://github.com/cloudflare/workers-sdk/commit/66bdad08834b403100d1e4d6cd507978cc50eaba) Thanks [@sesteves](https://github.com/sesteves)! - feature: support delayed delivery in the miniflare's queue simulator.
+
+  This change updates the miniflare's queue broker to support delayed delivery of messages, both when sending the message from a producer and when retrying the message from a consumer.
+
+### Patch Changes
+
+- [#5740](https://github.com/cloudflare/workers-sdk/pull/5740) [`97741db`](https://github.com/cloudflare/workers-sdk/commit/97741dbf8ff7498bcaa381361d61ad17af10f088) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: log "Version ID" in `wrangler deploy`, `wrangler deployments list`, `wrangler deployments view` and `wrangler rollback` to support migration from the deprecated "Deployment ID". Users should update any parsing to use "Version ID" before "Deployment ID" is removed.
+
+- [#5754](https://github.com/cloudflare/workers-sdk/pull/5754) [`f673c66`](https://github.com/cloudflare/workers-sdk/commit/f673c66373e2acd8d9cc94d5afa87b07dd3d750c) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: when using custom builds, the `wrangler dev` proxy server was sometimes left in a paused state
+
+  This could be observed as the browser loading indefinitely, after saving a source file (unchanged) when using custom builds. This is now fixed by ensuring the proxy server is unpaused after a short timeout period.
+
+- Updated dependencies [[`66bdad0`](https://github.com/cloudflare/workers-sdk/commit/66bdad08834b403100d1e4d6cd507978cc50eaba), [`9b4af8a`](https://github.com/cloudflare/workers-sdk/commit/9b4af8a59bc75ed494dd752c0a7007dbacf75e51)]:
+  - miniflare@3.20240419.1
+
+## 3.54.0
+
+### Minor Changes
+
+- [#5689](https://github.com/cloudflare/workers-sdk/pull/5689) [`19cac82`](https://github.com/cloudflare/workers-sdk/commit/19cac82233325d1f28eb02de53ea1a810bec3806) Thanks [@Ankcorn](https://github.com/Ankcorn)! - feat: Warn if unexpected key is in `wrangler.toml`
+
+## 3.53.1
+
+### Patch Changes
+
+- [#5091](https://github.com/cloudflare/workers-sdk/pull/5091) [`6365c90`](https://github.com/cloudflare/workers-sdk/commit/6365c9077ed7f438a8f5fc827eae2ca04c2520e0) Thanks [@Cherry](https://github.com/Cherry)! - fix: better handle dashes and other invalid JS identifier characters in `wrangler types` generation for vars, bindings, etc.
+
+  Previously, with the following in your `wrangler.toml`, an invalid types file would be generated:
+
+  ```toml
+  [vars]
+  some-var = "foobar"
+  ```
+
+  Now, the generated types file will be valid:
+
+  ```typescript
+  interface Env {
+    "some-var": "foobar";
+  }
+  ```
+
+- [#5748](https://github.com/cloudflare/workers-sdk/pull/5748) [`27966a4`](https://github.com/cloudflare/workers-sdk/commit/27966a43c65aa6046856d3b813af2d6797b894bf) Thanks [@penalosa](https://github.com/penalosa)! - fix: Load sourcemaps relative to the entry directory, not cwd.
+
+- [#5746](https://github.com/cloudflare/workers-sdk/pull/5746) [`1dd9f7e`](https://github.com/cloudflare/workers-sdk/commit/1dd9f7eeea4df9141c766e52c31828cf201ab71b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: suggest trying to update Wrangler if there is a newer one available after an unexpected error
+
+- [#5226](https://github.com/cloudflare/workers-sdk/pull/5226) [`f63e7a5`](https://github.com/cloudflare/workers-sdk/commit/f63e7a55613d56381c7396cf55c248dc2a0ad305) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - fix: remove second Wrangler banner from `wrangler dispatch-namespace rename`
+
+## 3.53.0
+
+### Minor Changes
+
+- [#5604](https://github.com/cloudflare/workers-sdk/pull/5604) [`327a456`](https://github.com/cloudflare/workers-sdk/commit/327a4568751a4046ff8794c72c658c074964a7c7) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add support for environments in `getPlatformProxy`
+
+  allow `getPlatformProxy` to target environments by allowing users to specify an `environment` option
+
+  Example usage:
+
+  ```js
+  const { env } = await getPlatformProxy({
+    environment: "production",
+  });
+  ```
+
+### Patch Changes
+
+- [#5705](https://github.com/cloudflare/workers-sdk/pull/5705) [`4097759`](https://github.com/cloudflare/workers-sdk/commit/4097759b6fbef4cd9aa81d3a6f01fc868ff50dd8) Thanks [@G4brym](https://github.com/G4brym)! - Add `staging` flag to AI binding
+
 ## 3.52.0
 
 ### Minor Changes
@@ -169,21 +657,21 @@
   import { WorkerEntrypoint } from "cloudflare:workers";
 
   export class EntrypointA extends WorkerEntrypoint {
-  	fetch(request) {
-  		return new Response("Hello from entrypoint A!");
-  	}
+    fetch(request) {
+      return new Response("Hello from entrypoint A!");
+    }
   }
 
   export const entrypointB: ExportedHandler = {
-  	fetch(request, env, ctx) {
-  		return new Response("Hello from entrypoint B!");
-  	}
+    fetch(request, env, ctx) {
+      return new Response("Hello from entrypoint B!");
+    },
   };
 
   export default <ExportedHandler>{
-  	fetch(request, env, ctx) {
-  		return new Response("Hello from the default entrypoint!");
-  	}
+    fetch(request, env, ctx) {
+      return new Response("Hello from the default entrypoint!");
+    },
   };
   ```
 
@@ -543,12 +1031,12 @@
 
   ```ts
   interface Env {
-  	SEND_EMAIL: SendEmail;
-  	VECTORIZE: VectorizeIndex;
-  	HYPERDRIVE: Hyperdrive;
-  	MTLS: Fetcher;
-  	BROWSER: Fetcher;
-  	AI: Fetcher;
+    SEND_EMAIL: SendEmail;
+    VECTORIZE: VectorizeIndex;
+    HYPERDRIVE: Hyperdrive;
+    MTLS: Fetcher;
+    BROWSER: Fetcher;
+    AI: Fetcher;
   }
   ```
 
@@ -571,7 +1059,7 @@
 
   ```js
   const worker = await unstable_dev("path/to/script.js", {
-  	logLevel: "none",
+    logLevel: "none",
   });
   ```
 
@@ -806,11 +1294,11 @@
 
   ```ts
   export function randomBytes(length: number) {
-  	if (navigator.userAgent !== "Cloudflare-Workers") {
-  		return new Uint8Array(require("node:crypto").randomBytes(length));
-  	} else {
-  		return crypto.getRandomValues(new Uint8Array(length));
-  	}
+    if (navigator.userAgent !== "Cloudflare-Workers") {
+      return new Uint8Array(require("node:crypto").randomBytes(length));
+    } else {
+      return crypto.getRandomValues(new Uint8Array(length));
+    }
   }
   ```
 
@@ -935,17 +1423,17 @@
 
   ```json
   {
-  	"error": {
-  		"text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
-  		"notes": [
-  			{
-  				"text": "no such column: asdf at offset 7 [code: 7500]"
-  			}
-  		],
-  		"kind": "error",
-  		"name": "APIError",
-  		"code": 7500
-  	}
+    "error": {
+      "text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
+      "notes": [
+        {
+          "text": "no such column: asdf at offset 7 [code: 7500]"
+        }
+      ],
+      "kind": "error",
+      "name": "APIError",
+      "code": 7500
+    }
   }
   ```
 
@@ -1109,12 +1597,12 @@
   const { bindings, dispose } = await getBindingsProxy();
 
   try {
-  	const myKv = bindings.MY_KV;
-  	const kvValue = await myKv.get("my-kv-key");
+    const myKv = bindings.MY_KV;
+    const kvValue = await myKv.get("my-kv-key");
 
-  	console.log(`KV Value = ${kvValue}`);
+    console.log(`KV Value = ${kvValue}`);
   } finally {
-  	await dispose();
+    await dispose();
   }
   ```
 
@@ -1505,17 +1993,17 @@
 
   ```jsonc
   {
-  	"configurations": [
-  		{
-  			"name": "Wrangler",
-  			"type": "node",
-  			"request": "attach",
-  			"port": 9229,
-  			// These can be omitted, but doing so causes silent errors in the runtime
-  			"attachExistingChildren": false,
-  			"autoAttachChildProcesses": false
-  		}
-  	]
+    "configurations": [
+      {
+        "name": "Wrangler",
+        "type": "node",
+        "request": "attach",
+        "port": 9229,
+        // These can be omitted, but doing so causes silent errors in the runtime
+        "attachExistingChildren": false,
+        "autoAttachChildProcesses": false,
+      },
+    ],
   }
   ```
 
@@ -1629,7 +2117,7 @@
 
   Wrangler can operate in two modes: the default bundling mode and `--no-bundle` mode. In bundling mode, dynamic imports
   (e.g. `await import("./large-dep.mjs")`) would be bundled into your entrypoint, making lazy loading less effective.
-  Additionally, variable dynamic imports (e.g. `` await import(`./lang/${language}.mjs`) ``) would always fail at runtime,
+  Additionally, variable dynamic imports (e.g. ``await import(`./lang/${language}.mjs`)``) would always fail at runtime,
   as Wrangler would have no way of knowing which modules to upload. The `--no-bundle` mode sought to address these issues
   by disabling Wrangler's bundling entirely, and just deploying code as is. Unfortunately, this also disabled Wrangler's
   code transformations (e.g. TypeScript compilation, `--assets`, `--test-scheduled`, etc).
@@ -1773,18 +2261,18 @@
 
   ```json
   {
-  	"configurations": [
-  		{
-  			"name": "Wrangler",
-  			"type": "node",
-  			"request": "attach",
-  			"port": 9229,
-  			"cwd": "/",
-  			"resolveSourceMapLocations": null,
-  			"attachExistingChildren": false,
-  			"autoAttachChildProcesses": false
-  		}
-  	]
+    "configurations": [
+      {
+        "name": "Wrangler",
+        "type": "node",
+        "request": "attach",
+        "port": 9229,
+        "cwd": "/",
+        "resolveSourceMapLocations": null,
+        "attachExistingChildren": false,
+        "autoAttachChildProcesses": false
+      }
+    ]
   }
   ```
 
@@ -2386,11 +2874,11 @@
 
   ```js
   export default {
-  	fetch(req) {
-  		const url = new URL(req.url);
-  		const name = url.searchParams.get("name");
-  		return new Response("Hello, " + name);
-  	},
+    fetch(req) {
+      const url = new URL(req.url);
+      const name = url.searchParams.get("name");
+      return new Response("Hello, " + name);
+    },
   };
   ```
 
@@ -3057,9 +3545,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev(
-  	"src/index.js",
-  	{},
-  	{ disableExperimentalWarning: true }
+    "src/index.js",
+    {},
+    { disableExperimentalWarning: true },
   );
   ```
 
@@ -3067,7 +3555,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev("src/index.js", {
-  	experimental: { disableExperimentalWarning: true },
+    experimental: { disableExperimentalWarning: true },
   });
   ```
 
@@ -3340,9 +3828,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   export const onRequest = ({ passThroughOnException }) => {
-  	passThroughOnException();
+    passThroughOnException();
 
-  	x; // Would ordinarily throw an error, but instead, static assets are served.
+    x; // Would ordinarily throw an error, but instead, static assets are served.
   };
   ```
 
@@ -3361,8 +3849,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.wasm" {
-  	const value: WebAssembly.Module;
-  	export default value;
+    const value: WebAssembly.Module;
+    export default value;
   }
   ```
 
@@ -3370,8 +3858,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.webp" {
-  	const value: ArrayBuffer;
-  	export default value;
+    const value: ArrayBuffer;
+    export default value;
   }
   ```
 
@@ -3379,8 +3867,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.text" {
-  	const value: string;
-  	export default value;
+    const value: string;
+    export default value;
   }
   ```
 
@@ -3575,7 +4063,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   await unstable_dev("src/index.ts", {
-  	local: false,
+    local: false,
   });
   ```
 
@@ -3687,42 +4175,42 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   import { unstable_dev } from "wrangler";
 
   describe("multi-worker testing", () => {
-  	let childWorker;
-  	let parentWorker;
+    let childWorker;
+    let parentWorker;
 
-  	beforeAll(async () => {
-  		childWorker = await unstable_dev(
-  			"src/child-worker.js",
-  			{ config: "src/child-wrangler.toml" },
-  			{ disableExperimentalWarning: true }
-  		);
-  		parentWorker = await unstable_dev(
-  			"src/parent-worker.js",
-  			{ config: "src/parent-wrangler.toml" },
-  			{ disableExperimentalWarning: true }
-  		);
-  	});
+    beforeAll(async () => {
+      childWorker = await unstable_dev(
+        "src/child-worker.js",
+        { config: "src/child-wrangler.toml" },
+        { disableExperimentalWarning: true },
+      );
+      parentWorker = await unstable_dev(
+        "src/parent-worker.js",
+        { config: "src/parent-wrangler.toml" },
+        { disableExperimentalWarning: true },
+      );
+    });
 
-  	afterAll(async () => {
-  		await childWorker.stop();
-  		await parentWorker.stop();
-  	});
+    afterAll(async () => {
+      await childWorker.stop();
+      await parentWorker.stop();
+    });
 
-  	it("childWorker should return Hello World itself", async () => {
-  		const resp = await childWorker.fetch();
-  		if (resp) {
-  			const text = await resp.text();
-  			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-  		}
-  	});
+    it("childWorker should return Hello World itself", async () => {
+      const resp = await childWorker.fetch();
+      if (resp) {
+        const text = await resp.text();
+        expect(text).toMatchInlineSnapshot(`"Hello World!"`);
+      }
+    });
 
-  	it("parentWorker should return Hello World by invoking the child worker", async () => {
-  		const resp = await parentWorker.fetch();
-  		if (resp) {
-  			const parsedResp = await resp.text();
-  			expect(parsedResp).toEqual("Parent worker sees: Hello World!");
-  		}
-  	});
+    it("parentWorker should return Hello World by invoking the child worker", async () => {
+      const resp = await parentWorker.fetch();
+      if (resp) {
+        const parsedResp = await resp.text();
+        expect(parsedResp).toEqual("Parent worker sees: Hello World!");
+      }
+    });
   });
   ```
 
@@ -4211,9 +4699,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   export default {
-  	fetch(req, env) {
-  		return env.Bee.fetch(req);
-  	},
+    fetch(req, env) {
+      return env.Bee.fetch(req);
+    },
   };
   ```
 
@@ -4227,9 +4715,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   export default {
-  	fetch(req, env) {
-  		return new Response("Hello World");
-  	},
+    fetch(req, env) {
+      return new Response("Hello World");
+    },
   };
   ```
 
@@ -5208,9 +5696,9 @@ And in your worker, you can call it like so:
 
 ```js
 export default {
-	fetch(req, env, ctx) {
-		return env.MYWORKER.fetch(new Request("http://domain/some-path"));
-	},
+  fetch(req, env, ctx) {
+    return env.MYWORKER.fetch(new Request("http://domain/some-path"));
+  },
 };
 ```
 

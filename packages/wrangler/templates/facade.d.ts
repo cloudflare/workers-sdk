@@ -3,10 +3,10 @@ declare module "__ENTRY_POINT__" {
 	import { WorkerEntrypoint } from "cloudflare:workers";
 
 	export type WorkerEntrypointConstructor = typeof WorkerEntrypoint;
-	export type WithMiddleware<T> = T & { middleware?: Middleware[] };
 
-	const worker: WithMiddleware<ExportedHandler | WorkerEntrypointConstructor>;
+	const worker: ExportedHandler | WorkerEntrypointConstructor;
 	export default worker;
+	export const __INTERNAL_WRANGLER_MIDDLEWARE__: Middleware[];
 }
 
 declare module "__KV_ASSET_HANDLER__" {

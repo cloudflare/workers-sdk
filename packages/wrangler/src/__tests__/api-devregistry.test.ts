@@ -1,14 +1,17 @@
 import { fetch } from "undici";
+import { vi } from "vitest";
 import { unstable_dev } from "../api";
+import { mockConsoleMethods } from "./helpers/mock-console";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 /**
  * a huge caveat to how testing multi-worker scripts works:
  * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
  */
 describe("multi-worker testing", () => {
+	mockConsoleMethods();
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let childWorker: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,11 +19,12 @@ describe("multi-worker testing", () => {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const workers: any[] = [];
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		childWorker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml",
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 				},
@@ -32,6 +36,7 @@ describe("multi-worker testing", () => {
 			"src/__tests__/helpers/worker-scripts/parent-worker.js",
 			{
 				config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml",
+				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 				},
@@ -40,7 +45,7 @@ describe("multi-worker testing", () => {
 		workers.push(parentWorker);
 	});
 
-	afterAll(async () => {
+	afterEach(async () => {
 		for (const worker of workers) {
 			await worker.stop();
 		}
@@ -78,19 +83,19 @@ describe("multi-worker testing", () => {
 		// Spy on all the console methods
 		let logs = "";
 		// Resolve when we see `[mf:inf] GET / 200 OK` message. This log is sent in
-		// a `waitUntil()`, which may execute after tests complete. To stop Jest
+		// a `waitUntil()`, which may execute after tests complete. To stop Vitest
 		// complaining about logging after a test, wait for this log.
 		let requestResolve: () => void;
 		const requestPromise = new Promise<void>(
 			(resolve) => (requestResolve = resolve)
 		);
 		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
-			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+			vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
-				process.stdout.write(`\n${args}`);
 				// Regexp ignores colour codes
-				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args)))
+				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args))) {
 					requestResolve();
+				}
 			})
 		);
 
@@ -103,6 +108,7 @@ describe("multi-worker testing", () => {
 					config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml",
 					// We need debug logs because this is where the message is written if registering the worker fails.
 					logLevel: "debug",
+					ip: "127.0.0.1",
 					experimental: {
 						disableExperimentalWarning: true,
 					},

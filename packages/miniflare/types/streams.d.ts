@@ -11,7 +11,7 @@ declare module "stream/web" {
 	}
 
 	interface ReadableStreamBYOBReader {
-		readonly closed: Promise<void>;
+		readonly closed: Promise<undefined>;
 		cancel(reason?: any): Promise<void>;
 		read<T extends ArrayBufferView>(
 			view: T

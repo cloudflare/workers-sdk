@@ -1,11 +1,12 @@
 import { fetch } from "undici";
+import { vi } from "vitest";
 import {
 	registerWorker,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
 
-jest.unmock("undici");
+vi.unmock("undici");
 
 /**
  * Sometimes the devRegistry killed by some reason, the register worker will to restart it.

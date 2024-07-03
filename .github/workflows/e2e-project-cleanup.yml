@@ -1,0 +1,33 @@
+# This workflow cleans up any leftover projects created by e2e runs.
+
+name: C3 E2E Project Cleanup
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * *" # Run at 3am each day
+jobs:
+  cleanup:
+    timeout-minutes: 30
+    name: "Cleanup Test Projects"
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Cleanup C3 E2E test projects
+        run: node -r esbuild-register tools/e2e/e2eCleanup.ts
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Cleanup E2E test projects
+        run: node -r esbuild-register tools/e2e/e2eCleanup.ts
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}

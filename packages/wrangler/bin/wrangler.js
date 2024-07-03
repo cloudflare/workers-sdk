@@ -28,30 +28,6 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 		return;
 	}
 
-	let pathToCACerts = process.env.NODE_EXTRA_CA_CERTS;
-	if (pathToCACerts) {
-		// TODO:
-		// - should we log a warning here?
-		// - maybe we can generate a certificate that concatenates with ours?
-		//
-		//  I do think it'll be rare that someone wants to add a cert AND
-		//  use Cloudflare WARP, but let's wait till the situation actually
-		//  arises before we do anything about it
-	} else {
-		const osTempDir = os.tmpdir();
-		const certDir = path.join(osTempDir, "wrangler-cert");
-		const certPath = path.join(certDir, "Cloudflare_CA.pem");
-		// copy cert to the system temp dir if needed
-		if (!fs.existsSync(certPath)) {
-			fs.mkdirSync(certDir, { recursive: true });
-			fs.writeFileSync(
-				certPath,
-				fs.readFileSync(path.join(__dirname, "../Cloudflare_CA.pem"), "utf-8")
-			);
-		}
-		pathToCACerts = certPath;
-	}
-
 	return spawn(
 		process.execPath,
 		[
@@ -63,10 +39,6 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 		],
 		{
 			stdio: ["inherit", "inherit", "inherit", "ipc"],
-			env: {
-				...process.env,
-				NODE_EXTRA_CA_CERTS: pathToCACerts,
-			},
 		}
 	)
 		.on("exit", (code) =>

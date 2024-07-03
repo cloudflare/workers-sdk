@@ -6,12 +6,12 @@ import { pathToFileURL } from "url";
 import { TextDecoder, TextEncoder } from "util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
-import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
 import { Worker_Module } from "../../runtime";
-import { MiniflareCoreError, PathSchema, globsToRegExps } from "../../shared";
+import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
+import type estree from "estree";
 
 const SUGGEST_BUNDLE =
 	"If you're trying to import an npm package, you'll need to bundle your Worker first.";
@@ -246,7 +246,7 @@ export class ModuleLocator {
 						) {
 							this.#visitModule(modulePath, name, type, argument);
 						}
-				  },
+					},
 		};
 		simple(root, visitors as Record<string, (node: any) => void>);
 	}

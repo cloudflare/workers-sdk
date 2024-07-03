@@ -18,13 +18,13 @@ export default function registerVersionsDeploymentsSubcommands(
 	versionDeploymentsYargs
 		.command(
 			"list",
-			"Displays the 10 most recent deployments of your Worker [beta]",
+			"Displays the 10 most recent deployments of your Worker",
 			versionsDeploymentsListOptions,
 			versionsDeploymentsListHandler
 		)
 		.command(
 			"status",
-			"See the current state of your production [beta]",
+			"View the current state of your production",
 			versionsDeploymentsStatusOptions,
 			versionsDeploymentsStatusHandler
 		)

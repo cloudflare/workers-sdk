@@ -3,14 +3,14 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy src/index.js",
-		"dev": "wrangler dev src/index.js",
+		"deploy": "wrangler deploy src/index.ts",
+		"dev": "wrangler dev src/index.ts",
 		"test": "jest"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230518.0 ",
+		"@cloudflare/workers-types": "^4.20240620.0",
 		"@types/jest": "^28.1.6",
-		"eslint": "^8.21.0",
+		"eslint": "^8.49.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-config-typescript": "^3.0.0",
 		"jest": "^28.1.3",

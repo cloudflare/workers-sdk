@@ -6,7 +6,7 @@ import * as metrics from "../metrics";
 import { printWranglerBanner } from "../update-check";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
-import { fetchLatestUploadedVersions } from "./api";
+import { fetchDeployableVersions } from "./api";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -57,7 +57,7 @@ export async function versionsListHandler(args: VersionsListArgs) {
 	}
 
 	const versionCache: VersionCache = new Map();
-	const versions = await fetchLatestUploadedVersions(
+	const versions = await fetchDeployableVersions(
 		accountId,
 		workerName,
 		versionCache

@@ -72,9 +72,15 @@ function getServiceBindingProxyFetch({
 
 	const getExternalUrl = (request: Request) => {
 		const newUrl = new URL(request.url);
-		if (protocol) newUrl.protocol = protocol;
-		if (host) newUrl.host = host;
-		if (port) newUrl.port = `${port}`;
+		if (protocol) {
+			newUrl.protocol = protocol;
+		}
+		if (host) {
+			newUrl.host = host;
+		}
+		if (port) {
+			newUrl.port = `${port}`;
+		}
 		return newUrl;
 	};
 

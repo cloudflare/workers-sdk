@@ -1,0 +1,17 @@
+{
+	"name": "unstable_dev",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"scripts": {
+		"dev": "node --no-warnings ./src/wrangler-dev.mjs",
+		"test:ci": "npm run dev"
+	},
+	"devDependencies": {
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

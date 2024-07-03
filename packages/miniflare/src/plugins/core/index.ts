@@ -12,13 +12,13 @@ import { z } from "zod";
 import { fetch } from "../../http";
 import {
 	Extension,
+	kVoid,
 	Service,
 	ServiceDesignator,
+	supportedCompatibilityDate,
 	Worker_Binding,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
-	kVoid,
-	supportedCompatibilityDate,
 } from "../../runtime";
 import {
 	Json,
@@ -36,34 +36,34 @@ import {
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	Plugin,
-	SERVICE_LOOPBACK,
-	WORKER_BINDING_SERVICE_LOOPBACK,
 	kProxyNodeBinding,
 	kUnsafeEphemeralUniqueKey,
 	parseRoutes,
+	Plugin,
+	SERVICE_LOOPBACK,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
-	SERVICE_ENTRY,
 	getBuiltinServiceName,
 	getCustomServiceName,
 	getUserServiceName,
+	SERVICE_ENTRY,
 } from "./constants";
 import {
+	buildStringScriptPath,
+	convertModuleDefinition,
 	ModuleLocator,
 	SourceOptions,
 	SourceOptionsSchema,
-	buildStringScriptPath,
-	convertModuleDefinition,
 	withSourceURL,
 } from "./modules";
 import { PROXY_SECRET } from "./proxy";
 import {
+	kCurrentWorker,
 	ServiceDesignatorSchema,
 	ServiceFetchSchema,
-	kCurrentWorker,
 } from "./services";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -125,9 +125,13 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
-		wasmBindings: z.record(PathSchema).optional(),
+		wasmBindings: z
+			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.optional(),
 		textBlobBindings: z.record(PathSchema).optional(),
-		dataBlobBindings: z.record(PathSchema).optional(),
+		dataBlobBindings: z
+			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
 			.record(z.union([z.string(), WrappedBindingSchema]))
@@ -356,8 +360,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.wasmBindings).map(([name, path]) =>
-					fs.readFile(path).then((wasmModule) => ({ name, wasmModule }))
+				...Object.entries(options.wasmBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((wasmModule) => ({ name, wasmModule }))
+						: { name, wasmModule: value }
 				)
 			);
 		}
@@ -370,8 +376,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.dataBlobBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
-					fs.readFile(path).then((data) => ({ name, data }))
+				...Object.entries(options.dataBlobBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((data) => ({ name, data }))
+						: { name, data: value }
 				)
 			);
 		}
@@ -436,10 +444,12 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.wasmBindings !== undefined) {
 			bindingEntries.push(
-				...Object.entries(options.wasmBindings).map(([name, path]) =>
-					fs
-						.readFile(path)
-						.then((buffer) => [name, new WebAssembly.Module(buffer)])
+				...Object.entries(options.wasmBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs
+								.readFile(value)
+								.then((buffer) => [name, new WebAssembly.Module(buffer)])
+						: [name, new WebAssembly.Module(value)]
 				)
 			);
 		}
@@ -452,8 +462,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.dataBlobBindings !== undefined) {
 			bindingEntries.push(
-				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
-					fs.readFile(path).then((buffer) => [name, viewToBuffer(buffer)])
+				...Object.entries(options.dataBlobBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((buffer) => [name, viewToBuffer(buffer)])
+						: [name, viewToBuffer(value)]
 				)
 			);
 		}
@@ -624,8 +636,8 @@ export const CORE_PLUGIN: Plugin<
 						classNamesEntries.length === 0
 							? undefined
 							: options.unsafeEphemeralDurableObjects
-							? { inMemory: kVoid }
-							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+								? { inMemory: kVoid }
+								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 					globalOutbound:
 						options.outboundService === undefined
 							? undefined
@@ -635,7 +647,7 @@ export const CORE_PLUGIN: Plugin<
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
 									options.outboundService
-							  ),
+								),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&

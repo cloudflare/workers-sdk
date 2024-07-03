@@ -29,7 +29,7 @@ type WranglerInstance = {
 	port: string;
 };
 
-describe.skip("Pages Functions", () => {
+describe("Pages Functions", () => {
 	let wranglerInstances: (WranglerInstance | UnstableDevWorker)[] = [];
 	let pagesAppPort: string;
 
@@ -38,34 +38,64 @@ describe.skip("Pages Functions", () => {
 			path.join(__dirname, "../module-worker-a/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-a/wrangler.toml"),
+				experimental: {
+					fileBasedRegistry: true,
+					disableExperimentalWarning: true,
+				},
 			}
 		);
+		await setTimeout(1000);
+
 		wranglerInstances[1] = await unstable_dev(
 			path.join(__dirname, "../module-worker-b/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-b/wrangler.toml"),
+				experimental: {
+					fileBasedRegistry: true,
+					disableExperimentalWarning: true,
+				},
 			}
 		);
+		await setTimeout(1000);
+
 		wranglerInstances[2] = await unstable_dev(
 			path.join(__dirname, "../service-worker-a/index.ts"),
 			{
 				config: path.join(__dirname, "../service-worker-a/wrangler.toml"),
+				experimental: {
+					fileBasedRegistry: true,
+					disableExperimentalWarning: true,
+				},
 			}
 		);
+		await setTimeout(1000);
+
 		wranglerInstances[3] = await unstable_dev(
 			path.join(__dirname, "../module-worker-c/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-c/wrangler.toml"),
 				env: "staging",
+				experimental: {
+					fileBasedRegistry: true,
+					disableExperimentalWarning: true,
+				},
 			}
 		);
+		await setTimeout(1000);
+
 		wranglerInstances[4] = await unstable_dev(
 			path.join(__dirname, "../module-worker-d/index.ts"),
 			{
 				config: path.join(__dirname, "../module-worker-d/wrangler.toml"),
 				env: "production",
+				experimental: {
+					fileBasedRegistry: true,
+					disableExperimentalWarning: true,
+				},
 			}
 		);
+		await setTimeout(1000);
+
 		wranglerInstances[5] = await getWranglerInstance({
 			pages: true,
 			dirName: "pages-functions-app",
@@ -79,6 +109,7 @@ describe.skip("Pages Functions", () => {
 		});
 
 		pagesAppPort = wranglerInstances[5].port;
+		await setTimeout(1000);
 	});
 
 	afterAll(async () => {
@@ -111,7 +142,7 @@ describe.skip("Pages Functions", () => {
 		expect(json).toMatchInlineSnapshot(`
 			{
 			  "moduleWorkerCResponse": "Hello from module worker c (staging)",
-			  "moduleWorkerDResponse": "You should start up wrangler dev --local on the STAGING_MODULE_D_SERVICE worker",
+			  "moduleWorkerDResponse": "[wrangler] Couldn't find \`wrangler dev\` session for service "module-worker-d-staging" to proxy to",
 			}
 		`);
 	});
@@ -132,9 +163,9 @@ async function getWranglerInstance({
 			[
 				...(pages ? ["pages"] : []),
 				"dev",
+				"--x-registry",
 				...(pages ? ["public"] : ["index.ts"]),
 				"--local",
-				`--port=0`,
 				...extraArgs,
 			],
 			{

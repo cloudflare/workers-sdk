@@ -3,17 +3,18 @@ import { dirname } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import PQueue from "p-queue";
-import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
+import { APIError } from "../parse";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
+	MAX_UPLOAD_GATEWAY_ERRORS,
 } from "./constants";
 import { ApiErrorCodes } from "./errors";
 import { validate } from "./validate";
@@ -194,9 +195,12 @@ export const upload = async (
 
 	for (const bucket of buckets) {
 		// Don't upload empty buckets (can happen for tiny projects)
-		if (bucket.files.length === 0) continue;
+		if (bucket.files.length === 0) {
+			continue;
+		}
 
 		attempts = 0;
+		let gatewayErrors = 0;
 		const doUpload = async (): Promise<void> => {
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
@@ -230,7 +234,20 @@ export const upload = async (
 						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 					);
 
-					if (
+					if (e instanceof APIError && e.isGatewayError()) {
+						// Gateway problem, wait for some additional time and set concurrency to 1
+						queue.concurrency = 1;
+						await new Promise((resolvePromise) =>
+							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
+						);
+
+						gatewayErrors++;
+
+						// only count as a failed attempt after a few initial gateway errors
+						if (gatewayErrors >= MAX_UPLOAD_GATEWAY_ERRORS) {
+							attempts++;
+						}
+					} else if (
 						(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
 						isJwtExpired(jwt)
 					) {
@@ -337,6 +354,13 @@ export const upload = async (
 
 // Decode and check that the current JWT has not expired
 function isJwtExpired(token: string): boolean | undefined {
+	// During testing we don't use valid JWTs, so don't try and parse them
+	if (
+		typeof vitest !== "undefined" &&
+		(token === "<<funfetti-auth-jwt>>" || token === "<<funfetti-auth-jwt2>>")
+	) {
+		return false;
+	}
 	try {
 		const decodedJwt = JSON.parse(
 			Buffer.from(token.split(".")[1], "base64").toString()

@@ -1,10 +1,11 @@
 import Module from "node:module";
-import {
-	_initialiseInstanceRegistry,
-	_enableControlEndpoints,
-} from "../dist/src/index.js";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { registerCompletionHandler } from "ava";
+import {
+	_enableControlEndpoints,
+	_initialiseInstanceRegistry,
+} from "../dist/src/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,4 +42,12 @@ process.on("exit", () => {
 		[bigSeparator, message, separator, stacks, bigSeparator].join("\n")
 	);
 	throw new Error(message);
+});
+
+// https://github.com/avajs/ava/discussions/3259
+// https://github.com/avajs/ava/blob/main/docs/08-common-pitfalls.md#timeouts-because-a-file-failed-to-exit
+
+// tl;dr - ava 6 doesn't automatically exit on tests completing, so we give it a nudge
+registerCompletionHandler(() => {
+	process.exit();
 });

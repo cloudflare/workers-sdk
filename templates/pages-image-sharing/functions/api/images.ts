@@ -30,7 +30,7 @@ export const onRequestGet: PagesFunction<{
 							: generateSignedURL({
 									url: `${previewURLBase}/preview`,
 									imagesKey,
-							  });
+								});
 
 						const downloadCounter = env.DOWNLOAD_COUNTER.get(
 							env.DOWNLOAD_COUNTER.idFromString(downloadCounterId)

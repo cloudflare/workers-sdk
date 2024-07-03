@@ -9,6 +9,7 @@ describe("Worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
 			logLevel: "none",
+			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
 			},

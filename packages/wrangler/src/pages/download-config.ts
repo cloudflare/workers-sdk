@@ -279,10 +279,10 @@ async function downloadProject(accountId: string, projectName: string) {
 				? {
 						preview,
 						production,
-				  }
+					}
 				: {
 						production,
-				  },
+					},
 		},
 	};
 }

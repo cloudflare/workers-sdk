@@ -1,6 +1,6 @@
 # 📚 d1
 
-This Worker implements a simple blog using D1 bindings. It uses migrations for setting up the database. These migrations are read in `vitest.config.ts`, and applied with the [test/apply-migrations.ts](test/apply-migrations.ts) setup file.
+This Worker implements a simple blog using D1 bindings. It uses migrations for setting up the database. These migrations are read in `vitest.config.mts`, and applied with the [test/apply-migrations.ts](test/apply-migrations.ts) setup file.
 
 | Test                                    | Overview                         |
 | --------------------------------------- | -------------------------------- |

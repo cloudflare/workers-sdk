@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -26,9 +27,13 @@ export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult(accounts)));
-		})
+		http.get(
+			"*/memberships",
+			() => {
+				return HttpResponse.json(createFetchResult(accounts));
+			},
+			{ once: true }
+		)
 	);
 }
 
@@ -48,40 +53,38 @@ describe("wrangler pages secret", () => {
 			env: "production" | "preview" = "production"
 		) {
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/pages/projects/:project`,
-					async (req, res, ctx) => {
-						expect(req.params.project).toEqual("some-project-name");
-						const project = await req.json<PagesProject>();
+					async ({ request, params }) => {
+						expect(params.project).toEqual("some-project-name");
+						const project = (await request.json()) as PagesProject;
 						expect(
 							project.deployment_configs[env].env_vars?.[input.name]
 						).toEqual({ type: "secret_text", value: input.text });
 						expect(
 							project.deployment_configs[env].wrangler_config_hash
 						).toEqual(env === "production" ? "wch" : undefined);
-						return res.once(ctx.json(createFetchResult(project)));
-					}
+						return HttpResponse.json(createFetchResult(project));
+					},
+					{ once: true }
 				),
-				rest.get(
-					"*/accounts/:accountId/pages/projects/:project",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									name: "some-project-name",
-									deployment_configs: {
-										production: { wrangler_config_hash: "wch" },
-										preview: {},
-									},
+				http.get("*/accounts/:accountId/pages/projects/:project", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								name: "some-project-name",
+								deployment_configs: {
+									production: { wrangler_config_hash: "wch" },
+									preview: {},
 								},
-							})
-						);
-					}
-				)
+							},
+						},
+						{ status: 200 }
+					);
+				})
 			);
 		}
 
@@ -218,7 +221,9 @@ describe("wrangler pages secret", () => {
 				mockStdIn.throwError(new Error("Error in stdin stream"));
 				await expect(
 					runWrangler("pages secret put the-key --project some-project-name")
-				).rejects.toThrowErrorMatchingInlineSnapshot(`"Error in stdin stream"`);
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Error in stdin stream]`
+				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
@@ -235,7 +240,7 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`"A request to the Cloudflare API (/memberships) failed."`
+						`[APIError: A request to the Cloudflare API (/memberships) failed.]`
 					);
 				});
 
@@ -244,9 +249,9 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
-				                  "Failed to automatically retrieve account IDs for the logged in user.
-				                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
-			                `);
+						[Error: Failed to automatically retrieve account IDs for the logged in user.
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.]
+					`);
 				});
 
 				it("should error if a user has multiple accounts, and has not specified an account", async () => {
@@ -268,13 +273,13 @@ describe("wrangler pages secret", () => {
 					await expect(
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
-				"More than one account available but unable to select one in non-interactive mode.
-				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-				Available accounts are (\`<name>\`: \`<account_id>\`):
-				  \`account-name-1\`: \`account-id-1\`
-				  \`account-name-2\`: \`account-id-2\`
-				  \`account-name-3\`: \`account-id-3\`"
-			`);
+						[Error: More than one account available but unable to select one in non-interactive mode.
+						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Available accounts are (\`<name>\`: \`<account_id>\`):
+						  \`account-name-1\`: \`account-id-1\`
+						  \`account-name-2\`: \`account-id-2\`
+						  \`account-name-3\`: \`account-id-3\`]
+					`);
 				});
 			});
 		});
@@ -289,11 +294,11 @@ describe("wrangler pages secret", () => {
 			env: "production" | "preview" = "production"
 		) {
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/pages/projects/:project`,
-					async (req, res, ctx) => {
-						expect(req.params.project).toEqual("some-project-name");
-						const project = await req.json<PagesProject>();
+					async ({ request, params }) => {
+						expect(params.project).toEqual("some-project-name");
+						const project = (await request.json()) as PagesProject;
 						expect(project.deployment_configs[env].env_vars?.[name]).toEqual(
 							null
 						);
@@ -301,29 +306,27 @@ describe("wrangler pages secret", () => {
 							project.deployment_configs[env].wrangler_config_hash
 						).toEqual(env === "production" ? "wch" : undefined);
 
-						return res.once(ctx.json(createFetchResult(project)));
-					}
+						return HttpResponse.json(createFetchResult(project));
+					},
+					{ once: true }
 				),
-				rest.get(
-					"*/accounts/:accountId/pages/projects/:project",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									name: "some-project-name",
-									deployment_configs: {
-										production: { wrangler_config_hash: "wch" },
-										preview: {},
-									},
+				http.get("*/accounts/:accountId/pages/projects/:project", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								name: "some-project-name",
+								deployment_configs: {
+									production: { wrangler_config_hash: "wch" },
+									preview: {},
 								},
-							})
-						);
-					}
-				)
+							},
+						},
+						{ status: 200 }
+					);
+				})
 			);
 		}
 
@@ -382,42 +385,39 @@ describe("wrangler pages secret", () => {
 		});
 		function mockListRequest() {
 			msw.use(
-				rest.get(
-					"*/accounts/:accountId/pages/projects/:project",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									name: "some-project-name",
-									deployment_configs: {
-										production: {
-											wrangler_config_hash: "wch",
-											env_vars: {
-												"the-secret-name": {
-													type: "secret_text",
-												},
-												"the-secret-name-2": {
-													type: "secret_text",
-												},
+				http.get("*/accounts/:accountId/pages/projects/:project", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								name: "some-project-name",
+								deployment_configs: {
+									production: {
+										wrangler_config_hash: "wch",
+										env_vars: {
+											"the-secret-name": {
+												type: "secret_text",
+											},
+											"the-secret-name-2": {
+												type: "secret_text",
 											},
 										},
-										preview: {
-											env_vars: {
-												"the-secret-name-preview": {
-													type: "secret_text",
-												},
+									},
+									preview: {
+										env_vars: {
+											"the-secret-name-preview": {
+												type: "secret_text",
 											},
 										},
 									},
 								},
-							})
-						);
-					}
-				)
+							},
+						},
+						{ status: 200 }
+					);
+				})
 			);
 		}
 
@@ -468,11 +468,11 @@ describe("wrangler pages secret", () => {
 			env: "production" | "preview" = "production"
 		) {
 			msw.use(
-				rest.patch(
+				http.patch(
 					`*/accounts/:accountId/pages/projects/:project`,
-					async (req, res, ctx) => {
-						expect(req.params.project).toEqual("some-project-name");
-						const project = await req.json<PagesProject>();
+					async ({ request, params }) => {
+						expect(params.project).toEqual("some-project-name");
+						const project = (await request.json()) as PagesProject;
 						for (const variable of vars) {
 							expect(
 								project.deployment_configs[env].env_vars?.[variable.name]
@@ -482,36 +482,34 @@ describe("wrangler pages secret", () => {
 						expect(
 							project.deployment_configs[env].wrangler_config_hash
 						).toEqual(env === "production" ? "wch" : undefined);
-						return res.once(ctx.json(createFetchResult(project)));
-					}
+						return HttpResponse.json(createFetchResult(project));
+					},
+					{ once: true }
 				),
-				rest.get(
-					"*/accounts/:accountId/pages/projects/:project",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									name: "some-project-name",
-									deployment_configs: {
-										production: { wrangler_config_hash: "wch" },
-										preview: {},
-									},
+				http.get("*/accounts/:accountId/pages/projects/:project", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								name: "some-project-name",
+								deployment_configs: {
+									production: { wrangler_config_hash: "wch" },
+									preview: {},
 								},
-							})
-						);
-					}
-				)
+							},
+						},
+						{ status: 200 }
+					);
+				})
 			);
 		}
 		it("should fail secret bulk w/ no pipe or JSON input", async () => {
 			mockProjectRequests([]);
-			jest
-				.spyOn(readline, "createInterface")
-				.mockImplementation(() => null as unknown as Interface);
+			vi.spyOn(readline, "createInterface").mockImplementation(
+				() => null as unknown as Interface
+			);
 			await expect(
 				runWrangler(`pages secret bulk --project some-project-name`)
 			).rejects.toMatchInlineSnapshot(
@@ -520,7 +518,7 @@ describe("wrangler pages secret", () => {
 		});
 
 		it("should use secret bulk w/ pipe input", async () => {
-			jest.spyOn(readline, "createInterface").mockImplementation(
+			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
 					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
 					JSON.stringify({
@@ -631,32 +629,29 @@ describe("wrangler pages secret", () => {
 			);
 
 			msw.use(
-				rest.get(
-					"*/accounts/:accountId/pages/projects/:project",
-					async (req, res, ctx) => {
-						return res(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									name: "some-project-name",
-									deployment_configs: {
-										production: { wrangler_config_hash: "wch" },
-										preview: {},
-									},
+				http.get("*/accounts/:accountId/pages/projects/:project", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								name: "some-project-name",
+								deployment_configs: {
+									production: { wrangler_config_hash: "wch" },
+									preview: {},
 								},
-							})
-						);
-					}
-				)
+							},
+						},
+						{ status: 200 }
+					);
+				})
 			);
 			msw.use(
-				rest.patch(
+				http.patch(
 					"*/accounts/:accountId/pages/projects/:project",
-					async (_, res) => {
-						return res.networkError(`Failed to create secret`);
+					async () => {
+						return HttpResponse.json(null);
 					}
 				)
 			);
@@ -666,7 +661,7 @@ describe("wrangler pages secret", () => {
 					"pages secret bulk ./secret.json --project some-project-name"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"🚨 7 secrets failed to upload"`
+				`[Error: 🚨 7 secrets failed to upload]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`

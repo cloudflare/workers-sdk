@@ -7,4 +7,5 @@
  */
 export enum SchedulingPolicy {
 	MOON = "moon",
+	MOON_JOBS = "moon_jobs",
 }

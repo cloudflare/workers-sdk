@@ -11,13 +11,16 @@
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
-	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "^5.28.3",
-		"wrangler": "workspace:*"
-	},
 	"dependencies": {
 		"cookie": "^0.6.0",
 		"isomorphic-random-example": "workspace:^"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"undici": "^5.28.4",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

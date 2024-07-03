@@ -74,6 +74,7 @@ export async function listCommand(
 	if (deploymentArgs.json || !isInteractive()) {
 		const deployments = (
 			await DeploymentsService.listDeploymentsV2(
+				undefined,
 				deploymentArgs.location,
 				deploymentArgs.image,
 				deploymentArgs.state as State,
@@ -171,10 +172,13 @@ const listCommandHandle = async (
 			onRefresh: async () => {
 				start("Refreshing placements");
 				const options = (await loadPlacements()).map(placementToOptions);
-				if (refresh) return [];
+				if (refresh) {
+					return [];
+				}
 				stop();
-				if (options.length)
+				if (options.length) {
 					options[0].label += ", last refresh: " + new Date().toLocaleString();
+				}
 				return options;
 			},
 		});

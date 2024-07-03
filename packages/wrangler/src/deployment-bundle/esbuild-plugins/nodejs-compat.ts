@@ -56,7 +56,7 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 		// Wait until the build finishes to log warnings, so that all files which import a package
 		// can be collated
 		pluginBuild.onEnd(() => {
-			if (!silenceWarnings)
+			if (!silenceWarnings) {
 				warnedPackaged.forEach((importers: string[], path: string) => {
 					logger.warn(
 						`The package "${path}" wasn't found on the file system but is built into node.
@@ -71,6 +71,7 @@ ${importers
 	.join("\n")}`
 					);
 				});
+			}
 		});
 	},
 });

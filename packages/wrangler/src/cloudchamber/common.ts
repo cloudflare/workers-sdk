@@ -52,7 +52,7 @@ export function handleFailure<
 		infer K
 	>
 		? K
-		: never
+		: never,
 >(
 	cb: (t: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
@@ -115,7 +115,9 @@ export async function promiseSpinner<T>(
 		message: "Loading",
 	}
 ): Promise<T> {
-	if (json) return promise;
+	if (json) {
+		return promise;
+	}
 	const { start, stop } = spinner();
 	start(message);
 	const t = await promise.catch((err) => {
@@ -309,7 +311,7 @@ export function renderDeploymentConfiguration(
 			? []
 			: [
 					["Include IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"],
-			  ]),
+				]),
 	] as const;
 
 	updateStatus(
@@ -381,7 +383,7 @@ export function renderDeploymentMutationError(
 				"You have surpassed the limits of your account\n" +
 				renderAccountLimits(),
 			[DeploymentMutationError.IMAGE_REGISTRY_NOT_CONFIGURED]: () =>
-				"You have to configure the domain of the image you're trying to set\n",
+				"The image registry you are trying to use is not configured. Use the 'wrangler cloudchamber registries configure' command to configure the registry.\n",
 		};
 
 	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
@@ -477,7 +479,9 @@ export async function promptForEnvironmentVariables(
 				value: ev.name,
 			})),
 			validate: (values: Arg) => {
-				if (!Array.isArray(values)) return "unknown error";
+				if (!Array.isArray(values)) {
+					return "unknown error";
+				}
 			},
 		});
 
@@ -485,7 +489,9 @@ export async function promptForEnvironmentVariables(
 		const selectedEnvironmentVariables = [];
 
 		for (const ev of environmentVariables) {
-			if (selectedNamesSet.has(ev.name)) selectedEnvironmentVariables.push(ev);
+			if (selectedNamesSet.has(ev.name)) {
+				selectedEnvironmentVariables.push(ev);
+			}
 		}
 
 		return selectedEnvironmentVariables;
@@ -571,7 +577,9 @@ export async function promptForLabels(
 				value: label.name,
 			})),
 			validate: (values: Arg) => {
-				if (!Array.isArray(values)) return "unknown error";
+				if (!Array.isArray(values)) {
+					return "unknown error";
+				}
 			},
 		});
 
@@ -579,7 +587,9 @@ export async function promptForLabels(
 		const selectedLabels = [];
 
 		for (const ev of labels) {
-			if (selectedNamesSet.has(ev.name)) selectedLabels.push(ev);
+			if (selectedNamesSet.has(ev.name)) {
+				selectedLabels.push(ev);
+			}
 		}
 
 		return selectedLabels;

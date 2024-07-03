@@ -30,6 +30,7 @@ type Env = {
 	MY_SERVICE_B: Fetcher;
 	MY_RPC: Service;
 	MY_KV: KVNamespace;
+	MY_KV_PROD: KVNamespace;
 	MY_DO_A: DurableObjectNamespace;
 	MY_DO_B: DurableObjectNamespace;
 	MY_BUCKET: R2Bucket;
@@ -38,7 +39,7 @@ type Env = {
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
 
-describe("getPlatformProxy - bindings", () => {
+describe("getPlatformProxy - env", () => {
 	let devWorkers: UnstableDevWorker[];
 
 	beforeEach(() => {
@@ -156,13 +157,25 @@ describe("getPlatformProxy - bindings", () => {
 	});
 
 	type EntrypointService = Service<
-		Omit<NamedEntrypoint, "getCounter"> & Rpc.WorkerEntrypointBranded
+		Omit<NamedEntrypoint, "getCounter" | "getHelloWorldFn" | "getHelloFn"> &
+			Rpc.WorkerEntrypointBranded
 	> & {
 		getCounter: () => Promise<
 			Promise<{
 				value: Promise<number>;
 				increment: (amount: number) => Promise<number>;
 			}>
+		>;
+		getHelloWorldFn: () => Promise<() => Promise<string>>;
+		getHelloFn: () => Promise<
+			(
+				greet: string,
+				name: string,
+				options?: {
+					suffix?: string;
+					capitalize?: boolean;
+				}
+			) => Promise<string>
 		>;
 	};
 
@@ -189,6 +202,24 @@ describe("getPlatformProxy - bindings", () => {
 			expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
 			expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
 			expect(await counter.value).toMatchInlineSnapshot(`12`);
+		});
+		it("can obtain and interact with returned functions", async () => {
+			const helloWorldFn = await rpc.getHelloWorldFn();
+			expect(helloWorldFn()).toEqual("Hello World!");
+
+			const helloFn = await rpc.getHelloFn();
+			expect(await helloFn("hi", "world")).toEqual("hi world");
+			expect(
+				await helloFn("hi", "world", {
+					capitalize: true,
+				})
+			).toEqual("HI WORLD");
+			expect(
+				await helloFn("Sup", "world", {
+					capitalize: true,
+					suffix: "?!",
+				})
+			).toEqual("SUP WORLD?!");
 		});
 	});
 
@@ -265,6 +296,66 @@ describe("getPlatformProxy - bindings", () => {
 			await dispose();
 		}
 	});
+
+	describe("with a target environment", () => {
+		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+				environment: "production",
+			});
+			try {
+				expect(env.MY_VAR).not.toBe("my-var-value");
+				expect(env.MY_VAR).toBe("my-PRODUCTION-var-value");
+				expect(env.MY_JSON_VAR).toEqual({ test: true, production: true });
+
+				expect(env.MY_KV).toBeTruthy();
+				expect(env.MY_KV_PROD).toBeTruthy();
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should not provide bindings targeting an environment when none was specified", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+			});
+			try {
+				expect(env.MY_VAR).not.toBe("my-PRODUCTION-var-value");
+				expect(env.MY_VAR).toBe("my-var-value");
+				expect(env.MY_JSON_VAR).toEqual({ test: true });
+
+				expect(env.MY_KV).toBeTruthy();
+				expect(env.MY_KV_PROD).toBeFalsy();
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should provide secrets targeting a specified environment", async () => {
+			const { env, dispose } = await getPlatformProxy<Env>({
+				configPath: wranglerTomlFilePath,
+				environment: "production",
+			});
+			try {
+				const { MY_DEV_VAR } = env;
+				expect(MY_DEV_VAR).not.toEqual("my-dev-var-value");
+				expect(MY_DEV_VAR).toEqual("my-PRODUCTION-dev-var-value");
+			} finally {
+				await dispose();
+			}
+		});
+
+		it("should error if a non-existent environment is provided", async () => {
+			await expect(
+				getPlatformProxy({
+					configPath: wranglerTomlFilePath,
+					environment: "non-existent-environment",
+				})
+			).rejects.toThrow(
+				/No environment found in configuration with name "non-existent-environment"/
+			);
+		});
+	});
 });
 
 /**
@@ -280,6 +371,7 @@ async function startWorkers(): Promise<UnstableDevWorker[]> {
 			const workerPath = path.join(workersDirPath, workerName);
 			return unstable_dev(path.join(workerPath, "index.ts"), {
 				config: path.join(workerPath, "wrangler.toml"),
+				ip: "127.0.0.1",
 			});
 		})
 	);

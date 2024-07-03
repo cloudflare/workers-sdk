@@ -1,8 +1,7 @@
-import fs from "node:fs";
 import { pathToFileURL } from "url";
 import type { CfModule } from "./worker";
 
-function withSourceURL(source: string, sourcePath: string) {
+export function withSourceURL(source: string, sourcePath: string) {
 	return `${source}\n//# sourceURL=${pathToFileURL(sourcePath)}`;
 }
 
@@ -14,9 +13,9 @@ function withSourceURL(source: string, sourcePath: string) {
  */
 export function withSourceURLs(
 	entrypointPath: string,
+	entrypointSource: string,
 	modules: CfModule[]
 ): { entrypointSource: string; modules: CfModule[] } {
-	let entrypointSource = fs.readFileSync(entrypointPath, "utf8");
 	if (!entrypointPath.endsWith(".py")) {
 		entrypointSource = withSourceURL(entrypointSource, entrypointPath);
 	}

@@ -1,21 +1,21 @@
 import http from "http";
 import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import { Dispatcher, Headers, fetch as baseFetch } from "undici";
+import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
 import { Request, RequestInfo, RequestInit } from "./request";
 import { Response } from "./response";
-import { WebSocketPair, coupleWebSocket } from "./websocket";
+import { coupleWebSocket, WebSocketPair } from "./websocket";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
-function headersFromIncomingRequest(req: http.IncomingMessage): Headers {
+function headersFromIncomingRequest(req: http.IncomingMessage): undici.Headers {
 	const entries = Object.entries(req.headers).filter(
 		(pair): pair is [string, string | string[]] => {
 			const [name, value] = pair;
 			return !ignored.includes(name) && value !== undefined;
 		}
 	);
-	return new Headers(Object.fromEntries(entries));
+	return new undici.Headers(Object.fromEntries(entries));
 }
 
 export async function fetch(
@@ -87,7 +87,7 @@ export async function fetch(
 		return responsePromise;
 	}
 
-	const response = await baseFetch(request, {
+	const response = await undici.fetch(request, {
 		dispatcher: requestInit?.dispatcher,
 	});
 	return new Response(response.body, response);
@@ -110,7 +110,7 @@ function addHeader(/* mut */ headers: AnyHeaders, key: string, value: string) {
  * `workerd` server is listening on. Handles cases where `fetch()` redirects to
  * same origin and different external origins.
  */
-export class DispatchFetchDispatcher extends Dispatcher {
+export class DispatchFetchDispatcher extends undici.Dispatcher {
 	private readonly cfBlobJson?: string;
 
 	/**
@@ -124,8 +124,8 @@ export class DispatchFetchDispatcher extends Dispatcher {
 	 * @param cfBlob							`request.cf` blob override for runtime requests
 	 */
 	constructor(
-		private readonly globalDispatcher: Dispatcher,
-		private readonly runtimeDispatcher: Dispatcher,
+		private readonly globalDispatcher: undici.Dispatcher,
+		private readonly runtimeDispatcher: undici.Dispatcher,
 		private readonly actualRuntimeOrigin: string,
 		private readonly userRuntimeOrigin: string,
 		cfBlob?: IncomingRequestCfProperties
@@ -149,8 +149,8 @@ export class DispatchFetchDispatcher extends Dispatcher {
 	}
 
 	dispatch(
-		/* mut */ options: Dispatcher.DispatchOptions,
-		handler: Dispatcher.DispatchHandlers
+		/* mut */ options: undici.Dispatcher.DispatchOptions,
+		handler: undici.Dispatcher.DispatchHandlers
 	): boolean {
 		let origin = String(options.origin);
 		// The first request in a redirect chain will always match the user origin

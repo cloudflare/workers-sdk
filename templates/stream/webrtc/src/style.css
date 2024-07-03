@@ -18,7 +18,12 @@ h3,
 h4,
 h5 {
 	color: white;
-	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+	font-family:
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		Roboto,
 		sans-serif;
 	margin-left: 1rem;
 }

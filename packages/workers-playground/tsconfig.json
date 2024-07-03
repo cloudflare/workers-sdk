@@ -16,10 +16,7 @@
 		"allowSyntheticDefaultImports": true,
 
 		/* Linting */
-		"strict": true,
-		"paths": {
-			"react": ["./node_modules/@types/react"]
-		}
+		"strict": true
 	},
 	"include": ["src"],
 	"references": [{ "path": "./tsconfig.node.json" }]

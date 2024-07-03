@@ -1,5 +1,5 @@
 import { writeFileSync } from "fs";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import {
 	deleteMTlsCertificate,
 	getMTlsCertificate,
@@ -34,29 +34,28 @@ describe("wrangler", () => {
 	) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/mtls_certificates",
-				async (request, response, context) => {
+				async ({ request }) => {
 					config.calls++;
 
-					const body = await request.json();
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "1234",
-								name: body.name,
-								certificates: body.certificates,
-								issuer: "example.com...",
-								uploaded_on: now.toISOString(),
-								expires_on: oneYearLater.toISOString(),
-								...resp,
-							},
-						})
-					);
-				}
+					const body = (await request.json()) as Record<string, unknown>;
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "1234",
+							name: body.name,
+							certificates: body.certificates,
+							issuer: "example.com...",
+							uploaded_on: now.toISOString(),
+							expires_on: oneYearLater.toISOString(),
+							...resp,
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -67,40 +66,39 @@ describe("wrangler", () => {
 	) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/mtls_certificates",
-				async (request, response, context) => {
+				async () => {
 					config.calls++;
 
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result:
-								typeof certs === "undefined"
-									? [
-											{
-												id: "1234",
-												name: "cert one",
-												certificates: "BEGIN CERTIFICATE...",
-												issuer: "example.com...",
-												uploaded_on: now.toISOString(),
-												expires_on: oneYearLater.toISOString(),
-											},
-											{
-												id: "5678",
-												name: "cert two",
-												certificates: "BEGIN CERTIFICATE...",
-												issuer: "example.com...",
-												uploaded_on: now.toISOString(),
-												expires_on: oneYearLater.toISOString(),
-											},
-									  ]
-									: certs,
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result:
+							typeof certs === "undefined"
+								? [
+										{
+											id: "1234",
+											name: "cert one",
+											certificates: "BEGIN CERTIFICATE...",
+											issuer: "example.com...",
+											uploaded_on: now.toISOString(),
+											expires_on: oneYearLater.toISOString(),
+										},
+										{
+											id: "5678",
+											name: "cert two",
+											certificates: "BEGIN CERTIFICATE...",
+											issuer: "example.com...",
+											uploaded_on: now.toISOString(),
+											expires_on: oneYearLater.toISOString(),
+										},
+									]
+								: certs,
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -109,27 +107,26 @@ describe("wrangler", () => {
 	function mockGetMTlsCertificate(resp: Partial<MTlsCertificateResponse> = {}) {
 		const config = { calls: 0 };
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/mtls_certificates/:certId",
-				async (request, response, context) => {
+				async () => {
 					config.calls++;
 
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: {
-								id: "1234",
-								certificates: "BEGIN CERTIFICATE...",
-								issuer: "example.com...",
-								uploaded_on: now.toISOString(),
-								expires_on: oneYearLater.toISOString(),
-								...resp,
-							},
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							id: "1234",
+							certificates: "BEGIN CERTIFICATE...",
+							issuer: "example.com...",
+							uploaded_on: now.toISOString(),
+							expires_on: oneYearLater.toISOString(),
+							...resp,
+						},
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -138,20 +135,19 @@ describe("wrangler", () => {
 	function mockDeleteMTlsCertificate() {
 		const config = { calls: 0 };
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/mtls_certificates/:certId",
-				async (request, response, context) => {
+				async () => {
 					config.calls++;
 
-					return response.once(
-						context.json({
-							success: true,
-							errors: [],
-							messages: [],
-							result: null,
-						})
-					);
-				}
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					});
+				},
+				{ once: true }
 			)
 		);
 		return config;
@@ -359,22 +355,22 @@ describe("wrangler", () => {
 					await runWrangler("mtls-certificate --help");
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
-				"wrangler mtls-certificate
+						"wrangler mtls-certificate
 
-				🪪 Manage certificates used for mTLS connections
+						🪪  Manage certificates used for mTLS connections
 
-				Commands:
-				  wrangler mtls-certificate upload  Upload an mTLS certificate
-				  wrangler mtls-certificate list    List uploaded mTLS certificates
-				  wrangler mtls-certificate delete  Delete an mTLS certificate
+						COMMANDS
+						  wrangler mtls-certificate upload  Upload an mTLS certificate
+						  wrangler mtls-certificate list    List uploaded mTLS certificates
+						  wrangler mtls-certificate delete  Delete an mTLS certificate
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
-			`);
+						GLOBAL FLAGS
+						  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+						  -c, --config                    Path to .toml configuration file  [string]
+						  -e, --env                       Environment to use for operations and .env files  [string]
+						  -h, --help                      Show help  [boolean]
+						  -v, --version                   Show version number  [boolean]"
+					`);
 				});
 			});
 

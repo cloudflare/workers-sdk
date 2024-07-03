@@ -12,29 +12,29 @@ describe("d1", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"wrangler d1
+			"wrangler d1
 
-		🗄  Interact with a D1 database
+			🗄  Manage Workers D1 databases
 
-		Commands:
-		  wrangler d1 list                List D1 databases
-		  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state.
-		  wrangler d1 insights <name>     Experimental command. Get information about the queries run on a D1 database.
-		  wrangler d1 create <name>       Create D1 database
-		  wrangler d1 delete <name>       Delete D1 database
-		  wrangler d1 backup              Interact with D1 Backups
-		  wrangler d1 execute <database>  Executed command or SQL file
-		  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
-		  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time.
-		  wrangler d1 migrations          Interact with D1 Migrations
+			COMMANDS
+			  wrangler d1 list                List D1 databases
+			  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state
+			  wrangler d1 insights <name>     Experimental command. Get information about the queries run on a D1 database.
+			  wrangler d1 create <name>       Create D1 database
+			  wrangler d1 delete <name>       Delete D1 database
+			  wrangler d1 backup              Interact with D1 backups
+			  wrangler d1 execute <database>  Execute a command or SQL file
+			  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
+			  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
+			  wrangler d1 migrations          Interact with D1 migrations
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when an invalid argument is passed", async () => {
@@ -48,30 +48,30 @@ describe("d1", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler d1
+			"
+			wrangler d1
 
-		🗄  Interact with a D1 database
+			🗄  Manage Workers D1 databases
 
-		Commands:
-		  wrangler d1 list                List D1 databases
-		  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state.
-		  wrangler d1 insights <name>     Experimental command. Get information about the queries run on a D1 database.
-		  wrangler d1 create <name>       Create D1 database
-		  wrangler d1 delete <name>       Delete D1 database
-		  wrangler d1 backup              Interact with D1 Backups
-		  wrangler d1 execute <database>  Executed command or SQL file
-		  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
-		  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time.
-		  wrangler d1 migrations          Interact with D1 Migrations
+			COMMANDS
+			  wrangler d1 list                List D1 databases
+			  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state
+			  wrangler d1 insights <name>     Experimental command. Get information about the queries run on a D1 database.
+			  wrangler d1 create <name>       Create D1 database
+			  wrangler d1 delete <name>       Delete D1 database
+			  wrangler d1 backup              Interact with D1 backups
+			  wrangler d1 execute <database>  Execute a command or SQL file
+			  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
+			  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
+			  wrangler d1 migrations          Interact with D1 migrations
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when the migrations command is passed", async () => {
@@ -85,23 +85,23 @@ describe("d1", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler d1 migrations
+			"
+			wrangler d1 migrations
 
-		Interact with D1 Migrations
+			Interact with D1 migrations
 
-		Commands:
-		  wrangler d1 migrations list <database>              List your D1 migrations
-		  wrangler d1 migrations create <database> <message>  Create a new Migration
-		  wrangler d1 migrations apply <database>             Apply D1 Migrations
+			COMMANDS
+			  wrangler d1 migrations list <database>              List your D1 migrations
+			  wrangler d1 migrations create <database> <message>  Create a new migration
+			  wrangler d1 migrations apply <database>             Apply D1 migrations
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 
 	it("should show help when the time travel command is passed", async () => {
@@ -115,21 +115,21 @@ describe("d1", () => {
 		"
 	`);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		wrangler d1 time-travel
+			"
+			wrangler d1 time-travel
 
-		Use Time Travel to restore, fork or copy a database at a specific point-in-time.
+			Use Time Travel to restore, fork or copy a database at a specific point-in-time
 
-		Commands:
-		  wrangler d1 time-travel info <database>     Retrieve information about a database at a specific point-in-time using Time Travel.
-		  wrangler d1 time-travel restore <database>  Restore a database back to a specific point-in-time.
+			COMMANDS
+			  wrangler d1 time-travel info <database>     Retrieve information about a database at a specific point-in-time using Time Travel
+			  wrangler d1 time-travel restore <database>  Restore a database back to a specific point-in-time
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]"
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 	});
 });

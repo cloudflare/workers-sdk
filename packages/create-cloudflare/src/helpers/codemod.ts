@@ -70,7 +70,7 @@ export const parseFile = (filePath: string) => {
 // Transform a file with the provided transformer methods and write it back to disk
 export const transformFile = (
 	filePath: string,
-	methods: recast.types.Visitor
+	methods: recast.types.Visitor,
 ) => {
 	const ast = parseFile(filePath);
 
@@ -112,4 +112,54 @@ export const loadSnippets = (parentFolder: string) => {
 
 export const loadTemplateSnippets = (ctx: C3Context) => {
 	return loadSnippets(getTemplatePath(ctx));
+};
+
+/**
+ * merges provided properties into a given object (updating the object itself), deeply merging them in case
+ * some properties are object themselves
+ *
+ * @param sourceObject the object into which merge the new properties
+ * @param newProperties the new properties to add/merge
+ */
+export const mergeObjectProperties = (
+	sourceObject: recast.types.namedTypes.ObjectExpression,
+	newProperties: recast.types.namedTypes.ObjectProperty[],
+): void => {
+	newProperties.forEach((newProp) => {
+		const newPropName = getPropertyName(newProp);
+		if (!newPropName) {
+			return false;
+		}
+		const indexOfExisting = sourceObject.properties.findIndex(
+			(p) => p.type === "ObjectProperty" && getPropertyName(p) === newPropName,
+		);
+
+		const existing = sourceObject.properties[indexOfExisting];
+		if (!existing) {
+			sourceObject.properties.push(newProp);
+			return;
+		}
+
+		if (
+			existing.type === "ObjectProperty" &&
+			existing.value.type === "ObjectExpression" &&
+			newProp.value.type === "ObjectExpression"
+		) {
+			mergeObjectProperties(
+				existing.value,
+				newProp.value.properties as recast.types.namedTypes.ObjectProperty[],
+			);
+			return;
+		}
+
+		sourceObject.properties[indexOfExisting] = newProp;
+	});
+};
+
+const getPropertyName = (newProp: recast.types.namedTypes.ObjectProperty) => {
+	return newProp.key.type === "Identifier"
+		? newProp.key.name
+		: newProp.key.type === "StringLiteral"
+			? newProp.key.value
+			: null;
 };

@@ -2,7 +2,7 @@
 
 import { URL } from "url";
 import test from "ava";
-import { RouterError, matchRoutes, parseRoutes } from "miniflare";
+import { matchRoutes, parseRoutes, RouterError } from "miniflare";
 
 // See https://developers.cloudflare.com/workers/platform/routes#matching-behavior and
 // https://developers.cloudflare.com/workers/platform/known-issues#route-specificity

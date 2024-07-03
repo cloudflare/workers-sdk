@@ -164,8 +164,8 @@ function encode(data) {
 		typeof data === 'string'
 			? new TextEncoder().encode(data)
 			: data instanceof Uint8Array
-			? data
-			: new Uint8Array(data);
+				? data
+				: new Uint8Array(data);
 	let result = '',
 		i;
 	const l = uint8.length;
@@ -2253,8 +2253,8 @@ function encode3(data) {
 		typeof data === 'string'
 			? new TextEncoder().encode(data)
 			: data instanceof Uint8Array
-			? data
-			: new Uint8Array(data);
+				? data
+				: new Uint8Array(data);
 	let result = '',
 		i;
 	const l = uint8.length;
@@ -2910,11 +2910,11 @@ class Connection1 {
 					transport: 'tcp',
 					hostname,
 					port,
-			  })
+				})
 			: await Deno.connect({
 					transport: 'unix',
 					path: socketPath,
-			  });
+				});
 		try {
 			let receive = await this.nextPacket();
 			const handshakePacket = parseHandshake(receive.body);

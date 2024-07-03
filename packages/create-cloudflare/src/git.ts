@@ -16,7 +16,7 @@ export const offerGit = async (ctx: C3Context) => {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
 			updateStatus(
-				"Couldn't find `git` installed on your machine. Continuing without git."
+				"Couldn't find `git` installed on your machine. Continuing without git.",
 			);
 		}
 
@@ -31,7 +31,7 @@ export const offerGit = async (ctx: C3Context) => {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
 			updateStatus(
-				"Must configure `user.name` and user.email` to use git. Continuing without git."
+				"Must configure `user.name` and user.email` to use git. Continuing without git.",
 			);
 		}
 
@@ -43,7 +43,10 @@ export const offerGit = async (ctx: C3Context) => {
 
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
-	if (insideGitRepo) return;
+	if (insideGitRepo) {
+		ctx.args.git = true;
+		return;
+	}
 
 	ctx.args.git = await processArgument(ctx.args, "git", {
 		type: "confirm",
@@ -63,9 +66,15 @@ export const gitCommit = async (ctx: C3Context) => {
 	//       we unconditionally run this command here
 	const commitMessage = await createCommitMessage(ctx);
 
+	if (!ctx.args.git) {
+		return;
+	}
+
 	// if a git repo existed before the process started then we don't want to commit
 	// we only commit if the git repo was initialized (directly or not) by c3
-	if (ctx.gitRepoAlreadyExisted) return;
+	if (ctx.gitRepoAlreadyExisted) {
+		return;
+	}
 
 	const gitInstalled = await isGitInstalled();
 	const gitInitialized = await isInsideGitRepo(ctx.project.path);
@@ -166,13 +175,17 @@ export async function isGitConfigured() {
 			useSpinner: false,
 			silent: true,
 		});
-		if (!userName) return false;
+		if (!userName) {
+			return false;
+		}
 
 		const email = await runCommand(["git", "config", "user.email"], {
 			useSpinner: false,
 			silent: true,
 		});
-		if (!email) return false;
+		if (!email) {
+			return false;
+		}
 
 		return true;
 	} catch {
@@ -213,13 +226,13 @@ export async function initializeGit(cwd: string) {
 		// Get the default init branch name
 		const defaultBranchName = await runCommand(
 			["git", "config", "--get", "init.defaultBranch"],
-			{ useSpinner: false, silent: true, cwd }
+			{ useSpinner: false, silent: true, cwd },
 		);
 
 		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
 		await runCommand(
 			["git", "init", "--initial-branch", defaultBranchName.trim() ?? "main"], // branch names can't contain spaces, so this is safe
-			{ useSpinner: false, silent: true, cwd }
+			{ useSpinner: false, silent: true, cwd },
 		);
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
@@ -238,7 +251,7 @@ export async function getProductionBranch(cwd: string) {
 				cwd,
 				useSpinner: false,
 				captureOutput: true,
-			}
+			},
 		);
 
 		return productionBranch.trim();

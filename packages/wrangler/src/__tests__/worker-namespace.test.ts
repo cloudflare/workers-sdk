@@ -1,4 +1,5 @@
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { printWranglerBanner } from "../update-check";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
@@ -8,6 +9,7 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Mock } from "vitest";
 
 describe("dispatch-namespace", () => {
 	const std = mockConsoleMethods();
@@ -24,56 +26,55 @@ describe("dispatch-namespace", () => {
 		await new Promise((resolve) => setImmediate(resolve));
 
 		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "wrangler dispatch-namespace
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "wrangler dispatch-namespace
 
-		📦 Interact with a dispatch namespace
+			🏗️  Manage dispatch namespaces
 
-		Commands:
-		  wrangler dispatch-namespace list                          List all dispatch namespaces
-		  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
-		  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
-		  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
-		  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
+			COMMANDS
+			  wrangler dispatch-namespace list                          List all dispatch namespaces
+			  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
+			  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
+			  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
+			  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
 
-		Flags:
-		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config                    Path to .toml configuration file  [string]
-		  -e, --env                       Environment to use for operations and .env files  [string]
-		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]",
-		  "warn": "",
-		}
-	`);
+			GLOBAL FLAGS
+			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]",
+			  "warn": "",
+			}
+		`);
 	});
 
 	describe("create namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.post(
+			http.post(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -81,25 +82,25 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace create <name>
+				"
+				wrangler dispatch-namespace create <name>
 
-			Create a dispatch namespace
+				Create a dispatch namespace
 
-			Positionals:
-			  name  Name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  name  Name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should attempt to create the given namespace", async () => {
@@ -115,15 +116,16 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.delete(
+			http.delete(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(ctx.json(null));
-				}
+					return HttpResponse.json(null);
+				},
+				{ once: true }
 			)
 		);
 
@@ -131,25 +133,25 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace create")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace create <name>
+				"
+				wrangler dispatch-namespace create <name>
 
-			Create a dispatch namespace
+				Create a dispatch namespace
 
-			Positionals:
-			  name  Name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  name  Name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should try to delete the given namespace", async () => {
@@ -165,26 +167,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -192,25 +193,25 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace get")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 1"`
+				`[Error: Not enough non-option arguments: got 0, need at least 1]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace get <name>
+				"
+				wrangler dispatch-namespace get <name>
 
-			Get information about a dispatch namespace
+				Get information about a dispatch namespace
 
-			Positionals:
-			  name  Name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  name  Name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should attempt to get info for the given namespace", async () => {
@@ -233,26 +234,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.get(
+			http.get(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -277,26 +277,25 @@ describe("dispatch-namespace", () => {
 		const namespaceName = "my-namespace";
 		let counter = 0;
 		msw.use(
-			rest.put(
+			http.put(
 				"*/accounts/:accountId/workers/dispatch/namespaces/:namespaceNameParam",
-				(req, res, ctx) => {
+				({ params }) => {
 					counter++;
-					const { namespaceNameParam } = req.params;
+					const { namespaceNameParam } = params;
 					expect(counter).toBe(1);
 					expect(namespaceNameParam).toBe(namespaceName);
-					return res.once(
-						ctx.json(
-							createFetchResult({
-								namespace_id: "some-namespace-id",
-								namespace_name: "namespace-name",
-								created_on: "2022-06-29T14:30:08.16152Z",
-								created_by: "1fc1df98cc4420fe00367c3ab68c1639",
-								modified_on: "2022-06-29T14:30:08.16152Z",
-								modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
-							})
-						)
+					return HttpResponse.json(
+						createFetchResult({
+							namespace_id: "some-namespace-id",
+							namespace_name: "namespace-name",
+							created_on: "2022-06-29T14:30:08.16152Z",
+							created_by: "1fc1df98cc4420fe00367c3ab68c1639",
+							modified_on: "2022-06-29T14:30:08.16152Z",
+							modified_by: "1fc1df98cc4420fe00367c3ab68c1639",
+						})
 					);
-				}
+				},
+				{ once: true }
 			)
 		);
 
@@ -304,26 +303,26 @@ describe("dispatch-namespace", () => {
 			await expect(
 				runWrangler("dispatch-namespace rename")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough non-option arguments: got 0, need at least 2"`
+				`[Error: Not enough non-option arguments: got 0, need at least 2]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler dispatch-namespace rename <old-name> <new-name>
+				"
+				wrangler dispatch-namespace rename <old-name> <new-name>
 
-			Rename a dispatch namespace
+				Rename a dispatch namespace
 
-			Positionals:
-			  old-name  Name of the dispatch namespace  [string] [required]
-			  new-name  New name of the dispatch namespace  [string] [required]
+				POSITIONALS
+				  old-name  Name of the dispatch namespace  [string] [required]
+				  new-name  New name of the dispatch namespace  [string] [required]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
+			`);
 		});
 
 		it("should attempt to rename the given namespace", async () => {
@@ -335,6 +334,7 @@ describe("dispatch-namespace", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"Renamed dispatch namespace \\"my-namespace\\" to \\"new-namespace\\""`
 			);
+			expect((printWranglerBanner as Mock).mock.calls.length).toEqual(1);
 		});
 	});
 });

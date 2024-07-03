@@ -1,7 +1,7 @@
 {
 	"root": true,
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
-	"include": ["**/*.ts", "templates/*/c3.ts"],
+	"include": ["**/*.ts", "templates/*/c3.ts", "**/*.mts"],
 	"exclude": [
 		"node_modules",
 		"dist",

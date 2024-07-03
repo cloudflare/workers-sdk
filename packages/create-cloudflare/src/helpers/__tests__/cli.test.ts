@@ -68,7 +68,7 @@ describe("isUpdateAvailable", () => {
 				},
 				{
 					headers: { "content-type": "application/json" },
-				}
+				},
 			);
 	}
 });

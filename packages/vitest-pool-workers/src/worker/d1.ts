@@ -72,7 +72,9 @@ export async function applyD1Migrations(
 		`INSERT INTO ${migrationsTableName} (name) VALUES (?);`
 	);
 	for (const migration of migrations) {
-		if (appliedMigrationNames.includes(migration.name)) continue;
+		if (appliedMigrationNames.includes(migration.name)) {
+			continue;
+		}
 
 		const queries = migration.queries.map((query) => db.prepare(query));
 		queries.push(insertMigrationStmt.bind(migration.name));

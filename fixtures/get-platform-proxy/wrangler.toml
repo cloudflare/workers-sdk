@@ -31,3 +31,9 @@ bindings = [
 binding = "MY_D1"
 database_name = "test-db"
 database_id = "000000000-0000-0000-0000-000000000000"
+
+[env.production]
+
+vars = { MY_VAR = "my-PRODUCTION-var-value", MY_JSON_VAR = { test = true, production = true } }
+
+kv_namespaces = [{ binding = "MY_KV_PROD", id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}]
