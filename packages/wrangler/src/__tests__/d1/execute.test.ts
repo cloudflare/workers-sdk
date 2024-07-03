@@ -7,9 +7,12 @@ import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 
 describe("execute", () => {
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
+
+	// We turn on SENTRY reporting so that we can prove that Wrangler will not attempt to report user errors.
+	useSentry();
 
 	it("should require login when running against prod", async () => {
 		setIsTTY(false);
@@ -36,6 +39,26 @@ describe("execute", () => {
 
 		await expect(runWrangler("d1 execute db")).rejects.toThrowError(
 			`Error: must provide --command or --file`
+		);
+	});
+
+	it("should reject use of both --command and --file", async () => {
+		setIsTTY(false);
+		writeWranglerToml({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await expect(
+			runWrangler(
+				"d1 execute db --command='SELECT * FROM CUSTOMERS' --file=query.sql"
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Error: can't provide both --command and --file.]`
+		);
+		expect(std.out).not.toMatch(
+			"Would you like to report this error to Cloudflare?"
 		);
 	});
 
@@ -115,3 +138,16 @@ describe("execute", () => {
 		);
 	});
 });
+
+function useSentry() {
+	// @ts-expect-error TS does not know about SENTRY_DSN
+	const oldSentryDsn = global.SENTRY_DSN;
+	beforeEach(() => {
+		// @ts-expect-error TS does not know about SENTRY_DSN
+		global.SENTRY_DSN = "FAKE_VALUE";
+	});
+	afterEach(() => {
+		// @ts-expect-error TS does not know about SENTRY_DSN
+		global.SENTRY_DSN = oldSentryDsn;
+	});
+}
