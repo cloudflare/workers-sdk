@@ -9,7 +9,9 @@
 			"persistent": true,
 			"cache": false
 		},
-		"build": { "dependsOn": ["^build"] },
+		"build": {
+			"dependsOn": ["^build"]
+		},
 		"test": {
 			"dependsOn": ["build"]
 		},
@@ -33,6 +35,18 @@
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {},
-		"//#check:format": { "cache": true }
+		"//#check:format": {
+			"cache": true
+		},
+		"test:e2e:c3-integration": {},
+		"test:e2e:deployments": {},
+		"test:e2e:dev-env": {},
+		"test:e2e:dev-with-resources": {},
+		"test:e2e:dev": {},
+		"test:e2e:get-platform-proxy": {},
+		"test:e2e:pages-dev": {},
+		"test:e2e:r2": {},
+		"test:e2e:startWorker": {},
+		"test:e2e:versions": {}
 	}
 }
