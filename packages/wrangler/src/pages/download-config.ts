@@ -82,8 +82,9 @@ async function toEnvironment(
 		configObj.compatibility_date = supportedCompatibilityDate;
 	}
 
-	if (deploymentConfig.compatibility_flags?.length)
+	if (deploymentConfig.compatibility_flags?.length) {
 		configObj.compatibility_flags = deploymentConfig.compatibility_flags;
+	}
 
 	if (deploymentConfig.placement) {
 		configObj.placement = deploymentConfig.placement;
