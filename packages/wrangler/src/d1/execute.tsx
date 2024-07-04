@@ -13,7 +13,7 @@ import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
-import { JsonFriendlyFatalError, UserError } from "../errors";
+import { createFatalError, JsonFriendlyFatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, readFileSync } from "../parse";
 import { readableRelative } from "../paths";
@@ -117,7 +117,10 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const config = readConfig(args.config, args);
 
 	if (file && command) {
-		return logger.error(`Error: can't provide both --command and --file.`);
+		throw createFatalError(
+			`Error: can't provide both --command and --file.`,
+			json
+		);
 	}
 
 	const isInteractive = process.stdout.isTTY;
@@ -552,17 +555,26 @@ async function d1ApiPost<T>(
 	action: string,
 	body: unknown
 ) {
-	return await fetchResult<T>(
-		`/accounts/${accountId}/d1/database/${db.uuid}/${action}`,
-		{
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
-			},
-			body: JSON.stringify(body),
+	try {
+		return await fetchResult<T>(
+			`/accounts/${accountId}/d1/database/${db.uuid}/${action}`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
+				},
+				body: JSON.stringify(body),
+			}
+		);
+	} catch (x) {
+		if (x instanceof APIError) {
+			// API Errors here are most likely to be user errors - e.g. invalid SQL.
+			// So we don't want to report those to Sentry.
+			x.preventReport();
 		}
-	);
+		throw x;
+	}
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
