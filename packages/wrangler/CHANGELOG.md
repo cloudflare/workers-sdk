@@ -1,5 +1,30 @@
 # wrangler
 
+## 3.63.1
+
+### Patch Changes
+
+- [#6192](https://github.com/cloudflare/workers-sdk/pull/6192) [`b879ce4`](https://github.com/cloudflare/workers-sdk/commit/b879ce49aff454f9fe34f86886fc97db8ff8083e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not report D1 user errors to Sentry
+
+- [#6150](https://github.com/cloudflare/workers-sdk/pull/6150) [`d993409`](https://github.com/cloudflare/workers-sdk/commit/d9934090594a7101912bd35aacc86ceb4cc15c3a) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Fix `pages dev` watch mode [_worker.js]
+
+  The watch mode in `pages dev` for Advanced Mode projects is currently partially broken, as it only watches for changes in the "\_worker.js" file, but not for changes in any of its imported dependencies. This means that given the following "\_worker.js" file
+
+  ```
+  import { graham } from "./graham-the-dog";
+  export default {
+  	fetch(request, env) {
+  		return new Response(graham)
+  	}
+  }
+  ```
+
+  `pages dev` will reload for any changes in the `_worker.js` file itself, but not for any changes in `graham-the-dog.js`, which is its dependency.
+
+  Similarly, `pages dev` will not reload for any changes in non-JS module imports, such as wasm/html/binary module imports.
+
+  This commit fixes all the aforementioned issues.
+
 ## 3.63.0
 
 ### Minor Changes
