@@ -17,12 +17,7 @@ import { printWranglerBanner } from "../update-check";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import {
-	FunctionsBuildError,
-	FunctionsNoRoutesError,
-	getFunctionsBuildWarning,
-	getFunctionsNoRoutesWarning,
-} from "./errors";
+import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
@@ -504,27 +499,22 @@ export const Handler = async (args: PagesDevArguments) => {
 		 * every detection period, the signal will not be sent!"
 		 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
 		 */
-		const debouncedRunBuild = (delayMS = 50) => {
-			const debounceFn = debounce(async () => {
-				try {
-					await runBuild();
-				} catch (e) {
-					/*
-					 * don't break developer flow in watch mode by throwing an error
-					 * here. Many times errors will be just the result of unfinished
-					 * typing. Instead, log the error, point out we are still serving
-					 * the last successfully built Worker, and allow developers to
-					 * write their code to completion
-					 */
-					logger.error(
-						`Error while attempting to build ${singleWorkerScriptPath}. Skipping to last successfully built version of the Worker.\n` +
-							`${e}`
-					);
-				}
-			}, delayMS);
-
-			debounceFn();
-		};
+		const debouncedRunBuild = debounce(async () => {
+			try {
+				await runBuild();
+			} catch (e) {
+				/*
+				 * don't break developer flow in watch mode by throwing an error
+				 * here. Many times errors will be just the result of unfinished
+				 * typing. Instead, log the error, point out we are still serving
+				 * the last successfully built Worker, and allow developers to
+				 * write their code to completion
+				 */
+				logger.warn(
+					`Failed to build ${singleWorkerScriptPath}. Continuing to serve the last successfully built version of the Worker.`
+				);
+			}
+		}, 50);
 
 		try {
 			await runBuild();
@@ -532,13 +522,16 @@ export const Handler = async (args: PagesDevArguments) => {
 			watcher.on("all", async (eventName, path) => {
 				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
 
-				// if "_worker.js" was deleted wait for 5s before re-building. It
-				// might be we are dealing with a temporary delete (as part of some
-				// frameworks-related process - see ...), and the file will be
-				// re-added immediately
-				const delayMS =
-					eventName === "unlink" && path.includes(workerScriptPath) ? 5000 : 50;
-				debouncedRunBuild(delayMS);
+				// Skip re-building the Worker if "_worker.js" was deleted.
+				// This is necessary for Pages projects + Frameworks, where
+				// the file was potentially deleted as part of a build process,
+				// which will add the updated file back.
+				// see https://github.com/cloudflare/workers-sdk/issues/3886
+				if (eventName === "unlink") {
+					return;
+				}
+
+				debouncedRunBuild();
 			});
 		} catch (e: unknown) {
 			/*
@@ -546,9 +539,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			 * Worker. These flag underlying issues in the _worker.js code, and
 			 * should be addressed before starting the dev process
 			 */
-			throw new FatalError(
-				`Error while attempting to build ${singleWorkerScriptPath}\n` + `${e}`
-			);
+			throw new FatalError(`Failed to build ${singleWorkerScriptPath}.`);
 		}
 	} else if (usingFunctions) {
 		// Try to use Functions
@@ -688,11 +679,9 @@ export const Handler = async (args: PagesDevArguments) => {
 				await buildFn();
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
-					logger.error(
-						getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+					logger.warn(
+						`${getFunctionsNoRoutesWarning(functionsDirectory)}. Continuing to serve the last successfully built version of Functions.`
 					);
-				} else if (e instanceof FunctionsBuildError) {
-					logger.error(getFunctionsBuildWarning(functionsDirectory, e.message));
 				} else {
 					/*
 					 * don't break developer flow in watch mode by throwing an error
@@ -701,9 +690,8 @@ export const Handler = async (args: PagesDevArguments) => {
 					 * the last successfully built Functions, and allow developers to
 					 * write their code to completion
 					 */
-					logger.error(
-						`Error while attempting to build the Functions directory ${functionsDirectory}. Skipping to last successfully built version of Functions.\n` +
-							`${e}`
+					logger.warn(
+						`Failed to build Functions at ${functionsDirectory}. Continuing to serve the last successfully built version of Functions.`
 					);
 				}
 			}
@@ -734,8 +722,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				 * issues in the Functions code, and should be addressed before
 				 */
 				throw new FatalError(
-					`Error while attempting to build the Functions directory ${functionsDirectory}\n` +
-						`${e}`
+					`Failed to build Functions at ${functionsDirectory}.`
 				);
 			}
 		}
@@ -747,7 +734,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		scriptReadyResolve!();
 
-		logger.log("No functions. Shimming...");
+		logger.log("No Functions. Shimming...");
 		scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 	}
 

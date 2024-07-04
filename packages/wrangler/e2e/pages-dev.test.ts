@@ -188,7 +188,7 @@ describe("pages dev", () => {
 
 		await setTimeout(5_000);
 
-		await worker.readUntil(/Error while attempting to build/);
+		await worker.readUntil(/Failed to build/);
 
 		// And then make sure Wrangler hasn't crashed
 		await helper.seed({
@@ -234,7 +234,7 @@ describe("pages dev", () => {
 
 		await setTimeout(5_000);
 
-		await worker.readUntil(/Unexpected error building Functions directory/);
+		await worker.readUntil(/Failed to build Functions/);
 
 		// And then make sure Wrangler hasn't crashed
 		await helper.seed({
