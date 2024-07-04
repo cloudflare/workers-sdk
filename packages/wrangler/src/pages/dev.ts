@@ -1,6 +1,6 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join, normalize, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
@@ -17,12 +17,7 @@ import { printWranglerBanner } from "../update-check";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import {
-	FunctionsBuildError,
-	FunctionsNoRoutesError,
-	getFunctionsBuildWarning,
-	getFunctionsNoRoutesWarning,
-} from "./errors";
+import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
@@ -402,7 +397,20 @@ export const Handler = async (args: PagesDevArguments) => {
 			}
 		});
 	} else if (usingWorkerScript) {
+		/*
+		 * Delegate watching for file changes to chokidar entirely. This gives
+		 * us a bit more flexibility and control as opposed to esbuild watch
+		 * mode, and keeps things consistent with the Functions implementation
+		 */
+		// always watch _worker.js
+		const watcher = watch([workerScriptPath], {
+			persistent: true,
+			ignoreInitial: true,
+		});
+		let watchedBundleDependencies: string[] = [];
+
 		scriptPath = workerScriptPath;
+
 		let runBuild = async () => {
 			await checkRawWorker(workerScriptPath, nodejsCompatMode, () =>
 				scriptReadyResolve()
@@ -417,37 +425,122 @@ export const Handler = async (args: PagesDevArguments) => {
 				getPagesTmpDir(),
 				`./bundledWorker-${Math.random()}.mjs`
 			);
+
 			runBuild = async () => {
-				try {
-					await buildRawWorker({
-						workerScriptPath: usingWorkerDirectory
-							? join(workerScriptPath, "index.js")
-							: workerScriptPath,
-						outfile: scriptPath,
-						directory: directory ?? ".",
-						nodejsCompatMode,
-						local: true,
-						sourcemap: true,
-						watch: false,
-						onEnd: () => scriptReadyResolve(),
-						defineNavigatorUserAgent,
-					});
-				} catch (e: unknown) {
-					logger.warn("Failed to bundle _worker.js.", e);
+				const workerScriptDirectory = dirname(workerScriptPath);
+				let currentBundleDependencies: string[] = [];
+
+				const bundle = await buildRawWorker({
+					workerScriptPath: usingWorkerDirectory
+						? join(workerScriptPath, "index.js")
+						: workerScriptPath,
+					outfile: scriptPath,
+					directory: directory ?? ".",
+					nodejsCompatMode,
+					local: true,
+					sourcemap: true,
+					watch: false,
+					onEnd: () => scriptReadyResolve(),
+					defineNavigatorUserAgent,
+				});
+
+				/*
+				 * EXCLUDE:
+				 *   - "_worker.js" because we're already watching it
+				 *   - everything in "./.wrangler", as it's mostly cache and
+				 *     temporary files
+				 *   - anything outside of the current working directory, since we
+				 *     are expecting `wrangler pages dev` to be run from the Pages
+				 *     project root folder
+				 */
+				const bundleDependencies = Object.keys(bundle.dependencies)
+					.map((dep) => resolve(workerScriptDirectory, dep))
+					.filter(
+						(resolvedDep) =>
+							!resolvedDep.includes(normalize(singleWorkerScriptPath)) &&
+							!resolvedDep.includes(normalize("/.wrangler/")) &&
+							resolvedDep.includes(resolve(process.cwd()))
+					);
+
+				// handle non-JS module dependencies, such as wasm/html/binary imports
+				const bundleModules = bundle.modules
+					.filter((module) => !!module.filePath)
+					.map((module) =>
+						resolve(workerScriptDirectory, module.filePath as string)
+					);
+
+				/*
+				 *`bundle.dependencies` and `bundle.modules` combined, will always
+				 * provide us with the most up-to-date list of dependencies we need
+				 * to watch, since they reflect the latest built Worker bundle.
+				 * Therefore, we can safely unwatch all dependencies we have been
+				 * watching so far, and add all the new ones.
+				 */
+				currentBundleDependencies = [...bundleDependencies, ...bundleModules];
+
+				if (watchedBundleDependencies.length) {
+					watcher.unwatch(watchedBundleDependencies);
 				}
+				watcher.add(currentBundleDependencies);
+				watchedBundleDependencies = [...currentBundleDependencies];
 			};
 		}
 
-		await runBuild();
-		watch([workerScriptPath], {
-			persistent: true,
-			ignoreInitial: true,
-		}).on("all", async (event) => {
-			if (event === "unlink") {
-				return;
+		/*
+		 * Improve developer experience by debouncing the re-building
+		 * of the Worker script, in case file changes are trigerred
+		 * at a high rate (for example if code editor runs auto-saves
+		 * at very short intervals)
+		 *
+		 * "Debouncing ensures that exactly one signal is sent for an
+		 * event that may be happening several times — or even several
+		 * hundreds of times over an extended period. As long as the
+		 * events are occurring fast enough to happen at least once in
+		 * every detection period, the signal will not be sent!"
+		 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
+		 */
+		const debouncedRunBuild = debounce(async () => {
+			try {
+				await runBuild();
+			} catch (e) {
+				/*
+				 * don't break developer flow in watch mode by throwing an error
+				 * here. Many times errors will be just the result of unfinished
+				 * typing. Instead, log the error, point out we are still serving
+				 * the last successfully built Worker, and allow developers to
+				 * write their code to completion
+				 */
+				logger.warn(
+					`Failed to build ${singleWorkerScriptPath}. Continuing to serve the last successfully built version of the Worker.`
+				);
 			}
+		}, 50);
+
+		try {
 			await runBuild();
-		});
+
+			watcher.on("all", async (eventName, path) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+
+				// Skip re-building the Worker if "_worker.js" was deleted.
+				// This is necessary for Pages projects + Frameworks, where
+				// the file was potentially deleted as part of a build process,
+				// which will add the updated file back.
+				// see https://github.com/cloudflare/workers-sdk/issues/3886
+				if (eventName === "unlink") {
+					return;
+				}
+
+				debouncedRunBuild();
+			});
+		} catch (e: unknown) {
+			/*
+			 * fail early if we encounter errors while attempting to build the
+			 * Worker. These flag underlying issues in the _worker.js code, and
+			 * should be addressed before starting the dev process
+			 */
+			throw new FatalError(`Failed to build ${singleWorkerScriptPath}.`);
+		}
 	} else if (usingFunctions) {
 		// Try to use Functions
 		scriptPath = join(
@@ -462,7 +555,6 @@ export const Handler = async (args: PagesDevArguments) => {
 		logger.debug(`Compiling worker to "${scriptPath}"...`);
 
 		const onEnd = () => scriptReadyResolve();
-		const watchedBundleDependencies: Set<string> = new Set();
 
 		/*
 		 * Pages Functions projects cannot rely on esbuild's watch mode alone.
@@ -504,124 +596,108 @@ export const Handler = async (args: PagesDevArguments) => {
 			persistent: true,
 			ignoreInitial: true,
 		});
+		let watchedBundleDependencies: string[] = [];
 
-		try {
-			const buildFn = async () => {
-				const currentBundleDependencies = new Set();
+		const buildFn = async () => {
+			let currentBundleDependencies: string[] = [];
 
-				const bundle = await buildFunctions({
-					outfile: scriptPath,
-					functionsDirectory,
-					sourcemap: true,
-					watch: false,
-					onEnd,
-					buildOutputDirectory: directory,
-					nodejsCompatMode,
-					local: true,
-					routesModule,
-					defineNavigatorUserAgent,
-				});
+			const bundle = await buildFunctions({
+				outfile: scriptPath,
+				functionsDirectory,
+				sourcemap: true,
+				watch: false,
+				onEnd,
+				buildOutputDirectory: directory,
+				nodejsCompatMode,
+				local: true,
+				routesModule,
+				defineNavigatorUserAgent,
+			});
 
-				for (const dep in bundle.dependencies) {
-					const resolvedDep = resolve(functionsDirectory, dep);
-					/*
-					 * EXCLUDE:
-					 *   - the "/functions" directory because we're already watching it
-					 *   - everything in "./.wrangler", as it's mostly cache and
-					 *     temporary files
-					 *   - any bundle dependencies we are already watching
-					 *   - anything outside of the current working directory, since we
-					 *     are expecting `wrangler pages dev` to be run from the Pages
-					 *     project root folder
-					 */
-					if (
+			/*
+			 * EXCLUDE:
+			 *   - the "/functions" directory because we're already watching it
+			 *   - everything in "./.wrangler", as it's mostly cache and
+			 *     temporary files
+			 *   - any bundle dependencies we are already watching
+			 *   - anything outside of the current working directory, since we
+			 *     are expecting `wrangler pages dev` to be run from the Pages
+			 *     project root folder
+			 */
+			const bundleDependencies = Object.keys(bundle.dependencies)
+				.map((dep) => resolve(functionsDirectory, dep))
+				.filter(
+					(resolvedDep) =>
 						!resolvedDep.includes(normalize("/functions/")) &&
 						!resolvedDep.includes(normalize("/.wrangler/")) &&
 						resolvedDep.includes(resolve(process.cwd()))
-					) {
-						currentBundleDependencies.add(resolvedDep);
+				);
 
-						if (!watchedBundleDependencies.has(resolvedDep)) {
-							watchedBundleDependencies.add(resolvedDep);
-							watcher.add(resolvedDep);
-						}
-					}
-				}
-
-				// handle non-JS module dependencies, such as wasm/html/binary imports
-				for (const module of bundle.modules) {
-					if (module.filePath) {
-						const resolvedDep = resolve(functionsDirectory, module.filePath);
-						currentBundleDependencies.add(resolvedDep);
-
-						if (!watchedBundleDependencies.has(resolvedDep)) {
-							watchedBundleDependencies.add(resolvedDep);
-							watcher.add(resolvedDep);
-						}
-					}
-				}
-
-				/*
-				 *`bundle.dependencies` and `bundle.modules` will always contain the
-				 * latest dependency list of the current bundle. If we are currently
-				 * watching any dependency files not in that list, we should remove
-				 * them, as they are no longer relevant to the compiled Functions.
-				 */
-				watchedBundleDependencies.forEach(async (path) => {
-					if (!currentBundleDependencies.has(path)) {
-						watchedBundleDependencies.delete(path);
-						watcher.unwatch(path);
-					}
-				});
-
-				await metrics.sendMetricsEvent("build pages functions");
-			};
+			// handle non-JS module dependencies, such as wasm/html/binary imports
+			const bundleModules = bundle.modules
+				.filter((module) => !!module.filePath)
+				.map((module) =>
+					resolve(functionsDirectory, module.filePath as string)
+				);
 
 			/*
-			 * Improve developer experience by debouncing the re-building
-			 * of Functions.
-			 *
-			 * "Debouncing ensures that exactly one signal is sent for an
-			 * event that may be happening several times — or even several
-			 * hundreds of times over an extended period. As long as the
-			 * events are occurring fast enough to happen at least once in
-			 * every detection period, the signal will not be sent!"
-			 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
-			 *
-			 * This handles use cases such as bulk file/directory changes
-			 * (such as copy/pasting multiple files/directories), where
-			 * chokidar will trigger a change event per each changed file/
-			 * directory. In such use cases, we want to ensure that we
-			 * re-build Functions once, as opposed to once per change event.
+			 *`bundle.dependencies` and `bundle.modules` will always contain the
+			 * latest dependency list of the current bundle. If we are currently
+			 * watching any dependency files not in that list, we should remove
+			 * them, as they are no longer relevant to the compiled Functions.
 			 */
-			const debouncedBuildFn = debounce(async () => {
-				try {
-					await buildFn();
-				} catch (e) {
-					if (e instanceof FunctionsNoRoutesError) {
-						logger.error(
-							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
-						);
-					} else if (e instanceof FunctionsBuildError) {
-						logger.error(
-							getFunctionsBuildWarning(functionsDirectory, e.message)
-						);
-					} else {
-						/*
-						 * don't break developer flow in watch mode by throwing an error
-						 * here. Many times errors will be just the result of unfinished
-						 * typing. Instead, log the error, point out we are still serving
-						 * the last successfully built Functions, and allow developers to
-						 * write their code to completion
-						 */
-						logger.error(
-							`Error while attempting to build the Functions directory ${functionsDirectory}. Skipping to last successfully built version of Functions.\n` +
-								`${e}`
-						);
-					}
-				}
-			}, 50);
+			currentBundleDependencies = [...bundleDependencies, ...bundleModules];
 
+			if (watchedBundleDependencies.length) {
+				watcher.unwatch(watchedBundleDependencies);
+			}
+			watcher.add(currentBundleDependencies);
+			watchedBundleDependencies = [...currentBundleDependencies];
+
+			await metrics.sendMetricsEvent("build pages functions");
+		};
+
+		/*
+		 * Improve developer experience by debouncing the re-building
+		 * of Functions.
+		 *
+		 * "Debouncing ensures that exactly one signal is sent for an
+		 * event that may be happening several times — or even several
+		 * hundreds of times over an extended period. As long as the
+		 * events are occurring fast enough to happen at least once in
+		 * every detection period, the signal will not be sent!"
+		 * (http://unscriptable.com/2009/03/20/debouncing-javascript-methods/)
+		 *
+		 * This handles use cases such as bulk file/directory changes
+		 * (such as copy/pasting multiple files/directories), where
+		 * chokidar will trigger a change event per each changed file/
+		 * directory. In such use cases, we want to ensure that we
+		 * re-build Functions once, as opposed to once per change event.
+		 */
+		const debouncedBuildFn = debounce(async () => {
+			try {
+				await buildFn();
+			} catch (e) {
+				if (e instanceof FunctionsNoRoutesError) {
+					logger.warn(
+						`${getFunctionsNoRoutesWarning(functionsDirectory)}. Continuing to serve the last successfully built version of Functions.`
+					);
+				} else {
+					/*
+					 * don't break developer flow in watch mode by throwing an error
+					 * here. Many times errors will be just the result of unfinished
+					 * typing. Instead, log the error, point out we are still serving
+					 * the last successfully built Functions, and allow developers to
+					 * write their code to completion
+					 */
+					logger.warn(
+						`Failed to build Functions at ${functionsDirectory}. Continuing to serve the last successfully built version of Functions.`
+					);
+				}
+			}
+		}, 50);
+
+		try {
 			await buildFn();
 
 			// If Functions found routes, continue using Functions
@@ -630,7 +706,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 				debouncedBuildFn();
 			});
-		} catch (e) {
+		} catch (e: unknown) {
 			// If there are no Functions, then Pages will only serve assets.
 			if (e instanceof FunctionsNoRoutesError) {
 				logger.error(
@@ -646,8 +722,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				 * issues in the Functions code, and should be addressed before
 				 */
 				throw new FatalError(
-					`Error while attempting to build the Functions directory ${functionsDirectory}\n` +
-						`${e}`
+					`Failed to build Functions at ${functionsDirectory}.`
 				);
 			}
 		}
@@ -659,7 +734,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		scriptReadyResolve!();
 
-		logger.log("No functions. Shimming...");
+		logger.log("No Functions. Shimming...");
 		scriptPath = resolve(getBasePath(), "templates/pages-shim.ts");
 	}
 
