@@ -8,9 +8,8 @@
  * The intended flow here is that CI will run this file, which will trigger turbo to run
  * an individual task for each Wrangler e2e test file, using `execSync`.
  */
-import assert from "assert";
 import { execSync } from "child_process";
-import { readdirSync, readFileSync } from "fs";
+import { readdirSync } from "fs";
 
 // Get a list of e2e test files, each of which should have an associated script
 const e2eTests = readdirSync("packages/wrangler/e2e");
