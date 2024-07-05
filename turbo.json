@@ -9,7 +9,9 @@
 			"persistent": true,
 			"cache": false
 		},
-		"build": { "dependsOn": ["^build"] },
+		"build": {
+			"dependsOn": ["^build"]
+		},
 		"test": {
 			"dependsOn": ["build"]
 		},
@@ -33,6 +35,8 @@
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {},
-		"//#check:format": { "cache": true }
+		"//#check:format": {
+			"cache": true
+		}
 	}
 }
