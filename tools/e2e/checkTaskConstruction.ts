@@ -22,40 +22,21 @@ import { readdirSync, readFileSync } from "fs";
 // Get a list of e2e test files, each of which should have an associated script
 const e2eTests = readdirSync("packages/wrangler/e2e");
 
-const tasks = new Map<string, string>();
+const tasks = new Set();
 
 for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
 	if (file.endsWith(".test.ts")) {
-		const [testName] = file.split(".test.ts");
-		tasks.set(`test:e2e:${testName}`, `pnpm test:e2e run ./e2e/${file}`);
+		tasks.add(
+			`pnpm test:e2e --log-order=stream --filter wrangler --concurrency 1 -- run ./e2e/${file}`
+		);
 	}
-}
-
-const wranglerPackageJson = JSON.parse(
-	readFileSync("packages/wrangler/package.json", "utf8")
-);
-for (const [testName, testScript] of tasks) {
-	assert(
-		wranglerPackageJson.scripts[testName] === testScript,
-		`Expected the "${testName}" script in Wrangler's package.json to be equal to "${testScript}". Found "${wranglerPackageJson[testName]}"`
-	);
 }
 
 const rootPackageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
-const rootScript =
-	"dotenv -- turbo --log-order=stream --filter wrangler --concurrency 1 " +
-	[...tasks.keys()].join(" ");
+const rootScript = [...tasks.values()].join(" && ");
 assert(
 	rootPackageJson.scripts["test:e2e:wrangler"] === rootScript,
 	`Expected the "test:e2e:wrangler" script in the root package.json to be equal to:\n\n${rootScript}\n\nFound:\n\n${rootPackageJson.scripts["test:e2e:wrangler"]}\n`
 );
-
-const rootTurboJson = JSON.parse(readFileSync("turbo.json", "utf8"));
-for (const [testName] of tasks) {
-	assert(
-		JSON.stringify(rootTurboJson.pipeline[testName]) === "{}",
-		`Expected the "${testName}" turbo task to be present in turbo.json`
-	);
-}
