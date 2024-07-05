@@ -219,6 +219,10 @@ async function pollExport(
 		`/accounts/${accountId}/d1/database/${db.uuid}/export`,
 		{
 			method: "POST",
+			headers: {
+				...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
+				"content-type": "application/json",
+			},
 			body: JSON.stringify({
 				outputFormat: "polling",
 				dumpOptions,
