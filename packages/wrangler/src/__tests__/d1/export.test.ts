@@ -9,7 +9,7 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 
-describe("execute", () => {
+describe("export", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 	mockConsoleMethods();
@@ -151,7 +151,7 @@ describe("execute", () => {
 									status: "complete",
 									result: {
 										filename: "xxxx-yyyy.sql",
-										signedUrl: "https://example.com/xxxx-yyyy.sql",
+										signed_url: "https://example.com/xxxx-yyyy.sql",
 									},
 									messages: [
 										"Uploaded part 3",
