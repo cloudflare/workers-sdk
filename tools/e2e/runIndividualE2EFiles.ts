@@ -17,12 +17,13 @@
  * Wrangler package.
  */
 import assert from "assert";
+import { execSync } from "child_process";
 import { readdirSync, readFileSync } from "fs";
 
 // Get a list of e2e test files, each of which should have an associated script
 const e2eTests = readdirSync("packages/wrangler/e2e");
 
-const tasks = new Set();
+const tasks = new Set<string>();
 
 for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
@@ -33,10 +34,8 @@ for (const file of e2eTests) {
 	}
 }
 
-const rootPackageJson = JSON.parse(readFileSync("package.json", "utf8"));
-
-const rootScript = [...tasks.values()].join(" && ");
-assert(
-	rootPackageJson.scripts["test:e2e:wrangler"] === rootScript,
-	`Expected the "test:e2e:wrangler" script in the root package.json to be equal to:\n\n${rootScript}\n\nFound:\n\n${rootPackageJson.scripts["test:e2e:wrangler"]}\n`
-);
+for (const task of tasks.values()) {
+	execSync(task, {
+		stdio: "inherit",
+	});
+}
