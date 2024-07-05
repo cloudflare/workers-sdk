@@ -2,19 +2,11 @@
  * Turbo only supports caching on the individual task level, but for Wrangler's
  * e2e tests we want to support caching on a more granular basis—at the file level.
  *
- * As such, we construct multiple turbo tasks—one per e2e test file, ensuring that each file's
- * tests can be cached individually.
+ * As such, we run the `test:e2e` turbo task multiple times—once per e2e test file
+ * with different arguments, ensuring that each file's tests can be cached individually.
  *
- * Because Turbo ignores the cache when package.json changes, we can't generate these package.json
- * scripts on the fly in CI, and so we require them to be commited to the repository.
- * Since this is easy to mess up, this script lints turbo.json, the root package.json, and Wrangler's package.json
- * to ensure everything is set up as intended.
- *
- * The intended flow here is that CI will run `pnpm test:e2e:wrangler`, which will trigger turbo to run
- * an individual task for each Wrangler e2e test file. These tasks are defined in the root turbo.json,
- * and correspond to scripts in the Wrangler package. We ensure there's no accidental task name collision
- * across packages by adding `--filter wrangler` to the turbo command, to make it only run tasks in the
- * Wrangler package.
+ * The intended flow here is that CI will run this file, which will trigger turbo to run
+ * an individual task for each Wrangler e2e test file, using `execSync`.
  */
 import assert from "assert";
 import { execSync } from "child_process";
