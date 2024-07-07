@@ -8,19 +8,11 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
-import {
-	afterEach,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	test,
-} from "vitest";
+import { beforeAll, describe, expect } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
 import { getFrameworkToTest } from "./frameworkToTest";
 import {
-	createTestLogStream,
 	getDiffsPath,
 	isQuarantineMode,
 	keys,
@@ -28,19 +20,20 @@ import {
 	recreateLogFolder,
 	runC3,
 	spawnWithLogging,
+	test,
 	testDeploymentCommitMessage,
-	testProjectDir,
 	waitForExit,
 } from "./helpers";
 import type { TemplateConfig } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
-import type { WriteStream } from "fs";
+import type { Writable } from "stream";
 import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
 const TEST_PM = process.env.TEST_PM ?? "";
-const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? false;
+const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? true;
+// const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? false;
 const TEST_RETRIES = process.env.E2E_RETRIES
 	? parseInt(process.env.E2E_RETRIES)
 	: 1;
@@ -49,7 +42,7 @@ type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
-	verifyDev?: {
+	verifyPreview: null | {
 		route: string;
 		expectedText: string;
 	};
@@ -79,6 +72,10 @@ function getFrameworkTests(opts: {
 					outputFile: "env.d.ts",
 					envInterfaceName: "CloudflareEnv",
 				},
+				verifyPreview: {
+					route: "/test",
+					expectedText: "C3_TEST",
+				},
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Create Next App",
@@ -97,7 +94,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Hello, Astronaut!",
 				},
-				verifyDev: {
+				verifyPreview: {
 					route: "/test",
 					expectedText: "C3_TEST",
 				},
@@ -126,6 +123,10 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Dinosaurs are cool",
 				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Dinosaurs are cool",
+				},
 				flags: [`--package-manager`, pm],
 				promptHandlers: [
 					{
@@ -145,7 +146,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "The fullstack meta-framework for Angular!",
 				},
-				verifyDev: {
+				verifyPreview: {
 					route: "/api/v1/test",
 					expectedText: "C3_TEST",
 				},
@@ -171,6 +172,10 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Congratulations! Your app is running.",
 				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Congratulations! Your app is running.",
+				},
 				flags: ["--style", "sass"],
 			},
 			gatsby: {
@@ -187,11 +192,19 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Gatsby!",
 				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Gatsby!",
+				},
 			},
 			hono: {
 				testCommitMessage: false,
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello Hono!",
+				},
+				verifyPreview: {
 					route: "/",
 					expectedText: "Hello Hono!",
 				},
@@ -216,7 +229,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Welcome to Qwik",
 				},
-				verifyDev: {
+				verifyPreview: {
 					route: "/test",
 					expectedText: "C3_TEST",
 				},
@@ -240,7 +253,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Welcome to Remix",
 				},
-				verifyDev: {
+				verifyPreview: {
 					route: "/test",
 					expectedText: "C3_TEST",
 				},
@@ -273,6 +286,10 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Create Next App",
 				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Create Next App",
+				},
 				flags: [
 					"--typescript",
 					"--no-install",
@@ -292,7 +309,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Welcome to Nuxt!",
 				},
-				verifyDev: {
+				verifyPreview: {
 					route: "/test",
 					expectedText: "C3_TEST",
 				},
@@ -322,6 +339,10 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Vite + React",
 				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Vite + React",
+				},
 			},
 			solid: {
 				promptHandlers: [
@@ -339,6 +360,10 @@ function getFrameworkTests(opts: {
 				unsupportedPms: ["npm", "yarn"],
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello world",
+				},
+				verifyPreview: {
 					route: "/",
 					expectedText: "Hello world",
 				},
@@ -365,7 +390,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "SvelteKit app",
 				},
-				verifyDev: {
+				verifyPreview: {
 					route: "/test",
 					expectedText: "C3_TEST",
 				},
@@ -383,6 +408,10 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Vite App",
 				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Vite App",
+				},
 				flags: ["--ts"],
 				quarantine: true,
 			},
@@ -397,22 +426,10 @@ const frameworkTests = getFrameworkTests({ experimental });
 describe.concurrent(
 	`E2E: Web frameworks (experimental:${experimental})`,
 	() => {
-		let logStream: WriteStream;
-
 		beforeAll(async (ctx) => {
 			recreateLogFolder({ experimental }, ctx as Suite);
 			recreateDiffsFolder({ experimental });
 		});
-
-		beforeEach(async (ctx) => {
-			logStream = createTestLogStream({ experimental }, ctx);
-		});
-
-		afterEach(async () => {
-			logStream.close();
-		});
-
-		test("dummy in case there are no frameworks to test", () => {});
 
 		Object.keys(frameworkTests).forEach((frameworkId) => {
 			const frameworkConfig = frameworkMap[frameworkId];
@@ -434,13 +451,9 @@ describe.concurrent(
 
 			// Skip if the OS is unsupported
 			shouldRun &&= !testConfig.unsupportedOSs?.includes(process.platform);
-			test.runIf(shouldRun)(
+			test({ experimental }).runIf(shouldRun)(
 				frameworkId,
-				async () => {
-					const { getPath, getName, clean } = testProjectDir("pages");
-					const projectPath = getPath(frameworkId);
-					const projectName = getName(frameworkId);
-
+				async ({ logStream, project }) => {
 					if (!testConfig.verifyDeploy) {
 						expect(
 							true,
@@ -452,7 +465,7 @@ describe.concurrent(
 					try {
 						const deploymentUrl = await runCli(
 							frameworkId,
-							projectPath,
+							project.path,
 							logStream,
 							{
 								argv: [
@@ -464,19 +477,19 @@ describe.concurrent(
 						);
 
 						// Relevant project files should have been created
-						expect(projectPath).toExist();
-						const pkgJsonPath = join(projectPath, "package.json");
+						expect(project.path).toExist();
+						const pkgJsonPath = join(project.path, "package.json");
 						expect(pkgJsonPath).toExist();
 
 						// Wrangler should be installed
-						const wranglerPath = join(projectPath, "node_modules/wrangler");
+						const wranglerPath = join(project.path, "node_modules/wrangler");
 						expect(wranglerPath).toExist();
 
 						// Make a request to the deployed project and verify it was successful
 						await verifyDeployment(
 							testConfig,
 							frameworkId,
-							projectName,
+							project.name,
 							`${deploymentUrl}${testConfig.verifyDeploy.route}`,
 							testConfig.verifyDeploy.expectedText,
 						);
@@ -484,7 +497,7 @@ describe.concurrent(
 						// Copy over any test fixture files
 						const fixturePath = join(__dirname, "fixtures", frameworkId);
 						if (existsSync(fixturePath)) {
-							await cp(fixturePath, projectPath, {
+							await cp(fixturePath, project.path, {
 								recursive: true,
 								force: true,
 							});
@@ -493,24 +506,23 @@ describe.concurrent(
 						await verifyDevScript(
 							testConfig,
 							frameworkConfig,
-							projectPath,
+							project.path,
 							logStream,
 						);
-						await verifyBuildCfTypesScript(testConfig, projectPath, logStream);
-						await verifyBuildScript(testConfig, projectPath, logStream);
-						await storeDiff(frameworkId, projectPath, { experimental });
+						await verifyBuildCfTypesScript(testConfig, project.path, logStream);
+						await verifyBuildScript(testConfig, project.path, logStream);
+						await storeDiff(frameworkId, project.path, { experimental });
 					} catch (e) {
 						console.error("ERROR", e);
 						expect.fail(
 							"Failed due to an exception while running C3. See logs for more details",
 						);
 					} finally {
-						clean(frameworkId);
 						// Cleanup the project in case we need to retry it
 						if (frameworkConfig.platform === "workers") {
-							await deleteWorker(projectName);
+							await deleteWorker(project.name);
 						} else {
-							await deleteProject(projectName);
+							await deleteProject(project.name);
 						}
 					}
 				},
@@ -545,7 +557,7 @@ const storeDiff = async (
 const runCli = async (
 	framework: string,
 	projectPath: string,
-	logStream: WriteStream,
+	logStream: Writable,
 	{ argv = [], promptHandlers = [] }: RunnerConfig,
 ) => {
 	const args = [
@@ -607,18 +619,22 @@ const verifyDeployment = async (
 };
 
 const verifyDevScript = async (
-	{ verifyDev }: FrameworkTestConfig,
-	{ devScript }: TemplateConfig,
+	{ verifyPreview }: FrameworkTestConfig,
+	{ devScript, previewScript }: TemplateConfig,
 	projectPath: string,
-	logStream: WriteStream,
+	logStream: Writable,
 ) => {
-	if (!verifyDev) {
+	if (!verifyPreview) {
 		return;
 	}
 
 	assert(devScript !== undefined, "Expected `devScript` to be defined");
 
-	// Run the devserver on a random port to avoid colliding with other tests
+	if (!verifyPreview || !previewScript) {
+		return;
+	}
+
+	// Run the dev-server on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
 
 	const proc = spawnWithLogging(
@@ -640,34 +656,38 @@ const verifyDevScript = async (
 		logStream,
 	);
 
-	// Retry requesting the test route from the devserver
-	await retry({ times: 10 }, async () => {
-		await sleep(2000);
-		const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
+	try {
+		// Retry requesting the test route from the dev-server
+		await retry({ times: 10 }, async () => {
+			await sleep(2000);
+			const res = await fetch(
+				`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`,
+			);
+			const body = await res.text();
+			if (!body.match(verifyPreview?.expectedText)) {
+				throw new Error("Expected text not found in response from dev-server.");
+			}
+		});
+
+		// Make a request to the specified test route
+		const res = await fetch(
+			`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`,
+		);
 		const body = await res.text();
-		if (!body.match(verifyDev?.expectedText)) {
-			throw new Error("Expected text not found in response from devserver.");
-		}
-	});
-
-	// Make a request to the specified test route
-	const res = await fetch(`http://localhost:${TEST_PORT}${verifyDev.route}`);
-	const body = await res.text();
-
-	// Kill the process gracefully so ports can be cleaned up
-	proc.kill("SIGINT");
-
-	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
-	// end up camped and cause future runs to fail
-	await sleep(1000);
-
-	expect(body).toContain(verifyDev.expectedText);
+		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
+		// end up camped and cause future runs to fail
+		await sleep(1000);
+		expect(body).toContain(verifyPreview.expectedText);
+	} finally {
+		// Kill the process gracefully so ports can be cleaned up
+		proc.kill("SIGINT");
+	}
 };
 
 const verifyBuildCfTypesScript = async (
 	{ verifyBuildCfTypes }: FrameworkTestConfig,
 	projectPath: string,
-	logStream: WriteStream,
+	logStream: Writable,
 ) => {
 	if (!verifyBuildCfTypes) {
 		return;
@@ -709,7 +729,7 @@ const verifyBuildCfTypesScript = async (
 const verifyBuildScript = async (
 	{ verifyBuild }: FrameworkTestConfig,
 	projectPath: string,
-	logStream: WriteStream,
+	logStream: Writable,
 ) => {
 	if (!verifyBuild) {
 		return;

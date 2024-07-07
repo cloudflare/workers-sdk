@@ -14,14 +14,14 @@ import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/retry";
 import { fetch } from "undici";
-import { expect } from "vitest";
+import { expect, test as originalTest } from "vitest";
 import { version } from "../package.json";
 import type {
 	ChildProcessWithoutNullStreams,
 	SpawnOptionsWithoutStdio,
 } from "child_process";
-import type { WriteStream } from "fs";
-import type { Suite, TaskContext } from "vitest";
+import type { Writable } from "stream";
+import type { RunnerTestCase, Suite, Test } from "vitest";
 
 export const C3_E2E_PREFIX = "tmp-e2e-c3";
 
@@ -73,7 +73,7 @@ export type RunnerConfig = {
 export const runC3 = async (
 	argv: string[] = [],
 	promptHandlers: PromptHandler[] = [],
-	logStream: WriteStream,
+	logStream: Writable,
 ) => {
 	const cmd = ["node", "./dist/cli.js", ...argv];
 	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
@@ -185,7 +185,7 @@ export const runC3 = async (
 
 /**
  * Spawn a child process and attach a handler that will log any output from
- * `stdout` or errors from `stderror` to a dedicated log file.
+ * `stdout` or errors from `stderr` to a dedicated log file.
  *
  * @param args The command and arguments as an array
  * @param opts Additional options to be passed to the `spawn` call
@@ -195,7 +195,7 @@ export const runC3 = async (
 export const spawnWithLogging = (
 	args: string[],
 	opts: SpawnOptionsWithoutStdio,
-	logStream: WriteStream,
+	logStream: Writable,
 ) => {
 	const [cmd, ...argv] = args;
 
@@ -263,7 +263,11 @@ export const waitForExit = async (
 			if (code === 0) {
 				resolve(null);
 			} else {
-				rejects(code);
+				rejects({
+					code,
+					output: stdout.join("\n").trim(),
+					errors: stderr.join("\n").trim(),
+				});
 			}
 		});
 
@@ -284,17 +288,14 @@ export const waitForExit = async (
 
 export const createTestLogStream = (
 	opts: { experimental: boolean },
-	ctx: TaskContext,
+	task: RunnerTestCase,
 ) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
-	const fileName = `${normalizeTestName(ctx)}.ansi`;
-	assert(ctx.task.suite, "Suite must be defined");
-	return createWriteStream(
-		path.join(getLogPath(opts, ctx.task.suite), fileName),
-		{
-			flags: "a",
-		},
-	);
+	const fileName = `${normalizeTestName(task)}.ansi`;
+	assert(task.suite, "Expected task.suite to be defined");
+	return createWriteStream(path.join(getLogPath(opts, task.suite), fileName), {
+		flags: "a",
+	});
 };
 
 export const recreateDiffsFolder = (opts: { experimental: boolean }) => {
@@ -340,19 +341,19 @@ const getLogPath = (opts: { experimental: boolean }, suite: Suite) => {
 	);
 };
 
-const normalizeTestName = (ctx: TaskContext) => {
-	const baseName = ctx.task.name
+const normalizeTestName = (task: Test) => {
+	const baseName = task.name
 		.toLowerCase()
 		.replace(/\s+/g, "_") // replace any whitespace with `_`
 		.replace(/\W/g, ""); // strip special characters
 
 	// Ensure that each retry gets its own log file
-	const retryCount = ctx.task.result?.retryCount ?? 0;
+	const retryCount = task.result?.retryCount ?? 0;
 	const suffix = retryCount > 0 ? `_${retryCount}` : "";
 	return baseName + suffix;
 };
 
-export const testProjectDir = (suite: string) => {
+export const testProjectDir = (suite: string, test: string) => {
 	const tmpDirPath =
 		process.env.E2E_PROJECT_PATH ??
 		realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
@@ -360,16 +361,16 @@ export const testProjectDir = (suite: string) => {
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
-	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
-	const getPath = (suffix: string) => path.join(tmpDirPath, getName(suffix));
-	const clean = (suffix: string) => {
+	const getName = () => `${baseProjectName}-${test}`;
+	const getPath = () => path.join(tmpDirPath, getName());
+	const clean = () => {
 		try {
 			if (process.env.E2E_PROJECT_PATH) {
 				return;
 			}
 
 			realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
-			const filepath = getPath(suffix);
+			const filepath = getPath();
 			rmSync(filepath, {
 				recursive: true,
 				force: true,
@@ -444,3 +445,28 @@ export const testDeploymentCommitMessage = async (
 export const isQuarantineMode = () => {
 	return process.env.E2E_QUARANTINE === "true";
 };
+
+/**
+ * A custom Vitest `test` that is extended to provide a project path and name, and a logStream.
+ */
+export const test = (opts: { experimental: boolean }) =>
+	originalTest.extend<{
+		project: { path: string; name: string };
+		logStream: Writable;
+	}>({
+		async project({ task }, use) {
+			assert(task.suite, "Expected task.suite to be defined");
+			const suite = task.suite.name
+				.toLowerCase()
+				.replaceAll(/[^a-z0-9-]/g, "-");
+			const suffix = task.name.toLowerCase().replaceAll(/[^a-z0-9-]/g, "-");
+			const { getPath, getName, clean } = testProjectDir(suite, suffix);
+			await use({ path: getPath(), name: getName() });
+			clean();
+		},
+		async logStream({ task }, use) {
+			const logStream = createTestLogStream(opts, task);
+			await use(logStream);
+			logStream.close();
+		},
+	});
