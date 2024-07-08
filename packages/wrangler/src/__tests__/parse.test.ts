@@ -219,9 +219,9 @@ describe("parseJSON", () => {
 			parseJSON(`\n{\n"version" "1\n}\n`);
 			expect.fail("parseJSON did not throw");
 		} catch (err) {
-			expect({ ...(err as Error) }).toStrictEqual({
+			const { text, ...serialised } = err as Record<string, unknown>;
+			expect(serialised).toStrictEqual({
 				name: "ParseError",
-				text: "Unexpected string",
 				kind: "error",
 				location: {
 					line: 3,
@@ -232,6 +232,10 @@ describe("parseJSON", () => {
 				},
 				notes: [],
 			});
+			expect(text).oneOf([
+				/* Node.js v16/v18 */ "Unexpected string",
+				/* Node.js v20+ */ "Expected ':' after property name",
+			]);
 		}
 	});
 
