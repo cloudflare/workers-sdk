@@ -20,7 +20,7 @@ for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
 	if (file.endsWith(".test.ts")) {
 		tasks.add(
-			`pnpm test:e2e --log-order=stream --only --summarize --filter wrangler --concurrency 1 -- run ./e2e/${file}`
+			`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler --concurrency 1 -- run ./e2e/${file}`
 		);
 	}
 }
