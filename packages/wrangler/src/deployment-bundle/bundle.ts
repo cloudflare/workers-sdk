@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
+import { polyfillNode } from "esbuild-plugin-polyfill-node";
 import * as esbuild from "esbuild";
 import { UserError } from "../errors";
 import { getBasePath, getWranglerTmpDir } from "../paths";
@@ -323,9 +322,8 @@ export async function bundleWorker(
 			moduleCollector.plugin,
 			...(nodejsCompatMode === "legacy"
 				? [
-						NodeGlobalsPolyfills({ buffer: true }),
+						polyfillNode(),
 						standardURLPlugin(),
-						NodeModulesPolyfills(),
 					]
 				: []),
 			// Runtime Node.js compatibility (will warn if not using nodejs compat flag and are trying to import from a Node.js builtin).
