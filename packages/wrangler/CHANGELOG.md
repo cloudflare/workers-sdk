@@ -1,5 +1,30 @@
 # wrangler
 
+## 3.63.2
+
+### Patch Changes
+
+- [#6199](https://github.com/cloudflare/workers-sdk/pull/6199) [`88313e5`](https://github.com/cloudflare/workers-sdk/commit/88313e50512ffbcfe8717dc60cf83a4d07a7509d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure `getPlatformProxy`'s `ctx` methods throw illegal invocation errors like workerd
+
+  in workerd detaching the `waitUntil` and `passThroughOnException` methods from the `ExecutionContext`
+  object results in them throwing `illegal invocation` errors, such as for example:
+
+  ```js
+  export default {
+    async fetch(_request, _env, { waitUntil }) {
+      waitUntil(() => {}); // <-- throws an illegal invocation error
+      return new Response("Hello World!");
+    },
+  };
+  ```
+
+  make sure that the same behavior is applied to the `ctx` object returned by `getPlatformProxy`
+
+- [#5569](https://github.com/cloudflare/workers-sdk/pull/5569) [`75ba960`](https://github.com/cloudflare/workers-sdk/commit/75ba9608faa9e5710fe1dc75b5852ae446696245) Thanks [@penalosa](https://github.com/penalosa)! - fix: Simplify `wrangler pages download config`:
+
+  - Don't include inheritable keys in the production override if they're equal to production
+  - Only create a preview environment if needed, otherwise put the preview config at the top level
+
 ## 3.63.1
 
 ### Patch Changes
