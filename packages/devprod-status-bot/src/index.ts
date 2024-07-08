@@ -11,7 +11,7 @@ async function getBotMessage(ai: Ai, prompt: string) {
 			{
 				role: "system",
 				content:
-					"You are the ANT status bot, a helpful assistent who assists the ANT team by posting helpful updates in Google Chat",
+					"You are the ANT status bot, a helpful assistant who assists the ANT team by posting helpful updates in Google Chat",
 			},
 			{
 				role: "user",
@@ -194,6 +194,8 @@ async function sendStartThreadMessage(pat: string, webhookUrl: string, ai: Ai) {
 					"petebacondarwin",
 					"CarmenPopoviciu",
 					"andyjessop",
+					"edmundhung",
+					"emily-shen",
 				].includes(pr.user.login)
 		)
 		.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
