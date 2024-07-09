@@ -3,7 +3,7 @@ import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
 import { runCommand } from "helpers/command";
-import { readFile, writeFile } from "helpers/files";
+import { readFile, readToml, writeFile, writeToml } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
@@ -26,6 +26,7 @@ import {
 } from "./helpers";
 import type { TemplateConfig } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
+import type { JsonMap } from "@iarna/toml";
 import type { Writable } from "stream";
 import type { Suite } from "vitest";
 
@@ -485,6 +486,8 @@ describe.concurrent(
 						const wranglerPath = join(project.path, "node_modules/wrangler");
 						expect(wranglerPath).toExist();
 
+						await addTestVarsToWranglerToml(project.path);
+
 						// Make a request to the deployed project and verify it was successful
 						await verifyDeployment(
 							testConfig,
@@ -589,6 +592,27 @@ const runCli = async (
 	}
 
 	return match[1];
+};
+
+/**
+ * Either update or create a wrangler.toml to include a `TEST` var.
+ *
+ * This is rather than having a wrangler.toml in the e2e test's fixture folder,
+ * which overwrites any that comes from the framework's template.
+ */
+const addTestVarsToWranglerToml = async (projectPath: string) => {
+	const wranglerTomlPath = join(projectPath, "wrangler.toml");
+	let wranglerToml: JsonMap = {};
+	const wranglerTomlExists = existsSync(wranglerTomlPath);
+	if (wranglerTomlExists) {
+		wranglerToml = readToml(wranglerTomlPath);
+	}
+
+	// Add a TEST var to the wrangler.toml
+	wranglerToml.vars ??= {};
+	(wranglerToml.vars as JsonMap).TEST = "C3_TEST";
+
+	writeToml(wranglerTomlPath, wranglerToml);
 };
 
 const verifyDeployment = async (
