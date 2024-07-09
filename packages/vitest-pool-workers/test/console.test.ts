@@ -19,8 +19,7 @@ test.skipIf(process.platform === "win32")(
 		});
 		const result = vitestDev();
 		await waitFor(() => {
-			expect(result.stdout).toMatch("stdout | index.test.ts:2:9\nglobal");
-			expect(result.stdout).toMatch("stdout | index.test.ts:4:10\ndescribe");
+			expect(result.stdout).toMatch("stdout | index.test.ts\nglobal\ndescribe");
 			expect(result.stdout).toMatch(
 				"stdout | index.test.ts > thing > does something\ntest"
 			);
@@ -42,10 +41,10 @@ test.skipIf(process.platform === "win32")(
 		`,
 		});
 		await waitFor(() => {
-			expect(result.stdout).toMatch("stdout | index.test.ts:2:9\nnew global");
 			expect(result.stdout).toMatch(
-				"stdout | index.test.ts:4:10\nnew describe"
+				"stdout | index.test.ts\nnew global\nnew describe"
 			);
+
 			expect(result.stdout).toMatch(
 				"stdout | index.test.ts > new thing > does something else\nnew test"
 			);

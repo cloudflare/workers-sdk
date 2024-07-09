@@ -86,7 +86,10 @@ export default async function ({ provide }: GlobalSetupContext) {
 		},
 	};
 	await fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
-	childProcess.execSync("pnpm install", { cwd: tmpPath, stdio: "inherit" });
+	childProcess.execSync("pnpm install --prefer-offline", {
+		cwd: tmpPath,
+		stdio: "inherit",
+	});
 
 	provide("tmpPoolInstallationPath", tmpPath);
 
