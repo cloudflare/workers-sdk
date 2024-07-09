@@ -2,7 +2,7 @@
 
 See below for a summary of this repo's Actions
 
-- _⚠️ means that the check is expected to sometimes fail._
+- _Actions marked with "⚠️" are expected to sometimes fail._
 
 ## PR related actions
 
