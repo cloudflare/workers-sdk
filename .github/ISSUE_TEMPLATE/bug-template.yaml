@@ -23,7 +23,7 @@ body:
         - Queues
         - R2
         - Workers for Platforms
-        - Constellation
+        - Workers AI
         - Workers Runtime
         - Wrangler
         - Miniflare
