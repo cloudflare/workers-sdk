@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.1.1
+
+### Patch Changes
+
+- [#6220](https://github.com/cloudflare/workers-sdk/pull/6220) [`c3cf009`](https://github.com/cloudflare/workers-sdk/commit/c3cf00984c16d3e865059fbd0f05fff28d8668cc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add Edmund and Emily to the contributors list
+
 ## 1.1.0
 
 ### Minor Changes
