@@ -13,10 +13,12 @@ import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
 import { retry } from "helpers/retry";
+import treeKill from "tree-kill";
 import { fetch } from "undici";
 import { expect, test as originalTest } from "vitest";
 import { version } from "../package.json";
 import type {
+	ChildProcess,
 	ChildProcessWithoutNullStreams,
 	SpawnOptionsWithoutStdio,
 } from "child_process";
@@ -41,7 +43,7 @@ const testEnv = {
 	// do not use the same global cache and accidentally hit race conditions.
 	YARN_CACHE_FOLDER: "./.yarn/cache",
 	YARN_ENABLE_GLOBAL_CACHE: "false",
-	PNPM_HOME: "./.pnpm",
+	// PNPM_HOME: "./.pnpm",
 	npm_config_cache: "./.npm/cache",
 	// unset the VITEST env variable as this causes e2e issues with some frameworks
 	VITEST: undefined,
@@ -64,7 +66,11 @@ export type RunnerConfig = {
 	argv?: string[];
 	quarantine?: boolean;
 	timeout?: number;
-	verifyDeploy?: {
+	verifyDeploy: null | {
+		route: string;
+		expectedText: string;
+	};
+	verifyPreview: null | {
 		route: string;
 		expectedText: string;
 	};
@@ -361,7 +367,9 @@ export const testProjectDir = (suite: string, test: string) => {
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
-	const getName = () => `${baseProjectName}-${test}`;
+	const getName = () =>
+		// Worker project names cannot be longer than 58 characters
+		`${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
 	const getPath = () => path.join(tmpDirPath, getName());
 	const clean = () => {
 		try {
@@ -470,3 +478,9 @@ export const test = (opts: { experimental: boolean }) =>
 			logStream.close();
 		},
 	});
+
+export function kill(proc: ChildProcess) {
+	return new Promise<void>(
+		(resolve) => proc.pid && treeKill(proc.pid, "SIGINT", () => resolve()),
+	);
+}

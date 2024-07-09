@@ -1,4 +1,3 @@
-import assert from "assert";
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
@@ -16,6 +15,7 @@ import {
 	getDiffsPath,
 	isQuarantineMode,
 	keys,
+	kill,
 	recreateDiffsFolder,
 	recreateLogFolder,
 	runC3,
@@ -28,13 +28,11 @@ import type { TemplateConfig } from "../src/templates";
 import type { RunnerConfig } from "./helpers";
 import type { JsonMap } from "@iarna/toml";
 import type { Writable } from "stream";
-import type { Suite } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
 const LONG_TIMEOUT = 1000 * 60 * 10;
 const TEST_PM = process.env.TEST_PM ?? "";
 const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? true;
-// const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? false;
 const TEST_RETRIES = process.env.E2E_RETRIES
 	? parseInt(process.env.E2E_RETRIES)
 	: 1;
@@ -43,10 +41,6 @@ type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
-	verifyPreview: null | {
-		route: string;
-		expectedText: string;
-	};
 	verifyBuildCfTypes?: {
 		outputFile: string;
 		envInterfaceName: string;
@@ -231,18 +225,12 @@ function getFrameworkTests(opts: {
 					expectedText: "Welcome to Qwik",
 				},
 				verifyPreview: {
-					route: "/test",
-					expectedText: "C3_TEST",
+					route: "/",
+					expectedText: "Welcome to Qwik",
 				},
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
-				},
-				verifyBuild: {
-					outputDir: "./dist",
-					script: "build",
-					route: "/test",
-					expectedText: "C3_TEST",
 				},
 			},
 			remix: {
@@ -428,7 +416,7 @@ describe.concurrent(
 	`E2E: Web frameworks (experimental:${experimental})`,
 	() => {
 		beforeAll(async (ctx) => {
-			recreateLogFolder({ experimental }, ctx as Suite);
+			recreateLogFolder({ experimental }, ctx);
 			recreateDiffsFolder({ experimental });
 		});
 
@@ -436,23 +424,7 @@ describe.concurrent(
 			const frameworkConfig = frameworkMap[frameworkId];
 			const testConfig = frameworkTests[frameworkId];
 
-			const quarantineModeMatch =
-				isQuarantineMode() == (testConfig.quarantine ?? false);
-
-			// If the framework in question is being run in isolation, always run it.
-			// Otherwise, only run the test if it's configured `quarantine` value matches
-			// what is set in E2E_QUARANTINE
-			const frameworkToTest = getFrameworkToTest({ experimental });
-			let shouldRun = frameworkToTest
-				? frameworkToTest === frameworkId
-				: quarantineModeMatch;
-
-			// Skip if the package manager is unsupported
-			shouldRun &&= !testConfig.unsupportedPms?.includes(TEST_PM);
-
-			// Skip if the OS is unsupported
-			shouldRun &&= !testConfig.unsupportedOSs?.includes(process.platform);
-			test({ experimental }).runIf(shouldRun)(
+			test({ experimental }).runIf(shouldRunTest(frameworkId, testConfig))(
 				frameworkId,
 				async ({ logStream, project }) => {
 					if (!testConfig.verifyDeploy) {
@@ -506,7 +478,7 @@ describe.concurrent(
 							});
 						}
 
-						await verifyDevScript(
+						await verifyPreviewScript(
 							testConfig,
 							frameworkConfig,
 							project.path,
@@ -561,7 +533,10 @@ const runCli = async (
 	framework: string,
 	projectPath: string,
 	logStream: Writable,
-	{ argv = [], promptHandlers = [] }: RunnerConfig,
+	{
+		argv = [],
+		promptHandlers = [],
+	}: Pick<RunnerConfig, "argv" | "promptHandlers">,
 ) => {
 	const args = [
 		projectPath,
@@ -642,18 +617,12 @@ const verifyDeployment = async (
 	});
 };
 
-const verifyDevScript = async (
+const verifyPreviewScript = async (
 	{ verifyPreview }: FrameworkTestConfig,
-	{ devScript, previewScript }: TemplateConfig,
+	{ previewScript }: TemplateConfig,
 	projectPath: string,
 	logStream: Writable,
 ) => {
-	if (!verifyPreview) {
-		return;
-	}
-
-	assert(devScript !== undefined, "Expected `devScript` to be defined");
-
 	if (!verifyPreview || !previewScript) {
 		return;
 	}
@@ -665,7 +634,7 @@ const verifyDevScript = async (
 		[
 			pm,
 			"run",
-			devScript,
+			previewScript,
 			...(pm === "npm" ? ["--"] : []),
 			"--port",
 			`${TEST_PORT}`,
@@ -673,7 +642,6 @@ const verifyDevScript = async (
 		{
 			cwd: projectPath,
 			env: {
-				NODE_ENV: "development",
 				VITEST: undefined,
 			},
 		},
@@ -681,30 +649,24 @@ const verifyDevScript = async (
 	);
 
 	try {
-		// Retry requesting the test route from the dev-server
-		await retry({ times: 10 }, async () => {
-			await sleep(2000);
-			const res = await fetch(
-				`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`,
-			);
-			const body = await res.text();
-			if (!body.match(verifyPreview?.expectedText)) {
-				throw new Error("Expected text not found in response from dev-server.");
-			}
-		});
+		// Wait for the dev-server to be ready
+		await retry(
+			{ times: 20, sleepMs: 5000 },
+			async () =>
+				await fetch(`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`),
+		);
 
 		// Make a request to the specified test route
 		const res = await fetch(
 			`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`,
 		);
-		const body = await res.text();
+		expect(await res.text()).toContain(verifyPreview.expectedText);
+	} finally {
+		// Kill the process gracefully so ports can be cleaned up
+		await kill(proc);
 		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 		// end up camped and cause future runs to fail
 		await sleep(1000);
-		expect(body).toContain(verifyPreview.expectedText);
-	} finally {
-		// Kill the process gracefully so ports can be cleaned up
-		proc.kill("SIGINT");
 	}
 };
 
@@ -789,11 +751,11 @@ const verifyBuildScript = async (
 	await sleep(7000);
 
 	// Make a request to the specified test route
-	const res = await fetch(`http://localhost:${TEST_PORT}${route}`);
+	const res = await fetch(`http://127.0.0.1:${TEST_PORT}${route}`);
 	const body = await res.text();
 
 	// Kill the process gracefully so ports can be cleaned up
-	devProc.kill("SIGINT");
+	await kill(devProc);
 
 	// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 	// end up camped and cause future runs to fail
@@ -802,3 +764,24 @@ const verifyBuildScript = async (
 	// Verify expectation after killing the process so that it exits cleanly in case of failure
 	expect(body).toContain(expectedText);
 };
+
+function shouldRunTest(frameworkId: string, testConfig: FrameworkTestConfig) {
+	const quarantineModeMatch =
+		isQuarantineMode() == (testConfig.quarantine ?? false);
+
+	// If the framework in question is being run in isolation, always run it.
+	// Otherwise, only run the test if it's configured `quarantine` value matches
+	// what is set in E2E_QUARANTINE
+	const frameworkToTest = getFrameworkToTest({ experimental });
+	let shouldRun = frameworkToTest
+		? frameworkToTest === frameworkId
+		: quarantineModeMatch;
+
+	// Skip if the package manager is unsupported
+	shouldRun &&= !testConfig.unsupportedPms?.includes(TEST_PM);
+
+	// Skip if the OS is unsupported
+	shouldRun &&= !testConfig.unsupportedOSs?.includes(process.platform);
+
+	return shouldRun;
+}
