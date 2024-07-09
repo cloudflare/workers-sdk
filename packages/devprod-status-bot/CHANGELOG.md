@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.1.2
+
+### Patch Changes
+
+- [#6236](https://github.com/cloudflare/workers-sdk/pull/6236) [`26d0afc`](https://github.com/cloudflare/workers-sdk/commit/26d0afca80b2baf8ef79b1f4330e606b7d692adc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: add account_id to wrangler.toml to fix deployment
+
 ## 1.1.1
 
 ### Patch Changes
