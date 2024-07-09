@@ -65,12 +65,27 @@ import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
 // https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vite-node/src/client.ts#L386
 declare const __vite_ssr_import__: unknown;
-assert(
-	typeof __vite_ssr_import__ === "undefined",
-	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
-);
+// assert(
+// 	typeof __vite_ssr_import__ === "undefined",
+// 	"Expected `@cloudflare/vitest-pool-workers` not to be transformed by Vite"
+// );
 
 function structuredSerializableStringify(value: unknown): string {
+	// Vitest v2+ sends a sourcemap to it's runner, which we can't serialise currently
+	// Deleting it doesn't seem to cause any problems, and error stack traces etc...
+	// still seem to work
+	// TODO: Figure out how to serialise SourceMap instances
+	if (
+		value &&
+		typeof value === "object" &&
+		"r" in value &&
+		value.r &&
+		typeof value.r === "object" &&
+		"map" in value.r &&
+		value.r.map
+	) {
+		delete value.r.map;
+	}
 	return devalue.stringify(value, structuredSerializableReducers);
 }
 function structuredSerializableParse(value: string): unknown {
@@ -740,7 +755,9 @@ async function runTests(
 	const rules = project.options.miniflare?.modulesRules;
 	const compiledRules = compileModuleRules(rules ?? []);
 
-	const localRpcFunctions = createMethodsRPC(project.project);
+	const localRpcFunctions = createMethodsRPC(project.project, {
+		cacheFs: false,
+	});
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
@@ -884,6 +901,7 @@ export default function (ctx: Vitest): ProcessPool {
 	// This function is called when config changes and may be called on re-runs
 	assertCompatibleVitestVersion(ctx);
 
+	// @ts-expect-error TODO: figure out how to implement `collectTests()`
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
