@@ -135,14 +135,11 @@ describe("User", () => {
 		mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
-		await expect(requireAuth({} as Config)).rejects
-			.toThrowErrorMatchingInlineSnapshot(`
-		"More than one account available but unable to select one in non-interactive mode.
-		Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-		Available accounts are (\`<name>\`: \`<account_id>\`):
-		  \`My Personal Account\`: \`account-id-1\`
-		  \`Enterprise Account\`: \`account-id-2\`"
-	`);
+		await expect(
+			requireAuth({} as Config)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.]`
+		);
 	});
 
 	it("should confirm no error message when refresh is successful", async () => {
