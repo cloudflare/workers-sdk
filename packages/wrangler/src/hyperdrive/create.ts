@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { createConfig } from "./client";
 import type {
@@ -16,9 +17,57 @@ export function options(yargs: CommonYargsArgv) {
 		.options({
 			"connection-string": {
 				type: "string",
-				demandOption: true,
 				describe:
 					"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
+			},
+			host: {
+				type: "string",
+				describe: "The host of the origin database",
+				conflicts: "connection-string",
+			},
+			port: {
+				type: "number",
+				describe: "The port number of the origin database",
+				conflicts: [
+					"connection-string",
+					"access-client-id",
+					"access-client-secret",
+				],
+			},
+			scheme: {
+				type: "string",
+				describe:
+					"The scheme used to connect to the origin database - e.g. postgresql or postgres",
+				default: "postgresql",
+			},
+			database: {
+				type: "string",
+				describe: "The name of the database within the origin database",
+				conflicts: "connection-string",
+			},
+			user: {
+				type: "string",
+				describe: "The username used to connect to the origin database",
+				conflicts: "connection-string",
+			},
+			password: {
+				type: "string",
+				describe: "The password used to connect to the origin database",
+				conflicts: "connection-string",
+			},
+			"access-client-id": {
+				type: "string",
+				describe:
+					"The Client ID of the Access token to use when connecting to the origin database, must be set with a Client Access Secret",
+				conflicts: ["connection-string", "port"],
+				implies: ["access-client-secret"],
+			},
+			"access-client-secret": {
+				type: "string",
+				describe:
+					"The Client Secret of the Access token to use when connecting to the origin database, must be set with a Client Access ID",
+				conflicts: ["connection-string", "port"],
+				implies: ["access-client-id"],
 			},
 			"caching-disabled": {
 				type: "boolean",
@@ -43,7 +92,16 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 
-	const url = new URL(args.connectionString);
+	const url = args.connectionString
+		? new URL(args.connectionString)
+		: buildURLFromParts(
+				args.host,
+				args.port,
+				args.scheme,
+				args.database,
+				args.user,
+				args.password
+			);
 
 	if (
 		url.port === "" &&
@@ -53,43 +111,59 @@ export async function handler(
 	}
 
 	if (url.protocol === "") {
-		logger.log("You must specify the database protocol - e.g. 'postgresql'.");
+		throw new UserError(
+			"You must specify the database protocol - e.g. 'postgresql'."
+		);
 	} else if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
-		logger.log(
+		throw new UserError(
 			"Only PostgreSQL or PostgreSQL compatible databases are currently supported."
 		);
 	} else if (url.host === "") {
-		logger.log(
+		throw new UserError(
 			"You must provide a hostname or IP address in your connection string - e.g. 'user:password@database-hostname.example.com:5432/databasename"
 		);
 	} else if (url.port === "") {
-		logger.log(
+		throw new UserError(
 			"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 		);
 	} else if (url.pathname === "") {
-		logger.log(
+		throw new UserError(
 			"You must provide a database name as the path component - e.g. /postgres"
 		);
 	} else if (url.username === "") {
-		logger.log(
+		throw new UserError(
 			"You must provide a username - e.g. 'user:password@database.example.com:port/databasename'"
 		);
 	} else if (url.password === "") {
-		logger.log(
+		throw new UserError(
 			"You must provide a password - e.g. 'user:password@database.example.com:port/databasename' "
 		);
 	} else {
 		logger.log(`🚧 Creating '${args.name}'`);
+
+		// if access client ID and client secret supplied in args, use them to construct origin without a port
+		const origin =
+			args.accessClientId && args.accessClientSecret
+				? {
+						host: url.hostname,
+						scheme: url.protocol.replace(":", ""),
+						database: decodeURIComponent(url.pathname.replace("/", "")),
+						user: decodeURIComponent(url.username),
+						password: decodeURIComponent(url.password),
+						access_client_id: args.accessClientId,
+						access_client_secret: args.accessClientSecret,
+					}
+				: {
+						host: url.hostname,
+						port: parseInt(url.port),
+						scheme: url.protocol.replace(":", ""),
+						database: decodeURIComponent(url.pathname.replace("/", "")),
+						user: decodeURIComponent(url.username),
+						password: decodeURIComponent(url.password),
+					};
 		const database = await createConfig(config, {
 			name: args.name,
-			origin: {
-				host: url.hostname,
-				port: parseInt(url.port),
-				scheme: url.protocol.replace(":", ""),
-				database: decodeURIComponent(url.pathname.replace("/", "")),
-				user: decodeURIComponent(url.username),
-				password: decodeURIComponent(url.password),
-			},
+			origin,
 			caching: {
 				disabled: args.cachingDisabled,
 				max_age: args.maxAge,
@@ -101,4 +175,29 @@ export async function handler(
 			JSON.stringify(database, null, 2)
 		);
 	}
+}
+
+function buildURLFromParts(
+	host: string | undefined,
+	port: number | undefined,
+	scheme: string,
+	database: string | undefined,
+	user: string | undefined,
+	password: string | undefined
+): URL {
+	const url = new URL(database ? `/${database}` : "", `${scheme}://${host}`);
+
+	if (port) {
+		url.port = port.toString();
+	}
+
+	if (user) {
+		url.username = user;
+	}
+
+	if (password) {
+		url.password = password;
+	}
+
+	return url;
 }

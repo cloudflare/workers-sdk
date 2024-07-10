@@ -9,15 +9,14 @@ export type HyperdriveConfig = {
 	caching: CachingOptions;
 };
 
-export type Origin = {
+export type PublicOrigin = {
 	host?: string;
 	port?: number;
-};
-
-export type PublicOrigin = Origin & {
 	scheme?: string;
 	database?: string;
 	user?: string;
+	access_client_id?: string;
+	access_client_secret?: string;
 };
 
 export type OriginWithPassword = PublicOrigin & {
