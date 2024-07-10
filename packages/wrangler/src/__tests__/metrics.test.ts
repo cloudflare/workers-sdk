@@ -110,9 +110,9 @@ describe("metrics", () => {
 				await dispatcher.identify({ a: 1, b: 2 });
 				await flushPromises();
 				expect(std.debug).toMatchInlineSnapshot(`
-"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-Metrics dispatcher: Failed to send request: Failed to fetch"
-`);
+					"Metrics dispatcher: Posting data {\\"type\\":\\"identify\\",\\"name\\":\\"identify\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+					Metrics dispatcher: Failed to send request: Failed to fetch"
+				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -190,9 +190,9 @@ Metrics dispatcher: Failed to send request: Failed to fetch"
 				await dispatcher.sendEvent("some-event", { a: 1, b: 2 });
 				await flushPromises();
 				expect(std.debug).toMatchInlineSnapshot(`
-"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
-Metrics dispatcher: Failed to send request: Failed to fetch"
-`);
+					"Metrics dispatcher: Posting data {\\"type\\":\\"event\\",\\"name\\":\\"some-event\\",\\"properties\\":{\\"a\\":1,\\"b\\":2}}
+					Metrics dispatcher: Failed to send request: Failed to fetch"
+				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);

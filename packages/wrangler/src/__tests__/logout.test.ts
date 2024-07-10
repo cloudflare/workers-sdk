@@ -11,8 +11,15 @@ describe("logout", () => {
 	const std = mockConsoleMethods();
 
 	it("should exit with a message stating the user is not logged in", async () => {
-		await runWrangler("logout");
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 		expect(std.out).toMatchInlineSnapshot(`"Not logged in, exiting..."`);
+	});
+
+	it("should exit with a message stating the user logged in via API token", async () => {
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: "DUMMY_TOKEN" });
+		expect(std.out).toMatchInlineSnapshot(
+			`"You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."`
+		);
 	});
 
 	it("should logout user that has been properly logged in", async () => {
@@ -37,7 +44,7 @@ describe("logout", () => {
 
 		expect(fs.existsSync(config)).toBeTruthy();
 
-		await runWrangler("logout");
+		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 
 		expect(std.out).toMatchInlineSnapshot(`"Successfully logged out."`);
 		expect(fs.existsSync(config)).toBeFalsy();
