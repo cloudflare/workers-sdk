@@ -79,9 +79,7 @@ export function handleFailure<
 			}
 
 			if (err instanceof Error) {
-				logger.log(
-					`${{ error: err.message, name: err.name, stack: err.stack }}`
-				);
+				logger.log(`${JSON.stringify({ error: err.message })}`);
 				return;
 			}
 
