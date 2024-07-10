@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { fetchResult } from "./cfetch";
+import { UserError } from "./errors";
 import { logger } from "./logger";
 import type { Config } from "./config";
 import type { CfWorkerInit } from "./deployment-bundle/worker";
@@ -15,6 +16,7 @@ export async function getMigrationsToUpload(
 		config: Config;
 		legacyEnv: boolean | undefined;
 		env: string | undefined;
+		dispatchNamespace: string | undefined;
 	}
 ): Promise<CfWorkerInit["migrations"]> {
 	const { config, accountId } = props;
@@ -22,6 +24,12 @@ export async function getMigrationsToUpload(
 	assert(accountId, "Missing accountId");
 	// if config.migrations
 	let migrations;
+
+	if (props.env && props.dispatchNamespace)
+		throw new UserError(
+			"You cannot use Environment together with dispatch namespaces"
+		);
+
 	if (config.migrations.length > 0) {
 		// get current migration tag
 		type ScriptData = { id: string; migration_tag?: string };
@@ -54,6 +62,16 @@ export async function getMigrationsToUpload(
 				}
 				// else it's a 404, no script found, and we can proceed
 			}
+		} else if (props.dispatchNamespace) {
+			//if this throw error. that would mean the namespace doesn't exist yet
+			const scriptData = await fetchResult<{
+				script: ScriptData | null;
+			}>(
+				`/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}/`
+			);
+
+			//if the script for this namespace doesnt exist before. it will be null
+			if (scriptData.script !== null) script = scriptData.script;
 		} else {
 			const scripts = await fetchResult<ScriptData[]>(
 				`/accounts/${accountId}/workers/scripts`
