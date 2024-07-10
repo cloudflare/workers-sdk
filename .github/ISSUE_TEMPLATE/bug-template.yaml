@@ -15,7 +15,7 @@ body:
       label: Which Cloudflare product(s) does this pertain to?
       multiple: true
       options:
-        - C3
+        - C3 (npm create cloudflare)
         - D1
         - KV
         - Pages
@@ -23,9 +23,9 @@ body:
         - Queues
         - R2
         - Workers for Platforms
-        - Constellation
+        - Workers AI
         - Workers Runtime
-        - Wrangler core
+        - Wrangler
         - Miniflare
         - KV Asset Handler
         - Workers Vitest Integration
