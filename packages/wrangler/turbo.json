@@ -14,7 +14,12 @@
 				"*.js",
 				"*.ts"
 			],
-			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
+			"outputs": [
+				"miniflare-dist/**",
+				"emitted-types/**",
+				"wrangler-dist/**",
+				"config-schema.json"
+			],
 			"env": [
 				"NODE_EXTRA_CA_CERTS",
 				"CLOUDFLARE_ACCOUNT_ID",
