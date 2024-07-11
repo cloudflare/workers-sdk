@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/node,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=node,macos
 
+packages/wrangler/src/type-generation/runtime/worker/types-worker.mjs
+packages/wrangler/src/type-generation/runtime/worker/workerd
+
 ### macOS ###
 # General
 .DS_Store

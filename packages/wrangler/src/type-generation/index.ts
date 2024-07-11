@@ -1,18 +1,19 @@
 import * as fs from "node:fs";
 import { findUpSync } from "find-up";
-import { findWranglerToml, readConfig } from "./config";
-import { getEntry } from "./deployment-bundle/entry";
-import { getVarsForDev } from "./dev/dev-vars";
-import { UserError } from "./errors";
-import { logger } from "./logger";
-import { printWranglerBanner } from "./update-check";
-import { CommandLineArgsError } from "./index";
-import type { Config } from "./config";
-import type { CfScriptFormat } from "./deployment-bundle/worker";
+import { findWranglerToml, readConfig } from "../config";
+import { getEntry } from "../deployment-bundle/entry";
+import { getVarsForDev } from "../dev/dev-vars";
+import { UserError } from "../errors";
+import { CommandLineArgsError } from "../index";
+import { logger } from "../logger";
+import { printWranglerBanner } from "../update-check";
+import { generateRuntimeTypes } from "./runtime";
+import type { Config } from "../config";
+import type { CfScriptFormat } from "../deployment-bundle/worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
-} from "./yargs-types";
+} from "../yargs-types";
 
 export function typesOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -27,6 +28,12 @@ export function typesOptions(yargs: CommonYargsArgv) {
 			default: "Env",
 			describe: "The name of the generated environment interface",
 			requiresArg: true,
+		})
+		.option("x-runtime", {
+			type: "boolean",
+			default: false,
+			describe: "The outfile for runtime types",
+			demandOption: false,
 		});
 }
 
@@ -67,6 +74,10 @@ export async function typesHandler(
 	}
 
 	const config = readConfig(configPath, args);
+
+	if (args.xRuntime) {
+		await generateRuntimeTypes(configPath, config);
+	}
 
 	const secrets = getVarsForDev(
 		{ configPath, vars: {} },
