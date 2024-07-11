@@ -17,6 +17,7 @@ import {
 	deleteR2Bucket,
 	deleteR2Object,
 	getR2Object,
+	isValidR2BucketName,
 	listR2Buckets,
 	putR2Object,
 	updateR2BucketStorageClass,
@@ -456,6 +457,12 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 				},
 				async (args) => {
 					await printWranglerBanner();
+
+					if (!isValidR2BucketName(args.name)) {
+						throw new CommandLineArgsError(
+							`The bucket name "${args.name}" is invalid. Bucket names can only have alphanumeric and - characters.`
+						);
+					}
 
 					const config = readConfig(args.config, args);
 

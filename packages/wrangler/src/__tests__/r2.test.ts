@@ -446,6 +446,14 @@ describe("r2", () => {
 			          `);
 			});
 
+			it("should error if the bucket name contains invalid characters", async () => {
+				await expect(
+					runWrangler("r2 bucket create abc_def")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The bucket name "abc_def" is invalid. Bucket names can only have alphanumeric and - characters.]`
+				);
+			});
+
 			it("should error if the bucket name to delete contains spaces", async () => {
 				await expect(
 					runWrangler("r2 bucket delete abc def ghi")
