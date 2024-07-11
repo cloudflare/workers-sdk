@@ -24,7 +24,8 @@
         "Text",
         "Data",
         "PythonModule",
-        "PythonRequirement"
+        "PythonRequirement",
+        "NodeJsCompatModule"
       ],
       "type": "string"
     },
@@ -142,6 +143,9 @@
           "properties": {
             "binding": {
               "type": "string"
+            },
+            "staging": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -474,6 +478,58 @@
         "main": {
           "description": "The entrypoint/path to the JavaScript file that will be executed.",
           "type": "string"
+        },
+        "migrations": {
+          "default": [],
+          "description": "A list of migrations that should be uploaded with your Worker.\n\nThese define changes in your Durable Object declarations.\n\nMore details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "deleted_classes": {
+                "description": "The Durable Objects being removed.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "new_classes": {
+                "description": "The new Durable Objects being defined.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "renamed_classes": {
+                "description": "The Durable Objects being renamed.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "tag": {
+                "description": "A unique identifier for this migration.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "tag"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "minify": {
           "description": "Minify the script before uploading.",
@@ -916,6 +972,7 @@
         "jsx_fragment",
         "kv_namespaces",
         "logfwdr",
+        "migrations",
         "mtls_certificates",
         "queues",
         "r2_buckets",
@@ -967,11 +1024,21 @@
           "properties": {
             "binding": {
               "type": "string"
+            },
+            "staging": {
+              "type": "boolean"
             }
           },
           "required": [
             "binding"
           ],
+          "type": "object"
+        },
+        "alias": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "A map of module aliases. Lets you swap out a module for any others. Corresponds with esbuild's `alias` config",
           "type": "object"
         },
         "analytics_engine_datasets": {
@@ -997,38 +1064,45 @@
           "type": "array"
         },
         "assets": {
-          "additionalProperties": false,
-          "description": "Serve a folder of static assets with your Worker, without any additional code. This can either be a string, or an object with additional config fields.",
-          "properties": {
-            "browser_TTL": {
-              "type": "number"
+          "anyOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "browser_TTL": {
+                  "type": "number"
+                },
+                "bucket": {
+                  "type": "string"
+                },
+                "exclude": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "include": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "serve_single_page_app": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "bucket",
+                "include",
+                "exclude",
+                "serve_single_page_app"
+              ],
+              "type": "object"
             },
-            "bucket": {
+            {
               "type": "string"
-            },
-            "exclude": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "include": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "serve_single_page_app": {
-              "type": "boolean"
             }
-          },
-          "required": [
-            "bucket",
-            "include",
-            "exclude",
-            "serve_single_page_app"
           ],
-          "type": "object"
+          "description": "Serve a folder of static assets with your Worker, without any additional code. This can either be a string, or an object with additional config fields."
         },
         "base_dir": {
           "description": "The directory in which module rules should be evaluated when including additional files into a Worker deployment. This defaults to the directory containing the `main` entry point of the Worker if not specified.",
@@ -2013,6 +2087,9 @@
           "properties": {
             "binding": {
               "type": "string"
+            },
+            "staging": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -2379,6 +2456,58 @@
         "main": {
           "description": "The entrypoint/path to the JavaScript file that will be executed.",
           "type": "string"
+        },
+        "migrations": {
+          "default": [],
+          "description": "A list of migrations that should be uploaded with your Worker.\n\nThese define changes in your Durable Object declarations.\n\nMore details at https://developers.cloudflare.com/workers/learning/using-durable-objects#configuring-durable-object-classes-with-migrations",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "deleted_classes": {
+                "description": "The Durable Objects being removed.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "new_classes": {
+                "description": "The new Durable Objects being defined.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "renamed_classes": {
+                "description": "The Durable Objects being renamed.",
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "tag": {
+                "description": "A unique identifier for this migration.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "tag"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "minify": {
           "description": "Minify the script before uploading.",
@@ -2854,7 +2983,7 @@
       "additionalProperties": false,
       "properties": {
         "environment": {
-          "description": "(Optional) The environt of the service.",
+          "description": "(Optional) The environment of the service.",
           "type": "string"
         },
         "service": {
