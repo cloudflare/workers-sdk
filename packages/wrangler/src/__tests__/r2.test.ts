@@ -450,7 +450,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc_def")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The bucket name \\"abc_def\\" is invalid. Bucket names can only have alphanumeric and - characters."`
+					`[Error: The bucket name "abc_def" is invalid. Bucket names can only have alphanumeric and - characters.]`
 				);
 			});
 
