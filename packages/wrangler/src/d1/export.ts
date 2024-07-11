@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { fetch } from "undici";
@@ -169,31 +170,41 @@ async function exportRemotely(
 	);
 
 	logger.log(`🌀 Executing on remote database ${name} (${db.uuid}):`);
-	logger.log(`🌀 Creating export...`);
 	const dumpOptions = {
 		noSchema,
 		noData,
 		tables,
 	};
 
-	const finalResponse = await pollExport(accountId, db, dumpOptions, undefined);
+	const s = spinner();
+	const finalResponse = await spinnerWhile<ExportPollingResponse>({
+		spinner: s,
+		promise: () => pollExport(s, accountId, db, dumpOptions, undefined),
+		startMessage: `Creating export`,
+	});
 
 	if (finalResponse.status !== "complete") {
 		throw new APIError({ text: `D1 reset before export completed!` });
 	}
 
-	logger.log(`🌀 Downloading SQL to ${output}...`);
 	logger.log(
 		chalk.gray(
 			`You can also download your export from the following URL manually. This link will be valid for one hour: ${finalResponse.result.signedUrl}`
 		)
 	);
-	const contents = await fetch(finalResponse.result.signedUrl);
-	await fs.writeFile(output, contents.body || "");
-	logger.log(`Done!`);
+
+	await spinnerWhile({
+		startMessage: `Downloading SQL to ${output}`,
+		async promise() {
+			const contents = await fetch(finalResponse.result.signedUrl);
+			await fs.writeFile(output, contents.body || "");
+		},
+	});
+	logger.log(`🌀 Downloaded to ${output} successfully!`);
 }
 
 async function pollExport(
+	s: ReturnType<typeof spinner>,
 	accountId: string,
 	db: Database,
 	dumpOptions: {
@@ -224,9 +235,9 @@ async function pollExport(
 		if (line.startsWith(`Uploaded part`)) {
 			// Part numbers can be reported as complete out-of-order which looks confusing to a user. But their ID has no
 			// special meaning, so just make them sequential.
-			logger.log(`🌀 Uploaded part ${++num_parts_uploaded}`);
+			s.update(`Uploaded part ${++num_parts_uploaded}`);
 		} else {
-			logger.log(`🌀 ${line}`);
+			s.update(line);
 		}
 	});
 
@@ -239,6 +250,7 @@ async function pollExport(
 		});
 	} else {
 		return await pollExport(
+			s,
 			accountId,
 			db,
 			dumpOptions,
