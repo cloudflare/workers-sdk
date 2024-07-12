@@ -319,7 +319,7 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify(mapBindings(bindings) as TOML.JsonMap)
+		? TOML.stringify((await mapBindings(accountId, bindings)) as TOML.JsonMap)
 		: `None`
 }
 `;
