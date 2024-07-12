@@ -9,7 +9,7 @@ import { runWrangler } from "../../helpers/run-wrangler";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 
-describe("versions secret put", () => {
+describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 	mockAccountId();
@@ -157,5 +157,45 @@ describe("versions secret put", () => {
 
 			"
 		`);
+	});
+
+	test("should allow versions secret:bulk as well", async () => {
+		await writeFile(
+			"secrets.json",
+			JSON.stringify({
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			}),
+			{ encoding: "utf8" }
+		);
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
+				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
+				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+		});
+
+		await runWrangler(
+			`versions secret:bulk secrets.json --name script-name --x-versions`
+		);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });

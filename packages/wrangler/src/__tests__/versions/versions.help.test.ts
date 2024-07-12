@@ -69,6 +69,7 @@ describe("versions --help", () => {
 			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+			  wrangler versions secret:bulk [json]        Create or update a secret variable for a Worker
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -108,6 +109,7 @@ describe("versions subhelp", () => {
 			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+			  wrangler versions secret:bulk [json]        Create or update a secret variable for a Worker
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -135,6 +137,7 @@ describe("versions subhelp", () => {
 			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+			  wrangler versions secret:bulk [json]        Create or update a secret variable for a Worker
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -162,6 +165,7 @@ describe("versions subhelp", () => {
 			  wrangler versions upload                    Uploads your Worker code and config as a new Version [beta]
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions [beta]
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
+			  wrangler versions secret:bulk [json]        Create or update a secret variable for a Worker
 
 			GLOBAL FLAGS
 			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]

@@ -14,6 +14,10 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { versionsDeployHandler, versionsDeployOptions } from "./deploy";
 import { versionsListHandler, versionsListOptions } from "./list";
 import { registerVersionsSecretsSubcommands } from "./secrets";
+import {
+	versionsSecretPutBulkHandler,
+	versionsSecretsPutBulkOptions,
+} from "./secrets/bulk";
 import versionsUpload from "./upload";
 import { versionsViewHandler, versionsViewOptions } from "./view";
 import type { Config } from "../config";
@@ -272,5 +276,11 @@ export default function registerVersionsSubcommands(
 			(yargs) => {
 				return registerVersionsSecretsSubcommands(yargs.command(subHelp));
 			}
+		)
+		.command(
+			"secret:bulk [json]",
+			"Create or update a secret variable for a Worker",
+			versionsSecretsPutBulkOptions,
+			versionsSecretPutBulkHandler
 		);
 }
