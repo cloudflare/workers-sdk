@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { basename, dirname, extname, relative, resolve } from "node:path";
+import * as esmLexer from "es-module-lexer";
 import { findUpSync } from "find-up";
 import { findWranglerToml, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
@@ -239,20 +240,16 @@ async function generateTypes(
 		const importPath = entrypoint
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined;
-		const entrypointContents = entrypoint
-			? fs.readFileSync(entrypoint.file, "utf-8")
+
+		await esmLexer.init;
+		const entrypointExports = entrypoint
+			? esmLexer.parse(fs.readFileSync(entrypoint.file, "utf-8"))[1]
 			: undefined;
+
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			// Naive check to see if the script exports the durable object class.
-			// This should handle using Durable Objects from a different script,
-			// but also allow the user to do `export interface ExternalDurableObject {}`
-			// to retain type safety
-			const exportExists = entrypointContents
-				? new RegExp(
-						`^\\s*export\\s+\\w+\\s+${durableObject.class_name}\\b`,
-						"m"
-					).test(entrypointContents)
-				: false;
+			const exportExists = entrypointExports?.some(
+				(e) => e.n === durableObject.class_name
+			);
 
 			const typeName =
 				importPath && exportExists

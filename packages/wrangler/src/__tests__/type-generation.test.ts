@@ -282,7 +282,7 @@ describe("generateTypes()", () => {
 			`import { DurableObject } from 'cloudflare:workers';
 				export default { async fetch () {} };
 				export class Durability1 extends DurableObject {}
-				export interface Durability2 {}`
+				export { Durability2 } from './durable-2.js';`
 		);
 		fs.writeFileSync(
 			"./wrangler.toml",
