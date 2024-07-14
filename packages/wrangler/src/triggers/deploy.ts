@@ -239,7 +239,7 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	}
 
 	if (config.queues.consumers && config.queues.consumers.length) {
-		const updateConsumers = await updateQueueConsumers(config);
+		const updateConsumers = await updateQueueConsumers(scriptName, config);
 
 		deployments.push(...updateConsumers);
 	}
