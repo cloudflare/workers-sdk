@@ -1054,6 +1054,7 @@ export async function updateQueueProducers(
 }
 
 export async function updateQueueConsumers(
+	scriptName: string | undefined,
 	config: Config
 ): Promise<Promise<string[]>[]> {
 	const consumers = config.queues.consumers || [];
@@ -1091,7 +1092,7 @@ export async function updateQueueConsumers(
 				])
 			);
 		} else {
-			if (config.name === undefined) {
+			if (scriptName === undefined) {
 				// TODO: how can we reliably get the current script name?
 				throw new UserError(
 					"Script name is required to update queue consumers"
@@ -1101,7 +1102,7 @@ export async function updateQueueConsumers(
 			const body: PostTypedConsumerBody = {
 				type: "worker",
 				dead_letter_queue: consumer.dead_letter_queue,
-				script_name: config.name,
+				script_name: scriptName,
 				settings: {
 					batch_size: consumer.max_batch_size,
 					max_retries: consumer.max_retries,
@@ -1117,12 +1118,12 @@ export async function updateQueueConsumers(
 			// Current script already assigned to queue?
 			const existingConsumer =
 				queue.consumers.filter(
-					(c) => c.script === config.name || c.service === config.name
+					(c) => c.script === scriptName || c.service === scriptName
 				).length > 0;
 			const envName = undefined; // TODO: script environment for wrangler deploy?
 			if (existingConsumer) {
 				updateConsumers.push(
-					putConsumer(config, consumer.queue, config.name, envName, body).then(
+					putConsumer(config, consumer.queue, scriptName, envName, body).then(
 						() => [`Consumer for ${consumer.queue}`]
 					)
 				);

@@ -41,6 +41,7 @@ import type {
 import type { ValidatorFn } from "./validation-helpers";
 
 export type NormalizeAndValidateConfigArgs = {
+	name?: string;
 	env?: string;
 	"legacy-env"?: boolean;
 	// This is not relevant in dev. It's only purpose is loosening Worker name validation when deploying to a dispatch namespace
