@@ -9,19 +9,18 @@ export type HyperdriveConfig = {
 	caching: CachingOptions;
 };
 
-export type Origin = {
+export type PublicOrigin = {
 	host?: string;
 	port?: number;
-};
-
-export type PublicOrigin = Origin & {
 	scheme?: string;
 	database?: string;
 	user?: string;
+	access_client_id?: string;
 };
 
-export type OriginWithPassword = PublicOrigin & {
+export type OriginWithSecrets = PublicOrigin & {
 	password?: string;
+	access_client_secret?: string;
 };
 
 export type CachingOptions = {
@@ -32,13 +31,13 @@ export type CachingOptions = {
 
 export type CreateUpdateHyperdriveBody = {
 	name: string;
-	origin: OriginWithPassword;
+	origin: OriginWithSecrets;
 	caching: CachingOptions;
 };
 
 export type PatchHyperdriveBody = {
 	name?: string;
-	origin?: OriginWithPassword;
+	origin?: OriginWithSecrets;
 	caching?: CachingOptions;
 };
 
