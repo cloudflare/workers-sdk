@@ -65,14 +65,22 @@ describe("constructType", () => {
 		);
 
 		expect(constructType("valid", 'a"', false)).toBe('valid: "a\\"";');
-		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\";');
-		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\b";');
-		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\b\\"";');
+		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\\\";');
+		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\\\b";');
+		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\\\b\\"";');
 
 		expect(constructType("valid", 1)).toBe("valid: 1;");
 		expect(constructType("valid", 12345)).toBe("valid: 12345;");
 		expect(constructType("valid", true)).toBe("valid: true;");
 		expect(constructType("valid", false)).toBe("valid: false;");
+	});
+});
+
+describe("constructType with multiline strings", () => {
+	it("should correctly escape newlines in string values", () => {
+		const multilineString = "This is a\nmulti-line\nstring";
+		const expected = `valid: "This is a\\nmulti-line\\nstring";`;
+		expect(constructType("valid", multilineString, false)).toBe(expected);
 	});
 });
 
