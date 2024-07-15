@@ -65,9 +65,9 @@ describe("constructType", () => {
 		);
 
 		expect(constructType("valid", 'a"', false)).toBe('valid: "a\\"";');
-		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\";');
-		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\b";');
-		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\b\\"";');
+		expect(constructType("valid", "a\\", false)).toBe('valid: "a\\\\";');
+		expect(constructType("valid", "a\\b", false)).toBe('valid: "a\\\\b";');
+		expect(constructType("valid", 'a\\b"', false)).toBe('valid: "a\\\\b\\"";');
 
 		expect(constructType("valid", 1)).toBe("valid: 1;");
 		expect(constructType("valid", 12345)).toBe("valid: 12345;");
