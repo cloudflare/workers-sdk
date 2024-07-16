@@ -243,6 +243,26 @@ export function normalizeAndValidateConfig(
 		}
 	}
 
+	deprecated(
+		diagnostics,
+		rawConfig,
+		"assets",
+		`The existing behavior of this experimental feature will change on August 15th.\n` +
+			`Releases of wrangler after this date will no longer support current behavior.\n` +
+			`\`legacy_assets\` willl preserve current behavior, but will also be deprecated soon.`,
+		false,
+		"Behavior change"
+	);
+
+	deprecated(
+		diagnostics,
+		rawConfig,
+		"legacy_assets",
+		`The existing behavior of the experimental \`assets\` feature will be changing on August 15th.\n` +
+			`\`legacy_assets\` will preserve current behavior, but will also be deprecated soon.`,
+		false
+	);
+
 	if (rawConfig.assets && rawConfig.legacy_assets) {
 		diagnostics.errors.push(
 			"Expected only one of `assets` or `legacy_assets`."

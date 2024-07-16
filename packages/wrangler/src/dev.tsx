@@ -165,13 +165,14 @@ export function devOptions(yargs: CommonYargsArgv) {
 					"Host to act as origin in local mode, defaults to dev.host or route",
 			})
 			.option("experimental-public", {
-				describe: "Static assets to be served",
+				describe: "(Deprecated) Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				deprecated: true,
 				hidden: true,
 			})
-			.option("assets", {
+			.option("legacy-assets", {
+				alias: "assets",
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
@@ -517,12 +518,22 @@ export async function startDev(args: StartDevOptions) {
 		}
 		if (args.experimentalPublic) {
 			throw new UserError(
-				"The --experimental-public field has been renamed to --assets"
+				"The --experimental-public field has been deprecated, try --assets instead."
 			);
 		}
 
 		if (args.public) {
-			throw new UserError("The --public field has been renamed to --assets");
+			throw new UserError(
+				"The --public field has been deprecated, try --assets instead."
+			);
+		}
+
+		if (args.legacyAssets) {
+			logger.warn(
+				`The behavior of the experimental --assets command will be changing on August 15th.\n` +
+					`Releases of wrangler after this date will no longer support current functionality.\n` +
+					`The --legacy-assets command will preserve current functionality after this point, but will also be deprecated towards the end of the year.`
+			);
 		}
 
 		if (args.experimentalEnableLocalPersistence) {
@@ -530,12 +541,6 @@ export async function startDev(args: StartDevOptions) {
 				`--experimental-enable-local-persistence is deprecated.\n` +
 					`Move any existing data to .wrangler/state and use --persist, or\n` +
 					`use --persist-to=./wrangler-local-state to keep using the old path.`
-			);
-		}
-
-		if (args.assets) {
-			logger.warn(
-				"The --assets argument is experimental and may change or break at any time"
 			);
 		}
 

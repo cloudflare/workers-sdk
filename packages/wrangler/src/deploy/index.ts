@@ -84,14 +84,14 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				default: false,
 			})
 			.option("experimental-public", {
-				describe: "Static assets to be served",
+				describe: "(Deprecated) Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				deprecated: true,
 				hidden: true,
 			})
 			.option("public", {
-				describe: "Static assets to be served",
+				describe: "(Deprecated) Static assets to be served",
 				type: "string",
 				requiresArg: true,
 				deprecated: true,
@@ -260,11 +260,14 @@ export async function deployHandler(
 		);
 	}
 
-	if (args.assets) {
+	if (args.legacyAssets) {
 		logger.warn(
-			"The --assets argument is experimental and may change or break at any time"
+			`The behavior of the experimental --assets command will be changing on August 15th.\n` +
+				`Releases of wrangler after this date will no longer support current functionality.\n` +
+				`The --legacy-assets command will preserve current functionality after this point, but will also be deprecated towards the end of the year.`
 		);
 	}
+
 	if (args.latest) {
 		logger.warn(
 			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
