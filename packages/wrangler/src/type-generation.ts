@@ -136,7 +136,8 @@ export function constructTypeKey(key: string) {
  * Generate a import specifier from one module to another
  */
 export function generateImportSpecifier(from: string, to: string) {
-	const relativePath = relative(dirname(from), dirname(to));
+	// Use unix-style paths on Windows
+	const relativePath = relative(dirname(from), dirname(to)).replace(/\\/g, "/");
 	const filename = basename(to, extname(to));
 	if (!relativePath) {
 		return `./${filename}`;
