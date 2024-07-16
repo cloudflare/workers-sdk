@@ -9,29 +9,32 @@ describe("multiple workers", () => {
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 
-		workers = await Promise.all([
-			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
+		workers = [
+			await unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
 				ip: "127.0.0.1",
+				port: 4589,
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
+			await unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
 				ip: "127.0.0.1",
+				port: 4590,
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
+			await unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
 				ip: "127.0.0.1",
+				port: 4591,
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-		]);
+		];
 	});
 
 	afterAll(async () => {
