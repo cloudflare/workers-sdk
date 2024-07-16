@@ -1,5 +1,44 @@
 # wrangler
 
+## 3.65.0
+
+### Minor Changes
+
+- [#6194](https://github.com/cloudflare/workers-sdk/pull/6194) [`25afcb2`](https://github.com/cloudflare/workers-sdk/commit/25afcb2f118fb06526209340b3562703cdae326b) Thanks [@zebp](https://github.com/zebp)! - chore: Add duration and sourcemap size to upload metrics event
+
+  Wrangler will now send the duration and the total size of any sourcemaps uploaded with your Worker to Cloudflare if you have metrics enabled.
+
+- [#6259](https://github.com/cloudflare/workers-sdk/pull/6259) [`eb201a3`](https://github.com/cloudflare/workers-sdk/commit/eb201a3258469f16c3a42dc5f749ecf3d3ecf372) Thanks [@ottomated](https://github.com/ottomated)! - chore: Add types to DurableObjectNamespace type generation. For example:
+
+  ```ts
+  interface Env {
+    OBJECT: DurableObjectNamespace<import("./src/index").MyDurableObject>;
+  }
+  ```
+
+- [#6245](https://github.com/cloudflare/workers-sdk/pull/6245) [`e4abed3`](https://github.com/cloudflare/workers-sdk/commit/e4abed3e8f9c46a014a045885da0dea5c4ae8837) Thanks [@OilyLime](https://github.com/OilyLime)! - feature: Add support for Hyperdrive over Access configs
+
+### Patch Changes
+
+- [#6255](https://github.com/cloudflare/workers-sdk/pull/6255) [`d497e1e`](https://github.com/cloudflare/workers-sdk/commit/d497e1e38c58ce740bdccf126bd926456d61ea9f) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: teach wrangler init --from-dash about d1 bindings
+
+  This PR teaches `wrangler init --from-dash` about D1 bindings, so they aren't incorrectly added to the wrangler.toml as unsafe bindings.
+
+- [#6258](https://github.com/cloudflare/workers-sdk/pull/6258) [`4f524f2`](https://github.com/cloudflare/workers-sdk/commit/4f524f2eb04f38114adff3590386e06db072f6b0) Thanks [@dom96](https://github.com/dom96)! - feature: Add warning about deploying Python with requirements.txt
+
+  This expands on the warning shown for all Python Workers to include a message about deploying Python Workers with a requirements.txt not being supported.
+
+- [#6249](https://github.com/cloudflare/workers-sdk/pull/6249) [`8bbd824`](https://github.com/cloudflare/workers-sdk/commit/8bbd824980c5b1a706bb2e7bef4e52206f7097cf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - chore: Update config-schema.json for the wrangler.toml
+
+- [#5955](https://github.com/cloudflare/workers-sdk/pull/5955) [`db11a0f`](https://github.com/cloudflare/workers-sdk/commit/db11a0fd12d7b048e5f74acab876080f79e393b3) Thanks [@harugon](https://github.com/harugon)! - fix: correctly escape newlines in `constructType` function for multiline strings
+
+  This fix ensures that multiline strings are correctly handled by the `constructType` function. Newlines are now properly escaped to prevent invalid JavaScript code generation when using the `wrangler types` command. This improves robustness and prevents errors related to multiline string handling in environment variables and other configuration settings.
+
+- [#6263](https://github.com/cloudflare/workers-sdk/pull/6263) [`fa1016c`](https://github.com/cloudflare/workers-sdk/commit/fa1016cffcb0edcc7fa5deef283481a9b1fd527f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use cli script-name arg when deploying a worker with queue consumers
+
+- Updated dependencies [[`0d32448`](https://github.com/cloudflare/workers-sdk/commit/0d32448fc72521be691dfc87c8ad5f108ddced62)]:
+  - miniflare@3.20240712.0
+
 ## 3.64.0
 
 ### Minor Changes
