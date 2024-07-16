@@ -251,10 +251,16 @@ async function generateTypes(
 				(e) => e.n === durableObject.class_name
 			);
 
-			const typeName =
-				importPath && exportExists
-					? `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`
-					: `DurableObjectNamespace /* ${durableObject.class_name} */`;
+			let typeName: string;
+			// Import the type if it's exported and it's not an external worker
+			if (importPath && exportExists && !durableObject.script_name) {
+				typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
+			} else if (durableObject.script_name) {
+				typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
+			} else {
+				typeName = `DurableObjectNamespace /* ${durableObject.class_name} */`;
+			}
+
 			envTypeStructure.push(constructType(durableObject.name, typeName));
 		}
 	}
