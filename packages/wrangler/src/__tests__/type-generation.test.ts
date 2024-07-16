@@ -3,6 +3,7 @@ import * as TOML from "@iarna/toml";
 import {
 	constructType,
 	constructTypeKey,
+	generateImportSpecifier,
 	isValidIdentifier,
 } from "../type-generation";
 import { dedent } from "../utils/dedent";
@@ -84,6 +85,24 @@ describe("constructType with multiline strings", () => {
 	});
 });
 
+describe("generateImportSpecifier", () => {
+	it("should generate a relative import specifier", () => {
+		expect(generateImportSpecifier("/app/types.ts", "/app/index.ts")).toBe(
+			"./index"
+		);
+		expect(
+			generateImportSpecifier("/app/types.ts", "/app/src/deep/dir/index.ts")
+		).toBe("./src/deep/dir/index");
+		expect(
+			generateImportSpecifier("/app/deep/dir/index.ts", "/app/types.ts")
+		).toBe("../../types");
+
+		expect(generateImportSpecifier("/app/types.ts", "/app/src/index.mjs")).toBe(
+			"./src/index"
+		);
+	});
+});
+
 const bindingsConfigMock: Omit<
 	EnvironmentNonInheritable,
 	"define" | "tail_consumers" | "constellation" | "cloudchamber"
@@ -118,8 +137,14 @@ const bindingsConfigMock: Omit<
 	},
 	durable_objects: {
 		bindings: [
-			{ name: "DURABLE_TEST1", class_name: "Durability1" },
-			{ name: "DURABLE_TEST2", class_name: "Durability2" },
+			{ name: "DURABLE_DIRECT_EXPORT", class_name: "DurableDirect" },
+			{ name: "DURABLE_RE_EXPORT", class_name: "DurableReexport" },
+			{ name: "DURABLE_NO_EXPORT", class_name: "DurableNoexport" },
+			{
+				name: "DURABLE_EXTERNAL",
+				class_name: "DurableExternal",
+				script_name: "external-worker",
+			},
 		],
 	},
 	r2_buckets: [
@@ -265,7 +290,15 @@ describe("generateTypes()", () => {
 	});
 
 	it("should log the interface type generated and declare modules", async () => {
-		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
+		fs.writeFileSync(
+			"./index.ts",
+			`import { DurableObject } from 'cloudflare:workers';
+				export default { async fetch () {} };
+				export class DurableDirect extends DurableObject {}
+				export { DurableReexport } from './durable-2.js';
+				// This should not be picked up, because it's external:
+				export class DurableExternal extends DurableObject {}`
+		);
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
@@ -286,8 +319,10 @@ describe("generateTypes()", () => {
 			ANOTHER: \\"thing\\";
 			\\"some-other-var\\": \\"some-other-value\\";
 			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-			DURABLE_TEST1: DurableObjectNamespace;
-			DURABLE_TEST2: DurableObjectNamespace;
+			DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+			DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+			DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+			DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
 			R2_BUCKET_BINDING: R2Bucket;
 			D1_TESTING_SOMETHING: D1Database;
 			SERVICE_BINDING: Fetcher;
