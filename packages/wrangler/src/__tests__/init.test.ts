@@ -2554,6 +2554,11 @@ describe("init", () => {
 						part: "./my-entire-app-depends-on-this.cfg",
 					},
 					{
+						type: "d1",
+						name: "DB",
+						id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+					},
+					{
 						type: "text_blob",
 						name: "TEXT_BLOB_TWO",
 						part: "./the-entirety-of-human-knowledge.txt",
@@ -2672,6 +2677,13 @@ describe("init", () => {
 						},
 					],
 				},
+				d1_databases: [
+					{
+						binding: "DB",
+						database_id: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+						database_name: "mydb",
+					},
+				],
 				kv_namespaces: [
 					{
 						binding: "kv_testing",
@@ -2941,6 +2953,24 @@ describe("init", () => {
 							);
 						},
 						{ once: true }
+					),
+					http.get(
+						`*/accounts/:accountId/d1/database/:database_id`,
+						() => {
+							return HttpResponse.json(
+								{
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										uuid: "40160e84-9fdb-4ce7-8578-23893cecc5a3",
+										name: "mydb",
+									},
+								},
+								{ status: 200 }
+							);
+						},
+						{ once: true }
 					)
 				);
 			}
@@ -3136,86 +3166,91 @@ describe("init", () => {
 				expect(
 					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
 				).toMatchInlineSnapshot(`
-			"name = \\"isolinear-optical-chip\\"
-			main = \\"src/index.js\\"
-			compatibility_date = \\"1987-09-27\\"
-			workers_dev = true
+					"name = \\"isolinear-optical-chip\\"
+					main = \\"src/index.js\\"
+					compatibility_date = \\"1987-09-27\\"
+					workers_dev = true
 
-			[[routes]]
-			pattern = \\"delta.quadrant\\"
-			zone_name = \\"delta.quadrant\\"
+					[[routes]]
+					pattern = \\"delta.quadrant\\"
+					zone_name = \\"delta.quadrant\\"
 
-			[[migrations]]
-			tag = \\"some-migration-tag\\"
-			new_classes = [ \\"Durability\\" ]
+					[[migrations]]
+					tag = \\"some-migration-tag\\"
+					new_classes = [ \\"Durability\\" ]
 
-			[triggers]
-			crons = [ \\"0 0 0 * * *\\" ]
+					[triggers]
+					crons = [ \\"0 0 0 * * *\\" ]
 
-			[[tail_consumers]]
-			service = \\"listener\\"
+					[[tail_consumers]]
+					service = \\"listener\\"
 
-			[vars]
-			ANOTHER-NAME = \\"thing-TEXT\\"
+					[vars]
+					ANOTHER-NAME = \\"thing-TEXT\\"
 
-			[[durable_objects.bindings]]
-			name = \\"DURABLE_TEST\\"
-			class_name = \\"Durability\\"
-			script_name = \\"another-durable-object-worker\\"
-			environment = \\"production\\"
+					[[durable_objects.bindings]]
+					name = \\"DURABLE_TEST\\"
+					class_name = \\"Durability\\"
+					script_name = \\"another-durable-object-worker\\"
+					environment = \\"production\\"
 
-			[[kv_namespaces]]
-			id = \\"some-namespace-id\\"
-			binding = \\"kv_testing\\"
+					[[kv_namespaces]]
+					id = \\"some-namespace-id\\"
+					binding = \\"kv_testing\\"
 
-			[[r2_buckets]]
-			binding = \\"test-bucket\\"
-			bucket_name = \\"test-bucket\\"
+					[[r2_buckets]]
+					binding = \\"test-bucket\\"
+					bucket_name = \\"test-bucket\\"
 
-			[[services]]
-			binding = \\"website\\"
-			service = \\"website\\"
-			environment = \\"production\\"
-			entrypoint = \\"WWWHandler\\"
+					[[services]]
+					binding = \\"website\\"
+					service = \\"website\\"
+					environment = \\"production\\"
+					entrypoint = \\"WWWHandler\\"
 
-			[[dispatch_namespaces]]
-			binding = \\"name-namespace-mock\\"
-			namespace = \\"namespace-mock\\"
+					[[dispatch_namespaces]]
+					binding = \\"name-namespace-mock\\"
+					namespace = \\"namespace-mock\\"
 
-			[[logfwdr.bindings]]
-			name = \\"httplogs\\"
-			destination = \\"httplogs\\"
+					[[logfwdr.bindings]]
+					name = \\"httplogs\\"
+					destination = \\"httplogs\\"
 
-			[[logfwdr.bindings]]
-			name = \\"trace\\"
-			destination = \\"trace\\"
+					[[logfwdr.bindings]]
+					name = \\"trace\\"
+					destination = \\"trace\\"
 
-			[wasm_modules]
-			WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
-			WASM_MODULE_TWO = \\"./more_wasm.wasm\\"
+					[wasm_modules]
+					WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
+					WASM_MODULE_TWO = \\"./more_wasm.wasm\\"
 
-			[text_blobs]
-			TEXT_BLOB_ONE = \\"./my-entire-app-depends-on-this.cfg\\"
-			TEXT_BLOB_TWO = \\"./the-entirety-of-human-knowledge.txt\\"
+					[text_blobs]
+					TEXT_BLOB_ONE = \\"./my-entire-app-depends-on-this.cfg\\"
+					TEXT_BLOB_TWO = \\"./the-entirety-of-human-knowledge.txt\\"
 
-			[data_blobs]
-			DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
-			DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
+					[[d1_databases]]
+					binding = \\"DB\\"
+					database_id = \\"40160e84-9fdb-4ce7-8578-23893cecc5a3\\"
+					database_name = \\"mydb\\"
 
-			[unsafe]
-			  [[unsafe.bindings]]
-			  type = \\"some unsafe thing\\"
-			  name = \\"UNSAFE_BINDING_ONE\\"
+					[data_blobs]
+					DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
+					DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
 
-			[unsafe.bindings.data.some]
-			unsafe = \\"thing\\"
+					[unsafe]
+					  [[unsafe.bindings]]
+					  type = \\"some unsafe thing\\"
+					  name = \\"UNSAFE_BINDING_ONE\\"
 
-			  [[unsafe.bindings]]
-			  type = \\"another unsafe thing\\"
-			  name = \\"UNSAFE_BINDING_TWO\\"
-			  data = 1_337
-			"
-		`);
+					[unsafe.bindings.data.some]
+					unsafe = \\"thing\\"
+
+					  [[unsafe.bindings]]
+					  type = \\"another unsafe thing\\"
+					  name = \\"UNSAFE_BINDING_TWO\\"
+					  data = 1_337
+					"
+				`);
 				expect(std.out).toContain("cd isolinear-optical-chip");
 
 				checkFiles({
