@@ -232,7 +232,7 @@ export type DevProps = {
 	queueConsumers: Config["queues"]["consumers"];
 	isWorkersSite: boolean;
 	assetPaths: AssetPaths | undefined;
-	assetsConfig: Config["assets"];
+	assetsConfig: Config["legacy_assets"];
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
@@ -472,7 +472,7 @@ function DevSession(props: DevSessionProps) {
 								exclude: props.assetPaths.excludePatterns,
 							}
 						: undefined,
-				assets: props.assetsConfig,
+				legacyAssets: props.assetsConfig,
 				enableServiceEnvironments: !props.legacyEnv,
 			},
 			unsafe: {
@@ -600,7 +600,7 @@ function DevSession(props: DevSessionProps) {
 		alias: props.alias,
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
-		assets: props.assetsConfig,
+		legacyAssets: props.assetsConfig,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy

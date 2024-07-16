@@ -117,8 +117,9 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * Serve a folder of static assets with your Worker, without any additional code.
 	 * This can either be a string, or an object with additional config fields.
+	 * Only one of assets and legacy_assets can be used.
 	 */
-	assets:
+	legacy_assets:
 		| {
 				bucket: string;
 				include: string[];
@@ -264,6 +265,22 @@ export interface DeprecatedConfigFields {
 	 * @deprecated
 	 */
 	miniflare?: unknown;
+
+	/**
+	 * Serve a folder of static assets with your Worker, without any additional code.
+	 * This can either be a string, or an object with additional config fields.
+	 * Only one of assets and legacy_assets can be used.
+	 */
+	assets?:
+		| {
+				bucket: string;
+				include: string[];
+				exclude: string[];
+				browser_TTL: number | undefined;
+				serve_single_page_app: boolean;
+		  }
+		| string
+		| undefined;
 }
 
 interface EnvironmentMap {
@@ -337,7 +354,7 @@ export const defaultWranglerConfig: Config = {
 	configPath: undefined,
 	legacy_env: true,
 	site: undefined,
-	assets: undefined,
+	legacy_assets: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,
 	data_blobs: undefined,

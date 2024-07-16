@@ -455,7 +455,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config.assets).toMatchInlineSnapshot(`
+				expect(config.legacy_assets).toMatchInlineSnapshot(`
 			Object {
 			  "browser_TTL": undefined,
 			  "bucket": "path/to/assets",
@@ -482,7 +482,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config.assets).toBeUndefined();
+				expect(config.legacy_assets).toBeUndefined();
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 
@@ -511,7 +511,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(config.assets).toEqual(
+				expect(config.legacy_assets).toEqual(
 					expect.objectContaining(expectedConfig.assets)
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);

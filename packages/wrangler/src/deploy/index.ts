@@ -97,7 +97,8 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			})
-			.option("assets", {
+			.option("legacy-assets", {
+				alias: "assets",
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
@@ -250,7 +251,10 @@ export async function deployHandler(
 		);
 	}
 
-	if ((args.assets || config.assets) && (args.site || config.site)) {
+	if (
+		(args.legacyAssets || config.legacy_assets) &&
+		(args.site || config.site)
+	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
 		);
@@ -274,8 +278,8 @@ export async function deployHandler(
 	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 	const assetPaths =
-		args.assets || config.assets
-			? getAssetPaths(config, args.assets)
+		args.legacyAssets || config.legacy_assets
+			? getAssetPaths(config, args.legacyAssets)
 			: getSiteAssetPaths(
 					config,
 					args.site,

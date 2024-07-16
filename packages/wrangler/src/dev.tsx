@@ -489,6 +489,11 @@ export async function startDev(args: StartDevOptions) {
 	let watcher: ReturnType<typeof watch> | undefined;
 	let rerender: (node: React.ReactNode) => void | undefined;
 	try {
+		const configPath =
+			args.config ||
+			(args.script && findWranglerToml(path.dirname(args.script)));
+		let config = readConfig(configPath, args);
+
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
@@ -534,12 +539,7 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 
-		const configPath =
-			args.config ||
-			(args.script && findWranglerToml(path.dirname(args.script)));
-
 		const projectRoot = configPath && path.dirname(configPath);
-		let config = readConfig(configPath, args);
 
 		const devEnv = new DevEnv();
 
@@ -707,7 +707,7 @@ export async function startDev(args: StartDevOptions) {
 								}
 							: undefined;
 					},
-					assets: (configParam) => configParam.assets,
+					legacyAssets: (configParam) => configParam.legacy_assets,
 					enableServiceEnvironments: !(args.legacyEnv ?? true),
 				},
 			} satisfies StartDevWorkerInput);
@@ -815,7 +815,7 @@ export async function startDev(args: StartDevOptions) {
 						getAccountFromCache()?.id
 					}
 					assetPaths={assetPaths}
-					assetsConfig={configParam.assets}
+					assetsConfig={configParam.legacy_assets}
 					initialPort={
 						args.port ?? configParam.dev.port ?? (await getLocalPort())
 					}
@@ -976,7 +976,7 @@ export async function startApiDev(args: StartDevOptions) {
 			accountId:
 				args.accountId ?? configParam.account_id ?? getAccountFromCache()?.id,
 			assetPaths: assetPaths,
-			assetsConfig: configParam.assets,
+			assetsConfig: configParam.legacy_assets,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
 			initialIp: args.ip ?? configParam.dev.ip,
@@ -1115,7 +1115,11 @@ export async function validateDevServerSettings(
 	config: Config
 ) {
 	const entry = await getEntry(
-		{ assets: args.assets, script: args.script, moduleRoot: args.moduleRoot },
+		{
+			legacyAssets: args.legacyAssets,
+			script: args.script,
+			moduleRoot: args.moduleRoot,
+		},
 		config,
 		"dev"
 	);
@@ -1159,7 +1163,10 @@ export async function validateDevServerSettings(
 		);
 	}
 
-	if ((args.assets ?? config.assets) && (args.site ?? config.site)) {
+	if (
+		(args.legacyAssets ?? config.legacy_assets) &&
+		(args.site ?? config.site)
+	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
 		);
@@ -1232,8 +1239,8 @@ export function getResolvedAssetPaths(
 	configParam: Config
 ) {
 	const assetPaths =
-		args.assets || configParam.assets
-			? getAssetPaths(configParam, args.assets)
+		args.legacyAssets || configParam.legacy_assets
+			? getAssetPaths(configParam, args.legacyAssets)
 			: getSiteAssetPaths(
 					configParam,
 					args.site,
