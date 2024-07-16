@@ -63,8 +63,9 @@ export async function generateHandler(args: GenerateArgs) {
 	await printWranglerBanner();
 
 	logger.warn(
-		`The \`generate\` command is no longer supported and will be removed in a future version.`
-		// TODO: recommend replacement commands
+		`Deprecation: \`wrangler generate\` has been deprecated and will be removed in a future version.\n` +
+			`Use \`npm create cloudflare@latest\` for new Workers and Pages projects.\n\n` +
+			`Please refer to https://developers.cloudflare.com/workers/wrangler/deprecations/#generate for more information."`
 	);
 
 	if (args.type) {
