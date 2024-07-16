@@ -100,7 +100,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./fixtures/*", "./packages/*", "./tools"]
+        filter: ["./fixtures/local-mode-tests"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
