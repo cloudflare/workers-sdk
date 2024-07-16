@@ -2,7 +2,7 @@
 "wrangler": minor
 ---
 
-Add types to DurableObjectNamespace type generation. For example:
+chore: Add types to DurableObjectNamespace type generation. For example:
 
 ```ts
 interface Env {
