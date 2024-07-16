@@ -29,21 +29,29 @@ export default function (
 			.filter((option) => !unwrapHook(option.disabled))
 			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`);
 
-		const stringifiedInstructions = instructions.join(", ");
+		let stringifiedInstructions = instructions.join(", ");
 
 		const ADDITIONAL_CHARS = 6; // 3 chars on each side of the instructions for the box and spacing ("│  " and "  │")
 		const willWrap =
 			stringifiedInstructions.length + ADDITIONAL_CHARS >
 			process.stdout.columns;
 		if (willWrap) {
-			// unboxed, multiline
-			return "\n" + instructions.join("\n");
+			stringifiedInstructions = instructions.join("\n");
 		}
 
+		const maxLineLength = Math.max(
+			...stringifiedInstructions.split("\n").map((line) => line.length)
+		);
+
+		stringifiedInstructions = stringifiedInstructions
+			.split("\n")
+			.map((line) => `│  ${line.padEnd(maxLineLength, " ")}  │`)
+			.join("\n");
+
 		return (
-			`╭──${"─".repeat(stringifiedInstructions.length)}──╮\n` +
-			`│  ${stringifiedInstructions}  │\n` +
-			`╰──${"─".repeat(stringifiedInstructions.length)}──╯`
+			`╭──${"─".repeat(maxLineLength)}──╮\n` +
+			stringifiedInstructions +
+			`\n╰──${"─".repeat(maxLineLength)}──╯`
 		);
 	}
 
