@@ -249,7 +249,7 @@ export function normalizeAndValidateConfig(
 		"assets",
 		`The existing behavior of this experimental feature will change on August 15th.\n` +
 			`Releases of wrangler after this date will no longer support current behavior.\n` +
-			`\`legacy_assets\` willl preserve current behavior, but will also be deprecated soon.`,
+			`\`legacy_assets\` will preserve current behavior, but will also be deprecated soon.`,
 		false,
 		"Behavior change"
 	);
