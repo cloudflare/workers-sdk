@@ -17,6 +17,7 @@ for (let index = 0; index < 100; index++) {
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
+						devEnv: true,
 					},
 				}),
 				await unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
@@ -25,6 +26,7 @@ for (let index = 0; index < 100; index++) {
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
+						devEnv: true,
 					},
 				}),
 				await unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
@@ -33,6 +35,7 @@ for (let index = 0; index < 100; index++) {
 					experimental: {
 						disableExperimentalWarning: true,
 						disableDevRegistry: true,
+						devEnv: true,
 					},
 				}),
 			];
