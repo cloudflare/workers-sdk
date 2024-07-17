@@ -34,7 +34,7 @@ function getDebugFilepath() {
 	return path.resolve(filepath);
 }
 
-async function ensureDirectoryExists(filepath: string) {
+export async function ensureDirectoryExists(filepath: string) {
 	const dirpath = path.dirname(filepath);
 
 	await mkdir(dirpath, { recursive: true });
