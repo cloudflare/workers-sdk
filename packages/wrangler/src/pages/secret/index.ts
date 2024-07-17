@@ -171,7 +171,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 		)
 		.command(
 			"bulk [json]",
-			"🗄️ Bulk upload secrets for a Pages project",
+			"Bulk upload secrets for a Pages project",
 			(yargs) => {
 				return yargs
 					.positional("json", {
