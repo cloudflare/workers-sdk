@@ -4,7 +4,7 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
+import { writeWranglerToml } from "../helpers/write-wrangler-toml";
 
 describe("execute", () => {
 	const std = mockConsoleMethods();
