@@ -52,6 +52,26 @@ describe("cloudchamber create", () => {
 		`);
 	});
 
+	it("should fail with a nice message when parameters are missing", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await expect(
+			runWrangler("cloudchamber create --image hello:world")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: location is required but it's not passed as an argument]`
+		);
+	});
+
+	it("should fail with a nice message when parameters are missing (json)", async () => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		await runWrangler("cloudchamber create --image hello:world --json");
+		expect(std.out).toMatchInlineSnapshot(
+			`"{\\"error\\":\\"location is required but it's not passed as an argument\\"}"`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	it("should create deployment (detects no interactivity)", async () => {
 		setIsTTY(false);
 		setWranglerConfig({});
@@ -86,26 +106,26 @@ describe("cloudchamber create", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"{
-		    \\"id\\": \\"1\\",
-		    \\"type\\": \\"default\\",
-		    \\"created_at\\": \\"123\\",
-		    \\"account_id\\": \\"123\\",
-		    \\"vcpu\\": 4,
-		    \\"memory\\": \\"400MB\\",
-		    \\"version\\": 1,
-		    \\"image\\": \\"hello\\",
-		    \\"location\\": {
-		        \\"name\\": \\"sfo06\\",
-		        \\"enabled\\": true
-		    },
-		    \\"network\\": {
-		        \\"ipv4\\": \\"1.1.1.1\\"
-		    },
-		    \\"placements_ref\\": \\"http://ref\\",
-		    \\"node_group\\": \\"metal\\"
-		}"
-	`);
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`);
 	});
 
 	it("should create deployment indicating ssh keys (detects no interactivity)", async () => {

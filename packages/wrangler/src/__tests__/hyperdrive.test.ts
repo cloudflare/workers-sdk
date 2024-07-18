@@ -239,6 +239,76 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
+	it("should reject a create hyperdrive command if both connection string and individual origin params are provided", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb' --host=example.com --port=5432 --database=neondb --user=test"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments host and connection-string are mutually exclusive[0m
+
+			"
+		`);
+	});
+
+	it("should create a hyperdrive over access config given the right params", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\",
+			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
+	});
+
+	it("should reject a create hyperdrive over access command if access client ID is set but not access client secret", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access'"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
+
+			   access-client-id -> access-client-secret
+
+			"
+		`);
+	});
+
+	it("should reject a create hyperdrive over access command if access client secret is set but not access client ID", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
+
+			   access-client-secret -> access-client-id
+
+			"
+		`);
+	});
+
 	it("should handle listing configs", async () => {
 		mockHyperdriveRequest();
 		await runWrangler("hyperdrive list");
@@ -315,10 +385,10 @@ describe("hyperdrive commands", () => {
 			)
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
-		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mWhen updating the origin, all of the following must be set: origin-host, origin-port, database, origin-user, origin-password[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mWhen updating the origin, all of the following must be set: origin-host, database, origin-user, origin-password[0m
 
-		"
-	`);
+			"
+		`);
 		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
 
@@ -395,6 +465,77 @@ describe("hyperdrive commands", () => {
 		}"
 	`);
 	});
+
+	it("should handle updating a hyperdrive to a hyperdrive over access config given the right parameters", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!' --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access' --access-client-secret='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"host\\": \\"example.com\\",
+			    \\"database\\": \\"mydb\\",
+			    \\"user\\": \\"newuser\\",
+			    \\"access_client_id\\": \\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access\\"
+			  },
+			  \\"caching\\": {
+			    \\"disabled\\": false
+			  }
+			}"
+		`);
+	});
+
+	it("should throw an exception when updating a hyperdrive config's origin but neither port nor access credentials are provided", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!'"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mWhen updating the origin, either the port or the Access Client ID and Secret must be set[0m
+
+			"
+		`);
+		expect(std.out).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should reject an update command if the access client ID is provided but not the access client secret", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!' --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access'"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
+
+			   access-client-id -> access-client-secret
+
+			"
+		`);
+	});
+
+	it("should reject an update command if the access client secret is provided but not the access client ID", async () => {
+		mockHyperdriveRequest();
+		await expect(() =>
+			runWrangler(
+				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!' --access-client-secret='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing dependent arguments:[0m
+
+			   access-client-secret -> access-client-id
+
+			"
+		`);
+	});
 });
 
 const defaultConfig: HyperdriveConfig = {
@@ -437,6 +578,7 @@ function mockHyperdriveRequest() {
 								// @ts-expect-error This is a string
 								scheme: reqBody.origin.protocol,
 								user: reqBody.origin.user,
+								access_client_id: reqBody.origin.access_client_id,
 							},
 							caching: reqBody.caching,
 						},
@@ -462,6 +604,7 @@ function mockHyperdriveRequest() {
 											port: reqBody.origin.port,
 											database: reqBody.origin.database,
 											user: reqBody.origin.user,
+											access_client_id: reqBody.origin.access_client_id,
 										}
 									: defaultConfig.origin,
 							caching: reqBody.caching ?? defaultConfig.caching,

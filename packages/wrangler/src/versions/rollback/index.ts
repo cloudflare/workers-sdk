@@ -127,7 +127,7 @@ export async function versionsRollbackHandler(args: VersionsRollbackArgs) {
 				.split(", ");
 
 			const secretConfirmation = await confirm(
-				"The following secrets have changed since the target version was deployed. " +
+				`The following secrets have changed since version ${versionId} was deployed. ` +
 					`Please confirm you wish to continue with the rollback\n` +
 					changedSecrets.map((secret) => `  * ${secret}`).join("\n")
 			);

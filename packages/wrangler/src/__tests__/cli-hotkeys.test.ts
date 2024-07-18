@@ -199,5 +199,37 @@ describe("Hot Keys", () => {
 				something 2"
 			`);
 		});
+
+		it("provides stacked formatted instructions in narrow views", async () => {
+			const originalColumns = process.stdout.columns;
+			try {
+				process.stdout.columns = 30;
+
+				const handlerA = vi.fn();
+				const handlerB = vi.fn();
+				const handlerC = vi.fn();
+				const handlerD = vi.fn();
+				const options = [
+					{ keys: ["a"], label: "first option", handler: handlerA },
+					{ keys: ["b"], label: "second option", handler: handlerB },
+					{ keys: ["c"], label: () => "third option", handler: handlerC },
+					{ keys: ["d"], label: "disabled", disabled: true, handler: handlerD },
+				];
+
+				// should print instructions immediately
+				const unregisterHotKeys = registerHotKeys(options);
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"╭─────────────────────╮
+					│  [a] first option   │
+					│  [b] second option  │
+					│  [c] third option   │
+					╰─────────────────────╯"
+				`);
+				unregisterHotKeys();
+			} finally {
+				process.stdout.columns = originalColumns;
+			}
+		});
 	});
 });

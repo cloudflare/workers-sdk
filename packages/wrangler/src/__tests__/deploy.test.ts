@@ -2733,28 +2733,30 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"┌─────────────┬──────┬──────────┐
-			│ Name        │ Type │ Size     │
-			├─────────────┼──────┼──────────┤
-			│ a/1.mjs     │ esm  │ xx KiB │
-			├─────────────┼──────┼──────────┤
-			│ a/b/2.mjs   │ esm  │ xx KiB │
-			├─────────────┼──────┼──────────┤
-			│ a/b/3.mjs   │ esm  │ xx KiB │
-			├─────────────┼──────┼──────────┤
-			│ a/b/c/4.mjs │ esm  │ xx KiB │
-			└─────────────┴──────┴──────────┘
-			↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				"┌───────────────────┬──────┬──────────┐
+				│ Name              │ Type │ Size     │
+				├───────────────────┼──────┼──────────┤
+				│ a/1.mjs           │ esm  │ xx KiB │
+				├───────────────────┼──────┼──────────┤
+				│ a/b/2.mjs         │ esm  │ xx KiB │
+				├───────────────────┼──────┼──────────┤
+				│ a/b/3.mjs         │ esm  │ xx KiB │
+				├───────────────────┼──────┼──────────┤
+				│ a/b/c/4.mjs       │ esm  │ xx KiB │
+				├───────────────────┼──────┼──────────┤
+				│ Total (4 modules) │      │ xx KiB │
+				└───────────────────┴──────┴──────────┘
+				↗️  Done syncing assets
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -10147,21 +10149,23 @@ export default{
 					".wrangler/tmp/deploy/index.py"
 				)
 			).toMatchInlineSnapshot(`
-			"┌──────────────────────────────────────┬────────┬──────────┐
-			│ Name                                 │ Type   │ Size     │
-			├──────────────────────────────────────┼────────┼──────────┤
-			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
-			└──────────────────────────────────────┴────────┴──────────┘
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				"┌──────────────────────────────────────┬────────┬──────────┐
+				│ Name                                 │ Type   │ Size     │
+				├──────────────────────────────────────┼────────┼──────────┤
+				│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+				├──────────────────────────────────────┼────────┼──────────┤
+				│ Total (1 module)                     │        │ xx KiB │
+				└──────────────────────────────────────┴────────┴──────────┘
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			`);
 		});
 
 		it("should upload python module specified in CLI args", async () => {
@@ -10182,21 +10186,23 @@ export default{
 					".wrangler/tmp/deploy/index.py"
 				)
 			).toMatchInlineSnapshot(`
-			"┌──────────────────────────────────────┬────────┬──────────┐
-			│ Name                                 │ Type   │ Size     │
-			├──────────────────────────────────────┼────────┼──────────┤
-			│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
-			└──────────────────────────────────────┴────────┴──────────┘
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class
-			Current Version ID: Galaxy-Class
+				"┌──────────────────────────────────────┬────────┬──────────┐
+				│ Name                                 │ Type   │ Size     │
+				├──────────────────────────────────────┼────────┼──────────┤
+				│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
+				├──────────────────────────────────────┼────────┼──────────┤
+				│ Total (1 module)                     │        │ xx KiB │
+				└──────────────────────────────────────┴────────┴──────────┘
+				Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class
+				Current Version ID: Galaxy-Class
 
 
-			Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
-		`);
+				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments"
+			`);
 		});
 	});
 

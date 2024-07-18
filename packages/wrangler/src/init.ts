@@ -8,6 +8,7 @@ import { version as wranglerVersion } from "../package.json";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
+import { getDatabaseInfoFromId } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
@@ -27,6 +28,7 @@ import type {
 	TailConsumer,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { DatabaseInfo } from "./d1/types";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
@@ -927,7 +929,7 @@ async function getWorkerConfig(
 		);
 	});
 
-	const mappedBindings = mapBindings(bindings);
+	const mappedBindings = await mapBindings(accountId, bindings);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -985,7 +987,22 @@ async function getWorkerConfig(
 	};
 }
 
-export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
+export async function mapBindings(
+	accountId: string,
+	bindings: WorkerMetadataBinding[]
+): Promise<RawConfig> {
+	//the binding API doesn't provide us with enough information to make a friendly user experience.
+	//lets call D1's API to get more information
+	const d1BindingsWithInfo: Record<string, DatabaseInfo> = {};
+	await Promise.all(
+		bindings
+			.filter((binding) => binding.type === "d1")
+			.map(async (binding) => {
+				const dbInfo = await getDatabaseInfoFromId(accountId, binding.id);
+				d1BindingsWithInfo[binding.id] = dbInfo;
+			})
+	);
+
 	return (
 		bindings
 			.filter((binding) => (binding.type as string) !== "secret_text")
@@ -1033,6 +1050,18 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 									},
 								],
 							};
+						}
+						break;
+					case "d1":
+						{
+							configObj.d1_databases = [
+								...(configObj.d1_databases ?? []),
+								{
+									binding: binding.name,
+									database_id: binding.id,
+									database_name: d1BindingsWithInfo[binding.id].name,
+								},
+							];
 						}
 						break;
 					case "browser":

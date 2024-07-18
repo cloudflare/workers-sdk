@@ -42,6 +42,20 @@ export function options(yargs: CommonYargsArgv) {
 				type: "string",
 				describe: "The password used to connect to the origin database",
 			},
+			"access-client-id": {
+				type: "string",
+				describe:
+					"The Client ID of the Access token to use when connecting to the origin database",
+				conflicts: ["origin-port"],
+				implies: ["access-client-secret"],
+			},
+			"access-client-secret": {
+				type: "string",
+				describe:
+					"The Client Secret of the Access token to use when connecting to the origin database",
+				conflicts: ["origin-port"],
+				implies: ["access-client-id"],
+			},
 			"caching-disabled": {
 				type: "boolean",
 				describe: "Disables the caching of SQL responses",
@@ -62,7 +76,6 @@ export function options(yargs: CommonYargsArgv) {
 
 const requiredOriginOptions = [
 	"originHost",
-	"originPort",
 	"database",
 	"originUser",
 	"originPassword",
@@ -96,6 +109,17 @@ export async function handler(
 		);
 	}
 
+	if (
+		allOriginFieldsSet &&
+		args.originPort === undefined &&
+		args.accessClientId === undefined &&
+		args.accessClientSecret === undefined
+	) {
+		throw new UserError(
+			`When updating the origin, either the port or the Access Client ID and Secret must be set`
+		);
+	}
+
 	const config = readConfig(args.config, args);
 
 	logger.log(`🚧 Updating '${args.id}'`);
@@ -107,14 +131,26 @@ export async function handler(
 	}
 
 	if (allOriginFieldsSet) {
-		database.origin = {
-			scheme: args.originScheme ?? "postgresql",
-			host: args.originHost,
-			port: args.originPort,
-			database: args.database,
-			user: args.originUser,
-			password: args.originPassword,
-		};
+		if (args.accessClientId && args.accessClientSecret) {
+			database.origin = {
+				scheme: args.originScheme ?? "postgresql",
+				host: args.originHost,
+				database: args.database,
+				user: args.originUser,
+				password: args.originPassword,
+				access_client_id: args.accessClientId,
+				access_client_secret: args.accessClientSecret,
+			};
+		} else {
+			database.origin = {
+				scheme: args.originScheme ?? "postgresql",
+				host: args.originHost,
+				port: args.originPort,
+				database: args.database,
+				user: args.originUser,
+				password: args.originPassword,
+			};
+		}
 	}
 
 	database.caching = {

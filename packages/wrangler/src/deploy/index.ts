@@ -257,15 +257,6 @@ export async function deployHandler(
 	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
-	await metrics.sendMetricsEvent(
-		"deploy worker script",
-		{
-			usesTypeScript: /\.tsx?$/.test(entry.file),
-		},
-		{
-			sendMetrics: config.send_metrics,
-		}
-	);
 
 	if (args.public) {
 		throw new UserError(
@@ -313,7 +304,8 @@ export async function deployHandler(
 		await standardPricingWarning(config);
 	}
 
-	await deploy({
+	const beforeUpload = Date.now();
+	const { sourceMapSize } = await deploy({
 		config,
 		accountId,
 		name: getScriptName(args, config),
@@ -348,4 +340,16 @@ export async function deployHandler(
 		dispatchNamespace: args.dispatchNamespace,
 		experimentalVersions: args.experimentalVersions,
 	});
+
+	await metrics.sendMetricsEvent(
+		"deploy worker script",
+		{
+			usesTypeScript: /\.tsx?$/.test(entry.file),
+			durationMs: Date.now() - beforeUpload,
+			sourceMapSize,
+		},
+		{
+			sendMetrics: config.send_metrics,
+		}
+	);
 }
