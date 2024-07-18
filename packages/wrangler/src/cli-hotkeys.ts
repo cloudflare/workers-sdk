@@ -16,13 +16,19 @@ export default function (
 	/**
 	 * Formats all options, comma-separated, prefixed by the first key in square brackets.
 	 *
-	 * Example output:
+	 * Example output (wide screen):
 	 *  ╭─────────────────────────────────────────────────────────╮
 	 *  │  [a] first option, [b] second option, [c] third option  │
 	 *  ╰─────────────────────────────────────────────────────────╯
 	 *
-	 * Limitations:
-	 *  - doesn't break nicely across lines
+	 * Example output (narrow screen):
+	 *
+	 *  ╭──────────────────────╮
+	 *  │  [a] first option,   |
+	 *  |  [b] second option   |
+	 *  |  [c] third option    │
+	 *  ╰──────────────────────╯
+	 *
 	 */
 	function formatInstructions() {
 		const instructions = options
