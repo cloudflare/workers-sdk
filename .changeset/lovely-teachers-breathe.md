@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Updating to match new D1 import/export API format
+fix: Updating to match new D1 import/export API format
