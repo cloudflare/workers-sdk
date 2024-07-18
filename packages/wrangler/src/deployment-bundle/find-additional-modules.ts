@@ -109,8 +109,13 @@ export async function findAdditionalModules(
 
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
-		logger.table(
-			modules.map(({ name, type, content }) => {
+		const totalSize = modules.reduce(
+			(previous, { content }) => previous + content.length,
+			0
+		);
+
+		logger.table([
+			...modules.map(({ name, type, content }) => {
 				return {
 					Name: name,
 					Type: type ?? "",
@@ -119,8 +124,13 @@ export async function findAdditionalModules(
 							? ""
 							: `${(content.length / 1024).toFixed(2)} KiB`,
 				};
-			})
-		);
+			}),
+			{
+				Name: `Total (${modules.length} module${modules.length > 1 ? "s" : ""})`,
+				Type: "",
+				Size: `${(totalSize / 1024).toFixed(2)} KiB`,
+			},
+		]);
 	}
 
 	return modules;
