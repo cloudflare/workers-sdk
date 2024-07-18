@@ -469,9 +469,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-					    \`legacy_assets\` will preserve current behavior, but will also be deprecated soon."
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
 				`);
 			});
 
@@ -489,9 +487,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-					    \`legacy_assets\` will preserve current behavior, but will also be deprecated soon."
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -522,9 +518,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-					    \`legacy_assets\` will preserve current behavior, but will also be deprecated soon."
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -553,9 +547,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \\"legacy_assets\\":
-					    The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-					    \`legacy_assets\` will preserve current behavior, but will also be deprecated soon."
+					  - \\"legacy_assets\\" fields are experimental and may change or break at any time."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -592,9 +584,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - [1mBehavior change[0m: \\"assets\\":
-					    The existing behavior of this experimental feature will change on August 15th.
-					    Releases of wrangler after this date will no longer support current behavior.
-					    \`legacy_assets\` will preserve current behavior, but will also be deprecated soon."
+					    The \`assets\` feature is experimental. We are going to be changing its behavior on August 15th.
+					    Releases of wrangler after this date will no longer support current functionality.
+					    Please shift to \`legacy_assets\` to preserve the current functionality. "
 				`);
 			});
 

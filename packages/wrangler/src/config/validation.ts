@@ -247,21 +247,14 @@ export function normalizeAndValidateConfig(
 		diagnostics,
 		rawConfig,
 		"assets",
-		`The existing behavior of this experimental feature will change on August 15th.\n` +
-			`Releases of wrangler after this date will no longer support current behavior.\n` +
-			`\`legacy_assets\` will preserve current behavior, but will also be deprecated soon.`,
+		`The \`assets\` feature is experimental. We are going to be changing its behavior on August 15th.\n` +
+			`Releases of wrangler after this date will no longer support current functionality.\n` +
+			`Please shift to \`legacy_assets\` to preserve the current functionality. `,
 		false,
 		"Behavior change"
 	);
 
-	deprecated(
-		diagnostics,
-		rawConfig,
-		"legacy_assets",
-		`The existing behavior of the experimental \`assets\` feature will be changing on August 15th.\n` +
-			`\`legacy_assets\` will preserve current behavior, but will also be deprecated soon.`,
-		false
-	);
+	experimental(diagnostics, rawConfig, "legacy_assets");
 
 	if (rawConfig.assets && rawConfig.legacy_assets) {
 		diagnostics.errors.push(
@@ -687,6 +680,7 @@ function normalizeAndValidateLegacyAssets(
 	configPath: string | undefined,
 	rawConfig: RawConfig
 ): Config["legacy_assets"] {
+	// So that the final config object only has the one legacy_assets property
 	const mergedAssetsConfig = rawConfig["legacy_assets"] ?? rawConfig["assets"];
 
 	// Even though the type doesn't say it,

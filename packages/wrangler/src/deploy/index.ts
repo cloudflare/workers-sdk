@@ -98,10 +98,15 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				alias: "assets",
-				describe: "Static assets to be served",
+				describe: "(Experimental) Static assets to be served",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -227,6 +232,26 @@ export async function deployHandler(
 		);
 	}
 
+	if (args.assets) {
+		logger.warn(
+			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.\n` +
+				`Releases of wrangler after this date will no longer support current functionality.\n` +
+				`Please shift to the --legacy-assets command to preserve the current functionality.`
+		);
+	}
+
+	if (args.legacyAssets) {
+		logger.warn(
+			`The --legacy-assets argument is experimental and may change or break at any time.`
+		);
+	}
+
+	if (args.legacyAssets && args.assets) {
+		throw new UserError("Cannot use both --assets and --legacy-assets.");
+	}
+
+	args.legacyAssets = args.legacyAssets ?? args.assets;
+
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const projectRoot = configPath && path.dirname(configPath);
@@ -243,11 +268,13 @@ export async function deployHandler(
 	);
 
 	if (args.public) {
-		throw new UserError("The --public field has been renamed to --assets");
+		throw new UserError(
+			"The --public field has been deprecated, try --legacy-assets instead."
+		);
 	}
 	if (args.experimentalPublic) {
 		throw new UserError(
-			"The --experimental-public field has been renamed to --assets"
+			"The --experimental-public field has been deprecated, try --legacy-assets instead."
 		);
 	}
 
@@ -257,14 +284,6 @@ export async function deployHandler(
 	) {
 		throw new UserError(
 			"Cannot use Assets and Workers Sites in the same Worker."
-		);
-	}
-
-	if (args.legacyAssets) {
-		logger.warn(
-			`The behavior of the experimental --assets command will be changing on August 15th.\n` +
-				`Releases of wrangler after this date will no longer support current functionality.\n` +
-				`The --legacy-assets command will preserve current functionality after this point, but will also be deprecated towards the end of the year.`
 		);
 	}
 

@@ -1993,11 +1993,7 @@ addEventListener('fetch', event => {});`
 
 
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.[0m
@@ -2214,11 +2210,7 @@ addEventListener('fetch', event => {});`
 
 
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
 				}
@@ -2268,11 +2260,10 @@ addEventListener('fetch', event => {});`
 
 
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.[0m
 
 				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  Please shift to the --legacy-assets command to preserve the current functionality.
 
 				",
 				}
@@ -2298,11 +2289,7 @@ addEventListener('fetch', event => {});`
 				",
 				  "info": "",
 				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
 				}
@@ -2321,16 +2308,18 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "",
-			}
-		`);
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+
+				",
+				}
+			`);
 		});
 
 		it("should error if --legacy-assets and config.site are used together", async () => {
@@ -2348,16 +2337,18 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			",
-			  "info": "",
-			  "out": "",
-			  "warn": "",
-			}
-		`);
+				",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
+
+				",
+				}
+			`);
 		});
 
 		it("should error if config.legacy_assets and --site are used together", async () => {
@@ -2382,9 +2373,7 @@ addEventListener('fetch', event => {});`
 				  "out": "",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-				      \`legacy_assets\` will preserve current behavior, but will also be deprecated soon.
+				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
 
 				",
 				}
@@ -2416,9 +2405,7 @@ addEventListener('fetch', event => {});`
 				  "out": "",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-				      \`legacy_assets\` will preserve current behavior, but will also be deprecated soon.
+				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
 
 				",
 				}
@@ -2469,11 +2456,7 @@ addEventListener('fetch', event => {});`
 
 
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
 				}
@@ -2527,9 +2510,7 @@ addEventListener('fetch', event => {});`
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The existing behavior of the experimental \`assets\` feature will be changing on August 15th.
-				      \`legacy_assets\` will preserve current behavior, but will also be deprecated soon.
+				    - \\"legacy_assets\\" fields are experimental and may change or break at any time.
 
 				",
 				}
@@ -3763,11 +3744,7 @@ addEventListener('fetch', event => {});`
 
 
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
 				}
@@ -8505,11 +8482,7 @@ addEventListener('fetch', event => {});`
 
 
 				Note: Deployment ID has been renamed to Version ID. Deployment ID is present to maintain compatibility with the previous behavior of this command. This output will change in a future version of Wrangler. To learn more visit: https://developers.cloudflare.com/workers/configuration/versions-and-deployments",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe behavior of the experimental --assets command will be changing on August 15th.[0m
-
-				  Releases of wrangler after this date will no longer support current functionality.
-				  The --legacy-assets command will preserve current functionality after this point, but will also be
-				  deprecated towards the end of the year.
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
 				",
 				}

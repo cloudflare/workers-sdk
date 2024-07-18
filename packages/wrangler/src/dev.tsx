@@ -172,10 +172,15 @@ export function devOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("legacy-assets", {
-				alias: "assets",
-				describe: "Static assets to be served",
+				describe: "(Experimental) Static assets to be served",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("assets", {
+				describe: "(Experimental) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				hidden: true,
 			})
 			.option("public", {
 				describe: "(Deprecated) Static assets to be served",
@@ -362,6 +367,26 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		}
 	}
 
+	if (args.assets) {
+		logger.warn(
+			`The --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.\n` +
+				`Releases of wrangler after this date will no longer support current functionality.\n` +
+				`Please shift to the --legacy-assets command to preserve the current functionality.`
+		);
+	}
+
+	if (args.legacyAssets) {
+		logger.warn(
+			`The --legacy-assets argument is experimental and may change or break at any time.`
+		);
+	}
+
+	if (args.legacyAssets && args.assets) {
+		throw new UserError("Cannot use both --assets and --legacy-assets.");
+	}
+
+	args.legacyAssets = args.legacyAssets ?? args.assets;
+
 	let watcher;
 	try {
 		const devInstance = await run(
@@ -427,7 +452,7 @@ export type AdditionalDevProps = {
 	showInteractiveDevSession?: boolean;
 };
 
-export type StartDevOptions = DevArguments &
+export type StartDevOptions = Omit<DevArguments, "assets"> &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
@@ -518,21 +543,13 @@ export async function startDev(args: StartDevOptions) {
 		}
 		if (args.experimentalPublic) {
 			throw new UserError(
-				"The --experimental-public field has been deprecated, try --assets instead."
+				"The --experimental-public field has been deprecated, try --legacy-assets instead."
 			);
 		}
 
 		if (args.public) {
 			throw new UserError(
-				"The --public field has been deprecated, try --assets instead."
-			);
-		}
-
-		if (args.legacyAssets) {
-			logger.warn(
-				`The behavior of the experimental --assets command will be changing on August 15th.\n` +
-					`Releases of wrangler after this date will no longer support current functionality.\n` +
-					`The --legacy-assets command will preserve current functionality after this point, but will also be deprecated towards the end of the year.`
+				"The --public field has been deprecated, try --legacy-assets instead."
 			);
 		}
 

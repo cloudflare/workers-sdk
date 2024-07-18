@@ -1178,82 +1178,85 @@ describe("wrangler dev", () => {
 			await expect(
 				runWrangler("dev --site")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Not enough arguments following: site"`
+				`[Error: Not enough arguments following: site]`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
+				Object {
+				  "debug": "",
+				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
 
-			",
-			  "info": "",
-			  "out": "
-			wrangler dev [script]
+				",
+				  "info": "",
+				  "out": "
+				wrangler dev [script]
 
-			Start a local server for developing a worker
+				👂 Start a local server for developing your Worker
 
-			Positionals:
-			  script  The path to an entry point for your worker  [string]
+				POSITIONALS
+				  script  The path to an entry point for your worker  [string]
 
-			Global Flags:
-			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
-			  -c, --config                    ⚑Path to .toml configuration file  [string]
-			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
-			  -h, --help                      ⚑Show help  [boolean]
-			  -v, --version                   ⚑Show version number  [boolean]
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
 
-			Options:
-			      --name                                       Name of the worker  [string]
-			      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
-			      --compatibility-date                         Date to use for compatibility checks  [string]
-			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
-			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
-			      --ip                                         IP address to listen on  [string]
-			      --port                                       Port to listen on  [number]
-			      --inspector-port                             Port for devtools to connect to  [number]
-			      --routes, --route                            Routes to upload  [array]
-			      --host                                       Host to forward requests to, defaults to the zone of project  [string]
-			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
-			      --https-key-path                             Path to a custom certificate key  [string]
-			      --https-cert-path                            Path to a custom certificate  [string]
-			      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
-			      --assets                                     Static assets to be served  [string]
-			      --site                                       Root folder of static assets for Workers Sites  [string]
-			      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
-			      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
-			      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
-			      --var                                        A key-value pair to be injected into the script as a variable  [array]
-			      --define                                     A key-value pair to be substituted in the script  [array]
-			      --jsx-factory                                The function that is called for each JSX element  [string]
-			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
-			      --tsconfig                                   Path to a custom tsconfig.json file  [string]
-			  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
-			      --minify                                     Minify the script  [boolean]
-			      --node-compat                                Enable Node.js compatibility  [boolean]
-			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
-			      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
-			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
-			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
-			      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]",
-			  "warn": "",
-			}
-		`);
+				OPTIONS
+				      --name                                       Name of the worker  [string]
+				      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
+				      --compatibility-date                         Date to use for compatibility checks  [string]
+				      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
+				      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
+				      --ip                                         IP address to listen on  [string]
+				      --port                                       Port to listen on  [number]
+				      --inspector-port                             Port for devtools to connect to  [number]
+				      --routes, --route                            Routes to upload  [array]
+				      --host                                       Host to forward requests to, defaults to the zone of project  [string]
+				      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
+				      --https-key-path                             Path to a custom certificate key  [string]
+				      --https-cert-path                            Path to a custom certificate  [string]
+				      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
+				      --legacy-assets                              (Experimental) Static assets to be served  [string]
+				      --site                                       Root folder of static assets for Workers Sites  [string]
+				      --site-include                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.  [array]
+				      --site-exclude                               Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.  [array]
+				      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
+				      --var                                        A key-value pair to be injected into the script as a variable  [array]
+				      --define                                     A key-value pair to be substituted in the script  [array]
+				      --alias                                      A module pair to be substituted in the script  [array]
+				      --jsx-factory                                The function that is called for each JSX element  [string]
+				      --jsx-fragment                               The function that is called for each JSX fragment  [string]
+				      --tsconfig                                   Path to a custom tsconfig.json file  [string]
+				  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
+				      --minify                                     Minify the script  [boolean]
+				      --node-compat                                Enable Node.js compatibility  [boolean]
+				      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
+				      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
+				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
+				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
+				      --show-interactive-dev-session               Show interactive dev session  (defaults to true if the terminal supports interactivity)  [boolean]
+				      --experimental-dev-env, --x-dev-env          Use the experimental DevEnv instantiation (unified across wrangler dev and unstable_dev)  [boolean] [default: false]
+				      --experimental-registry, --x-registry        Use the experimental file based dev registry for multi-worker development  [boolean] [default: false]",
+				  "warn": "",
+				}
+			`);
 		});
 
-		it("should error if --assets and --site are used together", async () => {
+		it("should error if --legacy-assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev --assets abc --site xyz")
+				runWrangler("dev --legacy-assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
-		it("should error if --assets and config.site are used together", async () => {
+		it("should error if --legacy-assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 				site: {
@@ -1262,38 +1265,38 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev --assets abc")
+				runWrangler("dev --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
-		it("should error if config.assets and --site are used together", async () => {
+		it("should error if config.legacy_assets and --site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "abc",
+				legacy_assets: "abc",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
 				runWrangler("dev --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
-		it("should error if config.assets and config.site are used together", async () => {
+		it("should error if config.legacy_assets and config.site are used together", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "abc",
+				legacy_assets: "abc",
 				site: {
 					bucket: "xyz",
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev --assets abc")
+				runWrangler("dev --legacy-assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Cannot use Assets and Workers Sites in the same Worker."`
+				`[Error: Cannot use Assets and Workers Sites in the same Worker.]`
 			);
 		});
 
@@ -1309,10 +1312,11 @@ describe("wrangler dev", () => {
 			await runWrangler("dev --site abc");
 			expect((Dev as Mock).mock.calls[1][0].isWorkersSite).toEqual(true);
 
-			await runWrangler("dev --assets abc");
+			await runWrangler("dev --legacy-assets abc");
 			expect((Dev as Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
-		it("should warn if --assets is used", async () => {
+
+		it("should point to --legacy-assets if --assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
 			});
@@ -1320,39 +1324,46 @@ describe("wrangler dev", () => {
 
 			await runWrangler('dev --assets "./assets"');
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental. We are going to be changing the behavior of this experimental command on August 15th.[0m
 
-			",
-			}
-		`);
+				  Releases of wrangler after this date will no longer support current functionality.
+				  Please shift to the --legacy-assets command to preserve the current functionality.
+
+				",
+				}
+			`);
 		});
 
-		it("should warn if config.assets is used", async () => {
+		it("should warn if --legacy-assets is used", async () => {
 			writeWranglerToml({
 				main: "./index.js",
-				assets: "./assets",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
-			await runWrangler("dev");
+			await runWrangler('dev --legacy-assets "./assets"');
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument is experimental and may change or break at any time.[0m
 
-			    - \\"assets\\" fields are experimental and may change or break at any time.
+				",
+				}
+			`);
+		});
 
-			",
-			}
-		`);
+		it("should warn if config.legacy_assets is used", async () => {
+			writeWranglerToml({
+				main: "./index.js",
+				legacy_assets: "./assets",
+			});
 		});
 	});
 
