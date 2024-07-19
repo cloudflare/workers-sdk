@@ -117,8 +117,9 @@ export async function createCommand(
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
 			: [];
+		const useIpv4 = args.ipv4 ?? config.cloudchamber.ipv4;
 		const network =
-			args.ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+			useIpv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,
@@ -223,7 +224,8 @@ export async function handleCreateCommand(
 ) {
 	startSection("Create a Cloudflare container", "Step 1 of 2");
 	const sshKeyID = await promptForSSHKeyAndGetAddedSSHKey(args);
-	const image = await processArgument<string>({ image: args.image }, "image", {
+	const givenImage = args.image ?? config.cloudchamber.image;
+	const image = await processArgument<string>({ image: givenImage }, "image", {
 		question: whichImageQuestion,
 		label: "image",
 		validate: (value) => {
@@ -237,15 +239,19 @@ export async function handleCreateCommand(
 				return "we don't allow :latest tags";
 			}
 		},
-		defaultValue: args.image ?? "",
-		initialValue: args.image ?? "",
+		defaultValue: givenImage ?? "",
+		initialValue: givenImage ?? "",
 		helpText: 'i.e. "docker.io/org/app:1.2", :latest tags are not allowed!',
 		type: "text",
 	});
 
-	const location = await getLocation(args);
+	const location = await getLocation({
+		location: args.image ?? config.cloudchamber.location,
+	});
 	const keys = await askWhichSSHKeysDoTheyWantToAdd(args, sshKeyID);
-	const network = await getNetworkInput(args);
+	const network = await getNetworkInput({
+		ipv4: args.ipv4 ?? config.cloudchamber.ipv4,
+	});
 
 	const selectedEnvironmentVariables = await promptForEnvironmentVariables(
 		environmentVariables,
